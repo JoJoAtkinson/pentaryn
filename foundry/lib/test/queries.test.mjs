@@ -38,8 +38,7 @@ test("every query row is registered; payloads use wire defaults, ref rows, legac
   let published = null;
   const names = registerQueries(MANIFEST, () => published, { g });
   assert.deepEqual(names, ["pentaryn-x.list", "pentaryn-x.gather", "pentaryn-x.inspect", "pentaryn-x.old.report"]);
-  await assert.rejects(g.CONFIG.queries["pentaryn-x.list"]({}), { code: "NOT_READY" });
-  published = api;
+  published = api; // before publish → NOT_READY after the AC-5 wait (its own test, on mocked timers)
   assert.deepEqual(await g.CONFIG.queries["pentaryn-x.list"](), ["a"]);
   assert.deepEqual(await g.CONFIG.queries["pentaryn-x.gather"]({ n: 1 }), { cropsAs: "base64", n: 1 });
   assert.deepEqual(await g.CONFIG.queries["pentaryn-x.gather"]({ cropsAs: "path" }), { cropsAs: "path" });
@@ -91,6 +90,37 @@ test("AC-4 queryGM: the timeout bounds the GM's own local handler too — TIMEOU
   assert.deepEqual(await queryGM("q", { a: 1 }, { g: local(async d => d), timeout: 50 }), { a: 1 });
   const boom = Object.assign(new Error("NOT_READY: pentaryn-x"), { code: "NOT_READY" });
   await assert.rejects(queryGM("q", {}, { g: local(async () => { throw boom; }), timeout: 50 }), e => e === boom);
+});
+
+test("AC-5 a query before publish waits up to 5 s for the API (polled every 250 ms), then NOT_READY", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const settled = p => p.then(v => ({ v }), e => ({ e }));
+  const pending = () => new Promise(r => setImmediate(() => r("pending")));
+  const step = async ms => { for (let i = 0; i < ms / 250; i++) { t.mock.timers.tick(250); await pending(); } };
+  const g = env(true);
+  let published = null;
+  registerQueries(MANIFEST, () => published, { g });
+  const list = g.CONFIG.queries["pentaryn-x.list"];
+  // a tab mid-reload: not published yet, publishes 1 s in → it answers instead of racing a ready tab with NOT_READY
+  const late = settled(list({}));
+  assert.equal(await Promise.race([late, pending()]), "pending", "no instant NOT_READY before publish");
+  await step(750);
+  assert.equal(await Promise.race([late, pending()]), "pending");
+  published = api;
+  await step(250);
+  assert.deepEqual(await late, { v: ["a"] });
+  // never publishes: NOT_READY at 5 s (under queryGM's 10 s default), not before
+  published = null;
+  const never = settled(list({}));
+  await step(4750);
+  assert.equal(await Promise.race([never, pending()]), "pending", "not before 5 s");
+  await step(250);
+  const r = await Promise.race([never, pending()]);
+  assert.equal(r.e?.code, "NOT_READY");
+  assert.equal(r.e?.message, "NOT_READY: pentaryn-x");
+  // already published: answers at once, no wait
+  published = api;
+  assert.deepEqual(await Promise.race([settled(list({})), pending()]), { v: ["a"] });
 });
 
 test("K3 guarded passes core's ctx through; sender:'any' accepts a player sender, still needs a GM receiver", async () => {

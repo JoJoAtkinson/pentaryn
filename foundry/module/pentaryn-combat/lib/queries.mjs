@@ -48,9 +48,27 @@ export function queryNameOf(manifest, row) {
   return `${manifest.module}.${row.queryName ?? row.path}`;
 }
 
+/** AC-5: how long a query waits for the module to publish before NOT_READY, and how often it looks. */
+const READY_WAIT_MS = 5000;
+const READY_POLL_MS = 250;
+
+/**
+ * The published API, waiting for it when the tab has not published yet (AC-5): `getApi()` is polled
+ * every READY_POLL_MS up to READY_WAIT_MS (under queryGM's 10 s default); null after that. A tab
+ * mid-reload then answers once it publishes instead of beating a ready tab with a NOT_READY (§5.9.1).
+ */
+async function awaitApi(getApi, g) {
+  let api = getApi();
+  for (let waited = 0; !api && waited < READY_WAIT_MS; waited += READY_POLL_MS) {
+    await new Promise(resolve => (g.setTimeout ?? setTimeout)(resolve, READY_POLL_MS));
+    api = getApi();
+  }
+  return api;
+}
+
 /**
  * Register a handler for every `query: true` row. `getApi()` returns the published API (null
- * before publish → NOT_READY). Results go through `toPlain` with no depth cap: the socket has no
+ * before publish → NOT_READY, after waiting up to 5 s for the publish, AC-5). Results go through `toPlain` with no depth cap: the socket has no
  * depth limit; the 4-level cap is `inspect()`'s.
  *  - `row.queryName` names the query when it differs from the row path (prompts registers
  *    `pentaryn-prompts.replace` for the `replaceMany` row).
@@ -67,7 +85,7 @@ export function registerQueries(manifest, getApi, { g = globalThis, log = null }
     const name = queryNameOf(manifest, row);
     if (names.includes(name)) throw new Error(`${manifest.module}: query "${name}" is registered twice`);
     const handler = async (data = {}, ctx) => {
-      const api = getApi();
+      const api = await awaitApi(getApi, g);
       if (!api) throw codedError("NOT_READY", manifest.module);
       const fn = row.path.split(".").reduce((o, k) => o?.[k], api);
       if (typeof fn !== "function") throw codedError("INTERNAL", row.path);

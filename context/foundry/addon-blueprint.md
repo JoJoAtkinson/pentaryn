@@ -529,8 +529,10 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
 - The server sends a query to **every socket of the recipient user** and keeps the **first answer,
   success or rejection** (`dist/components/activity.mjs` `n.sockets.forEach(e=>e.emit("userQuery",…))`).
   With the bridge tab and a GM browser tab open, the handler runs in both (both are
-  `activeGM.isSelf`), and a fast rejection from one tab (e.g. `NOT_READY` before it published) beats
-  a slower success from the other. MUST: a query handler that writes is idempotent **across
+  `activeGM.isSelf`), and a fast rejection from one tab would beat a slower success from the other.
+  A `registerQueries` handler therefore does not answer `NOT_READY` at once: before publish it polls
+  `getApi()` every 250 ms for up to 5 s (under `queryGM`'s 10 s default), so a tab mid-reload answers
+  once it publishes (AC-5, §5.9.5). MUST: a query handler that writes is idempotent **across
   concurrent tabs** — look-before-create is not enough, both tabs look before either creates. Make
   the write itself idempotent (a deterministic `_id`, §5.9.2) or request-keyed. A claim alone does
   not do it: the losing tab answers before the winner has written, so the sender gets the loser's
@@ -731,6 +733,12 @@ C62 (§5.1a `params`) is the manifest-side twin of the bridge's "eval-js only" r
   (`foundry/module/pentaryn-journal/journal.mjs:146`); their idempotency is unverified. Tracked as
   combat-riders-41 and items-journal-40 (Joe, 2026-10-11): each is fixed, claim first, as a
   `[declared]` commit when its module migrates.
+- Two GM tabs, one not yet published (kit 1.2.0, AC-5, [declared]): the kit's query handler used to
+  throw `NOT_READY` the moment `getApi()` was null, and the server keeps the first answer, so a tab
+  mid-reload beat a ready tab with a failure. Now the handler polls `getApi()` every 250 ms and throws
+  `NOT_READY` only after 5 s without a publish — inside `queryGM`'s 10 s default, so the sender still
+  gets a coded answer. A remaining race (a published tab whose handler itself rejects first) is the
+  idempotency rule above, not this wait. Pinned on mocked timers in `lib/test/queries.test.mjs`.
 - Both existing `.query(` callers pass `timeout: 8000`; C55 keeps that true.
 - `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented, not changed.
 - Python: once python-tooling-44 lands, a pytest in `scripts/tests` reads the AST of
