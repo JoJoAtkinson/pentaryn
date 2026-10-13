@@ -206,6 +206,12 @@ def _smoke_one(fa: FoundryAdmin, world: dict, *, policy: dict, touched: set[str]
                          dwell=int(smoke_policy.get("browser_dwell_seconds", 60)),
                          ignores=smoke_policy.get("ignore_console") or [])
     result.client = client
+    if client.get("skipped"):
+        # The browser check never ran (e.g. smoke.mjs absent): "not run", not "broken" —
+        # scored like `browser: false`, and the baseline is left alone (EC-8).
+        result.notes.append(f"browser check skipped: {client['skipped']}")
+        result.ok = result.server_ok
+        return result
 
     # A world that was ALREADY throwing before we touched anything must not veto an
     # update. `ardenhaven` throws "Cannot add property walls, object is not extensible"
