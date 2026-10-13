@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **A damage card deleted mid-resolve is a clean cancel** (declared, aoe-vanish-1): deleting the
+  card after the 750 ms resolve claim had settled but while `resolve()` was still running (for
+  example while Careful Spell's flag was being cleared) logged one swallowed console error
+  (`pentaryn-aoe | createChatMessage`, the bare-state write refused because the card was gone),
+  and a card deleted while the monster saves were rolling still rolled the rest and posted the
+  players' request card. Now `resolve()` stops quietly once the card is gone (a `resolve: card
+  deleted` trace), rolls no more saves, posts no request card, supersedes no older tray and applies
+  nothing; a queued resolution write to a card deleted in flight returns null without logging. A
+  write refused while the card still exists is still an error. Pinned by
+  `test/vanished-card.test.mjs`.
 - **A placed area shows in the dark, and its handle is named after the caster's token**
   (declared, AO-3-handle-dark): a handle had no light and no sight, so in darkness the caster
   could not see the area they had just placed, and the handle (the name dnd5e's chip shows) was

@@ -19,7 +19,7 @@
  */
 
 import {
-  MODULE, RECENT_MESSAGES, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
+  MODULE, RECENT_MESSAGES, aoeFlags, doesNotExist, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
   supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
@@ -51,6 +51,12 @@ function enqueue(messageId, task) {
   return next;
 }
 
+/**
+ * aoe-vanish-1: the card was deleted (a write to it was refused because it is gone, or it has left
+ * game.messages). That is the GM cancelling, not an error.
+ */
+const vanished = (messageId, err = null) => !game.messages.has(messageId) || doesNotExist(err);
+
 /** Run fn(resolution) → resolution for one message, one at a time, then write it back. */
 export function mutate(messageId, fn) {
   return enqueue(messageId, () => (async () => {
@@ -60,7 +66,11 @@ export function mutate(messageId, fn) {
     const out = (await fn(res, message)) ?? res;
     await message.update({ [`flags.${MODULE}.resolution`]: out });
     return out;
-  })().catch(err => { log.error("mutate", err); return null; }));
+  })().catch(err => {
+    if (vanished(messageId, err)) why("mutate", messageId, "card deleted");
+    else log.error("mutate", err);
+    return null;
+  }));
 }
 
 /** Messages with a write still queued on this client (debugging and tests). */
@@ -195,6 +205,7 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const usage = usageIdOf(message);
   // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
   const careful = (await context?.exposed.carefulFor?.(activity.actor, { usage, onSave, rows })) ?? null;
+  if (vanished(message.id)) return cancelled(message.id);
 
   const res = {
     activity: activity.uuid,
@@ -217,10 +228,13 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   // AC-6: queued like every other write, so a mutate already running on the old resolution
   // cannot land after this one and bring the old area's rows back. A failed write still throws.
   const failed = await enqueue(message.id, () => message.update({ [`flags.${MODULE}.resolution`]: res }).then(() => null, err => err));
+  if (failed && vanished(message.id, failed)) return cancelled(message.id);
   if (failed) throw failed;
+  if (vanished(message.id)) return cancelled(message.id);
   await supersedeOlder(message, res);
 
   await rollNpcSaves(message.id);
+  if (vanished(message.id)) return cancelled(message.id);
   if (setting("promptPlayers") && rows.some(r => r.kind === "manual" && r.apply && !r.save)) {
     await postRequest(message, activity, res);
   }
@@ -229,6 +243,12 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     if (ids.length) await applyRows(message.id, ids);
   }
   return aoeFlags(game.messages.get(message.id)).resolution;
+}
+
+/** aoe-vanish-1: the card was deleted mid-resolve — stop quietly, as if it had never been clicked. */
+function cancelled(messageId) {
+  why("resolve", messageId, "card deleted");
+  return null;
 }
 
 /**
@@ -276,6 +296,7 @@ export async function rollNpcSaves(messageId, { rowIds = null, force = false } =
   const scene = game.scenes.get(res.scene);
   const results = {};
   for (const row of res.rows) {
+    if (vanished(messageId)) break;   // aoe-vanish-1: the card was deleted; roll nothing more for it
     if (row.kind !== "auto" || row.applied || row.protected) continue;
     if (rowIds && !rowIds.includes(row.id)) continue;
     if (row.save && !force) continue;
