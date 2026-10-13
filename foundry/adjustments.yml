@@ -1006,8 +1006,8 @@ adjustments:
     packages: [core]
     modules: [pentaryn-pings]
     files: [foundry/module/pentaryn-pings/capture.mjs]
-    markers: ["handlePing", "__pentarynPatched"]
-    what: wraps ControlsLayer.prototype.handlePing through wrapMethod (marker __pentarynPatched) to record every ping drawn on this GM client; the original still runs with the same arguments
+    markers: ["handlePing", "__pentarynPingsPatched"]
+    what: wraps ControlsLayer.prototype.handlePing through wrapMethod (marker __pentarynPingsPatched) to record every ping drawn on this GM client; the original still runs with the same arguments. uninstall() undoes it through its own handle; with a foreign wrapper on top the undo fails and the record stays, so describe().patches still lists it and a hot re-import reuses that handle instead of wrapping twice
     why: Foundry keeps no ping history; handlePing is the only place a locally drawn ping is visible, and it is patched on the prototype because canvas layers are rebuilt on every scene change
     native_when: core keeps a ping history or fires a ping hook
     retire_class: guarded

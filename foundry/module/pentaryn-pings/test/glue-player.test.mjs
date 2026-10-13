@@ -26,7 +26,7 @@ test("player ready: no wrap, no userActivity listener, game.pentaryn.pings undef
   assert.equal(F.game.user.isGM, false);
   F.fire("ready");
   assert.equal(W.ControlsLayer.prototype.handlePing, W.original);
-  assert.equal(W.ControlsLayer.prototype.handlePing.__pentarynPatched, undefined);
+  assert.equal(W.ControlsLayer.prototype.handlePing.__pentarynPingsPatched, undefined);
   assert.deepEqual(W.socket, []);
   assert.equal(F.game.pentaryn?.pings, undefined);
   assert.equal(F.game.pentaryn, undefined, "the root is not even created");

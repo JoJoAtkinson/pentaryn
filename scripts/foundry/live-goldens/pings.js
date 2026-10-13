@@ -95,7 +95,7 @@ try {
   const layer = canvas.controls;
   out.golden.patch = {
     layerClass: layer.constructor.name,
-    patchedOnInstanceProto: !!layer.handlePing?.__pentarynPatched,
+    patchedOnInstanceProto: !!layer.handlePing?.__pentarynPingsPatched,
     ownInstanceProperty: Object.hasOwn(layer, "handlePing"),
     patchedOn: (() => { let p = layer, d = 0; while (p && !Object.hasOwn(p, "handlePing")) { p = Object.getPrototypeOf(p); d++; } return p ? `${p.constructor.name} (depth ${d})` : null; })(),
     surface: Object.keys(API ?? {}).sort(),

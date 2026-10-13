@@ -13,6 +13,31 @@
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 
+- [declared] Fix pings-ext-1: `uninstall()` undoes the `handlePing` wrap through its own kit handle
+  instead of `unwrapAll()`. With a foreign wrapper on top of ours the undo fails and the patch record
+  stays, so `describe().patches` still lists the live patch and a hot re-import reuses the existing
+  handle rather than wrapping a second time.
+- [declared] Fix pings-edge-1: with two GM tabs, a `clear()` in one tab is no longer undone by the
+  other tab's next flush, and neither tab overwrites the other's pings. The log is a kit
+  `serialStore`; each tab keeps only its pings since its last write and a flush appends them to the
+  log as stored then (core `mergePending`, which skips the other tab's copy of the same ping). The
+  `log` row has an onChange: an empty log (a clear from either tab) drops the unwritten pings.
+  Readers now always trail a new ping until its write (the SF3 "no lag before the first flush" and
+  "max+1 on a trim" cases are gone); a `clear()` with a flush due is one write, not two.
+- [declared] pings-rob-1 (fixed by the edge-1 design, now pinned): a hot re-import — a second `ready`
+  without `uninstall()` — keeps this tab's pings not yet written and their flush; they are merged
+  into the stored log instead of being dropped and the old log rewritten over them.
+- [declared] pings-async-1 (fixed by the edge-1 design, now pinned): every log write on one tab — a
+  flush and `clear()` — goes through the log's one `serialStore` queue (a Foundry `Semaphore(1)`), so
+  a write slower than FLUSH_MS never overlaps the next flush or a `clear()`, and with no Setting
+  document yet only one create happens.
+- [declared] Fix pings-edge-2: a failed log write is retried once, FLUSH_MS (250 ms) later, so the
+  readers no longer stay stale until the next ping; if the retry fails too, the pings are kept for
+  the next ping's write (one retry, never a loop). Each failure warns as before.
+- [declared] Fix pings-rob-2 (docs only): the README Pitfalls line says `recent(0)`, `recent(null)` and a
+  non-numeric string such as `recent("x")` return everything (a numeric string like `"2"` counts as 2),
+  pinned on core and the oracle; other non-numbers are not claimed (`true` counts as 1, `[2]` as 2).
+
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core
   `pings-core.mjs`, `settings.mjs`, `api-manifest.mjs`, the `capture.mjs` feature; the
   `handlePing` wrap goes through the kit's `wrapMethod`. Capture, dedupe, cap, flush timing,
