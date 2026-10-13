@@ -110,6 +110,8 @@ test("wave-3 lore-clean: the Known tab paints an HTML grant as clean text, secre
       return section;
     });
     assertClean(boxFor(root, "Where from"), "known");
+    // the fake DOM keeps a root's innerHTML as set, so ask the box: the raw source (secret included) is gone
+    assert.ok(!boxFor(root, "Where from").hasAttribute("data-enrich"), "no raw source left in a data-enrich attribute");
     const call = seen.find(c => c.html === HTML);
     assert.ok(call, "enrichHTML saw the raw authored HTML");
     assert.equal(call.opts.secrets, false, "a player surface never enriches with secrets");
