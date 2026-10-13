@@ -1153,6 +1153,30 @@ def test_pyb_e6_strict_gate_matches_the_full_detail_list_and_display_caps_it(tmp
     assert conformance._capped(["a", "b"], 2) == ["a", "b"]
 
 
+def test_py_blueprint_ext_6_rules_return_full_lists_and_hook_names_share_hook_reg(tmp_path, monkeypatch):
+    """py-blueprint-EXT-6: no rule truncates its own finding (C18's hook names, C34's keys, C36's
+    literals, C42's fixtures) — the one "… N more" cap is _capped, in to_markdown; and
+    registered_hook_names reads the same HOOK_REG as listeners(), not a second copy of it."""
+    hooks = "".join(f'Hooks.on("hook{i}", () => {i});\n' for i in range(9))
+    ui = "".join(f'el.textContent = "Hello there friend {i}";\n' for i in range(11))
+    fx = {f"test/fixtures/f{i}.json": "{}" for i in range(10)}
+    lang = {"lang/en.json": json.dumps({f"K{i}": {} for i in range(6)})}
+    d = _tiny(tmp_path, files={"one.mjs": hooks, "one-ui.mjs": ui, **fx, **lang})
+    res = {r["id"]: r for r in conformance.score_dir(d)["results"]}
+    assert all(f"hook{i}" in res["C18"]["detail"][0] for i in range(9)), res["C18"]
+    assert all(f"K{i}" in res["C34"]["detail"][0] for i in range(6)), res["C34"]
+    assert res["C36"]["detail"][0].count("one-ui.mjs:") == 11, res["C36"]
+    assert all(f"f{i}.json" in res["C42"]["detail"][0] for i in range(10)), res["C42"]
+    for rid in ("C18", "C34", "C36", "C42"):
+        assert "…" not in " ".join(res[rid]["detail"]), res[rid]
+
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    assert {n for _, n in conformance.registered_hook_names(m)} == {f"hook{i}" for i in range(9)}
+    monkeypatch.setattr(conformance, "HOOK_REG", re.compile(r"(?!)"))
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    assert conformance.registered_hook_names(m) == []
+
+
 def test_py_blueprint_rob_5_a_malformed_sibling_manifest_is_skipped_and_the_broken_module_fails_fast(tmp_path, capsys):
     """py-blueprint-ROB-5: one sibling module.json that is not JSON must not crash scoring every
     other module — C38 passes and names the folder it could not compare; scoring the broken module

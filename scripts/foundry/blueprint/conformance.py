@@ -303,12 +303,9 @@ LIFECYCLE_HOOKS = {"init", "i18nInit", "setup", "ready"}
 
 
 def registered_hook_names(m: Module) -> list[tuple[str, str]]:
-    """(file, hook name) for every literal Hooks.on/once or reg.on/once registration."""
-    out = []
-    for rel, src in m.files.items():
-        for mm in re.finditer(r"(?<![\w$])(?:Hooks|reg|ctx\.reg)\.(?:on|once)\(\s*\x01(\d+)\x01", src.code):
-            out.append((rel, src.strings[int(mm.group(1))].value))
-    return out
+    """(file, hook name) for every literal Hooks.on/once or reg.on/once registration — read off
+    listeners(), so HOOK_REG is the one registration regex (py-blueprint-EXT-6)."""
+    return [(ls.rel, ls.name) for ls in listeners(m)]
 
 
 def feature_files(m: Module) -> set[str]:
@@ -720,7 +717,7 @@ def c18(m):
         if not other:
             return na("no features: the module registers only lifecycle hooks (init/setup/ready) in its entry")
         return bad([f"no feature files (entry `import * as` targets exporting install), but it hooks "
-                    f"{', '.join(other[:6])}{' …' if len(other) > 6 else ''}"])
+                    f"{', '.join(other)}"])
     detail = []
     for rel in sorted(feats):
         names, _ = jsscan.exports_of(m.files[rel])
@@ -1042,7 +1039,7 @@ def c34(m):
     want = f"PENTARYN_{m.short.upper().replace('-', '_')}"
     keys = list(data)
     if keys != [want]:
-        return bad([f"top-level keys {keys[:4]}{'…' if len(keys) > 4 else ''}; want [{want!r}]"])
+        return bad([f"top-level keys {keys}; want [{want!r}]"])
     if not isinstance(data[want], dict):
         return bad(["root is not an object"])
     return ok()
@@ -1081,7 +1078,7 @@ def c36(m):
             if idx > 0 and ctx.search(src.code[max(0, idx - 40):idx]):
                 n += 1
                 where.append(f"{rel}:{s.line}")
-    return ok() if not n else ("warn", [f"{n} literal(s): {', '.join(where[:8])}{' …' if n > 8 else ''}"])
+    return ok() if not n else ("warn", [f"{n} literal(s): {', '.join(where)}"])
 
 
 def css_selectors(text: str) -> list[str]:
@@ -1207,7 +1204,7 @@ def c41(m):
 def c42(m):
     fx = sorted(p.relative_to(m.dir).as_posix() for p in (m.dir / "test" / "fixtures").rglob("*")
                 if p.is_file()) if (m.dir / "test" / "fixtures").is_dir() else []
-    return ("manual", [f"review: {', '.join(fx[:8])}"]) if fx else na("no test/fixtures")
+    return ("manual", [f"review: {', '.join(fx)}"]) if fx else na("no test/fixtures")
 
 
 @rule("C43", "fail", "test/run.mjs is the fixed body; self-running suites are listed in LEGACY")
