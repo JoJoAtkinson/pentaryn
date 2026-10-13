@@ -127,10 +127,7 @@ export async function gather(opts = {}) {
   const wantCrops = cropPlan.want;
   let images = [];
   if (wantCrops && Object.keys(manifest.encounters).length) {
-    const max = setting("cropMaxPerCall", DEFAULTS.cropMaxPerCall);
-    const ids = Object.keys(manifest.encounters).sort(idCompare).slice(0, max);
-    images = await renderCrops(manifest, ids, { longSide: setting("cropLongSidePx", DEFAULTS.cropLongSidePx) });
-    if (cropsAs === "files") images = await cropsToFiles(manifest.call, images);
+    images = await cropImages(manifest, { ids: Object.keys(manifest.encounters).sort(idCompare), cropsAs });
   }
   const tEnd = performance.now();
   const ms = Math.round(tEnd - t0);
@@ -189,9 +186,18 @@ export async function crops({ call, encounters, cropsAs = "files" } = {}) {
   if (!manifest) throw codedError("CALL_UNKNOWN", String(call));
   const ids = (encounters?.length ? encounters : Object.keys(manifest.encounters)).filter(e => manifest.encounters[e]);
   if (!ids.length) throw codedError("BAD_SPEC", "no such encounter in this call");
+  return { crops: await cropImages(manifest, { ids, cropsAs }) };
+}
+
+/**
+ * The crops for `ids` (the first cropMaxPerCall of them, in the order given) at cropLongSidePx,
+ * uploaded as files unless `cropsAs` is "base64" — the one crop path gather() and crops() share
+ * (prompts-core-M7).
+ */
+async function cropImages(manifest, { ids, cropsAs }) {
   const max = setting("cropMaxPerCall", DEFAULTS.cropMaxPerCall);
   const images = await renderCrops(manifest, ids.slice(0, max), { longSide: setting("cropLongSidePx", DEFAULTS.cropLongSidePx) });
-  return { crops: cropsAs === "files" ? await cropsToFiles(call, images) : images };
+  return cropsAs === "files" ? await cropsToFiles(manifest.call, images) : images;
 }
 
 /** `list()` → `{scenes: [{id, name, nav, prompts, empty}]}` for scenes holding prompt markers. */

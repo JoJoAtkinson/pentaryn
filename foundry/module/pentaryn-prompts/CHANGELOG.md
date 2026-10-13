@@ -97,6 +97,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   wall list and `makeRel` call a core-only `asSegment` in `core/sight.mjs` (not on the
   geometry-core barrel) instead of three copies of the test. `doorLines`' own door test stays
   loose. No behaviour change.
+- **[declared] One crop path** (prompts-core-M7): `gather` and `crops` share a private
+  `cropImages` in `gather.mjs` — the same `cropMaxPerCall` / `cropLongSidePx` reads and the same
+  upload under `pentaryn-prompts-crops/<call>/`. `gather` still crops its encounters in id order,
+  `crops` the ones asked for in the order asked. No behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
