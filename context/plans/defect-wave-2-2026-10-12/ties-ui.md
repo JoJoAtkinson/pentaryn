@@ -163,3 +163,82 @@ Use only ZZ-prefixed scratch documents: `ZZ Tie PC`, `ZZ Tie NPC`, `ZZ Tie Ghost
 3. Fix it: open ZZ Tie NPC's sheet on the Attributes tab. In eval, set `flags.pentaryn-ties.attributes` to `["zzward"]` (the ward without its parent) so the broken-ancestry banner shows. Then, in one eval, click the sheet's `[data-action="attr-repair"]` button and call `game.modules.get("pentaryn-ties").api.attributes.link(npc, "ZZ Other")` in the same tick. Expect: both writes land, the flag carries `zzward`, every ancestor of it and the linked entry, and the banner is gone.
 4. Concurrent ensure: in eval, run `Promise.all([A.ensure("ZZ Tide"), A.ensure("ZZ Tide")])`. Expect one `existed: false`, one `existed: true` and a single ZZ Tide entry. While it runs, change a tie's word and then its strength on ZZ Tie PC's Ties tab, and expect both to stick.
 5. Delete ZZ Tide, ZZ Other, ZZ Ward, ZZ City and the ZZ actors, and unassign ZZ Tie PC.
+
+## Live check result (FIX-3, 2026-10-13 ~07:50Z)
+
+This ran on main `915e1f54` in the one GM tab. The served `pentaryn-ties` files are sha-identical to
+the repo. The tab was loaded at 07:13Z, after the deploy, and it already holds the FIX-3 code
+(`isWriteFailed` is exported, and `ties.css` has `pt-filter-chip`), so no reload was needed. The
+scratch documents were named `ZZ ties-ui …` in place of `ZZ Tie …`: PC, NPC, Other, Third, Ghost,
+the scene `ZZ ties-ui Scene` (viewed only, never activated) and the registry entries City, Ward,
+Other and Tide. All of them were deleted afterwards. The GM's assigned character is back to none,
+the pinned-cards memo is back to `[]`, and the five study/inspect chat cards the run made were
+deleted. The tab was hidden, so canvas frames ran only while a screenshot was being taken. For that
+reason, wire and badge geometry was read after a rendered frame.
+
+- **E2: pass.** Three Known entries were hidden. With the sheet closed, pressing 5 on the NPC opened
+  Known with only that row un-hidden and expanded, and its notes focused. The NPC was then re-hidden
+  and the open sheet repainted, so the row was gone. Pressing 5 again had the same result. Other and
+  Third stayed hidden both times.
+- **M2: pass, with one caveat.** The dnd5e sheet will not go below 800px, so the Ties container was
+  540px wide and its stance chips kept their border and label. With the container held at 460px, the
+  chip had `border: none`, `padding: 0` and a hidden label, and its dot stayed. The sheet's filter
+  buttons are `pt-filter-chip`. In Attribute Review the All, Needs review and Selected chips (and the
+  Global and Personal tabs) are pills: `border-radius: 999px` with a 1px border, which a screenshot
+  confirms.
+- **ACC-3: pass.** The word was changed to `partner`, and 120 ms later the stance was changed to Wary.
+  After a close and reopen, both had persisted.
+- **EXT-3: pass.** Notes were typed and the field was blurred 200 ms after the last input. There was
+  exactly 1 `updateActor` ties write, and after a reopen the last words (`…ZZLAST`) were saved.
+- **perf-5 / ACC-5: pass.** With Review open and its window scrolled to 120, three
+  `attributes.update` calls gave 1 `render()` call and 1 render hook. There were 31 rows before and
+  after, and the scroll position stayed at 120. After close, `live.watching` is false and a further
+  update causes 0 renders.
+- **E5: pass. The reload was simulated**, because reloading the tab was not allowed. A card dragged
+  to the corner saved `{ x: 0, y: 0 }`. Then `popups.teardown()` and `restorePinned()` ran, which is
+  the reload's restore path. The card came back at `left: 0px; top: 0px`. `pinnedCoord(0)` is 0, and
+  `pinnedCoord(null)` is 20.
+- **M11: pass.** With no assigned character, the NPC's Attributes tab drew no Mark as learned button,
+  even with the PC token selected. After the PC was assigned, the button appeared. A click wrote
+  `attr:zztiesuiward:zzwardlore` into the PC's `granted` flag, and the toast read "ZZ ties-ui PC has
+  learned “ZZ ties-ui ward lore”."
+- **rob-4: pass.** The Ghost (a character) rolled the NPC's lore row, and then the Ghost was deleted.
+  The belief row shows `(deleted)` and has only a "Let them roll again" button, with no Deliver. That
+  button's confirmation reads "That character was deleted. Clear what they believed about ZZ ties-ui
+  NPC?". Yes cleared `flags.pentaryn-ties.beliefs` entirely.
+- **E4: pass, but the step's wording is wrong.** Pressing 9 twice quickly on the NPC rendered 1
+  card, and the second press closed it. At most 1 card was ever open, and 0 were open afterwards.
+  That is the declared behaviour ("a second press on the same face closes it"). Step 1's expectation
+  of "exactly one card is open" after two presses does not match it. A single press opened 1 card,
+  and the next press closed it.
+- **rob-7: pass.** The GM-side handler is an ES-module binding, so an eval cannot stub it. In its
+  place, the inspector's `getFlag` was made to throw on that one ZZ instance. The eye was disabled
+  during the click and enabled after it. The toast read "That didn't go through — see the
+  console.", and the console error was `pentaryn-ties | inspect Error: zz inspect stub`. The stub was
+  then removed.
+- **EXT-9: pass.** After 8 was pressed on the PC, the transient cards moved with the pan. The pinned
+  card's wire ran from the corner card to the Other token before and after the pan (its end moved
+  with the token from (762, 339) to (988, 490)). The worn badge appeared on the marked token and
+  followed it.
+- **EXT-16: pass.** Two flask clicks made 1 `InspectPreview`, the same instance both times. The
+  second click raised it from z 116 to 118, above a sheet at 117.
+- **ACC-4: pass.** With `["zztiesuiward"]` the banner showed. Repair caused 1 `updateActor`, the
+  button was disabled during it, and the flag became `[ward, city]` with no banner.
+- **perf-10: pass.** Moving the unmarked Other left the badge at (583, 317). Moving the marked NPC
+  moved the badge to (683, 517). A token created with the worn flag already set got its own badge at
+  (383, 717).
+- **FIX-3 rob-7 x R8: pass.** With `pc.update` rejecting, Mark as learned gave the error toast "That
+  didn't go through — see the console." and no learned toast. The console showed `pentaryn-ties |
+  mark as learned failed` and then `pentaryn-ties | attr-learned Error: writeFailed`, and the button
+  came back on. After `delete pc.update`, the learned toast named ZZ ties-ui PC (the M11 result
+  above).
+- **FIX-3 ACC-4 x U3: pass.** A Fix it click and `attributes.link(npc, "ZZ ties-ui Other")` ran in the
+  same tick. The flag became `["zztiesuiward","zztiesuicity","zztiesuiother"]`, `broken()` returned
+  `[]` and the banner was gone.
+- **FIX-3 EC-2 x ACC-3: pass.** `Promise.all` of two `ensure("ZZ ties-ui Tide")` calls returned one
+  `existed: false` and one `existed: true`, with a single Tide entry. During them, a tie's word was
+  changed to `nemesis` and its strength to 5 (a pip click), and both stuck.
+
+One thing outside this group: a GM belief row on the Ties tab prints authored HTML as text (it
+shows `<p>…</p>`), because `authoring-ui.mjs` escapes `row.text`. This is GM-only and existed
+before wave 2; it was not fixed here.
