@@ -3,7 +3,8 @@
  * line byte for byte (ties-15). The three windows that escape with `foundry.utils.escapeHTML` (look,
  * preview, review-ui) keep it: it writes a different entity for `'`, and their markup is pinned.
  *
- * Pure: no Foundry global. NOT on the known-core.mjs barrel — import it by path.
+ * Pure: no Foundry global at import time — the skill helpers read `CONFIG` and `game.i18n` only when
+ * called. NOT on the known-core.mjs barrel — import it by path.
  */
 
 const ENTITY = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -20,6 +21,38 @@ export const FALLBACK_ART = "icons/svg/mystery-man.svg";
  * so a rebound key is never misnamed (ties-ui-M14).
  */
 export const keyLabel = code => String(code ?? "").replace(/^Digit/, "").replace(/^Key/, "") || "?";
+
+/* ── skills (ties-ui-EXT-8) ──────────────────────────────────────────────── */
+/*
+ * The world's skill list, read off CONFIG at call time rather than hardcoded, so a GM's homebrew skill
+ * is authorable. Four windows each built their own dropdown and label and disagreed on order,
+ * localization and what to do with a skill the world no longer defines; these are the one rule.
+ */
+
+const worldSkills = () => globalThis.CONFIG?.DND5E?.skills ?? {};
+const has = (skills, key) => Object.prototype.hasOwnProperty.call(skills, key);
+
+/** A skill's localized label, or the bare key when this world does not define it. */
+export function skillLabelOf(key) {
+  const skills = worldSkills();
+  const label = has(skills, key) ? skills[key]?.label : null;
+  return label ? (globalThis.game?.i18n?.localize?.(label) ?? label) : String(key ?? "");
+}
+
+/**
+ * `<option>`s for a skill `<select>`: CONFIG.DND5E.skills in config order, localized. A `selected`
+ * key this world lacks is kept as its own first option ("hmb (not in this world)") rather than
+ * dropped — a dropped value falls to the first option and the next save retargets the check.
+ */
+export function skillOptionsHTML(selected) {
+  const skills = worldSkills();
+  const entries = Object.keys(skills).map(k => [k, skillLabelOf(k)]);
+  if (selected && !has(skills, selected)) {
+    const missing = globalThis.game?.i18n?.format?.("PENTARYN_TIES.lore.skillMissing", { skill: selected }) ?? selected;
+    entries.unshift([selected, missing]);
+  }
+  return entries.map(([k, label]) => `<option value="${esc(k)}"${k === selected ? " selected" : ""}>${esc(label)}</option>`).join("");
+}
 
 /* ── row fragments (ties-18) ─────────────────────────────────────────────── */
 /*

@@ -40,7 +40,7 @@ import {
   LORE_DC_MIN,
   LORE_DC_MAX
 } from "./known-core.mjs";
-import { esc, bindRowToggle, makeOpenState } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, skillOptionsHTML, skillLabelOf } from "./core/html.mjs";
 
 /** Which rows are expanded, keyed by the mount's own id — cosmetic, never persisted. */
 const open = makeOpenState();
@@ -53,25 +53,6 @@ export function forgetLoreKey(key) {
 
 /** Test-only: how many mounts the open-row map holds (ties-31). */
 export const _sizes = () => ({ open: open.size });
-
-/**
- * The skill list, read off the world rather than hardcoded.
- *
- * A GM's own homebrew skill has to be authorable, and the pure layer is not allowed to know
- * what dnd5e ships — so the list is built here, at the only point that legitimately has
- * `CONFIG`, and the row schema only shape-checks the value it gets back.
- */
-function skillOptions(selected) {
-  const skills = CONFIG.DND5E?.skills ?? {};
-  const entries = Object.entries(skills).map(([id, def]) => [id, def?.label ?? id]);
-  entries.sort((a, b) => a[1].localeCompare(b[1]));
-  // a row authored against a skill this world no longer defines keeps its value rather than
-  // silently retargeting to whatever sorts first
-  if (selected && !skills[selected]) entries.unshift([selected, _loc("PENTARYN_TIES.lore.skillMissing", { skill: selected })]);
-  return entries
-    .map(([id, label]) => `<option value="${esc(id)}"${id === selected ? " selected" : ""}>${esc(label)}</option>`)
-    .join("");
-}
 
 function holdOptions(hold) {
   const v = hold === true ? "on" : hold === false ? "off" : "";
@@ -87,7 +68,7 @@ function holdOptions(hold) {
 /** The collapsed line: what the row costs. Nothing nags for a miss — a failure hands over nothing. */
 function summary(row) {
   const label = row.label.trim() || _loc("PENTARYN_TIES.lore.untitled");
-  const skill = CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill;
+  const skill = skillLabelOf(row.skill);
   return `<div class="pt-summary pt-lore-summary" role="button" tabindex="0"
        aria-label="${esc(_loc("PENTARYN_TIES.lore.rowAria", { label, skill, dc: row.dc }))}">
     <span class="pt-lore-dc" data-tooltip="${esc(_loc("PENTARYN_TIES.lore.dcTip", { skill, dc: row.dc }))}">${row.dc}</span>
@@ -107,7 +88,7 @@ function detail(row) {
     <div class="pt-fields pt-lore-price">
       <label class="pt-field">
         <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.skillLabel"))}</span>
-        <select data-field="skill">${skillOptions(row.skill)}</select>
+        <select data-field="skill">${skillOptionsHTML(row.skill)}</select>
       </label>
       <label class="pt-field pt-field-dc">
         <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.lore.dcLabel"))}</span>

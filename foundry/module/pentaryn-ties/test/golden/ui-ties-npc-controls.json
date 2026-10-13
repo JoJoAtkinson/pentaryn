@@ -829,7 +829,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 12,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "<p>He owes the guild.</p>",
                 "miss": "<p>Shifty.</p>",
                 "hold": null
@@ -844,7 +844,7 @@
       "console": [],
       "after": {
         "parent": "pt-field",
-        "value": "inv"
+        "value": "rel"
       }
     },
     {
@@ -865,7 +865,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "<p>He owes the guild.</p>",
                 "miss": "<p>Shifty.</p>",
                 "hold": null
@@ -902,7 +902,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "<p>He owes the guild.</p>",
                 "miss": "<p>Shifty.</p>",
                 "hold": true
@@ -938,7 +938,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "zz typed text",
                 "miss": "<p>Shifty.</p>",
                 "hold": true
@@ -974,7 +974,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "zz typed text",
                 "miss": "zz typed miss",
                 "hold": true

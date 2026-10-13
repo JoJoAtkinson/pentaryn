@@ -75,7 +75,7 @@ import {
   ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
-import { FALLBACK_ART } from "./core/html.mjs";
+import { FALLBACK_ART, skillLabelOf } from "./core/html.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -107,7 +107,6 @@ const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 const pct = p => `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%`;
 /** d20 + mod ≥ dc. Ability checks have no automatic success or failure on a 20 or a 1. */
 const chance = (mod, dc) => Math.max(0, Math.min(1, (21 - (dc - mod)) / 20));
-const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
 
 const PROF = { none: 0, prof: 1, expert: 2 };
 
@@ -387,7 +386,7 @@ export class InspectPreview extends ApplicationV2 {
           ? `<span class="pv-dice">${_loc("PENTARYN_TIES.preview.noRoll", { why: r.bypass ? _loc("PENTARYN_TIES.preview.bypass") : _loc("PENTARYN_TIES.preview.autoScale") })}</span>`
           : `${dice(r)}${r.adv ? ` <span class="pv-dice">${_loc("PENTARYN_TIES.preview.advantage")}</span>` : ""}`;
         html += `<div class="pv-row">
-          <div class="pv-head"><img src="${esc(r.entry.icon)}"><b>${esc(r.entry.title)}</b> <span class="pv-skill">${esc(skillLabel(r.skill))}</span>
+          <div class="pv-head"><img src="${esc(r.entry.icon)}"><b>${esc(r.entry.title)}</b> <span class="pv-skill">${esc(skillLabelOf(r.skill))}</span>
           ${how} ${badge(r)}
           <span class="pv-odds" data-tooltip="${_loc("PENTARYN_TIES.preview.oddsTip")}">${pct(r.p)} · ${pct(r.cumulative)}</span></div>
           ${r.hold ? `<p class="pv-note">${_loc("PENTARYN_TIES.preview.held")}</p>` : ""}
@@ -417,7 +416,7 @@ export class InspectPreview extends ApplicationV2 {
     else if (k.auto) html += `${k.spent ? `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>` : ""}<p>${_loc("PENTARYN_TIES.preview.common", { name: esc(k.actor.name) })}</p>${said(k.text, true)}`;
     else {
       if (k.spent) html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>`;
-      html += `<div class="pv-row"><div class="pv-head"><img src="${esc(k.actor.img)}"><b>${esc(k.actor.name)}</b> <span class="pv-skill">${esc(skillLabel(k.skill))}</span>
+      html += `<div class="pv-row"><div class="pv-head"><img src="${esc(k.actor.img)}"><b>${esc(k.actor.name)}</b> <span class="pv-skill">${esc(skillLabelOf(k.skill))}</span>
         <span class="pv-dice">${k.die} ${k.mod >= 0 ? "+" : "−"} ${Math.abs(k.mod)} = <b>${k.total}</b></span>
         <span class="${k.tier >= 15 ? "pv-pass" : "pv-fail"}">${_loc("PENTARYN_TIES.preview.tier", { tier: k.tier })}${
           // below 15 is a failure: nothing at all, unless the GM authored rung 0 (the one lie)
@@ -426,7 +425,7 @@ export class InspectPreview extends ApplicationV2 {
         <details ${k.tier >= 15 ? "" : "open"}><summary>${_loc("PENTARYN_TIES.preview.whatTold")}</summary>${said(k.text, k.tier >= 15)}</details></div>`;
     }
     if (this.missingSkills?.size)
-      html = `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.missingSkills", { skills: [...this.missingSkills].map(x => esc(skillLabel(x))).join(", ") })}</p>` + html;
+      html = `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.missingSkills", { skills: [...this.missingSkills].map(x => esc(skillLabelOf(x))).join(", ") })}</p>` + html;
     html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.notModelled")}</p>`;
     return html;
   }
@@ -792,7 +791,7 @@ export class InspectPreview extends ApplicationV2 {
 
   loreRow(r, locked, badge, dice, said) {
     return `<div class="pv-row ${locked ? "pv-dim" : ""}">
-      <div class="pv-head"><b>${esc(r.row.label)}</b> <span class="pv-skill">${esc(skillLabel(r.row.skill))}</span>
+      <div class="pv-head"><b>${esc(r.row.label)}</b> <span class="pv-skill">${esc(skillLabelOf(r.row.skill))}</span>
       ${dice(r)} ${badge(r)} <span class="pv-odds">${pct(r.p)}</span></div>${said(r.text, r.pass)}</div>`;
   }
 

@@ -46,6 +46,7 @@ import {
 } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
+import { skillOptionsHTML, skillLabelOf } from "./core/html.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
 import {
   reviewState,
@@ -92,7 +93,6 @@ const HOLD_LABEL = Object.freeze({
 const { ApplicationV2 } = foundry.applications.api;
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
-const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
 const CARRIERS_SHOWN = 8;
 const SETTING_KEY = `${MODULE}.${REGISTRY_SETTING}`;
 
@@ -395,11 +395,7 @@ export class AttributeReview extends ApplicationV2 {
   }
 
   skillSelect(name, value, extra = "") {
-    const skills = CONFIG.DND5E?.skills ?? {};
-    const keys = Object.keys(skills);
-    if (value && !keys.includes(value)) keys.unshift(value);
-    const opts = keys.map(k => `<option value="${esc(k)}" ${k === value ? "selected" : ""}>${esc(skillLabel(k))}</option>`).join("");
-    return `<select ${name ? `data-field="${name}"` : ""} ${extra}>${opts}</select>`;
+    return `<select ${name ? `data-field="${name}"` : ""} ${extra}>${skillOptionsHTML(value)}</select>`;
   }
 
   detail(e, lore, who, kids, parent) {
@@ -413,7 +409,7 @@ export class AttributeReview extends ApplicationV2 {
     const shown = v => (v === null || v === undefined || v === "" ? "—" : typeof v === "string" ? v : JSON.stringify(v));
     const was = (k, cur, label = "") =>
       snap && k in snap && !same(snap[k], cur)
-        ? `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b>${label ? ` ${esc(label)}:` : ""} ${esc(k === "skill" ? skillLabel(snap[k]) : shown(snap[k]))}</p>`
+        ? `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b>${label ? ` ${esc(label)}:` : ""} ${esc(k === "skill" ? skillLabelOf(snap[k]) : shown(snap[k]))}</p>`
         : "";
     const fields = `<div class="pt-review-fields">
       ${field(_loc("PENTARYN_TIES.review.field.title"), `<input type="text" data-field="title" value="${esc(e.title)}">`)}
@@ -454,7 +450,7 @@ export class AttributeReview extends ApplicationV2 {
     const loreWas = (r, k) => {
       const old = snapLore?.get(r.id);
       if (!old || same(old[k], r[k])) return "";
-      return `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b> ${esc(k === "skill" ? skillLabel(old[k]) : shown(old[k]))}</p>`;
+      return `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b> ${esc(k === "skill" ? skillLabelOf(old[k]) : shown(old[k]))}</p>`;
     };
     const removed = snapLore ? [...snapLore.values()].filter(o => !lore.some(r => r.id === o.id)) : [];
 

@@ -178,6 +178,13 @@ the review panel's entry and lore-row DCs — takes its min, max and default fro
 LORE_DC_MAX / LORE_DC_DEFAULT` (core/lore.mjs, via known-core) instead of a literal 1 / 40 / 15, as
 the lore-row editor already did. ties-ui-EXT-7.
 
+Changed (declared): every **skill** dropdown — the lore-row editor, the Attributes tab's identify
+check, the review panel's entry and lore rows — lists the world's skills in dnd5e's own order with
+localized names (the lore editor used to sort them A–Z), and a skill the world no longer defines stays
+selected as "<key> (not in this world)" instead of the identify check silently switching to the first
+skill on its next save. Skill names in the Inspect preview and the review panel's "was" lines are
+localized too. One `skillOptionsHTML` / `skillLabelOf` in `core/html.mjs`. ties-ui-EXT-8.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

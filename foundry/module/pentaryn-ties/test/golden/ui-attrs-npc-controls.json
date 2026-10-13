@@ -409,7 +409,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -531,7 +531,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -635,7 +635,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -836,7 +836,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "inv",
+                  "skill": "ins",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -904,7 +904,7 @@
       "console": [],
       "after": {
         "parent": "pt-field",
-        "value": "inv"
+        "value": "ins"
       }
     },
     {
@@ -957,7 +957,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "inv",
+                  "skill": "ins",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": false

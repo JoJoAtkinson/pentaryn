@@ -2477,7 +2477,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 11,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "<p>Three rings.</p>",
                   "miss": "",
                   "hold": null
@@ -2545,7 +2545,7 @@
       "console": [],
       "after": {
         "parent": "pt-field",
-        "value": "ins"
+        "value": "arc"
       }
     },
     {
@@ -2579,7 +2579,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "<p>Three rings.</p>",
                   "miss": "",
                   "hold": null
@@ -2682,7 +2682,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "<p>Three rings.</p>",
                   "miss": "",
                   "hold": true
@@ -2784,7 +2784,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "",
                   "hold": true
@@ -2886,7 +2886,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true

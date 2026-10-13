@@ -56,7 +56,7 @@ import {
   LORE_DC_MAX,
   LORE_DC_DEFAULT
 } from "./known-core.mjs";
-import { esc, bindRowToggle, makeOpenState, guardClick } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, guardClick, skillOptionsHTML, skillLabelOf } from "./core/html.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -297,11 +297,9 @@ function sourceBlock(row) {
  * is blank: empty is a legitimate choice.
  */
 function identifyBlock(row) {
-  const skills = Object.entries(CONFIG.DND5E?.skills ?? {});
-  const opt = skills.map(([k, v]) => `<option value="${k}"${k === row.skill ? " selected" : ""}>${esc(game.i18n.localize(v.label ?? k))}</option>`).join("");
   return `<div class="pt-identify">
       <div class="pt-identify-head"><i class="fa-solid fa-eye" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.attributes.identifyHeading"))}
-        <select data-attr-field="skill" data-id="${esc(row.id)}">${opt}</select>
+        <select data-attr-field="skill" data-id="${esc(row.id)}">${skillOptionsHTML(row.skill)}</select>
         <span>${esc(_loc("PENTARYN_TIES.attributes.identifyDC"))}</span>
         <input type="number" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" data-attr-field="dc" data-id="${esc(row.id)}" value="${esc(row.dc ?? LORE_DC_DEFAULT)}">
       </div>
@@ -334,14 +332,10 @@ export function personalCluesHTML(entry, carriersOf = null) {
         log.swallow("attributes: carrier ids unreadable", () => attributeIdsOf(a, kindActorOf).includes(entry.id), false)
       );
   if (!carriers.length) return "";
-  const skill = k => {
-    const label = CONFIG.DND5E?.skills?.[k]?.label;
-    return label ? game.i18n.localize(label) : k;
-  };
   const lines = carriers.map(a => {
     const rows = log.swallow("attributes: carrier lore unreadable", () => rollableLore(a.getFlag(MODULE, LORE_FLAG)), []);
     const list = rows.length
-      ? rows.map(r => `${r.label} (${skill(r.skill)} ${r.dc})`).join(", ")
+      ? rows.map(r => `${r.label} (${skillLabelOf(r.skill)} ${r.dc})`).join(", ")
       : _loc("PENTARYN_TIES.attributes.cluesNone");
     return `<p class="pt-clues" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.cluesTip"))}">
       <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
