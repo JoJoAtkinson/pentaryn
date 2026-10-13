@@ -161,11 +161,12 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     return app;
   }
 
-  /** The open box already editing this marker, brought forward and handed the ticket; else null. */
+  /** The open box already editing this marker, brought forward (once rendered) and handed the ticket; else null. */
   static #reuse(tokenDoc, ticket) {
     const cur = PromptDialog.current;
     if (!cur || cur.#closing || !cur.edits(tokenDoc)) return null;
-    cur.bringToFront();
+    // not rendered yet (a second open in the same tick): core's bringToFront would read a missing element; its first render puts it on top
+    if (cur.rendered) cur.bringToFront();
     cur.#ticket ??= ticket;
     if (cur.#ticket !== ticket) cancelTyping(ticket);
     if (cur.rendered) cur.#focus();
