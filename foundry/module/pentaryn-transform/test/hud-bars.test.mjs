@@ -614,9 +614,23 @@ test("[declared] FIX-3 live item 6 (EC-4): a linked druid's form whose token hol
   const bonus = panels[1];
   assert.equal(bonus.isActionUsed, true, "the HUD Wild Shape's Bonus Action shows used");
   assert.ok(bonus.actionUse >= 2, "pips settled after the count changed");
+  // pentaryn-combat's swing-pip override sits on the Action panel instance before this listener runs
+  // (its getter falls back to Argon's): the seat wraps it, and a re-render does not wrap twice.
+  const action = argonPips(A.panel("DND5E.Action", [slot()]));
+  Object.setPrototypeOf(action, { get maxActions() { return this.actor?.inCombat ? 1 : null; } });
+  let swings = null;
+  const argonMax = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(action), "maxActions");
+  Object.defineProperty(action, "maxActions", { configurable: true, get() { return swings ?? argonMax.get.call(this); } });
+  fire(action, wolf);
+  fire(action, wolf);
+  assert.equal(action.maxActions, 1, "combat's own-instance override no longer hides the seat");
+  swings = 3;
+  assert.equal(action.maxActions, 3, "combat's swing pips still count");
+  swings = null;
   // Combat over: back to Argon's own answer.
   F.game.combat = null;
   assert.deepEqual(panels.map(p => p.maxActions), [null, null, null, null]);
+  assert.equal(action.maxActions, null);
   // Not a form, or another panel (Legendary): untouched.
   const plain = argonPips(A.panel("DND5E.LegendaryAction.Label", [slot()]));
   fire(plain, wolf);

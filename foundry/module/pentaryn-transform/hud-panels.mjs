@@ -191,16 +191,16 @@ function seated(actor) {
   return !!game.combat?.combatants?.some?.(c => c?.token?.actorId === actor.id);
 }
 function seatFormPips(panel, actor) {
-  if (!PIP_PANELS.has(panel?.label) || !actor?.isPolymorphed || actor.isToken || Object.hasOwn(panel, "maxActions")) return;
-  let argon = null;
-  for (let o = Object.getPrototypeOf(panel); o && !argon; o = Object.getPrototypeOf(o)) {
-    argon = Object.getOwnPropertyDescriptor(o, "maxActions") ?? null;
-  }
-  const own = () => (argon?.get ? argon.get.call(panel) : (argon?.value ?? null));
-  Object.defineProperty(panel, "maxActions", {
-    configurable: true,
-    get() { return own() ?? (seated(panel.actor ?? actor) ? 1 : null); }
-  });
+  if (!PIP_PANELS.has(panel?.label) || !actor?.isPolymorphed || actor.isToken) return;
+  // The getter in force: pentaryn-combat's swing-pip override on the instance (its listener runs
+  // first, and again on every render), else Argon's own on the class. Ours is wrapped round it once.
+  let d = null;
+  for (let o = panel; o && !d; o = Object.getPrototypeOf(o)) d = Object.getOwnPropertyDescriptor(o, "maxActions") ?? null;
+  if (d?.get?.pentarynSeat) return;
+  const own = () => (d?.get ? d.get.call(panel) : (d?.value ?? null));
+  const get = function () { return own() ?? (seated(panel.actor ?? actor) ? 1 : null); };
+  get.pentarynSeat = true;
+  Object.defineProperty(panel, "maxActions", { configurable: true, get });
   // Argon drew the pips before this hook; draw them again now the count is known.
   if (seated(actor)) settlePips(panel);
 }
