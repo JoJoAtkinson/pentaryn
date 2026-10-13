@@ -2,6 +2,10 @@
 
 ## Unreleased — 2026-10-12 (addon blueprint, Stage 5)
 
+- [declared] `api.refresh()` is gated by `installed` (defect wave 3): after `uninstall()` it is a
+  no-op that returns `null` (the system arrow) and writes nothing to `#board`, like the wrapped
+  `onChange`s, the preview listeners, the observer and the setting's `onChange`. Before, it
+  re-applied the active tool's glyph to the board `uninstall()` had just cleared.
 - The build tool and the icon sources leave the module (guide steps 7–8; C05, C13, C24, C25):
   `tools/build.mjs` → `scripts/foundry/cursors/build.mjs` (gains `--check-sources`),
   `assets/src/` (with `CREDITS.md` and every credited `alt-*`) → `scripts/foundry/cursors/src/`,

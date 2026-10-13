@@ -129,3 +129,12 @@ test("uninstall(): clears the board and drops every registered hook; nothing lef
   assert.equal(F.events.setCursorCalls.length, setCursors, "no resync after uninstall");
   el.style.cursor = "var(--cursor-default)";
 });
+
+test("[declared] refresh() after uninstall() is a no-op: returns null and leaves #board clear (wave3 cursors-refresh-gate)", () => {
+  // State from the uninstall test above: uninstalled, the target tool still active.
+  setTool("tokens", "target");
+  assert.equal(api.refresh(), null, "refresh() answers the system arrow while uninstalled");
+  assert.equal(api.current(), null);
+  assert.deepEqual(el.props(), {}, "no cursor variable is written to #board");
+  assert.equal(el.dataset.pentarynCursor, undefined);
+});
