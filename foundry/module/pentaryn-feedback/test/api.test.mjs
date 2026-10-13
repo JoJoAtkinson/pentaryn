@@ -2,9 +2,10 @@
 // shape, the relay and GM-only query contracts, and list/get/resolve against an in-memory store.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { maxDepth, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { IDS, WORLD, installClient, memoryStore, queuedReport, settle } from "./fixtures/world.mjs";
-import { CATEGORY_KEYS, FLAG_SCOPE, MODULE, QUEUE_KEY, STATUSES, STORE_DIR, normaliseReport } from "../feedback-core.mjs";
+import { CATEGORY_KEYS, FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, STATUSES, STORE_DIR, normaliseReport } from "../feedback-core.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { SETTINGS } from "../settings.mjs";
 import { buildApi, surfaceOf } from "../lib/api.mjs";
@@ -68,6 +69,15 @@ test("manifest strings match core tables (categories, statuses, report file, que
   const queue = `flags.${FLAG_SCOPE}.${QUEUE_KEY}`;
   assert.deepEqual(MANIFEST.flags.writes, [queue]);
   for (const s of strings.filter(s => s.startsWith("flags."))) assert.equal(s, queue);
+});
+
+test("manifest derives those strings from core, never repeats them as literals (feedback-EXT-1-followup)", () => {
+  const src = readFileSync(new URL("../api-manifest.mjs", import.meta.url), "utf8");
+  const inUnion = k => [`'${k}'|`, `|'${k}'`];
+  for (const literal of [`Data/${STORE_DIR}/`, `flags.${FLAG_SCOPE}.${QUEUE_KEY}`, ...CATEGORY_KEYS.flatMap(inUnion),
+    ...STATUSES.flatMap(inUnion)]) {
+    assert.ok(!src.includes(literal), `api-manifest.mjs spells ${literal} out; build it from feedback-core.mjs`);
+  }
 });
 
 test("describe() equals golden/describe.json (version, kit, published and patch routes excluded)", () => {
@@ -249,6 +259,79 @@ test("list: oldest first, status filter, limit, count; a player gets NOT_GM", as
   F.become({ userId: gm.id });
 });
 
+// feedback-EC-3: readAll promised "unreadable files skipped", but one corrupt file (res.json()
+// rejects), a GET answering 500, or an array-valued .json made list() reject (or list a row of
+// nulls) and set inspect's reports to null. Now each bad file is skipped with one warn line.
+test("feedback-EC-3: a corrupt, a 500 and an array-valued report file are skipped; list() returns the rest", async () => {
+  seed();
+  const bad = {
+    [`${dir}/cccccc0000000004.json`]: async () => { throw new SyntaxError("Unexpected token < in JSON"); },
+    [`${dir}/dddddd0000000005.json`]: async () => { throw codedError("INTERNAL", `fetch ${dir}/dddddd0000000005.json: HTTP 500`); },
+    [`${dir}/eeeeee0000000006.json`]: async () => [{ id: "x" }],
+  };
+  for (const path of Object.keys(bad)) mem.files.set(path, {});
+  const warned = [];
+  const warn = mock.method(console, "warn", (...a) => { warned.push(a); });
+  try {
+    useStore({ ...mem, get: path => bad[path]?.() ?? mem.get(path) });
+    const all = await api.list({ status: "all" });
+    assert.deepEqual(all.reports.map(r => r.id), ["aaaaaa0000000001", "aaaaab0000000002", "bbbbbb0000000003"]);
+    assert.equal(all.count, 3);
+    assert.deepEqual((await api.list()).reports.map(r => r.id), ["aaaaaa0000000001"]);
+    const skipped = warned.filter(([line]) => String(line).startsWith(`${MODULE} | `)).map(([, path]) => path);
+    assert.deepEqual(skipped, [...Object.keys(bad), ...Object.keys(bad)], "one warn per skipped path per read");
+    warned.length = 0;
+    assert.deepEqual((await api.inspect(IDS.player)).reports.map(r => r.id), ["aaaaaa0000000001", "aaaaab0000000002", "bbbbbb0000000003"], "inspect's reports, not null");
+  } finally {
+    warn.mock.restore();
+    useStore(mem);
+    for (const path of Object.keys(bad)) mem.files.delete(path);
+  }
+});
+
+// feedback-async-3 (+perf-2): readAll awaited one GET per report file before starting the next,
+// so list() over N files cost N round trips. Now up to LIMITS.readsInFlight GETs run at once;
+// results land by index, so the order (and EC-3's skips and their warn order) is unchanged.
+test("feedback-async-3: list() reads report files 6 at a time, keeping file order and skip warns in order", async () => {
+  seed();
+  const extra = Array.from({ length: 11 }, (_, i) => `${dir}/ffffff00000000${String(i).padStart(2, "0")}.json`);
+  for (const [i, path] of extra.entries()) {
+    const r = normaliseReport(queuedReport(path.split("/").pop().slice(0, 16), { t: T0 + i, category: "bug", text: `extra ${i}` }),
+      { user: { id: IDS.player, name: "Caven's player", role: 1 }, receivedAt: T0 + i });
+    mem.files.set(path, r);
+  }
+  const bad = new Set([extra[3], extra[8]]);
+  const paths = [...mem.files.keys()];
+  let inFlight = 0, peak = 0;
+  const warned = [];
+  const warn = mock.method(console, "warn", (...a) => { warned.push(a); });
+  try {
+    useStore({
+      ...mem,
+      get: async path => {
+        inFlight += 1;
+        peak = Math.max(peak, inFlight);
+        // later files answer sooner, so completion order is the reverse of file order
+        await new Promise(r => setTimeout(r, paths.length - paths.indexOf(path)));
+        inFlight -= 1;
+        if (bad.has(path)) throw new SyntaxError("Unexpected token < in JSON");
+        return mem.get(path);
+      },
+    });
+    const all = await api.list({ status: "all" });
+    assert.equal(peak, LIMITS.readsInFlight, "GETs overlap, capped at LIMITS.readsInFlight");
+    assert.equal(LIMITS.readsInFlight, 6);
+    const want = paths.filter(p => !bad.has(p)).map(p => mem.files.get(p)).sort((a, b) => a.t - b.t).map(r => r.id);
+    assert.deepEqual(all.reports.map(r => r.id), want);
+    const skipped = warned.filter(([line]) => String(line).startsWith(`${MODULE} | `)).map(([, path]) => path);
+    assert.deepEqual(skipped, [extra[3], extra[8]], "skip warns follow file order, not completion order");
+  } finally {
+    warn.mock.restore();
+    useStore(mem);
+    for (const path of extra) mem.files.delete(path);
+  }
+});
+
 test("get: full id or unique prefix; NOT_FOUND, AMBIGUOUS, BAD_ARGS are thrown (reads throw coded)", async () => {
   seed();
   assert.equal((await api.get({ id: "aaaaab" })).text, "A map tab for the party");
@@ -281,6 +364,14 @@ test("resolve: transitions, history, dryRun, refusals as fail(); an audit line p
   F.become({ userId: gm.id });
 });
 
+test("feedback-rob-2: resolve(null) answers a fail(), never throws", async () => {
+  seed();
+  assert.equal((await api.resolve(null)).code, "BAD_ARGS");
+  F.become({ userId: IDS.player });
+  assert.equal((await api.resolve(null)).code, "NOT_GM");
+  F.become({ userId: gm.id });
+});
+
 test("every patch record names an adjustments row with the module prefix", () => {
   const patches = api.describe().patches;
   assert.equal(patches.length, 3);
@@ -300,4 +391,24 @@ test("selftest passes on a healthy load once the toolbar exists", () => {
   assert.equal(out.ok, true, JSON.stringify(out.checks));
   ui.controls.controls = {};
   assert.equal(api.selftest().ok, false, "no toolbar yet → the check says so");
+});
+
+test("feedback-EXT-2: selftest checks every console wrap, not only console.error", async () => {
+  const { CONSOLE_PATCHES } = await import("../recorder.mjs");
+  const { wrapMethod } = await import("../lib/patch.mjs");
+  const controls = { tokens: { tools: {} } };
+  F.fire("getSceneControlButtons", controls);
+  ui.controls.controls = controls;
+  const consoleCheck = () => api.selftest().checks.find(c => c.label === "console wraps match captureConsole");
+  assert.deepEqual(CONSOLE_PATCHES.map(p => p.adjustments), ["feedback-console-error", "feedback-console-warn"]);
+  assert.equal(consoleCheck()?.ok, true);
+  assert.deepEqual(consoleCheck().detail, { captureConsole: true, wraps: { "console.error": true, "console.warn": true } });
+  const spec = { target: console, ...CONSOLE_PATCHES.find(p => p.name === "warn"), label: "console.warn" };
+  wrapMethod(MODULE, spec, () => {}).unwrap();                  // the existing handle: drop the warn wrap
+  assert.equal(consoleCheck().ok, false, "a missing console.warn wrap fails the check");
+  assert.deepEqual(consoleCheck().detail.wraps, { "console.error": true, "console.warn": false });
+  assert.equal(api.selftest().ok, false);
+  wrapMethod(MODULE, spec, (wrapped, ...args) => wrapped(...args));
+  assert.equal(consoleCheck().ok, true);
+  ui.controls.controls = {};
 });

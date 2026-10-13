@@ -153,7 +153,7 @@ export async function installClient({ settings = {}, queue2 = null, moduleId = "
   /* core's Notifications: info/warn/error go through notify (the method the recorder wraps) */
   class Notifications {
     notify(message, type = "info") {
-      F.calls.push({ op: "notify", level: type, message: String(message) });
+      F.calls.push({ op: "notify", level: type, message: String(message), argc: arguments.length });
       return { message, type };
     }
     info(m, o) { return this.notify(m, "info", o); }

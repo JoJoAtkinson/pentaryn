@@ -97,12 +97,13 @@ export function install(reg, ctx) {
    * File a report from `{ category, text }`. Resolves `ok({ id, status: "filed" | "queued" })` or a
    * `fail()`; never throws. Shows the player one toast either way.
    */
-  async function submit(draft = {}, { dryRun = false } = {}) {
+  async function submit(draft, opts) {
+    const { dryRun = false } = opts ?? {};        // a null draft/opts takes the fail() paths (rob-2)
     const refuse = (code, reason) => {
       log.notify("error", _loc("PENTARYN_FEEDBACK.Notify.Failed", { reason }));
       return fail(code, reason);
     };
-    const d = draftFrom(draft);
+    const d = draftFrom(draft ?? {});
     if (!d.text) return refuse("BAD_ARGS", "the report text is empty");
     const user = g.game.user;
     let report;
@@ -268,7 +269,8 @@ export function install(reg, ctx) {
    * stranger's request can only make the GM file what that user already queued (which updateUser
    * does anyway).
    */
-  async function ingest({ userId, ids = [] } = {}) {
+  async function ingest(opts) {
+    const { userId, ids = [] } = opts ?? {};      // null opts → NOT_GM / NOT_FOUND, never a throw (rob-2)
     if (!isActiveGM()) return fail("NOT_GM", "only the active GM files reports");
     const user = g.game.users.get(userId);
     if (!user) return fail("NOT_FOUND", `user ${userId}`);
@@ -318,7 +320,8 @@ export function install(reg, ctx) {
 }
 
 export function uninstall() {
-  chains.clear();
+  // `chains` is left alone: each chain removes itself when it settles, so a hot re-install's ingest
+  // queues behind one still in flight instead of filing the same entry twice (feedback-async-4)
   for (const timer of retries.values()) globalThis.clearTimeout?.(timer);
   retries.clear();
   buckets.clear();

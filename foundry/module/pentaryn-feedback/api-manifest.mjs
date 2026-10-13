@@ -7,18 +7,19 @@
  * review the golden diff.
  */
 
-import { CONTRACT, MODULE, NS, VERSION } from "./feedback-core.mjs";
+import { CATEGORY_KEYS, CONTRACT, FLAG_SCOPE, MODULE, NS, QUEUE_KEY, STATUSES, STORE_DIR, VERSION } from "./feedback-core.mjs";
 
 const USER = { name: "ref", kind: "user", type: "User|id|exact name", doc: "never a substring" };
-const FILE = "Data/pentaryn-feedback/<worldId>/<id>.json";
-const QUEUE = "flags.pentaryn-feedback.queue";
+const FILE = `Data/${STORE_DIR}/<worldId>/<id>.json`;
+const QUEUE = `flags.${FLAG_SCOPE}.${QUEUE_KEY}`;
+const union = keys => keys.map(k => `'${k}'`).join("|");
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
   namespace: NS,
   version: VERSION,
   contract: CONTRACT,
-  flagScope: MODULE,
+  flagScope: FLAG_SCOPE,
   rows: [
     {
       path: "inspect",
@@ -47,7 +48,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "open",
-      params: [{ name: "opts", type: "{ category?: 'bug'|'defect'|'feature', text? }", optional: true }],
+      params: [{ name: "opts", type: `{ category?: ${union(CATEGORY_KEYS)}, text? }`, optional: true }],
       returns: "{ ok: true, open: true }",
       gm: false, writes: false,
       doc: "Open the report dialog on this client, optionally pre-filled (what the bug button and /bug do).",
@@ -72,7 +73,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "list",
-      params: [{ name: "opts", type: "{ status?: 'open'|'triaged'|'resolved'|'wontfix'|'all', limit? }", optional: true }],
+      params: [{ name: "opts", type: `{ status?: ${union([...STATUSES, "all"])}, limit? }`, optional: true }],
       returns: "{ reports: [{ id, t, category, status, user, world, text60 }], count }",
       gm: true, writes: false, query: true,
       throws: ["NOT_GM", "BAD_ARGS"],
