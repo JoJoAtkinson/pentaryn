@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **No-stacking looks up fewer spells** (declared, aoe-perf-2): with `noSpellStacking` on, every
+  new effect looked up the source spell of every effect already on the actor before discarding
+  the ones with another name or switched off. It now drops those first and looks up only enabled
+  effects of the same name; what gets replaced is unchanged. Pinned by
+  `test/stacking-filter.test.mjs`.
 - **The settings migration logs through the kit log** (declared, R8): its one line was a raw
   `console.info`, the only console call in `settings.mjs`. It now goes through
   `makeLog(MODULE).info`; the console line is byte-identical (`pentaryn-aoe | npcSaveRollMode

@@ -119,8 +119,10 @@ function onPreCreateEffect(effect) {
   if (actor?.documentName !== "Actor" || !effect._stats?.duplicateSource) return;
   const spell = spellOf(effect);
   if (!spell) return;
+  // The cheap tests first: only an enabled effect of the same name has its spell looked up (aoe-perf-2).
   const old = sameSpellEffect({ name: effect.name, spell },
-    actor.effects.filter(e => e.id !== effect.id).map(e => ({ id: e.id, name: e.name, disabled: e.disabled, spell: spellOf(e) })));
+    actor.effects.filter(e => e.id !== effect.id && !e.disabled && e.name === effect.name)
+      .map(e => ({ id: e.id, name: e.name, disabled: e.disabled, spell: spellOf(e) })));
   if (old) actor.effects.get(old)?.delete().catch(err => log.warn(`replace ${effect.name}`, err));
 }
 
