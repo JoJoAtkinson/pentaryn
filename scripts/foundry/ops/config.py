@@ -122,15 +122,20 @@ class ModuleSpec:
     `syncable` decides whether `module-sync` may install the module. False keeps it
     checkable (`module-check`) but out of `module-sync`'s choices, and `modules.sync()`
     refuses it — the importer, which the actor pipeline installs (EXT-6).
+
+    `retired` — "<date> — <why>" — marks a module Joe no longer runs. Its source stays in the
+    repo and keeps every gate (`module-check`), but it is never syncable: `module-sync` refuses
+    it, the CLI does not offer it, and the updater never tells anyone to re-sync it.
     """
 
     #: every gate a spec may name — see `modules._CHECKS`
     CHECKS = ("parse", "imports", "i18n", "node-test", "vendor", "conformance")
 
     def __init__(self, name: str, *, check: str | tuple[str, ...],
-                 after_sync: tuple[str, ...] = (), syncable: bool = True):
+                 after_sync: tuple[str, ...] = (), syncable: bool = True, retired: str = ""):
         self.name = name
-        self.syncable = syncable
+        self.retired = retired
+        self.syncable = syncable and not retired
         self.check = (check,) if isinstance(check, str) else tuple(check)
         self._after_sync = tuple(after_sync)
         unknown = [c for c in self.check if c not in self.CHECKS]
@@ -199,6 +204,9 @@ MODULES = {
     "walls": ModuleSpec(
         "pentaryn-walls",
         check=ALL_GATES,
+        # Retired by Joe (defect wave 3): he walls scenes with prefabs now. The source and its
+        # gates stay; nothing installs it (context/foundry/walls.md).
+        retired="2026-10-13 — Joe uses prefabs",
     ),
     "attunement": ModuleSpec(
         "pentaryn-attunement",
