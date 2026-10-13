@@ -43,7 +43,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size } from "./popups.mjs";
+import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size, teardown } from "./popups.mjs";
 import { canSee, read } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -503,7 +503,15 @@ export function install(reg) {
   return { impl: { show: showAll, showAll, showOne, cards: showAll, clear, closeAllCards: closeAll } };
 }
 
-/** The entry's reg.offAll() removes the hooks; this drops the card-set subscription. */
+/**
+ * The entry's reg.offAll() removes the hooks; this drops the card-set subscription, cancels a queued
+ * paint, drops the wire layer and takes the cards down — the pinned memo is left as saved, so a hot
+ * re-import restores the same cards (ties-ui-M8).
+ */
 export function uninstall() {
   setOnChange(null);
+  if (queued) cancelAnimationFrame(queued);
+  queued = 0;
+  dropWires();
+  teardown();
 }

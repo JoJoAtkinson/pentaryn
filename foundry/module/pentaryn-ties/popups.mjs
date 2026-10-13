@@ -324,6 +324,15 @@ export function closeAll() {
   notify();
 }
 
+/**
+ * Uninstall: take the card layer out of the DOM and forget every card. Deliberately NOT savePinned —
+ * the memo stays as last saved, so the re-import's restorePinned brings the same cards back (ties-ui-M8).
+ */
+export function teardown() {
+  cards.clear();
+  document.getElementById(LAYER_ID)?.remove();
+}
+
 export function anyTransient() {
   for (const rec of cards.values()) if (!rec.pinned) return true;
   return false;

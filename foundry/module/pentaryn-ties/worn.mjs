@@ -330,5 +330,9 @@ export function install(reg) {
   return { impl: { worn: readWorn, setWorn, clearWorn, wornDialog: openDialog } };
 }
 
-/** The entry's reg.offAll() removes the hooks; worn keeps no other state worth dropping. */
-export function uninstall() {}
+/** The entry's reg.offAll() removes the hooks; this cancels a queued paint and drops the badge layer (ties-ui-M8). */
+export function uninstall() {
+  if (queued) cancelAnimationFrame(queued);
+  queued = 0;
+  dropBadges();
+}

@@ -132,6 +132,11 @@ Fixed (declared, no table-visible change): the Ties tab's editing pass no longer
 handler on the authoring section's lore rows (selector `.pt-row:not([data-inbound]):not(.pt-lore-row)`);
 lore rows are saved by the lore editor alone. ties-ui-M7.
 
+Fixed (declared): `game.pentaryn.ties.uninstall()` now cleans the canvas up — the worn badges and the
+tie wires are removed and their queued repaints cancelled, and the cards come down (new
+`popups.teardown()`, called from `overlay.uninstall`). The pinned-cards memo is NOT rewritten, so a hot
+re-import brings the same pinned cards back once instead of drawing a second set. ties-ui-M8.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's
