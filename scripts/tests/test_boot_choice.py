@@ -163,6 +163,28 @@ def test_pending_snapshot_taken_with_l_at_the_next_terminal(two_hosts, tty):
     assert st["based_on"] == m1 and st["pending_newer"] is None
 
 
+def test_ec6_pending_older_offer_is_not_called_latest(two_hosts, tty, capsys):
+    """EC-6: the pending snapshot an earlier no-terminal boot noticed, after this host's own
+    backup made a newer one, is not the newest — the prompt must not call it "latest"."""
+    _alt_on_macs_latest(two_hosts, tty)
+    m1 = _play(two_hosts, "mac", "session two")
+    tty(False)
+    with two_hosts.use("boss"):
+        boot.choose()
+    _play(two_hosts, "boss", "agent's addon work")
+    capsys.readouterr()
+    asked = tty(True, ["take"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert "an earlier boot without a terminal noticed it; it is not the newest" in out
+    assert len(asked) == 1 and "latest" not in asked[0]
+    assert ("boot from the offered snapshot or keep [local]?  "
+            "(Enter = local, l/take, k/local, or a number)") in asked[0]
+    assert _journal(two_hosts, "boss") == "session two"         # `take` took it
+    assert _state(two_hosts, "boss")["based_on"] == m1
+
+
 def test_cannot_tell_notice_stays_local_default_after_the_hosts_own_backup(two_hosts, tty,
                                                                            capsys):
     """A first no-terminal boot on a world with no record, edited after the cloud's newest:
