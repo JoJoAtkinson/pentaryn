@@ -13,7 +13,10 @@ Sources, all read-only:
   ``game.pentaryn.ns = …``, ``publishNamespace("ns", …)``);
 * `test/golden/describe.json` when the module has one (blueprint modules) — its method
   paths are the API column; otherwise the column says there is no golden yet;
-* `lib/kit.lock.json` (tier) and `test/run.mjs` (suite) via the ModuleSpec.
+* `lib/kit.lock.json` (tier — the file `ModuleSpec.kit_lock` reads) and `test/run.mjs`
+  (suite), read straight from the module directory so `rows(root)` works on any root.
+
+Every JSON file goes through `config.read_json` (missing or malformed → None).
 
     python -m scripts.foundry.ops module-index          # rewrite the block
     python -m scripts.foundry.ops module-index --check  # exit 1 when it is stale
@@ -24,7 +27,6 @@ regenerating fails there.
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
@@ -45,14 +47,6 @@ _PUBLISH_RE = re.compile(
     r"|publishNamespace\(\s*[\"'](\w+)[\"']")                      # kit publish("ns", …)
 
 
-def _json(path: Path) -> dict | None:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return data if isinstance(data, dict) else None
-
-
 def published_namespaces(module_dir: Path) -> list[str]:
     """Namespaces the module's own code assigns under game.pentaryn (tests and lib/ excluded)."""
     found: set[str] = set()
@@ -71,9 +65,9 @@ def published_namespaces(module_dir: Path) -> list[str]:
 
 def module_row(module_dir: Path) -> dict:
     """Everything the index says about one module, as data."""
-    manifest = _json(module_dir / "module.json") or {}
+    manifest = cfg.read_json(module_dir / "module.json") or {}
     flags = (manifest.get("flags") or {}).get("pentaryn") or {}
-    describe = _json(module_dir / "test/golden/describe.json")
+    describe = cfg.read_json(module_dir / "test/golden/describe.json")
     primary = ([flags["namespace"]] if flags.get("namespace")
                else [describe["namespace"]] if describe and describe.get("namespace")
                else [])
@@ -85,7 +79,7 @@ def module_row(module_dir: Path) -> dict:
                if isinstance(m, dict) and m.get("path")
                # kit names every blueprint module carries; not worth a column cell each
                and m["path"] not in conformance.RESERVED_API]
-    lock = _json(module_dir / "lib/kit.lock.json")
+    lock = cfg.read_json(module_dir / "lib/kit.lock.json")
     short = module_dir.name.removeprefix("pentaryn-")
     use_doc = cfg.REPO_ROOT / "context/foundry" / f"{short}.md"
     return {

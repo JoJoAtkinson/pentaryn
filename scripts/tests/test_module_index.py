@@ -136,3 +136,25 @@ def test_index_filters_by_conformance_reserved_not_its_own_copy(tmp_path, monkey
                 describe={"namespace": "ext3",
                           "methods": [{"path": "describe"}, {"path": "kitOnlyName"}, {"path": "real"}]})
     assert index.module_row(d)["api"] == ["real"]
+
+
+def test_index_reads_json_through_config_not_its_own_copy(tmp_path, monkeypatch):
+    """M7: index._json duplicated config._read_json; the index must read every JSON file
+    (manifest, describe golden, kit lock) through cfg.read_json, and its docstring must not
+    claim the tier and suite come "via the ModuleSpec" when they are read from the directory."""
+    assert not hasattr(index, "_json")
+    assert "via the ModuleSpec" not in (index.__doc__ or "")
+    seen = []
+    real = cfg.read_json
+
+    def spy(path):
+        seen.append(path.name)
+        return real(path)
+
+    monkeypatch.setattr(cfg, "read_json", spy)
+    d = _module(tmp_path / "modules", "pentaryn-m7", flags={"namespace": "m7"},
+                describe={"namespace": "m7", "methods": [{"path": "real"}]},
+                lock={"version": "1.0.1", "tier": "small", "files": []})
+    row = index.module_row(d)
+    assert set(seen) == {"module.json", "describe.json", "kit.lock.json"}
+    assert row["tier"] == "small" and row["api"] == ["real"]

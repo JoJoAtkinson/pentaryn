@@ -665,7 +665,7 @@ def test_real_after_sync_has_exactly_one_source():
     it, else the config tuple. A module carrying both (mid-move to module.json) must say the same
     thing in both; a generated module (pentaryn-feedback) carries only module.json."""
     for name, spec in cfg.MODULES.items():
-        manifest = cfg._read_json(spec.src / "module.json") or {}
+        manifest = cfg.read_json(spec.src / "module.json") or {}
         lines = ((manifest.get("flags") or {}).get("pentaryn") or {}).get("afterSync")
         if lines:
             assert spec.after_sync == tuple(lines), name

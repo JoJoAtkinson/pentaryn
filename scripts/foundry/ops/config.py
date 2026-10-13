@@ -93,7 +93,8 @@ def module_dirs(root: Path | None = None) -> list[str]:
     return sorted(p.name for p in root.iterdir() if (p / "module.json").is_file())
 
 
-def _read_json(path: Path) -> dict | None:
+def read_json(path: Path) -> dict | None:
+    """The JSON object at `path`, or None when it is missing, unreadable or not an object."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -147,7 +148,7 @@ class ModuleSpec:
     @property
     def after_sync(self) -> tuple[str, ...]:
         """Lines printed after a successful copy (module.json first, then the tuple)."""
-        manifest = _read_json(self.src / "module.json") or {}
+        manifest = read_json(self.src / "module.json") or {}
         lines = (((manifest.get("flags") or {}).get("pentaryn") or {}).get("afterSync"))
         if isinstance(lines, list) and lines:
             return tuple(str(x) for x in lines)
@@ -156,7 +157,7 @@ class ModuleSpec:
     @property
     def kit_lock(self) -> dict | None:
         """`lib/kit.lock.json` — `{version, tier, files}` — or None when unmigrated."""
-        return _read_json(self.src / "lib" / "kit.lock.json")
+        return read_json(self.src / "lib" / "kit.lock.json")
 
     @property
     def kit(self) -> tuple[str, ...] | None:
