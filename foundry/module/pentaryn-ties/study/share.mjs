@@ -337,6 +337,12 @@ async function shareKind({ subject, pcs, priorFor, out, kindState, fromActor }) 
 }
 
 /**
+ * A share spec as the gate's positional `(loreId, attrId)` tail — `reset` and `factFrom` take it
+ * that way. One mapping (EXT-10): a kind has neither, a lore row has a loreId, an attr fact both.
+ */
+const positionalOf = spec => [spec.ns === "kind" ? null : spec.factId, spec.ns === "attr" ? spec.attrId : null];
+
+/**
  * Undo a share — **and only a share** (`factStatus` must read `told`).
  *
  * What the share REPLACED comes back (`prior`, kept by `shareFact`): a failed roll stays failed
@@ -383,13 +389,13 @@ export async function forgetFact(spec, character) {
   }
 
   if (!prior) {
-    await reset(character, subject, spec.ns === "kind" ? null : spec.factId, spec.ns === "attr" ? spec.attrId : null);
+    await reset(character, subject, ...positionalOf(spec));
     await dropGrant();
     return { ok: true };
   }
 
   // give back the row the share replaced; the `studied` lock it implies stays where it is
-  const fact = factFrom(subject, spec.ns === "kind" ? null : spec.factId, spec.ns === "attr" ? spec.attrId : null);
+  const fact = factFrom(subject, ...positionalOf(spec));
   if (!fact) return { ok: false, reason: "invalid" };
   await putBelief(fact, character.id, null);
   await putBelief(fact, character.id, prior);

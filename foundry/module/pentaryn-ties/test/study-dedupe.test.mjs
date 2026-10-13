@@ -49,3 +49,9 @@ test("EXT-5: the attribute ledger key is built by one ledgerKeyOf, the inverse o
     { factKey: "attr:species:human:l1", characterId: "zzPc000000000001" }
   );
 });
+
+test("EXT-10: a share spec maps onto the gate's positional (loreId, attrId) in one place", () => {
+  const s = src("study/share.mjs");
+  assert.equal(count(s, /spec\.ns === "kind" \? null : spec\.factId/g), 1, "one copy, in positionalOf");
+  assert.equal(count(s, /\.\.\.positionalOf\(spec\)/g), 2, "forgetFact's reset and factFrom both use it");
+});
