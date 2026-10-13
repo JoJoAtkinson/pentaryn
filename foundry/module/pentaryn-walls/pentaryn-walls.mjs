@@ -5,12 +5,12 @@
  * the engine infers the rest or refuses and says why. Design: context/plans/foundry-wall-autocomplete.md.
  *
  * Files, in load order:
- *   walls-core.mjs       PURE barrel: constants, HOOKS, report/undo text, the busy lock; re-exports
+ *   walls-core.mjs       PURE barrel: constants, HOOKS, report/undo text, exclusive(); re-exports
  *     core/engine.mjs      the engine — pure geometry, no Foundry APIs, no I/O
  *     core/backends.mjs    the backend registry ("js" registered here) and canonical()/compare()
  *   backend-wasm.mjs     adapter: loads wall-engine.wasm (fetch or node:fs) and registers "wasm"
  *   settings.mjs         SETTINGS (backend) and KEYBINDINGS (Alt+W, Alt+Z, Alt+Shift+W)
- *   actions.mjs          feature: preview / run / undo / analyze / makeMacro and the keybinding guard
+ *   actions.mjs          feature: preview/run/undo/analyze/makeMacro, the keybinding guard, the busy lock
  *   migrations.mjs       feature, dormant: the Wave 7 flag-scope migration (core/migrate.mjs plans it)
  *   api-manifest.mjs     PURE API rows (describe() reads them)
  *   api.mjs              the rows bound to the actions; buildApiFor(ctx)

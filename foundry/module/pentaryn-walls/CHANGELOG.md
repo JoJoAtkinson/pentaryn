@@ -6,6 +6,9 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] The entry's file map puts the busy lock in `actions.mjs`** (`walls-M12`): the
+  comment said `walls-core.mjs` held it; walls-core exports `exclusive()`, and the lock object is
+  declared in `actions.mjs`. Comment only. `ctx.contributions` stays: the blueprint's ctx shape names it.
 - **[declared] The ready line lists `analyze()` and follows the keybindings** (`walls-EXT-11`):
   `readyLine` hard-coded "Alt+W run, Alt+Z undo, Alt+Shift+W preview" and an API list without
   `analyze()`. It now takes the API paths and the keybinding rows as arguments; the entry passes the

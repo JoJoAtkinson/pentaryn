@@ -65,3 +65,17 @@ test("lib.rs run() ABI doc matches the marshaller in three lines (walls-M2)", ()
                       "refusals*(x,y)", "components*(walls,dangling)]"])
     assert.ok(text.includes(part), part);
 });
+
+// walls-M12: the entry's file map puts each thing where it lives. walls-core exports exclusive(); the
+// busy lock object itself is declared in actions.mjs, so the map names it on the actions line.
+test("entry file map: exclusive() in walls-core, the busy lock in actions (walls-M12)", () => {
+  const read = f => readFileSync(new URL(f, ROOT), "utf8");
+  const map = read("pentaryn-walls.mjs").split("\n");
+  const row = name => map.find(l => new RegExp(`^ \\*\\s+${name.replace(".", "\\.")}\\s`).test(l));
+  assert.match(read("walls-core.mjs"), /^export function exclusive\(/m);
+  assert.match(read("actions.mjs"), /^const lock = \{busy: false\};$/m);
+  assert.doesNotMatch(read("walls-core.mjs"), /^const lock\b/m);
+  assert.match(row("walls-core.mjs"), /exclusive\(\)/);
+  assert.doesNotMatch(row("walls-core.mjs"), /busy lock/);
+  assert.match(row("actions.mjs"), /busy lock/);
+});
