@@ -1651,17 +1651,21 @@ def _marker_from_head(head: bytes) -> tuple[bool, dict | None]:
 
 def _parse_first_member(tar: tarfile.TarFile) -> tuple[bool, dict | None]:
     """(marker present, its manifest) from `tar`'s FIRST member — the one parse both the
-    cloud head (_marker_from_head) and a local tar (_read_marker) use (review M16). No
-    marker first → (False, None). A marker cut short, or not a valid bundled manifest,
-    raises ValueError: neither is ever read as "no marker" or as an empty one."""
+    cloud head (_marker_from_head) and a local tar (_read_marker) use (review M16). A
+    first member that is not the marker → (False, None). No first member at all (a tar
+    whose first block is zeros), a marker cut short, or one that is not a valid bundled
+    manifest raises ValueError: none is ever read as "no marker" or as an empty one —
+    the GC mark then does nothing (DL4) and a restore refuses before the clear."""
     first = tar.next()
-    if first is None or first.name != SNAPSHOT_MARKER:
+    if first is None:
+        raise ValueError("it has no first member")
+    if first.name != SNAPSHOT_MARKER:
         return False, None
     try:
         fh = tar.extractfile(first) if first.isfile() else None
         body = fh.read() if fh else b""
     except (tarfile.TarError, EOFError) as exc:
-        raise ValueError(f"its {SNAPSHOT_MARKER} is cut short ({exc})") from exc
+        raise ValueError(f"its {SNAPSHOT_MARKER} is cut short: {exc}") from exc
     if len(body) != first.size:
         raise ValueError(f"its {SNAPSHOT_MARKER} is cut short")
     try:
@@ -1682,8 +1686,9 @@ def _manifest_from_tar_head(st: Storage, s: Snapshot) -> dict | None:
     try:
         _marked, m = _marker_from_head(head)
     except ValueError as exc:
-        raise StorageError(f"the sidecar of {s.rel} is missing or unreadable, and so is its "
-                           f"tar's {SNAPSHOT_MARKER} ({exc})", verb="cat") from exc
+        raise StorageError(f"the sidecar of {s.rel} is missing or unreadable, and its tar's "
+                           f"head cannot say what it references either: {exc}",
+                           verb="cat") from exc
     return m
 
 
@@ -2131,8 +2136,9 @@ def read_manifest(st: Storage, snap: Snapshot) -> dict | None:
 
 def _read_marker(tar_path: Path) -> tuple[bool, dict | None]:
     """(marker present, its manifest) from the tar's FIRST member only, parsed as the
-    cloud head is (_parse_first_member). A marker that is present but cut short or not a
-    valid bundled manifest raises RestoreError naming the file."""
+    cloud head is (_parse_first_member). No first member, or a marker that is present
+    but cut short or not a valid bundled manifest, raises RestoreError naming the file;
+    its callers add that nothing was touched."""
     with tarfile.open(tar_path, "r:gz") as tar:
         try:
             return _parse_first_member(tar)
@@ -2246,6 +2252,8 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
             # the whole stream, not just its first member: a corruption deeper in would
             # otherwise surface in apply_snapshot, after the clear (review R2)
             bundles.read_all(local_tar)
+        except RestoreError as exc:        # _read_marker's refusal already names the file
+            raise RestoreError(f"{exc} — nothing local was touched") from exc
         except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError) as exc:
             raise RestoreError(f"{snap.name} is not a readable snapshot — nothing local was "
                                f"touched: {exc}") from exc
@@ -2560,6 +2568,8 @@ def extract_snapshot(tar_path: Path, *, systems: bool = True) -> None:
     try:
         marked, manifest = _read_marker(tar_path)
         bundles.read_all(tar_path)
+    except RestoreError as exc:            # _read_marker's refusal already names the file
+        raise RestoreError(f"{exc} — nothing was touched") from exc
     except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError) as exc:
         raise RestoreError(f"{tar_path.name} is not a readable snapshot — nothing was "
                            f"touched: {exc}") from exc

@@ -2360,3 +2360,52 @@ def test_both_first_member_readers_agree_on_a_marked_and_an_unmarked_tar(tmp_pat
     assert cloud._read_marker(marked) == (True, {"modules": {"m": _bundle("module", "m")},
                                                  "systems": {}})
     assert cloud._read_marker(plain) == (False, None)
+
+
+@pytest.mark.parametrize("keep", [0, 30])
+def test_a_cut_short_marker_restore_says_nothing_local_was_touched(two_hosts, capsys, keep):
+    """Review M16 repair: _read_marker's refusal (a RestoreError naming the file) still
+    reaches the user with the restore's reassurance, as every other refusal does — and
+    the local tree really is unchanged."""
+    stamp = time.strftime("%Y-%m-%d-%H%M%S", time.gmtime(time.time() - 2 * 86400))
+    name = f"world-{stamp}-fvtt14.369.tar.gz"
+    p = _cut_marker_tar(two_hosts.cloud / "world-backups" / name, keep)
+    os.utime(p, (time.time() - 2 * 86400,) * 2)
+    boss = two_hosts.data["boss"]
+    _install(boss)
+    before = _tree_hash(boss)
+    capsys.readouterr()
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(name, yes=True)
+    err = capsys.readouterr().err
+    assert f"{name}: its {cloud.SNAPSHOT_MARKER} is cut short" in err, err
+    assert "nothing local was touched" in err, err
+    assert _tree_hash(boss) == before
+
+
+def test_a_cut_short_marker_extract_says_nothing_was_touched(tmp_path):
+    """Review M16 repair: the updater's local entry point keeps its reassurance too."""
+    p = _cut_marker_tar(tmp_path / "world-cut.tar.gz", 5)
+    with pytest.raises(cloud.RestoreError) as exc:
+        cloud.extract_snapshot(p)
+    msg = str(exc.value)
+    assert "world-cut.tar.gz: its" in msg and "cut short" in msg and "nothing was touched" in msg
+
+
+def test_a_zero_member_tar_cannot_answer_for_either_reader(tmp_path):
+    """Review M16 repair: a tar whose first block is zeros has no first member. Both
+    readers refuse it (never "a full tar that references nothing"), so the GC mark keeps
+    its DL4 fail-safe (cannot tell → sweep nothing) and a local restore refuses it before
+    the clear instead of applying an empty snapshot."""
+    import gzip
+    import io
+    buf = io.BytesIO()
+    tarfile.open(fileobj=buf, mode="w").close()
+    p = tmp_path / "world-empty.tar.gz"
+    p.write_bytes(gzip.compress(buf.getvalue()))
+    with pytest.raises(ValueError, match="no first member"):
+        cloud._marker_from_head(p.read_bytes())
+    with pytest.raises(cloud.RestoreError, match=r"world-empty\.tar\.gz: .*no first member"):
+        cloud._read_marker(p)
+    with pytest.raises(cloud.RestoreError, match="nothing was touched"):
+        cloud.extract_snapshot(p)
