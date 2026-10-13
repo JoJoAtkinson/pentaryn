@@ -113,6 +113,10 @@ Declared changes:
 - dropbin-EC-5: `corpses.sync` finds an actor's tokens on every scene (`getDependentTokens`), so a
   linked NPC killed while the GM views another scene becomes a corpse there too (and revives
   there); it saw only the viewed scene's tokens before.
+- dropbin-EC-6: `corpses.toCorpse` (and `sync`) on a token that is already our corpse pile re-writes
+  its OBSERVER map (`delta.ownership.default`, an unlinked token) and `sight.enabled: false` when
+  either was lost; it returned at the pile check before, so a lost write left players without the
+  loot window. The saved flags and everything else are untouched.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

@@ -57,7 +57,7 @@
         "flags.core.overlay"
       ],
       "legacy": true,
-      "doc": "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done."
+      "doc": "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). Already our corpse pile: only a lost OBSERVER map or sight-off is written again. A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done."
     },
     {
       "path": "corpses.fromCorpse",

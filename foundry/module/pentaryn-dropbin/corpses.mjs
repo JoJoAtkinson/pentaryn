@@ -97,8 +97,9 @@ async function toCorpse(tokenDoc) {
  * failed; a failed flag write reverts that token's new pile (dropbin-R6) and the rest go on.
  */
 async function toCorpses(tokenDocs) {
+  const failed = await repairCorpses(tokenDocs.filter(t => isPile(t) && ourCorpse(t)));
   const docs = tokenDocs.filter(t => !isPile(t));
-  if (!docs.length) return [];
+  if (!docs.length) return failed;
   // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
   // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
   // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
@@ -106,7 +107,7 @@ async function toCorpses(tokenDocs) {
   const saved = docs.map(t => t.actorLink ? null : ourCorpse(t) ? (t.flags[MODULE].ownership ?? null)
     : foundry.utils.deepClone(t.delta?.ownership ?? null));
   await turnTokensIntoItemPiles(docs, { pileSettings: PILE_SETTINGS, tokenSettings: {} });
-  const failed = [], made = [];
+  const made = [];
   for (const [i, tokenDoc] of docs.entries()) {
     const linked = !!tokenDoc.actorLink, ownership = saved[i];
     const fresh = freshOf(tokenDoc);
@@ -128,6 +129,25 @@ async function toCorpses(tokenDocs) {
   // it on top of the token (paintEye below) while the body still holds something.
   for (const actor of actorsOf(made)) {
     try { await deadAsOverlay(actor); } catch (err) { failed.push({ name: actor.name, err }); }
+  }
+  return failed;
+}
+
+/**
+ * dropbin-EC-6: a pile that is already our corpse but lost its OBSERVER write (an unlinked token's
+ * delta default is not OBSERVER) or still has sight gets just those two fields written again; its
+ * saved flags and everything else stay as they are. Returns the `{ name, err }` of each failure.
+ */
+async function repairCorpses(tokenDocs) {
+  const failed = [];
+  for (const tokenDoc of tokenDocs) {
+    const lostObserver = !tokenDoc.actorLink && tokenDoc.delta?.ownership?.default !== OBSERVER;
+    if (!lostObserver && !tokenDoc.sight?.enabled) continue;
+    try {
+      await tokenDoc.update({ "sight.enabled": false, ...(lostObserver ? { "delta.ownership": { default: OBSERVER } } : {}) });
+    } catch (err) {
+      failed.push({ name: tokenDoc.name, err });
+    }
   }
   return failed;
 }

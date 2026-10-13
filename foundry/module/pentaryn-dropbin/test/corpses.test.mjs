@@ -82,6 +82,34 @@ test("PT3-1: a corpse that stopped being a pile and is re-piled keeps the pre-de
   assert.equal(playerLevel(tok), NONE);
 });
 
+test("dropbin-EC-6: a pile that is already our corpse but lost its OBSERVER write (and sight) is repaired", async () => {
+  // The corpse flags landed but the OBSERVER map (and sight off) did not: toCorpse returned at the
+  // isPile check, so players never got the loot window. It now re-writes just those two fields.
+  const shared = { default: NONE, [PLAYER]: OBSERVER };
+  const tok = goblin({ ...shared }, { [MOD]: { corpse: true, sight: true, ownership: { ...shared } },
+    "item-piles": { data: { enabled: true } } });
+  const piles = F.calls.filter(c => c.op === "turnTokensIntoItemPiles").length;
+  await corpses.toCorpse(tok);
+  assert.equal(tok.delta.ownership.default, OBSERVER, "players observe the body again");
+  assert.equal(tok.sight.enabled, false, "sight is off again");
+  assert.deepEqual(tok.flags[MOD], { corpse: true, sight: true, ownership: shared }, "saved flags untouched");
+  assert.equal(F.calls.filter(c => c.op === "turnTokensIntoItemPiles").length, piles, "no new pile call");
+  await corpses.fromCorpse(tok);
+  assert.deepEqual(tok.delta.ownership, shared, "a revival still puts the pre-death map back");
+  assert.equal(tok.sight.enabled, true);
+});
+
+test("dropbin-EC-6: a healthy corpse pile is left alone (no write)", async () => {
+  const tok = goblin({ default: OBSERVER }, { [MOD]: { corpse: true, sight: true, ownership: null },
+    "item-piles": { data: { enabled: true } } });
+  tok.sight.enabled = false;
+  let writes = 0;
+  const update = tok.update.bind(tok);
+  tok.update = async (...a) => { writes++; return update(...a); };
+  await corpses.toCorpse(tok);
+  assert.equal(writes, 0);
+});
+
 /* ── PT3-1 live (wave 2): the server's copy of delta.ownership can differ from the clients' ──────── */
 
 // Foundry 14.369 (seen live on fresh scenes): the server can drop a delta write it already broadcast,

@@ -42,6 +42,8 @@ the dnd5e 6 rarity keys).
   sidebar row stays hidden from players (it is a pile actor). `inspect`'s `saved.ownership` is the
   token's delta map; a linked corpse's lives on the actor. Sight is off on a corpse and restored on
   revival.
+  A body that is already our corpse pile but lost its OBSERVER map (an unlinked token) or its
+  sight-off write gets just those two fields written again on the next sync (dropbin-EC-6).
 - **Old corpses** (before October 2026) carried a "Lootable" effect and Dead as a corner icon; the
   active GM's client fixes them at every `ready` (`corpses.migrateLegacyEyes()`, safe to re-run).
 

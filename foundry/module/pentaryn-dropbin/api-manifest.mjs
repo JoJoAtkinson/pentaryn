@@ -34,7 +34,7 @@ export const MANIFEST = Object.freeze({
       "Active GM: turn each eligible token of the actor, on every scene, into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done.",
       { gm: true, writes: true, sideEffects: SYNC_WRITES }),
     corpseRow("corpses.toCorpse", [TOKEN_DOC], "Promise<void>",
-      "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done.",
+      "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). Already our corpse pile: only a lost OBSERVER map or sight-off is written again. A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done.",
       { gm: true, writes: true, sideEffects: TO_CORPSE_WRITES }),
     corpseRow("corpses.fromCorpse", [TOKEN_DOC], "Promise<void>",
       "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership (a linked token: its base actor's). Without Item Piles or given a non-TokenDocument, one console warning and nothing done.",
