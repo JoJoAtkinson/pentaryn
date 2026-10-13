@@ -10,21 +10,23 @@
 // nothing (the GM is viewing another scene). Captured: last() straight after the call (before the
 // 250 ms flush) and after it, a same-spot repeat inside 400 ms (dedupe), and Foundry's own
 // scene.dimensions next to the module's imageOffset arithmetic.
-// `lastImmediateIsScratch` depends on world state, not on the code: true while the module's buffer
-// still aliases the array game.settings.get returns (before the first flush and below the cap),
-// false after (wave-1-baseline.md SF3). Compare it across runs only with the ring in the same state.
+// `lastImmediateIsScratch` is false: since pings-edge-1 (defect wave 2, [declared]) a ping waits in
+// the module's pending list and the readers show it only once it is written (README "Read lag").
+// Before that it depended on world state (true while the module's buffer aliased the cached setting
+// array, below the cap; wave-1-baseline.md SF3), so a diff across that deploy shows it true → false.
 //
 // No trace (2026-10-11): the scratch pings (1 + N timing pings) used to stay in the world's ping
 // ring (setting pentaryn-pings.log, capped at `max`), pushing real pings out, and the module's
 // private buffer wrote them back on its next flush. The log is now saved before the first ping and
-// restored at the end through the module's documented hot patch: `uninstall()` (drops the buffer
-// and any pending flush), the saved log written back, the entry re-imported (ready re-reads the
-// store into a fresh buffer — the state right after a reload, so `lastImmediateIsScratch` no longer
-// depends on earlier runs). cleanup.pingLogRestored / pingScratchLeft report it; diff.mjs fails
+// restored at the end through the module's documented hot patch: `uninstall()` (drops the pending
+// pings and their flush), the saved log written back, the entry re-imported (ready re-reads the
+// store — the state right after a reload). cleanup.pingLogRestored / pingScratchLeft report it; diff.mjs fails
 // on false / > 0. A player's ping in the few milliseconds between uninstall and re-import is lost.
 // The log is read and restored through the stored Setting's `_source` (2026-10-12), not the cache
-// game.settings.get returns: on a hidden tab the flush is held back, the scratch records sit only in
-// the cached array, and a set() of the unchanged store is a no-op that left them there.
+// game.settings.get returns: before pings-edge-1, on a hidden tab whose flush was held back, the
+// scratch records sat only in the cached array, and a set() of the unchanged store was a no-op that
+// left them there. Since pings-edge-1 they wait in the module's pending list instead, which
+// uninstall() drops; a flush held past the 3 s settle leaves scratchRecordsInLog 0 (pings-w3-1).
 
 const N = 5;
 const median = xs => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
@@ -108,7 +110,7 @@ try {
   const layer = canvas.controls;
   out.golden.patch = {
     layerClass: layer.constructor.name,
-    patchedOnInstanceProto: !!layer.handlePing?.__pentarynPatched,
+    patchedOnInstanceProto: !!layer.handlePing?.__pentarynPingsPatched,
     ownInstanceProperty: Object.hasOwn(layer, "handlePing"),
     patchedOn: (() => { let p = layer, d = 0; while (p && !Object.hasOwn(p, "handlePing")) { p = Object.getPrototypeOf(p); d++; } return p ? `${p.constructor.name} (depth ${d})` : null; })(),
     surface: Object.keys(API ?? {}).sort(),
