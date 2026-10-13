@@ -96,6 +96,7 @@ test("describe() is plain JSON in the published shape", () => {
 
 test("surfaceOf and maxDepth", () => {
   const api = buildApi(MANIFEST, impl);
+  assert.deepEqual(Object.keys(api).slice(-6), ["version", "contract", "settings", "trace", "uninstall", "describe"]);
   const s = surfaceOf(api);
   assert.equal(s["store.list"], "list");
   assert.equal(s.version, "string");
@@ -267,4 +268,31 @@ test("kit-ext-6: one KINDS table; a ref param naming an unknown kind throws at l
   // no kind means actor, as before
   const bare = { ...MANIFEST, rows: [{ path: "peek", params: [{ name: "ref" }], returns: "x", gm: false, writes: false, doc: "" }] };
   assert.doesNotThrow(() => buildApi(bare, { peek: () => 1 }));
+});
+
+test("kit-ext-3-followup: one MEMBER_DEFAULTS table, keyed by errors.RESERVED, drives buildApi's kit members", async () => {
+  const { MEMBER_DEFAULTS } = await import("../api.mjs");
+  assert.ok(MEMBER_DEFAULTS && typeof MEMBER_DEFAULTS === "object", "api.mjs exports MEMBER_DEFAULTS");
+  assert.equal(Object.isFrozen(MEMBER_DEFAULTS), true);
+  assert.deepEqual(Object.keys(MEMBER_DEFAULTS).sort(), [...RESERVED].sort(), "one entry per RESERVED name");
+  // the published key order (legacy-surface goldens pin it) is unchanged
+  assert.deepEqual(Object.keys(MEMBER_DEFAULTS), ["version", "contract", "settings", "trace", "uninstall", "describe", "inspect", "selftest"]);
+  const by = via => Object.keys(MEMBER_DEFAULTS).filter(k => MEMBER_DEFAULTS[k].via === via).sort();
+  assert.deepEqual(by("built"), ["contract", "describe", "version"]);
+  assert.deepEqual(by("member"), ["settings", "trace", "uninstall"]);
+  assert.deepEqual(by("optional"), ["inspect", "selftest"]);
+  for (const e of Object.values(MEMBER_DEFAULTS)) assert.equal(Object.isFrozen(e), true);
+  // the table, not a hand list, decides: members are accepted, everything else refused
+  for (const name of by("member")) assert.doesNotThrow(() => buildApi(MANIFEST, impl, { members: { [name]: () => 1 } }), name);
+  for (const name of [...by("built"), ...by("optional")]) {
+    assert.throws(() => buildApi(MANIFEST, impl, { members: { [name]: () => 1 } }), /not a kit member/, name);
+  }
+  // defaults unchanged: anonymous fallbacks (surface goldens read "function"), built values from the manifest
+  const api = buildApi(MANIFEST, impl);
+  assert.deepEqual([api.settings(), api.trace(), api.uninstall()], [{}, [], undefined]);
+  assert.deepEqual([api.version, api.contract], [MANIFEST.version, MANIFEST.contract]);
+  assert.deepEqual(Object.keys(api).slice(-6), ["version", "contract", "settings", "trace", "uninstall", "describe"]);
+  const s = surfaceOf(api);
+  for (const k of ["settings", "trace", "uninstall", "describe"]) assert.equal(s[k], "function", k);
+  assert.throws(() => buildApi({ ...MANIFEST, version: undefined }, impl), /version missing/);
 });

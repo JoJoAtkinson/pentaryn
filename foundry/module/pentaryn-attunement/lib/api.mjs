@@ -7,10 +7,10 @@
  * implementation with no row, a name that would clobber a kit-owned member, or a resolved `ref`
  * param whose kind is not in resolve.mjs's KINDS (kit-ext-6) all throw here.
  *
- * Kit-owned members (errors.RESERVED):
- *   describe, version, contract    built here; never a row
- *   settings, trace, uninstall     passed as `members`; never a row
- *   inspect, selftest              optional; top-level rows of the module's own manifest only
+ * Kit-owned members (errors.RESERVED) are wired from one table, MEMBER_DEFAULTS:
+ *   describe, version, contract    "built" here; never a row
+ *   settings, trace, uninstall     "member": passed as `members`, else a default; never a row
+ *   inspect, selftest              "optional"; top-level rows of the module's own manifest only
  */
 
 import { CODES, KIT_VERSION, RESERVED, errorCode, toFail } from "./errors.mjs";
@@ -28,15 +28,39 @@ import { KINDS, refOf, resolveRef } from "./resolve.mjs";
  *   rows: ApiRow[], flags?: { writes: string[], reads: string[] }, unlisted?: string[] }} Manifest
  */
 
-const BUILT = ["describe", "version", "contract"];
-const MEMBERS = ["settings", "trace", "uninstall"];
-const OPTIONAL = ["inspect", "selftest"];
+/**
+ * How buildApi wires each kit-owned member (kit-ext-3-followup), in the order they land on the API —
+ * the published key order, which legacy-surface goldens pin. `value(ctx)` gives what lands, from
+ * `{ manifest, members, describe }`; an "optional" member has none — the module's own row supplies it.
+ * Every fallback is an anonymous arrow, so the surface golden reads "function".
+ */
+const WIRING = {
+  version: { via: "built", value: c => c.manifest.version },
+  contract: { via: "built", value: c => c.manifest.contract },
+  settings: { via: "member", value: c => c.members.settings ?? (() => ({})) },
+  trace: { via: "member", value: c => c.members.trace ?? (() => []) },
+  uninstall: { via: "member", value: c => c.members.uninstall ?? (() => undefined) },
+  describe: { via: "built", value: c => c.describe },
+  inspect: { via: "optional" },
+  selftest: { via: "optional" },
+};
+
+/** One frozen entry per errors.RESERVED name; a RESERVED name with no entry, or an entry not RESERVED, throws at load. */
+export const MEMBER_DEFAULTS = Object.freeze(Object.fromEntries(Object.entries(WIRING).map(([name, d]) => {
+  if (!RESERVED.includes(name)) throw new Error(`kit: MEMBER_DEFAULTS "${name}" is not in errors.RESERVED`);
+  return [name, Object.freeze({ ...d })];
+})));
+for (const name of RESERVED) {
+  if (!Object.hasOwn(MEMBER_DEFAULTS, name)) throw new Error(`kit: reserved member "${name}" has no MEMBER_DEFAULTS entry`);
+}
+
+const viaOf = name => MEMBER_DEFAULTS[name]?.via;
 
 function reservedClash(path, { own, legacy }) {
   const parts = path.split(".");
-  const hit = parts.find(p => RESERVED.includes(p));
+  const hit = parts.find(p => Object.hasOwn(MEMBER_DEFAULTS, p));
   if (!hit) return null;
-  if (OPTIONAL.includes(hit) && parts.length === 1 && own && !legacy) return null;
+  if (viaOf(hit) === "optional" && parts.length === 1 && own && !legacy) return null;
   return hit;
 }
 
@@ -181,7 +205,7 @@ export function buildApi(manifest, impl, { contributions = [], extras = {}, memb
     }
   }
   for (const name of Object.keys(members)) {
-    if (!MEMBERS.includes(name)) throw new Error(`${mod}: "${name}" is not a kit member`);
+    if (viaOf(name) !== "member") throw new Error(`${mod}: "${name}" is not a kit member`);
   }
 
   const merged = { ...manifest, rows };
@@ -189,13 +213,14 @@ export function buildApi(manifest, impl, { contributions = [], extras = {}, memb
   for (const row of rows) setPath(api, row.path, bind(row, fns[row.path], { g }), mod);
   for (const path of unlisted) if (fns[path]) setPath(api, path, publishedCopy(fns[path]), mod);
 
-  api.version = manifest.version;
-  api.contract = manifest.contract;
-  api.settings = members.settings ?? (() => ({}));
-  api.trace = members.trace ?? (() => []);
-  api.uninstall = members.uninstall ?? (() => undefined);
-  api.describe = () => describe(merged, typeof extras === "function" ? extras() : extras);
-  for (const k of BUILT) if (api[k] === undefined) throw new Error(`${mod}: ${k} missing`);
+  const ctx = { manifest, members };
+  // assigned, not an object-literal key, so the arrow stays anonymous (surface golden: "function")
+  ctx.describe = () => describe(merged, typeof extras === "function" ? extras() : extras);
+  for (const [k, d] of Object.entries(MEMBER_DEFAULTS)) {
+    if (d.via === "optional") continue;
+    api[k] = d.value(ctx);
+    if (d.via === "built" && api[k] === undefined) throw new Error(`${mod}: ${k} missing`);
+  }
   return freezeDeep(api);
 }
 
