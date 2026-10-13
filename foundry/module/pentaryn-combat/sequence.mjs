@@ -444,7 +444,8 @@ const SINGLE_SWING = Object.freeze({
 export async function runFollowUp(actor, f, { event = null } = {}) {
   if (!f || typeof f !== "object") return { rolled: 0, status: "unknown" };   // a console caller's bad argument (combat-core-ROB-6)
   const label = _loc(core.keyFor("FollowUp", f.kind), { weapon: actor.items.get(f.weaponId)?.name ?? "" });
-  const one = Object.hasOwn(SINGLE_SWING, f.kind) ? SINGLE_SWING[f.kind] : null;
+  // A kind is a string; an array or object that coerces to a table key (["hew"]) is "unknown" (combat-core-EXT-4).
+  const one = typeof f.kind === "string" && Object.hasOwn(SINGLE_SWING, f.kind) ? SINGLE_SWING[f.kind] : null;
   if (one) {
     const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: one.mode, kind: one.kind }], { event, title: label, swappable: false });
     if (one.records && out.rolled) {

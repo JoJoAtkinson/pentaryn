@@ -605,6 +605,21 @@ test("api.followUp with a missing or non-object followUp answers unknown, not a 
   F.calls.length = 0;
 });
 
+// combat-core-EXT-4 (repair): the SINGLE_SWING lookup only takes a string kind. A one-element array, or any
+// object whose toString names a table row, answered "unknown" under the old strict-equality ladder and
+// still does: nothing rolled, no bonusSpent, nothing written to the turn flag.
+test("combat-core-EXT-4: a non-string follow-up kind that coerces to a SINGLE_SWING key answers unknown", async () => {
+  const keyish = { toString: () => "hew" };
+  for (const [kind, weaponId] of [[["hew"], "glaive0000000001"], [["martial-arts"], "unarmedStrike001"], [["offhand"], "longsword0000001"], [keyish, "glaive0000000001"]]) {
+    F.calls.length = 0;
+    const before = JSON.stringify(sly.flags[MODULE]?.turn ?? null);
+    assert.deepEqual(await api.followUp(sly, { kind, weaponId }), { rolled: 0, status: "unknown" }, `combat-core-EXT-4: ${JSON.stringify(kind)}`);
+    assert.deepEqual(F.calls.filter(c => c.op === "activity.rollAttack"), [], "nothing rolled");
+    assert.equal(JSON.stringify(sly.flags[MODULE]?.turn ?? null), before, "the turn flag is untouched");
+  }
+  F.calls.length = 0;
+});
+
 test("Flurry of Blows: its own card spends the Focus first; missing / no Focus / cancelled (golden/sequence-flurry.json)", async () => {
   const rows = [];
   reset(mnk);
