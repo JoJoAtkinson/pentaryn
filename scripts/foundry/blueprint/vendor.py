@@ -123,6 +123,9 @@ def resolve_module(arg: str, root: Path = MODULE_ROOT) -> Path:
 
 
 def all_modules(root: Path = MODULE_ROOT) -> list[Path]:
+    """Every module folder under `root`; none when `root` is not a directory."""
+    if not root.is_dir():
+        return []
     return sorted(p for p in root.iterdir() if (p / "module.json").exists())
 
 

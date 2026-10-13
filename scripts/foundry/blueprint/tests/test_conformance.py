@@ -1256,3 +1256,29 @@ def test_py_blueprint_maint_5_score_comment_names_every_warn_manual_rule():
     named = re.findall(r"C\d+", m.group(1))
     registered = [rid for rid, cls, _full, _title in conformance.RULES if cls == "warn+manual"]
     assert named == registered, (named, registered)
+
+
+def test_py_blueprint_maint_6_an_unknown_module_prints_one_line_and_exits_2(tmp_path, capsys):
+    # pinned before the change: the line and the exit code survive the move to vendor.resolve_module
+    capsys.readouterr()
+    assert conformance.main(["--module", "nope", "--root", str(tmp_path)]) == 2
+    assert capsys.readouterr().err == f"  ✗ no module 'nope' under {tmp_path}\n"
+
+
+def test_py_blueprint_maint_6_targets_come_from_vendor(tmp_path, monkeypatch, capsys):
+    from scripts.foundry.blueprint import vendor
+    one = _tiny(tmp_path)
+    seen = []
+    real_resolve, real_all = vendor.resolve_module, vendor.all_modules
+    monkeypatch.setattr(vendor, "resolve_module", lambda a, r: seen.append(("resolve", a)) or real_resolve(a, r))
+    monkeypatch.setattr(vendor, "all_modules", lambda r: seen.append(("all", r)) or real_all(r))
+    conformance.main(["--module", "one", "--root", str(tmp_path), "--json"])
+    conformance.main(["--root", str(tmp_path), "--json"])
+    assert seen == [("resolve", "one"), ("all", tmp_path)]
+    assert vendor.resolve_module("one", tmp_path) == one.resolve()
+    # a root that is not a directory scores nothing instead of raising (the guard new_module had)
+    assert vendor.all_modules(tmp_path / "missing") == []
+    assert conformance.main(["--root", str(tmp_path / "missing"), "--json"]) == 0
+    assert new_module.namespace_owner("one", [tmp_path / "missing"]) is None
+    assert not hasattr(new_module, "_modules")                  # one listing, vendor.all_modules
+    capsys.readouterr()

@@ -2196,18 +2196,13 @@ def main(argv: list[str] | None = None) -> int:
         installed = True
     targets = []
     for name in args.module:
-        p = Path(name)
-        if (p / "module.json").exists():
-            targets.append(p)
-        else:
-            cand = [root / name, root / f"pentaryn-{name}"]
-            hit = next((c for c in cand if (c / "module.json").exists()), None)
-            if hit is None:
-                print(f"  ✗ no module {name!r} under {root}", file=sys.stderr)
-                return 2
-            targets.append(hit)
+        try:
+            targets.append(vendor.resolve_module(name, root))
+        except vendor.VendorError as exc:
+            print(f"  ✗ {exc}", file=sys.stderr)
+            return 2
     if not targets:
-        targets = sorted(p for p in root.iterdir() if (p / "module.json").exists())
+        targets = vendor.all_modules(root)
 
     registry = load_registry(reg_path)     # once per run, not once per module
     if registry[1]:

@@ -73,10 +73,6 @@ class Refused(Exception):
 
 # ── validation and collisions ────────────────────────────────────────────────
 
-def _modules(root: Path) -> list[Path]:
-    return sorted(p for p in root.iterdir() if (p / "module.json").exists()) if root.is_dir() else []
-
-
 def _read(p: Path) -> str:
     return p.read_text(encoding="utf-8", errors="replace")
 
@@ -95,7 +91,7 @@ def namespace_owner(ns: str, roots: list[Path]) -> str | None:
     src_res = [re.compile(rf"game\.pentaryn\.{re.escape(ns)}\b"),
                re.compile(rf"\{{\s*\.\.\.\s*[\w.$]+\s*,\s*{re.escape(ns)}\s*:")]
     for root in roots:
-        for mod in _modules(root):
+        for mod in vendor.all_modules(root):
             if _flags_of(mod).get("namespace") == ns:
                 return mod.name
             for f in mod.rglob("*.mjs"):
@@ -110,7 +106,7 @@ def namespace_owner(ns: str, roots: list[Path]) -> str | None:
 def css_owner(prefix: str, roots: list[Path], *, skip: str | None = None) -> str | None:
     sel = re.compile(rf"\.{re.escape(prefix)}[A-Za-z0-9_-]")
     for root in roots:
-        for mod in _modules(root):
+        for mod in vendor.all_modules(root):
             if mod.name == skip:
                 continue
             if _flags_of(mod).get("cssPrefix") == prefix:
