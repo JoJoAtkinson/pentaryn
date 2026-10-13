@@ -341,3 +341,31 @@ test("loot: renderItemPileInventoryApp adds a 'Loot all' button to the footer an
   await flush();
   assert.deepEqual(since(from, "transferEverything").map(c => c.args), [["Gear Pile", "Ann", {}]]);
 });
+
+// dropbin-EXT-5 — Loot all's last fallback (a player's first owned character) hard-coded the "character"
+// type; in a system whose Item Piles ACTOR_CLASS_TYPE is another type it found nothing (or the wrong
+// actor). Flipped by the [declared] fix: it filters on Item Piles' ACTOR_CLASS_TYPE, and on "character"
+// only when Item Piles is absent — matching the ledger's delete capture.
+test("dropbin-EXT-5: Loot all's fallback recipient uses Item Piles' ACTOR_CLASS_TYPE, 'character' without Item Piles", () => {
+  const API = game.itempiles.API;
+  const pc = makeActor(F, { id: "actorHero0000001", name: "Hero", type: "hero" });
+  Object.defineProperty(pc, "isOwner", { value: true, configurable: true });
+  Object.defineProperty(ann, "isOwner", { value: true, configurable: true });
+  const keepType = API.ACTOR_CLASS_TYPE;
+  const keepIP = game.itempiles;
+  F.become({ userId: PLAYER });
+  try {
+    assert.equal(game.user.character ?? null, null);
+    API.ACTOR_CLASS_TYPE = "hero";
+    assert.equal(game.pentaryn.dropbin.loot.recipientFor({})?.name, "Hero");
+    API.ACTOR_CLASS_TYPE = "character";
+    assert.equal(game.pentaryn.dropbin.loot.recipientFor({})?.name, "Ann");
+    delete game.itempiles;
+    assert.equal(game.pentaryn.dropbin.loot.recipientFor({})?.name, "Ann");
+  } finally {
+    game.itempiles = keepIP;
+    API.ACTOR_CLASS_TYPE = keepType;
+    F.become({ userId: GM });
+    F.game.actors.delete(pc.id);
+  }
+});

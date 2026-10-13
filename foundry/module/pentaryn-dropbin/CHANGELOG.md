@@ -121,6 +121,10 @@ Declared changes:
   throws `AMBIGUOUS` (the bridge relies on the code); by name a token wins, so pass the token
   uuid/id, an `opts.sceneId`, or the actor. The inspect row now declares its optional
   `opts { sceneId? }` param (M8); describe.json regenerated.
+- dropbin-EXT-5: Loot all's last fallback recipient (a player's first owned character) is an actor
+  of Item Piles' character type (`ACTOR_CLASS_TYPE`), as the ledger's delete capture uses; it
+  hard-coded `character` before, so in a system with another character type it found none.
+  `character` is used only when Item Piles is absent.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
