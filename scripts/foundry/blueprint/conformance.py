@@ -615,12 +615,15 @@ def c11(m):
     return ok() if not detail else bad(detail)
 
 
-@rule("C12", "fail", "MODULE defined once; no MOD / MODULE_ID / SCOPE")
+@rule("C12", "fail", "MODULE defined once; no MOD / MODULE_ID / SCOPE, not even as an alias")
 def c12(m):
     defs = [(rel, m.files[rel].line_of(mm.start())) for rel in m.files
             for mm in re.finditer(r"(?:const|let|var)\s+MODULE\s*=", m.code(rel))]
     dups = [f"{rel}:{m.files[rel].line_of(mm.start())} {mm.group(1)}" for rel in m.files
             for mm in re.finditer(r"(?:const|let|var)\s+(MOD|MODULE_ID|SCOPE)\s*=", m.code(rel))]
+    # an alias in an export or import list (`export { MODULE as MOD }`) is the banned name by another route
+    dups += [f"{rel}:{m.files[rel].line_of(mm.start())} MODULE as {mm.group(1)}" for rel in m.files
+             for mm in re.finditer(r"\bMODULE\s+as\s+(MOD|MODULE_ID|SCOPE)\b", m.code(rel))]
     detail = []
     if len(defs) != 1:
         detail.append(f"MODULE defined {len(defs)}×" + (f": {', '.join(f'{r}:{n}' for r, n in defs)}" if defs else ""))

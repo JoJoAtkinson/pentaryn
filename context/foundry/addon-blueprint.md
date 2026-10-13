@@ -90,7 +90,7 @@ Nothing imports the entry or `test/`. Named imports between module files; `impor
 the entry's feature list and `core/` barrels (the imports gate cannot see members of a namespace import).
 
 **Names.** Module id `pentaryn-<short>`, short `^[a-z][a-z0-9]{1,15}$`; `MODULE` defined once in core
-(never `MOD`, `MODULE_ID`, `SCOPE`); flag scope = module id; i18n root `PENTARYN_<SHORT>`; CSS
+(never `MOD`, `MODULE_ID`, `SCOPE`, not even as an alias); flag scope = module id; i18n root `PENTARYN_<SHORT>`; CSS
 prefix declared in `flags.pentaryn.cssPrefix` and unique (`pp-` is prompts'). Reserved shorts:
 `import moduleId contract _internals describe inspect namespaces published rules chain lib test core api settings`.
 
@@ -892,7 +892,7 @@ both Warnings and Manual.
 | C09 | fail | recommends carry reasons; every package named in code is in `relationships` |
 | C10 | warn | size caps |
 | C11 | fail | a pure core exists |
-| C12 | fail | `MODULE` defined once; no `MOD`/`MODULE_ID`/`SCOPE` |
+| C12 | fail | `MODULE` defined once; no `MOD`/`MODULE_ID`/`SCOPE`, not even as an alias (`export { MODULE as MOD }`) |
 | C13 | fail | no `.md` other than README/CHANGELOG |
 | C14 | fail | `lib/kit.lock.json` present, `vendor.py check` passes |
 | C15 | fail | `import * as` only for features (from the entry) and core barrels |

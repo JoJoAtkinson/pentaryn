@@ -130,6 +130,38 @@ def test_c11_lookbehind(tmp_path, code, clean):
     assert (status(report, "C11") == "pass") is clean, report["results"][10]
 
 
+C12_ALIAS_CASES = [
+    ('export { MODULE };', None),
+    ('export { MODULE, MODULE as MODULE_ID, EFFECT_ID };', "MODULE as MODULE_ID"),
+    ('export { MODULE as MOD };', "MODULE as MOD"),
+    ('export {\n  MODULE as SCOPE,\n};', "MODULE as SCOPE"),
+    ('export { MODULE as MODULE_NAME };', None),
+]
+
+
+@pytest.mark.parametrize("code,finding", C12_ALIAS_CASES)
+def test_c12_fails_on_an_alias_of_module(tmp_path, code, finding):
+    """EXT-8-c12: `MODULE as MOD|MODULE_ID|SCOPE` in an export or import list is the banned name
+    by another route; C12 used to see only `const|let|var` definitions."""
+    d = _tiny(tmp_path, "pentaryn-alias", {
+        "one.mjs": 'import { MODULE } from "./one-core.mjs";\nexport const b = MODULE;\n',
+        "one-core.mjs": 'const MODULE = "pentaryn-alias";\n' + code + "\n"})
+    r = next(r for r in conformance.score_dir(d)["results"] if r["id"] == "C12")
+    if finding is None:
+        assert r["status"] == "pass", r
+    else:
+        assert r["status"] == "fail" and any(f.startswith("one-core.mjs:") and f.endswith(finding)
+                                             for f in r["detail"]), r
+
+
+def test_c12_fails_on_an_import_alias_of_module(tmp_path):
+    d = _tiny(tmp_path, "pentaryn-alias", {
+        "one.mjs": 'import { MODULE as MOD } from "./one-core.mjs";\nexport const b = MOD;\n',
+        "one-core.mjs": 'export const MODULE = "pentaryn-alias";\n'})
+    r = next(r for r in conformance.score_dir(d)["results"] if r["id"] == "C12")
+    assert r["status"] == "fail" and r["detail"] == ["one.mjs:1 MODULE as MOD"], r
+
+
 def test_markdown_report_has_a_row_per_module(tmp_path):
     d = tmp_path / "pentaryn-one"
     write(d, {"module.json": json.dumps({"id": "pentaryn-one", "esmodules": ["one.mjs"]}), "one.mjs": "export {};\n"})
