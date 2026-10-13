@@ -154,9 +154,13 @@ Only the GM tab that calls `import()` writes; nothing runs by itself. A player c
 `PentarynAbort` (`items-journal-4`). That guard is per tab, so two GM tabs (the MCP bridge tab and
 a browser tab) can still overlap; a concurrent create is then refused per slug rather than
 duplicated (`importer-AC-2`): a new actor is created with an `_id` derived from its slug
-(`idForSlug`, `keepId`), so whichever tab comes second gets
+(`idForSlug`, `keepId`). Foundry 14 does not refuse a `keepId` create over an id a world Actor
+already holds — it silently replaces that actor — so the importer looks in `game.actors` first: a tab
+that finds the id taken by the other tab's actor (same slug) gets
 `{ slug, error: "created concurrently by another GM tab — re-run" }` in `failed[]` and goes on with
-the rest. A re-run finds the actor by slug and updates it. Actors already in the world keep their
+the rest; an id held by any other actor gets `id <id> is already held by Actor "<name>" — not
+overwritten`. Either way the holder is never overwritten. Two creates sent in the same instant (before
+either broadcast arrives) still leave one actor, holding the later tab's identical data. A re-run finds the actor by slug and updates it. Actors already in the world keep their
 random ids and are found by slug as before. Updates from two tabs at once are not guarded — run
 imports from one place.
 
