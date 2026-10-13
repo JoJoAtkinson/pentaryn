@@ -56,6 +56,9 @@ When `PENTARYN_MCP_LOG_DIR` is set (the same switch as the Foundry fork's log), 
 A call the server refuses before running it — unknown tool, non-object `arguments`, or
 server busy — is logged too, with `mode: "rejected"`, the tool name as given, `ok: false`,
 `ms: 0` and the same error text the caller got.
+A call the client cancels (`notifications/cancelled`) while it is still queued never runs:
+it frees its slot and logs one `rejected` line with `error: "Cancelled by the client before
+it ran"`. A call already running when cancelled finishes and logs normally, but sends no reply.
 Argument values longer than 2 KB (after JSON encoding) are truncated with a marker. There is
 no `client` field — a stdio server never learns who called it. Unset, nothing is written; a
 log write that fails goes to stderr and never fails the call. `make foundry-eval-report`

@@ -11,7 +11,7 @@ import subprocess
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timezone
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -64,6 +64,13 @@ _inflight_slots = threading.Semaphore(_INFLIGHT_LIMIT)
 # its worker forever. Bypass with DND_MCP_TOOL_TIMEOUT=<seconds>; raise it for
 # slow generators (e.g. PDF export) or set <=0 to disable (NOT recommended).
 _TOOL_TIMEOUT_SEC = _safe_int_env("DND_MCP_TOOL_TIMEOUT", 60)
+# notifications/cancelled (py-mcp-ac-5): every dispatched tools/call with an id is kept
+# here (id -> (future, runner, arguments)) until its worker finishes. A cancel of a call
+# still queued cancels its future so it never runs; a cancel of a running call adds its
+# id to _cancelled_ids and the worker drops its reply. Both are guarded by _calls_lock.
+_calls_lock = threading.Lock()
+_pending_calls: dict[Any, tuple[Future, "ToolRunner", dict[str, Any]]] = {}
+_cancelled_ids: set[Any] = set()
 
 
 def _python_bin() -> Path:
@@ -274,7 +281,7 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
     try:
         out = runner.run(arguments=arguments)
         ok = True
-        if msg_id is not None:
+        if msg_id is not None and not _was_cancelled(msg_id):
             _reply(msg_id, {"content": [{"type": "text", "text": out}]})
     except Exception as exc:
         if not ok:              # the tool failed (not the response write after it)
@@ -288,7 +295,7 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
             f"{_tb.format_exc()}\n"
         )
         sys.stderr.flush()
-        if msg_id is not None:
+        if msg_id is not None and not _was_cancelled(msg_id):
             _error(msg_id, _E_SERVER, str(exc))
     finally:
         try:
@@ -296,6 +303,55 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
                       ms=round((time.perf_counter() - started) * 1000), error=error)
         finally:
             _inflight_slots.release()
+
+
+def _was_cancelled(msg_id: Any) -> bool:
+    """True when the client sent notifications/cancelled for this running call."""
+    try:
+        with _calls_lock:
+            return msg_id in _cancelled_ids
+    except TypeError:           # an unhashable id was never tracked
+        return False
+
+
+def _track_call(msg_id: Any, future: Future, runner: "ToolRunner",
+                arguments: dict[str, Any]) -> None:
+    """Remember a dispatched call until its future finishes (py-mcp-ac-5). The
+    done-callback runs at once if the call already finished, so no entry is left behind.
+    An unhashable (malformed) id is not tracked, so it cannot be cancelled."""
+    try:
+        hash(msg_id)
+    except TypeError:
+        return
+    with _calls_lock:
+        _pending_calls[msg_id] = (future, runner, arguments)
+
+    def _forget(done: Future) -> None:
+        with _calls_lock:
+            if _pending_calls.get(msg_id, (None,))[0] is done:
+                del _pending_calls[msg_id]
+                _cancelled_ids.discard(msg_id)
+
+    future.add_done_callback(_forget)
+
+
+def _cancel_call(request_id: Any) -> None:
+    """Handle notifications/cancelled (py-mcp-ac-5). A call still queued never runs:
+    its slot is released and it logs one 'rejected' line. A running call finishes
+    but sends no reply. An unknown or finished id is ignored, as the spec allows."""
+    try:
+        with _calls_lock:
+            entry = _pending_calls.get(request_id)
+            if entry is None:
+                return
+            _cancelled_ids.add(request_id)
+    except TypeError:           # an unhashable requestId names no call
+        return
+    future, runner, arguments = entry
+    if future.cancel():
+        _inflight_slots.release()
+        _log_call(runner.tool.name, arguments, ok=False, ms=0,
+                  error="Cancelled by the client before it ran")
 
 
 @dataclass(frozen=True)
@@ -916,7 +972,13 @@ def _serve_loop(
                     if msg_id is not None:
                         _error(msg_id, _E_SERVER, busy)
                     continue
-                executor.submit(_run_call_worker, msg_id, runner, arguments)
+                future = executor.submit(_run_call_worker, msg_id, runner, arguments)
+                if msg_id is not None:
+                    _track_call(msg_id, future, runner, arguments)
+                continue
+
+            if method == "notifications/cancelled":
+                _cancel_call(params.get("requestId"))
                 continue
 
             # Ignore notifications like "initialized".

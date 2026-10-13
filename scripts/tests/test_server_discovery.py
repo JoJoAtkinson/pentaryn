@@ -468,6 +468,9 @@ class _SyncExecutor:
 
     def submit(self, fn, *args):
         fn(*args)
+        done = server.Future()
+        done.set_result(None)
+        return done
 
 
 def _serve(monkeypatch, messages, runners=(), slots=2):
@@ -984,3 +987,78 @@ def test_py_mcp_ac_4_rejected_calls_write_one_log_line_each(monkeypatch, tmp_pat
     assert "Unknown tool" in lines[0]["error"]
     assert "arguments must be an object" in lines[1]["error"]
     assert lines[2]["error"].startswith("Server busy: ")
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ac-5: notifications/cancelled drops a queued call and silences a running one
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ac_5_cancelled_calls_never_run_or_reply(monkeypatch, tmp_path):
+    """py-mcp-ac-5: the serve loop ignored notifications/cancelled, so a call the
+    client gave up on still ran and still replied. Now a still-queued call never
+    runs (its admission slot comes back and it logs one 'rejected' line), and a
+    call already running finishes but sends no reply. Other calls are untouched."""
+    started, gate, ran = server.threading.Event(), server.threading.Event(), []
+
+    def slow(**kw):
+        ran.append(kw["n"])
+        if kw["n"] == 1:
+            started.set()
+            assert gate.wait(5)
+        return f"done {kw['n']}"
+
+    def call(i):
+        return {"jsonrpc": "2.0", "id": i, "method": "tools/call",
+                "params": {"name": "probe", "arguments": {"n": i}}}
+
+    def cancel(i):
+        return {"jsonrpc": "2.0", "method": "notifications/cancelled",
+                "params": {"requestId": i, "reason": "user gave up"}}
+
+    def feed():
+        yield call(1)
+        assert started.wait(5)       # call 1 is running; call 2 will queue behind it
+        yield call(2)
+        yield cancel(2)
+        yield cancel(1)
+        yield cancel(99)             # an unknown id is ignored
+        gate.set()
+        yield call(3)
+        yield None
+
+    sent = []
+    frames = feed()
+    monkeypatch.setattr(server, "_read_message", lambda: next(frames))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(4))
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    runner = _runner(slow)
+    pool = server.ThreadPoolExecutor(max_workers=1)
+    try:
+        assert server._serve_loop((runner.tool,), {"probe": runner}, pool) == 0
+    finally:
+        gate.set()
+        pool.shutdown(wait=True)
+
+    assert ran == [1, 3]
+    assert sent == [{"jsonrpc": "2.0", "id": 3,
+                     "result": {"content": [{"type": "text", "text": "done 3"}]}}]
+    assert server._inflight_slots._value == 4
+    assert server._pending_calls == {} and server._cancelled_ids == set()
+    lines = _log_lines(tmp_path)
+    assert len(lines) == 3
+    queued = [l for l in lines if l["mode"] == "rejected"]
+    assert len(queued) == 1 and queued[0]["args"] == {"n": 2}
+    assert queued[0]["error"] == "Cancelled by the client before it ran"
+
+
+def test_py_mcp_ac_5_unhashable_id_still_replies(monkeypatch):
+    """py-mcp-ac-5: a malformed (list) id is not tracked for cancellation, and the
+    call still runs and replies instead of crashing the dispatch."""
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": [1], "method": "tools/call", "params": {"name": "probe"}},
+        {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": [1]}},
+    ], runners=(_runner(lambda **k: "ok"),))
+    assert sent == [{"jsonrpc": "2.0", "id": [1],
+                     "result": {"content": [{"type": "text", "text": "ok"}]}}]
+    assert server._pending_calls == {}
