@@ -84,7 +84,7 @@ def recover_module(fa: FoundryAdmin, pkg_type: str, pkg_id: str,
     entry = _newest_backup(listing, pkg_type, pkg_id, previous_version)
     if not entry:
         rec.error = (f"no backup of {pkg_id} {previous_version} to restore — "
-                     "the pre-run snapshot did not include it")
+                     "backup_packages did not record one before the run")
         return rec
 
     rec.steps.append(f"restoreBackup {pkg_id} ← {entry.get('id')}")
