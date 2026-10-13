@@ -26,11 +26,11 @@ import { MODULE, stanceOf } from "./ties-core.mjs";
 import { canSee, read, readWorn, stanceLabel } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { PIN_SETTING, setting, mayWrite } from "./settings.mjs";
+import { FALLBACK_ART } from "./core/html.mjs";
 
 const log = makeLog(MODULE);
 
 const LAYER_ID = "pentaryn-ties-cards";
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor, colour } */
 const cards = new Map();

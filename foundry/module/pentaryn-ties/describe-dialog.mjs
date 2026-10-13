@@ -26,7 +26,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, FALLBACK_ART } from "./core/html.mjs";
 
 /** The single live window, and who it is about. */
 let current = { app: null, actorId: null };
@@ -97,7 +97,7 @@ async function toggleFor(actor) {
     ? await editor().enrichHTML(raw, { async: true, relativeTo: actor, secrets: true })
     : `<p><em>${(_loc("PENTARYN_TIES.describe.empty") || "No description written.")}</em></p>`;
 
-  const art = actor.img || actor.prototypeToken?.texture?.src || "icons/svg/mystery-man.svg";
+  const art = actor.img || actor.prototypeToken?.texture?.src || FALLBACK_ART;
   const content = `<div class="pt-describe">
     <img class="pt-describe-art" src="${esc(art)}" alt="" />
     <div class="pt-describe-body">${body}</div>

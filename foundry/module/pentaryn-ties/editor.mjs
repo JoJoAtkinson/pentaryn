@@ -20,13 +20,10 @@
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
 import { read, inbound, presentActorIds, editTie, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
-import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary } from "./core/html.mjs";
+import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
-
-/** What a tie with no portrait — or no actor left at all — shows. Foundry ships it. */
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /**
  * The portrait, or the mystery man when there is no actor left to ask.
@@ -67,8 +64,7 @@ const setExpanded = expanded.set;
  * look to find out what it had become.
  */
 function addTieKey() {
-  const bound = game.keybindings?.get?.(MODULE, "addTie")?.[0]?.key ?? "";
-  return bound.replace(/^Digit/, "").replace(/^Key/, "") || "?";
+  return keyLabel(game.keybindings?.get?.(MODULE, "addTie")?.[0]?.key);
 }
 
 /** Drop a deleted actor's row state; nothing else holds a reference to it. */
@@ -425,13 +421,7 @@ export function bind(root, actor, rerender = () => {}) {
     btn.addEventListener("click", async () => {
       const author = game.actors.get(btn.dataset.id);
       if (!author) return;
-      try {
-        const { TieDialog } = await import("./tie-dialog.mjs");
-        TieDialog.open({ source: author, target: actor, onSaved: rerender });
-      } catch (err) {
-        log.error("the tie dialog failed to open", err);
-        ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
-      }
+      await openTieDialog({ source: author, target: actor, onSaved: rerender });
     });
   });
 
@@ -457,7 +447,9 @@ export function bind(root, actor, rerender = () => {}) {
       if (!tie) return;
       const reply = replies.get(id) ?? null;
       const html = summary(tie, { open: row.classList.contains("pt-open"), canEdit, reply });
-      replaceSummary(row, html, next => bindSummary(next, row, actor));
+      replaceSummary(row, html, next =>
+        bindSummary(next, row, { onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' })
+      );
     };
 
     // notes are the autosave's below; a `change` here as well saved the same text twice on blur
@@ -517,27 +509,21 @@ export function bind(root, actor, rerender = () => {}) {
     });
   });
 
-  root.querySelector('[data-action="add"]')?.addEventListener("click", async () => {
-    try {
-      const { TieDialog } = await import("./tie-dialog.mjs");
-      TieDialog.open({ source: actor, onSaved: rerender });
-    } catch (err) {
-      log.error("the tie dialog failed to open", err);
-      ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
-    }
-  });
+  root.querySelector('[data-action="add"]')?.addEventListener("click", () => openTieDialog({ source: actor, onSaved: rerender }));
 }
 
 /**
- * Re-wire a summary that was replaced in place. Kept separate from `bind()` so a partial
- * repaint cannot re-register every listener in the panel a second time.
+ * Open the tie dialog (loaded on first use), or say it is unavailable — the tab's Add button and
+ * the GM's per-author edit buttons share this one try/catch (ties-ui-M14).
  */
-function bindSummary(head, row, actor) {
-  const wrap = row.querySelector(".pt-detail-wrap");
-  if (!wrap) return;
-  // the same toggle as the full bind's; without it a row behaves differently depending on
-  // whether its summary happened to be repainted since the last render
-  bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' });
+async function openTieDialog(opts) {
+  try {
+    const { TieDialog } = await import("./tie-dialog.mjs");
+    TieDialog.open(opts);
+  } catch (err) {
+    log.error("the tie dialog failed to open", err);
+    ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
+  }
 }
 
 /** Standalone window — the fallback host, and the one the header button opens. */

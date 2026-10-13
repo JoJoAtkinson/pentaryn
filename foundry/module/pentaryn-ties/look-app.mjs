@@ -71,6 +71,7 @@ import { kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
 import { subjectFacts, knowsAbout, groupLabelKey } from "./facts.mjs";
 import { REGISTRY_SETTING, touchesFlagScope } from "./known-core.mjs";
+import { FALLBACK_ART } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -178,7 +179,7 @@ export class LookWindow extends ApplicationV2 {
     const kindLine = kind && base && kind.id !== base.id
       ? `<span class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: kind.name }))}</span>` : "";
     const head = `<div class="pt-summary pt-look-head">
-      <img class="pt-portrait" src="${esc(subject?.img || "icons/svg/mystery-man.svg")}" alt="">
+      <img class="pt-portrait" src="${esc(subject?.img || FALLBACK_ART)}" alt="">
       <span class="pt-who"><span class="pt-name">${esc(name)}</span>${kindLine}</span>
     </div>`;
 

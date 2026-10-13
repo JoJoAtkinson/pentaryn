@@ -30,12 +30,11 @@ import { read, write, baseActorOf } from "./ties-adapter.mjs";
 import { mayWrite } from "./settings.mjs";
 import { pips, stanceSelect } from "./editor.mjs";
 import { MODULE, resolveMirror, NOTES_MAX, clampStance, clampStrength } from "./ties-core.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, FALLBACK_ART } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 const artOf = actor => actor?.img || FALLBACK_ART;
 
 /**

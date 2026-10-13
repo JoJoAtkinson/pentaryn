@@ -142,6 +142,12 @@ Fixed (declared, no table-visible change): `TieDialog._renderHTML` is split into
 dialog's markup is byte-identical in every state (pinned per state in `app-tie-dialog-states-html`).
 ties-ui-M12.
 
+Changed (declared, no table-visible change): helpers the UI files copied now live once —
+`keyLabel`, `bindSummary` and `FALLBACK_ART` in `core/html.mjs` (the Ties and Known tabs' key hints
+and in-place summary rebinds, and the mystery-man portrait seven files spelled out), and the "open
+the tie dialog or say it is unavailable" try/catch once in `editor.mjs` (`openTieDialog`). Markup and
+behaviour unchanged. ties-ui-M14.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

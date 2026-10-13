@@ -40,7 +40,7 @@ import {
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
-import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary } from "./core/html.mjs";
+import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { categoriesFor, categoryLabel, readKnown, hideKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
 
@@ -65,8 +65,6 @@ const log = makeLog(MODULE);
  * copies of it is how a canvas key quietly starts landing on the Ties tab instead.
  */
 export const KNOWN_TAB_ID = "known";
-
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /**
  * Which rows are expanded, per actor — the same cosmetic state the ties panel keeps, and
@@ -122,8 +120,7 @@ async function knownCandidates(actor) {
  * look to find out what it had become.
  */
 function knownKey() {
-  const bound = game.keybindings?.get?.(MODULE, "fileKnown")?.[0]?.key ?? "";
-  return bound.replace(/^Digit/, "").replace(/^Key/, "") || "?";
+  return keyLabel(game.keybindings?.get?.(MODULE, "fileKnown")?.[0]?.key);
 }
 
 /**
@@ -713,7 +710,9 @@ export function bindKnown(root, actor, rerender = () => {}) {
           const entry = readKnown(actor).find(e => e.id === id);
           if (!entry) return;
           const html = summary(entry, { open: row.classList.contains("pt-open"), canEdit });
-          replaceSummary(row, html, next => bindSummary(next, row, actor));
+          replaceSummary(row, html, next =>
+            bindSummary(next, row, { onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="notes"]' })
+          );
         },
         { ms: 700 }
       );
@@ -746,13 +745,6 @@ export function bindKnown(root, actor, rerender = () => {}) {
   });
 
   root.querySelector('[data-action="known-add"]')?.addEventListener("click", () => openAddPicker(actor, rerender));
-}
-
-/** Re-wire a summary replaced in place, so a partial repaint doesn't double every listener. */
-function bindSummary(head, row, actor) {
-  const wrap = row?.querySelector(".pt-detail-wrap");
-  if (!head || !wrap) return; // a repaint that produced nothing must not take the tab down
-  bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="notes"]' });
 }
 
 /**

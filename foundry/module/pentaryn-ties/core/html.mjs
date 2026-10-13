@@ -11,6 +11,16 @@ const ENTITY = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#
 /** @param {*} s  anything; null and undefined escape to "" */
 export const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ENTITY[c]);
 
+/** What a portrait with no image — or no actor left at all — shows. Foundry ships it (ties-ui-M14). */
+export const FALLBACK_ART = "icons/svg/mystery-man.svg";
+
+/**
+ * A keybinding's key code as a hint shows it: "Digit6" → "6", "KeyQ" → "Q", anything else as is,
+ * nothing bound → "?". The caller reads the live binding (`game.keybindings`) and hands the code in,
+ * so a rebound key is never misnamed (ties-ui-M14).
+ */
+export const keyLabel = code => String(code ?? "").replace(/^Digit/, "").replace(/^Key/, "") || "?";
+
 /* ── row fragments (ties-18) ─────────────────────────────────────────────── */
 /*
  * The fragments the Ties and Known rows each rebuilt inline. Pure: the caller localizes the empty
@@ -122,6 +132,19 @@ export function replaceSummary(row, html, rebind) {
   head.replaceWith(next);
   rebind?.(next);
   return next;
+}
+
+/**
+ * Re-wire a summary replaced in place (by `replaceSummary`) with the same row toggle the full bind
+ * gives it — without it a row behaves differently depending on whether its summary happened to be
+ * repainted — and without re-registering every listener in the panel. `onToggle` and `focus` as for
+ * `bindRowToggle`. A repaint that produced nothing (no head, or a row with no detail) is a no-op, not
+ * a throw that takes the tab down. The Ties and Known tabs each carried a copy (ties-ui-M14).
+ */
+export function bindSummary(head, row, { onToggle, focus } = {}) {
+  const wrap = row?.querySelector(".pt-detail-wrap");
+  if (!head || !wrap) return;
+  bindRowToggle(head, row, { wrap, onToggle, focus });
 }
 
 /**

@@ -75,6 +75,7 @@ import {
   ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
+import { FALLBACK_ART } from "./core/html.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -505,7 +506,7 @@ export class InspectPreview extends ApplicationV2 {
     this.pcKey = pcKey;
 
     const head = `<div class="pt-summary pv-entry-head">
-      <img class="pt-portrait" src="${esc(subject.img || "icons/svg/mystery-man.svg")}" alt="" />
+      <img class="pt-portrait" src="${esc(subject.img || FALLBACK_ART)}" alt="" />
       <span class="pt-who"><span class="pt-name">${esc(subject.name)}</span>
       ${kind && kind.id !== subject.id ? `<span class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: kind.name }))}</span>` : ""}</span>
     </div>`;
