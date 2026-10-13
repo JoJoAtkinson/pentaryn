@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **The settings migration logs through the kit log** (declared, R8): its one line was a raw
+  `console.info`, the only console call in `settings.mjs`. It now goes through
+  `makeLog(MODULE).info`; the console line is byte-identical (`pentaryn-aoe | npcSaveRollMode
+  gmroll → gm`, still pinned by `test/glue.test.mjs`). Pinned by `test/settings-log.test.mjs`.
 - **The tray's multiplier labels live beside the multipliers** (declared, EXT-3): the ×0 ×¼ ×½ ×1
   ×2 labels were a separate table in `tray.mjs`, so a multiplier added to `core.MULTIPLIERS` would
   have rendered an "undefined" option. They are now `core.MULTIPLIER_LABELS` (frozen, keyed by

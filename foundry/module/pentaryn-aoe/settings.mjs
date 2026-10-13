@@ -12,7 +12,10 @@
  */
 
 import { I18N, MODULE } from "./core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
+
+const log = makeLog(MODULE);
 
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = Object.freeze([
@@ -99,7 +102,7 @@ export async function migrateSettings() {
   if (!LEGACY_ROLL_MODES.includes(stored)) return null;
   const next = foundry.dice.Roll._mapLegacyRollMode(stored);
   await game.settings.set(MODULE, "npcSaveRollMode", next);
-  console.info(`${MODULE} | npcSaveRollMode ${stored} → ${next}`);
+  log.info(`npcSaveRollMode ${stored} → ${next}`);
   return next;
 }
 
