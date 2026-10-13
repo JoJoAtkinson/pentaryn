@@ -26,7 +26,7 @@ import {
   onPointerMove, dropStaleTooltip, pickerOpen, cancelTargetPicker, closeOwnPickers,
   hudActor, hudTokenDoc, hudTokenId, hudPortrait, hudPanel
 } from "./argon.mjs";
-import { applyButtons, itemButtonClass, slotKind } from "./lib/argon-kit.mjs";
+import { applyButtons, itemButtonClass, settlePips, slotKind } from "./lib/argon-kit.mjs";
 import { argonClasses, liveButtons, TT } from "./form-picker.mjs";
 
 const log = makeLog(MODULE);
@@ -110,10 +110,11 @@ function composeBonusBar(panel, actor) {
   }
   applyButtons(panel, next, fresh);
 
-  // The shift or revert this turn spent the Bonus Action on a HUD that no longer exists.
+  // The shift or revert this turn spent the Bonus Action on a HUD that no longer exists. settlePips
+  // paints the used pip even when the pip count just changed, without pentaryn-combat's wrap (EC-4).
   if (bonusUsedNow(hudTokenId())) {
     panel.isActionUsed = true;
-    panel.updateActionUse();
+    settlePips(panel);
   }
 }
 

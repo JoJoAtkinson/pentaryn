@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **The Bonus pip re-mark settles without pentaryn-combat (EC-4, defect wave 2).** hud-panels.mjs
+  re-marked a Bonus Action spent this turn with one `updateActionUse()`, which Argon ignores when the
+  pip count just changed, so the used pip painted only while combat's pip-settle wrap was on. It now
+  calls the vendored kit's `settlePips(panel)`; the second call is a no-op when combat's wrap is on
+  ([declared]; test "EC-4" in hud-bars.test.mjs; no new strings or hooks).
 - **The Chalice pulse is documented as local to the caster (EC-3, defect wave 2).** The offer is
   painted from `dnd5e.postUseActivity`, which fires only on the casting client — the same client
   that shows the druid's HUD — so there is no relay. The README and the hud-panels.mjs comment now

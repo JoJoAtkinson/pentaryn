@@ -93,7 +93,33 @@ test("Bonus bar, shifted with a revert item: the item's own button, highlighted;
   await flush();
   pinJSON("bonus-shifted-revert-item", bar(p), file);
   assert.equal(p.isActionUsed, true);
-  assert.equal(p.actionUse, 1);
+  assert.equal(p.actionUse, 2, "settled twice (EC-4)");
+});
+
+test("EC-4: with pentaryn-combat absent, a Bonus Action spent this turn paints the used pip after one compose", async () => {
+  const { talo } = fresh({ revertItem: true });
+  const wolf = await T.shift(talo, "p1");
+  const tokenId = talo._tokens[0].id;
+  game.combats.set("c1", { id: "c1", started: true, round: 1, turn: 0, combatant: { tokenId } });
+  wolf._tokens = talo._tokens;
+  T.markBonusUsed(wolf);
+  ui.ARGON._token = { id: tokenId };
+  assert.equal(game.modules.get("pentaryn-combat")?.active, false, "combat's pip-settle wrap is not installed");
+  const p = A.panel("DND5E.BonusAction", [slot(), new A.SplitButton(btn(wolf.items.get(IDS.revert)), btn(wolf.items.get(IDS.cure)))]);
+  // Argon's updateActionUse: when the pip count changed since the last call it only re-counts;
+  // the used pip is painted on a call that finds the count unchanged.
+  p.pips = 1;
+  p.lastPips = 0;
+  p.usedPip = false;
+  p.updateActionUse = function () {
+    this.actionUse += 1;
+    if (this.pips !== this.lastPips) { this.lastPips = this.pips; return; }
+    this.usedPip = this.isActionUsed;
+  };
+  fire(p, wolf);
+  await flush();
+  assert.equal(p.isActionUsed, true);
+  assert.equal(p.usedPip, true, "the used pip is painted without combat's wrap");
 });
 
 test("Bonus bar: an actor with neither Wild Shape nor a revert item is left alone; the panel's own actor is the fallback", async () => {
