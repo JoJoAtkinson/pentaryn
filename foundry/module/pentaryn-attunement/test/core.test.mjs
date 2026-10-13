@@ -84,6 +84,30 @@ for (const [label, M] of IMPLS) {
     assert.equal(purse.name, "Coin Purse (T)");
     same(purse.flags["pentaryn-attunement"].bond, { actor: owns, key: "r2", name: "Coin Purse", currency: { gp: 5 } });
     assert.equal(purse.system.description.value, "<p>5 gp.</p>");
+
+    // [declared] EC-5: an attuned copy is never a merge target, so a later plain Torch of the same
+    // name stashes as its own copy. The verbatim oracle folds it into the bonded copy (the defect).
+    n = 0;
+    const pair = {
+      ...owner,
+      items: new Items([
+        ["a", item("a", "Torch", "loot", { attuned: true }, { name: "Torch", system: { attuned: true, quantity: 1, attunement: "required" } })],
+        ["p", item("p", "Torch", "loot", {}, { name: "Torch", system: { quantity: 4 } })],
+      ]),
+      getFlag: (m, k) => (k === "slots" ? ["a"] : []),
+    };
+    const split = M.planStash(pair, ["a", "p"], { randomID, setProperty });
+    if (label === "oracle") {
+      assert.equal(split.creates.length, 1, "oracle: the plain torch folds into the bonded copy");
+      assert.equal(split.creates[0].system.quantity, 5);
+    } else {
+      assert.equal(split.creates.length, 2, "EC-5: attuned Torch then plain Torch stash as two copies");
+      assert.equal(split.creates[0].system.quantity, 1);
+      assert.equal(split.creates[0].flags["pentaryn-attunement"].bond.attuned, true);
+      assert.equal(split.creates[1].system.quantity, 4);
+      assert.equal(split.creates[1].flags["pentaryn-attunement"].bond.attuned, false);
+    }
+    same(split.away, [{ key: "r1", name: "Torch", img: "i" }]);
   });
 
   // The core has no t() since lang-switch: its strings are lang/en.json through _loc (i18n.test pins parity).

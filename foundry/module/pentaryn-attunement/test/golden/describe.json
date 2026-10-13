@@ -41,7 +41,7 @@
           "kind": "actor",
           "type": "Actor|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor passes through unchanged; a string resolves exactly (never a substring)"
+          "doc": "an Actor (any object with items and getFlag) passes through unchanged; a string resolves exactly (never a substring)"
         }
       ],
       "returns": "{ slots: (itemId|'away:<key>'|null)[], max, value, over } | null",
@@ -49,7 +49,7 @@
       "writes": false,
       "query": false,
       "sideEffects": [],
-      "nullWhen": "a string that names no actor",
+      "nullWhen": "a string that names no actor, or an object that is not actor-like (no items or getFlag)",
       "throws": [
         "AMBIGUOUS"
       ],
@@ -130,7 +130,7 @@
           "kind": "actor",
           "type": "Actor|uuid|id|exact name",
           "resolve": false,
-          "doc": "an Actor passes through unchanged; a string resolves exactly (never a substring)"
+          "doc": "an Actor (any object with items and getFlag) passes through unchanged; a string resolves exactly (never a substring)"
         }
       ],
       "returns": "{ key, name, img }[]",
@@ -142,7 +142,7 @@
         "AMBIGUOUS"
       ],
       "legacy": true,
-      "doc": "The actor's away entries (attuned items not on the actor); [] when there are none or no actor."
+      "doc": "The actor's away entries (attuned items not on the actor); [] when there are none or no actor (a string that names no actor, or an object that is not actor-like: no items or getFlag)."
     },
     {
       "path": "inspect",
@@ -214,7 +214,9 @@
     "writes": [
       "flags.pentaryn-attunement.slots",
       "flags.pentaryn-attunement.away",
-      "flags.pentaryn-attunement.bond"
+      "flags.pentaryn-attunement.bond",
+      "flags.pentaryn-attunement.claims.coinBack",
+      "flags.pentaryn-attunement.claims.home"
     ],
     "reads": []
   },

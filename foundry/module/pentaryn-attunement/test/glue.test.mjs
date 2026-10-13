@@ -95,6 +95,21 @@ test("preUpdateItem attuning on an actor at cap: one WouldExceed warn; never vet
   assert.deepEqual(since(quiet, "notify"), [], "no delta, no attunement, already attuned: silent");
 });
 
+test("EC-10: a non-finite attunement.max warns against the strip's cap of 3, never 'undefined'", () => {
+  for (const [i, max] of [undefined, NaN].entries()) {
+    const quiet = makeActor(F, { id: `actorNoMx000000${i}`, name: "No Max", attunement: { value: 2, max } });
+    const q = addItem(F, quiet, { id: `itemNoMxQ000000${i}`, name: "Ring", system: { attunement: "required", attuned: false } });
+    const from = mark();
+    F.fireCall("preUpdateItem", q, { system: { attuned: true } });
+    assert.deepEqual(since(from, "notify"), [], `${max}: 2 of 3 is under the cap`);
+    const full = makeActor(F, { id: `actorNoMx100000${i}`, name: "No Max", attunement: { value: 3, max } });
+    const f = addItem(F, full, { id: `itemNoMxF000000${i}`, name: "Ring", system: { attunement: "required", attuned: false } });
+    const at = mark();
+    F.fireCall("preUpdateItem", f, { system: { attuned: true } });
+    assert.deepEqual(since(at, "notify").map(c => c.message), ["No Max is already attuned to 3 items — attuning Ring makes 4."], String(max));
+  }
+});
+
 // KNOWN: items-journal-12 — the over-cap warning reads system.attributes.attunement.value (dnd5e's count),
 // the strip counts prepared-attuned items: they can disagree. Recorded, not fixed (countMismatch is optional).
 test("KNOWN items-journal-12: computeSlots counts 2 where the warning's input is 1", () => {
@@ -105,7 +120,7 @@ test("KNOWN items-journal-12: computeSlots counts 2 where the warning's input is
   assert.deepEqual(oracle.wouldExceed({ value: actor.system.attributes.attunement.value, max: 3, awayCount: 0 }), { exceed: false, after: 2 });
 });
 
-test("preCreateItem with a bond, on the bonded actor at home: updateSource with the home changes; options tagged", () => {
+test("M11: preCreateItem with a bond, on the bonded actor at home: updateSource with the home changes; options left untouched", () => {
   const actor = makeActor(F, { id: "actorTalo0000001", name: "Talo Vesk", flags: { [MOD]: { away: [{ key: "k", name: "Cloak", img: "i" }] } } });
   const bond = { actor: actor.id, key: "k", name: "Cloak", equipped: true, attuned: true, attunement: "required" };
   const item = addItem(F, null, { id: "itemBond00000001", name: "Cloak (Talo)", flags: { [MOD]: { bond } } });
@@ -116,7 +131,7 @@ test("preCreateItem with a bond, on the bonded actor at home: updateSource with 
   assert.deepEqual(since(from, "updateSource").map(c => c.changes), [
     { name: "Cloak", "system.attunement": "required", "system.attuned": true, "system.equipped": true },
   ]);
-  assert.deepEqual(options[MOD], { bond });
+  assert.deepEqual(options, {}, "M11: no unread options tag; the batch's shared options namespace is not written");
   assert.equal(JSON.stringify(since(from, "updateSource")[0].changes),
     JSON.stringify(oracle.bondChanges(bond, { actorId: actor.id, awayKeys: ["k"], fallbackName: item.name })));
 });
@@ -142,6 +157,34 @@ test("preCreateItem of an attuned item (no bond) onto an actor at cap: ArrivedAt
   assert.deepEqual(since(from, "notify").map(c => c.message), ["Amulet arrived already attuned; Full is now over the attunement limit."]);
 });
 
+test("EC-4: a batch of attunes counts the ones before it; the first past the cap and every later one warns", () => {
+  // As Foundry does: one options object for the whole batch, every pre-hook before any write.
+  const actor = makeActor(F, { id: "actorBtch0000001", name: "Batch", attunement: { value: 2, max: 3 } });
+  const items = ["A", "B", "C"].map(n => addItem(F, actor, { id: `itemBtc${n}00000000`, name: `Ring ${n}`, system: { attunement: "required", attuned: false } }));
+  const options = {};
+  const from = mark();
+  for (const it of items) assert.equal(F.fireCall("preUpdateItem", it, { system: { attuned: true } }, options), true);
+  assert.deepEqual(since(from, "notify").map(c => c.message), [
+    "Batch is already attuned to 3 items — attuning Ring B makes 4.",
+    "Batch is already attuned to 3 items — attuning Ring C makes 5.",   // the message names the cap; the count runs on
+  ]);
+
+  // Created already attuned, in one batch; a bonded item coming home holds its own away slot and is not counted.
+  const full = makeActor(F, { id: "actorBtch0000002", name: "Batch Two", attunement: { value: 2, max: 3 }, flags: { [MOD]: { away: [] } } });
+  const bond = { actor: full.uuid, key: "kB", name: "Orb", equipped: true, attuned: true, attunement: "required" };
+  const arrivals = [
+    addItem(F, null, { id: "itemArrA00000001", name: "Amulet", system: { attuned: true, attunement: "required" } }),
+    addItem(F, null, { id: "itemArrB00000001", name: "Orb (Batch)", flags: { [MOD]: { bond } } }),
+    addItem(F, null, { id: "itemArrC00000001", name: "Brooch", system: { attuned: true, attunement: "required" } }),
+  ];
+  const created = {};
+  const quiet = mark();
+  for (const it of arrivals) { it.parent = full; F.fireCall("preCreateItem", it, {}, created); }
+  assert.deepEqual(since(quiet, "notify").map(c => c.message), [
+    "Brooch arrived already attuned; Batch Two is now over the attunement limit.",
+  ]);
+});
+
 test("createItem (own user, bond, home): bond cleared, away/slots written, BackInHand toast — in that order", async () => {
   const actor = makeActor(F, { id: "actorHome0000001", name: "Talo Home",
     flags: { [MOD]: { away: [{ key: "k1", name: "Staff", img: "i" }], slots: ["away:k1", "itemCloak0000001", null] } },
@@ -151,9 +194,13 @@ test("createItem (own user, bond, home): bond cleared, away/slots written, BackI
   const from = mark();
   F.fire("createItem", staff, {}, GM);
   await flush();
+  mock.timers.tick(750);                      // [declared] ATT-AC-1-residual: one tab claims the hand-back
+  await flush();
   const seq = since(from).filter(c => ["update", "notify"].includes(c.op)).map(c => (c.op === "notify" ? ["notify", c.message] : ["update", c.documentName, c.changes]));
   assert.deepEqual(seq, [
-    ["update", "Item", { "flags.pentaryn-attunement.bond": "<_del>" }],   // [declared] v14 hygiene: _del, not -=
+    ["update", "Item", { "flags.pentaryn-attunement.claims.home": "socket-gm-1" }],
+    // [declared] v14 hygiene: _del, not -=; ATT-AC-1-residual: the claim is cleared in the same write
+    ["update", "Item", { "flags.pentaryn-attunement.bond": "<_del>", "flags.pentaryn-attunement.claims.home": "<_del>" }],
     ["update", "Actor", { "flags.pentaryn-attunement.away": [], "flags.pentaryn-attunement.slots": ["itemStaff0000001", "itemCloak0000001"] }],
     ["notify", "Staff is back with Talo Home — attunement restored."],
   ]);
@@ -331,7 +378,29 @@ test("report('nope') with no controlled token: undefined and one console.warn", 
   let out = "unset";
   const lines = await withConsole(() => { out = game.pentaryn.attunement.report("nope"); });
   assert.equal(out, undefined);
-  assert.deepEqual(lines, [["warn", "pentaryn-attunement | no actor"]]);
+  assert.deepEqual(lines, [["warn", 'pentaryn-attunement | no actor "nope"']]);   // [declared] EC-6: names the string
+});
+
+test("[declared] EC-6: a misspelt name or a non-Actor object never falls back to the controlled token", async () => {
+  const held = makeActor(F, { id: "actorHeld0000001", name: "Held Token", attunement: { value: 0, max: 3 } });
+  const keep = canvas.tokens.controlled;
+  canvas.tokens.controlled = [{ actor: held }];
+  try {
+    const api = game.pentaryn.attunement;
+    let miss = "unset", obj = "unset", none = "unset";
+    const lines = await withConsole(() => {
+      miss = api.report("Misspelt Name");
+      obj = api.report({ name: "Held Token" });
+    });
+    assert.equal(miss, undefined, "a string that names no actor is a miss, not the controlled token");
+    assert.equal(obj, undefined, "a non-Actor object is a miss");
+    assert.deepEqual(lines, [["warn", 'pentaryn-attunement | no actor "Misspelt Name"'], ["warn", "pentaryn-attunement | no actor"]]);
+    await withConsole(() => { none = api.report(undefined, { quiet: true }); });
+    assert.equal(none?.actor, "Held Token", "no target still defaults to the controlled token");
+    assert.equal(api.report(null, { quiet: true })?.actor, "Held Token");
+  } finally {
+    canvas.tokens.controlled = keep;
+  }
 });
 
 test("computeSlots is idempotent over the legacy fixture shapes (items-journal-13 seam)", () => {

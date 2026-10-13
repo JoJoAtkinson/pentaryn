@@ -4,6 +4,92 @@
 
 The version stays 0.3.0 until the next `module.json` restart batch (code only: sync + reload).
 
+- **[declared] EXT-3:** the claim keys are named once in the core, `COIN_CLAIM = "coinBack"` and
+  `HOME_CLAIM = "home"`, and `bonds.mjs` and `actor-adapter.mjs` build every flag update path with
+  the kit's `flagPath(MODULE, …)` (the away list, the slots, the two claims) instead of hand-written
+  `flags.${…}` templates. `api-manifest.mjs` and the EXT-6 source scan read the same constants (the
+  scan now resolves a template key passed to `flagPath`). The paths written are unchanged
+  (`golden/describe.json` untouched); no change in play. `test/flag-paths.test.mjs`.
+- **[declared] M10:** `actor-adapter.mjs` looks up dnd5e's Tooltips5e prototype through one private,
+  uncached `itemTooltipProto()` (used by `guardItemTooltipPosition` and `tooltipGuarded`) and names
+  the wrap marker once, `GUARD_MARKER = "pentarynGuarded"`, for the `wrapMethod` marker and the
+  `tooltipGuarded` check (was: both written out twice). The literal stays in `actor-adapter.mjs`
+  (adjustments.yml lists it as a marker); `describe()` is unchanged. No change in play.
+  `test/docs.test.mjs`.
+- **[declared] M7:** `strip.mjs` builds the slot ✕ button through one private
+  `removeButton(action, label)` helper, used by filled slots (`unattune`) and away slots (`release`)
+  with the same class, `data-action`, `aria-label` and icon in the same order (was: the same seven lines
+  written twice). The strip's DOM is unchanged (`golden/strip.json` untouched); no change in play.
+  `test/strip.test.mjs`.
+- **[declared] M6:** `strip.mjs` drops `buildAwaySlot`'s unused `index` parameter and its
+  `awayByKey = awayIndex(actor)` default (its one caller, buildSlot, always passes the strip's away index), and
+  `applyTooltip`, `buildSlot`, `buildAwaySlot` and `awayIndex` are module-private (only
+  `buildStrip`, `decorateCounter` and `mountStrip` stay exported). No change in play.
+  `test/strip.test.mjs`.
+- **[declared] M4:** the `actor-adapter.mjs` header and the README "Extending" section now say the
+  adapter holds the shared writes (`stash`, `releaseAway`, `writeSlots`, the `serial` lane) and the
+  third-party reads, and that the features write their own hook-driven updates (`sheet.mjs`
+  attune/unattune, `bonds.mjs` hand-back and purse); was: "every document write lives in the
+  adapter". Docs only; no change in play. `test/docs.test.mjs`.
+- **[declared] M1:** `stash` builds the copies' id list through one private `idsOf(made)` helper,
+  called in the shortfall branch and on the success path (was: the same `.map` written twice). Not
+  hoisted, so the shortfall check runs first and the failure path's writes and `console.error` are
+  unchanged (unlike the reverted 535780c9); no change in play. `test/stash-safety.test.mjs`.
+- **[declared] perf-1:** a drop onto a slot re-renders the sheet once. The write order stays
+  (items, then the slot flag, so preUpdateItem and the `swapFrom` swap still fire), but the item
+  write passes `render: false`, so the sheet no longer first draws the new item in the wrong hole.
+  When the slot flag would not change (the item still holds that slot after an ✕), the item write
+  keeps its render, as that flag write renders nothing. `test/strip.test.mjs`.
+- **[declared] M11:** `restoreBond` (preCreateItem) no longer writes `options["pentaryn-attunement"].bond`.
+  Nothing read that tag, and the batch's shared options namespace now holds only the over-cap
+  count (`pending`) and `swapFrom`; the unused `data`/`options` parameters are gone.
+  `test/glue.test.mjs` asserts options is left untouched.
+- **[declared] EC-10:** the over-cap warning uses the strip's cap. A new pure `capOf(att)` in the
+  core (a finite `attunement.max`, floored at 0, else 3) feeds `computeSlots` and `warnOverCap`'s
+  threshold and its `{max}` placeholder, so an actor with no (or a NaN) `max` warns at 3 and the toast
+  says 3 (was: warned on every attune and said "attuned to undefined items").
+  `test/core-meta.test.mjs`, `test/glue.test.mjs`.
+- **[declared] ATT-ROB-6:** the legacy `computeSlots(actor)` / `away(actor)` pass an object through
+  only when it is actor-like (has `items` and `getFlag`); any other object is a miss, so
+  `computeSlots` returns `null` and `away` returns `[]`, as for a name that matches nothing (was:
+  every object passed through and `computeSlots` threw an uncoded TypeError). `test/api.test.mjs`.
+- **[declared] EXT-8:** `selftest()`'s "item hooks and the sheet hook registered" check now
+  checks each hook by name (`sheet.mjs` and `bonds.mjs` export a frozen `HOOK_NAMES`; the entry
+  passes them to the API) and its `detail` lists the missing names, `null` when none (was: passed on
+  any four registrations, detail the count). `test/api.test.mjs`.
+- **[declared] EC-6:** `report(target)` falls back to the controlled token only when no target is
+  given. A string that names no actor (by id, then name) or a non-Actor object now returns
+  `undefined` with the `no actor` warn, which names the string (was: silently reported the
+  controlled token's actor). `test/glue.test.mjs`.
+- **[declared] ATT-AC-3:** two overlapping `stash` calls on one owner now keep both away entries
+  (was: the second write dropped the first one's), and two overlapping slot drops each keep the slot
+  they were dropped on. Both now run on the per-actor chain the slot hand-back uses (`serial`, moved
+  from `bonds.mjs` to `actor-adapter.mjs`; `uninstall()` still clears it), planning inside the step;
+  a lone stash or drop runs at once, with today's timing. `test/overlap.test.mjs`.
+- **[declared] ATT-AC-2-residual:** the README (Two sessions / who writes) now says an Item Piles
+  currency transfer in the same take-all is written by Item Piles with an absolute value outside
+  the purse chain, and that the purse's 750 ms claim settle orders the payout after it. Docs only;
+  `test/docs.test.mjs` guards the sentence.
+- **[declared] EXT-6:** `describe().flags.writes` and the README Data written table now list the
+  item claim flags `flags.pentaryn-attunement.claims.coinBack` and `.claims.home` that
+  `claimDocument` writes (a separate `CLAIMS` list in the manifest; `stash`'s side effects are
+  unchanged). `test/flags-written.test.mjs` scans the sources so a new flag write cannot go unlisted.
+- **[declared] EC-5:** stashing an attuned item and a plain item of the same name (an attuned
+  Torch, then a stack of Torches) now gives two copies in the box; the plain stack used to be folded
+  into the bonded attuned copy, so it came home with the attuned item. `planStash` registers only
+  mergeable copies (not containers, not attuned) as merge targets.
+- **[declared] EC-4:** a batch that attunes several items, or creates several already attuned, now
+  warns for the first item past the cap and every one after it (was: no warning, since none of the
+  batch's writes had landed when each pre-hook read the count). The pre-hooks count the batch's
+  attunes in its shared options (`options["pentaryn-attunement"].pending`); `restoreBond` merges its
+  `bond` tag into that object instead of replacing it. Still a warning, never a veto.
+- **[declared] ATT-AC-1-residual:** an item coming home is claimed (kit `claimDocument`, key
+  `flags.pentaryn-attunement.claims.home` on the item, 750 ms settle) before the bond is cleared and
+  the slot handed back, as the coin purse is. The MCP bridge tab and a GM browser tab each kept their
+  own hand-back chain, so a two-item batch could write the actor twice per item and leave a phantom
+  away slot; now one tab hands each item back (one write, one toast). The winner deletes the claim in
+  the same update that deletes the bond; `restoreBond` clears a stale `claims.home` copied with an
+  item. The slot lights up about 750 ms later than before.
 - **[declared] W2-A1 follow-up:** `restoreBond` (preCreateItem, non-pile actor) clears a stale
   `flags.pentaryn-attunement.claims.coinBack`. A purse copied inside another actor's 750 ms claim
   window carried that tab's socket stamp, so every tab on the new actor read the claim as held and

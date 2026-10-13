@@ -1,7 +1,9 @@
 /**
- * Pentaryn Attunement Slots — ADAPTER: the writes to actor and item documents, the third-party
- * reads (Item Piles), and the two dnd5e adjustments (CONFIG.DND5E.armorProficienciesMap and the
- * Tooltips5e#_positionItemTooltip guard). Decisions come from attunement-core.mjs.
+ * Pentaryn Attunement Slots — ADAPTER: the shared writes (stash, releaseAway, writeSlots, the
+ * serial lane), the third-party reads (Item Piles), and the two dnd5e adjustments
+ * (CONFIG.DND5E.armorProficienciesMap and the Tooltips5e#_positionItemTooltip guard). Decisions
+ * come from attunement-core.mjs. The features write their own hook-driven updates (sheet.mjs
+ * attune/unattune, bonds.mjs hand-back and purse).
  *
  * Shared by the features (sheet.mjs, bonds.mjs) and api.mjs, which may not import each other.
  */
@@ -9,6 +11,7 @@
 import {
   AWAY_FLAG, MODULE, SLOTS, awayOf, patchProficiencyMap, planStash, tooltipAnchorMissing, trimSlots
 } from "./attunement-core.mjs";
+import { flagPath } from "./lib/flags.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
 /**
@@ -16,6 +19,32 @@ import { wrapMethod } from "./lib/patch.mjs";
  * to box keeps its tag. Adjustments row `itempiles-attunement-repair`.
  */
 export const isPileActor = a => !!game.itempiles?.API?.isValidItemPile?.(a);
+
+/** Per-actor tails of in-flight shared writes (hand-backs, stashes, slot drops) and, apart (`:coin`), coin purses. Local to this tab; the claims keep a second tab out. */
+const tails = new Map();
+
+/**
+ * Run `step` after the actor's previous step in the same `lane` settles. Uncontended, it runs
+ * synchronously, so a lone item home, stash or drop takes the same ticks as before. Returns `step`'s own
+ * promise: a rejection still reaches the caller, while the stored tail swallows it so the next step still runs.
+ * @param {Actor} actor
+ * @param {() => Promise<*>} step
+ * @param {string} [lane]
+ */
+export function serial(actor, step, lane = "") {
+  const key = actor.uuid + lane;
+  const prev = tails.get(key);
+  const run = prev ? prev.then(step) : step();
+  const tail = run.catch(() => {});
+  tails.set(key, tail);
+  tail.then(() => { if (tails.get(key) === tail) tails.delete(key); });
+  return run;
+}
+
+/** Forget every tail (uninstall). */
+export function clearSerial() {
+  tails.clear();
+}
 
 /**
  * Persist a slot arrangement. Trailing holes are trimmed so the flag does not
@@ -52,7 +81,17 @@ export async function releaseAway(actor, key) {
  *                                   keys of the away entries this call added.
  * @returns {Promise<number|{count: number, created: string[], away: string[]}>}
  */
-export async function stash(owner, container, itemIds, { tag, currency = false, detail = false } = {}) {
+export async function stash(owner, container, itemIds, opts = {}) {
+  // Plans from the owner's away list and slots and writes them whole: one stash at a time per owner,
+  // and in turn with a hand-back or a slot drop on the same owner (ATT-AC-3).
+  return serial(owner, () => stashNow(owner, container, itemIds, opts));
+}
+
+// The ids of the copies a createEmbeddedDocuments call returned (null where a copy has none). Called
+// in each branch rather than once up front, so the shortfall check still runs first (M1).
+const idsOf = made => (made ?? []).map(d => d?.id ?? d?._id ?? null);
+
+async function stashNow(owner, container, itemIds, { tag, currency = false, detail = false } = {}) {
   const ids = new Set(itemIds);
   const awayBefore = awayOf(owner).length;
   const { creates, away, slots } = planStash(owner, itemIds, {
@@ -69,7 +108,7 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
     const msg = `${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`;
     console.error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`,
       { owner: owner.id, container: container.id });
-    const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
+    const created = idsOf(made);
     let tail = "";
     let rolledBack = true;
     if (created.length) {
@@ -89,10 +128,10 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
     throw err;
   }
   await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
-  const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
+  const update = { [flagPath(MODULE, AWAY_FLAG)]: away, [flagPath(MODULE, SLOTS)]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
   await owner.update(update);
-  const created = (made ?? []).map(d => d?.id ?? d?._id ?? null);
+  const created = idsOf(made);
   // Audit line for a cross-user write (playbook §5.1: info, with the ids written and `by`), read
   // back after an eval-js run.
   console.info(`${MODULE} | stash: ${creates.length} moved to ${container.name}`,
@@ -121,23 +160,37 @@ export function applyProficiencies() {
 let tooltipGuard = null;
 
 /**
+ * The wrapMethod marker on the guarded `_positionItemTooltip`. The literal stays in this file:
+ * adjustments.yml row `attunement-item-tooltip-anchor` lists it as a marker.
+ */
+const GUARD_MARKER = "pentarynGuarded";
+
+/**
+ * dnd5e's Tooltips5e prototype, or null when this dnd5e has no item tooltips. Looked up on each
+ * call, never cached. Used by the guard and by tooltipGuarded.
+ */
+function itemTooltipProto() {
+  return game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+}
+
+/**
  * dnd5e 6.0.6 `Tooltips5e#_positionItemTooltip` runs a frame after an item tooltip's content
  * loads and calls `game.tooltip._setAnchor`, which reads `game.tooltip.element`. When the row
  * under the pointer was re-rendered away in between (a sheet refresh after a take, an attune,
  * a light), core has already deactivated the tooltip and that element is null, so every such
  * hover logged "Cannot read properties of null (reading 'getBoundingClientRect')" (Area 8 run).
  * With no anchor there is nothing to position: skip. Adjustments row
- * `attunement-item-tooltip-anchor` (a patch row, D2). The marker literal `pentarynGuarded` stays
+ * `attunement-item-tooltip-anchor` (a patch row, D2). The marker (GUARD_MARKER) stays
  * the same, so a second install (and a copy wrapped before the migration) is a no-op.
  */
 export function guardItemTooltipPosition() {
-  const proto = game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+  const proto = itemTooltipProto();
   if (typeof proto?._positionItemTooltip !== "function") return;
   tooltipGuard = wrapMethod(MODULE, {
     target: proto,
     label: "Tooltips5e#_positionItemTooltip",
     name: "_positionItemTooltip",
-    marker: "pentarynGuarded",
+    marker: GUARD_MARKER,
     adjustments: "attunement-item-tooltip-anchor",
   }, function (wrapped, ...args) {
     if (tooltipAnchorMissing({ element: game.tooltip?.element, tooltip: this.tooltip })) return;
@@ -150,9 +203,9 @@ export function guardItemTooltipPosition() {
  * has no item tooltips to guard (selftest).
  */
 export function tooltipGuarded() {
-  const proto = game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+  const proto = itemTooltipProto();
   if (typeof proto?._positionItemTooltip !== "function") return null;
-  return proto._positionItemTooltip.pentarynGuarded === true;
+  return proto._positionItemTooltip[GUARD_MARKER] === true;
 }
 
 /** Undo the tooltip guard (uninstall). */

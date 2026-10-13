@@ -56,7 +56,8 @@ system's `☀ value / max` counter in the inventory row, which turns **red when 
 all NPC sheets get.
 
 **Warnings.** Attuning past the cap, or an item arriving already attuned onto an actor at the cap,
-shows a warning toast. A drop onto a filled slot is a swap (one out, one in), so it does not warn. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
+shows a warning toast. A batch (several items attuned or created attuned in one write) counts the
+ones before each item, so the first past the cap and every one after it warns. A drop onto a filled slot is a swap (one out, one in), so it does not warn. The warning and the strip share one cap (`capOf`): `attunement.max` when it is a finite number, else 3, so a missing max warns at 3 and names 3. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
 and without throwing, so an MCP script would carry on believing it succeeded. The cap is
 unenforceable anyway — expire the effect that raised `attunement.max` and no item hook fires.
 
@@ -72,8 +73,8 @@ Also `game.modules.get("pentaryn-attunement").api`, published at `ready` (frozen
 | Method | Args | Returns | Writes? | GM? |
 |---|---|---|---|---|
 | `report(target?, { quiet? })` | Actor, id or name; defaults to the controlled token | `{ actor, value, max, over, slots, rows }`, or `undefined` (+ a warn) when no actor; prints a table unless `quiet` | no | no |
-| `computeSlots(actor)` | Actor, or id / uuid / exact name | `{ slots, max, value, over }`; `null` for a name that matches nothing | no | no |
-| `away(actor)` | as above | `[{ key, name, img }]` | no | no |
+| `computeSlots(actor)` | Actor, or id / uuid / exact name | `{ slots, max, value, over }`; `null` for a name that matches nothing or an object that is not actor-like (no `items` / `getFlag`) | no | no |
+| `away(actor)` | as above | `[{ key, name, img }]`; `[]` on the same misses | no | no |
 | `stash(owner, container, itemIds, { tag?, currency?, detail? })` | Actors and item ids | the number of items created; with `detail`, `{ count, created, away }`. Rejects, deleting none of the owner's items, if the container accepted fewer copies than asked; the copies it did accept are deleted from the container again, and the error names them (`err.created`, `err.rolledBack`; a failed rollback leaves them there and says why). A success logs one `console.info` audit line (count, container, copy ids and names, `by`) | yes | no |
 | `releaseAway(actor, key)` | Actor, away key | `setFlag`'s promise | yes | no |
 | `inspect(ref, { sceneId?, base? })` | any actor ref (throws `NOT_FOUND` / `AMBIGUOUS`) | `{ actor, slots, max, value, over, away, bonds, counts }`, plain JSON; `counts` = dnd5e's value, away, the strip's value and `mismatch` | no | no |
@@ -90,6 +91,7 @@ inert in play. Nothing in `inspect` is GM-only.
 | actor `flags.pentaryn-attunement.slots` | `(itemId \| "away:<key>" \| null)[]`; trailing holes trimmed by a drop and by an item coming home; `stash` writes the reconciled order padded to `max` (`computeSlots()` re-pads on read, so both forms render the same) | a drop onto a slot; `stash`; an item coming home |
 | actor `flags.pentaryn-attunement.away` | `[{ key, name, img }]` | `stash`; `releaseAway`; an item coming home |
 | item `flags.pentaryn-attunement.bond` | `{ actor, key, name, equipped, attuned, attunement, currency? }`; `actor` is the owner's **uuid**, so an unlinked token is told apart from its base actor and its siblings (a bond written before 2026-10-12 holds the bare id and still matches on it) | `stash` (on the copies); cleared (`_del`) when the item is home |
+| item `flags.pentaryn-attunement.claims.coinBack`, `flags.pentaryn-attunement.claims.home` | the claiming tab's socket id | `claimDocument` (one GM tab wins a returning coin purse / a returning bonded item); gone with the purse when it pays out (the purse deletes itself); `.claims.home` cleared (`_del`) with the bond when the item is home; both cleared on a copy that arrives carrying a stale one |
 
 The slot flag is only ever a **hint**: `computeSlots()` reconciles it on every render (gone,
 unattuned or duplicated ids become holes; attuned items without a slot drop into the first hole),
@@ -121,18 +123,28 @@ reads `DND5E.EFFECT.Suppressed.Hint`.
   the bond restore mutates the item's source there (for an Item Piles Take, the GM's).
 - `createItem` (slot hand-back, coin purse) runs only where `userId === game.user.id` — once per
   user, but in **every tab** of that user (the MCP bridge tab and a GM browser tab both, for a
-  GM-made change). The slot hand-back writes the same values from either tab. The coin purse is
+  GM-made change). The slot hand-back is claimed like the purse (kit `claimDocument`, key `home`
+  on the returning item, ~750 ms settle): exactly one tab clears the bond, together with its claim,
+  and hands the slot back, so a batch from two tabs cannot leave a phantom away slot
+  (ATT-AC-1-residual). The coin purse is
   claimed first (kit `claimDocument`, key `coinBack` on the purse item, 750 ms settle), so exactly
   one tab pays and deletes it; a purse already gone stands down (W2-A1). Several purses in one
   batch pay in turn on a per-actor coin chain, apart from the hand-backs, so each adds to the last
-  total (ATT-AC-2).
-- Sheet drops and `stash` write from the client that calls them.
+  total (ATT-AC-2). An Item Piles currency transfer in the same take-all is written by Item Piles
+  with an absolute value outside this chain; the purse's 750 ms claim settle is what orders the
+  payout after it (ATT-AC-2-residual).
+- Sheet drops and `stash` write from the client that calls them. In that tab they run in turn
+  with each other and with the slot hand-back on a per-actor chain (`serial` in
+  `actor-adapter.mjs`), each planning from the previous one's write, so two overlapping stashes or
+  drops on one owner keep both away entries and both slots (ATT-AC-3). A lone call runs at once.
 
 ## Extending
 
 Pure rules go in `attunement-core.mjs` with a fixture table in `test/core.test.mjs` (oracle +
-core). Document writes and third-party reads go in `actor-adapter.mjs`; DOM in `strip.mjs`; hooks in
-a feature (`sheet.mjs`, `bonds.mjs`) registered through `reg.on(name, fn, { label })`. A new API
+core). The shared writes (`stash`, `releaseAway`, `writeSlots`, the `serial` lane) and third-party reads go in
+`actor-adapter.mjs`; the features write their own hook-driven updates (`sheet.mjs` attune/unattune,
+`bonds.mjs` hand-back and purse). DOM in `strip.mjs`; hooks in a feature (`sheet.mjs`, `bonds.mjs`)
+registered through `reg.on(name, fn, { label })`. A new API
 method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and a read of the golden diff.
 
@@ -156,7 +168,7 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 | File | Role |
 |---|---|
 | `attunement.mjs` | entry: init, ready (guard, build, publish), installs `sheet` then `bonds` |
-| `attunement-core.mjs` | pure: constants, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe` |
+| `attunement-core.mjs` | pure: constants, `capOf`, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe` |
 | `actor-adapter.mjs` | `stash`, `releaseAway`, `writeSlots`, `isPileActor`, the two dnd5e adjustments |
 | `strip.mjs` | UI: the strip, the counter's over-cap class |
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
@@ -174,7 +186,9 @@ node test/run.mjs        # from this folder
 `slots.test` holds the slot fixtures (stale flags, deleted items, duplicates, corrupt flag types,
 over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
 `hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
-`stash-safety`, `guard-failure`, `home-race`, `bond-uuid` and `lang-switch` pin the wiring; `core-meta` holds the core's identity (it loads
+`stash-safety`, `guard-failure`, `home-race`, `overlap`, `bond-uuid` and `lang-switch` pin the wiring;
+`flags-written` scans the sources so every flag path they write is in `describe().flags.writes`;
+`flag-paths` checks `bonds.mjs` and `actor-adapter.mjs` build flag paths with the kit's `flagPath` and the core's claim keys (`COIN_CLAIM`, `HOME_CLAIM`); `core-meta` holds the core's identity (it loads
 with no Foundry globals, constants agree with `module.json`, `trimSlots`), `docs` guards this
 README, and `i18n` checks `lang/en.json` against the oracle's former `STRINGS`. Goldens in `test/golden/`.
 

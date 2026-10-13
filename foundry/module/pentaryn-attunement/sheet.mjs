@@ -7,8 +7,8 @@
  * handler without patching anything.
  */
 
-import { AWAY, MODULE, awayOf, computeSlots, safe } from "./attunement-core.mjs";
-import { releaseAway, writeSlots } from "./actor-adapter.mjs";
+import { AWAY, MODULE, SLOTS, awayOf, computeSlots, safe, trimSlots } from "./attunement-core.mjs";
+import { releaseAway, serial, writeSlots } from "./actor-adapter.mjs";
 import { decorateCounter, mountStrip } from "./strip.mjs";
 
 /* -------------------------------------------- */
@@ -22,6 +22,12 @@ import { decorateCounter, mountStrip } from "./strip.mjs";
  * @param {number} index
  */
 async function attuneToSlot(actor, item, index) {
+  // Plans from the slots and writes them whole: in turn with a stash, a hand-back or another drop on
+  // the same actor (ATT-AC-3). Uncontended, it runs at once.
+  return serial(actor, () => attuneNow(actor, item, index));
+}
+
+async function attuneNow(actor, item, index) {
   const { slots } = computeSlots(actor);
   const occupant = slots[index] ?? null;
   if (occupant === item.id) return;
@@ -42,6 +48,12 @@ async function attuneToSlot(actor, item, index) {
 
   // A drop onto a filled slot is a swap: the over-cap warning subtracts the occupant (EC-3).
   const options = occupant ? { [MODULE]: { swapFrom: occupant } } : {};
+  // The item write skips its re-render so the sheet draws once, on the slot-flag write, with both
+  // states final (perf-1). If that flag write is a no-op (the item still holds this slot from an ✕)
+  // Foundry renders nothing for it, so the item write keeps its render.
+  const stored = actor.getFlag(MODULE, SLOTS);
+  const flagChanges = JSON.stringify(trimSlots(next)) !== JSON.stringify(Array.isArray(stored) ? stored : null);
+  if (flagChanges) options.render = false;
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates, options);
   await writeSlots(actor, next);
 }
@@ -181,6 +193,9 @@ function onRenderSheet(app, element) {
     console.error(`${MODULE} | render failed`, err);
   }
 }
+
+/** The hooks install() registers, in order; selftest() checks each is in the registry (EXT-8). */
+export const HOOK_NAMES = Object.freeze(["renderBaseActorSheet"]);
 
 export function install(reg) {
   reg.on("renderBaseActorSheet", onRenderSheet, { label: "renderBaseActorSheet: strip" });

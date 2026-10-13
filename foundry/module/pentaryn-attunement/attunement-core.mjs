@@ -24,6 +24,9 @@ export const HOOKS = Object.freeze({});
 export const SLOTS = "slots";
 export const AWAY_FLAG = "away";
 export const BOND = "bond";
+/** Claim keys: kit claimDocument stamps the item flag claims.<key> under this module (EXT-3). */
+export const COIN_CLAIM = "coinBack";
+export const HOME_CLAIM = "home";
 /** Prefix of an away item's id in the slot array: `away:<key>`. */
 export const AWAY = "away:";
 
@@ -131,11 +134,13 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
     });
     if (wasAttuned) { away.push({ key, name: item.name, img: item.img }); keyById.set(id, key); }
 
-    // Merge plain duplicates (two stacks of torches) so the box stays readable.
+    // Merge plain duplicates (two stacks of torches) so the box stays readable. Only a mergeable
+    // copy is a merge target: an attuned copy is never a prior for a later stack (EC-5).
     const mkey = `${data.type}|${data.name}`;
-    const prior = (data.type !== "container" && !wasAttuned) ? merged.get(mkey) : null;
+    const mergeable = data.type !== "container" && !wasAttuned;
+    const prior = mergeable ? merged.get(mkey) : null;
     if (prior && ("quantity" in data.system)) { prior.system.quantity += data.system.quantity ?? 1; continue; }
-    merged.set(mkey, data);
+    if (mergeable) merged.set(mkey, data);
     creates.push(data);
   }
 
@@ -161,6 +166,16 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
 /* -------------------------------------------- */
 
 /**
+ * The attunement cap the strip and the over-cap warning share: a finite `max` (floored at 0),
+ * else 3 — so a missing or NaN `max` warns at the same count the strip draws (EC-10). Pure.
+ * @param {{max?: number}} [att]   `system.attributes.attunement`
+ * @returns {number}
+ */
+export function capOf(att) {
+  return Number.isFinite(att?.max) ? Math.max(0, att.max) : 3;
+}
+
+/**
  * Reconcile the stored slot order against what is actually attuned right now.
  *
  * Pure: reads documents, writes nothing. Safe to call from render.
@@ -170,7 +185,7 @@ export function planStash(owner, itemIds, { tag, currency = false, randomID, set
  */
 export function computeSlots(actor) {
   const att = actor.system?.attributes?.attunement ?? {};
-  const max = Number.isFinite(att.max) ? Math.max(0, att.max) : 3;
+  const max = capOf(att);
 
   // Prepared data is the right source here: an item stripped of its attunement
   // by prepareFinalEquippableData (equipment without the Magical property) is
