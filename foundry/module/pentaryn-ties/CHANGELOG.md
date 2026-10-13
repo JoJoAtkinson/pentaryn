@@ -5,6 +5,11 @@ the old README's version-tagged sections.
 
 ## Unreleased — blueprint migration (2026-10, wave 3)
 
+- [declared] ties-ui belief text (defect wave 3, 2026-10-13): the GM-only belief row on a studied
+  actor's Ties tab renders the authored lore as enriched HTML (`TextEditor.enrichHTML` relative to
+  the actor, after the section binds) instead of printing its tags as literal text. Still GM-only;
+  an empty belief keeps "said nothing"; a failed enrich falls back to the escaped text.
+
 - [declared] names-ext-3 (kit 1.2.0, final review 2026-10-12): `inspect` reads a token's synthetic
   actor through the kit's `resolveRef(..., { base: true })` (the token's `actorId`) instead of ties'
   own `isToken` patch (the synthetic actor's id). Same dossier at the table.
