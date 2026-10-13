@@ -12,6 +12,7 @@ import {
 import { FOLDER_NAME, markerSizeOf, promptText } from "./core/markers.mjs";
 import { panelRels, seenCount } from "./core/placement.mjs";
 import { sceneCache } from "./core/cache.mjs";
+import { DEFAULTS } from "./core/defaults.mjs";
 import { wallSegmentsOf } from "./core/walls.mjs";
 import { makeSight, heightWarning } from "./sight-adapter.mjs";
 import { isStockLore } from "./build-core.mjs";
@@ -362,7 +363,7 @@ export function promptTokens(scene) {
  * The side panel for one marker: what it can see, nearest first, and what is just out of sight.
  * Rows carry what the dialog draws; geometry comes from the same `rel` the gather uses.
  */
-export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = 60 } = {}) {
+export function panelFor(tokenDoc, { rows = 12, unseenWithinFt = DEFAULTS.unseenWithinFt } = {}) {
   const scene = tokenDoc.parent;
   // the panel always builds fresh (a door shut, an actor renamed: never a stale panel) and leaves
   // what it built for the hover tip

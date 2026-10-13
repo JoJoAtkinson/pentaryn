@@ -3,8 +3,9 @@
  * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
  */
 
+import { isPromptId } from "./group.mjs";
 import { atFeet } from "./placement.mjs";
-import { DOOR, classifySight, wallSegment } from "./sight.mjs";
+import { DOOR, asSegment, classifySight, wallSegment } from "./sight.mjs";
 import { idCompare } from "./text.mjs";
 
 /* ── Doors near prompts ──────────────────────────────────────────────────── */
@@ -30,7 +31,7 @@ const DOOR_BUILT_CAP = 3;
 export function doorLines(doors, groups, { dims, gridFt = 5, withinFt = 60, walls = null, reach = null } = {}) {
   if (!doors?.length || !dims) return [];
   const pxPerFt = dims.size / gridFt;
-  const segs = walls ? walls.map(x => (x.a && x.b && "sight" in x ? x : wallSegment(x))) : null;
+  const segs = walls ? walls.map(asSegment) : null;
   const same = (s, d) => (s.id && d.id ? s.id === d.id
     : s.a.x === d.a.x && s.a.y === d.a.y && s.b.x === d.b.x && s.b.y === d.b.y);
   const out = [];
@@ -80,7 +81,6 @@ export function doorLines(doors, groups, { dims, gridFt = 5, withinFt = 60, wall
       cands.sort((a, b) => (a.ft - b.ft) || idCompare(a.m.id, b.m.id));
       // the nearest member that sees the doorway; failing that, one that sees it past another door
       let seen = null, viaDoor = null, blocked = null, blockedPrompt = null;
-      const isPromptId = id => /^p\d+$/.test(String(id ?? ""));
       for (const c of cands) {
         const centre = { x: c.m.rect.x + c.m.rect.w / 2, y: c.m.rect.y + c.m.rect.h / 2 };
         const { P, side } = spot(centre);

@@ -57,6 +57,8 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
 | `lastCalls` | world, hidden store | `[]` | The last five gather manifests (replace and crops read them) |
 
 Every read is live (`settings.mjs` `setting()`), so a change applies without a reload.
+The defaults of `gatherChars`, `unseenWithinFt`, `cropMaxPerCall`, `cropLongSidePx` and
+`cropsDefault` live once in `core/defaults.mjs` `DEFAULTS`; change a default there, not in a fallback.
 
 ## API — `game.pentaryn.prompts`
 
@@ -83,7 +85,8 @@ hold `"current"`). `crops`: `"auto"` · `true`/`"on"` · `false`/`"off"`. `crops
 default: `Data/pentaryn-prompts-crops/<call>/E1.webp`, no base64 in an eval-js result) or `"base64"`
 (what the queries get; the bridge turns them into MCP images). `party`: `"4x5"`, `{size, level}` or
 `[levels]`; the text's `<party>` line names it and its source, or says none is set. Paging: at most
-`maxPrompts` (60) after the first scene; pass `next` as `from` with the same `scenes`. `specFile`: a JSON
+`maxPrompts` (60) after the first scene; pass `next` as `from` with the same `scenes` (under `"all"`, a
+`from` that has since lost its prompts resumes at the next prompted scene after it). `specFile`: a JSON
 file under the Data dir (`pentaryn-prompts-specs/<name>.json`): replacements, or `{call, party, replacements}`.
 `place` and a drop arm the keyboard capture on the **calling** client for up to 3.5 s.
 
@@ -91,7 +94,7 @@ file under the Data dir (`pentaryn-prompts-specs/<name>.json`): replacements, or
 `pentaryn-prompts.list`, `.gather`, `.crops`, `.replace` (= `replaceMany`), `.show`; a query before
 the API is published answers `NOT_READY`. **Errors are** `Error("<CODE>: detail")`: `TEXT_CHANGED`
 (replace: the prompt was edited after the gather), `MARKER_GONE` (show, replace: the marker is gone;
-replace says what replaced it or what it was resized to), `CALL_UNKNOWN` (crops, show, replace: no
+replace says what replaced it, what it was resized to, or that another GM tab is replacing it), `CALL_UNKNOWN` (crops, show, replace: no
 stored manifest), `SCENE_UNKNOWN` (gather, show, replace, `model`), `BAD_SPEC` (any bad argument, per
 row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY_RUN_REQUIRED`
 (replace: more than 5 without a dry run of the same set). The fork adds `MODULE_MISSING` and
@@ -127,7 +130,10 @@ Results are flat rows (strings, numbers, booleans, lists of strings), built by `
 `text` is the readback the MCP tool prints. Placement: same footprint → the marker's own x/y; other
 creature footprints centred and snapped; hotspots and tiles centred unsnapped; notes and lights on the
 centre. Every created document, actor and journal carries the provenance. A failed replacement keeps
-its marker, and what this module created for it is deleted again (`discarded`).
+its marker, and what this module created for it is deleted again (`discarded`). The replaced markers
+on a scene go in one delete; a marker already gone (another GM deleted it mid-run) is left out and
+its row keeps its replacement with a WARN saying so, and if the delete still fails each marker is
+deleted on its own, so a refusal leaves only that row `markerDeleted=false` with a WARN naming it.
 
 ### The gather, briefly
 
@@ -161,7 +167,8 @@ the table is in `context/foundry/markers.md`.
 
 None emitted (`renderPromptDialog` is core's ApplicationV2 hook). The hooks it listens to are
 `test/golden/hooks.json` (registered at import), plus the scene-model cache's invalidation hooks
-(`core/cache.mjs` `INVALIDATING_HOOKS`), registered at `ready`.
+(`core/cache.mjs` `INVALIDATION`, hook → scope; `INVALIDATING_HOOKS` is its keys), registered at
+`ready`.
 
 ## Patches and adjustments
 
@@ -178,8 +185,12 @@ subclass (the box): no row, nothing of core's is changed.
 Everything is GM-only. `ensureMarkers` runs on the active GM, which is every tab of that user;
 its creates use fixed ids with `keepId`, so two tabs make one folder and one actor per size. The
 queries are GM-guarded; the fork reaches them through the bridge module, which calls the handler in
-its own GM tab. A `User#query` to the GM would run in **every** tab of that user, and `replace` is
-not idempotent across tabs — keep calling it through the bridge. The side panel, hover tip and keyboard capture are per client.
+its own GM tab. A `User#query` to the GM would run in **every** tab of that user — keep calling
+`replace` through the bridge. Overlapping `replace` runs in one tab queue per scene (the later one
+re-reads its markers, so one the earlier run built reports `MARKER_GONE`), and a real run claims
+each marker across tabs (`claimDocument`, `flags.pentaryn-prompts.claims.replace`) before it builds:
+a marker another tab holds fails that row only. A claim left on a marker that was not replaced is
+taken off; `force` takes over one left by a tab that went away mid-run. The side panel, hover tip and keyboard capture are per client.
 
 ## Extending
 

@@ -50,6 +50,14 @@ export function wallSegment(w) {
 }
 
 /**
+ * A wall as a segment record: one already normalised (`a`, `b` and `sight`) is used as given,
+ * anything else goes through wallSegment. Core-only (not on the geometry-core barrel).
+ */
+export function asSegment(w) {
+  return w.a && w.b && "sight" in w ? w : wallSegment(w);
+}
+
+/**
  * Core's `Edge#applyThreshold` for sight from `origin` (no external radius): true when the wall
  * stops counting — a PROXIMITY wall seen from within its threshold, a DISTANCE wall from beyond it.
  */
@@ -78,7 +86,7 @@ export function rayPasses(origin, dest, walls, { ignoreDoors = false } = {}) {
   const doors = [];
   let blocked = false;
   for (const raw of walls ?? []) {
-    const w = raw.a && raw.b && "sight" in raw ? raw : wallSegment(raw);
+    const w = asSegment(raw);
     if (!w.sight) continue;
     const isDoor = w.door !== DOOR.NONE;
     if (isDoor && w.ds === DOOR_STATE.OPEN) continue;

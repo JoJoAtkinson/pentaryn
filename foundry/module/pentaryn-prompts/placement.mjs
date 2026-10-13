@@ -25,16 +25,18 @@ export async function placeAtCursor(sizeKey, { ticket = null } = {}) {
   ticket ??= startTyping();   // the API path too: keys typed while the token is created are held
   const giveUp = () => { if (ticket !== null) cancelTyping(ticket); return null; };
   if (!game.user?.isGM || !canvas?.ready || !canvas.scene) return giveUp();
-  const size = SIZE_BY_KEY[sizeKey] ? sizeKey : settingStrict("defaultSize");
-  const actor = markerActor(size);
-  if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return giveUp(); }
   const g = canvas.grid.size;
-  const w = SIZE_BY_KEY[size].w * g;
-  const m = canvas.mousePosition;
-  const data = await tokenDataFrom(actor, canvas.scene, { at: { x: m.x - w / 2, y: m.y - w / 2 }, snap: true,
-    extra: { elevation: canvas.level?.elevation?.base ?? 0, ...(canvas.level?.id ? { level: canvas.level.id } : {}) } });
   let tok;
   try {
+    // the setting read and the token data are inside the try too: any failure logs and gives up
+    // (ticket cancelled, null), never a rejection with the keys still captured (prompts-core-EC-6)
+    const size = SIZE_BY_KEY[sizeKey] ? sizeKey : settingStrict("defaultSize");
+    const actor = markerActor(size);
+    if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return giveUp(); }
+    const w = SIZE_BY_KEY[size].w * g;
+    const m = canvas.mousePosition;
+    const data = await tokenDataFrom(actor, canvas.scene, { at: { x: m.x - w / 2, y: m.y - w / 2 }, snap: true,
+      extra: { elevation: canvas.level?.elevation?.base ?? 0, ...(canvas.level?.id ? { level: canvas.level.id } : {}) } });
     [tok] = await canvas.scene.createEmbeddedDocuments("Token", [data], { pentarynPrompts: { placed: true } });
   } catch (err) {
     log.error("placing a prompt marker failed", err);
@@ -48,7 +50,8 @@ export async function placeAtCursor(sizeKey, { ticket = null } = {}) {
 /** Keybinding `place` (P). */
 export function onPlaceKey() {
   if (!game.user?.isGM || !canvas?.ready) return false;
-  placeAtCursor(null, { ticket: startTyping() });   // capture from the key press on
+  const ticket = startTyping();   // capture from the key press on
+  placeAtCursor(null, { ticket }).catch(() => cancelTyping(ticket));   // never leave keys captured
   return true;
 }
 
