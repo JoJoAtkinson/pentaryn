@@ -26,6 +26,8 @@ import { FEATURE_ROWS } from "./api-manifest.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
+/** The handle actor's and its prototype token's name (aoe-mnt-10: written once). */
+const HANDLE_NAME = "Area handle";
 /** The handle actor's fixed id (16 alphanumerics): two sessions creating it at once make one actor. */
 const HANDLE_ACTOR_ID = "pentarynAoeHndl0";
 
@@ -41,7 +43,7 @@ const attachedElsewhere = region => attachedToOther(region, id => region?.parent
 
 function handlePrototype() {
   return {
-    name: "Area handle",
+    name: HANDLE_NAME,
     width: 0.5, height: 0.5,
     texture: { src: HANDLE_ICON },
     displayName: CONST.TOKEN_DISPLAY_MODES.HOVER,
@@ -62,8 +64,10 @@ function handlePrototype() {
  * creature tokens (Token5e._onOverrideSize). The handle is 0.5: "tiny" makes the sync a no-op and
  * flags.dnd5e.lockSize opts out of it outright. hover exempts the handle from movementAutomation's
  * Falling when its region sits at an elevation. Adjustment row dnd5e-token-size-lock.
+ * The one source for these: handleActorData builds the new actor's system from it and
+ * handleActorRepairs checks an existing actor against it (aoe-mnt-10).
  */
-const HANDLE_SYSTEM = { "system.traits.size": "tiny", "system.attributes.movement.hover": true };
+const HANDLE_SYSTEM = Object.freeze({ "system.traits.size": "tiny", "system.attributes.movement.hover": true });
 
 function handleActorRepairs(actor) {
   const update = {};
@@ -100,12 +104,13 @@ export async function ensureHandleActor() {
 
 function handleActorData(folder) {
   return {
-    name: "Area handle",
+    name: HANDLE_NAME,
     type: "npc",
     img: HANDLE_ICON,
     folder: folder?.id ?? null,
     ownership: { default: OWNER },
-    system: { attributes: { hp: { value: 0, max: 0 }, movement: { hover: true } }, traits: { size: "tiny" } },
+    // hp first keeps the key order attributes{hp, movement}, traits — whatever HANDLE_SYSTEM's order
+    system: foundry.utils.expandObject({ "system.attributes.hp.value": 0, "system.attributes.hp.max": 0, ...HANDLE_SYSTEM }).system,
     prototypeToken: handlePrototype(),
     flags: { [MODULE]: { handleActor: true } }
   };
@@ -485,4 +490,4 @@ export function uninstall() {}
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { handlePrototype, handleActorRepairs, spellName, deleteHandlesOf, decorateCard, actionRow, concentrationItemUuid, attachedElsewhere, pending };
+export const _internals = { HANDLE_NAME, HANDLE_SYSTEM, handlePrototype, handleActorData, handleActorRepairs, spellName, deleteHandlesOf, decorateCard, actionRow, concentrationItemUuid, attachedElsewhere, pending };

@@ -548,3 +548,19 @@ test("-7 two GM sessions at ready create one handle actor (D-A6)", async () => {
   assert.equal(creates[0]?.data._id, "pentarynAoeHndl0");
   assert.equal(F.game.actors.filter(a => a.flags?.[MODULE]?.handleActor).length, 1);
 });
+
+test("[declared] aoe-mnt-10: one HANDLE_NAME and one HANDLE_SYSTEM feed the actor, its prototype and the repairs", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../areas.mjs", import.meta.url), "utf8");
+  assert.equal(src.split('"Area handle"').length - 1, 1, "the handle name is written once");
+  assert.equal(src.match(/size"?: "tiny"/g)?.length, 1, "the handle size is written once");
+  assert.equal(A.HANDLE_NAME, "Area handle");
+  const data = A.handleActorData(null);
+  assert.equal(data.name, A.HANDLE_NAME);
+  assert.equal(data.prototypeToken.name, A.HANDLE_NAME);
+  for (const [path, value] of Object.entries(A.HANDLE_SYSTEM)) assert.equal(F.foundry.utils.getProperty(data, path), value, path);
+  // golden key order kept: hp before movement, attributes before traits
+  assert.deepEqual(JSON.stringify(data.system), JSON.stringify({ attributes: { hp: { value: 0, max: 0 }, movement: { hover: true } }, traits: { size: "tiny" } }));
+  // an actor built from the data needs no repair
+  assert.deepEqual(A.handleActorRepairs({ _source: structuredClone(data) }), {});
+});

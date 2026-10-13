@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **The handle actor's invariants are written once** (declared, aoe-mnt-10): the "Area handle"
+  name sat in both the actor and its prototype token, and its tiny size and hover were spelled
+  out in the new actor's data and again in the repair table. One `HANDLE_NAME` and one
+  `HANDLE_SYSTEM` now feed `handlePrototype`, `handleActorData` and `handleActorRepairs`; the
+  created actor is byte-identical (create-handle/ready-calls goldens unchanged). Pinned by
+  `test/areas.test.mjs`.
 - **A handle is found however its attachment is stored** (declared, aoe-mnt-7): `handleFor` read
   the region's attached token by hand and missed a bare token id on the live region, falling back
   to the region flag. It now reads it through `core.attachedTokenId`, which handles the live
