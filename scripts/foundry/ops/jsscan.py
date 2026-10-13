@@ -282,7 +282,7 @@ class Import:
 
 
 _RE_IMPORT = re.compile(
-    rf"(?<![\w$.])import\s*(?![\(.])(?:([^;]*?)\s*from\s*)?(\x01\d+\x01)")
+    rf"(?<![\w$.])import\s*(?![\(.])(?:([^;\x01]*?)\s*from\s*)?(\x01\d+\x01)")
 _RE_DYNAMIC = re.compile(
     rf"(?:const|let|var)\s*(?:\{{([^}}]*)\}}|{IDENT})\s*=\s*(?:await\s+)?import\(\s*([^)]*?)\s*\)")
 _RE_DYNAMIC_BARE = re.compile(r"(?<![\w$.])import\(\s*([^)]*?)\s*\)")

@@ -152,6 +152,20 @@ def test_the_word_import_inside_a_string_is_not_an_import(tmp_path):
     assert modules._check_imports(build(tmp_path, files)) == 0
 
 
+def test_a_semicolon_less_side_effect_import_does_not_swallow_the_next(tmp_path, capsys):
+    """EC-5: `import "./a.mjs"` with no semicolon let the next import's clause span the
+    first string, so `{ gone }` was never checked against ./lib.mjs."""
+    files = {"main.mjs": 'import "./side.mjs"\nimport { gone } from "./lib.mjs"\nexport const x = gone\n',
+             "side.mjs": 'export {}\n',
+             "lib.mjs": 'export const beta = 2\n'}
+    spec = build(tmp_path, files)
+    found = jsscan.imports_of(jsscan.scan(spec.src / "main.mjs"))
+    assert [(i.spec, i.names, i.line) for i in found] == [
+        ("./side.mjs", [], 1), ("./lib.mjs", ["gone"], 2)]
+    assert modules._check_imports(spec) == 1
+    assert "gone" in capsys.readouterr().out
+
+
 # ── i18n keys ─────────────────────────────────────────────────────────────────
 
 LANG = {"DEMO.title": "Demo", "DEMO.row.remove": "Remove", "DEMO.row.keep": "Keep"}
