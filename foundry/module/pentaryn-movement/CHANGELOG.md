@@ -17,6 +17,34 @@ manifest); the kit is vendored. What a player or GM can notice:
   session instead of swallowed silently (console only).
 - **[declared] D-M4** — the "ghost movement is available again" toast after the GM allows ghost
   during a fight reads "The GM allows ghost movement again" instead of "The fight is over" (F-M2).
+- **[declared]** after a fight switched a player's ghost off, moving to another map while that fight
+  still runs no longer toasts "The fight is over" (which used up the one-time toast); the toast now
+  comes once, when the fight on the map it was cleared on really ends (movement-edge-1).
+- **[declared]** a quick double click on the GM ghost button no longer toasts a mode that never takes
+  effect: the clicks (and `setPolicy`) are applied one after another on that client, each flipping
+  from the previous result, and the toast names the mode actually in effect (movement-async-1).
+- **[declared]** `selftest()`'s "settings readable" check can fail now: it passes only when every
+  setting is registered and reads back a value of its default's type, and its `detail` lists the
+  keys that did not (rob-4).
+- **[declared]** `pinsUnderTokens(scene)` also takes a scene id: it is looked up in the world's
+  scenes, and an unknown id answers `[]` like no scene, instead of a raw TypeError (rob-1).
+- **[declared]** `ghostFor(token)` also takes a TokenDocument (e.g. `canvas.scene.tokens.get(id)`) and
+  answers like its placeable, instead of a silent `false`; the manifest param type reads
+  "Token placeable | TokenDocument" (rob-2).
+- **[declared]** `combatActive(scene)` and `status(opts)` take a scene id or a Scene document, and
+  `status("sceneId")` takes a bare id, instead of answering for the wrong scene; `status().sceneId`
+  is always the id string (rob-3).
+- **[declared]** with two tabs open on one player account, switching the ghost button or "Show my
+  own tokens on top" in one tab now takes effect in the other tab as well, instead of that tab
+  carrying on with the old value until something else redrew it (movement-edge-3, movement-async-2).
+- **[declared]** `combatActive(null)` now answers for the viewed scene, as `status({ sceneId: null })`
+  already did, instead of always answering `false`. `status()` given an argument that names no
+  scene (`""`, or `{ sceneId: 42 }` / `{}`) still answers no combat with `sceneId: null` (movement-edge-4).
+- **[declared]** `pinsUnderTokens` respects Foundry 14 scene levels: a pin shown only on other
+  levels than a token's is no longer reported under it; a pin shown on every level, or a token with
+  no level, pairs as before (movement-edge-5).
+- **[declared]** the GM ghost switch remembers its last mode from the policy list itself rather than
+  a hand-kept copy of it; every off/on flip lands where it did before (EXT-4).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

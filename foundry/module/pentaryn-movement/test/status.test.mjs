@@ -54,3 +54,52 @@ test("no viewed scene and no sceneId: sceneId null, no combat", () => {
   canvas.scene = saved;
   game.combats.contents = [];
 });
+
+test("rob-3: combatActive and status take a scene id or a Scene; status takes a bare id; sceneId is always the id", () => {
+  const other = { id: OTHER, documentName: "Scene" };
+  game.combats.contents = [combat({ sceneId: OTHER })];
+  try {
+    assert.equal(api.combatActive(OTHER), true);
+    assert.equal(api.combatActive(other), true, "a Scene document answers for that scene");
+    assert.equal(api.combatActive({ id: SCENE, documentName: "Scene" }), false);
+    for (const arg of [OTHER, other, { sceneId: OTHER }, { sceneId: other }]) {
+      const s = api.status(arg);
+      assert.equal(s.sceneId, OTHER, `sceneId for ${JSON.stringify(arg)}`);
+      assert.equal(s.combatOnScene, true, `combatOnScene for ${JSON.stringify(arg)}`);
+      assert.equal(s.reason, "combat");
+    }
+    assert.equal(api.status().sceneId, SCENE, "no argument still means the viewed scene");
+    assert.equal(api.status({ sceneId: null }).sceneId, SCENE);
+  } finally {
+    game.combats.contents = [];
+  }
+});
+
+test("movement-edge-4: combatActive(null) and status({ sceneId: null }) both mean the viewed scene", () => {
+  game.combats.contents = [combat({ sceneId: SCENE })];
+  try {
+    assert.equal(api.combatActive(), true, "no argument: the viewed scene");
+    assert.equal(api.combatActive(undefined), true);
+    assert.equal(api.combatActive(null), true, "null means the viewed scene, like status({ sceneId: null })");
+    assert.equal(api.status({ sceneId: null }).combatOnScene, api.combatActive(null));
+    assert.equal(api.combatActive(OTHER), false, "an explicit other scene still answers for that scene");
+  } finally {
+    game.combats.contents = [];
+  }
+});
+
+test("movement-edge-4: status() with an argument that names no scene answers no combat, not the viewed scene's", () => {
+  game.combats.contents = [combat({ sceneId: SCENE })];
+  try {
+    for (const junk of ["", { sceneId: "" }, { sceneId: 42 }, { sceneId: {} }, { sceneId: { id: 7 } }]) {
+      const s = api.status(junk);
+      assert.equal(s.sceneId, null, JSON.stringify(junk));
+      assert.equal(s.combatOnScene, false, JSON.stringify(junk));
+      assert.equal(s.reason, null, JSON.stringify(junk));
+    }
+    assert.equal(api.status({ sceneId: null }).combatOnScene, true, "explicit null still means the viewed scene");
+    assert.equal(api.status().combatOnScene, true);
+  } finally {
+    game.combats.contents = [];
+  }
+});

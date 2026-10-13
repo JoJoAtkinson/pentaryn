@@ -220,6 +220,16 @@ test("ghostFor through the API", async () => {
   assert.equal(game.pentaryn.movement.ghostFor(null), false);
 });
 
+test("ghostFor takes a TokenDocument too, answering like its placeable; other objects stay false (rob-2)", async () => {
+  await reset();
+  await set("ghost", true);
+  const doc = owner => ({ ...token({ owner }).document, documentName: "Token" });
+  assert.equal(game.pentaryn.movement.ghostFor(doc(true)), true);
+  assert.equal(game.pentaryn.movement.ghostFor(doc(false)), false);
+  assert.equal(game.pentaryn.movement.ghostFor({ ...doc(true), documentName: "Actor" }), false);
+  assert.equal(game.pentaryn.movement.ghostFor({ isOwner: true, parent: { id: SCENE } }), false);
+});
+
 test("setPolicy: a player rejects 'GM only'; a GM writes ghostPolicyLast then ghostPolicy; 'off' writes one", async () => {
   await reset();
   await assert.rejects(game.pentaryn.movement.setPolicy("always"), { message: "GM only" });
@@ -328,6 +338,59 @@ test("aoe-movement-portals-42: GM allows ghost mid-fight → the toast is notify
   await reset();
 });
 
+// movement-edge-1 (fixed [declared]) — cleared by a fight on scene A, then the player views scene B while
+// that fight still runs: the toast was "The fight is over" (notify.back.combat) and it used up the one-time
+// toast. Now B says nothing, and back.combat fires once, when A's fight really ends.
+test("movement-edge-1: viewing another scene mid-fight says nothing; back.combat fires once when that fight ends", async t => {
+  t.after(() => { canvas.scene = { id: SCENE }; });
+  await reset();
+  await set("ghost", true);
+  game.combats.contents = [combat()];
+  F.fire("createCombat");
+  await settle();                                     // cleared.combat on SCENE
+
+  let from = mark();
+  canvas.scene = { id: OTHER };
+  F.fire("canvasReady");
+  await settle();
+  assert.deepEqual(toasts(from), [], "the fight on the cleared scene still runs");
+
+  from = mark();
+  F.fire("updateCombat");
+  await settle();
+  assert.deepEqual(toasts(from), [], "still running");
+
+  from = mark();
+  game.combats.contents = [];
+  F.fire("deleteCombat");
+  await settle();
+  assert.deepEqual(toasts(from), [["info", "PENTARYN_MOVEMENT.notify.back.combat", { localize: true }]]);
+
+  from = mark();
+  F.fire("updateCombat");
+  await settle();
+  assert.deepEqual(toasts(from), [], "once only");
+  canvas.scene = { id: SCENE };
+  await reset();
+});
+
+test("movement-edge-1: on another scene, the GM allowing ghost mid-fight still toasts back.off", async t => {
+  t.after(() => { canvas.scene = { id: SCENE }; });
+  await reset();
+  await set("ghost", true);
+  game.combats.contents = [combat()];
+  F.fire("createCombat");
+  await settle();
+  canvas.scene = { id: OTHER };
+  F.fire("canvasReady");
+  await settle();
+  const from = mark();
+  await set("ghostPolicy", "always");
+  assert.deepEqual(toasts(from), [["info", "PENTARYN_MOVEMENT.notify.back.off", { localize: true }]]);
+  canvas.scene = { id: SCENE };
+  await reset();
+});
+
 test("a GM never gets the cleared or the back toast", async () => {
   await reset();
   asGM();
@@ -413,6 +476,44 @@ test("GM button onChange flips the policy off and back and toasts the localized 
   await reset();
 });
 
+test("movement-async-1: a quick GM double flip and setPolicy queue; each toast names the mode in effect", async () => {
+  await reset();
+  const lastBefore = game.settings.get(MOD, "ghostPolicyLast");
+  await set("ghostPolicy", "always");
+  await set("ghostPolicyLast", "exploration");
+  asGM();
+  const controls = { tokens: { tools: {} } };
+  F.fire("getSceneControlButtons", controls);
+  const flip = controls.tokens.tools.pentarynGhostPolicy.onChange;
+  let from = mark();
+  // Double click: off then on, the second fired before the first's writes land.
+  await Promise.all([flip(null, false), flip(null, true)]);
+  assert.deepEqual(since(from, "settings.set").map(c => [c.id, c.value]), [
+    [`${MOD}.ghostPolicyLast`, "always"], [`${MOD}.ghostPolicy`, "off"], [`${MOD}.ghostPolicy`, "always"],
+  ], "the second flip reads the first flip's result");
+  assert.equal(game.settings.get(MOD, "ghostPolicy"), "always");
+  assert.deepEqual(toasts(from).map(t => t[1]), [
+    "Player ghost movement: OFF (click to allow)",
+    "Player ghost movement: always allowed (click to turn off)",
+  ], "the last toast names the mode actually in effect");
+  // setPolicy shares the queue: a flip fired while setPolicy writes sees setPolicy's result.
+  await set("ghostPolicy", "off");
+  from = mark();
+  await Promise.all([game.pentaryn.movement.setPolicy("exploration"), flip(null, false)]);
+  assert.deepEqual(since(from, "settings.set").map(c => [c.id, c.value]), [
+    [`${MOD}.ghostPolicyLast`, "exploration"], [`${MOD}.ghostPolicy`, "exploration"], [`${MOD}.ghostPolicy`, "off"],
+  ]);
+  assert.equal(game.settings.get(MOD, "ghostPolicy"), "off");
+  assert.deepEqual(toasts(from).map(t => t[1]), ["Player ghost movement: OFF (click to allow)"]);
+  // A player is still refused with "GM only", before anything is queued.
+  asPlayer();
+  from = mark();
+  await assert.rejects(game.pentaryn.movement.setPolicy("always"), { message: "GM only" });
+  assert.deepEqual(since(from, "settings.set"), []);
+  await set("ghostPolicyLast", lastBefore);
+  await reset();
+});
+
 test("renderSceneControls toggles pm-blocked on the player button only in the combat state", async () => {
   await reset();
   const toggles = [];
@@ -486,4 +587,24 @@ test("pinsUnderTokens(scene) on a synthetic scene (golden/pins.json)", () => {
   canvas.scene = null;
   assert.deepEqual(game.pentaryn.movement.pinsUnderTokens(), []);
   canvas.scene = { id: SCENE };
+});
+
+test("pinsUnderTokens takes a scene id too: resolved through game.scenes; an unknown id answers [] (rob-1)", () => {
+  const scene = {
+    id: "zzPins", grid: { size: 100 },
+    notes: [{ id: "n1", x: 150, y: 150, text: "Under the hero" }],
+    tokens: [{ id: "pc", name: "Hero", x: 100, y: 100, width: 1, height: 1, hidden: false,
+      testUserPermission: u => u.id === PLAYER }],
+  };
+  game.scenes.set("zzPins", scene);
+  try {
+    const byDoc = game.pentaryn.movement.pinsUnderTokens(scene);
+    assert.equal(byDoc.length, 1);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens("zzPins"), byDoc);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens("noSuchScene"), []);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens(""), []);
+    assert.deepEqual(game.pentaryn.movement.pinsUnderTokens(null), []);
+  } finally {
+    game.scenes.delete("zzPins");
+  }
 });

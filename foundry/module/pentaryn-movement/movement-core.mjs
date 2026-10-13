@@ -226,7 +226,8 @@ export function gmTool({ isGM, policy } = {}) {
  */
 export function flipPolicy(policy, last, on) {
   const p = normalizePolicy(policy);
-  const remembered = last === "always" || last === "exploration" ? last : DEFAULT_POLICY;
+  const r = normalizePolicy(last);
+  const remembered = r === "off" ? DEFAULT_POLICY : r;
   if (on) return { policy: p === "off" ? remembered : p, last: p === "off" ? remembered : p };
   return { policy: "off", last: p === "off" ? remembered : p };
 }
@@ -316,10 +317,12 @@ export function compareTokens(a, b) {
 
 /**
  * Every pin whose centre lies inside a token's square(s).
- * notes:  [{ id, x, y, label }]                    (Note x/y is the pin's centre)
- * tokens: [{ id, name, x, y, w, h, playerOwned }]  (x/y top-left, w/h in pixels)
+ * notes:  [{ id, x, y, label, levels }]                   (Note x/y is the pin's centre)
+ * tokens: [{ id, name, x, y, w, h, playerOwned, level }]  (x/y top-left, w/h in pixels)
  * Returns [{ noteId, label, tokenId, tokenName, playerOwned }], player-owned tokens first.
- * Edges count as inside; a pin on the border still loses the click.
+ * Edges count as inside; a pin on the border still loses the click. A pin on other scene levels
+ * than the token's is skipped; a note with no levels (shown on every level) or a token with no
+ * level pairs as before (movement-edge-5).
  */
 export function pinsUnderTokens(notes, tokens) {
   const out = [];
@@ -327,6 +330,7 @@ export function pinsUnderTokens(notes, tokens) {
     if (!n || !Number.isFinite(n.x) || !Number.isFinite(n.y)) continue;
     for (const t of tokens ?? []) {
       if (!t || ![t.x, t.y, t.w, t.h].every(Number.isFinite)) continue;
+      if (Array.isArray(n.levels) && n.levels.length && t.level && !n.levels.includes(t.level)) continue;
       if (n.x >= t.x && n.x <= t.x + t.w && n.y >= t.y && n.y <= t.y + t.h) {
         out.push({ noteId: n.id, label: n.label ?? "", tokenId: t.id, tokenName: t.name ?? "",
           playerOwned: !!t.playerOwned });

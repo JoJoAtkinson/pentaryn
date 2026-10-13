@@ -36,7 +36,8 @@ Built from the 2026-10-08 table feedback (plan item C2, `context/plans/table-fee
 - *Settings → Pentaryn Movement → Player ghost movement*: **Off** (no button), **Exploration only**
   (default: off while a combat runs on the scene), **Always allowed**.
 - **GM toolbar button** (token tools, next to core's own ghost): pressed = players may ghost. Click
-  it to turn ghost off for everyone; click again to restore the previous mode.
+  it to turn ghost off for everyone; click again to restore the previous mode. Quick repeat clicks
+  (and `setPolicy` calls) apply one after another, and each toast names the mode then in effect.
 - **"A combat is running on the scene"** = an **active** encounter linked to the scene that has a
   combatant or has started, or an unlinked one with a combatant standing there. An empty encounter
   does not count, and **hidden combatants don't count** (a hidden ambush tips no one off).
@@ -63,6 +64,10 @@ still honours `ignoreTokens`. Verified on core 14.369 / dnd5e 6.0.6.
 
 `status().settings` lists the same keys with their scopes.
 
+The two client settings live in the browser's storage, so they are shared by every tab of that
+browser: flipping the ghost button or *Show my own tokens on top* in one tab redraws the other tabs
+too (they re-read the setting; nothing is written).
+
 ## API — game.pentaryn.movement
 
 Canonical: `game.modules.get("pentaryn-movement").api`; `game.pentaryn.movement` is the same
@@ -71,12 +76,12 @@ frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offli
 
 | Method | GM | Writes | Returns |
 |---|---|---|---|
-| `status(opts?)` | — | — | policy, `combatOnScene`, allowed and why not, the player's switch, `patched.{drag,keyboard}`, then `sceneId`, `version`, `settings` (key → scope). `opts.sceneId` asks about another scene (default: the viewed one) |
-| `ghostFor(token)` | — | — | is ghost in effect for that placeable on this client |
-| `combatActive(sceneId?)` | — | — | does a combat stop ghosting there |
+| `status(opts?)` | — | — | policy, `combatOnScene`, allowed and why not, the player's switch, `patched.{drag,keyboard}`, then `sceneId`, `version`, `settings` (key → scope). `opts.sceneId` (or a bare scene id or Scene) asks about another scene (default: the viewed one); `sceneId` comes back as the id |
+| `ghostFor(token)` | — | — | is ghost in effect for that token (a placeable or a TokenDocument) on this client |
+| `combatActive(sceneId?)` | — | — | does a combat stop ghosting there; takes a scene id or a Scene (default: the viewed one) |
 | `setGhost(on)` | — | client setting `ghost` | the player's button. **Player clients only:** on a GM client (and so from the MCP bridge) it changes nothing for players |
 | `setPolicy(value)` | yes | world settings `ghostPolicy`, `ghostPolicyLast` | `"off" \| "exploration" \| "always"`; rejects with `Error("GM only")` on a player client |
-| `pinsUnderTokens(scene?)` | — | — | map pins whose centre sits under a visible token, player-owned first (pins belong **beside** tokens: owned-on-top makes a pin under your token unclickable) |
+| `pinsUnderTokens(scene?)` | — | — | map pins whose centre sits under a visible token on the same scene level (a pin shown on every level, or a token with no level, always counts), player-owned first; `scene` is a Scene or a scene id (an unknown id answers `[]`) (pins belong **beside** tokens: owned-on-top makes a pin under your token unclickable) |
 | `selftest()` | — | — | `{ ok, checks }` |
 
 Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`, `uninstall()`.

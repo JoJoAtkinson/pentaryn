@@ -17,7 +17,8 @@ export const MANIFEST = Object.freeze({
   rows: [
     {
       path: "status",
-      params: [{ name: "opts", type: "{ sceneId? }", optional: true, doc: "sceneId default: the viewed scene" }],
+      params: [{ name: "opts", type: "{ sceneId?: string | Scene } | string | Scene", optional: true,
+        doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope } }",
       gm: false, writes: false, legacy: true,
@@ -27,7 +28,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "ghostFor",
-      params: [{ name: "token", type: "Token placeable" }],
+      params: [{ name: "token", type: "Token placeable | TokenDocument" }],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
       doc: "Is ghost movement in effect for that token on this client (a player, owner, button on, allowed)? "
@@ -35,7 +36,8 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "combatActive",
-      params: [{ name: "sceneId", type: "string", optional: true, doc: "default: the viewed scene" }],
+      params: [{ name: "sceneId", type: "string | Scene", optional: true,
+        doc: "a scene id or a Scene; default: the viewed scene" }],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
       doc: "Does a combat stop ghosting on that scene (an active encounter there with a visible combatant, "
@@ -61,11 +63,13 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "pinsUnderTokens",
-      params: [{ name: "scene", type: "Scene", optional: true, doc: "default: the viewed scene" }],
+      params: [{ name: "scene", type: "Scene | string", optional: true,
+        doc: "a Scene or a scene id; default: the viewed scene" }],
       returns: "{ noteId, label, tokenId, tokenName, playerOwned }[]",
       gm: false, writes: false, legacy: true,
       doc: "Map pins whose centre sits under a visible token (owned-on-top makes them unclickable for that "
-        + "player); player-owned tokens first. [] without a scene.",
+        + "player); player-owned tokens first. A pin limited to other scene levels than the token's is skipped. "
+        + "[] without a scene or for an unknown scene id.",
     },
     {
       path: "selftest",

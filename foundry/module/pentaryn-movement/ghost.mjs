@@ -18,8 +18,8 @@ import {
   CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
-import { SETTINGS, setting } from "./settings.mjs";
-import { combatSummaries } from "./combat-adapter.mjs";
+import { SETTINGS, policyWrite, setting } from "./settings.mjs";
+import { combatSummaries, sceneIdOf } from "./combat-adapter.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
 /** The ctx this feature was installed with (null when uninstalled). */
@@ -34,8 +34,12 @@ let log = null;
 const policy = () => core.normalizePolicy(setting("ghostPolicy"));
 const wish = () => !!setting("ghost");
 
-function combatActive(sceneId = canvas?.scene?.id) {
-  return core.combatOnScene(combatSummaries(), sceneId);
+/**
+ * Takes a scene id or a Scene document (rob-3); default: the viewed scene. null also means the
+ * viewed scene, as it does for status({ sceneId: null }) (movement-edge-4).
+ */
+function combatActive(scene) {
+  return core.combatOnScene(combatSummaries(), sceneIdOf(scene ?? canvas?.scene?.id));
 }
 
 /**
@@ -57,9 +61,12 @@ function invalidate() {
   ghostContext = null;
 }
 
-/** Ghost in effect for this placeable (Token) on this client? */
+/**
+ * Ghost in effect for this token on this client? Takes a Token placeable (the drag and keyboard
+ * wraps) or a TokenDocument (rob-2); anything else is false.
+ */
 function ghostFor(token) {
-  const doc = token?.document;
+  const doc = token?.document ?? (token?.documentName === "Token" ? token : null);
   if (!doc) return false;
   return core.ghostForCtx(context(), { isGM: game.user.isGM, isOwner: !!doc.isOwner, sceneId: doc.parent?.id });
 }
@@ -74,13 +81,17 @@ const SETTING_SCOPES = Object.freeze(Object.fromEntries(SETTINGS.map(r => [r.key
 /**
  * Everything a console reader needs to see why ghost is or isn't on, for `opts.sceneId` (default:
  * the scene this client views). The first eight keys are the historic ones; sceneId, version and
- * the settings key map are appended after them.
+ * the settings key map are appended after them. `opts` may also be a bare scene id or a Scene, and
+ * `opts.sceneId` a Scene; the returned sceneId is always the id string (rob-3).
  */
 function status(opts = {}) {
-  const sceneId = opts?.sceneId ?? canvas?.scene?.id ?? null;
+  const scene = typeof opts === "string" || opts?.documentName === "Scene" ? opts : opts?.sceneId;
+  const sceneId = scene == null ? (canvas?.scene?.id ?? null) : sceneIdOf(scene);
   return {
     ...core.statusFrom({
-      policy: policy(), combat: combatActive(sceneId), wish: wish(), isGM: game.user.isGM,
+      // Not combatActive(sceneId): there null means the viewed scene, and a junk argument that
+      // resolved to null here must answer no combat, not the viewed scene's (movement-edge-4).
+      policy: policy(), combat: core.combatOnScene(combatSummaries(), sceneId), wish: wish(), isGM: game.user.isGM,
       ownedOnTop: setting("ownedOnTop"), patched: { drag: dragPatched, keyboard: keyboardPatched }
     }),
     sceneId,
@@ -259,13 +270,20 @@ async function onPlayerToggle(active) {
   }
 }
 
+/**
+ * The GM's button. The flip is computed from the live policy inside the policy queue, so a quick
+ * double click flips from the first click's result; the toast names the mode in effect after the
+ * write (movement-async-1).
+ */
 async function onGmFlip(active) {
   if (!game.user.isGM) return;
   try {
-    const next = core.flipPolicy(policy(), setting("ghostPolicyLast"), !!active);
-    if (next.last !== setting("ghostPolicyLast")) await game.settings.set(MODULE, "ghostPolicyLast", next.last);
-    await game.settings.set(MODULE, "ghostPolicy", next.policy);
-    ui.notifications.info(game.i18n.localize(GM_KEYS[next.policy]));
+    await policyWrite(async () => {
+      const next = core.flipPolicy(policy(), setting("ghostPolicyLast"), !!active);
+      if (next.last !== setting("ghostPolicyLast")) await game.settings.set(MODULE, "ghostPolicyLast", next.last);
+      await game.settings.set(MODULE, "ghostPolicy", next.policy);
+      ui.notifications.info(game.i18n.localize(GM_KEYS[policy()]));
+    });
   } catch (err) {
     log.warn("policy flip failed", err);
   }
@@ -300,6 +318,7 @@ function markBlocked(element) {
  * if what the button shows has changed.
  */
 let clearedBy = null; // why this client last switched the player's ghost off ("combat" | "off")
+let clearedScene = null; // the viewed scene a "combat" clear happened on (movement-edge-1)
 async function refresh() {
   try {
     // One live read serves every rule below: nothing awaits between them (finding -19).
@@ -308,15 +327,18 @@ async function refresh() {
     if (reason) {
       ui.notifications.info(NOTIFY_CLEARED[reason], { localize: true });
       clearedBy = reason;
+      clearedScene = reason === "combat" ? canvas?.scene?.id ?? null : null;
       await game.settings.set(MODULE, "ghost", false); // its onChange calls refresh again
       return;
     }
-    if (now.wish) clearedBy = null;
+    if (now.wish) clearedBy = clearedScene = null;
     else if (!game.user.isGM) {
-      const key = core.ghostBackKey({ cleared: clearedBy, ...now });
+      // A fight clear asks about the scene it happened on, not the one now viewed (movement-edge-1).
+      const combatActive = clearedBy === "combat" ? core.combatOnScene(combatSummaries(), clearedScene) : now.combatActive;
+      const key = core.ghostBackKey({ cleared: clearedBy, ...now, combatActive });
       if (key) {
         ui.notifications.info(key, { localize: true });
-        clearedBy = null;
+        clearedBy = clearedScene = null;
       }
     }
     // Combat updates fire every turn; only a real change of state redraws anything.
@@ -336,6 +358,18 @@ const ON_SETTING = Object.freeze({
   ownedOnTop: () => { invalidate(); refreshTokens(); },
 });
 
+/**
+ * A client setting written in another tab of this browser reaches this one only as a window
+ * "storage" event (Foundry keeps client settings in localStorage; this tab's onChange never runs).
+ * Run that key's handler here too, so the cached ghost context is not stale (movement-edge-3).
+ * Nothing is written: the handler re-reads what localStorage already holds.
+ */
+const STORAGE_KEYS = new Map(["ghost", "ownedOnTop"].map(key => [`${MODULE}.${key}`, key]));
+function onStorage(event) {
+  const key = STORAGE_KEYS.get(event?.key);
+  if (key) ON_SETTING[key]();
+}
+
 /* -------------------------------------------- */
 /*  Install / uninstall                         */
 /* -------------------------------------------- */
@@ -352,6 +386,7 @@ export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
   for (const [key, fn] of Object.entries(ON_SETTING)) ctx.onSettingChange(key, fn);
+  globalThis.window?.addEventListener?.("storage", onStorage);
 
   if (ctx.late) patchAll();
   else reg.once("setup", patchAll, { guard: false, label: "setup: wrap drag and keyboard" });
@@ -408,7 +443,8 @@ export function uninstall() {
   dragHandle = keyboardHandle = sortPatch = null;
   dragPatched = keyboardPatched = false;
   lastToolKey = null;
-  clearedBy = null;
+  clearedBy = clearedScene = null;
   if (feature) for (const key of Object.keys(ON_SETTING)) feature.onSettingChange(key, null);
+  globalThis.window?.removeEventListener?.("storage", onStorage);
   feature = null;
 }

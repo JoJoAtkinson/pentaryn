@@ -70,6 +70,33 @@ test("selftest passes on a healthy load", () => {
   assert.equal(out.ok, true, JSON.stringify(out.checks));
 });
 
+test("rob-4: 'settings readable' fails, naming the keys, when a row is unregistered or unreadable", () => {
+  const check = () => api.selftest().checks.find(c => c.label === "settings readable");
+  const reg = game.settings.settings;
+  const id = `${MODULE}.ownedOnTop`;
+  const row = reg.get(id);
+  reg.delete(id);
+  try {
+    assert.equal(check().ok, false, "an unregistered row fails the check");
+    assert.deepEqual(check().detail, ["ownedOnTop"]);
+  } finally {
+    reg.set(id, row);
+  }
+  const get = game.settings.get;
+  game.settings.get = (ns, key) => {
+    if (key === "ghost") throw new Error("unreadable");
+    if (key === "ghostPolicyLast") return 7;
+    return get.call(game.settings, ns, key);
+  };
+  try {
+    assert.equal(check().ok, false, "a throwing read or a wrong-typed value fails the check");
+    assert.deepEqual(check().detail, ["ghostPolicyLast", "ghost"]);
+  } finally {
+    game.settings.get = get;
+  }
+  assert.equal(check().ok, true);
+});
+
 test("trace() is the kit ring (empty with debug off)", () => {
   assert.deepEqual(api.trace(), []);
 });

@@ -8,33 +8,43 @@
 import * as core from "./movement-core.mjs";
 import { HOOKS, MODULE, NS } from "./movement-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
-import { SETTINGS, setting, settingsSnapshot } from "./settings.mjs";
-import { pinInputs } from "./combat-adapter.mjs";
+import { SETTINGS, policyWrite, settingsSnapshot, unreadableSettings } from "./settings.mjs";
+import { pinInputs, sceneOf } from "./combat-adapter.mjs";
 import { buildApi } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 
-/** GM: set the policy directly. A mode other than off is also what the GM button restores. */
+/**
+ * GM: set the policy directly. A mode other than off is also what the GM button restores. Queued
+ * behind any policy write already running on this client (movement-async-1).
+ */
 async function setPolicy(value) {
   if (!game.user.isGM) throw new Error("GM only");
   const p = core.normalizePolicy(value);
-  if (p !== "off") await game.settings.set(MODULE, "ghostPolicyLast", p);
-  return game.settings.set(MODULE, "ghostPolicy", p);
+  return policyWrite(async () => {
+    if (p !== "off") await game.settings.set(MODULE, "ghostPolicyLast", p);
+    return game.settings.set(MODULE, "ghostPolicy", p);
+  });
 }
 
-/** Pins on a scene whose centre sits under a visible token; player-owned tokens first. */
+/**
+ * Pins on a scene whose centre sits under a visible token; player-owned tokens first. Takes a Scene
+ * or a scene id; an unknown id answers [] like no scene (rob-1).
+ */
 function pinsUnderTokens(scene = canvas?.scene) {
-  if (!scene) return [];
-  const { notes, tokens } = pinInputs(scene);
+  const doc = sceneOf(scene);
+  if (!doc) return [];
+  const { notes, tokens } = pinInputs(doc);
   return core.pinsUnderTokens(notes, tokens);
 }
 
 function selftest(ctx) {
   const patched = ctx.exposed.patched?.() ?? {};
+  const unreadable = unreadableSettings();
   const checks = [
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
-    { label: "settings readable", ok: SETTINGS.every(r => typeof setting(r.key) === typeof r.default) },
+    { label: "settings readable", ok: unreadable.length === 0, detail: unreadable },
     { label: "Token#_getDragConstrainOptions wrapped", ok: patched.drag === true },
     { label: "TokenLayer#_prepareKeyboardMovementUpdates wrapped", ok: patched.keyboard === true },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },

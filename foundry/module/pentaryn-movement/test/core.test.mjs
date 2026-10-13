@@ -170,3 +170,43 @@ check("junk skipped", pinsUnderTokens([null, { id: "x" }], [null, { id: "t", x: 
 test("all 89 legacy checks are ported", () => {
   assert.equal(count, 89);
 });
+
+test("pinsUnderTokens drops pairs on different scene levels; an unlevelled note or token still pairs (movement-edge-5)", () => {
+  const tok = (id, level) => ({ id, name: id, x: 0, y: 0, w: 100, h: 100, playerOwned: false, level });
+  const pin = (id, levels) => ({ id, x: 50, y: 50, label: id, levels });
+  const pairs = pinsUnderTokens(
+    [pin("ground", ["L1"]), pin("both", ["L1", "L2"]), pin("everywhere", []), pin("legacy")],
+    [tok("down", "L1"), tok("up", "L2"), tok("nolevel", null)]
+  ).map(h => `${h.noteId}/${h.tokenId}`);
+  assert.deepEqual(pairs, [
+    "ground/down", "ground/nolevel",
+    "both/down", "both/up", "both/nolevel",
+    "everywhere/down", "everywhere/up", "everywhere/nolevel",
+    "legacy/down", "legacy/up", "legacy/nolevel",
+  ]);
+});
+
+// EXT-4: flipPolicy's remembered mode is derived from POLICIES (normalizePolicy), not a hand list.
+// A frozen copy of the pre-EXT-4 function pins that every (policy, last, on) triple answers the same.
+const OLD_FLIP_POLICY = Object.freeze(function oldFlipPolicy(policy, last, on) {
+  const p = normalizePolicy(policy);
+  const remembered = last === "always" || last === "exploration" ? last : DEFAULT_POLICY;
+  if (on) return { policy: p === "off" ? remembered : p, last: p === "off" ? remembered : p };
+  return { policy: "off", last: p === "off" ? remembered : p };
+});
+
+test("flipPolicy names no non-off mode by hand (EXT-4)", () => {
+  const src = String(flipPolicy);
+  for (const p of POLICIES.filter(m => m !== "off")) assert.ok(!src.includes(`"${p}"`), `flipPolicy lists "${p}" by hand`);
+});
+
+test("flipPolicy answers every (policy, last, on) triple as before (EXT-4)", () => {
+  const values = [...POLICIES, undefined, null, "", "sometimes", "Always", true, 0];
+  let n = 0;
+  for (const policy of values) for (const last of values) for (const on of [true, false]) {
+    n += 1;
+    assert.equal(JSON.stringify(flipPolicy(policy, last, on)), JSON.stringify(OLD_FLIP_POLICY(policy, last, on)),
+      `flipPolicy(${String(policy)}, ${String(last)}, ${on})`);
+  }
+  assert.equal(n, values.length * values.length * 2);
+});
