@@ -44,3 +44,11 @@ test("nothing imports the entry; no feature imports another feature", () => {
     if (features.has(from)) for (const to of tos) assert.equal(features.has(to), false, `${from} → ${to}`);
   }
 });
+
+test("EXT-8: cards.mjs unwraps the render hook's html with the kit's htmlRoot, no local rootOf copy", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../cards.mjs", import.meta.url), "utf8");
+  assert.match(src, /import \{[^}]*\bhtmlRoot\b[^}]*\} from "\.\/lib\/api\.mjs";/, "imports htmlRoot from the vendored kit");
+  assert.doesNotMatch(src, /\brootOf\b/, "no local rootOf");
+  assert.doesNotMatch(src, /instanceof HTMLElement/, "no hand-rolled element-or-jQuery unwrap");
+});

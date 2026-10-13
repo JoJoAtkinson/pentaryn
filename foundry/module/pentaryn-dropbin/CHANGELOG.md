@@ -19,6 +19,9 @@ vendored kit (1.0.2, full tier); user-facing strings in `lang/en.json`; `node:te
 
 Declared changes:
 
+- journal-EXT-9: the pinned-journal rule that hides eye readables from the players' sidebar is the
+  kit's null-safe one (`lib/pins.mjs`, kit 1.2.0, shared with journal); a scene without notes no
+  longer breaks the player's Journal sidebar render.
 - Hook handlers report through the kit guard: a throwing handler is logged as
   `pentaryn-dropbin | <label>`, a rejected async one too (was Foundry's report / an anonymous
   unhandled rejection).

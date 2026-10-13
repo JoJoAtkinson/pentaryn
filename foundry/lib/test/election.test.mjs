@@ -60,3 +60,29 @@ test("claimMessage re-reads from game.messages (a deleted message never wins)", 
   assert.equal(await claimMessage(msg, "selfApply", { scope: "pentaryn-aoe", g }), false);
   assert.deepEqual(store.writes, [["flags.pentaryn-aoe.claims.selfApply", "A"]]);
 });
+
+test("KIT-R3: a failed claim write is coded INTERNAL, or false when the document is gone; no socket/doc id still acts", async () => {
+  const g = { game: { socket: { id: "A" } }, setTimeout: fn => fn() };
+  const failing = (extra = {}) => ({
+    id: "d1", uuid: "ChatMessage.d1", flags: {},
+    async update() { throw new Error("server said no"); }, ...extra,
+  });
+  // the document is still there: rethrown coded, naming the claim and the document
+  await assert.rejects(
+    claimDocument(failing(), "resolve", { scope: "pentaryn-x", g, reread: d => d }),
+    err => err.code === "INTERNAL" && /^INTERNAL: claim resolve on ChatMessage\.d1: server said no$/.test(err.message),
+  );
+  // the default reread through the collection finds it present → coded too
+  const present = failing();
+  present.collection = { get: () => present };
+  await assert.rejects(claimDocument(present, "resolve", { scope: "pentaryn-x", g }), { code: "INTERNAL" });
+  // deleted under us: nobody acts
+  assert.equal(await claimDocument(failing(), "resolve", { scope: "pentaryn-x", g, reread: () => ({}) }), false);
+  assert.equal(await claimDocument(failing({ collection: { get: () => undefined } }), "resolve", { scope: "pentaryn-x", g }), false);
+  const gone = { game: { socket: { id: "A" }, messages: { get: () => undefined } }, setTimeout: fn => fn() };
+  assert.equal(await claimMessage(failing(), "selfApply", { scope: "pentaryn-aoe", g: gone }), false);
+  // kept: no socket id, or a null / id-less doc → act
+  assert.equal(await claimDocument(null, "resolve", { scope: "pentaryn-x", g }), true);
+  assert.equal(await claimDocument({}, "resolve", { scope: "pentaryn-x", g }), true);
+  assert.equal(await claimDocument(failing(), "resolve", { scope: "pentaryn-x", g: { game: {} } }), true);
+});

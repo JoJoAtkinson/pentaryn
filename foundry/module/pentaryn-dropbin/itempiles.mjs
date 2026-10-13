@@ -19,9 +19,10 @@
  */
 
 import {
-  MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, pinnedEntryIds, planLockSounds, planEyesNeedView,
+  MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, planLockSounds, planEyesNeedView,
   isActiveGMSelf,
 } from "./dropbin-core.mjs";
+import { pinnedEntryIds } from "./lib/pins.mjs";
 
 /** The module log (set by install). */
 let log = null;

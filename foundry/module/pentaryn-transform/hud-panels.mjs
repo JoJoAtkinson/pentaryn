@@ -108,7 +108,7 @@ function composeBonusBar(panel, actor) {
       next.push(ab);
     }
   }
-  applyButtons(panel, next, fresh);
+  applyButtons(panel, next, fresh, { log });
 
   // The shift or revert this turn spent the Bonus Action on a HUD that no longer exists.
   if (bonusUsedNow(hudTokenId())) {
@@ -157,7 +157,7 @@ function composeActionBar(panel, actor) {
   const fresh = ids.map(id => new ItemBtn({ item: actor.items.get(id), inActionPanel: true }));
   const next = [...kept];
   next.splice(slot ? next.indexOf(slot) + 1 : 0, 0, ...fresh);
-  applyButtons(panel, next, fresh);
+  applyButtons(panel, next, fresh, { log });
 }
 
 /** Starry Form lives on the Bonus bar only: drop it from the Special bar (Chalice/Dragon are "special"). */
@@ -176,7 +176,7 @@ function composeSpecialBar(panel, actor) {
     fresh.push(b);
     return b;
   });
-  applyButtons(panel, next, fresh);
+  applyButtons(panel, next, fresh, { log });
 }
 
 function onActionPanelRender(panel, element, actor) {

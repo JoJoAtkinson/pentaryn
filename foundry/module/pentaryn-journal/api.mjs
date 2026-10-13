@@ -117,6 +117,7 @@ export function buildApiFor(ctx) {
       events: core.HOOKS,
       hooks: ctx.reg.ids(),
       patches: [],
+      queries: [core.QUERY],
       published: publishedOf(core.NS),
     }),
   });

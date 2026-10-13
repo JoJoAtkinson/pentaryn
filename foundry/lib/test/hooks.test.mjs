@@ -78,6 +78,33 @@ test("emit warns once when a legacy name is past its until", () => {
   assert.deepEqual(errors, [["warnOnce", "legacy hook old.x is past m 0.8; remove it", "legacy:old.x"]]);
 });
 
+// kit-ext-2 (defect wave 2, Joe 2026-10-12): the contract says "warns once"; without a log the
+// overdue-legacy warning used to reach console.warn on every emit.
+test("kit-ext-2: emit without a log warns once per legacy name on the console, per emitter", () => {
+  const lines = [];
+  const H = stubHooks();
+  const g = { Hooks: H, console: { warn: (...a) => lines.push(a) } };
+  const HOOKS = {
+    x: { name: "m.x", legacyName: "old.x", until: "m 0.8" },
+    y: { name: "m.y", legacyName: "old.y", until: "m 0.8", pre: true },
+  };
+  const emit = emitter("m", HOOKS, { g, version: "0.8.0" });
+  emit("x");
+  emit("x");
+  emit("y");
+  emit("y");
+  emit("x");
+  assert.deepEqual(lines, [
+    ["m | legacy hook old.x is past m 0.8; remove it"],
+    ["m | legacy hook old.y is past m 0.8; remove it"],
+  ]);
+  // the Set is closure-local: a second emitter (a hot-patched copy) warns again, once
+  const again = emitter("m", HOOKS, { g, version: "0.8.0" });
+  again("x");
+  again("x");
+  assert.equal(lines.length, 3);
+});
+
 test("hook-order fixture: moving registration from module scope to setup changes who vetoes first", () => {
   // Module A registers at module scope today; module B already at setup. A veto listener's
   // position decides whether the other ever runs — this is why migrating modules keep a

@@ -84,12 +84,11 @@ async function relabelEmbedded(parents, collection, embeddedName, canEdit, actor
 export function syncRef(ref, oldName, newName) {
   let actor;
   try {
-    actor = resolveRef(ref, "actor", { base: true, required: false });
+    actor = resolveRef(ref, "actor", { base: true, required: false });   // a synthetic actor too (kit 1.2.0)
   } catch (err) {
     if (errorCode(err, CODES)) return toFail(err);
     throw err;
   }
-  if (actor?.isToken) actor = game.actors.get(actor.token?.actorId) ?? null;
   return sync(actor, oldName, newName);
 }
 

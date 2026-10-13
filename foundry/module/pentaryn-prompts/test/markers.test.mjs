@@ -79,7 +79,7 @@ test("ensureMarkers: skipped for a player and for a GM who is not the active GM;
   F.game.user = { id: "player0000000001", isGM: false };
   assert.deepEqual(await M.ensureMarkers(), { skipped: "not GM" });
   F.game.user = gm;
-  F.game.users.set("aaGM000000000001", Object.assign(Object.create(null), { id: "aaGM000000000001", isGM: true, active: true, isSelf: false }));
+  F.game.users.set("aaGM000000000001", Object.assign(Object.create(null), { id: "aaGM000000000001", isGM: true, role: 4, active: true, isSelf: false }));
   assert.deepEqual(await M.ensureMarkers(), { skipped: "not the active GM" });
   F.game.users.delete("aaGM000000000001");
   const a = M.ensureMarkers(), b = M.ensureMarkers();

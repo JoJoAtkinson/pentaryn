@@ -24,6 +24,8 @@
  *   synthetic; real campaign text is only ever checked in a live eval.
  */
 
+import { makePinnedCache, pinnedEntryIds } from "./lib/pins.mjs";
+
 export const MODULE = "pentaryn-journal";
 /** The legacy name: the published `core.MOD` and the legacy suite read it. An alias, not a second definition. */
 export { MODULE as MOD };
@@ -476,28 +478,11 @@ export const needsItemRefresh = kinds => [...(kinds ?? [])].includes("item");
 /* -------------------------------------------- */
 
 /**
- * Every journal id some scene Note pins. A deliberate copy of pentaryn-dropbin's rule
- * (items-journal-24); modules never import each other.
+ * pinnedEntryIds and makePinnedCache live in the kit (lib/pins.mjs, journal-EXT-9), the one null-safe
+ * rule dropbin uses too. Re-exported here by name for the older suites (pinned.test); bar.mjs imports
+ * the kit directly. The core → lib edge is a test/graph-allow.json debt.
  */
-export function pinnedEntryIds(scenes) {
-  const ids = new Set();
-  for (const sc of scenes ?? []) for (const n of sc?.notes ?? []) if (n?.entryId) ids.add(n.entryId);
-  return ids;
-}
-
-/**
- * pinnedEntryIds(getScenes()), built on first use and kept until invalidate(). The caller
- * invalidates whenever a Note or a Scene is created, updated or deleted (bar.mjs: a Scene update only
- * when it changes `notes`).
- */
-export function makePinnedCache(getScenes) {
-  let ids = null;
-  return {
-    has: id => (ids ??= pinnedEntryIds(getScenes())).has(id),
-    invalidate() { ids = null; },
-    get built() { return ids !== null; },
-  };
-}
+export { pinnedEntryIds, makePinnedCache };
 
 /* -------------------------------------------- */
 /*  One GM tab answers the relay (items-journal-40) */

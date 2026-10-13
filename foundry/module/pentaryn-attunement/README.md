@@ -162,7 +162,7 @@ method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
 | `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `styles/attunement.css` | every rule under `.pentaryn-attunement` / `.pentaryn-attunement-*` |
-| `lib/` | vendored kit 1.1.0 (full + `patch`, `election`) — never edited here |
+| `lib/` | vendored kit 1.2.0 (full + `patch`, `election`) — never edited here |
 
 ## Tests
 

@@ -2,6 +2,8 @@
 
 ## Unreleased (Wave 7 restart batch, wave 5, 2026-10-12)
 
+- **[declared] kit-ext-1:** `describe().queries` now lists the hand-registered relay query
+  `pentaryn-journal.ensure` (passed as `extras.queries`; kit 1.2.0 merges it after the row-derived names).
 - `module.json`: `flags.pentaryn` blueprint keys (`flagScope` `journal` → `pentaryn-journal`,
   manifest-only), `relationships.systems` dnd5e, `recommends` item-piles, `verified: "14.369"`,
   `styles/journal.css` (moved).
@@ -19,6 +21,9 @@
   (`scene.update({notes})`) now refreshes which journals open as one page; before, only the Note
   hooks and Scene create/delete forgot the pinned-journal cache, though the docs said a Scene update
   did too. Scene updates that don't change `notes` keep the cache.
+- **[declared] journal-EXT-9:** which journals a scene Note pins comes from the kit (`lib/pins.mjs`,
+  kit 1.2.0): one null-safe rule shared with dropbin, the cache and its six invalidation hooks.
+  `journal-core` re-exports `pinnedEntryIds`/`makePinnedCache` for the older suites.
 
 ## Unreleased (blueprint migration, wave 2)
 

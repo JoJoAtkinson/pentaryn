@@ -261,7 +261,8 @@ keeps what it had and gains the file and its deps), then `vendor.py check <short
   first param is named `ref` is resolved by `resolveRef` on every call (Actor, Token, UUID, 16-char
   id, exact then case-insensitive name; **never a substring**). Scene scope comes only from that
   call's `opts.sceneId` (`"current"` = the viewing client's canvas), and `opts.base: true` picks
-  the world actor over a token's synthetic one. `inspect(ref, { as: userRef })` answers with what
+  the world actor over a token's synthetic one (a token, its id/uuid, or the synthetic Actor itself,
+  kit 1.2.0). `inspect(ref, { as: userRef })` answers with what
   that user may see.
 - A **write** row (`writes: true`) whose ref does not resolve returns `fail("NOT_FOUND" |
   "AMBIGUOUS" | "BAD_ARGS", reason)` instead of throwing; `await` a write either way.
@@ -295,13 +296,13 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 | Field | Type | Meaning |
 |---|---|---|
 | `path` | string | dotted path under the namespace (`"store.list"`); no reserved name at any depth (§5.1) |
-| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, …; `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must say how a string reaches it: `resolve: "self"` (kit 1.1.0) when the function resolves a uuid, id or exact name itself, or its string forms in `type` (`"Actor\|uuid\|id\|exact name"`), or `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
+| `params` | `{name, kind?, type?, optional?, resolve?, doc?}[]` | a first param named `ref` is resolved per call (`kind`: `actor` default, `token`, `user`, … — a key of the kit's `KINDS` table in `resolve.mjs`, else `buildApi` throws at load (kit 1.2.0, kit-ext-6); `resolve: false` opts out). A param with a Document `kind`, or a `ref`, that the kit does **not** resolve must say how a string reaches it: `resolve: "self"` (kit 1.1.0) when the function resolves a uuid, id or exact name itself, or its string forms in `type` (`"Actor\|uuid\|id\|exact name"`), or `eval-js only` in its (or the row's) `doc`: the bridge refuses it over `pentaryn-read`/`-write` otherwise (C62) |
 | `returns` | string | the shape, in words or TS-ish (`"{ ok, checks }"`) |
 | `gm` | boolean | GM-only |
 | `writes` | boolean | changes world data → returns `ok()/fail()`, accepts `dryRun` when bulk; the fork routes it to `pentaryn-write` (D14) |
 | `query` | boolean | also registered as `CONFIG.queries["<id>.<queryName ?? path>"]` |
 | `queryName` | string | the query name when it differs from `path` (kit 1.0.1, K8) |
-| `relay` | boolean | register through `relayed` (any sender, active-GM receiver) instead of `guarded` (kit 1.0.1, K4) |
+| `relay` | boolean | register through `relayed` (any sender, active-GM receiver) instead of `guarded` (kit 1.0.1, K4); the API function gets core's ctx as a trailing argument — `fn(opts, ctx)` / `fn(ref, opts, ctx)` — for the `ctx.user` ownership check (kit 1.2.0, AC-1) |
 | `dryRun` | boolean | the row takes a dry run (`opts.dryRun`); the bridge's `pentaryn-write` forwards its `dryRun` only to such a row (kit 1.1.0, W2-B3) |
 | `wire` | `data => data` | fills query-payload defaults before the call (prompts' `cropsAs: "base64"`) |
 | `sideEffects` | string[] | flag paths / documents written |
@@ -316,7 +317,9 @@ The manifest (`api-manifest.mjs`) is pure data. **Manifest-level fields:**
 `module, namespace, version, contract, flagScope, kit, published, methods, queries, settings,
 events, hooks, patches, flags {writes, reads}, errors`. `methods[]` carries `path, params, returns,
 gm, writes, query, sideEffects, doc` plus `queryName, relay, dryRun, nullWhen, throws, legacy, since` when
-set. The goldens normalise away `version`, `kit`, `published` and patch routes.
+set. `queries` lists the row-derived query names first, then any `extras.queries` (a hand-registered
+query) not already present (kit 1.2.0, kit-ext-1). The goldens normalise away `version`, `kit`,
+`published` and patch routes.
 
 **`inspect(ref, { as })`** — read-only, plain JSON, depth ≤ 4. With no `as` it answers as the
 caller. `as` is a user ref: a GM sees everything; for a player, GM-only state (the template's
@@ -346,6 +349,8 @@ unmigrated modules (veto order on `dnd5e.preUseActivity`, Argon render order) an
 change that needs the order fixture (`foundry/lib/test/fixtures/hook-order.mjs`) first. Argon:
 wait for `canvasReady`/`argonInit`, never a timer. v14/dnd5e 6 hygiene: `renderChatMessageHTML`,
 `HTMLElement` in AppV2 render hooks, `_del` not `-=`, `message.system.*`, `movement.speeds.*`.
+A hook whose `html` may still be a jQuery wrapper unwraps it with the kit's `htmlRoot(html)`
+(`lib/api.mjs`, 1.2.0 EXT-8), never a local `el instanceof HTMLElement ? el : el[0]` copy.
 
 **Emitting events.** A module's own events are rows in the `HOOKS` table in core, fired with
 `ctx.emit(key, ...args)` (the kit's `emitter`; an unknown key throws `BAD_ARGS`), not a literal
@@ -384,7 +389,12 @@ Hot hooks (`refreshToken`, `drawToken`, `sightRefresh`, `canvasPan`, `hoverToken
 `updateWorldTime`, Argon action-panel render, `pointermove`) read from a cache or `memo`, never
 iterate `game.actors`/`game.scenes`/`canvas.tokens.placeables`, and carry a `// hot: <cache>`
 comment (C49). World-wide reactions run on one client (`isActiveGM()`, `claimDocument` for two GM
-sessions), with batched writes and `coalesce`/`foundry.utils.debounce` for rebuilds. Who runs what, and why, is §5.9.
+sessions), with batched writes. A rebuild several hooks trigger uses `foundry.utils.debounce` (or
+another trailing variant) so the last change is not lost; `coalesce` is leading-edge and suits
+idempotent reads whose callers can share the in-flight result (kit-perf-3). `settingReader` stays
+uncached so a hot-patched client still reads live values, and Foundry builds a Setting on every
+client-scope `get`: a hot hook caches a client-scope read at the call site and invalidates that
+cache from the row's `onChange` (kit-perf-4). Who runs what, and why, is §5.9.
 
 ### 5.6 Patches and `foundry/adjustments.yml`
 
@@ -408,9 +418,9 @@ existing one is declared); core CSS variables and `.theme-dark/.theme-light`.
 Shared CSS lives in the kit as a `kit.json` row with `"ext": "css"`. It is vendored to
 `lib/<name>.css`, loaded by listing it in `module.json` `styles`, and proven byte-identical by C14
 (`vendor.py` also fails a `styles` entry naming an unlocked `lib/*.css`). C37 and C37w do not score
-`lib/*.css`. First kit stylesheet: `argon-tooltip.css` (D7). Wave 4 vendored it into combat and
-transform, which `@import "../lib/argon-tooltip.css"` from their own stylesheet until a manifest
-edit lists it in `styles` (then drop the `@import` in the same commit).
+`lib/*.css`. First kit stylesheet: `argon-tooltip.css` (D7), vendored by combat, transform and
+riders, each listing `lib/argon-tooltip.css` in `module.json` `styles` — never `@import` a kit
+stylesheet from a module's own CSS.
 
 ### 5.8 Flags
 
@@ -493,14 +503,19 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
 - A world setting's `onChange` runs on **every client** (`client/documents/setting.mjs:39-51`); a
   client-scoped one locally only (`client-settings.mjs:327`). An `onChange` that writes is a fan-out
   bug unless role-gated.
-- `serialStore(MODULE, key)` (`lib/settings.mjs:158`) serialises read-modify-write **for one store
+- `serialStore(MODULE, key)` (`lib/settings.mjs:166`) serialises read-modify-write **for one store
   instance in one tab** (`foundry.utils.Semaphore(1)`). It does not protect against two tabs, two
   `serialStore` instances on one key, or a direct `game.settings.set` on that key. The write sends
   the whole value, so two clients writing at once lose one update; the server's own `Semaphore(1)`
   orders DB writes, it does not merge them.
+  - A multi-key store's `mutate` may return a partial object: an omitted key keeps its value, an
+    explicit `null` writes `null`; `write` resolves to the full stored object (kit 1.2.0 KIT-R4).
+  - A multi-key write is **not atomic** (no multi-key setting transaction): keys are separate
+    Setting writes in table order, each `onChange` sees the intermediate state, and a failure can
+    leave a torn pair. List the counter key first so a torn write never reuses an id (kit 1.2.0 AC-6).
   - MUST: exactly one `serialStore` per key, at module scope (C58).
   - MUST: a key more than one client may write uses `anyGM: false` — the active GM *user*
-    (`activeGM.isSelf`, `lib/settings.mjs:161`); **two tabs on that account still race**. Other
+    (`activeGM.isSelf`, `lib/settings.mjs:169`); **two tabs on that account still race**. Other
     clients reach it through a `relay: true` query.
   - MUST: a relayed store write is idempotent or keyed by a request id — the relay arrives in every
     GM tab (below), so a bare `counter + 1` counts twice. A claim picks the writer but the losing
@@ -521,8 +536,10 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
 - The server sends a query to **every socket of the recipient user** and keeps the **first answer,
   success or rejection** (`dist/components/activity.mjs` `n.sockets.forEach(e=>e.emit("userQuery",…))`).
   With the bridge tab and a GM browser tab open, the handler runs in both (both are
-  `activeGM.isSelf`), and a fast rejection from one tab (e.g. `NOT_READY` before it published) beats
-  a slower success from the other. MUST: a query handler that writes is idempotent **across
+  `activeGM.isSelf`), and a fast rejection from one tab would beat a slower success from the other.
+  A `registerQueries` handler therefore does not answer `NOT_READY` at once: before publish it polls
+  `getApi()` every 250 ms for up to 5 s (under `queryGM`'s 10 s default), so a tab mid-reload answers
+  once it publishes (AC-5, §5.9.5). MUST: a query handler that writes is idempotent **across
   concurrent tabs** — look-before-create is not enough, both tabs look before either creates. Make
   the write itself idempotent (a deterministic `_id`, §5.9.2) or request-keyed. A claim alone does
   not do it: the losing tab answers before the winner has written, so the sender gets the loser's
@@ -531,8 +548,8 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   (`e.once("disconnect",u)` on the sender's socket); a recipient tab closing mid-query hangs it
   forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` (C55; `queryMany` is
   static `(users, name, data, options)`, `user.mjs:335`). `queryGM` defaults to 10000 ms and runs
-  the handler locally on the GM's own client (`lib/queries.mjs:89-98`); a raw `User#query` to
-  yourself still goes through the server (`user.mjs:305-321`).
+  the handler locally on the GM's own client, under the same timeout (`lib/queries.mjs:94-108`,
+  AC-4); a raw `User#query` to yourself still goes through the server (`user.mjs:305-321`).
 - Errors cross the socket as `e.message` only (`client/documents/collections/users.mjs:233-234`);
   that is why `codedError` puts the code in the message prefix (§5.4).
 
@@ -575,8 +592,9 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   synchronous, read from a cache/`memo` (§5.5, C49) and never start an async job per call —
   `void (async () => …)()` is still one (C60). Defer with `perFrame` (latest args, once per frame),
   `foundry.utils.debounce` (trailing, `.cancel()`, callback errors **not** caught,
-  `common/utils/helpers.mjs:101-114`) or `coalesce` when several triggers want the same rebuild
-  (`lib/perf.mjs`).
+  `common/utils/helpers.mjs:101-114`) when several triggers want the same rebuild, or `coalesce`
+  (`lib/perf.mjs`) for an idempotent read callers can share — never a rebuild: a change that lands
+  during its run is lost (§5.5).
 - A loop over hundreds of documents with no `await` freezes canvas and socket. Batch first; where
   you must yield, do it every N items with `await new Promise(r => g.setTimeout(r, 0))` using the
   injected `g`, so tests drive it with `t.mock.timers`. Core has no `sleep`.
@@ -648,6 +666,8 @@ claim on that document with that key stands down in every tab, including after a
 tabs have new socket ids. Claim with a fixed key only on a document that is itself the one-time event
 (a new chat message, a new combat), never for a repeatable request on a long-lived document such as
 an actor.
+If the claim write itself fails, `claimDocument` returns false when the document was deleted under
+it, and otherwise rejects coded `INTERNAL` — let the caller's coded-error handling report it.
 
 Shared value, one store (the relay must still be idempotent or request-keyed — two GM tabs race):
 ```js
@@ -668,8 +688,9 @@ const refresh = perFrame(() => rebuildOverlay(cache), { g });   // hot: cache
 reg.on("refreshToken", (token) => { if (cache.has(token.id)) refresh(); }, { label: "overlay" });
 ```
 
-Burst coalescing: `const rebuild = coalesce(async () => { … })` — a call during a run gets that
-run's promise.
+Burst rebuilds: `const rebuild = foundry.utils.debounce(() => { … }, 100)` — the trailing call runs
+once after the burst and sees the last change. Shared reads: `const load = coalesce(async () => { … })`
+— a call during a run gets that run's promise, so use it only for an idempotent read (§5.5).
 
 #### 5.9.3 Anti-patterns
 
@@ -721,6 +742,12 @@ C62 (§5.1a `params`) is the manifest-side twin of the bridge's "eval-js only" r
   (`foundry/module/pentaryn-journal/journal.mjs:146`); their idempotency is unverified. Tracked as
   combat-riders-41 and items-journal-40 (Joe, 2026-10-11): each is fixed, claim first, as a
   `[declared]` commit when its module migrates.
+- Two GM tabs, one not yet published (kit 1.2.0, AC-5, [declared]): the kit's query handler used to
+  throw `NOT_READY` the moment `getApi()` was null, and the server keeps the first answer, so a tab
+  mid-reload beat a ready tab with a failure. Now the handler polls `getApi()` every 250 ms and throws
+  `NOT_READY` only after 5 s without a publish — inside `queryGM`'s 10 s default, so the sender still
+  gets a coded answer. A remaining race (a published tab whose handler itself rejects first) is the
+  idempotency rule above, not this wait. Pinned on mocked timers in `lib/test/queries.test.mjs`.
 - Both existing `.query(` callers pass `timeout: 8000`; C55 keeps that true.
 - `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented, not changed.
 - Python: once python-tooling-44 lands, a pytest in `scripts/tests` reads the AST of

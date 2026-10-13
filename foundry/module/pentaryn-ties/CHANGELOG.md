@@ -5,6 +5,10 @@ the old README's version-tagged sections.
 
 ## Unreleased — blueprint migration (2026-10, wave 3)
 
+- [declared] names-ext-3 (kit 1.2.0, final review 2026-10-12): `inspect` reads a token's synthetic
+  actor through the kit's `resolveRef(..., { base: true })` (the token's `actorId`) instead of ties'
+  own `isToken` patch (the synthetic actor's id). Same dossier at the table.
+
 Structure (no table-visible change): the pure core split into `core/` behind `known-core.mjs`, the
 study conduit into `study/` behind `study.mjs`, the entry into features, settings into
 `settings.mjs`, the API built from `api-manifest.mjs` by the kit, the ties data layer into

@@ -13,9 +13,10 @@
  */
 
 import {
-  MODULE, escapeHTML, findSaved, isMine, isPersonal, makePinnedCache, needsItemRefresh, placeFrom, planSave, singlePage,
+  MODULE, escapeHTML, findSaved, isMine, isPersonal, needsItemRefresh, placeFrom, planSave, singlePage,
   skipReason, status,
 } from "./journal-core.mjs";
+import { PIN_HOOKS, makePinnedCache, pinsChanged } from "./lib/pins.mjs";
 import { setting, whenChanged } from "./settings.mjs";
 import { descriptorsFor, targetFor as targetForApp } from "./sources-adapter.mjs";
 
@@ -284,20 +285,20 @@ const personalSheet = () => ctx.exposed.personal()?.sheet;
 /**
  * Which journals a scene Note pins, cached (items-journal-38): applySinglePage runs on every journal
  * render, and the answer used to walk every scene's notes each time. Forgotten whenever a Note or a
- * Scene is created, updated or deleted (a Scene update only when it changes `notes`, pinned-cache).
+ * Scene is created, updated or deleted (a Scene update only when it changes `notes`, pinned-cache):
+ * the kit's PIN_HOOKS and pinsChanged (lib/pins.mjs, journal-EXT-9).
  * Those six listeners are registered on first use (always after ready: only a journal render asks),
  * not at load — the load-time hook manifest stays as it was.
  */
 const pins = makePinnedCache(() => game.scenes);
-const PIN_HOOKS = ["createNote", "updateNote", "deleteNote", "createScene", "deleteScene"];
 let watchingPins = false;
 
 function isEyeReadable(entry) {
   if (!watchingPins) {
     watchingPins = true;
-    for (const h of PIN_HOOKS) ctx.reg.on(h, () => pins.invalidate(), { label: `${h}: forget pinned journals` });
-    ctx.reg.on("updateScene", (_scene, changed) => { if (changed && "notes" in changed) pins.invalidate(); },
-      { label: "updateScene: forget pinned journals when its notes change" });
+    for (const h of PIN_HOOKS) {
+      ctx.reg.on(h, (_doc, changed) => { if (pinsChanged(h, changed)) pins.invalidate(); }, { label: `${h}: forget pinned journals` });
+    }
   }
   return pins.has(entry.id);
 }
