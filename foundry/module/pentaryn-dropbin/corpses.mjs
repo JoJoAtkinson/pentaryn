@@ -37,7 +37,7 @@ import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoIt
   renderItemPileInterface } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
-const EYE = "assets/tokens/custom/props/icon-eye.webp";
+const EYE = "modules/pentaryn-dropbin/assets/icon-eye.webp";     // the module's own asset, never one world's (dropbin-EXT-8)
 
 const isGMRunner = () => isActiveGMSelf(game.users);
 

@@ -189,6 +189,9 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   against other modules (`golden/hooks.json`).
 - `restore()` returns a Notification on refusal; scripts want `restoreResult()`.
 - `list()`/`all()` carry every item's full source: use `list(n, { brief: true })` from the bridge.
+- The corpse eye is the module's own asset, `assets/icon-eye.webp` (loaded as
+  `modules/pentaryn-dropbin/assets/icon-eye.webp`): never point it at a world's `assets/` folder,
+  the module runs in any dnd5e world (dropbin-EXT-8).
 
 ## Files
 
@@ -201,6 +204,7 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 | `piles.mjs`, `socketlib-adapter.mjs` | adapters: Item Piles, socketlib |
 | `ledger.mjs`, `itempiles.mjs`, `corpses.mjs`, `loot.mjs`, `i18n-shim.mjs` | features |
 | `api-manifest.mjs`, `api.mjs` | API rows; implementations, inspect, selftest |
+| `assets/icon-eye.webp` | the corpse eye badge's texture, shipped with the module |
 | `lang/en.json`, `lib/` | strings; vendored kit |
 | `test/` | node:test suites, goldens, fixtures, vendored test kit, the legacy suite |
 

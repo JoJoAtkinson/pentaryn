@@ -125,6 +125,9 @@ Declared changes:
   of Item Piles' character type (`ACTOR_CLASS_TYPE`), as the ledger's delete capture uses; it
   hard-coded `character` before, so in a system with another character type it found none.
   `character` is used only when Item Piles is absent.
+- dropbin-EXT-8: the corpse eye loads `modules/pentaryn-dropbin/assets/icon-eye.webp`, shipped in
+  the module; it loaded `assets/tokens/custom/props/icon-eye.webp` from one world's Data folder, so
+  any other world showed no eye on a lootable corpse.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
