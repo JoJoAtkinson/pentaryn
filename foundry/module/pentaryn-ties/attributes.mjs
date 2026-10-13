@@ -1172,10 +1172,16 @@ export const repairAncestry = (actor, ref) => linkAttribute(actor, ref);
  * update (one round trip, one render) instead of one per row. Dangling rows are left alone: no
  * ancestor can be added for an id whose entry is gone.
  *
+ * Queued through `serial()` with its flag reads inside, like `linkAttribute` (ties-core-U3): a Fix
+ * it racing a script's link or unlink on the same actor lands both. ⚠ Never call it from inside a
+ * serialised function — it would wait on itself.
+ *
  * → `{ok:true, actorId, added:[…], unsuppressed:[…]}` (both empty = nothing broken, nothing written) |
  *   `{ok:false, reason:"notGM"|"invalid"|"writeFailed"}`
  */
-export async function repairAllAncestry(actor, kindResolver = null) {
+export const repairAllAncestry = (actor, kindResolver = null) => serial(() => repairAllNow(actor, kindResolver));
+
+async function repairAllNow(actor, kindResolver) {
   if (!game.user?.isGM) return fail("notGM");
   const subject = subjectOf(actor);
   if (!subject) return fail("invalid");

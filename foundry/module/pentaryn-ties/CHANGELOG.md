@@ -68,6 +68,14 @@ Fixed (declared): the Attributes tab's ancestry **Fix it** button links every mi
 save (`repairAllAncestry` in `attributes.mjs`) instead of one save per broken membership, is greyed
 out while it works so a double-click cannot run it twice, and repaints the tab once. ties-ui-ACC-4.
 
+Fixed (declared, integration with ties-core): **Fix it** (`repairAllAncestry`) now runs through the
+registry's write queue with its link-flag reads inside, as `link`/`unlink`/`repair` do since
+ties-core-U3, so a Fix it racing a script's link on the same actor lands both. The registry queue and
+each actor's ties/Known queue (`serial` in `ties-adapter.mjs`) are separate chains: neither waits on
+the other, so neither reorders or deadlocks the other — EC-2's concurrent `ensure` still answers
+created + `existed: true` beside quick ties edits. Pinned by `test/review-queues-together.test.mjs`.
+ties-ui-ACC-4 x ties-core-U3/EC-2.
+
 Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in both directions, as its
 confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
 sender must own their character and have removed their own side). ties-ui-E3.
@@ -269,6 +277,13 @@ through one `guardClick` (`core/html.mjs`) — disabled while their write runs, 
 ends. A write that throws now logs `pentaryn-ties | <action>` (error) and shows "That didn't go through
 — see the console." instead of leaving the button dead with an unprefixed unhandled rejection. The HUD
 eye is no longer left disabled after a finished inspection. ties-ui-rob-7.
+
+Fixed (declared, integration with ties-core R8): ties-core's writes no longer throw on a refused save —
+`markLearned`, `grantKnowledge` and `repairAllAncestry` answer `{ ok: false, reason: "writeFailed" }`.
+`guardClick` treats that answer as its failure path, so **Mark as learned**, **Tell them** and **Fix it**
+show the same thing a throw did: the button enabled again, `pentaryn-ties | <action>` (error) in the
+console beside the write's own warning, and "That didn't go through — see the console."; Mark as
+learned shows no "learned" toast. ties-ui-rob-7 x R8.
 
 Changed (declared, no table-visible change): key lists are derived from their label tables — the
 world filter chips from `FILTER_LABEL`, the world tree's failed / pending / unknown tag from a new
