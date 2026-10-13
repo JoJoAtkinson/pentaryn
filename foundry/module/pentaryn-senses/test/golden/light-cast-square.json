@@ -56,6 +56,7 @@
       "type": "AmbientLight",
       "data": [
         {
+          "_id": "b6ea97151ca5c793",
           "x": 333,
           "y": 445,
           "elevation": 0,
@@ -88,7 +89,8 @@
             }
           }
         }
-      ]
+      ],
+      "keepId": true
     }
   ]
 }

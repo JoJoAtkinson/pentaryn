@@ -19,7 +19,7 @@
                 "class": "unbutton config-button item-control ps-light-toggle lit",
                 "type": "button",
                 "data": {
-                  "tooltip": "Put it out"
+                  "tooltipText": "Put it out"
                 },
                 "attrs": {
                   "aria-label": "Put it out"
@@ -54,7 +54,7 @@
                 "class": "unbutton config-button item-control ps-light-toggle lit outshone",
                 "type": "button",
                 "data": {
-                  "tooltip": "Lit, but your Torch gives more light, so this one adds nothing now. Click to put it out."
+                  "tooltipText": "Lit, but your Torch gives more light, so this one adds nothing now. Click to put it out."
                 },
                 "attrs": {
                   "aria-label": "Lit, but your Torch gives more light, so this one adds nothing now. Click to put it out."
@@ -66,7 +66,7 @@
                 "class": "unbutton config-button item-control ps-light-hood hooded",
                 "type": "button",
                 "data": {
-                  "tooltip": "Raise the hood"
+                  "tooltipText": "Raise the hood"
                 },
                 "attrs": {
                   "aria-label": "Raise the hood"

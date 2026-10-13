@@ -30,6 +30,10 @@ export class FakeElement {
       contains: c => list().includes(c),
     };
   }
+  /** The installed fake `document`, as a real element's ownerDocument. */
+  get ownerDocument() {
+    return globalThis.document;
+  }
   get firstElementChild() {
     return this.children[0] ?? null;
   }
