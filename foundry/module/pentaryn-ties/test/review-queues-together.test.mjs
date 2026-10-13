@@ -30,6 +30,8 @@ const REGISTRY = [
 ];
 
 await bootWorld({
+  // real timers: inTime()'s deadlock timer has to fire, and the fixture's mock.timers would freeze it
+  timers: false,
   settings: { "pentaryn-ties.attributes": REGISTRY },
   actors: [
     {
@@ -130,23 +132,43 @@ test("EC-2 x ACC-3: concurrent ensures, links and Fix it run beside quick ties/K
   assert.deepEqual([ties.length, knownWrites.length, links.length], [3, 3, 2], landed.join(" | "));
 });
 
-test("a per-actor write that awaits a registry write, and a registry write racing it, both settle (no cross-queue deadlock)", async () => {
+test("a per-actor write that awaits Fix it and an ensure, racing a link and the same ensure on the registry queue — all land, nothing deadlocks", async () => {
+  // break the ladder again: "realm" is missing above "city", so Fix it has a row to write
+  await apply({ flags: { "pentaryn-ties": { attributes: ["city", "guild", "tideorder"] } } });
+  const before = landed.length;
+
   const both = Promise.all([
+    // ties-ui, the per-actor queue: an edit that awaits two registry writes before it writes its own
     T.serial(PC, async () => {
+      const fixed = await A.repairAllAncestry(pc);
       const made = await A.ensureAttribute("Ash Court");
       const list = T.read(pc);
       list.find(t => t.id === NPC).word = `of the ${made.entry.title}`;
-      return T.write(pc, list);
+      return { fixed, made, wrote: await T.write(pc, list) };
     }),
+    // ties-core, the registry queue, called first: an ensure of the same new title and a link of it.
+    // Fix it is queued behind the link, so it reads the link's write; unqueued (7ca6e0a9), it read
+    // the flags while the link's write was still in flight and one of the two writes undid the other
     A.ensureAttribute("Ash Court", { dc: 9 }),
+    A.linkAttribute(pc, "Ash Court"),
     T.editTie(pc, NPC, "stance", 1),
   ]);
-  const [wrote, outer, stance] = await inTime(both, "a registry write nested in an actor's queue");
-  assert.equal(wrote, true);
+  const [inner, outer, link, stance] = await inTime(both, "registry writes nested in an actor's queue");
+  assert.equal(inner.wrote, true);
+
   // EC-2 across the nesting: the outer ensure reached the registry queue first and created the
-  // entry; the nested one, queued behind it, answered existed:true
-  assert.deepEqual([outer.ok, outer.existed], [true, false], JSON.stringify(outer));
+  // entry; the nested one, queued behind it, answered existed:true with the first's opts
+  assert.deepEqual([outer.ok, outer.existed, inner.made.ok, inner.made.existed], [true, false, true, true], JSON.stringify({ outer, made: inner.made }));
+  assert.equal(inner.made.entry.dc, 9);
   assert.equal(entryIds().filter(id => id === "ashcourt").length, 1, "one entry");
+
+  // the link and Fix it both landed: neither write undid the other
+  assert.equal(link.ok, true, JSON.stringify(link));
+  assert.deepEqual(link.added, ["ashcourt"]);
+  assert.equal(inner.fixed.ok, true, JSON.stringify(inner.fixed));
+  assert.deepEqual(inner.fixed.added, ["realm"]);
+  assert.deepEqual([...flag("attributes")].sort(), ["ashcourt", "city", "guild", "realm", "tideorder"], landed.slice(before).join(" | "));
+
   // FIFO on the actor's queue: the stance edit ran after the nested write and kept its word
   assert.ok(stance);
   const tie = flag("ties").find(t => t.id === NPC);

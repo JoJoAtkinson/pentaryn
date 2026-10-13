@@ -108,7 +108,8 @@ return A.list().sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0)).slice(
   you changed is **refused** rather than written over your change.
 - **Writes from two GM tabs** (the bridge and Joe's) are caught by a version stamp: every registry
   write stores `{ stamp: "registry", rev, by }` as one extra element of the setting (readers drop
-  it). A write that lands on top of another tab's without having seen it makes the overwritten
+  it). So in an ad-hoc eval read the registry with `api.attributes.list()`, not the raw
+  `game.settings.get("pentaryn-ties", "attributes")`, which ends with that non-entry row. A write that lands on top of another tab's without having seen it makes the overwritten
   tab re-apply its own change once; if both changed the **same field** the later one stands and
   Joe's open row gets the reload banner.
 - **Rows keep their place** while he works. Order is recomputed on open, on a sort change, after
