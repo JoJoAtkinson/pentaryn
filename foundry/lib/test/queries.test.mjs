@@ -72,6 +72,27 @@ test("KIT-R7 queryGM: a remote timeout is TIMEOUT; a remote coded rejection keep
     { code: "INTERNAL", message: "INTERNAL: User [abc] is not active" });
 });
 
+test("AC-4 queryGM: the timeout bounds the GM's own local handler too — TIMEOUT, same as the remote path", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const settled = p => p.then(v => ({ v }), e => ({ e }));
+  const pending = () => new Promise(r => setImmediate(() => r("pending")));
+  const local = (handler, name = "q") => ({ game: { user: { isGM: true }, users: { activeGM: { isSelf: true } } }, CONFIG: { queries: { [name]: handler } } });
+  let ran = 0;
+  const out = settled(queryGM("pentaryn-x.list", {}, { g: local(() => { ran++; return new Promise(() => {}); }, "pentaryn-x.list"), timeout: 50 }));
+  t.mock.timers.tick(49);
+  assert.equal(await Promise.race([out, pending()]), "pending", "not before the timeout");
+  t.mock.timers.tick(1);
+  const r = await Promise.race([out, pending()]);
+  assert.notEqual(r, "pending", "a never-resolving local handler must not hang queryGM");
+  assert.equal(r.e?.code, "TIMEOUT");
+  assert.equal(r.e?.message, "TIMEOUT: pentaryn-x.list");
+  assert.equal(ran, 1);
+  // a handler that answers in time wins; its own rejection passes through unchanged
+  assert.deepEqual(await queryGM("q", { a: 1 }, { g: local(async d => d), timeout: 50 }), { a: 1 });
+  const boom = Object.assign(new Error("NOT_READY: pentaryn-x"), { code: "NOT_READY" });
+  await assert.rejects(queryGM("q", {}, { g: local(async () => { throw boom; }), timeout: 50 }), e => e === boom);
+});
+
 test("K3 guarded passes core's ctx through; sender:'any' accepts a player sender, still needs a GM receiver", async () => {
   const g = env(true);
   const player = { isGM: false, name: "P" };

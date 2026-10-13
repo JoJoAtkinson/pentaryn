@@ -86,8 +86,8 @@ export function registerQueries(manifest, getApi, { g = globalThis, log = null }
 }
 
 /**
- * Ask the active GM to run a query. On the GM's own client the handler runs locally.
- * Throws NO_GM when no GM is connected. A remote rejection comes back coded (KIT-R7): socket.io's
+ * Ask the active GM to run a query. On the GM's own client the handler runs locally, raced against
+ * the same `timeout` (`TIMEOUT: <name>`, AC-4; the handler is not cancelled). Throws NO_GM when no GM is connected. A remote rejection comes back coded (KIT-R7): socket.io's
  * ack timeout ("operation has timed out") is `TIMEOUT: <name>`; the GM handler's own coded error
  * (NOT_GM, NOT_READY, …) crosses the socket as its message and keeps its code; anything else is INTERNAL.
  */
@@ -97,7 +97,14 @@ export async function queryGM(name, data, { g = globalThis, timeout = 10000 } = 
   if (gm.isSelf) {
     const handler = g.CONFIG.queries?.[name];
     if (typeof handler !== "function") throw codedError("UNSUPPORTED", name);
-    return handler(data, { user: g.game.user });
+    // AC-4: the same timeout bounds the local path; the handler keeps running, as it does on a remote GM
+    let timer;
+    const expiry = new Promise((_, reject) => { timer = setTimeout(() => reject(codedError("TIMEOUT", name)), timeout); });
+    try {
+      return await Promise.race([handler(data, { user: g.game.user }), expiry]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
   try {
     return await gm.query(name, data, { timeout });

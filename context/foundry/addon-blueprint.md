@@ -539,8 +539,8 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   (`e.once("disconnect",u)` on the sender's socket); a recipient tab closing mid-query hangs it
   forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` (C55; `queryMany` is
   static `(users, name, data, options)`, `user.mjs:335`). `queryGM` defaults to 10000 ms and runs
-  the handler locally on the GM's own client (`lib/queries.mjs:89-98`); a raw `User#query` to
-  yourself still goes through the server (`user.mjs:305-321`).
+  the handler locally on the GM's own client, under the same timeout (`lib/queries.mjs:94-108`,
+  AC-4); a raw `User#query` to yourself still goes through the server (`user.mjs:305-321`).
 - Errors cross the socket as `e.message` only (`client/documents/collections/users.mjs:233-234`);
   that is why `codedError` puts the code in the message prefix (§5.4).
 
