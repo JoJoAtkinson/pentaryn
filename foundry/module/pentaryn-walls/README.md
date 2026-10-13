@@ -1,13 +1,15 @@
 ---
 created: 2026-08-11
-last_modified: 2026-10-11
+last_modified: 2026-10-13
 tags: ["foundry", "vtt", "module", "maps", "walls"]
-status: active
+status: retired
 ---
 
 # Wall Autocomplete (`pentaryn-walls`)
 
-**Read this when:** you are changing or calling `pentaryn-walls`. **Not this file:** how to draw
+**Read this when:** you are changing or calling `pentaryn-walls` — **retired 2026-10-13** (Joe
+uses prefabs now): the source and its gate stay, but nothing syncs it (`module-sync` refuses it) and
+it is off in the world; un-retiring is in [`walls.md`](../../../context/foundry/walls.md). **Not this file:** how to draw
 and run it at the table → [`context/foundry/walls.md`](../../../context/foundry/walls.md) · the
 engine design, rule table and traces →
 [`context/plans/foundry-wall-autocomplete.md`](../../../context/plans/foundry-wall-autocomplete.md) ·
@@ -16,7 +18,7 @@ how every addon is built → [`context/foundry/addon-blueprint.md`](../../../con
 Deterministic completion of hand-drawn walls. Rough in the walls that carry information —
 windows, doors, one hint stub per bare wall line — and the engine infers the rest. Where it would
 have to guess, it refuses and names the endpoint and the reason. System-agnostic: it touches only
-`Wall` documents. Full tier; disabled in the pentaryn world today.
+`Wall` documents. Full tier; retired 2026-10-13 and disabled in the pentaryn world.
 
 ## What the player sees
 

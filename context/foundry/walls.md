@@ -1,22 +1,27 @@
 ---
 title: Wall Autocomplete
-status: active
-last_modified: 2026-10-12
+status: retired
+last_modified: 2026-10-13
 tags: [foundry, module, pentaryn-walls, maps, walls]
 ---
 
 # Wall Autocomplete
 
-**Read this when:** drawing walls for the autocomplete, running it on a scene, or deciding
-whether to trust a run. **Not this file:** the module README
+**Read this when:** never at the table — `pentaryn-walls` was **retired 2026-10-13**: Joe walls
+scenes with prefabs now. Nothing syncs or installs it (`module-sync` refuses it, `make help` offers
+no `-sync`, the updater never says to re-sync it); its source and `make foundry-walls-check` stay
+in the repo. Read on only if Joe un-retires it, to draw walls for the autocomplete, run it on a
+scene, or decide whether to trust a run. **Not this file:** the module README
 ([`foundry/module/pentaryn-walls/README.md`](../../foundry/module/pentaryn-walls/README.md)) for
 the API, data written and code structure; [`../plans/foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md)
 for the design, the rule table and the traces.
 
 ## At the table
 
-Players see nothing: the walls simply exist. All of this is GM prep. The module is **disabled in
-the pentaryn world**; enable it on a scratch world or a copy of a scene first.
+Players see nothing: the walls simply exist. All of this is GM prep. The module is **retired
+(2026-10-13)** and disabled in the pentaryn world; do not sync or enable it. Everything below is
+how it worked, kept for the day Joe un-retires it — that starts by removing `retired=` from its
+`ModuleSpec` in `scripts/foundry/ops/config.py` and `walls` from `RETIRED_MODULES` in the Makefile.
 
 ## For the GM
 
