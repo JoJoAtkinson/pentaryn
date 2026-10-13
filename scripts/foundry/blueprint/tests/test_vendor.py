@@ -342,3 +342,17 @@ def test_a_null_pentaryn_flag_is_no_tier_not_a_traceback(tmp_path):
     assert vendor.plan(d)["files"] == vendor.closure(kit["tiers"]["full"], kit)
     vendor.sync(d)
     assert vendor.check(d) == []
+
+
+def test_re_is_imported_once_at_module_top():
+    """py-blueprint-MAINT-13: `re` is a top-level import of vendor.py, not re-imported inside
+    _lib_imports / _lib_styles."""
+    import ast
+    from pathlib import Path
+
+    tree = ast.parse(Path(vendor.__file__).read_text(encoding="utf-8"))
+    top = {a.name for n in tree.body if isinstance(n, ast.Import) for a in n.names}
+    assert "re" in top
+    local = [f.name for f in ast.walk(tree) if isinstance(f, ast.FunctionDef)
+             for n in ast.walk(f) if isinstance(n, ast.Import) and any(a.name == "re" for a in n.names)]
+    assert local == []

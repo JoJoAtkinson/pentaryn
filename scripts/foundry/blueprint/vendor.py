@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -217,7 +218,6 @@ def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None =
 
 def _lib_imports(module_dir: Path) -> set[str]:
     """Kit file stems imported as ./lib/x.mjs (or ../lib/x.mjs from a subfolder) by the module's own code."""
-    import re
     names: set[str] = set()
     pattern = re.compile(r"""["'](?:\./|(?:\.\./)+)lib/([\w-]+)\.mjs["']""")
     for f in module_dir.rglob("*.mjs"):
@@ -230,7 +230,6 @@ def _lib_imports(module_dir: Path) -> set[str]:
 
 def _lib_styles(module_dir: Path) -> set[str]:
     """Kit stylesheet stems the manifest loads as `lib/<name>.css`."""
-    import re
     try:
         manifest = json.loads((module_dir / "module.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
