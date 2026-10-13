@@ -133,6 +133,9 @@ Declared changes:
   any other world showed no eye on a lootable corpse.
 - dropbin-M13: the manifest's row helper is `legacyRow` (was `corpseRow`; it builds the `loot.*`
   rows too). Rename only — `describe()` and every row are unchanged.
+- dropbin-M12: `socketlib-adapter.mjs` is the only file that touches `socketlib`; the ledger's
+  hot-reimport branch asks the adapter's `socketlibPresent()` (was a direct `globalThis.socketlib`
+  probe). No behaviour change.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

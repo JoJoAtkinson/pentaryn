@@ -26,7 +26,7 @@ import {
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
 import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
-import { registerRecord, hasSocket, executeAsGM, resetSocket } from "./socketlib-adapter.mjs";
+import { registerRecord, hasSocket, executeAsGM, resetSocket, socketlibPresent } from "./socketlib-adapter.mjs";
 
 /* ------------------------------------------------------------------ storage */
 
@@ -259,7 +259,7 @@ async function clear() {
  */
 export function install(reg, ctx) {
   ctx.expose({ ledger: { all, list, get, search, restore, restoreResult, export: exportMirror, clear } });
-  if (globalThis.game?.ready && globalThis.socketlib) {
+  if (globalThis.game?.ready && socketlibPresent()) {
     // a hot re-import after ready: socketlib.ready has fired already (socketlib hands back the
     // module's existing socket)
     try { registerRecord(recordAsGM); } catch (err) { ctx.log.warn("hot patch: the ledger relay was not re-registered", err); }
