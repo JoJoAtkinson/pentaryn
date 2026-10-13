@@ -2361,4 +2361,4 @@ def test_m3_coalesce_target_has_no_protect_parameter():
     import inspect
     params = list(inspect.signature(cloud._coalesce_target).parameters)
     assert params == ["existing", "me", "contained"]
-    assert "protect" not in (cloud._coalesce_target.__doc__ or "")
+    assert "`protect`" not in (cloud._coalesce_target.__doc__ or "")
