@@ -10,10 +10,13 @@
  * the tools' zod silently dropped.
  */
 
+import { ABILITIES } from "./build-core.mjs";
+
 export const NPC_SIZES = Object.freeze(["tiny", "small", "medium", "large", "huge", "gargantuan"]);
 export const CREATURE_TYPES = Object.freeze(["humanoid", "undead", "beast", "dragon", "aberration", "construct", "elemental",
   "fey", "fiend", "giant", "monstrosity", "ooze", "plant", "celestial", "swarm"]);
-export const ABILITY_KEYS = Object.freeze(["str", "dex", "con", "int", "wis", "cha"]);
+/** The six ability keys: build-core's ABILITIES under the name the npc tools used. */
+export const ABILITY_KEYS = ABILITIES;
 export const SKILL_NAMES = Object.freeze(["Acrobatics", "Animal Handling", "Arcana", "Athletics", "Deception", "History", "Insight",
   "Intimidation", "Investigation", "Medicine", "Nature", "Perception", "Performance", "Persuasion", "Religion", "Sleight of Hand",
   "Stealth", "Survival"]);

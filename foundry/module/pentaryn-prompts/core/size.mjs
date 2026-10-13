@@ -24,8 +24,8 @@ export const SIZES = Object.freeze([
 export const SIZE_KEYS = SIZES.map(s => s.key);
 export const SIZE_BY_KEY = Object.freeze(Object.fromEntries(SIZES.map((s, i) => [s.key, { ...s, rank: i }])));
 
-/** dnd5e size key → token width in squares (the system's own table, restated so node can use it). */
-export const DND_SIZE_WIDTH = Object.freeze({ tiny: 0.5, sm: 1, med: 1, lg: 2, huge: 3, grg: 4 });
+/** dnd5e size key → token width in squares (the system's own table, read off SIZES so node can use it). */
+export const DND_SIZE_WIDTH = Object.freeze(Object.fromEntries(SIZES.map(s => [s.dnd, s.w])));
 
 /** `Medium 5x5 ft` for a marker size on a grid of `gridFt` feet per square. */
 export function footprintLabel(sizeKey, gridFt = 5) {
@@ -48,8 +48,9 @@ export function fmtNum(n) {
 export const SIZE_WORDS = Object.freeze({ tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg",
   huge: "huge", gargantuan: "grg", grg: "grg" });
 
-/** The player-character subset (2024 species are tiny to large): no huge, no gargantuan. */
-export const PC_SIZE_WORDS = Object.freeze({ tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg" });
+/** The player-character subset (2024 species are tiny to large): SIZE_WORDS without huge or gargantuan. */
+const PC_DND = SIZES.slice(0, SIZES.findIndex(s => s.dnd === "lg") + 1).map(s => s.dnd);
+export const PC_SIZE_WORDS = Object.freeze(Object.fromEntries(Object.entries(SIZE_WORDS).filter(([, dnd]) => PC_DND.includes(dnd))));
 
 /** "1/4" | 0.25 | "3" → a number, or null. */
 export function parseCr(cr) {

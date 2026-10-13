@@ -109,6 +109,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `core/placement.mjs`, `core/size.mjs`, `prompts-core.mjs` and `build-core.mjs`'s re-export comment
   now list their names and where each is re-exported or imported from (not every core name is on the
   geometry-core barrel). Comment only, no behaviour change.
+- **[declared] Three restated tables are derived from their source** (prompts-core-M12): npc-core's
+  `ABILITY_KEYS` is build-core's `ABILITIES`; `core/size.mjs`'s `DND_SIZE_WIDTH` is read off `SIZES`
+  and `PC_SIZE_WORDS` is `SIZE_WORDS` filtered to tiny..large. Oracle tests pin the old values, so
+  no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
