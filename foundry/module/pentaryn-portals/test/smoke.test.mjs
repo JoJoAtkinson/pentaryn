@@ -14,7 +14,7 @@ const EXPORTS = {
   "scene-adapter.mjs": ["configureSceneAdapter", "cardFor", "behaviorOf", "teleportBehaviors", "toAbsolute", "destinationsOf", "snapshot",
     "moveRegionDocs", "lookAt", "folderNames", "recordOf", "partyRecords", "landingPlaces", "carryTo", "confirmParty", "teleportParty",
     "linkRegions", "unlinkRegion"],
-  "card-app.mjs": ["PortalCard", "configureCardApp"],
+  "card-app.mjs": ["PortalCard", "configureCardApp", "SWITCHES"],
   "party.mjs": ["install", "uninstall", "cameThroughPortal", "spreadArrival", "bringFollowers"],
   "badges.mjs": ["install", "uninstall", "drawBadges", "badges", "seen", "editing", "setEditing", "refreshBadgeSight", "samplePoints",
     "badgeAt", "showTip", "hideTip", "openMenu", "closeMenu", "bindBoard", "moveRegion"],

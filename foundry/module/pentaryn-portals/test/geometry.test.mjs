@@ -99,11 +99,9 @@ test("core blockingWallCoords / tokenBox / occupiedBy = oracle", () => {
 test("core dialogIdParts: one parse for the behaviour uuid and the token id (= both old parses)", () => {
   for (const id of [ID, "dialog-Scene.S.Region.R.RegionBehavior.B-", "dialog-Scene.A.Region.B.RegionBehavior.C-tok-9"]) {
     assert.deepEqual(core.dialogIdParts(id), { behaviorUuid: oracle.behaviorUuidFromDialogId(id), tokenId: oracle.tokenIdFromDialogId(id) });
-    assert.equal(core.behaviorUuidFromDialogId(id), oracle.behaviorUuidFromDialogId(id));
   }
   for (const id of ["dialog-abc", "x-Scene.S.Region.R.RegionBehavior.B-t", "", undefined]) {
     assert.equal(core.dialogIdParts(id), null, String(id));
-    assert.equal(core.behaviorUuidFromDialogId(id), null);
   }
 });
 

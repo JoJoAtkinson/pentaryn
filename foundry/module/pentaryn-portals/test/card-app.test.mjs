@@ -3,6 +3,7 @@
 // Render goldens depend on the scenes in game.scenes: keep the edit render the first test.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { pinJSON } from "./kit/harness.mjs";
 import { boot, MODULE, P1, GM } from "./fixtures/world.mjs";
 import { places } from "./fixtures/places.mjs";
@@ -240,5 +241,43 @@ test("gaps: edit mode with no destinations says so", async () => {
   const Q = places(W, "E");
   const app = await S.PortalCard.open(Q.cell, { edit: true });
   assert.match(app.element.querySelector(".window-content").innerHTML, /<div class="ppt-cards"><p class="hint">No destinations yet.<\/p><\/div>/);
+  await app.close();
+});
+
+test("[declared] EXT-6: one frozen SWITCHES table drives both the passage switches' render and their change handler", async () => {
+  const { SWITCHES } = await import("../card-app.mjs");
+  assert.ok(Array.isArray(SWITCHES) && Object.isFrozen(SWITCHES), "SWITCHES is a frozen array");
+  assert.deepEqual(SWITCHES.map(s => s.key), ["open", "revealed", "choice"]);
+  for (const s of SWITCHES) {
+    assert.ok(Object.isFrozen(s), `${s.key} row frozen`);
+    assert.deepEqual(Object.keys(s), ["key", "label", "hint", "read", "write"]);
+    assert.match(s.label, /^PENTARYN_PORTALS\.Card\./);
+    assert.equal(s.hint, `${s.label}Hint`);
+  }
+  // no second list: the handler has no per-key branches, the render no per-key sw() calls
+  const src = readFileSync(new URL("../card-app.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(src, /k === "(open|revealed|choice)"/);
+  assert.doesNotMatch(src, /sw\("(open|revealed|choice)"/);
+
+  const Q = places(W, "X6");
+  const app = await S.PortalCard.open(Q.fork, { edit: true });
+  const c = app.element.querySelector(".window-content");
+  const behaviors = () => S.teleportBehaviors(Q.fork);
+  // render: the switch row is exactly the table, in order, each checked from its own read()
+  assert.deepEqual(c.querySelectorAll(".ppt-switches [data-set]").map(el => [el.dataset.set, el.hasAttribute("checked")]),
+    SWITCHES.map(s => [s.key, s.read(Q.fork, behaviors())]));
+  // handler: a change writes through the row's write(region, behaviors, on)
+  const el = c.querySelector('[data-set="choice"]');
+  el.checked = false;
+  const n = F.calls.length;
+  await el.fire("change");
+  assert.deepEqual(W.callsSince(n, ["update", "updateEmbedded"]).map(x => [x.parent, x.updates]), [[Q.fork.uuid, [{ _id: Q.bFork.id, "system.choice": false }]]]);
+  assert.equal(SWITCHES[2].read(Q.fork, behaviors()), false);
+  // read/write straight off the table
+  const open = SWITCHES[0];
+  assert.equal(open.read(Q.fork, behaviors()), true);
+  await open.write(Q.fork, behaviors(), false);
+  assert.equal(Q.fork.hidden, true);
+  assert.equal(open.read(Q.fork, behaviors()), false);
   await app.close();
 });

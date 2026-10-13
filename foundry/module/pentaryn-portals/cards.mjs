@@ -13,10 +13,11 @@
  * a pull"), and so does this — a hidden destination never gets a card on a player's screen.
  */
 
-import { MODULE, cardHTML, dialogIdParts, esc } from "./portals-core.mjs";
+import { MODULE, FLAG_SCOPE, cardHTML, dialogIdParts, esc } from "./portals-core.mjs";
 import { behaviorDestinations, behaviorOf, cardFor, snapshot } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { htmlRoot } from "./lib/api.mjs";
+import { flagPath } from "./lib/flags.mjs";
 
 export function decorate(app, element) {
   const behavior = behaviorOf(app);
@@ -95,19 +96,19 @@ export function injectConfig(app, element) {
     <legend>${_loc("PENTARYN_PORTALS.Config.Legend")}</legend>
     <p class="hint">${_loc("PENTARYN_PORTALS.Config.Hint")}</p>
     <div class="form-group"><label>${_loc("PENTARYN_PORTALS.Config.Title")}</label>
-      <div class="form-fields"><input type="text" name="flags.${MODULE}.title" value="${esc(f.title ?? "")}" placeholder="${esc(card.title)}"></div></div>
+      <div class="form-fields"><input type="text" name="${flagPath(FLAG_SCOPE, "title")}" value="${esc(f.title ?? "")}" placeholder="${esc(card.title)}"></div></div>
     <div class="form-group"><label>${_loc("PENTARYN_PORTALS.Config.Image")}</label>
-      <div class="form-fields"><input type="text" name="flags.${MODULE}.img" value="${esc(f.img ?? "")}" placeholder="${_loc("PENTARYN_PORTALS.Config.ImagePlaceholder")}">
+      <div class="form-fields"><input type="text" name="${flagPath(FLAG_SCOPE, "img")}" value="${esc(f.img ?? "")}" placeholder="${_loc("PENTARYN_PORTALS.Config.ImagePlaceholder")}">
       <button type="button" class="ppt-snap" data-tooltip="${_loc("PENTARYN_PORTALS.Config.Snap")}"><i class="fa-solid fa-camera"></i></button></div></div>
     <div class="form-group stacked"><label>${_loc("PENTARYN_PORTALS.Config.Description")}</label>
-      <textarea name="flags.${MODULE}.description" rows="4" placeholder="${_loc("PENTARYN_PORTALS.Config.DescriptionPlaceholder")}">${esc(f.description ?? "")}</textarea></div>
+      <textarea name="${flagPath(FLAG_SCOPE, "description")}" rows="4" placeholder="${_loc("PENTARYN_PORTALS.Config.DescriptionPlaceholder")}">${esc(f.description ?? "")}</textarea></div>
     <div class="ppt-preview">${cardHTML(card)}</div>`;
   tab.append(fs);
   fs.querySelector(".ppt-snap").addEventListener("click", guard("config snapshot", async ev => {
     ev.preventDefault();
     const path = await snapshot(region);
     if (path) {
-      fs.querySelector(`input[name="flags.${MODULE}.img"]`).value = region.flags?.[MODULE]?.img ?? path;
+      fs.querySelector(`input[name="${flagPath(FLAG_SCOPE, "img")}"]`).value = region.flags?.[MODULE]?.img ?? path;
       fs.querySelector(".ppt-preview").innerHTML = cardHTML(cardFor(region));
     }
   }));
