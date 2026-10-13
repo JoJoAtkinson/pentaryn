@@ -564,6 +564,10 @@
       "label": "locks"
     },
     {
+      "name": "item-piles-preTransferItems",
+      "label": "transfer capture"
+    },
+    {
       "name": "item-piles-dropItem",
       "label": "drop capture"
     },

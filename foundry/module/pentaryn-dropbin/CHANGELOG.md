@@ -1,5 +1,17 @@
 # Changelog — Pentaryn Drop Bin (`pentaryn-dropbin`)
 
+## Unreleased — 2026-10-13 (defect wave 3)
+
+Declared changes:
+
+- A drop onto an **existing** pile is one ledger row. Item Piles' `_transferItems` gives the item a
+  new `_id` on the pile, so the FIX-3 match by `_id` left a `delete` row and a `drop` row. The ledger
+  now listens to Item Piles' `item-piles-preTransferItems` (registered at ready, before the drop
+  capture) and remembers what that transfer took off the character; the drop's item is matched within
+  that one transfer — by `_id`, else name, type and quantity (`movedSourceId`) — and takes the delete
+  row's place. A hand delete is never in a transfer, so a same-named hand delete keeps its row
+  (dropbin-EC-2).
+
 ## Unreleased — 2026-10-13 (defect wave 2 live check, FIX-3)
 
 Declared changes (DB-AC-1 live):

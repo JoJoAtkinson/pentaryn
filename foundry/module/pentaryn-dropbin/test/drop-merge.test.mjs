@@ -86,3 +86,68 @@ test("appendEntry: a drop of the item the tail 'delete' row removed takes that r
   assert.equal(core.appendEntry(one.log, 7, { ...drop, item: null }).log.length, 2, "no item source: its own row");
   assert.equal(core.appendEntry(one.log, 7, { ...del, t: 100, item: { _id: "i3" } }).log.length, 2, "a delete never merges");
 });
+
+// Wave 3 dropbin item 1 [declared]: a drop onto an EXISTING pile goes through Item Piles' _transferItems,
+// which fires `item-piles-preTransferItems` (on the client running it, the active GM's) with the
+// character's removed items, deletes the item off the character (our 'delete' row), then creates it on
+// the pile under a NEW id (ensureValidIds) and fires the drop hook with that new item. The drop is still
+// one row: the moved item is matched within that transfer by id, else by name, type and quantity.
+const bag = addScene(F, { id: "sceneBag00000001", name: "Bag", tokens: [{ id: "tokBag0000000001", name: "Old pile" }] });
+const oldPile = bag.tokens.get("tokBag0000000001");
+const pileActor = { documentName: "Actor", id: "actorPile0000001", name: "Old pile" };
+const bob = makeActor(F, { id: "actorBob00000001", name: "Bob" }, {
+  items: [
+    { id: "itemCoil00000001", _id: "itemCoil00000001", name: "Coil", type: "loot", system: { quantity: 2 } },
+    { id: "itemFlask0000001", _id: "itemFlask0000001", name: "Flask", type: "loot", system: { quantity: 1 } },
+    { id: "itemFlask0000002", _id: "itemFlask0000002", name: "Flask", type: "loot", system: { quantity: 1 } },
+  ],
+});
+
+/** Item Piles' _dropItems onto an existing pile: preTransferItems, the delete, the new-id item, the drop hook. */
+async function dropOnPile(actor, id, newId) {
+  const src = actor.items.get(id).toObject();
+  const qty = src.system.quantity;
+  Hooks.call("item-piles-preTransferItems", actor, { itemDeltas: [{ item: src, quantity: -qty }], itemsToDelete: [id] },
+    pileActor, { itemsToCreate: [{ ...src, _id: newId }] }, false);
+  await actor.items.get(id).delete();
+  await settle();
+  Hooks.callAll("item-piles-dropItem", { actor }, oldPile.uuid, [{ item: { ...src, _id: newId }, quantity: qty }], { x: 5, y: 6 });
+  await settle();
+}
+
+test("wave-3 item 1: a drop onto an existing pile (new id on the pile) is one 'drop' row on the pile's scene", async () => {
+  const before = game.pentaryn.dropbin.all().length;
+  await quiet(() => dropOnPile(bob, "itemCoil00000001", "pileItemNew00001"));
+  const added = game.pentaryn.dropbin.all().slice(before);
+  assert.deepEqual(added.map(e => [e.reason, e.itemName, e.quantity, e.sceneName, e.pileUuid]), [["drop", "Coil", 2, "Bag", oldPile.uuid]]);
+  assert.equal(game.settings.get("pentaryn-dropbin", "counter"), added[0].n, "the drop took the delete row's number");
+});
+
+test("wave-3 item 1: a hand delete, then a drop onto a pile of another same-named item, keeps both rows", async () => {
+  const before = game.pentaryn.dropbin.all().length;
+  await quiet(async () => {
+    await bob.items.get("itemFlask0000001").delete();          // by hand, off the sheet
+    await settle();
+    // the second Flask leaves by a partial transfer: nothing deleted off the sheet, so no delete row of its own
+    const src = bob.items.get("itemFlask0000002").toObject();
+    Hooks.call("item-piles-preTransferItems", bob, { itemDeltas: [{ item: src, quantity: -1 }], itemsToDelete: [] },
+      pileActor, { itemsToCreate: [] }, false);
+    Hooks.callAll("item-piles-dropItem", { actor: bob }, oldPile.uuid, [{ item: { ...src, _id: "pileItemNew00002" }, quantity: 1 }], { x: 1, y: 1 });
+    await settle();
+  });
+  const added = game.pentaryn.dropbin.all().slice(before);
+  assert.deepEqual(added.map(e => [e.reason, e.itemName]), [["delete", "Flask"], ["drop", "Flask"]]);
+});
+
+test("wave-3 item 1 movedSourceId: the transfer's item by id, else by name, type and quantity; else null", () => {
+  const moved = [{ _id: "a1", name: "Rope", type: "loot", quantity: 1 }, { _id: "a2", name: "Coil", type: "loot", quantity: 2 }];
+  const transfer = { actorId: "ann", t: 1000, moved };
+  const at = (item, quantity, extra = {}) => core.movedSourceId(transfer, { actorId: "ann", item, quantity, now: 1500, ...extra });
+  assert.equal(at({ _id: "a2", name: "Coil", type: "loot" }, 2), "a2", "same id");
+  assert.equal(at({ _id: "new", name: "Coil", type: "loot" }, 2), "a2", "new id: name, type and quantity");
+  assert.equal(at({ _id: "new", name: "Coil", type: "loot" }, 1), null, "another quantity");
+  assert.equal(at({ _id: "new", name: "Coil", type: "tool" }, 2), null, "another type");
+  assert.equal(at({ _id: "new", name: "Coil", type: "loot" }, 2, { actorId: "bob" }), null, "another actor's transfer");
+  assert.equal(at({ _id: "new", name: "Coil", type: "loot" }, 2, { now: 1000 + core.DEDUPE_MS }), null, "a stale transfer");
+  assert.equal(core.movedSourceId(null, { actorId: "ann", item: { _id: "a1" }, quantity: 1, now: 1 }), null, "no transfer");
+});

@@ -32,6 +32,12 @@ export const api = () => itempiles()?.API;
 /** The hook Item Piles fires when an item is dropped onto the canvas as a pile, or undefined. */
 export const dropHook = () => itempiles()?.hooks?.ITEM?.DROP;
 
+/**
+ * The hook Item Piles calls (on the client running the transfer) before `_transferItems` commits —
+ * a drop onto an existing pile is one — or undefined.
+ */
+export const preTransferHook = () => itempiles()?.hooks?.ITEM?.PRE_TRANSFER;
+
 /** The actor type Item Piles treats as a character (its ACTOR_CLASS_TYPE), or undefined. */
 export const actorClassType = () => api()?.ACTOR_CLASS_TYPE;
 

@@ -93,7 +93,8 @@ test("ready: post-ready registrations in order (golden/hooks-after-ready.json); 
   });
   const after = F.hooks.slice(hooksBefore);
   pinJSON("hooks-after-ready", after, import.meta.url);
-  assert.deepEqual(after.map(h => h.name), ["item-piles-dropItem", "preDeleteItem", "item-piles-preRenderInterface",
+  // [declared] wave 3 dropbin item 1: the pre-transfer capture registers first
+  assert.deepEqual(after.map(h => h.name), ["item-piles-preTransferItems", "item-piles-dropItem", "preDeleteItem", "item-piles-preRenderInterface",
     "item-piles-preRenderActorSheet", "item-piles-preRattleItemPile", "preCreateItem"]);
   // [declared] items-journal-25: the active GM writes each plan's actors in one Actor.updateDocuments batch
   const writes = since(from).filter(c => ["update", "Actor.updateDocuments", "updateEmbeddedDocuments"].includes(c.op))

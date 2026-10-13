@@ -13,7 +13,7 @@
 import { MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement } from "./loot-core.mjs";
 import {
   DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry,
-  briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, dropReplacesTail,
+  briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, dropReplacesTail, movedSourceId,
 } from "./ledger-core.mjs";
 import { pinnedEntryIds } from "./lib/pins.mjs";
 
@@ -21,7 +21,7 @@ import { pinnedEntryIds } from "./lib/pins.mjs";
 export {
   MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement,
   DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry,
-  briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, dropReplacesTail,
+  briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, dropReplacesTail, movedSourceId,
 };
 
 export const SHORT = "dropbin";
