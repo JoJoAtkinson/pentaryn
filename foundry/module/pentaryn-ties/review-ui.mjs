@@ -410,7 +410,7 @@ export class AttributeReview extends ApplicationV2 {
       ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("skill", e.skill))}
       ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-field="dc" value="${e.dc}">`)}
     </div>
-    ${["title", "category", "skill", "dc"].map(k => was(k, e[k], _loc(FIELD_LABEL[k] ?? `PENTARYN_TIES.review.field.${k}`))).join("")}
+    ${Object.keys(FIELD_LABEL).map(k => was(k, e[k], _loc(FIELD_LABEL[k]))).join("")}
     ${field(_loc("PENTARYN_TIES.review.field.reveal"), `<textarea data-field="reveal">${esc(e.reveal)}</textarea>`)}
     ${was("reveal", e.reveal)}
     ${field(_loc("PENTARYN_TIES.review.field.miss"), `<textarea data-field="miss">${esc(e.miss)}</textarea>`)}

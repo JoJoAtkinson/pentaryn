@@ -164,6 +164,10 @@ ends. A write that throws now logs `pentaryn-ties | <action>` (error) and shows 
 — see the console." instead of leaving the button dead with an unprefixed unhandled rejection. The HUD
 eye is no longer left disabled after a finished inspection. ties-ui-rob-7.
 
+Changed (declared, no table-visible change): key lists are derived from their label tables — the
+world filter chips from `FILTER_LABEL`, the world tree's failed / pending / unknown tag from a new
+`STATE_LABEL`, the review panel's "was" rows from `FIELD_LABEL`. Same order, same markup. ties-ui-EXT-5.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

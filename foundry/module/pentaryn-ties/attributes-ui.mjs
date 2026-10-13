@@ -71,6 +71,12 @@ const FILTER_LABEL = Object.freeze({
   pending: "PENTARYN_TIES.attributes.filter.pending",
   failed: "PENTARYN_TIES.attributes.filter.failed"
 });
+/** The world tree's state tags (a `known` node carries none). */
+const STATE_LABEL = Object.freeze({
+  failed: "PENTARYN_TIES.attributes.state.failed",
+  pending: "PENTARYN_TIES.attributes.state.pending",
+  unknown: "PENTARYN_TIES.attributes.state.unknown"
+});
 
 export const ATTR_TAB_ID = "attributes";
 
@@ -462,13 +468,13 @@ function worldKnowledgeSection(character, isGM) {
    * never be in is itself a statement that those states exist for them.
    */
   const active = worldFilter.get(character.id) ?? "all";
-  const filters = ["all", "unknown", "pending", "failed"];
+  const filters = Object.keys(FILTER_LABEL);
   const bar = isGM
     ? `<div class="pt-world-filter" role="group" aria-label="${esc(_loc("PENTARYN_TIES.attributes.filterLabel"))}">
         ${filters
           .map(
             k => `<button type="button" class="pt-filter-chip${k === active ? " pt-filter-chip-on" : ""}"
-                    data-action="world-filter" data-filter="${k}">${esc(_loc(FILTER_LABEL[k] ?? `PENTARYN_TIES.attributes.filter.${k}`))}</button>`
+                    data-action="world-filter" data-filter="${k}">${esc(_loc(FILTER_LABEL[k]))}</button>`
           )
           .join("")}
         <button type="button" class="pt-filter-chip pt-filter-chip-quiet" data-action="world-collapse">${esc(_loc("PENTARYN_TIES.attributes.collapseAll"))}</button>
@@ -520,14 +526,9 @@ function worldNode(node, isGM, characterId) {
       </button>`
     : `<span class="pt-twisty pt-twisty-leaf" aria-hidden="true"></span>`;
 
-  const tag =
-    node.state === "failed"
-      ? `<span class="pt-attr-tag pt-state-failed">${esc(_loc("PENTARYN_TIES.attributes.state.failed"))}</span>`
-      : node.state === "pending"
-        ? `<span class="pt-attr-tag pt-state-pending">${esc(_loc("PENTARYN_TIES.attributes.state.pending"))}</span>`
-        : node.state === "unknown"
-          ? `<span class="pt-attr-tag pt-state-unknown">${esc(_loc("PENTARYN_TIES.attributes.state.unknown"))}</span>`
-          : "";
+  const tag = Object.hasOwn(STATE_LABEL, node.state)
+    ? `<span class="pt-attr-tag pt-state-${node.state}">${esc(_loc(STATE_LABEL[node.state]))}</span>`
+    : "";
 
   /*
    * ⚠ **GM only, and this is the leak the whole view is built to refuse.** "2 of 7 told" states
