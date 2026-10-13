@@ -124,6 +124,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] The prompt-id test is written once** (prompts-core-EXT-5): `core/group.mjs`, which
   hands out the p# ids, exports `isPromptId`; `core/doors.mjs` and `replace.mjs`'s encounter lines
   use it instead of restating `/^p\d+$/`. Same matching, no behaviour change.
+- **[declared] The sourceRules enum is written once** (prompts-core-EXT-8): npc-core's local `RULES`
+  (`["2014", "2024"]`) is used by `NPC_SPEC`, the features' shared source fields and the
+  spellcasting feature instead of three copies. Same values and default (2014), no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug

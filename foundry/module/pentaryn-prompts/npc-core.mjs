@@ -77,6 +77,9 @@ function apply(raw, spec, where) {
 
 /* ── the npc ─────────────────────────────────────────────────────────────── */
 
+/** The `sourceRules` enum the npc and its features share. */
+const RULES = Object.freeze(["2014", "2024"]);
+
 const NPC_SPEC = {
   name: { type: T.str(1), req: true },
   creatureType: { type: T.one(CREATURE_TYPES), req: true },
@@ -112,7 +115,7 @@ const NPC_SPEC = {
   biography: { type: T.str(), def: "" },
   sourceBook: { type: T.str(), def: "" },
   sourcePage: { type: T.str(), def: "" },
-  sourceRules: { type: T.one(["2014", "2024"]), def: "2014" }
+  sourceRules: { type: T.one(RULES), def: "2014" }
 };
 
 export const NPC_KEYS = Object.freeze(Object.keys(NPC_SPEC));
@@ -158,7 +161,7 @@ const common = {
   actorIdentifier: { type: T.any() }
 };
 const named = { featureName: { type: T.str(1), req: true }, description: { type: T.str(), def: "" } };
-const source = { sourceRules: { type: T.one(["2014", "2024"]), def: "2014" }, sourceBook: { type: T.str(), def: "" }, sourcePage: { type: T.str(), def: "" } };
+const source = { sourceRules: { type: T.one(RULES), def: "2014" }, sourceBook: { type: T.str(), def: "" }, sourcePage: { type: T.str(), def: "" } };
 const weapon = {
   activationType: { type: T.one(ACT), def: "action" },
   attackType: { type: T.one(["melee", "ranged"]), req: true },
@@ -187,7 +190,7 @@ const FEATURE_SPEC = {
     areaType: { type: T.one(AREA), req: true }, areaSize: { type: T.num(0, true), req: true }, areaUnits: { type: T.one(["ft", "m"]), def: "ft" },
     affectsType: { type: T.one(["creature", "object", "space", ""]), def: "creature" }, ...source },
   spellcasting: { ...common, spellcastingClass: { type: T.one(Object.keys(SPELLCASTING_CLASSES)), req: true },
-    spellcastingLevel: { type: T.int(1, 20), req: true }, spellcastingAbility: { type: ABIL }, sourceRules: { type: T.one(["2014", "2024"]), def: "2014" } },
+    spellcastingLevel: { type: T.int(1, 20), req: true }, spellcastingAbility: { type: ABIL }, sourceRules: { type: T.one(RULES), def: "2014" } },
   spells: { ...common, spellNames: { type: { check: v => Array.isArray(v) && v.length >= 1 && v.length <= 50 && v.every(x => typeof x === "string" && x),
     want: "1-50 spell names" }, req: true },
   compendiumPacks: { type: T.strs(), def: () => ["dnd5e.spells"] } }
