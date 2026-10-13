@@ -98,17 +98,20 @@ def gate(fa: FoundryAdmin, policy: dict, *, force: bool = False) -> state.EntryS
 
     # A leftover entry file means the previous run died partway. Its recorded state is
     # the truth about what service should look like; the current (possibly broken)
-    # state is not. Repair first, then adopt it as this run's restore target.
+    # state is not. Repair first, then adopt it as this run's restore target — but only
+    # after the connected-users check, which a repaired table is just as subject to (EC-7).
     stale = state.EntryState.read()
     if stale:
         _repair_from(stale)
-        return stale
 
     status = fa.status() if admin_mod.port_open() else None
     users = (status.users or 0) if status and status.active else 0
     if users > 0 and not force:
         raise Aborted(f"{users} user(s) connected to {status.world!r} — "
                       "not touching a live table")
+
+    if stale:
+        return stale
 
     entry = state.EntryState(
         foundry_up=admin_mod.port_open(),
