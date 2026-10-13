@@ -24,7 +24,7 @@ await import("../pings.mjs");
 test("globalThis.ControlsLayer is patched before CONFIG's layerClass", async () => {
   F.fire("init");
   F.fire("ready");
-  assert.equal(GlobalLayer.prototype.handlePing.__pentarynPatched, true);
+  assert.equal(GlobalLayer.prototype.handlePing.__pentarynPingsPatched, true);
   assert.equal(W.ControlsLayer.prototype.handlePing, W.original, "CONFIG.Canvas.layers.controls.layerClass untouched");
   assert.equal(new GlobalLayer().handlePing(F.game.users.get(GM), { x: 1, y: 2 }, { scene: ALPHA }), "global", "a sync original's value passes through");
   assert.deepEqual(calls, [[F.game.users.get(GM), { x: 1, y: 2 }, { scene: ALPHA }]]);

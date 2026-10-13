@@ -1,10 +1,9 @@
 // SF3 case C on a GM client: the log already holds `max` records when the first ping arrives. Its own
-// process (ready fires once per page; the buffer is module state).
+// process (ready fires once per page; the pending list is module state).
 //
-// appendCapped pushes into the buffer, which before any flush is the cached setting array, and then
-// slices: the trimming ping lands in the cache (all() briefly returns max+1) and the buffer is detached
-// from it, so later pings trail in the readers until the 250 ms write. Pinned as it is (README Pitfalls,
-// "Read lag"); glue.test.mjs pins cases A and B.
+// [declared] pings-edge-1: pings wait in this tab's pending list, not in the cached setting array, so a
+// full log no longer shows max+1 records or the trimming ping early: the readers show the stored max
+// until the 250 ms write, which merges and trims. glue.test.mjs pins case B.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { manifestOf } from "./kit/harness.mjs";
@@ -22,7 +21,7 @@ F.game.modules.set(MODULE, { id: MODULE, active: true, version: manifest.version
 W.captureConsole();
 await import("../pings.mjs");
 
-test("KNOWN SF3 case C: a trim detaches the buffer — the trimming ping shows, all() is max+1, later pings lag until the flush", async () => {
+test("SF3 case C ([declared] pings-edge-1): a full log is trimmed at the write; the readers show the stored max until then", async () => {
   F.fire("init");
   F.fire("setup");
   F.fire("ready");
@@ -33,8 +32,8 @@ test("KNOWN SF3 case C: a trim detaches the buffer — the trimming ping shows, 
 
   layer.handlePing(gm, { x: 1, y: 1 }, { scene: ALPHA });
   layer.handlePing(gm, { x: 2, y: 2 }, { scene: ALPHA });
-  assert.equal(api.last().x, 1, "the trimming ping shows; the next one trails");
-  assert.equal(api.all().length, 51, "the cache was pushed to before the slice");
+  assert.equal(api.last().x, 1049, "both pings trail until the write");
+  assert.equal(api.all().length, 50, "the cache is never pushed to");
   assert.equal(W.log().length, 0, "no write before 250 ms");
 
   mock.timers.tick(250);
@@ -43,5 +42,5 @@ test("KNOWN SF3 case C: a trim detaches the buffer — the trimming ping shows, 
   assert.equal(W.log()[0].value.length, 50);
   assert.equal(api.last().x, 2);
   assert.equal(api.all().length, 50);
-  assert.deepEqual(api.all().slice(-2).map(r => r.x), [1, 2]);
+  assert.deepEqual(api.all().slice(-3).map(r => r.x), [1049, 1, 2]);
 });
