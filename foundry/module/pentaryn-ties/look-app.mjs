@@ -236,16 +236,19 @@ export class LookWindow extends ApplicationV2 {
     const regKey = `${MODULE}.${REGISTRY_SETTING}`;
     const onActor = (actor, changes = {}) => {
       if (!actor) return;
+      const isCharacter = actor.id === this.character.id;
+      if (!isCharacter && actor.id !== this.base.id) {
+        const kindId = log.swallow("look: kind pointer unreadable", () => kindActorOf(this.base)?.id ?? null, null);
+        if (!kindId || actor.id !== kindId) return;
+      }
+      // only the window's own actors get their changes flattened
       const keys = Object.keys(foundry.utils.flattenObject(changes ?? {}));
       const flags = keys.some(k => touchesFlagScope(k, MODULE));
-      if (actor.id === this.character.id) {
+      if (isCharacter) {
         if (flags) this.queueLive();
         return;
       }
-      const kindId = log.swallow("look: kind pointer unreadable", () => kindActorOf(this.base)?.id ?? null, null);
-      if (actor.id === this.base.id || (kindId && actor.id === kindId)) {
-        if (flags || keys.some(k => k === "name" || k === "img")) this.queueLive();
-      }
+      if (flags || keys.some(k => k === "name" || k === "img")) this.queueLive();
     };
     const onSetting = setting => {
       if ((setting?.key ?? "") === regKey) this.queueLive();

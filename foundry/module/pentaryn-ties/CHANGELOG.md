@@ -26,6 +26,10 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): the Look window's `updateActor` hook checks the actor against the character, the
+subject and its kind before flattening the change, so an unrelated actor's update returns at once;
+what refreshes the window is unchanged. ties-ui-perf-9.
+
 Fixed (declared): a Known-tab paint indexes the attribute registry once and hands that index to
 every entry's secrecy filter, instead of each entry re-clamping the whole registry; what the tab shows
 is unchanged. `visibleAttributesFor` takes an `index` (an `indexRegistry()` result or its `byId` Map)
