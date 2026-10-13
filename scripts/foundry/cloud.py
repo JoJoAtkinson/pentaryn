@@ -1707,7 +1707,8 @@ def _ops_event(state: str, job: uploadq.Job, **extra) -> None:
 
 def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snapshot | None:
     """`_upload_job` with the status file and the ops log kept. Raises on failure (the
-    job stays queued), after recording the failure — except a job that can never
+    job stays queued), after recording the failure — any exception, not only a
+    StorageError, so the status never stays 'uploading' — except a job that can never
     complete (_Incomplete), which is dropped (_drop_job) and raises JobDropped."""
     t0 = time.time()
     uploadq.write_status(state="uploading", name=job.name, reason=job.reason,
@@ -1721,6 +1722,12 @@ def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snaps
         if isinstance(exc, SystemExit) and exc.code in (0, None):
             raise
         err = str(exc) if isinstance(exc, StorageError) else f"see {tmp_dir() / uploadq.LOG_FILE}"
+        uploadq.write_status(state="failed", name=job.name, reason=job.reason,
+                             size=job.size, started=t0, finished=time.time(), error=err)
+        _ops_event("failed", job, error=err, seconds=round(time.time() - t0, 1))
+        raise
+    except Exception as exc:  # noqa: BLE001 — recorded, then re-raised (R6)
+        err = f"{type(exc).__name__}: {exc}"
         uploadq.write_status(state="failed", name=job.name, reason=job.reason,
                              size=job.size, started=t0, finished=time.time(), error=err)
         _ops_event("failed", job, error=err, seconds=round(time.time() - t0, 1))

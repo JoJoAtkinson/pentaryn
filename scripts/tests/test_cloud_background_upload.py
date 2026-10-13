@@ -194,6 +194,27 @@ def test_a_failed_upload_records_nothing_and_leaves_the_job(two_hosts, spawned, 
         assert _snaps(two_hosts.cloud) == [job.name]
 
 
+def test_an_unexpected_error_marks_the_upload_failed_r6(two_hosts, spawned, monkeypatch):
+    """R6: a non-StorageError (an OSError, a bug) must not leave the status 'uploading'
+    with nobody uploading — it is recorded as failed, logged, and still raised."""
+    from scripts.foundry.ops import config as cfg
+
+    def boom(*_a, **_k):
+        raise OSError("disk vanished")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        monkeypatch.setattr(cloud, "_upload_job", boom)
+        with pytest.raises(OSError, match="disk vanished"):
+            cloud._run_job(storage.get(), job)
+        st = uploadq.read_status()
+        assert st["state"] == "failed" and st["error"] == "OSError: disk vanished"
+        assert [j.name for j in uploadq.pending()] == [job.name]   # still queued
+    lines = [json.loads(x) for f in cfg.OPS_LOG_DIR.glob("ops-*.jsonl")
+             for x in f.read_text().splitlines()]
+    assert [x["state"] for x in lines if x.get("snapshot") == job.name][-1] == "failed"
+
+
 def test_a_crashed_upload_is_retried_by_the_next_blocking_backup(two_hosts, spawned):
     with two_hosts.use("mac"):
         cloud.backup("shutdown", background=True)              # …and the uploader died
