@@ -24,6 +24,7 @@ import {
   MODULE, FLAGS, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath, hudColumn, hudButton,
 } from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const TEX = `modules/${MODULE}/assets/chain-link.webp`;
 const TILE_H = 96; // px height of the source tile
@@ -34,7 +35,10 @@ const state = { layer: null, tex: null, loading: null, queued: 0, hooks: [], reg
 /** The sprites on the layer, per pair (finding -20): updated in place, rebuilt for a new layer or texture. */
 const drawn = { layer: null, tex: null, sprites: new Map() };
 
-const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
+/** The kit log: the entry's ctx.log once installed (senses-R6). */
+let log = makeLog(MODULE);
+
+const warn = (label, err) => log.warn(`chain ${label}`, err);
 
 /* -------------------------------------------- */
 /*  Data                                        */
@@ -111,7 +115,7 @@ function texture() {
       .then(tex => {
         state.tex = tex ?? null;
         if (tex?.baseTexture) tex.baseTexture.wrapMode = PIXI.WRAP_MODES.REPEAT;
-        if (!tex) console.warn(`${MODULE} | chain texture missing: ${TEX}`);
+        if (!tex) log.warn(`chain texture missing: ${TEX}`);
       })
       .catch(e => warn("texture", e))
       .finally(() => {
@@ -302,6 +306,7 @@ const exposed = { link, break: breakChain, links, repaint: schedule };
 /** FEATURE: called synchronously by the entry, at import. */
 export function install(reg, ctx) {
   state.reg = reg;
+  log = ctx.log;
   ctx.expose({ chain: exposed });
 
   on("canvasTearDown", () => {

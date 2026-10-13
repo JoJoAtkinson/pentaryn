@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **[declared senses-R6] Five files log through the kit log** (final review 2026-10-12):
+  chain, light and migrate use the entry's `ctx.log` once installed; light-ui and argon use
+  `makeLog(MODULE)`. No hand-prefixed `console.*` call is left. Console text byte-identical
+  ('pentaryn-senses | light <label>' and the rest); goldens unchanged. New `test/kit-log.test.mjs`.
+
 - **[declared senses-M10] One Token HUD button builder** (final review 2026-10-12): chain.mjs
   and light-ui.mjs no longer each build their own HUD button. `core/hud-dom.mjs` now holds
   `rootOf`, `hudColumn` and `hudButton` beside `setTip` (the senses-edge-3 tip rule), and both

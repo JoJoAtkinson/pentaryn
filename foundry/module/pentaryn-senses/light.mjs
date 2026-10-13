@@ -17,6 +17,7 @@ import {
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
 import { isActiveGM, isAnyGM, claimDocument } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { realItem, itemFrom, casterToken, allItems, litBy, anyLitBy, allSources, findToken } from "./light-adapter.mjs";
 import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, pick, prompt } from "./light-ui.mjs";
 
@@ -27,7 +28,10 @@ const RECENT = 20;
 
 const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), reg: null, ctx: null, recent: [] };
 
-const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
+/** The kit log: the entry's ctx.log once installed (senses-R6). */
+let log = makeLog(MODULE);
+
+const warn = (label, err) => log.warn(`light ${label}`, err);
 
 /* -------------------------------------------- */
 /*  Casting (any client that owns the item)     */
@@ -179,7 +183,7 @@ export async function setup() {
       warn(`setup ${parent?.uuid ?? "world items"}`, e);
     }
   }
-  console.info(`${MODULE} | setupLight: ${n} torch item(s) given a Light activity`);
+  log.info(`setupLight: ${n} torch item(s) given a Light activity`);
   return n;
 }
 
@@ -241,7 +245,7 @@ async function deleteLive(scene, type, ids, live) {
     await scene.deleteEmbeddedDocuments(type, there);
   } catch (e) {
     if (!/does not exist/i.test(e?.message ?? "")) throw e;
-    state.ctx?.log.debug(`${type} already deleted by another GM session`, e);
+    log.debug(`${type} already deleted by another GM session`, e);
   }
   return there.length;
 }
@@ -341,7 +345,7 @@ async function applyWanted(source, plan, done) {
       } catch (e) {
         // The other GM tab's create of this square landed first: the refusal is the election.
         if (!/already exists/i.test(e?.message ?? "")) throw e;
-        state.ctx?.log.debug("square already made by another GM session", e);
+        log.debug("square already made by another GM session", e);
       }
       done.created = true;
     }
@@ -363,7 +367,7 @@ function remember(plan, done, desired) {
   const summary = summarise(plan, { ...done, desired });
   state.recent.push({ ...summary, desired: summary.desired && { ...summary.desired } });   // the ring's own copy
   if (state.recent.length > RECENT) state.recent.splice(0, state.recent.length - RECENT);
-  state.ctx?.log.debug("reconcile", summary);
+  log.debug("reconcile", summary);
   return summary;
 }
 
@@ -443,7 +447,7 @@ async function tidyOldSummons() {
       try {
         from = fromUuidSync(origin, { strict: false });
       } catch (e) {
-        state.ctx?.log.debug("summon origin unresolvable", e);
+        log.debug("summon origin unresolvable", e);
       }
       const spell = from?.documentName === "Item" ? from : from?.item ?? null;
       const base = game.actors.get(t.actorId);
@@ -451,7 +455,7 @@ async function tidyOldSummons() {
       if (isLightSpellData(spell) || phb) ids.push(t.id);
     }
     if (ids.length) {
-      console.info(`${MODULE} | light: removing ${ids.length} old Light summon token(s) on ${scene.name}`, ids);
+      log.info(`light: removing ${ids.length} old Light summon token(s) on ${scene.name}`, ids);
       removed += await deleteLive(scene, "Token", ids, scene.tokens);
     }
   }
@@ -501,6 +505,7 @@ const exposed = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe,
 export function install(reg, ctx) {
   state.reg = reg;
   state.ctx = ctx;
+  log = ctx.log;
   ctx.expose({ light: exposed });
   bindActions({ end, onMe, pickAndCast, toggle, hood, run });
 

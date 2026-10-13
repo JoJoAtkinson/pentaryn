@@ -9,6 +9,7 @@ import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, 
 import { realItem, itemFrom } from "./light-adapter.mjs";
 import { collapseArgonPanels } from "./argon.mjs";
 import { isActiveGM } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 const PICK_TIMEOUT_MS = 60_000;
 
@@ -22,7 +23,8 @@ export function bindActions(a) {
   actions = a;
 }
 
-const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
+const log = makeLog(MODULE);   // the kit log (senses-R6)
+const warn = (label, err) => log.warn(`light ${label}`, err);
 
 /**
  * The Light actions, once, for both the prompt's buttons (`dialog`) and the spell card's action row
