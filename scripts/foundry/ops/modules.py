@@ -681,6 +681,10 @@ def _install_locked(src: Path, dst: Path, staging: Path, cmd: str) -> dict:
 def sync(name: str) -> int:
     """Prove the sources, then copy the module into Foundry's Data/modules."""
     spec = cfg.MODULES[name]
+    if spec.retired:
+        # the CLI never offers it either; this guards a direct call (wave 3 walls-retire)
+        _say(f"✗ {name} is retired ({spec.retired}) — module-sync never installs it")
+        return FAIL
     if not spec.syncable:
         # the CLI parses every registered name, so this is the refusal it reaches (EXT-6)
         _say(f"✗ {name} is not synced by module-sync — the actor pipeline installs it; "

@@ -105,14 +105,14 @@ settings were copied on disk with classic-level while both worlds were closed.
   Bridge: foundry-mcp-bridge **0.8.3-pentaryn.2** (adds `pentaryn-read` / `pentaryn-write`), module
   built from fork `pentaryn` `2fd6eb0` (toggle-condition without `active` toggles, write-log ids,
   eval-js `phase: "args"`); the server runs `7712417` (pentaryn-read description only).
-  `pentaryn-walls` 0.2.0 is in the repo but off (below). Record:
+  `pentaryn-walls` 0.2.0 is retired (2026-10-13, Joe uses prefabs): in the repo, never synced, off (below). Record:
   [`plans/merge-and-go-live-2026-10-11.md`](plans/merge-and-go-live-2026-10-11.md).
 
 **Left out**
 
 | Module | Reason |
 |---|---|
-| `pentaryn-walls` | Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent. Migrated in wave 2, never live-tested, off in the world: do not sync or live-check it (W2-L1, 2026-10-11) |
+| `pentaryn-walls` | **Retired 2026-10-13** — Joe uses prefabs now; `module-sync` refuses it and nothing reinstalls it (source kept, [`foundry/walls.md`](foundry/walls.md)). Before that: Joe's instruction: do not activate the custom walls add-on. `false` in `core.moduleConfiguration`; `game.pentaryn.walls` absent. Migrated in wave 2, never live-tested, off in the world: do not sync or live-check it (W2-L1, 2026-10-11) |
 | "Auto map generator" | No such module exists. The only generator is the bridge's ComfyUI `generate-map` tool: zero calls in the logs, rejected in [`plans/foundry-mcp-fork.md`](plans/foundry-mcp-fork.md). Nothing to switch off |
 
 **Log audit:** no add-on bugged out. Error logs were 0 bytes; the only failures were bridge

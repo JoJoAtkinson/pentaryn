@@ -158,3 +158,22 @@ def test_index_reads_json_through_config_not_its_own_copy(tmp_path, monkeypatch)
     row = index.module_row(d)
     assert set(seen) == {"module.json", "describe.json", "kit.lock.json"}
     assert row["tier"] == "small" and row["api"] == ["real"]
+
+
+# ── a retired module says so in its row (wave 3 walls-retire) ─────────────────
+
+def test_a_retired_module_s_row_says_retired_walls_retire(tmp_path, monkeypatch):
+    root = tmp_path / "modules"
+    _module(root, "pentaryn-zz", lock={"version": "1.0.1", "tier": "full", "files": []})
+    monkeypatch.setitem(cfg.MODULES, "zz", cfg.ModuleSpec("pentaryn-zz", check="parse",
+                                                          retired="2026-10-13 — gone"))
+    assert index.module_row(root / "pentaryn-zz")["retired"] == "2026-10-13 — gone"
+    (row,) = [ln for ln in index.render(root).splitlines() if "`pentaryn-zz`" in ln]
+    assert "| full tier · **retired 2026-10-13 — gone** |" in row
+
+
+@pytest.mark.repo
+def test_the_real_walls_row_says_retired_walls_retire():
+    text = index.README.read_text(encoding="utf-8")
+    (row,) = [ln for ln in text.splitlines() if "| `pentaryn-walls` |" in ln]
+    assert "**retired 2026-10-13 — Joe uses prefabs**" in row

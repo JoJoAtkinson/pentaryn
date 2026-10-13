@@ -93,6 +93,9 @@ def module_row(module_dir: Path) -> dict:
         "suite": (module_dir / "test/run.mjs").is_file(),
         "useDoc": f"{short}.md" if use_doc.is_file() else None,
         "readme": (module_dir / "README.md").is_file(),
+        # the ops registry's retirement, "" when live (wave 3 walls-retire)
+        "retired": next((s.retired for s in cfg.MODULES.values()
+                         if s.name == (manifest.get("id") or module_dir.name)), ""),
     }
 
 
@@ -118,6 +121,8 @@ def render(root: Path | None = None) -> str:
     for r in rows(root):
         ns = ", ".join(f"`{n}`" for n in r["namespaces"]) or "— (publishes none)"
         bp = f"{r['tier']} tier" if r["tier"] else "not migrated"
+        if r["retired"]:
+            bp += f" · **retired {r['retired']}**"
         docs = []
         if r["useDoc"]:
             docs.append(f"[`{r['useDoc']}`]({r['useDoc']})")

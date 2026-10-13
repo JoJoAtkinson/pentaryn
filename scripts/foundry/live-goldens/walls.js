@@ -1,5 +1,6 @@
 // Live golden — pentaryn-walls (`game.pentaryn.walls`).
 //
+// RETIRED 2026-10-13 (Joe uses prefabs): no wave runs this golden; it stays for an un-retire.
 // RUN ONLY WHEN JOE RE-ENABLES WALLS. walls is switched off in Joe's world; with the module
 // inactive this script returns `{ skipped: "pentaryn-walls is not active (run only when Joe re-enables walls)" }`
 // and writes nothing.
