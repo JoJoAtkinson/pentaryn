@@ -729,39 +729,3 @@ def module_conformance(argv: list[str]) -> int:
     from scripts.foundry.blueprint import conformance
     return conformance.main(list(argv))
 
-
-# ── walls-only extras ─────────────────────────────────────────────────────────
-
-def walls_wasm() -> int:
-    """Build the compiled backend.
-
-    Needs rustup plus the wasm32-unknown-unknown target:
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-        rustup target add wasm32-unknown-unknown
-
-    Rust rather than C/C++ on purpose: no FMA contraction, no fast-math, so float
-    semantics are strict IEEE-754 by default — which is what keeps the compiled
-    engine bit-identical to the JS one.
-    """
-    src = cfg.MODULES["walls"].src
-    wasm_dir = src / "wasm"
-    env = {**os.environ, "PATH": f"{Path.home() / '.cargo/bin'}:{os.environ.get('PATH', '')}"}
-    rc = subprocess.run(
-        ["cargo", "build", "--release", "--target", "wasm32-unknown-unknown"],
-        cwd=wasm_dir, env=env,
-    ).returncode
-    if rc != 0:
-        return rc
-
-    built = wasm_dir / "target/wasm32-unknown-unknown/release/wall_engine.wasm"
-    dest = src / "wall-engine.wasm"
-    shutil.copy2(built, dest)
-    _say(f"✓ wall-engine.wasm ({dest.stat().st_size / 1024:.0f} KB)")
-    return OK
-
-
-def walls_bench(grid: str | None = None) -> int:
-    """Scaling curve: at what map size does this stop being instant?"""
-    bench = cfg.MODULES["walls"].src / "test/bench.mjs"
-    cmd = ["node", str(bench)] + ([grid] if grid else [])
-    return subprocess.run(cmd).returncode

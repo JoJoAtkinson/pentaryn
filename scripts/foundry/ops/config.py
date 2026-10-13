@@ -202,13 +202,6 @@ MODULES = {
         # the legacy known/look/reach ones (python-tooling-7).
         check=ALL_GATES,
     ),
-    "walls": ModuleSpec(
-        "pentaryn-walls",
-        check=ALL_GATES,
-        # Retired by Joe (defect wave 3): he walls scenes with prefabs now. The source and its
-        # gates stay; nothing installs it (context/foundry/walls.md).
-        retired="2026-10-13 — Joe uses prefabs",
-    ),
     "attunement": ModuleSpec(
         "pentaryn-attunement",
         # node-test on top of the static gates: the slot reconciliation has edge cases

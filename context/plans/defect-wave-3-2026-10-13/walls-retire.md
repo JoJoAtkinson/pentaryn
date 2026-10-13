@@ -2,7 +2,9 @@
 
 **Read this when:** you want the history of how `pentaryn-walls` was retired in defect wave 3:
 what stopped shipping it, the commits and tests, and what is left for the live step. History
-only — to operate (or un-retire) walls, read [`../../foundry/walls.md`](../../foundry/walls.md).
+only — to operate (or un-retire) walls, read its use-doc as archived on branch `archive/pentaryn-walls`
+([`context/foundry/walls.md` there](https://github.com/JoJoAtkinson/pentaryn/blob/archive/pentaryn-walls/context/foundry/walls.md)); the
+source has since left `main`.
 
 Branch `wave3/walls-retire-2026-10-13`, from `origin/main` `e392ba56`. Approved by Joe on
 2026-10-13 ("retire his walls addon"; he walls scenes with prefabs now). Every change is a

@@ -19,9 +19,9 @@ pytestmark = [
 ]
 
 # The modules whose targets existed before the pattern rules: everything registered
-# except walls (its check target is foundry-walls-test), importer (staged by the actor
-# pipeline) and pings (registered later, python-tooling-3).
-_HAND_KEPT = sorted(set(cfg.MODULES) - {"walls", "importer", "pings"})
+# except importer (staged by the actor pipeline) and pings (registered later,
+# python-tooling-3). Walls, once excluded here too, is no longer in the repo.
+_HAND_KEPT = sorted(set(cfg.MODULES) - {"importer", "pings"})
 
 
 def _dry(target: str) -> str:
@@ -42,10 +42,6 @@ def test_module_sync_target(module):
 
 
 @pytest.mark.parametrize("target, expect", [
-    ("foundry-walls-test", "module-check walls"),
-    ("foundry-walls-sync", "module-sync walls"),
-    ("foundry-walls-wasm", "walls-wasm"),
-    ("foundry-walls-bench", "walls-bench"),
     ("foundry-sync", "scripts.foundry.ops stage"),
     ("foundry-adjustments-check", "scripts.foundry.update.adjustments --exposure"),
     ("foundry-admin-check", "admin_password"),
@@ -63,7 +59,6 @@ def test_every_registered_module_has_a_check_target(module):
 
 @pytest.mark.parametrize("target, expect", [
     ("foundry-pings-sync", "module-sync pings"),
-    ("foundry-walls-check", "module-check walls"),
     ("foundry-modules-check", "module-check --all"),
     ("foundry-lib-check", "node foundry/lib/test/run.mjs"),
     ("foundry-lib-vendor", "module-vendor sync --all"),
@@ -314,15 +309,20 @@ def test_foundry_module_index_with_an_assignment_regenerates_wave3_2(tmp_path):
 
 
 # ── a retired module is check-only in `make help` (wave 3 walls-retire) ──────
+# Walls was the one retired module; it has since left the repo (context/foundry/retired.md),
+# so the list is empty today. The mechanism stays for the next one.
 
 def test_help_offers_no_sync_for_a_retired_module_walls_retire():
     out = _dry_args("help")
     (line,) = [ln for ln in out.splitlines() if "<m>:" in ln]
     names = line.split("<m>:", 1)[1].split("(", 1)[0].split()
     retired = sorted(k for k, s in cfg.MODULES.items() if s.retired)
-    assert retired == ["walls"]
-    assert "walls" not in names and "ties" in names
-    assert "retired, -check only: walls" in line
+    assert not set(retired) & set(names) and "ties" in names
+    if retired:
+        assert f"retired, -check only: {' '.join(retired)}" in line
+    else:
+        assert "retired" not in line
+
 
 
 # ── wave 3b (2026-10-13): the backups live in foundry-up / foundry-down ──────
@@ -415,3 +415,15 @@ def test_help_says_where_the_backups_live_wave3b():
     assert "pre-launch" in up and "shutdown" in down
     vtt_up = next(ln for ln in out.splitlines() if "make vtt-up " in ln)
     assert "foundry-up" in vtt_up and "tunnel" in vtt_up
+
+
+def test_the_makefile_retired_list_matches_the_registry():
+    text = (cfg.REPO_ROOT / "Makefile").read_text(encoding="utf-8")
+    (row,) = [ln for ln in text.splitlines() if ln.startswith("RETIRED_MODULES :=")]
+    assert sorted(row.split(":=", 1)[1].split()) == sorted(k for k, s in cfg.MODULES.items() if s.retired)
+
+
+def test_help_names_the_retired_list_when_it_is_set():
+    out = _dry_args("help", "RETIRED_MODULES=zz")
+    (line,) = [ln for ln in out.splitlines() if "<m>:" in ln]
+    assert "retired, -check only: zz" in line

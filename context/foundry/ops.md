@@ -21,7 +21,6 @@ status: active
 | Start/stop the server, the tunnel, sync assets, restore a world, install a module, check what's exposed | **this one** |
 | Whitelist a player's Gmail (**two lists: Google test users + Cloudflare policy**), the Google login in front of the tunnel | [`cloudflare-access.md`](cloudflare-access.md) |
 | Build world *content* — actor generation from `actions.jsonl`, the importer module, the write paths that fail silently, Gates 0–4 | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) |
-| Complete hand-drawn walls | [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) |
 | Extend the MCP bridge's tool surface | [`mcp-fork.md`](mcp-fork.md) · design history: [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) |
 
 Where this one and `foundry-vtt.md` overlap — the actors import pipeline and its Gate 2 — this playbook covers the
@@ -44,7 +43,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | See what's in the cloud store | `make foundry-cloud` |
 | See which modules are in the cloud, and their fingerprints | `make foundry-bundles` · `make foundry-bundles-gc` lists what the sweep would delete (`YES=1` deletes) |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
-| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer through `make foundry-importer-install` (its code alone: module-check + install, nothing staged) or `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after); there is no `foundry-importer-sync`. The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving; two syncs of one module take turns on `.pentaryn-sync/<id>.lock` (the second waits, then installs on top). Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
+| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-ties-sync`) · the importer through `make foundry-importer-install` (its code alone: module-check + install, nothing staged) or `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after); there is no `foundry-importer-sync`. The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving; two syncs of one module take turns on `.pentaryn-sync/<id>.lock` (the second waits, then installs on top). Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
@@ -607,7 +606,7 @@ Full detail: [`scripts/foundry/README.md`](../../scripts/foundry/README.md).
 | id | version | Source |
 | -- | ------- | ------ |
 | `pentaryn-importer` | 1.0.0 | `make foundry-importer-install` copies the code alone; `make foundry-sync` copies it with `actors.json` |
-| `pentaryn-walls` | 0.2.0 | `make foundry-walls-sync` copies it in ([README](../../foundry/module/pentaryn-walls/README.md)) |
+| `pentaryn-walls` | 0.2.0 | Removed from the repo 2026-10-13 (Joe uses prefabs) |
 | `pentaryn-ties` | 0.1.0 | `make foundry-ties-sync` copies it in. Directed NPC relationships on actor flags: Ties tab on actor sheets, GM-only canvas overlay on a rebindable keybinding (default `8`). [README](../../foundry/module/pentaryn-ties/README.md) · [design doc](../plans/foundry-npc-ties.md) |
 
 **The bridge:**
@@ -712,8 +711,8 @@ the manifest URL. The only path that resolves dependencies and validates compati
 ⚠ Use the **raw** manifest URL. A GitHub *blob* URL serves HTML and fails to install.
 
 **B. Filesystem drop.** A Foundry module is just a directory under `Data/modules/<id>/` with a
-`module.json` — this is exactly what `make foundry-sync`, `make foundry-walls-sync` and
-`make foundry-ties-sync` do for our own modules, and how the Argon pair went in. An established idiom here, not a hack. For a
+`module.json` — this is exactly what `make foundry-sync` and
+`make foundry-<m>-sync` (e.g. `make foundry-ties-sync`) do for our own modules, and how the Argon pair went in. An established idiom here, not a hack. For a
 GitHub-released module:
 
 1. Resolve version and download URL from the releases API:
@@ -1018,10 +1017,11 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 ## Related
 
 - [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) — the content pipeline: decisions D1–D10, actor generation, importer module, Gates 0–4
-- [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) · [`pentaryn-walls` README](../../foundry/module/pentaryn-walls/README.md)
+- [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) — the walls addon's design (history; the addon left the repo 2026-10-13)
 - [`foundry-npc-ties.md`](../plans/foundry-npc-ties.md) · [`pentaryn-ties` README](../../foundry/module/pentaryn-ties/README.md)
 - [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — bridge fork design (history); operating the fork: [`mcp-fork.md`](mcp-fork.md)
 - [`scripts/foundry/README.md`](../../scripts/foundry/README.md) — license key, make-target table
 - [`foundry/CONTRACT.md`](../../foundry/CONTRACT.md) — the `actors.json` generator ⇄ importer contract (§12 for who deletes the staged file)
 - [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) — the OneDrive implementation; its docstring is the rationale
 - [`rclone-two-hosts-2026-10.md`](../plans/rclone-two-hosts-2026-10.md) — the two-host design (history) and the BOSS hand-off
+- [`retired.md`](retired.md) — addons Joe retired and removed from the repo (walls), and how to bring one back

@@ -1454,8 +1454,9 @@ def test_a_malformed_policy_never_crashes_the_run(block, on):
 
 # The literal make_checks() returned on 2026-10-11 by scraping the Makefile. Step (a)
 # derives the same set from ops config.MODULES (pings joined when it was registered —
-# its target comes from the foundry-%-check pattern rule); walls (target foundry-walls-test) is still
-# absent and admin-check still present until step (b), which changes this pin on purpose.
+# its target comes from the foundry-%-check pattern rule); walls (absent then, target
+# foundry-walls-test) has since left the repo, and admin-check is still present until step
+# (b), which changes this pin on purpose.
 MAKE_CHECKS_PIN = [
     "make foundry-adjustments-check", "make foundry-admin-check", "make foundry-aoe-check",
     "make foundry-attunement-check", "make foundry-combat-check",
@@ -1473,7 +1474,7 @@ MAKE_CHECKS_PIN = [
 def test_make_checks_pinned(monkeypatch):
     monkeypatch.setattr(esc, "_MAKE_TARGETS", None)
     assert esc.make_checks() == MAKE_CHECKS_PIN
-    assert esc.checks_for(["foundry/module/pentaryn-walls/wall-engine.mjs",
+    assert esc.checks_for(["foundry/module/pentaryn-gone/gone.mjs",
                            "foundry/module/pentaryn-ties/look-app.mjs"]) == [
         "make foundry-adjustments-check", "make foundry-ties-check"]
 

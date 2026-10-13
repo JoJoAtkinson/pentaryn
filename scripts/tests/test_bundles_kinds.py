@@ -69,9 +69,9 @@ def test_ext4_one_key_splitter_and_no_hand_splits_in_cloud():
     """Review EXT-4: a "<kind>/<id>" key is split in one place — bundles.split_key — and
     turned into its folder under the data root by bundles.key_rel; cloud.py splits none by
     hand."""
-    assert bundles.split_key("module/pentaryn-walls") == ("module", "pentaryn-walls")
+    assert bundles.split_key("module/pentaryn-ties") == ("module", "pentaryn-ties")
     assert bundles.split_key("system/dnd5e") == ("system", "dnd5e")
-    assert bundles.key_rel("module/pentaryn-walls") == "Data/modules/pentaryn-walls"
+    assert bundles.key_rel("module/pentaryn-ties") == "Data/modules/pentaryn-ties"
     assert bundles.key_rel("system/dnd5e") == "Data/systems/dnd5e"
     src = Path(cloud.__file__).read_text(encoding="utf-8")
     assert not re.search(r"\b(key|k)\.split\(\s*['\"]/['\"]", src)

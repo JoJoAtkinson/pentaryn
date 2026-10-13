@@ -8,7 +8,10 @@ OPS := cd $(ROOT) && $(if $(WORLD),PENTARYN_FOUNDRY_WORLD=$(WORLD) ,)$(PY) -m sc
 MODULE_NAMES = $(sort $(patsubst pentaryn-%,%,$(notdir $(patsubst %/module.json,%,$(wildcard $(ROOT)/foundry/module/*/module.json)))))
 # Retired modules (ModuleSpec.retired in scripts/foundry/ops/config.py; a test keeps the two equal):
 # their source stays and -check still runs, but module-sync refuses them, so help offers no -sync.
-RETIRED_MODULES := walls
+# None today: walls was removed from the repo instead (context/foundry/retired.md).
+RETIRED_MODULES :=
+RETIRED_NOTE = $(if $(strip $(RETIRED_MODULES)),; retired$(,) -check only: $(RETIRED_MODULES))
+, := ,
 
 # This file is a list of the commands worth remembering. The logic behind them lives
 # in Python — `scripts/foundry/ops/` for the server and pipeline, `scripts/foundry/
@@ -39,7 +42,7 @@ help:
 	@echo "    make foundry-importer-install  check + install the importer's code only (no actors.json)"
 	@echo "    make foundry-<m>-check prove one module (parse, imports, i18n, tests, kit, conformance)"
 	@echo "    make foundry-<m>-sync  check, then install it into Foundry's Data/modules"
-	@echo "      <m>: $(filter-out $(RETIRED_MODULES),$(MODULE_NAMES))   (importer: -check only; install with foundry-importer-install; retired, -check only: $(RETIRED_MODULES))"
+	@echo "      <m>: $(filter-out $(RETIRED_MODULES),$(MODULE_NAMES))   (importer: -check only; install with foundry-importer-install$(RETIRED_NOTE))"
 	@echo "    make foundry-modules-check  every module, keeps going (JSON=1 for --json)"
 	@echo ""
 	@echo "  Building modules (context/foundry/addon-blueprint.md)"
@@ -259,12 +262,9 @@ foundry-bundles-gc:
 foundry-%-check: ; @$(OPS) module-check $*
 foundry-%-sync:  ; @$(OPS) module-sync $*
 
-.PHONY: foundry-modules-check foundry-walls-test foundry-walls-wasm foundry-walls-bench
+.PHONY: foundry-modules-check
 # Every registered module through every gate; keeps going past a failure. JSON=1 for --json.
 foundry-modules-check: ; @$(OPS) module-check --all $(if $(JSON),--json,)
-foundry-walls-test:  foundry-walls-check   # the old name of walls' check
-foundry-walls-wasm:  ; @$(OPS) walls-wasm
-foundry-walls-bench: ; @$(OPS) walls-bench $(N)
 
 # ─── Addon blueprint: the shared kit, the generator, the scorer ──────────
 # Playbook: context/foundry/addon-blueprint.md. M=<short> picks one module.
