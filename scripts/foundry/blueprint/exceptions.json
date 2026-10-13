@@ -2,6 +2,14 @@
   "doc": "Strict-gate exceptions (migration Stage 5 step 2, README §7 W3). Since 2026-10-12 the vendor and conformance gates FAIL every module (make foundry-<m>-check, make foundry-modules-check). The only way a failing fail-class rule passes the gate is a row here: module id → rule id → {reason, decision, until, match}. `match` lists regexes (re.search) for the findings the decision covers: a failing finding no pattern matches blocks the gate, so a row never accepts a later, unreviewed finding of the same rule. Every row names the decision that accepted it (an Open-for-Joe row with Joe's decision, or a parked step) and what retires it. The gate also FAILS on a stale row — a listed rule that no longer fails — so this list cannot outlive its reason: when the work in `until` lands, delete the row in the same commit. Never add a row to make a red gate green without a decision to cite; fix the module instead. The vendor gate has no exceptions.",
   "modules": {
     "pentaryn-combat": {
+      "C12": {
+        "reason": "combat-core.mjs re-exports MODULE as MOD so game.pentaryn.combat.core.MOD stays readable for macros; an alias of the one MODULE, not a second definition",
+        "decision": "EXT-8-c12 (final-review-2026-10-12/transform-core.md; defect wave 2, Joe approved 2026-10-12, recommendation taken): C12 widened to export/import aliases; the published legacy alias stays this wave — an accepted finding, not a module change",
+        "until": "the module retires the published core.MOD alias (a declared API change) — delete this row in that commit",
+        "match": [
+          "^combat-core\\.mjs:\\d+ MODULE as MOD$"
+        ]
+      },
       "C23": {
         "reason": "settings.mjs aoeAutoDamage() reads pentaryn-aoe.autoDamageOnHit with game.settings.get (the one reader, combat-core-M6): aoe's kit settings() is only published at ready, and Foundry renders the chat log before ready, so reading through it would show a per-swing Damage button on every card rendered at load",
         "decision": "W4-C3 (wave-4-report.md): Joe 2026-10-12 keep — a documented exception",
@@ -12,6 +20,14 @@
       }
     },
     "pentaryn-journal": {
+      "C12": {
+        "reason": "journal-core.mjs re-exports MODULE as MOD: the published core.MOD and the legacy suite read it; an alias of the one MODULE, not a second definition",
+        "decision": "EXT-8-c12 (final-review-2026-10-12/transform-core.md; defect wave 2, Joe approved 2026-10-12, recommendation taken): C12 widened to export/import aliases; the published legacy alias stays this wave — an accepted finding, not a module change",
+        "until": "the module retires the published core.MOD alias (a declared API change) — delete this row in that commit",
+        "match": [
+          "^journal-core\\.mjs:\\d+ MODULE as MOD$"
+        ]
+      },
       "C56": {
         "reason": "personal.mjs assigns CONFIG.queries by hand: the kit's query/relay rows do not forward the sender, which the personal-journal relay needs",
         "decision": "W2-J2 (wave-2-report.md): Joe 2026-10-12 not taken — kit does not forward the sender",
@@ -22,6 +38,15 @@
       }
     },
     "pentaryn-riders": {
+      "C12": {
+        "reason": "riders-core.mjs and table-core.mjs re-export MODULE as MOD: game.pentaryn.riders.core.MOD, old imports and the fixture suites read it; an alias of the one MODULE, not a second definition",
+        "decision": "EXT-8-c12 (final-review-2026-10-12/transform-core.md; defect wave 2, Joe approved 2026-10-12, recommendation taken): C12 widened to export/import aliases; the published legacy alias stays this wave — an accepted finding, not a module change",
+        "until": "the module retires the published core.MOD alias (a declared API change) — delete this row in that commit",
+        "match": [
+          "^riders-core\\.mjs:\\d+ MODULE as MOD$",
+          "^table-core\\.mjs:\\d+ MODULE as MOD$"
+        ]
+      },
       "C37": {
         "reason": "styles/riders.css keeps Argon's click-through rule (#tooltip.ech-tooltip-container, #tooltip .ech-tooltip { pointer-events: none }; adjustments row argon-tooltip-click-through): moving it into the shared lib/argon-tooltip.css would make every Argon hover tooltip click-through whenever combat or transform is on",
         "decision": "W4-R9 (wave-4-report.md): Joe 2026-10-12 keep the rule in riders.css",

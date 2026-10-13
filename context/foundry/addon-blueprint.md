@@ -90,7 +90,7 @@ Nothing imports the entry or `test/`. Named imports between module files; `impor
 the entry's feature list and `core/` barrels (the imports gate cannot see members of a namespace import).
 
 **Names.** Module id `pentaryn-<short>`, short `^[a-z][a-z0-9]{1,15}$`; `MODULE` defined once in core
-(never `MOD`, `MODULE_ID`, `SCOPE`); flag scope = module id; i18n root `PENTARYN_<SHORT>`; CSS
+(never `MOD`, `MODULE_ID`, `SCOPE`, not even as an alias); flag scope = module id; i18n root `PENTARYN_<SHORT>`; CSS
 prefix declared in `flags.pentaryn.cssPrefix` and unique (`pp-` is prompts'). Reserved shorts:
 `import moduleId contract _internals describe inspect namespaces published rules chain lib test core api settings`.
 
@@ -141,8 +141,8 @@ prefix declared in `flags.pentaryn.cssPrefix` and unique (`pp-` is prompts'). Re
 7. **Patches**: `wrapMethod` + an adjustments row (§5.6).
 8. **Goldens**: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, read the diff, keep it.
 9. **Docs**: README sections in the fixed order (§7), CHANGELOG line, routing rows.
-10. **Wire it** (the generator prints these): a ModuleSpec in `scripts/foundry/ops/config.py` (its
-    kit list comes from `lib/kit.lock.json` and `after_sync` from `module.json`
+10. **Wire it** (the generator prints these): a ModuleSpec in `scripts/foundry/ops/config.py` with
+    `check=ALL_GATES` like every other row (its kit list comes from `lib/kit.lock.json` and `after_sync` from `module.json`
     `flags.pentaryn.afterSync`, never stored there), routing rows, then `make foundry-module-index`.
     The Makefile's `foundry-%-check`/`-sync` pattern rules need no line per module. Then
     `conformance.py --module <short>` scores the repo-wiring rules too (C39 ModuleSpec, C46 route).
@@ -159,13 +159,13 @@ prefix declared in `flags.pentaryn.cssPrefix` and unique (`pp-` is prompts'). Re
 | `--kit a,b` | extra kit files on top of the tier, closed over their deps (e.g. `--kit election,perf`) |
 | `--namespace <ns>` | `game.pentaryn.<ns>` when it should differ from the short name (refused if taken) |
 | `--css-prefix <px->` | the CSS prefix (default: the first free `p<short…>-`; refused if taken) |
-| `--no-dnd5e` | no dnd5e system relationship, no dnd5e example code |
+| `--no-dnd5e` | no dnd5e system relationship, no dnd5e example code (`--dnd5e` puts it back on a `--force` re-render) |
 | `--description "…"` | `module.json` description |
 | `--out DIR` | parent folder (default `foundry/module`, which also needs `--install`) |
 | `--install` | allow writing under `foundry/module/` (the folder sync deploys) |
 | `--docs` | write `context/foundry/<short>.md` and `context/plans/<short>-<yyyy-mm>.md`, never overwriting |
 | `--check` | after the suite: ops gates, `vendor.check`, conformance — exit 1 on any failure. Conformance runs as **not installed** even with `--install`: the repo-wiring rules (C39 ModuleSpec, C46 route) are step 10 follow-ups, so they read n/a here; run `conformance.py --module <short>` after step 10 to score them |
-| `--force` | re-render the template files over an existing folder. Keeps `lib/kit.lock.json` (so earlier `--kit` extras stay), re-vendors from it, **never rewrites goldens** (the suite runs without `GOLDEN_UPDATE` and fails on a real difference) |
+| `--force` | re-render the template files over an existing folder. `--tier`, `--namespace`, `--css-prefix` and `--[no-]dnd5e` default to the existing `module.json` (`flags.pentaryn`, `relationships.systems`); an explicit flag wins. Keeps `lib/kit.lock.json` (so earlier `--kit` extras stay) and re-vendors from it — an explicit `--tier` moves the lock to that tier, extras kept. The vendoring plan is checked before anything is rendered, so a refusal leaves the folder untouched. **Never rewrites goldens** (the suite runs without `GOLDEN_UPDATE` and fails on a real difference) |
 | `--no-run` | skip the generated suite |
 
 Vendoring one module by hand (`scripts/foundry/blueprint/vendor.py`):
@@ -385,8 +385,9 @@ is fine at this table; on-screen leaks are not.
 
 ### 5.5 Performance
 
-Hot hooks (`refreshToken`, `drawToken`, `sightRefresh`, `canvasPan`, `hoverToken`,
-`updateWorldTime`, Argon action-panel render, `pointermove`) read from a cache or `memo`, never
+Hot hooks (every `refresh*`, `draw*` and `hover*` hook, plus `sightRefresh`, `canvasPan`,
+`updateWorldTime`, Argon action-panel render, `pointermove`; packages.json `hotHooks` and
+`hotHookPrefixes`) read from a cache or `memo`, never
 iterate `game.actors`/`game.scenes`/`canvas.tokens.placeables`, and carry a `// hot: <cache>`
 comment (C49). World-wide reactions run on one client (`isActiveGM()`, `claimDocument` for two GM
 sessions), with batched writes. A rebuild several hooks trigger uses `foundry.utils.debounce` (or
@@ -546,7 +547,8 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   answer (§5.9.2).
 - Without `timeout` the server releases a query only when the **sender** disconnects
   (`e.once("disconnect",u)` on the sender's socket); a recipient tab closing mid-query hangs it
-  forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` (C55; `queryMany` is
+  forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` in its **options**
+  argument, not the data (C55; `queryMany` is
   static `(users, name, data, options)`, `user.mjs:335`). `queryGM` defaults to 10000 ms and runs
   the handler locally on the GM's own client, under the same timeout (`lib/queries.mjs:94-108`,
   AC-4); a raw `User#query` to yourself still goes through the server (`user.mjs:305-321`).
@@ -590,7 +592,8 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   (`client/canvas/placeables/placeable-object.mjs:424-441`); `draw*`, `hover*`, `sightRefresh`,
   `canvasPan`, `updateWorldTime` are all `callAll` on every client. MUST: their handlers are
   synchronous, read from a cache/`memo` (§5.5, C49) and never start an async job per call —
-  `void (async () => …)()` is still one (C60). Defer with `perFrame` (latest args, once per frame),
+  `void (async () => …)()` is still one, and so is `void paint(t)` when `paint` is an
+  `async function` in the file or a file it imports (C60). Defer with `perFrame` (latest args, once per frame),
   `foundry.utils.debounce` (trailing, `.cancel()`, callback errors **not** caught,
   `common/utils/helpers.mjs:101-114`) when several triggers want the same rebuild, or `coalesce`
   (`lib/perf.mjs`) for an idempotent read callers can share — never a rebuild: a change that lands
@@ -916,7 +919,7 @@ both Warnings and Manual.
 | C09 | fail | recommends carry reasons; every package named in code is in `relationships` |
 | C10 | warn | size caps |
 | C11 | fail | a pure core exists |
-| C12 | fail | `MODULE` defined once; no `MOD`/`MODULE_ID`/`SCOPE` |
+| C12 | fail | `MODULE` defined once; no `MOD`/`MODULE_ID`/`SCOPE`, not even as an alias (`export { MODULE as MOD }`) |
 | C13 | fail | no `.md` other than README/CHANGELOG |
 | C14 | fail | `lib/kit.lock.json` present, `vendor.py check` passes |
 | C15 | fail | `import * as` only for features (from the entry) and core barrels |
@@ -959,13 +962,13 @@ both Warnings and Manual.
 | C52 | fail | a `legacyName` always has `until` |
 | C53 | fail | no `async` listener on a vetoable hook (`pre*`, `<pkg>.pre*`), inline or a named `async` function in the same file (§5.9) |
 | C54 | warn+manual | a `pre(Create\|Update\|Delete)<Doc>` listener gated on the active GM (runs on the initiator only) |
-| C55 | fail | every `User#query` / `User.queryMany` passes `timeout` (`queryGM` exempt; unknown receivers → manual) |
+| C55 | fail | every `User#query` / `User.queryMany` passes `timeout` in its options argument (an object-literal last argument must be the options and name it; otherwise any `timeout` in the call counts; `queryGM` exempt; unknown receivers → manual) |
 | C56 | fail | no hand-written `CONFIG.queries` assignment (`[…] =`, `.x =`, `??=`, `Object.assign`); reads pass |
-| C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`) |
-| C58 | fail | one `serialStore` per key across the module |
-| C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body (batch it) |
-| C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
-| C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
+| C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`); a channel constant is read from the same file or, failing that, through the file's own named import of it (alias-aware) as a module-scope `const` in the imported file — never by bare name, and a name a local declaration or enclosing parameter shadows stays n/a |
+| C58 | fail | one `serialStore` per key across the module, at module scope or memoised (`x ??= serialStore(`) |
+| C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body, or an `await f(…)` there where `f` is a same-file function that awaits one (batch it) |
+| C60 | warn | no `async` listener, `await`, or call to a same-file/imported `async function` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
+| C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id` or `=== `, either side, `game.user?.id` too) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports; a named handler (`reg.on("updateActor", onUpdate)`) imported from another module file is read there, and one it cannot find is listed for review by hand |
 | C62 | fail | a manifest param with a Document `kind` (`actor token item scene user journal message macro region combat table folder playlist`), or a `ref`, that the kit does not resolve (`resolve: false`, or not the first param) names a string form in `type` (`uuid`, `id`, `name`, `string`), carries `resolve: "self"` (kit 1.1.0), or its `doc` or the row's says `eval-js only`. Read from `test/golden/describe.json` (n/a without one). Mirrors the bridge's `needsDoc` (`pentaryn-call.ts`): without it the row is refused live as "eval-js only" (senses.inspect, W3L) |
 
 ## 12. Wiring status

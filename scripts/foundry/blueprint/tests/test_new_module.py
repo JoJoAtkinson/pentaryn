@@ -149,6 +149,19 @@ def test_namespace_collision_found_in_source(tmp_path, source):
     assert rc == 2 and not target.exists()
 
 
+@pytest.mark.parametrize("source", [
+    "game.pentaryn = { ...game.pentaryn, demo: api };\n",
+    "game.pentaryn = { ...globalThis.$p, demo: api };\n",
+])
+def test_py_blueprint_e5_a_dotted_spread_operand_is_a_namespace_owner(tmp_path, source):
+    """PYB-E5: `{ ...game.pentaryn, ns: api }` publishes ns, as ops/index._PUBLISH_RE already reads it."""
+    mods = tmp_path / "mods"
+    _fake_module(mods, "pentaryn-other", source=source)
+    assert new_module.namespace_owner("demo", [mods]) == "pentaryn-other"
+    rc, target = gen(tmp_path, "demo", "--no-run", modules_root=mods)
+    assert rc == 2 and not target.exists()
+
+
 def test_css_prefix_collision_and_auto_pick(tmp_path):
     mods = tmp_path / "mods"
     _fake_module(mods, "pentaryn-other", css=".pd-thing { color: red; }\n")
@@ -212,20 +225,48 @@ def test_docs_follow_the_tier(tmp_path):
         assert (f"game.pentaryn.d{tier}.inspect(" in text) == (tier == "full")
 
 
-def test_after_sync_follow_up_is_valid_python_from_module_json(tmp_path, capsys):
+def _registration_row(out: str) -> str:
+    """The printed MODULES row (the `"<short>": ModuleSpec(` line and its continuation lines)."""
+    lines = out.splitlines()
+    i = next(n for n, ln in enumerate(lines) if ln.strip().startswith('"demo": ModuleSpec('))
+    row = [lines[i].strip()]
+    while not row[-1].endswith("),"):
+        i += 1
+        row.append(lines[i].strip())
+    return " ".join(row)
+
+
+def test_registration_row_runs_every_gate_and_leaves_after_sync_to_module_json(tmp_path, capsys):
+    """EXT-2: the printed row is check=ALL_GATES (vendor + conformance too), and it does not
+    repeat the afterSync lines the generator already wrote into module.json."""
+    import ast
     rc, target = gen(tmp_path, "demo", "--no-run")
     assert rc == 0
     out = capsys.readouterr().out
     assert "…)" not in out and "(…" not in out
-    line = next(ln.strip() for ln in out.splitlines() if ln.strip().startswith("after_sync=("))
-    assert line.endswith(")),")                      # the tuple, then ModuleSpec's own paren
-    expr = line[len("after_sync="):-2]
+    assert json.loads((target / "module.json").read_text())["flags"]["pentaryn"]["afterSync"]
+    row = _registration_row(out)
+    call = ast.parse("{" + row[:-1] + "}").body[0].value.values[0]   # pastes as one dict entry
+    kw = {k.arg: k.value for k in call.keywords}
+    assert isinstance(kw["check"], ast.Name) and kw["check"].id == "ALL_GATES"
+    assert "after_sync" not in kw
+    from scripts.foundry.ops import config
+    assert {"vendor", "conformance"} <= set(config.ALL_GATES)
+
+
+def test_registration_row_carries_after_sync_when_module_json_has_none(tmp_path):
+    """EXT-2: without flags.pentaryn.afterSync the row still names after_sync, as valid Python."""
     import ast
-    value = ast.literal_eval(expr)
-    want = json.loads((target / "module.json").read_text())["flags"]["pentaryn"]["afterSync"]
-    assert list(value) == want and len(want) >= 1
-    spec = next(ln.strip() for ln in out.splitlines() if ln.strip().startswith('"demo": ModuleSpec('))
-    ast.parse("{" + spec + " " + line[:-1] + "}")     # the two printed lines paste as one valid dict entry
+    rc, target = gen(tmp_path, "demo", "--no-run")
+    assert rc == 0
+    manifest = json.loads((target / "module.json").read_text())
+    del manifest["flags"]["pentaryn"]["afterSync"]
+    (target / "module.json").write_text(json.dumps(manifest), encoding="utf-8")
+    row = _registration_row(new_module.follow_ups("demo", "Pentaryn Demo", "demo", installed=False, target=target))
+    call = ast.parse("{" + row[:-1] + "}").body[0].value.values[0]
+    kw = {k.arg: k.value for k in call.keywords}
+    assert kw["check"].id == "ALL_GATES"
+    assert ast.literal_eval(kw["after_sync"]) == ()
 
 
 @needs_node
@@ -266,3 +307,129 @@ def test_force_keeps_the_css_prefix(tmp_path, sibling, expected):
         assert rc == 0
         assert json.loads((target / "module.json").read_text())["flags"]["pentaryn"]["cssPrefix"] == expected
         assert f".{expected}" in (target / "styles" / "demo.css").read_text()
+
+
+def _flags(target):
+    man = json.loads((target / "module.json").read_text())
+    return man["flags"]["pentaryn"], man["relationships"]["systems"]
+
+
+def test_force_rerenders_at_the_existing_tier_namespace_and_system(tmp_path, capsys):
+    # PYB-E7: --force without the original flags must not silently turn a small, custom-namespace,
+    # no-dnd5e module into a full, short-namespace, dnd5e one while the lock stays small
+    rc, target = gen(tmp_path, "demo", "--no-run", "--tier", "small", "--namespace", "demoNs",
+                     "--css-prefix", "dm-", "--no-dnd5e")
+    assert rc == 0
+    capsys.readouterr()
+    assert gen(tmp_path, "demo", "--no-run", "--force")[0] == 0
+    flags, systems = _flags(target)
+    assert (flags["tier"], flags["namespace"], flags["cssPrefix"], systems) == ("small", "demoNs", "dm-", [])
+    assert not (target / "api.mjs").exists()
+    assert json.loads((target / "lib/kit.lock.json").read_text())["tier"] == "small"
+    assert "tier small, namespace demoNs, CSS dm-" in capsys.readouterr().out
+    assert vendor.check(target) == []
+
+
+def test_force_with_an_explicit_tier_moves_the_lock_and_keeps_kit_extras(tmp_path):
+    # PYB-E7: an explicit flag still wins, and --tier is passed to vendor.sync so the lock follows it
+    rc, target = gen(tmp_path, "demo", "--no-run", "--tier", "small", "--kit", "election")
+    assert rc == 0
+    assert gen(tmp_path, "demo", "--no-run", "--force", "--tier", "full", "--namespace", "other")[0] == 0
+    flags, systems = _flags(target)
+    assert (flags["tier"], flags["namespace"]) == ("full", "other")
+    assert [s["id"] for s in systems] == ["dnd5e"]
+    lock = json.loads((target / "lib/kit.lock.json").read_text())
+    assert lock["tier"] == "full"
+    assert set(vendor.load_kit()["tiers"]["full"]) | {"election"} <= set(lock["files"])
+    assert vendor.check(target) == []
+
+
+@pytest.mark.parametrize("kit", [["--kit", "nosuchfile"], ["--kit", "argon-kit"]])
+def test_a_refused_force_leaves_the_existing_folder_untouched(tmp_path, kit):
+    # PYB-E7: the vendoring plan is checked before render(), so a refusal writes nothing
+    rc, target = gen(tmp_path, "demo", "--no-run")
+    assert rc == 0
+    (target / "demo-core.mjs").write_text("// edited\n")
+    before = {p.relative_to(target).as_posix(): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    assert gen(tmp_path, "demo", "--no-run", "--force", *kit)[0] == 2
+    after = {p.relative_to(target).as_posix(): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+    assert after == before
+
+
+def test_vendor_plan_is_pure_and_refuses_like_sync(tmp_path):
+    # PYB-E7: plan() runs sync's closure/package/ext checks without writing anything
+    d = tmp_path / "pentaryn-p"
+    d.mkdir()
+    (d / "module.json").write_text(json.dumps({"id": "pentaryn-p", "flags": {"pentaryn": {"tier": "small"}}}))
+    planned = vendor.plan(d, None, ["election"])
+    assert planned["tier"] == "small" and "election" in planned["files"]
+    assert sorted(p.name for p in d.iterdir()) == ["module.json"]
+    with pytest.raises(vendor.VendorError):
+        vendor.plan(d, None, ["argon-kit"])
+    assert vendor.plan(d, None, ["argon-kit"], manifest={"relationships": {
+        "recommends": [{"id": "enhancedcombathud"}]}})["files"][-1] == "argon-kit"
+    vendor.sync(d, extra=["election"])                # sync writes exactly what plan() chose
+    lock = json.loads((d / "lib/kit.lock.json").read_text())
+    assert (lock["tier"], lock["files"]) == (planned["tier"], planned["files"])
+
+
+def test_py_blueprint_rob_5_an_unreadable_sibling_manifest_still_has_its_sources_and_css_scanned(tmp_path):
+    # py-blueprint-ROB-5: a malformed module.json is skipped, not a traceback — and the module's
+    # sources and CSS are still scanned for the namespace and the prefix.
+    mods = tmp_path / "mods"
+    d = _fake_module(mods, "pentaryn-other", source="game.pentaryn.demo = api;\n", css=".pd-thing { color: red; }\n")
+    (d / "module.json").write_text("{not json")
+    assert new_module.namespace_owner("demo", [mods]) == "pentaryn-other"
+    assert new_module.css_owner("pd-", [mods]) == "pentaryn-other"
+    assert new_module.namespace_owner("other", [mods]) is None
+    assert new_module.css_owner("pz-", [mods]) is None
+    rc, target = gen(tmp_path, "demo", "--no-run", modules_root=mods)
+    assert rc == 2 and not target.exists()
+
+
+def test_py_blueprint_ext_8_full_only_agrees_with_c40_and_the_template():
+    # py-blueprint-EXT-8: the tier-to-files mapping is written out in several places. Pin the two
+    # that must agree: the test files new_module.FULL_ONLY skips for small are exactly the ones C40
+    # adds for the non-small tier, and every FULL_ONLY file is in the template with each import of
+    # it (from a file both tiers get) inside an `@if full` block.
+    import posixpath
+    import re
+    from types import SimpleNamespace
+
+    def c40_needs(tier, d):
+        stub = SimpleNamespace(tier=tier, dir=d, files=[], code=lambda rel: "")
+        status, detail = conformance._FUNCS["C40"](stub)
+        assert status == "fail"
+        return set(re.findall(r"test/[\w.-]+\.test\.mjs", " ".join(detail)))
+
+    nowhere = new_module.TEMPLATE / "no-such-module"
+    full_only_tests = {p for p in new_module.FULL_ONLY if re.fullmatch(r"test/[\w.-]+\.test\.mjs", p)}
+    assert full_only_tests == c40_needs("full", nowhere) - c40_needs("small", nowhere)
+
+    src_root = new_module.TEMPLATE / "pentaryn-__SHORT__"
+    assert {p for p in new_module.FULL_ONLY if not (src_root / p).is_file()} == set()
+
+    imp = re.compile(r"""(?:\bfrom|\bimport)\s*\(?\s*["'](\.{1,2}/[^"']+)["']""")
+
+    def imports(rel, text):
+        base = posixpath.dirname(rel)
+        return {posixpath.normpath(posixpath.join(base, m)) for m in imp.findall(text)}
+
+    gated = set()
+    for src in sorted(src_root.rglob("*.mjs")):
+        rel = src.relative_to(src_root).as_posix()
+        if rel in new_module.FULL_ONLY or rel.startswith("lib/"):
+            continue
+        text = src.read_text(encoding="utf-8")
+        for flags in ({"small", "dnd5e"}, {"small", "nodnd5e"}):
+            leaked = imports(rel, new_module.apply_blocks(text, flags)) & new_module.FULL_ONLY
+            assert leaked == set(), f"{rel} imports {sorted(leaked)} outside an @if full block"
+        gated |= imports(rel, new_module.apply_blocks(text, {"full", "dnd5e"})) & new_module.FULL_ONLY
+    full_only_code = {p for p in new_module.FULL_ONLY if p.endswith(".mjs") and not p.startswith("test/")}
+    assert full_only_code <= gated, f"never imported under @if full: {sorted(full_only_code - gated)}"
+
+    values = {"__SHORT__": "demo"}
+    langs = lambda tier: [x.get("path") for x in
+                          new_module.planned_manifest(values, tier=tier, dnd5e=True).get("languages", [])]
+    assert ("lang/en.json" in langs("full"), "lang/en.json" in langs("small")) == (True, False)
+    assert "lang/en.json" in new_module.FULL_ONLY
