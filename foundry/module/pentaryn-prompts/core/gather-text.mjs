@@ -3,6 +3,7 @@
  * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
  */
 
+import { BANDS } from "./grid.mjs";
 import { FORMATION_FT, LINK_FT } from "./group.mjs";
 import { fmtNum, footprintLabel } from "./size.mjs";
 import { builtDescription, idCompare, isoDate, normalisePrompt, preview, relationText, sortRelations } from "./text.mjs";
@@ -13,10 +14,23 @@ export const GATHER_CHARS = 400;
 
 /* ── The gather text (Draft A, plan §5.3) ────────────────────────────────── */
 
+/**
+ * The legend's "Bands: …" line, read off BANDS (M13). Each band runs from 5 ft past the one before
+ * it to its own max ("close 15-30"); the first is just its max, the last is open ("distant 155+").
+ */
+function bandsLine() {
+  const parts = BANDS.map(([max, name], i) => {
+    const lo = i ? BANDS[i - 1][0] + 5 : max;
+    if (max === Infinity) return `${name} ${lo}+`;
+    return lo === max ? `${name} ${max}` : `${name} ${lo}-${max}`;
+  });
+  return `Bands: ${parts.join(" | ")}.`;
+}
+
 export const LEGEND = [
   "p# = prompt marker to build and replace. t# = already built: context only, never replace, never move.",
   "ft = 5e grid distance between nearest occupied squares (adjacent = 5), scene diagonal rule.",
-  "Bands: touching 5 | reach 10 | close 15-30 | near 35-60 | far 65-150 | distant 155+.",
+  bandsLine(),
   "LOS = clear sight line through walls with unlimited darkvision (light ignored).",
   "door = blocked only by a closed door (secret doors say \"secret door\"). wall = no sight line.",
   "Bearing = compass on the map, north is up. at = feet from the map's top-left corner.",

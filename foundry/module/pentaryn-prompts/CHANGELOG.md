@@ -113,6 +113,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   `ABILITY_KEYS` is build-core's `ABILITIES`; `core/size.mjs`'s `DND_SIZE_WIDTH` is read off `SIZES`
   and `PC_SIZE_WORDS` is `SIZE_WORDS` filtered to tiny..large. Oracle tests pin the old values, so
   no behaviour change.
+- **[declared] The legend's Bands line is read off `BANDS`** (prompts-core-M13): `core/gather-text.mjs`
+  builds "Bands: touching 5 | … | distant 155+." from `core/grid.mjs`'s `BANDS` instead of a hand
+  copy, so a band change cannot leave the legend stale. An oracle test pins the old line byte for
+  byte, so the gather text is unchanged. No behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
