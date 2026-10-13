@@ -1,8 +1,6 @@
 {
   "noScene": {
-    "value": {
-      "notification": "Open a scene first."
-    },
+    "value": false,
     "calls": [
       {
         "op": "notify",
@@ -12,9 +10,7 @@
     ]
   },
   "ilsaOnRoad": {
-    "value": {
-      "notification": "Your token isn't on this scene. Use Pick a target."
-    },
+    "value": false,
     "calls": [
       {
         "op": "notify",

@@ -10,9 +10,6 @@
 // This is the pure half (planSightReset and friends): it loads without Foundry, and
 // test/migrate.test.mjs proves it. The Foundry half (registration, resetSight) is ../migrate.mjs.
 
-import { MODULE } from "./ids.mjs";
-
-export { MODULE };
 export const SIGHT_RESET = "sightReset";
 /** The setting value once the reset has run in this world. */
 export const SIGHT_RESET_DONE = 1;

@@ -27,9 +27,25 @@ function carriedLight(actor) {
   return carriedLightOf(actor?.items ?? []);
 }
 
+/**
+ * A light profile as Foundry stores it: LightData drops unknown keys and lower-cases colours
+ * (senses-edge-4). A profile LightData refuses is compared raw, as before. LightData cleans the
+ * object it is handed in place (every default filled in), so it gets a copy: the item's own flag
+ * keeps its stored shape and the write is still just the keys the profile sets (FIX-3).
+ */
+function normalise(light) {
+  const LightData = foundry.data?.LightData;
+  if (!LightData) return light;
+  try {
+    return new LightData(foundry.utils.deepClone(light), { strict: false }).toObject();
+  } catch {
+    return light;
+  }
+}
+
 /** core/light.mjs itemLightUpdate with Foundry's helpers. The prior is cleared with `_del`, else a null value. */
 function lightUpdate(doc, light) {
-  return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null });
+  return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null, normalise });
 }
 
 /** The actor's tokens, scene by scene, lazily: a scene is read after the previous write. */
@@ -135,12 +151,17 @@ async function syncAll() {
   return n;
 }
 
-/** Coalesce bursts into one sync per actor. */
+/**
+ * Coalesce bursts into one sync per actor. [declared senses-R1] Keyed by uuid: an unlinked token's
+ * synthetic actor shares its base actor's id, and each keeps its own timer (and syncs only itself).
+ * A pack actor is never synced, so it is never scheduled.
+ */
 function schedule(actor) {
-  if (!actor || actor.documentName !== "Actor" || !isActiveGMOrLoneGM()) return;
-  clearTimeout(pending.get(actor.id));
-  pending.set(actor.id, setTimeout(() => {
-    pending.delete(actor.id);
+  if (!actor || actor.documentName !== "Actor" || actor.pack || !isActiveGMOrLoneGM()) return;
+  const key = actor.uuid;
+  clearTimeout(pending.get(key));
+  pending.set(key, setTimeout(() => {
+    pending.delete(key);
     // a failed write is logged with the module and the actor, never left as an unhandled rejection (-15)
     syncLight(actor).catch(e => log?.warn(`carried light ${actor.name} (${actor.id})`, e));
   }, DEBOUNCE_MS));
