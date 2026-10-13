@@ -101,3 +101,21 @@ scenes.
 
       If the timing misses and one tab sees the other's actor first, step 2b's look-first join shows instead. That still passes: one actor, one create, one join.
 3. **No leftover listener.** After each run, `game.pentaryn.importer.describe().hooks` is `[]` and `Hooks.events.createActor` holds no `create watch` entry from the importer.
+
+## Live check result (FIX-W3, 2026-10-13)
+
+Run in the MCP bridge GM tab on world `pentaryn` (Foundry 14.369, dnd5e 6.0.6), ZZ actors only, file
+`Data/worlds/pentaryn/zz-importer-actors.json`. A second GM tab was opened only for step 2c and closed
+after it.
+
+| step | result | evidence |
+|---|---|---|
+| 1.1 | pass | `created:['zz-blank']`, hash `sha256:zz-1`, one loot Item |
+| 1.2 | pass | Foundry's error toast "name: may not be undefined" (the blank name is cleaned to undefined); `failed:[{slug:'zz-blank', error:'update refused by Foundry — validation errors: … name: may not be undefined'}]`, `updated:[]`, the permanent "1 actor(s) failed" warning; hash still `sha256:zz-1`, name `ZZ blank`, Item id unchanged |
+| 1.3 | pass | `updated:['zz-blank']`, name `ZZ blank fixed`, hash `sha256:zz-2` |
+| 2a | pass | a one-call GM shadow replaced `zz-first` right after this tab's create; "another GM tab replaced this actor while it was written — writing it again on the live actor"; `created:['zz-first']`, `failed:[]`, one actor at `idForSlug`, the file's name, Item once, stamp |
+| 2b | pass after the fix above | before it: correct outcome (`created:['zz-a']`, `updated:['zz-join']`, same id, file's name, Item, stamp) but the wait took 40 s. After deploy and reload: "no content hash … after 10479 ms", whole run 10.6 s. Repeat with the hash pre-stamped: `skipped:['zz-join']` in 70 ms |
+| 2c | pass | both tabs fired at the same ms. Bridge tab: `created:['zz-same']` (and it rewrote after the other tab's replace). Second tab: "created this actor in the same instant — joining it as an update", `updated:['zz-same']`. One actor, one Item, one stamp; client and server reads agree |
+| 3 | pass | after every run, in both tabs, `describe().hooks` is `[]` and `Hooks.events.createActor` holds only the three baseline listeners (ScenePacker, combat, feedback) |
+
+Cleanup: the five ZZ actors deleted, the file deleted (404).
