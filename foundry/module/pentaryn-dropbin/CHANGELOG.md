@@ -140,6 +140,9 @@ Declared changes:
   `LEGACY_KEYS` (a legacy key with no literal word would have filled `undefined`). No behaviour change.
 - dropbin-R1: `list(0)` (and `listLast(log, 0)`) is `[]`; it returned the whole ledger
   (`slice(-0)` is `slice(0)`). Only `0` changes: every other `n` gives the same answer as before.
+- dropbin-M5: `corpses.isDead` always returns a boolean, as the manifest says: a missing actor (or
+  one with no `statuses`) is `false`; it returned `undefined`. The live golden reads `isDead(null)`
+  under `golden.declared.isDeadNull` now (`"false"`; was `"undefined"` in `golden.shared.isDead`).
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

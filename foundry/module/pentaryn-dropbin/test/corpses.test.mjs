@@ -387,3 +387,16 @@ test("DB-AC-4: a single-token sync still makes one call with that token", async 
   assert.deepEqual(ops("turnTokensIntoItemPiles").slice(piles).map(c => c.n), [1]);
   assert.equal(tok.flags[MOD].corpse, true);
 });
+
+test("dropbin-M5: isDead is always a boolean (manifest: returns boolean)", () => {
+  const { isDead } = corpses;
+  const hp = (value, max, statuses) => ({ system: { attributes: { hp: { value, max } } }, ...(statuses ? { statuses } : {}) });
+  assert.strictEqual(isDead(null), false, "a missing actor is not dead");
+  assert.strictEqual(isDead(undefined), false);
+  assert.strictEqual(isDead({}), false, "no hp, no statuses");
+  assert.strictEqual(isDead(hp(5, 10)), false, "alive, no statuses set");
+  assert.strictEqual(isDead(hp(3, 7, new Set())), false);
+  assert.strictEqual(isDead(hp(0, 0, new Set())), false, "hp.max 0 is not the corpse rule");
+  assert.strictEqual(isDead(hp(0, 7)), true);
+  assert.strictEqual(isDead(hp(5, 10, new Set(["dead"]))), true, "the dead status");
+});

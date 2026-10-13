@@ -52,7 +52,7 @@ function tokensOf(actor) {
 
 function isDead(actor) {
   const hp = actor?.system?.attributes?.hp;
-  return (hp && Number.isFinite(hp.value) && hp.max > 0 && hp.value <= 0) || actor?.statuses?.has("dead");
+  return !!((hp && Number.isFinite(hp.value) && hp.max > 0 && hp.value <= 0) || actor?.statuses?.has("dead"));   // always a boolean (dropbin-M5)
 }
 
 function eligible(tokenDoc) {
