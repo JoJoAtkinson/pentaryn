@@ -69,7 +69,7 @@ is `game.pentaryn.rules.describe()`; this table is its `returns` column.
 | `monsters(q)` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }` — iterate `.monsters` |
 | `names(kind?)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one of those keys |
 | `packs()` | `{ world, foundry, system, packs: [{ id, present, label?, type?, entries?, edition? }] }` |
-| `onList(spell, cls, opts?)` | `{ spell, uuid, level, list, onList: true \| false }` \| `{ …, onList: null, hint }` \| `{ notFound, spell, hint }` |
+| `onList(spell, cls, opts?)` | `{ spell, uuid, level, edition?, list, onList: true \| false, listedAs? }` \| `{ …, onList: null, hint }` \| `{ notFound, spell, hint }` |
 | `spellList(cls, opts?)` | `{ list, count, spells: [{ name, level, uuid }] }` \| `{ error, known }` |
 | `selftest()` | `{ ok, passed, failed, checks: [{ label, ok, detail }] }` |
 | `toPlainText(html)` | `string` |
