@@ -335,6 +335,38 @@ def test_mac_stop_forces_when_osascript_quit_times_out(monkeypatch):
     assert calls[1] == ["pkill", "-f", "MacOS/Foundry Virtual Tabletop"]
 
 
+_REAL_PID = host.pid      # conftest stubs host.pid for every test; keep the real one
+
+
+def _ere_matches(pattern: str, line: str) -> bool:
+    """Ask a real POSIX ERE engine (`grep -E`, the dialect `pgrep -f` speaks)."""
+    return subprocess.run(["grep", "-Eq", "--", pattern], input=line, text=True).returncode == 0
+
+
+@pytest.mark.parametrize("data, cmdline, hit", [
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry --port=30000", True),
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry", True),
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry-test --port=30001", False),
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry/x", False),
+    ("/d/foundry", "node /opt/fvtt/mainXjs --dataPath=/d/foundry", False),
+    ("/d/f.v(1)", "node main.js --dataPath=/d/fXv(1) --port=1", False),       # metachars literal
+    ("/d/f.v(1)", "node main.js --dataPath=/d/f.v(1) --port=1", True),
+])
+def test_linux_pid_pattern_is_escaped_and_anchored_ec4(monkeypatch, data, cmdline, hit):
+    """EC-4: the pgrep pattern must not match a sibling Foundry whose data path merely
+    starts with ours (/d/foundry vs /d/foundry-test) — stopping the wrong server."""
+    monkeypatch.setenv("FOUNDRY_DATA", data)
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    assert _ere_matches(host._linux_pattern(), cmdline) is hit
+
+
+def test_linux_pid_hands_pgrep_the_anchored_pattern(monkeypatch, runs):
+    monkeypatch.setenv("FOUNDRY_DATA", "/d/foundry")
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    _REAL_PID()
+    assert runs == [["pgrep", "-f", host._linux_pattern()]]
+
+
 def test_is_running_probes_the_configured_port(monkeypatch):
     seen = []
 

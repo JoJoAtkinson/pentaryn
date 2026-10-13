@@ -324,7 +324,9 @@ def _mac_bundle() -> Path | None:
 
 
 def _linux_pattern() -> str:
-    return f"main.js --dataPath={foundry_data()}"
+    """`pgrep -f` ERE for this data root's `node main.js`. The path is escaped and must end
+    at a space or the end of the line, so /d/foundry never matches /d/foundry-test (EC-4)."""
+    return rf"main\.js --dataPath={re.escape(str(foundry_data()))}( |$)"
 
 
 def pid() -> int | None:
