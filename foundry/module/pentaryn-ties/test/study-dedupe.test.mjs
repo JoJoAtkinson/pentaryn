@@ -31,3 +31,10 @@ test("M8: one skill-label lookup and one flat-row grade closure across study/", 
   assert.equal(count(r, /loreOutcome\(row, total\)/g), 1, "the lore and attr branches share loreGrade");
   assert.equal(count(r, /grade: loreGrade\(row\)/g), 2);
 });
+
+test("EXT-8: the attribute and individual offered rows come from one offeredRow mapper", () => {
+  const q = src("study/request.mjs");
+  assert.match(q, /^function offeredRow\(/m);
+  assert.equal(count(q, /available: !spent/g), 1, "one copy of the row shape");
+  assert.equal(count(q, /offeredRow\(row, !!spent\[/g), 2, "both state readers call it");
+});

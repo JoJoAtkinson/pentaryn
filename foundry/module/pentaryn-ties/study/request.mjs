@@ -132,20 +132,27 @@ export function attrLoreStateFor(character, subject, attrId) {
   const spent = studiedOf(character).lore;
   // `loreOfferable`, not `loreRollable`: a failure hands over nothing, so a row with no pass text
   // would spend the attempt on a guaranteed nothing — never draw it as a button
-  return rollableLore(attributeLore(attrId)).filter(loreOfferable).map(row => {
-    const key = attrFactKey(attrId, row.id);
-    return {
-      id: row.id,
-      attrId,
-      label: row.label,
-      dc: row.dc,
-      skill: row.skill,
-      skillLabel: skillLabelOf(row.skill),
-      spent: !!spent[key],
-      available: !spent[key],
-      gmOnline: !!game.users?.activeGM
-    };
-  });
+  return rollableLore(attributeLore(attrId))
+    .filter(loreOfferable)
+    .map(row => offeredRow(row, !!spent[attrFactKey(attrId, row.id)], { attrId }));
+}
+
+/**
+ * One offered row, as the player's sheet draws it — the one shape `attrLoreStateFor` and
+ * `loreStateFor` both answer (EXT-8). `extra` sits after `id` (the attribute rows' `attrId`).
+ */
+function offeredRow(row, spent, extra = {}) {
+  return {
+    id: row.id,
+    ...extra,
+    label: row.label,
+    dc: row.dc,
+    skill: row.skill,
+    skillLabel: skillLabelOf(row.skill),
+    spent,
+    available: !spent,
+    gmOnline: !!game.users?.activeGM
+  };
 }
 
 /** Every attribute fact on offer for this pair, grouped by attribute — the sheet's list. */
@@ -240,17 +247,7 @@ export function loreStateFor(character, subject) {
   if (!subject) return [];
   const spent = studiedOf(character).lore;
   // offerable, not merely rollable — see `attrLoreStateFor`
-  return rollableLore(readFlag(subject, MODULE, LORE_FLAG)).filter(loreOfferable).map(row => {
-    const key = loreFactKey(subject.id, row.id);
-    return {
-      id: row.id,
-      label: row.label,
-      dc: row.dc,
-      skill: row.skill,
-      skillLabel: skillLabelOf(row.skill),
-      spent: !!spent[key],
-      available: !spent[key],
-      gmOnline: !!game.users?.activeGM
-    };
-  });
+  return rollableLore(readFlag(subject, MODULE, LORE_FLAG))
+    .filter(loreOfferable)
+    .map(row => offeredRow(row, !!spent[loreFactKey(subject.id, row.id)]));
 }
