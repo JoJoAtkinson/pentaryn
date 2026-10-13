@@ -102,3 +102,19 @@ test("syncAll row: says it batches, as carried.mjs does (senses-M11)", () => {
   assert.doesNotMatch(row.doc, /one after another/);
   assert.match(row.doc, /one Actor batch for the prototypes, then one Token batch per scene/);
 });
+
+// senses-EXT-7: the profileFor row doc and the README's light table name the profile keys by hand.
+// A LIGHT_PROFILES row added (or renamed) without them fails here. Test-only; no runtime change.
+import { LIGHT_PROFILES } from "../core/light.mjs";
+
+test("profileFor row and README name every LIGHT_PROFILES key (senses-EXT-7)", () => {
+  const keys = Object.keys(LIGHT_PROFILES);
+  assert.ok(keys.length >= 5, "today's five profiles are present");
+  const row = MANIFEST.rows.find(r => r.path === "light.profileFor");
+  const named = new Set(row.doc.match(/\(([^)]*)\)\.?$/)?.[1].split(/,\s*/) ?? []);
+  assert.deepEqual([...named].sort(), [...keys].sort(), "profileFor row lists exactly the LIGHT_PROFILES keys");
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  for (const key of keys) {
+    assert.ok(readme.includes(`| \`${key}\` |`), `README light table has a \`${key}\` row`);
+  }
+});

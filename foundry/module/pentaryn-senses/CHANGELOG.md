@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **[declared senses-EXT-7] profileFor drift check** (final review 2026-10-12): `test/api.test.mjs`
+  now fails if the `light.profileFor` row doc or the README light table stops naming every
+  `LIGHT_PROFILES` key in `core/light.mjs`. Test-only; no runtime change, goldens unchanged.
+
 - **[declared senses-R6] Five files log through the kit log** (final review 2026-10-12):
   chain, light and migrate use the entry's `ctx.log` once installed; light-ui and argon use
   `makeLog(MODULE)`. No hand-prefixed `console.*` call is left. Console text byte-identical
