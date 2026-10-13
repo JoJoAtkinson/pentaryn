@@ -842,3 +842,60 @@ def test_py_mcp_ext_3_mcp_tool_prefixed_helpers_are_ignored(tmp_path):
     assert "b_schema_ext3.py" not in reasons
     assert reasons["c_helper_only_ext3.py"] == server._NO_TOOL
     assert reasons["d_named_ext3.py"] == server._NO_TOOL
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-EC-3: a lone surrogate in a reply must not swallow the reply
+# ---------------------------------------------------------------------------
+
+class _FakeStdout:
+    def __init__(self):
+        import io
+        self.buffer = io.BytesIO()
+
+
+def _surrogate_boom(**kw):
+    raise ValueError("bad \udcff byte")
+
+
+@pytest.mark.parametrize("mode", ["jsonl", "lsp"])
+def test_py_mcp_ec_3_lone_surrogate_error_still_replies(monkeypatch, mode):
+    """py-mcp-EC-3: a handler error message carrying a lone surrogate (e.g. from a
+    surrogateescape-decoded path) made _write_message's .encode('utf-8') raise, so
+    the worker wrote no reply at all and the client hung on that id. Now the frame is
+    re-encoded with ensure_ascii=True (the surrogate becomes \\udcff) and the error
+    reply always reaches the client, on both transports."""
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    fake = _FakeStdout()
+    monkeypatch.setattr(sys, "stdout", fake)
+    # The real stderr uses errors="backslashreplace"; a StringIO takes the
+    # traceback's surrogate the same way, unlike pytest's strict capture.
+    import io
+    monkeypatch.setattr(sys, "stderr", io.StringIO())
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", mode)
+    server._inflight_slots.acquire()
+    server._run_call_worker(9, _runner(_surrogate_boom), {})
+
+    raw = fake.buffer.getvalue()
+    assert raw, "no reply was written"
+    if mode == "lsp":
+        head, body = raw.split(b"\r\n\r\n", 1)
+        assert head == f"Content-Length: {len(body)}".encode("ascii")
+    else:
+        assert raw.endswith(b"\n") and raw.count(b"\n") == 1
+        body = raw[:-1]
+    assert b"\\udcff" in body
+    msg = json.loads(body.decode("utf-8"))
+    assert msg["id"] == 9
+    assert msg["error"]["code"] == -32000
+    assert msg["error"]["message"] == "bad \udcff byte"
+
+
+def test_py_mcp_ec_3_plain_unicode_stays_unescaped(monkeypatch):
+    """py-mcp-EC-3: the ASCII fallback is only for the failing case; ordinary
+    non-ASCII text is still written as raw UTF-8."""
+    fake = _FakeStdout()
+    monkeypatch.setattr(sys, "stdout", fake)
+    monkeypatch.setattr(server, "_TRANSPORT_MODE", "jsonl")
+    server._write_message({"jsonrpc": "2.0", "id": 1, "result": "café"})
+    assert "café".encode("utf-8") in fake.buffer.getvalue()

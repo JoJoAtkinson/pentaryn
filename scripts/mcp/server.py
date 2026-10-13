@@ -176,8 +176,13 @@ def _read_message() -> Optional[dict[str, Any]]:
 
 def _write_message(payload: dict[str, Any]) -> None:
     """Serialize a JSON-RPC envelope to stdout. Holds _STDOUT_LOCK so concurrent
-    worker threads can't interleave bytes mid-message."""
-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    worker threads can't interleave bytes mid-message. A lone surrogate (e.g. in a
+    handler's error message) can't be UTF-8 encoded, so that frame is re-dumped with
+    ensure_ascii=True, which escapes it as \\udcXX instead of dropping the reply."""
+    try:
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    except UnicodeEncodeError:
+        body = json.dumps(payload, ensure_ascii=True).encode("utf-8")
     with _STDOUT_LOCK:
         if _TRANSPORT_MODE == "jsonl":
             sys.stdout.buffer.write(body + b"\n")
