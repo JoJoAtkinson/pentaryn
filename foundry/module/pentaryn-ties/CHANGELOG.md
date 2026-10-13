@@ -148,6 +148,12 @@ back, so only the last link survived. `linkAttribute`/`unlinkAttribute` (and `re
 through the registry's `serial()` queue with their flag reads inside it. Pinned by
 `test/review-link-race.test.mjs`. ties-core-U3.
 
+Fixed (declared): an **item mark's** hover text is shown as plain text. The tip (`mark.tip`, which a
+player can write like any item flag) went to `data-tooltip`, which Foundry renders as HTML, so markup in
+it ran in every viewer's sheet; it now goes to `data-tooltip-text`. Icon and colour are unchanged.
+Pinned by `test/review-mark-tip-text.test.mjs`; the `canvas-item-marks` and `declared-b6-unescaped`
+goldens' dataset key is now `tooltipText`. ties-core-U4.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

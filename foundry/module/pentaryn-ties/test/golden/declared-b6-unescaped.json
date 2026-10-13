@@ -19,7 +19,7 @@
                 "tag": "I",
                 "className": "pt-item-mark fa-solid fa-fire",
                 "dataset": {
-                  "tooltip": "t"
+                  "tooltipText": "t"
                 }
               }
             ]

@@ -106,7 +106,7 @@ Read but never written — the GM authors these by hand (`flags.reads` in `descr
 | Where | Key | What |
 |---|---|---|
 | Actor (character) | `flags.pentaryn-ties.knownCategories` | `[{ key, label }]` — extra notebook categories, or a rename of a seeded one |
-| Item | `flags.pentaryn-ties.mark` | `{ icon, tip, color }` — the item mark |
+| Item | `flags.pentaryn-ties.mark` | `{ icon, tip, color }` — the item mark; `tip` shows as plain text (`data-tooltip-text`) |
 
 Writes use `render: false` where a re-render would destroy the injected tab mid-edit.
 

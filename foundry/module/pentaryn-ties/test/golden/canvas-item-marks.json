@@ -20,7 +20,7 @@
                   "tag": "I",
                   "className": "pt-item-mark fa-solid fa-fire",
                   "dataset": {
-                    "tooltip": "Burns hotter"
+                    "tooltipText": "Burns hotter"
                   },
                   "style": {
                     "color": "#ff7a1a"
