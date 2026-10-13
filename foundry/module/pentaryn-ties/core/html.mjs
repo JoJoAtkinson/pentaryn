@@ -368,7 +368,11 @@ export function paintRich(root, { relativeTo = null, log = null } = {}) {
   if (root.matches?.(".pt-rich[data-enrich]")) boxes.unshift(root);
   return Promise.all(
     boxes.map(async box => {
-      const { html, failed } = await enrichLore(box.dataset.enrich ?? "", { relativeTo, log });
+      const raw = box.dataset.enrich ?? "";
+      // taken off before the await: the raw source (secret block included) does not stay in the DOM,
+      // and a second paint of the same root does not enrich this box twice
+      box.removeAttribute("data-enrich");
+      const { html, failed } = await enrichLore(raw, { relativeTo, log });
       box.innerHTML = html;
       if (failed) box.classList?.remove("pt-rich");
     })
