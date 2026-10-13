@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+- **Return on an unlinked token's form names the token, not the base actor (EC-5, defect wave 2).**
+  form-picker.mjs `ReturnButton` labelled and pictured the button from the `originalActor` flag,
+  which for an unlinked token is the base actor every copy shares, so a renamed token read "Return
+  to <base actor>". For a token form it now uses the token's `flags.dnd5e.previousTokenData` name
+  and `texture.src`, falling back to the base actor; linked druids are unchanged. A comment says why
+  this is not `original()` (EXT-10) ([declared]; test "EC-5" in hud-buttons.test.mjs; no new
+  strings or hooks).
 - **The Bonus pip re-mark settles without pentaryn-combat (EC-4, defect wave 2).** hud-panels.mjs
   re-marked a Bonus Action spent this turn with one `updateActionUse()`, which Argon ignores when the
   pip count just changed, so the used pip painted only while combat's pip-settle wrap was on. It now

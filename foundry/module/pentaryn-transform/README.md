@@ -181,6 +181,8 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 - Transform updates tokens on the **viewed** scene only (dnd5e), so a shift needs the druid's token
   there (refused otherwise). Revert also fixes tokens on other scenes.
 - An unlinked token druid's form is its own original and keeps its own Wild Shape item.
+  Its HUD Return button names and pictures the token as it was before the shift (dnd5e's
+  `previousTokenData`), not the base actor every unlinked copy shares.
 - The revert item is optional (without it the HUD adds its own Return button); if used, keep it a
   `feat` with one bonus-action utility activity, so the Wild Shape preset carries it onto the form.
 - Two GM tabs (bridge + browser) both run the automatic endings and the sweep, but only the tab that

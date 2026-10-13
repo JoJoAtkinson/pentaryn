@@ -135,9 +135,18 @@ export function argonClasses() {
    */
   class ReturnButton extends ItemButton {
     constructor({ hudActor }) {
+      // Not original() (EXT-10): that answers an unlinked token's form with the form itself, and its
+      // originalActor flag is the base actor every unlinked copy shares. The token's own name and
+      // image from before the shift live in its previousTokenData (EC-5); linked druids, and a token
+      // with no snapshot, fall back to the original actor.
       const host = game.actors.get(hudActor?.getFlag?.("dnd5e", "originalActor")) ?? null;
+      const prev = hudActor?.isToken ? hudActor.token?.getFlag?.("dnd5e", "previousTokenData") : null;
       super({
-        item: { id: "pentarynReturn00", name: returnLabel(host?.name ?? hudActor?.name ?? "?"), img: host?.img || hudActor?.img },
+        item: {
+          id: "pentarynReturn00",
+          name: returnLabel(prev?.name || host?.name || hudActor?.name || "?"),
+          img: prev?.texture?.src || host?.img || hudActor?.img
+        },
         inActionPanel: true
       });
       this.hudActor = hudActor;
