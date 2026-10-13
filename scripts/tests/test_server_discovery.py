@@ -683,7 +683,7 @@ def test_py_mcp_mnt_7_comments_match_the_code():
     assert "~10s in srd5_2" not in src
     assert "Waits for running and queued calls" in src
     assert "DND_MCP_TOOL_TIMEOUT\n        # (default 60s)" in src
-    assert "in-process handlers have no cap" in src
+    assert "in-process handlers are bounded only by their own locks" in src
     assert "SQLite's per-connection locking" in src
 
 

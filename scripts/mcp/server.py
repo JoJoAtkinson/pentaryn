@@ -833,7 +833,8 @@ def main() -> int:
         # On stdin EOF, finish in-flight tool calls before exiting so we don't
         # truncate a response mid-write. Waits for running and queued calls (up to
         # _INFLIGHT_LIMIT); each subprocess call is capped by DND_MCP_TOOL_TIMEOUT
-        # (default 60s), and in-process handlers have no cap.
+        # (default 60s), and in-process handlers are bounded only by their own locks
+        # (each flock gives up after the same DND_MCP_TOOL_TIMEOUT; a thread cannot be killed).
         executor.shutdown(wait=True)
 
 
