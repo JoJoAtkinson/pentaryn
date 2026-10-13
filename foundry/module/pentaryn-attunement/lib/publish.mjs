@@ -22,7 +22,7 @@ function publishedMap(g) {
   return g[PUBLISHED];
 }
 
-/** `{ when, at }` for one namespace, or null when it has not been published. */
+/** `{ when, at, module, alias }` for one namespace, or null when it has not been published. */
 export function publishedOf(ns, { g = globalThis } = {}) {
   const p = publishedMap(g)[ns];
   return p ? { ...p } : null;

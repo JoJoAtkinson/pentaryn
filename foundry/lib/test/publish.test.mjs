@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { apiOf, installRoot, publishNamespace, publishedOf } from "../publish.mjs";
 
 function env() {
@@ -40,6 +42,15 @@ test("publishedOf returns when/at/module/alias (the shape modules put in describ
   assert.deepEqual({ ...publishedOf("chain", { g }), at: 0 }, { when: "ready", at: 0, module: "pentaryn-y", alias: true });
   publishedOf("x", { g }).when = "mutated";
   assert.equal(publishedOf("x", { g }).when, "ready", "a copy, not the stored record");
+});
+
+test("publishedOf's doc comment names every key it returns (KIT-M10-followup)", () => {
+  const g = env();
+  publishNamespace("x", api("x"), { moduleId: "pentaryn-x", g });
+  const src = readFileSync(fileURLToPath(new URL("../publish.mjs", import.meta.url)), "utf8");
+  const doc = src.match(/\/\*\*([^]*?)\*\/\s*export function publishedOf\b/)?.[1] ?? "";
+  const keys = doc.match(/`\{([^}`]*)\}`/)?.[1].split(",").map(k => k.trim()) ?? [];
+  assert.deepEqual(keys, Object.keys(publishedOf("x", { g })));
 });
 
 test("J10: no frozen-root guard and no re-alias tick — an extensible root is assigned into, a frozen one throws", () => {
