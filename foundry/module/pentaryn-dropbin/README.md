@@ -42,7 +42,9 @@ the dnd5e 6 rarity keys).
   actor's own `corpse`/`ownership` flags and written back on revival (dropbin-EC-3), or by the
   active GM once the actor's last corpse token (or its scene) is deleted, checked again at every
   `ready`. Its Actors
-  sidebar row stays hidden from players (it is a pile actor). `inspect`'s `saved.ownership` is the
+  sidebar row stays hidden from players (it is a pile actor). That release also turns off the pile
+  Item Piles wrote on the base actor and takes away the Dead dropbin added (a Dead the GM set before
+  the death stays), so the actor's next token is not born a dead pile dropbin does not manage. `inspect`'s `saved.ownership` is the
   token's delta map; a linked corpse's lives on the actor. Sight is off on a corpse and restored on
   revival.
   A body that is already our corpse pile but lost its OBSERVER map (an unlinked token) or its
@@ -117,7 +119,8 @@ itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 | `Data/assets/drop-bin/drop-log.json` | the mirror, ~2 s after a burst; `export()` at once | the recording GM |
 | token `flags.pentaryn-dropbin.corpse`, `.sight`, `.ownership` | our corpse, its sight and pre-death delta ownership | active GM |
 | token `delta.ownership`, `sight.enabled`; Item Piles pile flags | while a corpse | active GM |
-| linked NPC actor `flags.pentaryn-dropbin.corpse`, `.ownership`; `ownership.default` | a linked corpse: its pre-death map, players OBSERVER | active GM |
+| linked NPC actor `flags.pentaryn-dropbin.corpse`, `.ownership`, `.dead`; `ownership.default` | a linked corpse: its pre-death map, players OBSERVER, whether its Dead is ours | active GM |
+| linked NPC actor `flags.item-piles.data.enabled` (false), its Dead removed | when its last corpse token (or that scene) goes: the pile Item Piles wrote on the actor turned off, and Dead only if dropbin added it | active GM |
 | actor/token `flags.item-piles.data.lockedSound`; pile `sight.enabled`; Note `global` | ready backfills | active GM |
 | ActiveEffect Dead (`flags.core.overlay`) | the corpse overlay | active GM |
 | `system.attunement` on items Item Piles creates | the repair (`preCreateItem`, in memory before the create) | the creating client |
@@ -163,8 +166,12 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   scene and uuid are recorded). One drop is one row: Item Piles takes the item off the sheet first,
   which the delete capture records, and the drop row then takes that delete row's place and number
   (same actor and item `_id`, within 2 s) — DB-AC-1 live. Part of a stack is an update, not a delete,
-  so it was only ever the drop row. A drop onto an *existing* pile is still a `delete` row and a
-  `drop` row: Item Piles gives the moved item a new `_id` on the pile, so nothing ties the two. A delete off a sheet is captured by
+  so it was only ever the drop row. A drop onto an *existing* pile is one row too: Item Piles gives
+  the moved item a new `_id` on the pile, so the ledger listens to its `item-piles-preTransferItems`
+  and keeps, per transfer, the items it took off the character (each kept 2 s). The drop's item is
+  matched within that actor's own transfers — by `_id`, else name, type and quantity — and the match
+  is used once; the tail `delete` row may match either that id or the drop item's own. A hand delete
+  is never in a transfer, so it keeps its own row. A delete off a sheet is captured by
   the deleting client; players relay it through socketlib (`executeAsGM`) to a GM, and a GM records
   locally. A relay that reaches a GM tab still loading (before `ready`) is held and recorded at
   `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst). A malformed relayed entry (bad reason, itemName, t, quantity or item) is one

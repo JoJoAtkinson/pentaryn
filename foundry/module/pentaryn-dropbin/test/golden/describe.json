@@ -22,6 +22,7 @@
         "flags.pentaryn-dropbin.corpse",
         "flags.pentaryn-dropbin.sight",
         "flags.pentaryn-dropbin.ownership",
+        "flags.pentaryn-dropbin.dead",
         "delta.ownership",
         "actor ownership (linked)",
         "sight.enabled",
@@ -50,6 +51,7 @@
         "flags.pentaryn-dropbin.corpse",
         "flags.pentaryn-dropbin.sight",
         "flags.pentaryn-dropbin.ownership",
+        "flags.pentaryn-dropbin.dead",
         "delta.ownership",
         "actor ownership (linked)",
         "sight.enabled",
@@ -77,6 +79,7 @@
         "flags.pentaryn-dropbin.corpse",
         "flags.pentaryn-dropbin.sight",
         "flags.pentaryn-dropbin.ownership",
+        "flags.pentaryn-dropbin.dead",
         "delta.ownership",
         "actor ownership (linked)",
         "sight.enabled",
@@ -122,6 +125,7 @@
         "flags.pentaryn-dropbin.corpse",
         "flags.pentaryn-dropbin.sight",
         "flags.pentaryn-dropbin.ownership",
+        "flags.pentaryn-dropbin.dead",
         "delta.ownership",
         "actor ownership (linked)",
         "sight.enabled",
@@ -564,6 +568,10 @@
       "label": "locks"
     },
     {
+      "name": "item-piles-preTransferItems",
+      "label": "transfer capture"
+    },
+    {
       "name": "item-piles-dropItem",
       "label": "drop capture"
     },
@@ -594,7 +602,9 @@
       "flags.pentaryn-dropbin.corpse",
       "flags.pentaryn-dropbin.sight",
       "flags.pentaryn-dropbin.ownership",
-      "flags.item-piles.data.lockedSound"
+      "flags.pentaryn-dropbin.dead",
+      "flags.item-piles.data.lockedSound",
+      "flags.item-piles.data.enabled"
     ],
     "reads": [
       "flags.item-piles.data"

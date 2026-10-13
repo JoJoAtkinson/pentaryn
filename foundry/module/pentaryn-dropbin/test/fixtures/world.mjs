@@ -40,7 +40,7 @@ export async function dropbinWorld() {
   const piles = new Set();
   F.piles = piles;
   F.game.itempiles = {
-    hooks: { ITEM: { DROP: "item-piles-dropItem" } },
+    hooks: { ITEM: { DROP: "item-piles-dropItem", PRE_TRANSFER: "item-piles-preTransferItems" } },
     API: {
       ACTOR_CLASS_TYPE: "character",
       isValidItemPile: doc => piles.has(doc) || piles.has(doc?.actor) || !!doc?.flags?.["item-piles"]?.data?.enabled,

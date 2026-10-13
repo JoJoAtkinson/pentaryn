@@ -430,6 +430,81 @@ test("dropbin-EC-3: deleting the last corpse token of a linked NPC gives back it
   assert.equal(sheetVeto(actor, true, {}), true, "no sheet veto on the living NPC");
 });
 
+// Wave 3 dropbin item 2 [declared]: Item Piles' turnTokensIntoItemPiles writes its pile flag on a LINKED
+// token's base actor too, and Dead (our overlay) sits on that actor. Deleting the last corpse token gave
+// back the ownership map but left both, so the actor's next token was born a pile dropbin does not manage
+// (no corpse flag) and dead. The release now clears what dropbin set: the pile (enabled: false, as Item
+// Piles' own revert writes) and Dead only when dropbin added it; a Dead the GM set before death stays.
+/** Sync with an Item Piles stand-in that also writes the pile flag on a linked token's base actor, as 3.3.4. */
+async function syncAsItemPiles(actor) {
+  const api = F.game.itempiles.API, turn = api.turnTokensIntoItemPiles;
+  api.turnTokensIntoItemPiles = async (docs, opts) => {
+    for (const a of new Set(docs.filter(t => t.actorLink).map(t => t.actor))) await a.update({ "flags.item-piles.data": { enabled: true, type: "pile" } });
+    return turn(docs, opts);
+  };
+  try { await corpses.sync(actor); } finally { api.turnTokensIntoItemPiles = turn; }
+}
+
+test("wave-3 item 2: deleting a linked corpse's last token clears dropbin's pile flag and Dead on the base actor", async () => {
+  const [a, b] = linkedNpc(undefined, 2);
+  const actor = a.actor, api = F.game.itempiles.API;
+  await syncAsItemPiles(actor);
+  assert.equal(api.isValidItemPile(actor), true, "Item Piles made the base actor a pile");
+  assert.equal(actor.statuses.has("dead"), true, "dropbin's Dead overlay");
+  deleteToken(a);
+  await flushAll();
+  assert.equal(api.isValidItemPile(actor), true, "another corpse token is still on the map");
+  assert.equal(actor.statuses.has("dead"), true);
+  deleteToken(b);
+  await flushAll();
+  assert.equal(api.isValidItemPile(actor), false, "the next token is not born a pile");
+  assert.equal(actor.flags["item-piles"].data.type, "pile", "only enabled changes, as Item Piles' own revert");
+  assert.equal(actor.statuses.has("dead"), false, "the Dead dropbin added is gone");
+  assert.deepEqual(actor.flags[MOD] ?? {}, {}, "no dropbin flag left on the actor");
+});
+
+test("wave-3 item 2: a Dead the GM set before death stays on the base actor; the pile still goes", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor, api = F.game.itempiles.API;
+  actor.statuses.add("dead");                 // the GM's own override: dead, not ours to take away
+  await syncAsItemPiles(actor);
+  deleteToken(tok);
+  await flushAll();
+  assert.equal(api.isValidItemPile(actor), false);
+  assert.equal(actor.statuses.has("dead"), true, "the GM's Dead is kept");
+  assert.deepEqual(actor.flags[MOD] ?? {}, {});
+});
+
+test("wave-3 item 2: a Dead removal that fails leaves the actor our corpse, so the next release run finishes it", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor, api = F.game.itempiles.API, toggle = actor.toggleStatusEffect;
+  await syncAsItemPiles(actor);
+  actor.toggleStatusEffect = async () => { throw new Error("socket gone"); };
+  const warns = [], { warn, log } = console;
+  Object.assign(console, { warn: (...a) => warns.push(a.map(String).join(" ")), log: () => {} });
+  try {
+    deleteToken(tok);
+    await flushAll();
+    assert.equal(actor.flags[MOD].corpse, true, "still ours: the release is retried, not lost");
+    assert.equal(actor.statuses.has("dead"), true);
+    actor.toggleStatusEffect = toggle;
+    // the next release run (the ready sweep runs the same releaseBases; ready fires once per file here)
+    Hooks.callAll("deleteToken", tok, {}, GM);
+    await flushAll();
+  } finally { Object.assign(console, { warn, log }); actor.toggleStatusEffect = toggle; }
+  assert.equal(warns.filter(w => w.includes("corpse")).length, 1, "one warning, for the failed removal");
+  assert.equal(actor.statuses.has("dead"), false, "the Dead dropbin added is gone on the retry");
+  assert.equal(api.isValidItemPile(actor), false);
+  assert.deepEqual(actor.flags[MOD] ?? {}, {});
+});
+
+test("wave-3 item 2: a revival leaves no dropbin flag on the base actor (Dead goes by the revival itself)", async () => {
+  const [tok] = linkedNpc();
+  await syncAsItemPiles(tok.actor);
+  await corpses.revive(tok);
+  assert.deepEqual(tok.actor.flags[MOD] ?? {}, {});
+});
+
 test("dropbin-EC-3: deleting a linked corpse's scene gives back its base actor's map", async () => {
   const before = { default: NONE, [GM]: OWNER };
   const [tok] = linkedNpc({ ...before });

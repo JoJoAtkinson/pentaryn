@@ -1,6 +1,10 @@
 [
   {
     "kind": "on",
+    "name": "item-piles-preTransferItems"
+  },
+  {
+    "kind": "on",
     "name": "item-piles-dropItem"
   },
   {

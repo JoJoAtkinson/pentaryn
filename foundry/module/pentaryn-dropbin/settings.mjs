@@ -67,7 +67,7 @@ async function drain(items) {
     const ok = [];
     for (const it of items) {   // dropbin-R10: an entry appendEntry throws on rejects its caller only
       try {
-        const r = appendEntry(log, counter, it.entry, it.dedupeMs);
+        const r = appendEntry(log, counter, it.entry, it.dedupeMs, it.opts);
         ({ log, counter } = r);
         ok.push([it, r]);
       } catch (err) {
@@ -89,11 +89,12 @@ async function drain(items) {
  * Append `entry` to the ledger, serialised and coalesced. Resolves `{ n, log, duplicate }`: on a
  * duplicate of the tail (same key within `dedupeMs`) nothing is written for it and `n` is the
  * tail's. A failed write rejects the callers in that batch only; later appends still run. An entry
- * the append throws on rejects its own caller only; the rest of its batch is still written.
+ * the append throws on rejects its own caller only; the rest of its batch is still written. `opts`
+ * goes to appendEntry (`sourceId`: a drop's item id on the character, wave 3 dropbin item 1).
  */
-export function appendLedger(entry, dedupeMs = DEDUPE_MS) {
+export function appendLedger(entry, dedupeMs = DEDUPE_MS, opts = {}) {
   return new Promise((resolve, reject) => {
-    const item = { entry, dedupeMs, resolve, reject };
+    const item = { entry, dedupeMs, opts, resolve, reject };
     if (batch) {
       batch.push(item);
       return;

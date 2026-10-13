@@ -59,25 +59,74 @@ export function isPlausibleSender(entry, { users, actors }) {
  * A drop that finishes the tail's 'delete' row (DB-AC-1 live, FIX-3): Item Piles' drop removes the
  * item from the character on the active GM's client before it fires the drop hook, so the sheet-delete
  * capture has just recorded that same item (same actor, same item source _id, within `dedupeMs`).
- * The drop is the one row; it takes the delete row's place and number.
+ * The drop is the one row; it takes the delete row's place and number. The tail's `_id` may match the
+ * drop item's own `_id` (a new pile keeps it) or `sourceId`, the id the item had on the character when
+ * an existing pile gave it a new one (takeMoved, wave 3 item 1): either one, so a wrong `sourceId`
+ * never hides the own-id match.
  */
-export function dropReplacesTail(log, entry, dedupeMs = DEDUPE_MS) {
+export function dropReplacesTail(log, entry, dedupeMs = DEDUPE_MS, sourceId = null) {
   const tail = log[log.length - 1];
-  const id = entry?.item?._id;
-  return !!(tail && entry?.reason === "drop" && tail.reason === "delete" && id && tail.item?._id === id
+  const ids = [entry?.item?._id, sourceId].filter(Boolean);
+  return !!(tail && entry?.reason === "drop" && tail.reason === "delete" && ids.length && ids.includes(tail.item?._id)
     && tail.fromActorId === entry.fromActorId && entry.t - tail.t < dedupeMs);
+}
+
+/** Most transfers kept (wave 3 item 1): far more than one burst of drops within `dedupeMs`. */
+export const TRANSFERS_KEPT = 32;
+
+/**
+ * The recent-transfers list with `transfer` added (wave 3, dropbin item 1): one entry per Item Piles
+ * transfer, `{actorId, t, moved: [{_id, name, type, quantity}]}`. Entries `dedupeMs` older than
+ * `transfer` are dropped, and at most TRANSFERS_KEPT stay. Never mutates its input.
+ */
+export function rememberTransfer(transfers, transfer, dedupeMs = DEDUPE_MS) {
+  const kept = (transfers ?? []).filter(x => x && transfer.t - x.t < dedupeMs);
+  return [...kept, transfer].slice(-TRANSFERS_KEPT);
+}
+
+/**
+ * The id on the character of the item a drop moved, taken out of the recent-transfers list (wave 3,
+ * dropbin item 1). A drop onto an existing pile is Item Piles' `_transferItems`: its
+ * `preTransferItems` hook names the character's items it moves, then the pile gets the item under a
+ * new id. Only this actor's transfers younger than `dedupeMs` count (another actor's, such as a player
+ * looting a corpse in between, are passed over); the newest is tried first, by `_id`, then by name,
+ * type and quantity. A matched item is removed from its transfer, so it never matches a second drop.
+ * `transfers` may be one transfer or a list. @returns {{ id, transfers }} — `id` null on no match.
+ */
+export function takeMoved(transfers, { actorId, item, quantity, now, dedupeMs = DEDUPE_MS }) {
+  const list = Array.isArray(transfers) ? transfers : transfers ? [transfers] : [];
+  const live = i => list[i] && list[i].actorId === actorId && now - list[i].t < dedupeMs;
+  const tests = [m => !!item?._id && m._id === item._id,
+    m => m.name === item?.name && m.type === item?.type && m.quantity === quantity];
+  for (const hit of tests) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (!live(i)) continue;
+      const moved = list[i].moved ?? [];
+      const k = moved.findIndex(hit);
+      if (k < 0) continue;
+      const next = list.slice();
+      next[i] = { ...list[i], moved: moved.filter((_, j) => j !== k) };
+      return { id: moved[k]._id ?? null, transfers: next };
+    }
+  }
+  return { id: null, transfers: list };
+}
+
+/** takeMoved's id alone: the transfers are left as they are. */
+export function movedSourceId(transfers, query) {
+  return takeMoved(transfers, query).id;
 }
 
 /**
  * Append `entry` as number `counter + 1`, recognise it as a repeat of the tail, or (a drop finishing
- * the tail's delete, dropReplacesTail) put it in the tail's place under the tail's number. Never mutates
- * its inputs. @returns {{ log, counter, n, duplicate }} — on a duplicate the log and counter are
- * the ones passed in and `n` is the tail's number.
+ * the tail's delete, dropReplacesTail) put it in the tail's place under the tail's number. `sourceId`:
+ * as dropReplacesTail. Never mutates its inputs. @returns {{ log, counter, n, duplicate }} — on a
+ * duplicate the log and counter are the ones passed in and `n` is the tail's number.
  */
-export function appendEntry(log, counter, entry, dedupeMs = DEDUPE_MS) {
+export function appendEntry(log, counter, entry, dedupeMs = DEDUPE_MS, { sourceId } = {}) {
   const tail = duplicateOfTail(log, entry, dedupeMs);
   if (tail) return { log, counter, n: tail.n, duplicate: true };
-  if (dropReplacesTail(log, entry, dedupeMs)) {
+  if (dropReplacesTail(log, entry, dedupeMs, sourceId)) {
     const n = log[log.length - 1].n;
     return { log: [...log.slice(0, -1), { n, ...entry }], counter, n, duplicate: false };
   }

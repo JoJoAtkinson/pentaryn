@@ -22,10 +22,10 @@
 
 import {
   MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
-  briefOf, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, isActiveGMSelf,
+  briefOf, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, isActiveGMSelf, takeMoved, rememberTransfer,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
-import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
+import { dropHook, preTransferHook, actorClassType, isValidItemPile } from "./piles.mjs";
 import { registerRecord, hasSocket, executeAsGM, resetSocket, socketlibPresent } from "./socketlib-adapter.mjs";
 
 /* ------------------------------------------------------------------ storage */
@@ -84,8 +84,9 @@ function drainPreReady() {
  * held and recorded at ready (DB-AC-2); settings.set is never called before ready. A malformed entry
  * (isEntryShape) resolves null with one console warning and is never appended (dropbin-R10); so is
  * one whose userId is not an existing GM or the owner of its still-existing actor (DB-AC-3).
+ * `opts` (appendEntry's `sourceId`) comes only from this client's own drop capture, never the relay.
  */
-async function recordAsGM(entry) {
+async function recordAsGM(entry, opts) {
   if (!isEntryShape(entry)) {
     console.warn(`${MODULE} | malformed ledger entry ignored`, entry);
     return null;
@@ -96,7 +97,7 @@ async function recordAsGM(entry) {
     console.warn(`${MODULE} | ledger entry refused: its user is unknown, or neither a GM nor the actor's owner`, entry);
     return null;
   }
-  const { n, duplicate } = await appendLedger(entry, DEDUPE_MS);
+  const { n, duplicate } = await appendLedger(entry, DEDUPE_MS, opts);
   if (duplicate) return n;
   mirrorSoon();
 
@@ -109,13 +110,13 @@ async function recordAsGM(entry) {
  * hooks do not await it): a relay with no GM online, or a failed write, is one console warning
  * naming the entry (items-journal-21), and resolves null.
  */
-function submit(entry) {
+function submit(entry, opts) {
   const lost = err => {
     console.warn(`${MODULE} | ledger entry not recorded${game.user.isGM ? "" : " (no GM?)"}`,
       { reason: entry.reason, item: entry.itemName, actor: entry.fromActorName }, err);
     return null;
   };
-  if (game.user.isGM) return recordAsGM(entry).catch(lost);
+  if (game.user.isGM) return recordAsGM(entry, opts).catch(lost);
   if (hasSocket()) return new Promise(resolve => resolve(executeAsGM("record", entry))).catch(lost);
   console.warn(`${MODULE} | no socketlib and not a GM — entry dropped`, entry);
   return null;
@@ -127,8 +128,31 @@ function baseEntry(reason, actor, item, quantity, scene = canvas?.scene) {
 
 /* ------------------------------------------------------------------- capture */
 
+/**
+ * The recent Item Piles transfers this client ran (wave 3, dropbin item 1), newest last: each its
+ * source actor, when, and the items it moved as `{_id, name, type, quantity}` (rememberTransfer keeps
+ * those younger than DEDUPE_MS). A drop onto an existing pile gives the item a new id on the pile;
+ * takeMoved finds its id on the character here, from that actor's own transfer even when another
+ * actor's ran in between, and takes it out so it never matches a later drop.
+ */
+let transfers = [];
+
 function registerCapture(reg) {
   const DROP = dropHook();
+  const PRE_TRANSFER = preTransferHook();
+
+  // 0. Item Piles' pre-transfer hook: remember what left the character. Returns nothing (never a veto).
+  if (PRE_TRANSFER) {
+    reg.on(PRE_TRANSFER, (source, sourceUpdates) => {
+      try {
+        const deltas = Array.isArray(sourceUpdates?.itemDeltas) ? sourceUpdates.itemDeltas : [];
+        transfers = rememberTransfer(transfers, { actorId: source?.id ?? null, t: Date.now(), moved: deltas.map(d => ({
+          _id: d?.item?._id ?? null, name: d?.item?.name, type: d?.item?.type, quantity: Math.abs(d?.quantity ?? 0) })) }, DEDUPE_MS);
+      } catch (err) {
+        console.warn(`${MODULE} | transfer capture failed`, err);
+      }
+    }, { label: "transfer capture" });
+  }
 
   // 1. dropped onto the canvas as an Item Pile. Item Piles calls the hook on every client
   // (DB-AC-1): the active GM user records it — the corpses' runner rule — and the scene is the
@@ -148,7 +172,10 @@ function registerCapture(reg) {
           e.x = position?.x ?? null;
           e.y = position?.y ?? null;
           e.pileUuid = pile.uuid;
-          submit(e);
+          const taken = takeMoved(transfers, { actorId: actor?.id ?? null, item: obj, quantity: e.quantity, now: e.t });
+          transfers = taken.transfers;
+          const sourceId = taken.id;
+          submit(e, sourceId ? { sourceId } : undefined);
         }
       } catch (err) {
         console.warn(`${MODULE} | drop capture failed`, err);
@@ -264,10 +291,10 @@ export function install(reg, ctx) {
   if (globalThis.game?.ready && socketlibPresent()) {
     // a hot re-import after ready: socketlib.ready has fired already (socketlib hands back the
     // module's existing socket)
-    try { registerRecord(recordAsGM); } catch (err) { ctx.log.warn("hot patch: the ledger relay was not re-registered", err); }
+    try { registerRecord(entry => recordAsGM(entry)); } catch (err) { ctx.log.warn("hot patch: the ledger relay was not re-registered", err); }
   } else {
     reg.once("socketlib.ready", () => {
-      registerRecord(recordAsGM);
+      registerRecord(entry => recordAsGM(entry));
     }, { label: "socketlib.ready" });
   }
   ctx.onReady(() => {
@@ -277,9 +304,10 @@ export function install(reg, ctx) {
   }, "ledger ready");
 }
 
-/** Forget the relay; a mirror still pending is written now rather than dropped. */
+/** Forget the relay and the recent transfers; a mirror still pending is written now rather than dropped. */
 export function uninstall() {
   resetSocket();
+  transfers = [];
   if (mirrorPending) {
     cancelMirror();
     void writeMirror(readLog());
