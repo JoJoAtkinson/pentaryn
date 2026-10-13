@@ -99,6 +99,8 @@ const { ApplicationV2 } = foundry.applications.api;
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 const CARRIERS_SHOWN = 8;
 const SETTING_KEY = `${MODULE}.${REGISTRY_SETTING}`;
+/** The embedded item types `derivedFor` reads an actor's derived ids from. */
+const DERIVED_ITEM_TYPES = new Set(["race", "background"]);
 
 /** "2h ago" with the ISO time as tooltip; `null` → the "before timestamps" dash. */
 function when(ms) {
@@ -238,9 +240,20 @@ export class AttributeReview extends ApplicationV2 {
     const onRegistry = s => {
       if (s?.key === SETTING_KEY) this.live.debounce(() => this.safeRender());
     };
+    const onActor = () => this.dropCarriers();
+    // derivedFor reads the species and background items: a swap there moves an actor's ids too
+    const onItem = item => {
+      if (item?.parent && DERIVED_ITEM_TYPES.has(item.type)) this.dropCarriers();
+    };
     this.live.start([
       ["updateSetting", onRegistry],
       ["createSetting", onRegistry],
+      ["createActor", onActor],
+      ["updateActor", onActor],
+      ["deleteActor", onActor],
+      ["createItem", onItem],
+      ["updateItem", onItem],
+      ["deleteItem", onItem],
       [
         "updateUser",
         (user, changes) => {
@@ -261,6 +274,7 @@ export class AttributeReview extends ApplicationV2 {
 
   async _onClose(options) {
     this.live.stop();
+    this.dropCarriers();
     this.offConflict?.();
     this.offConflict = null;
     return super._onClose?.(options);
@@ -268,8 +282,14 @@ export class AttributeReview extends ApplicationV2 {
 
   /* ── data ──────────────────────────────────────────────────────────────── */
 
-  /** id → carrier actor names, computed per render (world actors; unlinked tokens not counted). */
+  /**
+   * id → carrier actor names (world actors; unlinked tokens not counted). The walk is kept between
+   * renders while the window watches the world — expanding a row repaints without re-walking every
+   * actor — and dropped when an actor, or the species/background item its derived ids read, is
+   * created, changed or deleted (ties-ui-perf-11). Not kept before the hooks are up or after close.
+   */
   carriers() {
+    if (this.carrierMap && this.live?.watching) return this.carrierMap;
     const map = new Map();
     // the same walk, keeping the actors too: the personal-clue rows need them (ties-27)
     const actors = new Map();
@@ -284,7 +304,13 @@ export class AttributeReview extends ApplicationV2 {
       }
     }
     this.carrierActors = actors;
+    this.carrierMap = this.live?.watching ? map : null;
     return map;
+  }
+
+  /** Forget the carrier walk; the next render walks the world again. */
+  dropCarriers() {
+    this.carrierMap = null;
   }
 
   /* ── render ────────────────────────────────────────────────────────────── */

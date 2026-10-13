@@ -26,6 +26,11 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Fixed (declared): the Attribute Review keeps its carrier walk while open and drops it on
+`createActor`/`updateActor`/`deleteActor` (and a species/background item's create, update or delete),
+so expanding a row repaints without walking every world actor; the carriers shown are unchanged.
+ties-ui-perf-11.
+
 Fixed (declared): the worn badges keep the ids of the scene's marked tokens (rebuilt on
 `canvasReady`, kept by a new `createToken` hook, `updateToken` flag writes and `deleteToken`), so a
 token's animation step asks for a badge repaint only when that token is marked; the badges drawn are
