@@ -32,7 +32,7 @@ let badgeLayer = null;
  * 'addChild')" on the player client (usability Area 9). A draw that is no longer the latest stops.
  */
 let drawRun = 0;
-export const badges = []; // { region, x, y, r, revealed, bounds, sprite, cards }
+export const badges = []; // { region, x, y, r, revealed, bounds, pts, sprite, cards }
 /** Region uuids this client has seen in sight, so a badge stays once found even before fog saves. */
 export const seen = new Set();
 /** Region uuids whose Portal card window is in edit mode: their badge can be dragged. */
@@ -129,7 +129,8 @@ export async function drawBadges() {
       c.addChild(sq, mv);
     }
     layer.addChild(c);
-    badges.push({ region, x, y, r, revealed, bounds: b, sprite: c, cards: dests.map(d => cardFor(d.region)) });
+    // perf-1: the square's sample points, once per draw — refreshBadgeSight runs on every sightRefresh
+    badges.push({ region, x, y, r, revealed, bounds: b, pts: samplePoints(b), sprite: c, cards: dests.map(d => cardFor(d.region)) });
   });
   refreshBadgeSight();
 }
@@ -141,7 +142,7 @@ export const samplePoints = b => samplePointsAt(b, canvas.grid.size);
 export function refreshBadgeSight() {
   for (const badge of badges) {
     if (game.user.isGM || seen.has(badge.region.uuid)) { badge.sprite.visible = true; continue; }
-    const pts = samplePoints(badge.bounds);
+    const { pts } = badge;
     const now = pts.some(p => canvas.fog.isPointExplored(p))
       || canvas.visibility.testVisibility(pts, { tolerance: 0 });
     if (now) seen.add(badge.region.uuid);

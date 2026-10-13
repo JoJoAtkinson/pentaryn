@@ -191,6 +191,25 @@ test("refreshBadgeSight: GM sees all; a player sees a badge once explored or in 
   assert.deepEqual(S.badges.map(b => b.sprite.visible), [true, true, true]);
 });
 
+test("perf-1: drawBadges computes each badge's sample points once; refreshBadgeSight reuses them; badges() and badges-gm.json never carry them", async () => {
+  onCanvas();
+  await S.drawBadges();
+  for (const b of S.badges) assert.deepEqual(b.pts, S.samplePoints(b.bounds), `${b.region.name}: pts on the record`);
+  F.become({ userId: P1 });
+  S.seen.clear();
+  W.explored = () => false;
+  const got = [];
+  W.visible = pts => { got.push(pts); return false; };
+  S.refreshBadgeSight();
+  S.refreshBadgeSight();
+  assert.equal(got.length, 6);
+  got.forEach((pts, i) => assert.equal(pts, S.badges[i % 3].pts, "the cached array, not a rebuilt one"));
+  F.become({ userId: GM });
+  const { contribution } = await import("../badges.mjs");
+  assert.deepEqual(Object.keys(contribution().impl.badges()[0]), ["region", "revealed", "visible", "cards"]);
+  assert.equal(JSON.stringify(summary()).includes("pts"), false, "the badges-gm.json summary has no pts");
+});
+
 test("sightRefresh hook: players only, and only with badges", async () => {
   onCanvas();
   await S.drawBadges();
