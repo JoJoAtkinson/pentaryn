@@ -17,6 +17,7 @@
 import { stanceOf, clampStance, clampStrength, clampNotes, clampWord, FLAG, LEGACY_SCOPE, MODULE } from "./ties-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { perFrame } from "./lib/perf.mjs";
 
 const log = makeLog(MODULE);
 
@@ -494,3 +495,72 @@ export class LiveHooks {
   }
 }
 
+/* -------------------------------------------- */
+/*  Client-only canvas layers (ties-ui-EXT-9)   */
+/* -------------------------------------------- */
+
+/**
+ * The PIXI layer a painter draws on — the wires (overlay.mjs) and the worn badges (worn.mjs) — made
+ * on first paint and kept on `state.layer`. Pointer-transparent, stacked at `state.z` on
+ * canvas.interface, which exists in this browser alone (never a world document). Null until the
+ * canvas is ready.
+ *
+ * @param {{ layer: object|null, z: number, name: string }} state
+ * @param {() => object} make  a fresh PIXI display object
+ */
+export function interfaceLayer(state, make) {
+  if (state.layer && !state.layer.destroyed) return state.layer;
+  if (!canvas?.ready || !canvas.interface) return null;
+  const layer = make();
+  layer.eventMode = "none";
+  layer.zIndex = state.z;
+  canvas.interface.addChild(layer);
+  state.layer = layer;
+  return layer;
+}
+
+/** Destroy the layer (children and all) and forget it. A teardown that throws is logged, never raised. */
+export function dropLayer(state) {
+  if (!state.layer) return;
+  try {
+    if (!state.layer.destroyed) state.layer.destroy({ children: true });
+  } catch (e) {
+    log.warn(`${state.name} teardown`, e);
+  }
+  state.layer = null;
+}
+
+/**
+ * `paint` at most once per animation frame, through the kit's `perFrame` — refreshToken fires per
+ * animation step per token, and once a frame is plenty for something that follows a token. A paint
+ * that throws is logged as `<name> paint`. `cancel()` drops a queued frame (uninstall, ties-ui-M8).
+ *
+ * @param {() => void} paint
+ * @param {string} name
+ * @returns {{ draw: () => void, cancel: () => void }}
+ */
+export function framePainter(paint, name) {
+  let id = 0;
+  const g = {
+    requestAnimationFrame: cb => (id = requestAnimationFrame(() => {
+      id = 0;
+      cb();
+    }))
+  };
+  const make = () => perFrame(() => {
+    try {
+      paint();
+    } catch (e) {
+      log.warn(`${name} paint`, e);
+    }
+  }, { g });
+  let run = make();
+  return {
+    draw: () => run(),
+    cancel() {
+      if (id) cancelAnimationFrame(id);
+      id = 0;
+      run = make(); // perFrame cannot be told its frame was cancelled: a fresh one is not waiting on it
+    }
+  };
+}

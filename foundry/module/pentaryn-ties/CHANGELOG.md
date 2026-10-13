@@ -185,6 +185,11 @@ selected as "<key> (not in this world)" instead of the identify check silently s
 skill on its next save. Skill names in the Inspect preview and the review panel's "was" lines are
 localized too. One `skillOptionsHTML` / `skillLabelOf` in `core/html.mjs`. ties-ui-EXT-8.
 
+Changed (declared, no table-visible change): the tie wires and the worn badges no longer carry their
+own copy of the once-per-frame scheduler and the canvas-layer helpers. Both paint through one
+`framePainter` (the kit's `perFrame`, cancellable on uninstall) and one `interfaceLayer` / `dropLayer`
+pair in `ties-adapter.mjs`. Same frames, same pixels (canvas goldens byte-identical). ties-ui-EXT-9.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

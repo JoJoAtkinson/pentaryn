@@ -44,7 +44,7 @@
 
 import { MODULE } from "./ties-core.mjs";
 import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size, teardown } from "./popups.mjs";
-import { canSee, read } from "./ties-adapter.mjs";
+import { canSee, dropLayer, framePainter, interfaceLayer, read } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
 
@@ -55,7 +55,10 @@ const log = makeLog(MODULE);
  * and `tieId` is the single person key 7 last put up. There is deliberately NO "is it
  * showing" boolean here — see the ⚠ note above showAll().
  */
-const state = { wires: null, actorId: null, mode: null, tieId: null };
+const state = { actorId: null, mode: null, tieId: null };
+
+/** The wire layer: one PIXI Graphics on canvas.interface (interfaceLayer / dropLayer, ties-adapter.mjs). */
+const wires = { layer: null, z: 1000, name: "wire" };
 
 /* -------------------------------------------- */
 /*  Who, and how far                            */
@@ -145,45 +148,18 @@ function strokeLine(g, from, to, colour, alpha, width) {
   }
 }
 
-function wireLayer() {
-  if (state.wires && !state.wires.destroyed) return state.wires;
-  if (!canvas?.ready || !canvas.interface) return null;
-  const g = new PIXI.Graphics();
-  g.eventMode = "none";
-  g.zIndex = 1000;
-  canvas.interface.addChild(g);
-  state.wires = g;
-  return g;
-}
-
-function dropWires() {
-  if (!state.wires) return;
-  try {
-    if (!state.wires.destroyed) state.wires.destroy({ children: true });
-  } catch (e) {
-    log.warn(`wire teardown`, e);
-  }
-  state.wires = null;
-}
+const dropWires = () => dropLayer(wires);
 
 /**
- * Coalesce to one repaint per frame. `refreshToken` fires per animation step per token,
- * and painting reads every card's bounding box — which forces a layout. Once a frame is
- * plenty for a line that follows a token.
+ * Coalesce to one repaint per frame (`perFrame`, via framePainter). `refreshToken` fires per
+ * animation step per token, and painting reads every card's bounding box — which forces a layout.
+ * Once a frame is plenty for a line that follows a token.
  */
-let queued = 0;
+const frame = framePainter(() => paintWires(), "wire");
 export function drawWires() {
-  // hot: state.wires — no card and no wire layer means nothing to paint and nothing to drop (ties-25)
-  if (!size() && !state.wires) return;
-  if (queued) return;
-  queued = requestAnimationFrame(() => {
-    queued = 0;
-    try {
-      paintWires();
-    } catch (e) {
-      log.warn(`wire paint`, e);
-    }
-  });
+  // hot: wires.layer — no card and no wire layer means nothing to paint and nothing to drop (ties-25)
+  if (!size() && !wires.layer) return;
+  frame.draw();
 }
 
 /**
@@ -195,7 +171,7 @@ function paintWires() {
   const live = liveCards();
   if (!live.length) return dropWires();
 
-  const g = wireLayer();
+  const g = interfaceLayer(wires, () => new PIXI.Graphics());
   if (!g) return;
   g.clear();
 
@@ -472,7 +448,7 @@ export function install(reg) {
 
   reg.on("canvasTearDown", () => {
     // Foundry destroys canvas.interface under us — drop the handle rather than the cards.
-    state.wires = null;
+    wires.layer = null;
     state.actorId = null;
     state.mode = null;
     state.tieId = null;
@@ -490,9 +466,9 @@ export function install(reg) {
   }, { label: "overlay: canvasPan" });
 
   // a tie who walks out of sight (or into it) while cards are up
-  // hot: state.wires — drawWires only schedules one frame; the paint reads the live card set
+  // hot: wires.layer — drawWires only schedules one frame; the paint reads the live card set
   reg.on("refreshToken", () => drawWires(), { label: "overlay: refreshToken" });
-  // hot: state.wires
+  // hot: wires.layer
   reg.on("sightRefresh", () => drawWires(), { label: "overlay: sightRefresh" });
 
   // the cards' API paths (rows in api-manifest.mjs)
@@ -506,8 +482,7 @@ export function install(reg) {
  */
 export function uninstall() {
   setOnChange(null);
-  if (queued) cancelAnimationFrame(queued);
-  queued = 0;
+  frame.cancel();
   dropWires();
   teardown();
 }
