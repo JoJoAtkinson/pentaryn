@@ -19,8 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # ── The Foundry application ──
 # Where it lives and how it starts are host.py's (Mac: /Applications, `open -a`;
-# BOSS: FOUNDRY_APP_ROOT and PENTARYN_START_CMD). This name is only for messages.
-FOUNDRY_APP = _host.MAC_APP_NAME
+# BOSS: FOUNDRY_APP_ROOT and PENTARYN_START_CMD); messages name host.foundry_app_root().
 FOUNDRY_URL = f"http://localhost:{_host.foundry_port()}"
 FOUNDRY_BOOT_TIMEOUT = 40  # seconds to wait for the port after host.start()
 

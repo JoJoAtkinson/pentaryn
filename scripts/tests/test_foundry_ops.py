@@ -537,6 +537,12 @@ def test_world_is_launched_is_gone_M4():
     assert not hasattr(service, "world_is_launched")
 
 
+def test_config_has_no_foundry_app_M5():
+    # M5: config.FOUNDRY_APP was "only for messages" and no message read it — the
+    # launch-failure message names host.foundry_app_root() instead.
+    assert not hasattr(cfg, "FOUNDRY_APP")
+
+
 # ── the world guard ───────────────────────────────────────────────────────────
 # The Makefile targeted `ardenhaven` while the live world was `space-journey`, so the
 # import staged into an unplayed world, found nothing, and then asserted a 404 against
