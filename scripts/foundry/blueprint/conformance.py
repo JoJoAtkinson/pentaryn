@@ -1851,13 +1851,15 @@ def _awaited_call(body: str, i: int) -> str | None:
 
 def loop_bodies(code: str) -> list[tuple[int, str]]:
     out = []
-    for mm in re.finditer(r"(?<![\w$.])(?:for|while)\s*\(", code):
+    for mm in re.finditer(r"(?<![\w$.])(?:for(?:\s+await)?|while)\s*\(", code):
         close = match_paren(code, mm.end() - 1)
         q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
         if code[q:q + 1] == "{":
             out.append((mm.start(), code[q:match_paren(code, q) + 1]))
         else:
             out.append((mm.start(), code[q:_expr_end(code, q) + 1]))
+    for mm in re.finditer(r"(?<![\w$.])do\s*(?=\{)", code):                   # do { … } while (…)
+        out.append((mm.start(), code[mm.end():match_paren(code, mm.end()) + 1]))
     for mm in re.finditer(r"\.(?:forEach|map)\(\s*(?=async\b)", code):
         _, body, _ = handler_at(code, mm.end())
         if body:

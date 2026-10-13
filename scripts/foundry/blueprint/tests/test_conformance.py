@@ -642,6 +642,22 @@ def test_c59_per_document_await_in_a_loop(tmp_path, code, want):
     assert res(one(tmp_path, code), "C59")["status"] == ("warn" if want == "warn" else "pass")
 
 
+C59_LOOP_FORMS_CASES = [                                                         # py-blueprint-AC-5
+    ("for await (const t of stream) { await t.update({ hidden: true }); }", "warn"),
+    ("for await (const t of stream) await t.delete();", "warn"),
+    ("do { await q.pop().delete(); } while (q.length);", "warn"),
+    ("do\n{\n  await a.setFlag(M, 'k', 1);\n} while (next());", "warn"),
+    ("for await (const t of stream) { u.push({ _id: t.id }); }", "pass"),
+    ("do { u.push(q.pop()); } while (q.length);\nawait scene.updateEmbeddedDocuments('Token', u);", "pass"),
+    ("const todo = 1; await t.update({});", "pass"),                             # `do` inside a name
+]
+
+
+@pytest.mark.parametrize("code,want", C59_LOOP_FORMS_CASES)
+def test_c59_sees_for_await_and_do_while_py_blueprint_ac_5(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C59")["status"] == want
+
+
 C60_CASES = [
     ('reg.on("refreshToken", async (t) => { await paint(t); });', "warn"),
     ('reg.on("refreshToken", (t) => { void (async () => { await paint(t); })(); });', "warn"),
