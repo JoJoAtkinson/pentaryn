@@ -12,7 +12,7 @@
  * also deletes with `replacements`, and does not drag anything along.
  */
 
-import { MODULE, FLAG_SCOPE, crowded, followersOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
+import { MODULE, FLAG_SCOPE, crowded, displaceOptions, followersOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
 import { carryTo, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
@@ -56,7 +56,8 @@ function stepOff(arrived) {
  *
  * Every active-GM tab runs this (the MCP bridge and a GM browser are both activeGM.isSelf), so a
  * move is claimed first and only the winning tab writes (portals-async-1). The claim flag leaves
- * in the winner's own write, so core's next teleport (toObject) does not carry it to a new scene.
+ * in the winner's own write, so core's next teleport (toObject) does not carry it to a new scene;
+ * an emptied `claims` object leaves with it (portals-w3-2).
  */
 export async function spreadArrival(tokenOrUuid) {
   const arrived = docOf(tokenOrUuid, "Token", "spreadArrival");   // ROB-6
@@ -66,9 +67,14 @@ export async function spreadArrival(tokenOrUuid) {
   if (!won) return arrived;
   const place = stepOff(arrived);                                 // the scene may have moved on meanwhile
   const changes = { ...place };
-  if (arrived.flags?.[MODULE]?.claims?.spread !== undefined) changes[flagPath(FLAG_SCOPE, "claims.spread")] = _del;
+  // The claim leaves with the move; when it was the only one, `claims` goes too — no empty {} left (portals-w3-2).
+  const claims = arrived.flags?.[MODULE]?.claims;
+  if (claims?.spread !== undefined) {
+    const others = Object.keys(claims).some(k => k !== "spread");
+    changes[flagPath(FLAG_SCOPE, others ? "claims.spread" : "claims")] = _del;
+  }
   if (!Object.keys(changes).length) return arrived;
-  await arrived.update(changes, place ? { teleport: true, animate: false } : {});
+  await arrived.update(changes, place ? displaceOptions([{ _id: arrived.id, ...place }]) : {});
   return arrived;
 }
 

@@ -96,6 +96,14 @@ function boundsOf({ x, y, width, height }) {
   return { x, y, width, height, contains: (px, py) => px >= x && px < x + width && py >= y && py < y + height };
 }
 
+/** Core v14 (client/documents/token.mjs #inferMovementWaypoints): the `teleport` update option warns. */
+function teleportOptionWarning(options) {
+  if (options && "teleport" in options) {
+    foundry.utils.logCompatibilityWarning("DatabaseUpdateOperation#teleport has been deprecated. "
+      + "Use DatabaseUpdateOperation#waypoints or TokenDocument#movement instead.", { since: 13, until: 15 });
+  }
+}
+
 function embedded(doc, coll, documentName) {
   Object.defineProperty(doc, coll, { value: new StubCollection(), enumerable: false, writable: true });
   return doc[coll];
@@ -103,7 +111,24 @@ function embedded(doc, coll, documentName) {
 
 /** A scene with grid, dimensions, walls, tiles and the embedded write methods portals calls. */
 export function scene({ id, name, navName = "", thumb = null, background = null, grid = 100, regions = [], tokens = [], walls = [], tiles = [] } = {}) {
-  const s = makeScene({ id, name, navName, thumb, background: { src: background } });
+  const s = makeScene({ id, name, navName, thumb });
+  // v14 shape: the art lives on the scene's Levels. Scene#background is core's deprecated shim
+  // (client/documents/scene.mjs): it warns through logCompatibilityWarning, then reads firstLevel.
+  embedded(s, "levels");
+  const level = makeDoc("Level", { id: `${id}Lvl0`, name: "Level", background: { src: background }, textures: {} }, { parent: s });
+  s.levels.set(level.id, level);
+  Object.defineProperties(s, {
+    firstLevel: { get: () => s.levels.values().next()?.value, enumerable: false },
+    initialLevel: { get: () => s.firstLevel, enumerable: false },
+    background: {
+      get() {
+        foundry.utils.logCompatibilityWarning("Scene#background is deprecated. Use Level#background and Level#textures instead.",
+          { since: 14, until: 16 });   // core adds once: true; left off so each test sees its own read
+        return { src: s.firstLevel?.background?.src ?? null };
+      },
+      enumerable: false, configurable: true,
+    },
+  });
   s.grid = {
     size: grid,
     getSnappedPoint: ({ x, y }, { mode } = {}) => {
@@ -147,6 +172,7 @@ export function scene({ id, name, navName = "", thumb = null, background = null,
     },
     async updateEmbeddedDocuments(type, updates, options = {}) {
       F.calls.push({ op: "updateEmbedded", parent: s.uuid, type, updates: F.plain(updates), options: F.plain(options) });
+      if (type === "Token") teleportOptionWarning(options);
       const coll = collOf(type);
       for (const { _id, ...rest } of updates) Object.assign(coll.get(_id) ?? {}, rest);
       return updates;
@@ -285,6 +311,17 @@ export async function boot({ settings = {} } = {}) {
     },
     async flush(n = 6) { for (let i = 0; i < n; i++) await new Promise(r => setImmediate(r)); },
     callsSince(i, ops) { return F.calls.slice(i).filter(c => !ops || ops.includes(c.op)); },
+    /** Core compatibility warnings logged since F.logged[i] (what a v14 client prints as deprecated). */
+    deprecationsSince(i) {
+      return F.logged.slice(i).map(l => String(l.args?.[0] ?? "")).filter(m => /deprecated/i.test(m));
+    },
+  };
+  // A single Token#update with the `teleport` option warns as core does. Wrapped, not Hooks.on,
+  // so the registration manifest (golden/hooks.json) stays the module's own.
+  const hooksCall = F.Hooks.call;
+  F.Hooks.call = function (name, ...args) {
+    if (name === "preUpdateToken") teleportOptionWarning(args[2]);
+    return hooksCall.call(this, name, ...args);
   };
 
   Object.assign(F.canvas, {
