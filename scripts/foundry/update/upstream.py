@@ -20,8 +20,8 @@ prefer it.
 and for premium content the package's own site, since licence-gated releases have no
 public notes to read.
 
-Everything is cached under ``.state/vtt-update-cache/`` for the day, so re-running a dry
-scan while iterating costs nothing.
+Successful fetches are cached under ``.state/vtt-update-cache/`` for six hours (a failed one is
+retried next call, never cached), so re-running a dry scan while iterating costs nothing.
 """
 
 from __future__ import annotations
@@ -146,13 +146,19 @@ def _cache_path(key: str) -> Path:
 
 
 def _cached(key: str, produce, ttl: int = CACHE_TTL):
+    """``None`` means the fetch failed, so it is never cached and a ``null`` already on
+    disk is a miss — an unreachable upstream is retried next call, not pinned for the TTL."""
     path = _cache_path(key)
     if path.exists() and (time.time() - path.stat().st_mtime) < ttl:
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            hit = json.loads(path.read_text(encoding="utf-8"))
+            if hit is not None:
+                return hit
         except json.JSONDecodeError:
             pass
     value = produce()
+    if value is None:
+        return None
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value), encoding="utf-8")
     return value
