@@ -47,7 +47,10 @@ repair labels that missed a rename, after the first relabel has finished.
 
 Two renames of one actor on the same client are chained (names-ac-3): the second relabel starts
 after the first settles and reads the labels it wrote, so `Bob → Rob → Robert` lands on `Robert`
-however fast they come. Renames of one actor from two different tabs or users less than a round
+however fast they come — also when both are sent before either reply (`a.update(Mid); await
+a.update(Fin)`), where both `preUpdateActor` calls still see the first name: the update options carry
+how many renames of that actor had landed when it was sent (`pentarynLanded[id]`), and if one landed
+since, the relabel starts from the name that one left (FIX-3). Renames of one actor from two different tabs or users less than a round
 trip apart are not chained and can leave labels on the middle name: call
 `sync(actor, middle, final)` to repair.
 

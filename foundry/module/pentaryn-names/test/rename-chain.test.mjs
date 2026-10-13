@@ -43,13 +43,25 @@ F.fire("ready");
 const bob = game.actors.get(IDS.bob);
 const label = id => [...game.scenes].flatMap(s => [...s.tokens]).find(t => t.id === id).name;
 
-/** Rename as Foundry would on the renaming client: preUpdateActor, then updateActor. No waiting. */
-function rename(actor, to) {
+/**
+ * Rename as Foundry does on the renaming client: preUpdateActor runs at once, while actor.name still
+ * holds the old value; the name changes and updateActor fires only when the server's reply comes back.
+ * Returns that reply as `land()`. Live (FIX-3), `a.update(Mid); await a.update(Fin)` ran BOTH
+ * preUpdateActor calls before either reply, so both saw the first name.
+ */
+function send(actor, to, userId = IDS.gm) {
   const changes = { name: to };
   const options = {};
-  F.fireCall("preUpdateActor", actor, changes, options, IDS.gm);
-  actor.name = to;
-  F.fire("updateActor", actor, changes, options, IDS.gm);
+  F.fireCall("preUpdateActor", actor, changes, options, userId);
+  return () => {
+    actor.name = to;
+    F.fire("updateActor", actor, changes, options, userId);
+  };
+}
+
+/** One rename whose reply lands before the next is sent. */
+function rename(actor, to) {
+  send(actor, to)();
 }
 
 async function settle() {
@@ -58,8 +70,10 @@ async function settle() {
 
 test("names-ac-3: two renames of one actor inside a round trip leave its labels on the final name", async () => {
   reset(F);
-  rename(bob, "Rob");
-  rename(bob, "Robert");
+  const first = send(bob, "Rob");
+  const second = send(bob, "Robert");   // sent before the first reply: preUpdateActor still sees "Bob"
+  first();
+  second();
   await settle();
   assert.equal(bob.prototypeToken.name, "Robert");
   assert.equal(label("tokA1000000000001"), "Robert", "scene one token");
@@ -108,6 +122,32 @@ test("names-ac-3: once a chain drains, a later rename of that actor runs at once
   rename(bob, "Rob");
   await settle();
   rename(bob, "Robert");
+  await settle();
+  assert.equal(label("tokA1000000000001"), "Robert");
+  assert.equal(label("tokA2000000000001"), "Robert");
+});
+
+test("names-ac-3 (FIX-3 live): the second reply lands after the first relabel drained — still the final name", async () => {
+  reset(F);
+  const first = send(bob, "Rob");
+  const second = send(bob, "Robert");
+  first();
+  await settle();                        // the first chain has drained before the second reply lands
+  assert.equal(label("tokA1000000000001"), "Rob");
+  second();
+  await settle();
+  assert.equal(bob.prototypeToken.name, "Robert");
+  assert.equal(label("tokA1000000000001"), "Robert");
+  assert.equal(label("tokA2000000000001"), "Robert");
+});
+
+test("names-ac-3 (FIX-3 live): another user's rename landing between my send and my reply is the old name I relabel from", async () => {
+  reset(F);
+  const mine = send(bob, "Robert");      // my preUpdateActor sees "Bob"
+  send(bob, "Rob", IDS.player)();  // another client's rename lands first; that client relabels, not me
+  // that client's relabel, done here by hand: its labels now read "Rob"
+  await game.pentaryn.names.sync(bob, "Bob", "Rob");
+  mine();
   await settle();
   assert.equal(label("tokA1000000000001"), "Robert");
   assert.equal(label("tokA2000000000001"), "Robert");

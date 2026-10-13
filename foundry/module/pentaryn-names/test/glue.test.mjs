@@ -143,6 +143,18 @@ test("the published relabel and shortName agree with the oracle on every table r
   );
 });
 
+/**
+ * names-ac-3 (FIX-3 live): preUpdateActor also stamps `pentarynLanded[id]`, how many renames of that
+ * actor had landed on this client when it ran (a count, so its value depends on earlier tests). Check
+ * it rides along with every old name, then compare the rest exactly.
+ */
+function withoutLanded(options) {
+  const { pentarynLanded, ...rest } = options;
+  assert.deepEqual(Object.keys(pentarynLanded ?? {}), Object.keys(rest.pentarynOldNames ?? {}), "a landed count for each old name");
+  for (const n of Object.values(pentarynLanded ?? {})) assert.ok(Number.isInteger(n) && n >= 0, `landed count ${n}`);
+  return rest;
+}
+
 /* ── preUpdateActor ───────────────────────────────────────────────────────────────────────────── */
 
 test("preUpdateActor remembers the old name only when the name changes, and never vetoes", () => {
@@ -160,7 +172,7 @@ test("preUpdateActor remembers the old name only when the name changes, and neve
     const options = {};
     const allowed = F.fireCall("preUpdateActor", actor, changes, options, IDS.gm);
     assert.equal(allowed, true, `never a veto: ${JSON.stringify(changes)}`);
-    assert.deepEqual(options, want, JSON.stringify(changes));
+    assert.deepEqual(withoutLanded(options), want, JSON.stringify(changes));
   }
   assert.deepEqual(effects(F.calls), []);
 });
@@ -168,7 +180,7 @@ test("preUpdateActor remembers the old name only when the name changes, and neve
 test("preUpdateActor fires the same for any user (the old name is captured on every client that sees it)", () => {
   const options = {};
   F.fireCall("preUpdateActor", game.actors.get(IDS.bob), { name: "Rob" }, options, IDS.player);
-  assert.deepEqual(options, { pentarynOldNames: { [IDS.bob]: "Bob" } });
+  assert.deepEqual(withoutLanded(options), { pentarynOldNames: { [IDS.bob]: "Bob" } });
 });
 
 /* ── updateActor ──────────────────────────────────────────────────────────────────────────────── */
@@ -253,7 +265,7 @@ test("a rename through actor.update relabels prototype + placed tokens, one writ
 test("names' own prototype write carries {pentarynNames: true} and does not re-enter", async () => {
   reset(F);
   const seen = [];
-  const id = Hooks.on("updateActor", (a, changes, options) => seen.push([changes, { ...options }]));
+  const id = Hooks.on("updateActor", (a, changes, options) => seen.push([changes, withoutLanded({ ...options })]));
   await game.actors.get(IDS.bob).update({ name: "Rob" });
   await flush();
   Hooks.off("updateActor", id);
