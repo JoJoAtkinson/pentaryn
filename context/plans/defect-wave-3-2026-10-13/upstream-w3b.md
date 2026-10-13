@@ -191,3 +191,9 @@ A possible fix is `speaker: ChatMessage.getSpeaker({actor: this.actor, token: th
 - [x] I have disabled all other modules
 ````
 
+
+## Filed (2026-10-13, Joe approved in chat)
+
+- Foundry core: https://github.com/foundryvtt/foundryvtt/issues/14845
+- Argon core: https://github.com/theripper93/enhancedcombathud/issues/166
+- Argon dnd5e: https://github.com/theripper93/enhancedcombathud-dnd5e/issues/17
