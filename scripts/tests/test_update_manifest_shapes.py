@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from scripts.foundry.update import risk, upstream
 from scripts.foundry.update.inventory import Package
 
@@ -59,3 +61,30 @@ def test_rob11_well_formed_relationships_still_pass():
     d = _decide({"requires": [{"id": "lib-wrapper"}], "systems": [{"id": "dnd5e"}]})
     assert d.bucket == risk.AUTO
     assert "malformed manifest" not in d.reasons
+
+
+@pytest.mark.parametrize("relationships", [
+    {"requires": 5}, {"requires": True}, {"conflicts": 5}, {"systems": 5},
+    {"requires": [{"id": ["x"]}]}, {"requires": [{"id": {"a": 1}}]},
+    {"conflicts": [{"id": ["x"]}]}, {"systems": [{"id": ["dnd5e"]}]},
+    {"systems": [{"id": 5}, {"id": "x"}]}, {"requires": [{"name": 7}]},
+])
+def test_rob11_wrong_shapes_hold_and_never_raise(relationships):
+    d = _decide(relationships)
+    assert d.bucket == risk.HOLD
+    assert "malformed manifest" in d.reasons
+
+
+def test_rob11_empty_relationship_lists_are_not_malformed():
+    d = _decide({"requires": [], "conflicts": None, "systems": {}})
+    assert d.bucket == risk.AUTO
+    assert "malformed manifest" not in d.reasons
+
+
+def test_rob11_non_mapping_compatibility_on_a_hand_built_upstream_does_not_raise():
+    up = upstream.Upstream(id="m", type="module", installed="1.0.0", latest="1.1.0",
+                           compatibility="13", relationships=["lib-wrapper"])
+    d = risk.classify_package(_pkg(), up, policy={}, core_version="13.351",
+                              system_version="5.1.0", installed_ids={"lib-wrapper"},
+                              seen={"m": "1.0.0"})
+    assert d.bucket == risk.AUTO
