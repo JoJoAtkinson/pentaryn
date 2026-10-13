@@ -78,6 +78,10 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] One box per marker, even when reopened mid-save** (EC-6): two opens of a marker
   whose box is still saving (Esc, then straight back in, twice) now share one box instead of each
   making their own.
+- **[declared] A second open in the same tick no longer throws** (EC-6 live, FIX-3 2026-10-13): a
+  fast double-click or Shift+P twice on one marker used to reject the second open with a
+  `TypeError` (core's `bringToFront` on a box not yet rendered). The box is only brought forward
+  once it has rendered; both opens get the one box.
 - **[declared] The manifest's `returns` strings match what crops and model return** (EXT-3): crops
   names `mimeType` and the error row's `scene` (`{encounter, scene, error}`), and model names `nav`.
   `test/ext3-returns.test.mjs` compares each row's key list with a real sample (the `crop-row`
