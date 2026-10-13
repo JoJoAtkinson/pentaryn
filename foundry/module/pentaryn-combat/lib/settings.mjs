@@ -15,10 +15,21 @@ import { codedError } from "./errors.mjs";
 /**
  * @typedef {{ key: string, scope: "world"|"client"|"user", config: boolean, type: *, default: *,
  *   name?: string, hint?: string, choices?: object|string[], range?: object, requiresReload?: boolean,
- *   onChange?: Function, store?: boolean, doc: string }} SettingRow
+ *   onChange?: Function, filePicker?: string|boolean, store?: boolean, doc: string }} SettingRow
+ *
+ * Only these reach `game.settings.register`: the row keys defineSettings maps itself (`scope`,
+ * `config`, `type`, `default`, `name`, `hint`, `choices`) and the SettingConfig keys copied as-is,
+ * `SETTING_PASSTHROUGH`. Any other key is dropped (with a `log.warn` when a log is given).
  */
 
+/** SettingConfig keys defineSettings copies from a row to `register` unchanged (store rows: `onChange` only). */
+export const SETTING_PASSTHROUGH = Object.freeze(["range", "requiresReload", "onChange", "filePicker"]);
+
+/** Row keys defineSettings itself reads; anything else not in SETTING_PASSTHROUGH is dropped. */
+const ROW_KEYS = new Set(["key", "scope", "config", "type", "default", "name", "hint", "choices", "store", "doc"]);
+
 const DEFAULT_LABELS = { section: "Setting", name: "Name", hint: "Hint" };
+const DEFAULT_KEYBIND_LABELS = { section: "Keybind", name: "Name", hint: "Hint" };
 
 function labelKey(i18nRoot, labels, key, leaf) {
   return i18nRoot ? `${i18nRoot}.${labels.section}.${key}.${leaf}` : undefined;
@@ -35,13 +46,20 @@ function choicesOf(row, i18nRoot, labels) {
 
 /**
  * Register every row, in table order. Rows already registered (a hot-patched second load) are
- * skipped. @returns {string[]} the keys registered by this call
+ * skipped. A row key outside the row keys and `SETTING_PASSTHROUGH` is not registered; with a `log`
+ * it warns once per such key name, and it never throws. @returns {string[]} the keys registered by this call
  */
-export function defineSettings(moduleId, SETTINGS, { i18nRoot, labels = DEFAULT_LABELS, g = globalThis } = {}) {
+export function defineSettings(moduleId, SETTINGS, { i18nRoot, labels = DEFAULT_LABELS, g = globalThis, log = null } = {}) {
   const lb = { ...DEFAULT_LABELS, ...labels };
   const registered = [];
+  const warned = new Set();
   for (const row of SETTINGS) {
     if (!row?.key) throw codedError("BAD_ARGS", `${moduleId}: a SETTINGS row has no key`);
+    for (const k of Object.keys(row)) {
+      if (ROW_KEYS.has(k) || SETTING_PASSTHROUGH.includes(k) || warned.has(k)) continue;
+      warned.add(k);
+      log?.warn?.(`settings: ${moduleId}.${row.key}: row key "${k}" is not passed to register (see SETTING_PASSTHROUGH)`);
+    }
     if (g.game.settings.settings?.has?.(`${moduleId}.${row.key}`)) continue;
     let config;
     if (row.store) {
@@ -56,7 +74,7 @@ export function defineSettings(moduleId, SETTINGS, { i18nRoot, labels = DEFAULT_
         type: row.type,
         default: row.default,
       };
-      for (const k of ["range", "requiresReload", "onChange", "filePicker"]) {
+      for (const k of SETTING_PASSTHROUGH) {
         if (row[k] !== undefined) config[k] = row[k];
       }
       const choices = choicesOf(row, i18nRoot, lb);
@@ -105,6 +123,9 @@ export function settingsSnapshot(moduleId, SETTINGS, { g = globalThis } = {}) {
 
 /**
  * Keybinding rows: `{ key, name, hint, editable, onDown, onUp, restricted, precedence, repeat }`.
+ * Every key but `key` and `doc` is passed to `register` as-is. A row without a literal `name`/`hint`
+ * gets `${i18nRoot}.${section}.${key}.${Name|Hint}`; `labels` overrides those segments as in
+ * defineSettings (default `{ section: "Keybind", name: "Name", hint: "Hint" }`).
  *
  * Foundry only accepts keybindings until it builds its binding map, right after the `setup` hook
  * (Game#initializeKeyboard); `register` throws "You cannot register a Keybinding after the init
@@ -112,8 +133,8 @@ export function settingsSnapshot(moduleId, SETTINGS, { g = globalThis } = {}) {
  * registers nothing once `game.keybindings.bindings` exists, and a row whose action is already
  * registered is skipped. @returns {string[]} the keys registered by this call
  */
-export function defineKeybindings(moduleId, KEYBINDINGS, { i18nRoot, g = globalThis, log = null } = {}) {
-  const lb = { section: "Keybind", name: "Name", hint: "Hint" };
+export function defineKeybindings(moduleId, KEYBINDINGS, { i18nRoot, labels = DEFAULT_KEYBIND_LABELS, g = globalThis, log = null } = {}) {
+  const lb = { ...DEFAULT_KEYBIND_LABELS, ...labels };
   const kb = g.game.keybindings;
   const rows = KEYBINDINGS ?? [];
   if (rows.length && kb.bindings) {

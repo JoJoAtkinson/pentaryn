@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { defineKeybindings, defineSettings, serialStore, settingReader, settingsSnapshot } from "../settings.mjs";
+import { SETTING_PASSTHROUGH, defineKeybindings, defineSettings, serialStore, settingReader, settingsSnapshot } from "../settings.mjs";
 
 function fakeGame({ isGM = true, activeSelf = true } = {}) {
   const registry = new Map();
@@ -63,6 +63,34 @@ test("defineSettings forwards filePicker to register", () => {
   const g = fakeGame();
   defineSettings("pentaryn-x", [{ key: "img", scope: "world", config: true, type: String, default: "", filePicker: "image", doc: "img" }], { g });
   assert.equal(g.registry.get("pentaryn-x.img").filePicker, "image");
+});
+
+test("kit-ext-9: SETTING_PASSTHROUGH is exported; an unknown row key warns once per key, never throws", () => {
+  assert.deepEqual([...SETTING_PASSTHROUGH], ["range", "requiresReload", "onChange", "filePicker"]);
+  assert.equal(Object.isFrozen(SETTING_PASSTHROUGH), true);
+  const rows = [
+    { key: "a", type: String, default: "", requiresReload: true, doc: "a" },
+    { key: "b", type: Number, default: 0, step: 5, doc: "b" },
+    { key: "c", type: Number, default: 0, step: 5, mystery: 1, doc: "c" },
+  ];
+  const warn = [];
+  const g = fakeGame();
+  assert.deepEqual(defineSettings("pentaryn-x", rows, { g, log: { warn: m => warn.push(m) } }), ["a", "b", "c"]);
+  // once per unknown key name per call: "step" on c does not warn again
+  assert.deepEqual(warn, [
+    'settings: pentaryn-x.b: row key "step" is not passed to register (see SETTING_PASSTHROUGH)',
+    'settings: pentaryn-x.c: row key "mystery" is not passed to register (see SETTING_PASSTHROUGH)',
+  ]);
+  assert.equal("step" in g.registry.get("pentaryn-x.b"), false);
+  // no log: silent, and still registers
+  const g2 = fakeGame();
+  assert.deepEqual(defineSettings("pentaryn-x", rows, { g: g2 }), ["a", "b", "c"]);
+});
+
+test("kit-ext-9: defineKeybindings takes a labels option like defineSettings", () => {
+  const g = fakeGame();
+  defineKeybindings("pentaryn-x", [{ key: "hide", editable: [] }], { i18nRoot: "PENTARYN_X", labels: { section: "keybindings", name: "name", hint: "hint" }, g });
+  assert.deepEqual(g.binds, [["pentaryn-x.hide", "PENTARYN_X.keybindings.hide.name", "PENTARYN_X.keybindings.hide.hint"]]);
 });
 
 test("setting(): live value, the default when unreadable, undefined for an unknown key", () => {
