@@ -1235,6 +1235,27 @@ def test_bundled_restore_downloads_only_what_this_machine_lacks(two_hosts, monke
     assert _tmp_files(boss) == []
 
 
+def test_perf2_a_bundled_restore_reads_each_downloaded_bundle_twice(two_hosts, monkeypatch):
+    """PERF-2: fetch_snapshot's verify read each bundle end to end, then apply_snapshot's
+    extract read it twice more (its member list, then the extract). verify's names now
+    reach extract, which streams once: two reads in all, the same checks."""
+    _install(two_hosts.data["mac"], maps_extra=os.urandom(512 * 1024))
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        maps = bundles.local_inventory()["module/maps"].name
+    snap = [n for n in _names(two_hosts.cloud) if n.startswith("world-")][-1]
+    _install(two_hosts.data["boss"])                       # other maps art, same tools
+    size = (two_hosts.cloud / bundles.BUNDLES / maps).stat().st_size
+    from bundle_fakes import count_tar_reads
+    reads = count_tar_reads(monkeypatch)
+    with two_hosts.use("boss"):
+        assert cloud.restore(snap, yes=True) == 0
+    passes = reads[maps] / size
+    assert passes < 2.5, f"{maps} was read {passes:.2f} times end to end"
+    assert ((two_hosts.data["boss"] / "Data/modules/maps/art/big.webp").read_bytes()
+            == (two_hosts.data["mac"] / "Data/modules/maps/art/big.webp").read_bytes())
+
+
 def cloud_digest(two_hosts, who="boss"):
     with two_hosts.use(who):
         return cloud.snapshot_digest()

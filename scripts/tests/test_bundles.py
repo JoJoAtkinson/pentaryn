@@ -607,6 +607,43 @@ def test_extract_failure_mid_way_restores_nothing_and_cleans(fake_data, tmp_path
     assert not ex.exists() or not any(ex.iterdir())
 
 
+# ── PERF-2: a restore reads each bundle twice (verify, extract), not three times ──
+
+def test_perf2_verify_then_extract_reads_the_bundle_twice_not_three_times(
+        mod, fake_data, tmp_path, monkeypatch):
+    """PERF-2: verify read the tar end to end, then extract read it again for its member
+    list (getmembers) and a third time to extract (r:gz seeks back to the start). Now
+    verify returns the names it read and extract takes them, streaming once."""
+    (mod / "maps/noise.bin").write_bytes(os.urandom(512 * 1024))   # incompressible
+    tar = bundles.build(_local(mod), tmp_path / "staging")
+    size = tar.stat().st_size
+    from bundle_fakes import count_tar_reads
+    reads = count_tar_reads(monkeypatch)
+    names = bundles.verify(tar, "module", "alpha")
+    assert names and names[0] == "alpha"
+    bundles.extract(tar, "module", "alpha", fake_data, members=names)
+    passes = reads[tar.name] / size
+    assert passes < 2.5, f"the bundle was read {passes:.2f} times end to end"
+    dest = fake_data / "Data/modules/alpha"
+    assert bundles.fingerprint(dest) == bundles.fingerprint(mod)
+    assert (dest / "maps/noise.bin").read_bytes() == (mod / "maps/noise.bin").read_bytes()
+
+
+def test_perf2_extract_refuses_a_member_missing_from_the_names_it_was_given(
+        fake_data, tmp_path):
+    """PERF-2: with `members`, extract checks those names and skips its own pass — so a
+    tar that holds a member the list does not name (it changed after verify) is refused
+    while streaming, and nothing in place is touched."""
+    existing = make_module(fake_data / "Data/modules", "alpha")
+    tar = _evil_tar(tmp_path / f"module@alpha@1@{FP}.tar.gz", ["alpha/ok.txt", "alpha/new"])
+    with pytest.raises(ValueError, match="alpha/new"):
+        bundles.extract(tar, "module", "alpha", fake_data, members=["alpha/ok.txt"])
+    assert (existing / "module.json").exists()
+    assert not (fake_data / "Data/modules/alpha/ok.txt").exists()
+    ex = fake_data / bundles.TMP_DIRNAME / bundles.EXTRACT
+    assert not ex.exists() or not any(ex.iterdir())
+
+
 def test_extract_into_missing_root(fake_data, tmp_path, mod):
     tar = bundles.build(_local(mod, kind="system"), tmp_path / "staging")
     assert tar.name.startswith("system@alpha@")

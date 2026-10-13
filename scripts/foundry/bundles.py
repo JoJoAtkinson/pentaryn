@@ -480,21 +480,26 @@ def read_all(tar: Path) -> list[str]:
     return names
 
 
-def verify(tar: Path, kind: str, id: str) -> None:
+def verify(tar: Path, kind: str, id: str) -> list[str]:
     """A downloaded bundle is whole and holds only `<id>` and `<id>/…`: read_all, then the
-    member check extract does. Raises ValueError."""
+    member check extract does. Returns the member names read, for extract(members=…) to
+    skip its own names pass. Raises ValueError."""
     _check_id(kind, id)
-    _check_members(Path(tar).name, id, read_all(tar))
+    names = read_all(tar)
+    _check_members(Path(tar).name, id, names)
+    return names
 
 
-def extract(tar: Path, kind: str, id: str, data_root: Path, *, seed_cache: bool = True
-            ) -> None:
+def extract(tar: Path, kind: str, id: str, data_root: Path, *,
+            members: list[str] | None = None, seed_cache: bool = True) -> None:
     """Put the bundle `tar` in place as data_root/<kind root>/<id>.
 
-    Every member is checked to be `<id>` or under `<id>/` before anything is written.
-    The tar is extracted (filter='data') to .pentaryn-tmp/extract/<id>; the folder in
-    place, if any, is moved aside, the new one renamed in, and the old one removed — on a
-    failed swap the old one is put back. The staging area is left clean either way. With
+    Every member is checked to be `<id>` or under `<id>/` before anything is written:
+    `members` — the names verify() returned for this tar — are checked as given, else
+    the tar is read once for its names. The tar is then extracted in one streaming pass
+    (filter='data'), refusing any member not among those names, to
+    .pentaryn-tmp/extract/<id>; the folder in place, if any, is moved aside, the new one
+    renamed in, and the old one removed — on a failed swap the old one is put back. The staging area is left clean either way. With
     `seed_cache`, the cache learns the extracted folder's fingerprint from the tar's name,
     so the next backup does not hash what it just downloaded."""
     tar, data_root = Path(tar), Path(data_root)
@@ -504,15 +509,24 @@ def extract(tar: Path, kind: str, id: str, data_root: Path, *, seed_cache: bool 
         raise ValueError(f"{dest} is a symlink — refusing to replace it")
     exdir = data_root / TMP_DIRNAME / EXTRACT
     staged, aside = exdir / id, exdir / f".old-{id}"
-    with tarfile.open(tar, "r:gz") as tf:
-        members = tf.getmembers()
-        _check_members(tar.name, id, [m.name for m in members])
+    names = read_all(tar) if members is None else list(members)
+    _check_members(tar.name, id, names)
+    allowed = set(names)
+
+    def checked(tf: tarfile.TarFile):
+        for m in tf:
+            if m.name not in allowed:
+                raise ValueError(f"{tar.name}: member {m.name!r} was not in it when it was "
+                                 f"checked — refused")
+            yield m
+
+    with tarfile.open(tar, "r|gz") as tf:
         try:
             for leftover in (staged, aside):
                 if leftover.exists() or leftover.is_symlink():
                     shutil.rmtree(leftover)
             exdir.mkdir(parents=True, exist_ok=True)
-            tf.extractall(exdir, members=members, filter="data")
+            tf.extractall(exdir, members=checked(tf), filter="data")
             if not staged.is_dir():
                 raise ValueError(f"{tar.name}: holds no {id}/ folder")
             dest.parent.mkdir(parents=True, exist_ok=True)

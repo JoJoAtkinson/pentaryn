@@ -87,3 +87,63 @@ def make_module(root: Path, id: str, *, version: str | None = "1.0.0", packs: in
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(data)
     return d
+
+
+class _CountingFile:
+    """A read-only file whose reads add to `counter[key]` (bytes handed to the reader)."""
+
+    def __init__(self, fh, counter: dict, key: str):
+        self._fh, self._counter, self._key = fh, counter, key
+
+    def _add(self, n: int) -> None:
+        self._counter[self._key] = self._counter.get(self._key, 0) + n
+
+    def read(self, *a):
+        data = self._fh.read(*a)
+        self._add(len(data))
+        return data
+
+    def read1(self, *a):
+        data = self._fh.read1(*a)
+        self._add(len(data))
+        return data
+
+    def readinto(self, b):
+        n = self._fh.readinto(b) or 0
+        self._add(n)
+        return n
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self._fh.close()
+
+    def __iter__(self):
+        return iter(self._fh)
+
+    def __getattr__(self, name):
+        return getattr(self._fh, name)
+
+
+def count_tar_reads(monkeypatch, suffix: str = ".tar.gz") -> dict[str, int]:
+    """Patch every way the bundle code opens a file (builtins.open, which gzip uses, and
+    tarfile's own bltn_open) so reads of a `*<suffix>` file are counted by its name.
+    Returns the live {file name: bytes read} map — bytes read / file size is how many
+    times that tar was read end to end (PERF-2)."""
+    import builtins
+    import tarfile
+
+    counter: dict[str, int] = {}
+    real = builtins.open
+
+    def counting_open(file, mode="r", *a, **k):
+        fh = real(file, mode, *a, **k)
+        if (isinstance(file, (str, os.PathLike)) and os.fspath(file).endswith(suffix)
+                and "r" in mode and "+" not in mode):
+            return _CountingFile(fh, counter, Path(file).name)
+        return fh
+
+    monkeypatch.setattr(builtins, "open", counting_open)
+    monkeypatch.setattr(tarfile, "bltn_open", counting_open)
+    return counter

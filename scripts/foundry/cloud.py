@@ -2123,6 +2123,7 @@ class Fetched:
     extras: list[str]                  # "<kind>/<id>" here, absent from the manifest
     unchanged: list[str]               # "<kind>/<id>" here at the manifest's bundle
     cleanup: list[Path] = field(default_factory=list)   # temp files/dirs to remove
+    bundle_members: dict[str, list[str]] = field(default_factory=dict)  # name → verified names
 
 
 def _bundle_plan(manifest: dict, *, systems: bool = True, warn=None
@@ -2248,7 +2249,8 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
             # been touched — bundles.extract would find it after the world was cleared.
             for key, name in sorted(f.needed.items()):
                 try:
-                    bundles.verify(f.bundle_tars[name], *key.split("/", 1))
+                    f.bundle_members[name] = bundles.verify(f.bundle_tars[name],
+                                                            *key.split("/", 1))
                 except ValueError as exc:
                     raise RestoreError(
                         f"bundle {name} of {snap.name} is not usable — nothing local was "
@@ -2490,7 +2492,8 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
         if not ours(key):
             continue
         kind, id = key.split("/", 1)
-        bundles.extract(f.bundle_tars[name], kind, id, root)
+        bundles.extract(f.bundle_tars[name], kind, id, root,
+                        members=f.bundle_members.get(name))
         installed.append(key)
     for key in f.extras:
         if not ours(key):
