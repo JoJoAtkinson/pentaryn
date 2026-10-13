@@ -943,3 +943,44 @@ def test_py_mcp_ec_5_non_dict_handlers_skips_whole_module(tmp_path):
     assert "sample_inproc" in names
     reasons = {path.name: reason for path, reason in result.skipped}
     assert reasons["a_listhandlers_ec5.py"] == "MCP_HANDLERS is not a dict"
+
+
+# ---------------------------------------------------------------------------
+# py-mcp-ac-4: busy, unknown-tool and bad-argument calls are logged too
+# ---------------------------------------------------------------------------
+
+def test_py_mcp_ac_4_rejected_calls_write_one_log_line_each(monkeypatch, tmp_path):
+    """py-mcp-ac-4: the README promises one action-log line per tools/call, but the
+    three calls the serve loop refuses before dispatch (unknown tool, non-object
+    arguments, server busy) wrote nothing. Each now writes one line with
+    mode 'rejected', ok false, ms 0 and the same error text the caller got."""
+    sent = []
+    feed = iter([
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "nope"}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+         "params": {"name": "probe", "arguments": [1, 2]}},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+         "params": {"name": "probe", "arguments": {"a": 1}}},
+        None,
+    ])
+    monkeypatch.setattr(server, "_read_message", lambda: next(feed))
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    monkeypatch.setattr(server, "_inflight_slots", server.threading.Semaphore(0))
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    runner = _runner(lambda **k: "ok")
+    assert server._serve_loop((runner.tool,), {"probe": runner}, _SyncExecutor()) == 0
+
+    errors = [m["error"]["message"] for m in sent]
+    assert [m["id"] for m in sent] == [1, 2, 3]
+    lines = _log_lines(tmp_path)
+    assert len(lines) == 3
+    for line, error in zip(lines, errors):
+        assert set(line) == _LOG_KEYS
+        assert line["server"] == "dnd-scripts" and line["mode"] == "rejected"
+        assert line["ok"] is False and line["ms"] == 0 and line["error"] == error
+    assert [l["tool"] for l in lines] == ["nope", "probe", "probe"]
+    assert lines[0]["args"] == {} and lines[2]["args"] == {"a": 1}
+    assert lines[1]["args"] == [1, 2]
+    assert "Unknown tool" in lines[0]["error"]
+    assert "arguments must be an object" in lines[1]["error"]
+    assert lines[2]["error"].startswith("Server busy: ")

@@ -52,7 +52,10 @@ Every tool declares MCP `annotations` (`readOnlyHint`, `destructiveHint`, `idemp
 
 When `PENTARYN_MCP_LOG_DIR` is set (the same switch as the Foundry fork's log), every
 `tools/call` appends one line to `<dir>/dnd-scripts-<YYYY-MM>.jsonl`:
-`{ts, server: "dnd-scripts", tool, mode: "inprocess"|"subprocess", args, ok, ms, error}`.
+`{ts, server: "dnd-scripts", tool, mode: "inprocess"|"subprocess"|"rejected", args, ok, ms, error}`.
+A call the server refuses before running it — unknown tool, non-object `arguments`, or
+server busy — is logged too, with `mode: "rejected"`, the tool name as given, `ok: false`,
+`ms: 0` and the same error text the caller got.
 Argument values longer than 2 KB (after JSON encoding) are truncated with a marker. There is
 no `client` field — a stdio server never learns who called it. Unset, nothing is written; a
 log write that fails goes to stderr and never fails the call. `make foundry-eval-report`

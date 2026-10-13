@@ -214,7 +214,9 @@ _LOG_ARG_MAX = 2048          # characters per argument value, after JSON encodin
 _log_lock = threading.Lock()
 
 
-def _log_args(arguments: dict[str, Any]) -> dict[str, Any]:
+def _log_args(arguments: Any) -> Any:
+    if not isinstance(arguments, dict):     # a rejected call's non-object arguments
+        return _log_args({"_": arguments})["_"]
     out: dict[str, Any] = {}
     for key, value in arguments.items():
         try:
@@ -228,9 +230,11 @@ def _log_args(arguments: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _log_call(runner: "ToolRunner", arguments: dict[str, Any], *, ok: bool, ms: int,
+def _log_call(runner: "ToolRunner | str", arguments: Any, *, ok: bool, ms: int,
               error: str | None) -> None:
-    """Append one action-log line. Never raises: logging must not fail a call."""
+    """Append one action-log line. Never raises: logging must not fail a call.
+    `runner` is a tool name string for a call the serve loop rejected before
+    dispatch (unknown tool, non-object arguments, busy): mode 'rejected' (py-mcp-ac-4)."""
     log_dir = os.environ.get(_LOG_ENV, "").strip()
     if not log_dir:
         return
@@ -239,8 +243,9 @@ def _log_call(runner: "ToolRunner", arguments: dict[str, Any], *, ok: bool, ms: 
         line = {
             "ts": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
             "server": SERVER_NAME,
-            "tool": runner.tool.name,
-            "mode": "inprocess" if runner.handler is not None else "subprocess",
+            "tool": runner if isinstance(runner, str) else runner.tool.name,
+            "mode": ("rejected" if isinstance(runner, str)
+                     else "inprocess" if runner.handler is not None else "subprocess"),
             "args": _log_args(arguments),
             "ok": ok,
             "ms": ms,
@@ -888,21 +893,28 @@ def _serve_loop(
                 # Validate sync (so shape/lookup errors return in-order via the
                 # outer except), then dispatch the actual handler to a worker so
                 # concurrent calls overlap their HTTP latency.
+                # Each rejection is logged (mode 'rejected') before its error reply,
+                # so every tools/call writes one action-log line (py-mcp-ac-4).
                 tool_name = str(params.get("name") or "")
                 arguments = params.get("arguments") or {}
+                rejected = None
                 if not isinstance(arguments, dict):
-                    raise ValueError("tools/call params.arguments must be an object")
-                runner = runner_by_name.get(tool_name)
-                if runner is None:
-                    raise ValueError(f"Unknown tool: {tool_name}")
+                    rejected = "tools/call params.arguments must be an object"
+                elif tool_name not in runner_by_name:
+                    rejected = f"Unknown tool: {tool_name}"
+                if rejected is not None:
+                    _log_call(tool_name, arguments, ok=False, ms=0, error=rejected)
+                    raise ValueError(rejected)
+                runner = runner_by_name[tool_name]
                 # Admission control: refuse new work past the in-flight cap so a
                 # fast sender can't pile up unbounded queue depth (memory + tail
                 # latency). Slot is released by the worker in its finally clause.
                 if not _inflight_slots.acquire(blocking=False):
+                    busy = (f"Server busy: {_INFLIGHT_LIMIT} in-flight tool calls. "
+                            "Retry after some complete.")
+                    _log_call(tool_name, arguments, ok=False, ms=0, error=busy)
                     if msg_id is not None:
-                        _error(msg_id, _E_SERVER,
-                               f"Server busy: {_INFLIGHT_LIMIT} in-flight tool calls. "
-                               "Retry after some complete.")
+                        _error(msg_id, _E_SERVER, busy)
                     continue
                 executor.submit(_run_call_worker, msg_id, runner, arguments)
                 continue
