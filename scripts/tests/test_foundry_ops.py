@@ -393,6 +393,24 @@ def test_blueprint_wrappers_accept_a_leading_option(monkeypatch, cmd, fn, argv):
     assert seen == [argv]
 
 
+@pytest.mark.parametrize("argv", [
+    ["module-new", "demo", "--title", "T"],
+    ["--", "module-new", "demo", "--title", "T"],
+    ["--", "module-vendor", "check", "--all"],
+])
+def test_blueprint_wrappers_route_once_through_the_table(monkeypatch, argv):
+    # M10: `ops -- module-new …` reaches argparse and used to be routed by a second,
+    # hand-copied `if c == "module-…"` ladder; both spellings now go through _WRAPPERS.
+    seen = []
+    cmd = argv[1] if argv[0] == "--" else argv[0]
+    rest = argv[2:] if argv[0] == "--" else argv[1:]
+    for fn in ("module_new", "module_vendor", "module_conformance"):
+        monkeypatch.setattr(cli.modules, fn, lambda *a: pytest.fail("routed around _WRAPPERS"))
+    monkeypatch.setitem(cli._WRAPPERS, cmd, lambda r: seen.append(r) or 5)
+    assert cli.main(argv) == 5
+    assert seen == [rest]
+
+
 def test_module_new_installs_into_foundry_module_unless_out_is_given(monkeypatch):
     from scripts.foundry.blueprint import new_module
     seen = []
