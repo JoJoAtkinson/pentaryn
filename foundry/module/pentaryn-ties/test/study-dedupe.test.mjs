@@ -38,3 +38,14 @@ test("EXT-8: the attribute and individual offered rows come from one offeredRow 
   assert.equal(count(q, /available: !spent/g), 1, "one copy of the row shape");
   assert.equal(count(q, /offeredRow\(row, !!spent\[/g), 2, "both state readers call it");
 });
+
+test("EXT-5: the attribute ledger key is built by one ledgerKeyOf, the inverse of parseLedgerKey", async () => {
+  for (const f of ["apply.mjs", "share.mjs", "gate.mjs", "claim.mjs"])
+    assert.doesNotMatch(src(`study/${f}`), /`\$\{[\w.]+\}:\$\{[\w.]+\}`/, `${f} builds a ledger key inline`);
+  const { ledgerKeyOf, parseLedgerKey } = await import("../known-core.mjs");
+  const key = ledgerKeyOf("attr:species:human:l1", "zzPc000000000001");
+  assert.deepEqual(
+    { factKey: parseLedgerKey(key).factKey, characterId: parseLedgerKey(key).characterId },
+    { factKey: "attr:species:human:l1", characterId: "zzPc000000000001" }
+  );
+});

@@ -15,6 +15,7 @@ import {
   GRANTED_TEXT_MAX,
   isBlankProse,
   KNOWN_FLAG,
+  ledgerKeyOf,
   makeKnownEntry,
   readAttrBeliefs,
   readGranted,
@@ -278,7 +279,7 @@ async function applyClaimed(character, fact, payload, rollMode, refuse) {
  */
 export function readBelief(fact, characterId) {
   if (fact.ns === "attr") {
-    return readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[`${fact.factKey}:${characterId}`] ?? null;
+    return readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[ledgerKeyOf(fact.factKey, characterId)] ?? null;
   }
   return beliefsOf(fact.ledger)[characterId]?.[fact.beliefKey] ?? null;
 }
@@ -304,7 +305,7 @@ export async function putBelief(fact, characterId, record) {
    * the fresh value inside the queue, so it carries the other tab's row too and both converge.
    */
   if (!game.user?.isGM) return;
-  const key = `${fact.factKey}:${characterId}`;
+  const key = ledgerKeyOf(fact.factKey, characterId);
   const row =
     record === null
       ? null

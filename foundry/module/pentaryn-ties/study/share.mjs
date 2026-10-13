@@ -29,6 +29,7 @@ import {
   KIND_KEY,
   KNOWN_FLAG,
   knowsAttribute,
+  ledgerKeyOf,
   LORE_FLAG,
   MEMBER_FACT,
   parseFactKey,
@@ -87,7 +88,7 @@ export function factStatus(spec, character) {
     failedKnowledge = failedAttribute(knowledge(), character.id, spec.attrId);
     dc = identDcOf(subject, spec.attrId);
   } else if (spec.ns === "attr") {
-    belief = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[`${key}:${character.id}`] ?? null;
+    belief = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[ledgerKeyOf(key, character.id)] ?? null;
     dc = rollableLore(attributeLore(spec.attrId)).find(r => r.id === spec.factId)?.dc ?? null;
   } else if (spec.ns === "lore") {
     belief = beliefsOf(subject)[character.id]?.[key] ?? null;
@@ -454,7 +455,7 @@ export function legacyMissCards() {
       } else if (parsed.ns === "attr" && parsed.fact !== MEMBER_FACT) {
         subject = describeAttribute(parsed.subject)?.title ?? parsed.subject;
         const dc = readLore(attributeLore(parsed.subject)).find(r => r.id === parsed.fact)?.dc;
-        missed = rolledMiss(attrLedger[`${factKey}:${pc.id}`], dc);
+        missed = rolledMiss(attrLedger[ledgerKeyOf(factKey, pc.id)], dc);
       } else if (parsed.ns === "kind") {
         const kind = game.actors.get(parsed.subject);
         if (!kind) continue;
