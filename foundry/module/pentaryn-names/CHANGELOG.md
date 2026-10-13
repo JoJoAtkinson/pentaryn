@@ -1,10 +1,14 @@
 # Changelog — Pentaryn Token Name Sync (`pentaryn-names`)
 
-## Unreleased — 2026-10-11 (kit 1.0.2)
+## Unreleased — 2026-10-11 (kit 1.1.0)
 
 - [declared] Kit 1.0.2 (wave 2, J10): a frozen `game.pentaryn` is no longer rebuilt; the `ready`
   publish throws into Foundry's hook error report and leaves the root as it was. Nothing freezes the
   root since the importer's keystone, so a live world sees no difference.
+- [declared] Kit 1.1.0 (W2-B4, Joe 2026-10-12, `5835ac59`): `describe()` marks `sync`'s `ref` param
+  `resolve: "self"`, so the bridge's `pentaryn-write` passes a uuid, id or exact name through
+  (`rename.mjs` resolves it) instead of refusing it as eval-js only. The kit still does not wrap the
+  param.
 - [declared] names-edge-1 (+rob-1, final review 2026-10-12): renaming an unlinked token's synthetic
   actor relabels only that token (and, GM, its combatants). Before, it relabelled every sibling token
   of the base actor on every scene and sent, counted and toasted a prototype write Foundry dropped.
@@ -35,6 +39,9 @@
   `describe()` and the bridge show) now says a ref of the wrong kind (a number, a plain object, an
   Item) or a missing or non-string `oldName`/`newName` returns `fail("BAD_ARGS")`, writing nothing.
   Doc only: the behaviour already shipped; `throws` stays `["TypeError"]`.
+- [declared] names-maint-4 (final review 2026-10-12): the Unreleased header names the vendored kit
+  (1.1.0, was 1.0.2) and W2-B4 has its line. `test/changelog.test.mjs` pins the header to
+  `lib/errors.mjs` `KIT_VERSION`, so the next kit re-vendor must update it.
 
 ## 0.1.1 — 2026-10-11 (play-test fix, fix/playtest-2026-10-11)
 
