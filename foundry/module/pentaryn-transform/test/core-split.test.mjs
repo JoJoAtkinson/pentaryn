@@ -30,10 +30,9 @@ test("every core/* export is re-exported by the barrel (UNIT_SECONDS stays inter
   assert.equal("UNIT_SECONDS" in core, false);
 });
 
-test("blueprint constants: MODULE is the id (MODULE_ID an alias), NS/SHORT transform, VERSION the manifest's", () => {
+test("blueprint constants: MODULE is the id (no alias, EXT-8), NS/SHORT transform, VERSION the manifest's", () => {
   const m = manifestOf(ROOT);
   assert.equal(core.MODULE, m.id);
-  assert.equal(core.MODULE_ID, core.MODULE);
   assert.equal(core.FLAG_SCOPE, core.MODULE);
   assert.equal(core.VERSION, m.version);
   assert.deepEqual([core.SHORT, core.NS, core.I18N, core.CSS, core.CONTRACT],

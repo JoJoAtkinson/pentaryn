@@ -15,17 +15,17 @@
  * flags.pentaryn-senses.light while the form lasts — pentaryn-senses' carried-light path writes it
  * to every token of the druid and puts any hand-set light back afterwards.
  *
- * Imports wildshape-adapter.mjs (say, markBonusUsed): the Starry actions spend the Wild Shape use and
+ * Imports wildshape-adapter.mjs (say, markBonusUsed, refund): the Starry actions spend the Wild Shape use and
  * post through the same chat helper (test/graph-allow.json). The hooks are starry.mjs's.
  */
 
 import {
-  MODULE, activitiesOf, usesLeft, formatDuration, CONSTELLATIONS, STARRY_LIGHT, STARRY_SECONDS,
+  MODULE, activitiesOf, usesLeft, formatDuration, CONSTELLATIONS, STARRY_FORM, STARRY_LIGHT, STARRY_SECONDS,
   constellationOfActivity, starryEffectData, starryBlock, findWildShapeItem, secondsLeft, constellationImgOf,
-  pickStarryBase, starryEndKey, refundUpdate
+  pickStarryBase, starryEndKey
 } from "./transform-core.mjs";
 import { readFlag, flagPath } from "./lib/flags.mjs";
-import { say, markBonusUsed } from "./wildshape-adapter.mjs";
+import { say, markBonusUsed, refund } from "./wildshape-adapter.mjs";
 
 /** The druid's Starry Form effect. Static, 16 characters. */
 export const STARRY_EFFECT_ID = "pentarynStarry00";
@@ -39,7 +39,7 @@ const byIdentifier = (actor, ident, name) =>
 
 /** The Starry Form feature on this actor, or null. */
 export function starryItem(actor) {
-  return byIdentifier(actor, "starry-form", "Starry Form");
+  return byIdentifier(actor, STARRY_FORM.identifier, STARRY_FORM.name);
 }
 
 /** The Wild Shape item whose uses Starry Form spends. */
@@ -90,13 +90,26 @@ export function starrySecondsLeft(actor) {
   return secondsLeft({ start: e?.start?.time ?? e?._source?.start?.time, seconds: e?._source?.duration?.value, now: game.time.worldTime });
 }
 
+const ticking = new Map();   // form effect uuid → its tick in flight on this client
+
 /**
  * The world clock moved dt seconds while the druid is in a started combat: count the form's time
  * down (D8: only combat time counts). "expired" when it has run out, "ticked" after the write,
- * null when there is no combat-timed form (none up, or one put on before D8).
+ * null when there is no combat-timed form (none up, or one put on before D8). `effect` is the form
+ * the caller already found (perf-2: one lookup per druid per tick).
  */
-export async function tickStarry(actor, dt) {
-  const effect = activeStarry(actor);
+export async function tickStarry(actor, dt, effect = activeStarry(actor)) {
+  // One tick at a time per form on this client (transform-ui/lens-rerun, [declared]): a second clock
+  // advance landing before the first write came back read the same time left, and one tick was lost.
+  const key = effect?.uuid;
+  if (!key) return tickOnce(effect, dt);
+  const run = () => tickOnce(effect, dt);   // after the last tick either way: its caller reported a failure
+  const job = (ticking.get(key) ?? Promise.resolve()).then(run, run);
+  ticking.set(key, job);
+  return job.finally(() => { if (ticking.get(key) === job) ticking.delete(key); });
+}
+
+async function tickOnce(effect, dt) {
   const left = effect?.getFlag?.(MODULE, "starry")?.left;
   if (!Number.isFinite(left) || !Number.isFinite(dt) || dt === 0) return null;
   const next = Math.min(STARRY_SECONDS, left - dt);
@@ -224,8 +237,7 @@ export async function assumeStarry(actor, constellation) {
     } catch (err) {
       // The use is spent but the form did not go up: it comes back, as a failed shift's does (doShift).
       // A form that is up (only its light failed) keeps the use.
-      const update = constellationOf(actor) === constellation ? null : refundUpdate(ws?.system?.uses);
-      if (update) await ws.update(update);
+      if (constellationOf(actor) !== constellation) await refund(actor, ws);
       throw err;
     }
     announceStarryOn(actor, constellation);
@@ -241,8 +253,16 @@ const ending = new Set();   // actor uuids, like wildshape-adapter's `reverting`
  * Dismiss the starry form (no action required). One ending at a time per druid on this client: an
  * expiry and an Incapacitated (or a Long Rest) landing together delete once and post one line.
  */
-export async function endStarry(actor, { quiet = false, reason = "manual" } = {}) {
-  const effect = activeStarry(actor);
+export async function endStarry(actor, opts = {}) {
+  return endStarryEffect(actor, activeStarry(actor), opts);
+}
+
+/**
+ * endStarry for a form the caller already found (perf-2). One that is no longer on the druid (gone
+ * while the ending was claimed) falls back to a fresh lookup, as endStarry's own would.
+ */
+export async function endStarryEffect(actor, found, { quiet = false, reason = "manual" } = {}) {
+  const effect = found && actor?.effects?.get?.(found.id) === found ? found : activeStarry(actor);
   if (!effect || ending.has(actor.uuid)) return false;
   ending.add(actor.uuid);
   try {

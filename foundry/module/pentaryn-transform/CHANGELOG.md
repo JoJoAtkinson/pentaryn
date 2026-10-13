@@ -8,6 +8,172 @@
   `applyButtons` now catches a fresh button's rejected render and warns `pentaryn-transform | argon
   button render failed` instead of leaving an unhandled rejection; the three bar composers pass
   their `log` ([declared]).
+- **Two quick rounds both count against Starry Form (transform-ui/lens-rerun, defect wave 2).**
+  starry-adapter.mjs `tickStarry` read the form's time left and wrote it back minus the clock's
+  advance; a second advance (the GM clicking Next Round twice) landing before the first write came
+  back read the same time left, so one round was lost. Ticks of one form now run one at a time on
+  each client, each reading what the last one wrote ([declared]; test "transform-ui/lens-rerun … two
+  clock advances" in starry.test.mjs; no new strings or hooks).
+- **The Starry Bonus-bar rebuild never overlaps a render of the bar (transform-ui/lens-rerun, defect
+  wave 2).** hud-panels.mjs `onStarryChange` called the Bonus panel's `render()` unawaited every time
+  the form changed. Argon's ActionPanel render is not re-entrant, so a rebuild landing during another
+  render of the same panel (Argon's first render after a rebind, or a second form change) could leave
+  the first render's buttons in the bar, and a failing render was an unhandled rejection. Now a panel
+  whose first render has not finished is left to compose the live form itself, a change during this
+  module's own rebuild queues one more rebuild after it, and a failed rebuild warns "Bonus bar rebuild
+  failed" ([declared]; test "transform-ui/lens-rerun … Starry rebuild" in hud-bars.test.mjs; golden
+  console-texts.json gains the row; no new strings or hooks).
+- **The Chalice offer has no real-time minute (transform-ui/lens-rerun, defect wave 2).**
+  hud-panels.mjs put the pulsing Chalice button out after 60 s of wall-clock time, so a slow table
+  lost the reminder mid-turn, against "timers count only game time". The offer is now a Set with no
+  timer: it ends when the Chalice is used, the form ends or changes constellation, or the world
+  clock moves on (a round in combat, the GM advancing time), via the existing `updateWorldTime`
+  listener; that also drops offers for actors since deleted ([declared]; test
+  "transform-ui/lens-rerun … Chalice" in hud-bars.test.mjs; no new strings or hooks).
+- **wildshape-adapter.mjs is back under the 500-line adapter cap (EXT-8, defect wave 2).** The
+  wildcard-art block (`formImage`, `formImageFor`, the wildcard listing, `wildcardFormImage`,
+  `shiftSource`) and `traitsHtml` moved, unchanged, to the new `form-image-adapter.mjs`, which
+  wildshape-adapter.mjs imports (a new test/graph-allow.json edge) and api.mjs serves the
+  `formImage` relay row from. No behaviour change; golden/console-texts.json names the new file for
+  the five moved log lines ([declared]; test "EXT-8" in findings.test.mjs; no new strings or hooks).
+- **The sweep ages a spent form from when this GM tab first saw it (EC-6, defect wave 2).**
+  sweep-adapter.mjs compared the GM client's `Date.now()` with the server's `_stats.createdTime`, so a
+  GM clock running fast could sweep a form still mid-swap. Each sweep now records the first time it
+  sees a form (a module Map; an entry drops when this tab deletes the form, or at the next sweep once
+  it is gone) and a form is spent only 10 s after that sighting. Forms already out at ready are swept
+  ~10 s later than before ([declared]; test "EC-6" in lifecycle.test.mjs; no new strings or hooks).
+- **Return on an unlinked token's form names the token, not the base actor (EC-5, defect wave 2).**
+  form-picker.mjs `ReturnButton` labelled and pictured the button from the `originalActor` flag,
+  which for an unlinked token is the base actor every copy shares, so a renamed token read "Return
+  to <base actor>". For a token form it now uses the token's `flags.dnd5e.previousTokenData` name
+  and `texture.src`, falling back to the base actor; linked druids are unchanged. A comment says why
+  this is not `original()` (EXT-10) ([declared]; test "EC-5" in hud-buttons.test.mjs; no new
+  strings or hooks).
+- **The Bonus pip re-mark settles without pentaryn-combat (EC-4, defect wave 2).** hud-panels.mjs
+  re-marked a Bonus Action spent this turn with one `updateActionUse()`, which Argon ignores when the
+  pip count just changed, so the used pip painted only while combat's pip-settle wrap was on. It now
+  calls the vendored kit's `settlePips(panel)`; the second call is a no-op when combat's wrap is on
+  ([declared]; test "EC-4" in hud-bars.test.mjs; no new strings or hooks).
+- **The Chalice pulse is documented as local to the caster (EC-3, defect wave 2).** The offer is
+  painted from `dnd5e.postUseActivity`, which fires only on the casting client — the same client
+  that shows the druid's HUD — so there is no relay. The README and the hud-panels.mjs comment now
+  say the pulse is a reminder on the casting player's own HUD ([declared]; test "EC-3" in
+  findings.test.mjs; no code, string or hook change).
+- **A Chalice offer ends when the constellation changes (EC-2, defect wave 2).** hud-panels.mjs
+  cleared the pulsing Chalice button only on `deleteActiveEffect`, so swapping to the Archer and
+  back within the minute brought the pulse back. `onStarryUpdate` now forwards a non-tick change to
+  `onStarryRecast`, which clears the offer when the update moves the constellation off the Chalice
+  ([declared]; test "EC-2" in hud-bars.test.mjs; no new strings or hooks).
+- **A portrait repaint that fails on a world-time tick warns instead of erroring (R5, defect wave
+  2).** hud-panels.mjs `onWorldTime` called `paintPortrait` without the "portrait line failed"
+  guard that `onPortraitRender` has, so a throw surfaced as the hook's error. Both now go through
+  `repaintPortrait`, which logs the same warn ([declared]; test "R5" in hud-bars.test.mjs; no new
+  console text).
+- **Reverting from an unloaded compendium beast no longer gives the druid the beast's effects (R3,
+  defect wave 2).** wildshape-adapter.mjs `carryBack` read the beast's effect ids with
+  `fromUuidSync`, which answers an unloaded compendium beast with its index entry (no effects), so
+  the beast's own status effects were carried onto the druid. When the effects are not iterable it
+  now awaits `fromUuid`; a failed load is logged at debug ("form source for revert failed", with
+  the source uuid) and falls back to none, as before ([declared]; test "R3" in wildshape.test.mjs;
+  golden console-texts.json gains the row).
+- **A form whose beast fails to load is logged (M6, defect wave 2).** form-picker.mjs `formSource`
+  swallowed a `fromUuid` failure with `catch { doc = null; }`; it now logs it at debug ("form source
+  failed", with the uuid) and the tile still shows no tooltip source. The glue.test T-D3 scan now also
+  fails a catch whose body only assigns ([declared]; test "every console text…" in glue.test.mjs;
+  golden console-texts.json gains the row).
+- **patches.mjs's GLUE comment names both importers (M1, defect wave 2).** It said only the entry
+  imports the file, but wiring.mjs imports `removePatches`. It now says the entry imports
+  `installPatches` and wiring.mjs imports `removePatches`. Comment only ([declared]; test "M1" in
+  findings.test.mjs; goldens unchanged).
+- **A Starry Form with no known end reads just its name (M5, defect wave 2).** core/hud.mjs
+  `portraitText` left `starryLeft` undefined when absent, so the portrait line read "0 minutes" left
+  instead of the unknown end its JSDoc promises. `starryLeft` now defaults to null and any non-finite
+  value is unknown (`left: null`), so the line is just the form's name ([declared]; test "M5
+  portraitText" in core.test.mjs; goldens unchanged).
+- **One feature's failed uninstall no longer strands the rest (R3, defect wave 2).** wiring.mjs
+  `ctx.uninstall()` ran each feature's `uninstall` bare, so a throw skipped the remaining features,
+  `reg.offAll()` and `removePatches()`. Each uninstall now runs in try/catch and logs
+  `<feature>: uninstall failed` at warn (the entries pass each feature's name to `installFeature`);
+  contributions, every hook and the patch are always cleared after ([declared]; test "R3 ctx.uninstall()"
+  in features.test.mjs; golden/console-texts.json gains the wiring.mjs row).
+- **An item-less Argon button stays on the Bonus bar (EC-3, defect wave 2).** core/hud.mjs
+  `planBonusBar` compared slot ids with `wildShapeId`, which is null while shifted, so an Argon button
+  with no item (id null) was taken for Wild Shape and vanished. A null or undefined id never matches
+  Wild Shape now, so that button is kept ([declared]; test "EC-3 planBonusBar" in core.test.mjs;
+  goldens unchanged).
+- **A hot re-import past ready still sweeps (EC-4, defect wave 2).** sweep.mjs `install` registered
+  its first sweep on `Hooks.once("ready")`, which never fires again after ready, so a hot re-import
+  left spent forms in the sidebar until the next token change. It now schedules the 3 s sweep at once
+  when `game.ready` is already true (the shape transform.mjs uses to publish), and registers the ready
+  hook only before ready ([declared]; the hot-patch test in features.test.mjs expects golden/hooks.json
+  less row 17 too; the golden itself is unchanged).
+- **The barrel exports `MODULE` only (EXT-8, defect wave 2).** transform-core.mjs dropped its
+  `MODULE as MODULE_ID` alias, which C12 bans; core-legacy.mjs, core.test.mjs and core-split.test.mjs
+  use `MODULE`. No behaviour change ([declared]; golden/core-exports.json loses the `MODULE_ID` row,
+  golden/core-constants.json pins the id under `MODULE`).
+- **One Starry Form identity (EXT-7, defect wave 2).** core/starry.mjs exports a frozen
+  `STARRY_FORM = { identifier: "starry-form", name: "Starry Form" }` through the barrel; core
+  `isStarryFormData` and starry-adapter.mjs `starryItem` both match by its identifier first and its
+  name as the fallback, instead of each hard-coding the pair. No behaviour change ([declared];
+  core.test.mjs ADDED lists `STARRY_FORM`, so golden/core-exports.json stays the 39 checkpoint rows).
+- **Wild Shape and Starry Form end through one shared helper (EXT-2, defect wave 2).** The
+  Incapacitated check (after the effect lands, `setTimeout(0)`), the expiry check on the feature's own
+  effect, the runner gate and the per-tab claim were copied in wildshape.mjs and starry.mjs; they are
+  now claim-adapter.mjs's `endingListeners({ effectId, isActive, ending, onError })`, registered by
+  both features with their existing labels and order. `isRunner` moved from wildshape-adapter.mjs to
+  claim-adapter.mjs (still on the entry's exports). No behaviour change ([declared]; goldens unchanged).
+- **One place computes the Wild Shape refund (M7, defect wave 2).** wildshape-adapter.mjs now exports
+  `refund(actor, item | itemId)`; Starry Form's sheet route (dialog closed) and `assumeStarry`'s failed
+  form call it instead of building the refund update inline. No behaviour change ([declared]).
+- **`starry.assume`'s describe() doc lists every way it answers false (M6, defect wave 2).** Besides
+  shifted, incapacitated and out of uses, it now names a druid with no Starry Form feature or consume
+  activity (warns), an unknown constellation or no actor, a call already in progress for this druid,
+  and the activity's use refused (all silent). Doc only; no behaviour change ([declared];
+  golden/describe.json: the one row's doc).
+- **Starry Form's combat clock looks the form up once per druid per tick (perf-2, defect wave 2).**
+  `onWorldTime` found the effect, then `tickStarry`, `maybeEnd` and `endStarry` each looked it up
+  again. The tick now hands the one effect down: `tickStarry(actor, dt, effect)` and the new
+  `endStarryEffect(actor, effect, opts)` (endStarry's body; a form gone while its ending was claimed
+  falls back to a fresh lookup). No behaviour change; `starry.end` keeps its signature ([declared]).
+- **A Long Rest taken while shifted is never lost (transform-core-async-3, defect wave 2).** The
+  `dnd5e.longRest` listener always vetoed the rest and rested the druid only when `revert()` answered,
+  so a rest that landed while a revert was already running, or on a form already deleted, vanished.
+  `revert()` now keeps its in-flight promise (`revertInFlight(uuid)` in wildshape-adapter.mjs); the
+  rest waits on it, then the druid rests. A revert that answers null rests the original as it stands
+  (marked `pentarynTransformRestSync`, which the listener now passes). With no original at all it
+  warns (`long rest: no original for <form>, resting the form`) and does not veto, so dnd5e rests the
+  form ([declared]; golden/console-texts.json: one new row).
+- **A failed form, constellation or Return click no longer leaves a stuck tooltip (R1 + M5, final
+  review).** Argon's `itemButton.js` calls `_onLeftClick` without `await`, so a `shift()` or
+  `assumeStarry()` that threw became an unhandled promise rejection and skipped `dropStaleTooltip()`.
+  FormTile, ConstellationTile and ReturnButton now catch the failure and log it at warn (`form tile
+  click failed`, `constellation tile click failed`, `return button click failed`); the stale tooltip
+  is dropped in a `finally`. FormTile and ConstellationTile also call `collapseAllPanels?.()` the way
+  ReturnButton already did ([declared]; golden/console-texts.json: three new rows).
+- **A beast taken straight from the compendium gets a real token image (wildcard-art-compendium,
+  defect wave 2).** A compendium Wolf with wildcard token art still gave the form the literal
+  `wolf-*.webp` placeholder: core's `getTokenImages()` answers a compendium beast's wildcard path as
+  it is, and the copy of the beast dnd5e was handed kept its original token. `formImage` now lists any
+  wildcard path itself (a FilePicker browse with `{ wildcard: true }`), and the chosen image is put on
+  the form through `dnd5e.transformActor` (`prototypeToken.texture.src`, `randomImg: false`) and on
+  the token swap (`preUpdateToken`), so world and compendium beasts, linked and unlinked druids, get
+  the first sorted file, else the portrait. A player who may not browse files still asks the GM; an
+  owner without `FILES_BROWSE` now asks the GM too ([declared]; golden/describe.json: the
+  `preUpdateToken` label).
+- **`describe()` lists the hand-set item flags as reads (EXT-1, final review).** `flags.writes` no
+  longer names `flags.pentaryn-transform.revert`, which the module never writes; `flags.reads` now
+  names it and `flags.pentaryn-transform.keepInForm` ([declared]; golden/describe.json regenerated).
+- **Dragging a token no longer schedules a sweep (perf-1, final review).** Every token update, even an
+  x/y drag, scheduled a world-wide sweep of spent forms. Now only a token update that changes
+  `actorId`, `actorLink`, `delta` or `flags.dnd5e` schedules it; a deleted token, a form losing
+  `isPolymorphed` and the ready sweep schedule it as before ([declared]).
+- **One tab writes each automatic ending (transform-core-async-2, final review).** With the MCP bridge
+  tab and a GM browser tab open, both tabs are the runner user, so both reverted a form at 0 HP, on
+  Incapacitated or at expiry, ended the druid's copy of a carried effect, ended Starry Form and swept
+  spent forms. Each of these writes is now claimed per tab first with the kit's `claimDocument`
+  (`flags.pentaryn-transform.claims.<key>`, added to the manifest's `flags.writes`): only the winning
+  tab writes, about 750 ms after the trigger, and clears its claim afterwards; a loser stands down
+  with a debug line. The Starry combat-time tick stays unclaimed ([declared]).
 - **One Starry Form ending at a time (starry-double-end, final review).** An expiry landing together
   with an Incapacitated or a Long Rest could send two deletes for the same effect and log a failed
   ending. `endStarry` now holds an in-flight guard per druid, as revert does: the overlapping ending

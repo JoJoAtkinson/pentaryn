@@ -4,12 +4,13 @@
  * hud.mjs (esmodules[1]) right before the HUD panels, where its hooks always registered.
  */
 
-import { MODULE, starryBlock, refundUpdate, canRunAny } from "./transform-core.mjs";
+import { MODULE, starryBlock, canRunAny } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { isRunner } from "./wildshape-adapter.mjs";
+import { refund } from "./wildshape-adapter.mjs";
+import { isRunner, endingListeners } from "./claim-adapter.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, isStarryConsume, activeStarry, constellationOf, tickStarry,
-  setLight, applyStarry, BLOCKS, assumeStarry, endStarry, announceStarryOn
+  setLight, applyStarry, BLOCKS, assumeStarry, endStarry, endStarryEffect, announceStarryOn
 } from "./starry-adapter.mjs";
 import { pickConstellation } from "./starry-dialog.mjs";
 import { STARRY_ROWS } from "./api-manifest.mjs";
@@ -33,12 +34,7 @@ function onSheetPostUse(activity, usageConfig) {
   if (!isStarryConsume(activity) || usageConfig?.pentaryn?.starry) return;
   const actor = activity.actor;
   pickConstellation(actor).then(async c => {
-    if (!c) {                                     // closed: the use comes back
-      const ws = wildShapeItemOf(actor);
-      const update = refundUpdate(ws?.system?.uses);
-      if (update) await ws.update(update);
-      return;
-    }
+    if (!c) return refund(actor, wildShapeItemOf(actor));   // closed: the use comes back
     await applyStarry(actor, c);
     announceStarryOn(actor, c);
   }).catch(err => log.error("starry form failed", err));
@@ -46,24 +42,18 @@ function onSheetPostUse(activity, usageConfig) {
 
 /* ── ending without a click ──────────────────────────────────────────────── */
 
-function maybeEnd(actor, reason) {
-  if (!actor || !activeStarry(actor) || !isRunner(actor)) return;
-  endStarry(actor, { reason }).catch(err => log.warn("ending starry form failed", err));
-}
-
-// Incapacitated (or anything that implies it).
-function onEffectChange(effect) {
-  const actor = effect?.parent;
-  if (!(actor instanceof Actor) || !activeStarry(actor)) return;
-  setTimeout(() => { if (actor.statuses?.has("incapacitated")) maybeEnd(actor, "incapacitated"); }, 0);
-}
-function onEffectUpdate(effect, changes) {
-  if (effect.id === STARRY_EFFECT_ID && foundry.utils.getProperty(changes, "duration.expired") === true) {
-    maybeEnd(effect.parent, "expired");
-    return;
-  }
-  onEffectChange(effect);
-}
+// Incapacitated and the effect's expiry are claim-adapter.mjs's endingListeners (EXT-2, [declared]).
+const ending = endingListeners({
+  effectId: STARRY_EFFECT_ID,
+  isActive: actor => !!activeStarry(actor),
+  // `effect`: the form the caller already looked up (perf-2), else it is looked up here.
+  // One tab of the runner user ends it (transform-core-async-2, [declared]); endStarryEffect re-checks.
+  ending: (actor, reason, effect = actor ? activeStarry(actor) : null) => (!effect ? null : {
+    doc: effect, key: "end", work: () => endStarryEffect(actor, effect, { reason })
+  }),
+  onError: err => log.warn("ending starry form failed", err)
+});
+const maybeEnd = ending.end;
 
 // However it went (dismissed, expired, right-clicked off the HUD, deleted on the sheet): the light goes.
 function onStarryDelete(effect) {
@@ -86,9 +76,11 @@ function onWorldTime(worldTime, dt) {
       const actor = combatant?.actor;
       if (!actor || seen.has(actor.uuid)) continue;   // one druid, two tokens in the fight: counted once
       seen.add(actor.uuid);
-      if (!activeStarry(actor) || !isRunner(actor)) continue;
-      tickStarry(actor, dt)
-        .then(done => { if (done === "expired") maybeEnd(actor, "expired"); })
+      const effect = activeStarry(actor);             // perf-2: the one lookup this tick, handed down
+      if (!effect || !isRunner(actor)) continue;
+      // Unclaimed: two tabs of the runner write the same time left; the ending itself is claimed.
+      tickStarry(actor, dt, effect)
+        .then(done => { if (done === "expired") maybeEnd(actor, "expired", effect); })
         .catch(err => log.warn("starry form timing failed", err));
     }
   }
@@ -104,8 +96,8 @@ function onRestCompleted(actor, result, config) {
 export function install(reg) {
   reg.on("dnd5e.preUseActivity", onSheetPreUse, { label: "dnd5e.preUseActivity: Starry Form sheet route" });
   reg.on("dnd5e.postUseActivity", onSheetPostUse, { label: "dnd5e.postUseActivity: Starry Form sheet route" });
-  reg.on("createActiveEffect", onEffectChange, { label: "createActiveEffect: incapacitated ends Starry Form" });
-  reg.on("updateActiveEffect", onEffectUpdate, { label: "updateActiveEffect: Starry Form expired / incapacitated" });
+  reg.on("createActiveEffect", ending.onEffectChange, { label: "createActiveEffect: incapacitated ends Starry Form" });
+  reg.on("updateActiveEffect", ending.onEffectUpdate, { label: "updateActiveEffect: Starry Form expired / incapacitated" });
   reg.on("deleteActiveEffect", onStarryDelete, { label: "deleteActiveEffect: the starlight goes" });
   reg.on("updateWorldTime", onWorldTime, { label: "updateWorldTime: Starry Form expiry" });
   reg.on("dnd5e.restCompleted", onRestCompleted, { label: "dnd5e.restCompleted: a Long Rest ends Starry Form" });

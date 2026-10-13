@@ -22,6 +22,8 @@ const lines = () => F.chat.map(c => c.content.replace(/<\/?[^>]+>/g, ""));
 const notes = () => F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]);
 const ops = (...names) => F.calls.filter(c => names.includes(c.op));
 const flush = async (n = 6) => { for (let i = 0; i < n; i++) await new Promise(r => setImmediate(r)); };
+// An automatic ending claims its write for one tab first (transform-core-async-2): the claim settles in 750 ms.
+const settle = async () => { await flush(); mock.timers.tick(750); await flush(); };
 const light = talo => talo.items.get(IDS.starry).flags["pentaryn-senses"]?.light ?? null;
 
 function fresh(opts) {
@@ -373,7 +375,7 @@ test("Incapacitated while starry: ends after a zero timeout (runner), the Incapa
   const eff = F.W.makeEffect(talo, { id: "stun0000000000001", name: "Stunned", statuses: ["incapacitated"] }, talo.effects);
   Hooks.callAll("createActiveEffect", eff, {}, "u");
   mock.timers.tick(0);
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo is incapacitated; the starry form fades."]);
 });
 
@@ -386,7 +388,7 @@ test("updateActiveEffect: the Starry effect marked expired ends it (Expired line
   await flush();
   assert.deepEqual(lines(), []);
   Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(lines(), ["Talo's starry form fades after 10 minutes."]);
 });
 
@@ -437,11 +439,65 @@ test("D8-starry: in combat it counts down by combat time and ends at 10 minutes,
     assert.equal(S.starrySecondsLeft(talo), 6);
     F.become({ userId: IDS.gm });
     await tick(6);
+    await settle();                                   // the ending is claimed; the tick is not
     assert.deepEqual(lines().sort(), ["Hedge Druid's starry form fades after 10 minutes.", "Talo's starry form fades after 10 minutes."]);
     assert.equal(S.activeStarry(talo), null);
     assert.equal(S.activeStarry(npc), null, "D8-starry: the unlinked druid's form ends in combat too");
   } finally {
     game.combats.clear();
+  }
+});
+
+// perf-2: onWorldTime looks the form up once per druid per tick and hands it to the tick and the ending.
+test("perf-2: one Starry Form lookup per druid per tick, on a counting tick and on the expiring one", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  const npc = hedgeDruid(12);
+  F.chat.length = 0;
+  // Counted: lookups on the tick's own path. The updateActiveEffect listener (onEffectChange) that the
+  // time-left write fires does its own, as any effect update does; that is not the tick's.
+  const lookups = new Map();
+  const count = a => { if (!new Error().stack.includes("onEffectChange")) lookups.set(a.name, (lookups.get(a.name) ?? 0) + 1); };
+  for (const a of [talo, npc]) {
+    const get = a.effects.get.bind(a.effects), find = a.effects.find.bind(a.effects);
+    a.effects.get = id => { if (id === SID) count(a); return get(id); };
+    a.effects.find = fn => { count(a); return find(fn); };
+  }
+  startCombat(talo, npc);
+  try {
+    await tick(6);
+    assert.deepEqual(Object.fromEntries(lookups), { "Talo": 1, "Hedge Druid": 1 }, "perf-2: a counting tick looks each form up once");
+    assert.equal(S.starrySecondsLeft(npc), 6);
+    lookups.clear();
+    await tick(6);                                    // the Hedge Druid's form runs out on this one
+    assert.deepEqual(Object.fromEntries(lookups), { "Talo": 1, "Hedge Druid": 1 }, "perf-2: the expiring tick looks each form up once");
+    await settle();
+    assert.deepEqual(lines(), ["Hedge Druid's starry form fades after 10 minutes."]);
+    assert.equal(S.activeStarry(npc), null);
+    assert.ok(S.activeStarry(talo));
+  } finally {
+    game.combats.clear();
+  }
+});
+
+test("transform-ui/lens-rerun [declared]: two clock advances before the first time-left write lands both count", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "archer");
+  const effect = talo.effects.get(SID);
+  const write = effect.update.bind(effect);
+  const held = [];
+  effect.update = changes => new Promise(r => held.push(r)).then(() => write(changes));   // the server round trip
+  startCombat(talo);
+  try {
+    const before = () => { game.time.worldTime += 6; Hooks.callAll("updateWorldTime", game.time.worldTime, 6, {}, IDS.gm); };
+    before();
+    before();                                         // the GM clicks Next Round twice
+    await flush();
+    while (held.length) { held.shift()(); await flush(); }
+    assert.equal(S.starrySecondsLeft(talo), 588, "transform-ui/lens-rerun: the second round must not be lost to a stale time-left read");
+  } finally {
+    game.combats.clear();
+    effect.update = write;
   }
 });
 
@@ -477,13 +533,13 @@ test("dnd5e.restCompleted (long): the form ends quietly for an owner; a short re
   await S.assumeStarry(talo, "archer");
   talo.effects.get(SID).delete = async () => { throw new Error("x"); };
   Hooks.callAll("dnd5e.restCompleted", talo, {}, { type: "long" });
-  Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
+  Hooks.callAll("dnd5e.restCompleted", talo, {}, { type: "long" });
   await flush();
-  // starry-double-end: the rest and the expiry overlap, so only the first sends a delete and warns.
+  // starry-double-end: the two endings overlap, so only the first sends a delete and warns.
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]]);
   F.console.length = 0;
   Hooks.callAll("updateActiveEffect", talo.effects.get(SID), { duration: { expired: true } }, {}, "u");
-  await flush();
+  await settle();
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | ending starry form failed"]],
     "starry-double-end: a failed ending releases the guard, so the next one tries again");
 });

@@ -15,6 +15,9 @@ export const STARRY_LIGHT = Object.freeze({
   animation: { type: "starlight", speed: 2, intensity: 3, reverse: false }
 });
 
+/** The Starry Form feature's identity: its identifier first, its name as the fallback (wildshape.mjs isStarryFormData, starry-adapter.mjs starryItem). */
+export const STARRY_FORM = Object.freeze({ identifier: "starry-form", name: "Starry Form" });
+
 /** Starry Form lasts 10 minutes. */
 export const STARRY_SECONDS = 600;
 

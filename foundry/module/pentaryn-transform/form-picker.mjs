@@ -19,6 +19,12 @@ import {
 } from "./starry-adapter.mjs";
 import { dropTooltip, dropStaleTooltip, cancelTargetPicker } from "./argon.mjs";
 import { paintBadge as paintArgonBadge } from "./lib/argon-kit.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
+
+/* Argon's itemButton.js calls _onLeftClick without await: a tile click logs its failure and never
+   rejects, and the stale tooltip goes either way (R1). */
 
 let built = null;                // { WildShapeButton, FormTile, … }, built on first use
 
@@ -49,7 +55,11 @@ async function formSource(form) {
   const near = form.actor ?? fromUuidSync(form.uuid);
   if (typeof near?.items?.[Symbol.iterator] === "function") return near;
   let doc = null;
-  try { doc = await fromUuid(form.uuid); } catch { doc = null; }
+  try {
+    doc = await fromUuid(form.uuid);
+  } catch (err) {
+    log.debug("form source failed", { uuid: form.uuid }, err);   // M6: logged, then no tooltip source
+  }
   return typeof doc?.items?.[Symbol.iterator] === "function" ? doc : null;
 }
 
@@ -102,11 +112,16 @@ export function argonClasses() {
     }
 
     async _onLeftClick(event) {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels();
-      await shift(this.hudActor, this.form.id);
-      dropStaleTooltip();
+      try {
+        dropTooltip();
+        cancelTargetPicker();
+        ui.ARGON?.collapseAllPanels?.();
+        await shift(this.hudActor, this.form.id);
+      } catch (err) {
+        log.warn("form tile click failed", err);
+      } finally {
+        dropStaleTooltip();
+      }
     }
 
     async _onRightClick(event) {
@@ -120,9 +135,18 @@ export function argonClasses() {
    */
   class ReturnButton extends ItemButton {
     constructor({ hudActor }) {
+      // Not original() (EXT-10): that answers an unlinked token's form with the form itself, and its
+      // originalActor flag is the base actor every unlinked copy shares. The token's own name and
+      // image from before the shift live in its previousTokenData (EC-5); linked druids, and a token
+      // with no snapshot, fall back to the original actor.
       const host = game.actors.get(hudActor?.getFlag?.("dnd5e", "originalActor")) ?? null;
+      const prev = hudActor?.isToken ? hudActor.token?.getFlag?.("dnd5e", "previousTokenData") : null;
       super({
-        item: { id: "pentarynReturn00", name: returnLabel(host?.name ?? hudActor?.name ?? "?"), img: host?.img || hudActor?.img },
+        item: {
+          id: "pentarynReturn00",
+          name: returnLabel(prev?.name || host?.name || hudActor?.name || "?"),
+          img: prev?.texture?.src || host?.img || hudActor?.img
+        },
         inActionPanel: true
       });
       this.hudActor = hudActor;
@@ -135,11 +159,16 @@ export function argonClasses() {
     }
 
     async _onLeftClick(event) {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels?.();
-      await returnToNormal(this.hudActor);
-      dropStaleTooltip();
+      try {
+        dropTooltip();
+        cancelTargetPicker();
+        ui.ARGON?.collapseAllPanels?.();
+        await returnToNormal(this.hudActor);
+      } catch (err) {
+        log.warn("return button click failed", err);
+      } finally {
+        dropStaleTooltip();
+      }
     }
   }
 
@@ -261,12 +290,17 @@ export function argonClasses() {
     }
 
     async _onLeftClick() {
-      dropTooltip();
-      cancelTargetPicker();
-      ui.ARGON?.collapseAllPanels();
-      if (this.constellation === "end") await endStarry(this.hudActor);
-      else await assumeStarry(this.hudActor, this.constellation);
-      dropStaleTooltip();
+      try {
+        dropTooltip();
+        cancelTargetPicker();
+        ui.ARGON?.collapseAllPanels?.();
+        if (this.constellation === "end") await endStarry(this.hudActor);
+        else await assumeStarry(this.hudActor, this.constellation);
+      } catch (err) {
+        log.warn("constellation tile click failed", err);
+      } finally {
+        dropStaleTooltip();
+      }
     }
 
     async _onRightClick() { starryItem(this.hudActor)?.sheet?.render(true); }

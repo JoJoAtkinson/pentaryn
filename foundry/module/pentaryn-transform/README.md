@@ -22,15 +22,17 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
   macro. The sheet still works: Wild Shape → Use opens dnd5e's form dialog, then shifts at once.
 - The form's token image is the same every time, never random and never the placeholder
   (wildcard-art, Joe's ruling): the beast's own token image; for wildcard token art (the Monster
-  Manual Wolf, Cat), the first matching file in sorted order; if none resolves, the beast's portrait.
-  A player who may not browse files gets the image from the active GM (the `formImage` relay); with
-  no GM online, the portrait.
+  Manual Wolf, Cat), the first matching file in sorted order — for a world beast and a beast taken
+  straight from the compendium alike; if none resolves, the beast's portrait. A player who may not
+  browse files gets the image from the active GM (the `formImage` relay); with no GM online, the
+  portrait.
 - The portrait line reads `Wild Shape: Dire Wolf · 5 hours 59 minutes left`; the form's effect
   (`Wild Shape: Dire Wolf`) is larger, with a gold ring, and its tooltip has the time left.
   HP with temp HP reads `99+12 / 99`.
 - The form ends by itself at 0 HP, when Incapacitated, when its time runs out, when its effect is
-  deleted, and before a Long Rest (the druid then rests). Short Rest in a form also gives the druid
-  their one use back.
+  deleted, and before a Long Rest (the druid then rests — after a revert already under way, or as
+  they stand if the form was already gone). Short Rest in a form also gives the druid their one use
+  back.
 - Features that would spend Wild Shape uses or spell slots never come along into the form; item
   uses, Hit Dice, exhaustion, inspiration and conditions gained there come back on revert, and a
   Concentration broken in beast form ends on the druid too.
@@ -44,7 +46,10 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
   pentaryn-senses). With Twinkling Constellations a change is free. It ends after 10 minutes of
   combat time (out of combat it stays on and world time does not count, D8), when Incapacitated, at a
   Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
-  heal makes the Chalice button pulse for a minute. From the sheet, Consume Wild Shape opens a
+  heal makes the Chalice button pulse until it is used, the form ends, another constellation
+  takes over, or game time moves on (a round in combat, the GM advancing the clock); there is no
+  real-time limit. The pulse is a reminder on the casting player's own HUD (the client that
+  cast the heal); it is not relayed to the GM or other players. From the sheet, Consume Wild Shape opens a
   three-button dialog; closing it refunds the use. A use spent from the HUD comes back if the form
   then fails to go up.
 - **Escape** cancels Argon's target picker ("0/1 Targets"), else closes an open Wild Shape / Starry
@@ -89,7 +94,7 @@ is out): `inspect("Talo")` and `inspect(<the form>)` give the same read. Kit mem
 
 `formImage` is also the module's one query, `pentaryn-transform.formImage` (a relay row: any sender,
 the active GM answers; read-only). A player's shift asks it when the beast's token art is a wildcard
-the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownership of the beast).
+the player may not list (the wildcard is listed with a FilePicker browse, which needs `FILES_BROWSE`).
 
 ## Data written
 
@@ -97,7 +102,7 @@ the player may not list (core's wildcard listing needs `FILES_BROWSE` or ownersh
 |---|---|---|
 | a form actor | `flags.pentaryn-transform.wildshape` | `{ original, source, profile, endsAt, carried }` — the sweep, the auto-revert, the HUD and `inspect` read it |
 | the form's duration effect | `_id pentarynWildShp0`, `flags.pentaryn-transform.wildshape` | the timed effect Argon's portrait strip shows |
-| an item | `flags.pentaryn-transform.revert` | set by hand: using it reverts its actor (`keepInForm` keeps a feat in the form) |
+| an item | `flags.pentaryn-transform.revert`, `.keepInForm` | set by hand, never written by the module (`describe()` lists both under `flags.reads`): using a `revert` item reverts its actor; `keepInForm` keeps a feat in the form |
 | the druid's Starry effect | `_id pentarynStarry00`, `flags.pentaryn-transform.starry.constellation`, `.left` | the constellation glimmering; seconds of combat time left (D8) |
 | the Starry Form item | `flags.pentaryn-senses.light` | `STARRY_LIGHT` while the form lasts (pentaryn-senses lights the tokens) |
 | form actors | created / deleted | dnd5e creates them; the active GM sweeps spent ones |
@@ -143,12 +148,21 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 - A shift, Change Form, Return and the Starry buttons run on the clicking user's client, with that
   user's permissions (dnd5e refuses a non-owner's revert).
 - The automatic endings (0 HP, Incapacitated, expiry, a carried effect ending) run on **one user**:
-  the active GM, else the first active owner by id (`isRunner`). With the MCP bridge tab and a GM
-  browser tab open, both tabs are that user and both act (see Pitfalls).
-- The sweep of spent forms runs on the active GM's client (`activeGM.isSelf`), 3 s after token
-  traffic (one timer, never pushed back), 1.5 s after a form loses `isPolymorphed` (a player's
-  revert), and 3 s after ready; it deletes transformed copies with no token on any scene that are
-  over 10 s old.
+  the active GM, else the first active owner by id (`isRunner`, `claim-adapter.mjs`). Wild Shape and
+  Starry Form share one Incapacitated / expiry listener pair and runner gate (`endingListeners`).
+- Two sessions: every tab of that user (the MCP bridge tab plus a GM browser tab) passes `isRunner`,
+  so each automatic write is then claimed per tab with the kit's `claimDocument`
+  (`flags.pentaryn-transform.claims.<key>`, `claim-adapter.mjs`): the form (`revert`), the druid's
+  copy of a carried effect (`end`), the Starry effect (`end`) and each spent form (`sweep`). Only the
+  winning tab writes, ~750 ms after the trigger; a loser, or a claim refused because the document is
+  already gone, stands down with a debug line; the winner clears its claim after the write. The
+  Starry combat-time tick is not claimed (both tabs write the same value). [declared]
+- The sweep of spent forms runs on the active GM's client (`activeGM.isSelf`), 3 s after a token
+  is deleted or changes its actor, link, delta or `flags.dnd5e` (one timer, never pushed back; a drag,
+  light, hidden or elevation change schedules nothing), 1.5 s after a form loses `isPolymorphed` (a player's
+  revert), and 3 s after ready (or after a hot re-import past ready); it deletes transformed copies
+  with no token on any scene that this GM tab first saw over 10 s ago (its own clock, not the
+  server's `createdTime`, so a fast GM clock cannot sweep a form mid-swap). [declared] EC-6
 
 ## Extending
 
@@ -169,10 +183,12 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 - Transform updates tokens on the **viewed** scene only (dnd5e), so a shift needs the druid's token
   there (refused otherwise). Revert also fixes tokens on other scenes.
 - An unlinked token druid's form is its own original and keeps its own Wild Shape item.
+  Its HUD Return button names and pictures the token as it was before the shift (dnd5e's
+  `previousTokenData`), not the base actor every unlinked copy shares.
 - The revert item is optional (without it the HUD adds its own Return button); if used, keep it a
   `feat` with one bonus-action utility activity, so the Wild Shape preset carries it onto the form.
-- Two GM tabs (bridge + browser) both run the automatic endings and the sweep; the second revert
-  finds the form gone. Watch for a doubled chat line in the live phase.
+- Two GM tabs (bridge + browser) both run the automatic endings and the sweep, but only the tab that
+  wins the claim writes (Two sessions); a doubled ending chat line in the live phase is a bug.
 - Starry Form counts combat time only (D8, Joe's ruling): the time left is
   `flags.pentaryn-transform.starry.left`, counted down by the runner for every druid in a started
   combat (linked or an unlinked token); the effect has no duration value and dnd5e's `isTemporary`
@@ -193,7 +209,7 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 | `wiring.mjs` | the one log / hook registry / ctx both entries share |
 | `transform-core.mjs`, `core/*.mjs` | pure rules (wildshape, hud, starry, bodyswap) behind the barrel |
 | `settings.mjs`, `patches.mjs` | the keybinding and outside settings reads; the core patch |
-| `wildshape-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `argon.mjs` | adapters (documents, Argon) |
+| `wildshape-adapter.mjs`, `form-image-adapter.mjs`, `sweep-adapter.mjs`, `starry-adapter.mjs`, `claim-adapter.mjs`, `argon.mjs` | adapters (documents, the form's token image and trait text, the runner and the one-tab claim, Argon) |
 | `form-picker.mjs`, `starry-dialog.mjs` | UI: the Argon components; the constellation dialog |
 | `bodyswap.mjs`, `wildshape.mjs`, `sweep.mjs`, `starry.mjs`, `hud-panels.mjs` | features: `install(reg, ctx)` / `uninstall()` |
 | `api-manifest.mjs`, `api.mjs` | the published API |

@@ -150,6 +150,8 @@ test("-2 [declared] T-D6 updateWorldTime: a player's client skips both scans whi
     F.become({ userId: IDS.player });
     Hooks.callAll("updateWorldTime", 30_000, 30_000);
     await flush();
+    mock.timers.tick(750);                                // the one-tab claim settles (transform-core-async-2)
+    await flush();
     assert.equal(scans, 4, "no GM connected: the owner's client scans");
     assert.deepEqual(F.calls.filter(c => c.op === "revertOriginalForm").map(c => c.actor), [wolf.id], "and ends the expired form");
   } finally {
@@ -218,4 +220,214 @@ test("§5.8 [declared] Starry Form ending removes flags.pentaryn-senses.light wi
   const upd = F.calls.find(c => c.op === "update" && c.uuid === item.uuid);
   assert.ok(upd, JSON.stringify(F.calls.map(c => c.op)));
   assert.equal(item.flags["pentaryn-senses"]?.light, undefined, "gone");
+});
+
+/* ── R1 tile left-clicks: Argon does not await them ───────────────────────── */
+
+test("R1 [declared] a rejecting shift()/assumeStarry() under a FormTile/ConstellationTile click resolves (no unhandled rejection), warns, and still drops the stale tooltip", async () => {
+  const W = await import("../wildshape-adapter.mjs");
+  const S = await import("../starry-adapter.mjs");
+  const { talo } = fresh();
+  ui.ARGON._actor = talo;
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, talo);
+  await flush();
+  const by = name => p._buttons.find(b => b.constructor.name === name);
+  const ws = by("WildShapeButton"), starry = by("StarryFormButton");
+  await ws.render();
+  await starry.render();
+  W.wildShapeActivity(talo).use = async () => { throw new Error("boom"); };
+  const consume = [...talo.items.get(IDS.starry).system.activities.values()].find(S.isStarryConsume);
+  consume.use = async () => { throw new Error("boom"); };
+  for (const [tile, text] of [[ws.panel._buttons[0], "form tile click failed"], [starry.panel._buttons[0], "constellation tile click failed"]]) {
+    F.console.length = 0;
+    F.tooltipCalls.length = 0;
+    game.tooltip.element = { isConnected: false };            // the HUD rebuild took the anchor
+    // Argon's itemButton.js calls _onLeftClick without await: its promise must never reject.
+    await assert.doesNotReject(tile._onLeftClick({}), text);
+    assert.deepEqual(F.tooltipCalls, ["deactivate", "deactivate"], `${text}: the stale tooltip is dropped after the failure`);
+    assert.deepEqual(F.console.map(c => [c[0], c[1]]), [["warn", `pentaryn-transform | ${text}`]]);
+  }
+  game.tooltip.element = null;
+  liveButtons.clear();
+});
+
+test("R1 [declared] ReturnButton's click, for symmetry: a throw resolves, warns, and still drops the stale tooltip", async () => {
+  const { talo } = fresh();
+  const wolf = await T.shift(talo, "p1");
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, wolf);
+  await flush();
+  const ret = p._buttons.find(b => b.constructor.name === "ReturnButton");
+  Object.defineProperty(ret, "hudActor", { get() { throw new Error("boom"); } });
+  F.console.length = 0;
+  F.tooltipCalls.length = 0;
+  game.tooltip.element = { isConnected: false };
+  await assert.doesNotReject(ret._onLeftClick({}));
+  assert.deepEqual(F.tooltipCalls, ["deactivate", "deactivate"]);
+  assert.deepEqual(F.console.map(c => [c[0], c[1]]), [["warn", "pentaryn-transform | return button click failed"]]);
+  game.tooltip.element = null;
+  liveButtons.clear();
+});
+
+/* ── M7 one refund: the Starry routes call wildshape-adapter's refund() ───── */
+
+test("M7 [declared] wildshape-adapter exports refund(actor, item | id); starry.mjs and starry-adapter.mjs refund through it, never inline", async () => {
+  const { readFileSync } = await import("node:fs");
+  const W = await import("../wildshape-adapter.mjs");
+  assert.equal(typeof W.refund, "function", "refund is exported");
+  const { talo } = fresh();
+  const ws = talo.items.get(IDS.ws);
+  await ws.update({ "system.uses.spent": 2 });
+  await W.refund(talo, ws);
+  assert.equal(ws.system.uses.spent, 1, "by the item");
+  await W.refund(talo, IDS.ws);
+  assert.equal(ws.system.uses.spent, 0, "by its id");
+  F.calls.length = 0;
+  await W.refund(talo, ws);
+  assert.equal(F.calls.filter(c => c.op === "update").length, 0, "nothing spent: nothing written");
+  await assert.doesNotReject(W.refund(talo, null), "no item: nothing to do");
+  for (const f of ["starry.mjs", "starry-adapter.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.doesNotMatch(src, /refundUpdate/, `${f} computes no refund update of its own`);
+    assert.match(src, /\brefund\(/, `${f} calls the shared refund()`);
+  }
+});
+
+/* ── EXT-2 one 'ending without a click' helper for Wild Shape and Starry Form ── */
+
+test("EXT-2 [declared] claim-adapter's endingListeners holds the incapacitated / expired listeners, the setTimeout(0) and the runner gate once; wildshape.mjs and starry.mjs register it", async () => {
+  const { readFileSync } = await import("node:fs");
+  const C = await import("../claim-adapter.mjs");
+  assert.equal(typeof C.endingListeners, "function", "EXT-2: the shared helper is exported");
+  const { talo } = fresh();
+  const ended = [];
+  const doc = { uuid: "ZZ.ending", name: "ZZ ending" };   // no id: the claim is won at once
+  const L = C.endingListeners({
+    effectId: "zzEndingEffect01",
+    isActive: a => a === talo,
+    ending: (actor, reason, extra = "looked up") => ({ doc, key: "end", work: () => ended.push([actor.name, reason, extra]) }),
+    onError: err => { throw err; }
+  });
+  L.onEffectUpdate({ id: "zzEndingEffect01", parent: talo }, { duration: { expired: true } });
+  await flush();
+  assert.deepEqual(ended, [["Talo", "expired", "looked up"]], "its own effect marked expired ends it");
+  ended.length = 0;
+  L.end(talo, "expired", "handed down");
+  await flush();
+  assert.deepEqual(ended, [["Talo", "expired", "handed down"]], "end() passes the caller's extra argument to ending()");
+  ended.length = 0;
+  talo.statuses.add("incapacitated");
+  L.onEffectChange({ id: "other", parent: talo });
+  await flush();
+  assert.deepEqual(ended, [], "the Incapacitated check waits for the effect to land (setTimeout 0)");
+  mock.timers.tick(0);
+  await flush();
+  L.onEffectUpdate({ id: "zzEndingEffect01", parent: talo }, { name: "renamed" });
+  mock.timers.tick(0);
+  await flush();
+  assert.deepEqual(ended, [["Talo", "incapacitated", "looked up"], ["Talo", "incapacitated", "looked up"]], "create and a non-expiry update both check");
+  ended.length = 0;
+  L.onEffectChange({ id: "other", parent: { name: "not an actor" } });
+  mock.timers.tick(0);
+  await flush();
+  assert.deepEqual(ended, [], "not an actor with the feature up: nothing");
+  F.become({ userId: IDS.player });
+  L.end(talo, "expired");
+  await flush();
+  F.become({ userId: IDS.gm });
+  assert.deepEqual(ended, [], "not the runner: nothing");
+  talo.statuses.delete("incapacitated");
+  for (const f of ["wildshape.mjs", "starry.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.match(src, /\bendingListeners\(/, `${f} registers the shared helper`);
+    assert.doesNotMatch(src, /setTimeout\(/, `${f} has no Incapacitated timer of its own`);
+    assert.doesNotMatch(src, /duration\.expired/, `${f} has no expiry check of its own`);
+  }
+});
+
+/* ── EXT-7 one Starry Form identity for the core and the adapter ──────────── */
+
+test("EXT-7 [declared] core/starry.mjs's frozen STARRY_FORM is the one identity: isStarryFormData and starryItem both match identifier first, name as the fallback", async () => {
+  const { readFileSync } = await import("node:fs");
+  const C = await import("../transform-core.mjs");
+  const S = await import("../starry-adapter.mjs");
+  assert.deepEqual(C.STARRY_FORM, { identifier: "starry-form", name: "Starry Form" }, "EXT-7: STARRY_FORM through the barrel");
+  assert.ok(Object.isFrozen(C.STARRY_FORM), "frozen");
+  const byId = { _id: "a", name: "Renamed Stars", system: { identifier: "starry-form" } };
+  const byName = { _id: "b", name: "Starry Form", system: { identifier: "" } };
+  const other = { _id: "c", name: "Wild Shape", system: { identifier: "wild-shape" } };
+  assert.deepEqual([byId, byName, other].map(C.isStarryFormData), [true, true, false], "core: identifier, else name");
+  assert.equal(S.starryItem({ items: [byName, byId, other] }), byId, "adapter: the identifier wins over an earlier name match");
+  assert.equal(S.starryItem({ items: [other, byName] }), byName, "adapter: the name is the fallback");
+  assert.equal(S.starryItem({ items: [other] }), null);
+  for (const f of ["core/wildshape.mjs", "starry-adapter.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.match(src, /STARRY_FORM\.identifier/, `${f} matches by STARRY_FORM.identifier`);
+    assert.match(src, /STARRY_FORM\.name/, `${f} falls back to STARRY_FORM.name`);
+    assert.doesNotMatch(src, /"Starry Form"/, `${f} hard-codes no Starry Form name of its own`);
+    assert.doesNotMatch(src, /identifier === "starry-form"|"starry-form", /, `${f} hard-codes no Starry Form identifier of its own`);
+  }
+});
+
+/* ── EXT-8 the barrel exports MODULE only, no MODULE_ID alias (C12) ─────── */
+
+test("EXT-8 [declared] transform-core.mjs exports MODULE and no `MODULE as MODULE_ID` alias; the tests import MODULE", async () => {
+  const { readFileSync } = await import("node:fs");
+  const C = await import("../transform-core.mjs");
+  assert.equal(typeof C.MODULE, "string", "EXT-8: MODULE through the barrel");
+  assert.equal("MODULE_ID" in C, false, "EXT-8: no MODULE_ID alias on the barrel (C12)");
+  assert.doesNotMatch(readFileSync(new URL("../transform-core.mjs", import.meta.url), "utf8"), /\bas\s+MODULE_ID\b/, "EXT-8: no aliased re-export");
+  for (const f of ["test/core-legacy.mjs", "test/core.test.mjs", "test/core-split.test.mjs"]) {
+    const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+    assert.doesNotMatch(src, /\bMODULE_ID\b/, `${f} uses MODULE, not MODULE_ID`);
+  }
+});
+
+/* ── EXT-8 (wave 2) the wildcard-art block lives in form-image-adapter.mjs ── */
+
+test("EXT-8 [declared] wildshape-adapter.mjs is back under the 500-line adapter cap: the wildcard-art block moved to form-image-adapter.mjs, which it imports", async () => {
+  const { readFileSync } = await import("node:fs");
+  const read = f => readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+  const ws = read("wildshape-adapter.mjs");
+  assert.ok(ws.split("\n").length <= 500, `EXT-8: wildshape-adapter.mjs has ${ws.split("\n").length} lines (cap 500)`);
+  const FI = await import("../form-image-adapter.mjs");
+  for (const name of ["formImage", "formImageFor", "wildcardFormImage", "shiftSource"]) {
+    assert.equal(typeof FI[name], "function", `EXT-8: form-image-adapter exports ${name}`);
+  }
+  for (const name of ["hasWildcardToken", "wildcardFiles", "formImage", "formImageFor", "wildcardFormImage", "shiftSource"]) {
+    assert.doesNotMatch(ws, new RegExp(`function ${name}\\(`), `EXT-8: ${name} is no longer defined in wildshape-adapter.mjs`);
+  }
+  assert.match(ws, /from "\.\/form-image-adapter\.mjs"/, "EXT-8: wildshape-adapter imports the block");
+  assert.match(read("api.mjs"), /\bformImageFor\b[^;]*from "\.\/form-image-adapter\.mjs"/, "EXT-8: the relay row comes from form-image-adapter");
+  const allow = JSON.parse(read("test/graph-allow.json")).allow;
+  assert.ok(allow.some(e => e.from === "wildshape-adapter.mjs" && e.to === "form-image-adapter.mjs"), "EXT-8: the adapter edge is allowed and explained");
+});
+
+/* ── M1 patches.mjs's GLUE comment names both importers ──────────────────── */
+
+test("M1 [declared] patches.mjs's GLUE comment names both importers: the entry (installPatches) and wiring.mjs (removePatches)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../patches.mjs", import.meta.url), "utf8");
+  const glue = src.match(/\* GLUE:([\s\S]*?)\*\//)?.[1] ?? "";
+  assert.doesNotMatch(glue, /only the entry imports/, "M1: the entry is not the only importer");
+  assert.match(glue, /installPatches/, "M1: the entry imports installPatches");
+  assert.match(glue, /wiring\.mjs[\s\S]*removePatches|removePatches[\s\S]*wiring\.mjs/, "M1: wiring.mjs imports removePatches");
+  for (const [f, name] of [["transform.mjs", "installPatches"], ["wiring.mjs", "removePatches"]]) {
+    assert.match(readFileSync(new URL(`../${f}`, import.meta.url), "utf8"), new RegExp(`import \\{ ${name} \\} from "\\./patches\\.mjs"`), `M1: ${f} imports ${name}`);
+  }
+});
+
+/* ── EC-3 the Chalice offer is a reminder on the casting player's own HUD ── */
+
+test("EC-3 [declared] the Chalice pulse is local to the casting client, and the README and the code comment say so", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../hud-panels.mjs", import.meta.url), "utf8");
+  const head = src.match(/\/\* ── Chalice: offered when it is earned[\s\S]*?const chaliceReady/)?.[0] ?? "";
+  assert.match(head, /postUseActivity[\s\S]*caster's client/, "EC-3: the comment says the hook fires on the caster's client");
+  assert.match(head, /no relay/i, "EC-3: the comment says the offer is not relayed");
+  assert.doesNotMatch(src, /socket|executeAsGM|executeForEveryone/, "EC-3: no relay was added");
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  const starry = readme.match(/\*\*Starry Form:\*\*[\s\S]*?\n- \*\*/)?.[0] ?? "";
+  assert.match(starry, /reminder on the casting player's own HUD/, "EC-3: the README says the pulse is local");
 });

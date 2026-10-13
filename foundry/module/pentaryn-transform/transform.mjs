@@ -7,6 +7,7 @@
 //   patches.mjs            the core v14 _preUpdateOperation unwrap (wrapMethod)
 //   wiring.mjs             the one log / hook registry / ctx both entries share
 //   wildshape-adapter.mjs  shift, revert, lookups, chat, the bonus-action mark, who runs what
+//   form-image-adapter.mjs the form's token image (wildcard art, the formImage relay) and trait text
 //   sweep-adapter.mjs      the active GM's sweep of spent forms
 //   bodyswap.mjs, wildshape.mjs, sweep.mjs   features installed here, in this order
 //   hud.mjs (esmodules[1]) installs starry.mjs and hud-panels.mjs (with starry-adapter.mjs,
@@ -30,9 +31,10 @@ import { MANIFEST } from "./api-manifest.mjs";
 import { installFeature, ctx, log } from "./wiring.mjs";
 import { buildApiFor } from "./api.mjs";
 import {
-  shift, revert, forms, wildShapeActivity, original, isRevertItem, isRunner, markBonusUsed, bonusUsedNow, say,
+  shift, revert, forms, wildShapeActivity, original, isRevertItem, markBonusUsed, bonusUsedNow, say,
   returnToNormal, isWildShapeForm
 } from "./wildshape-adapter.mjs";
+import { isRunner } from "./claim-adapter.mjs";
 import { sweepSpentForms } from "./sweep-adapter.mjs";
 import * as bodyswap from "./bodyswap.mjs";
 import * as wildshape from "./wildshape.mjs";
@@ -44,12 +46,12 @@ export {
 };
 
 /** Features this entry installs, in load order (hud.mjs installs starry and the HUD panels after). */
-const FEATURES = [bodyswap, wildshape, sweep];
+const FEATURES = { bodyswap, wildshape, sweep };
 
 /* ── the core v14 operator unwrap: applied now, before any preUpdateToken listener ── */
 installPatches();
 
-for (const feature of FEATURES) installFeature(feature);
+for (const [name, feature] of Object.entries(FEATURES)) installFeature(feature, name);
 
 /* ── the manifest's query rows (formImage's relay), on every client: a player's queryGM needs it too ── */
 registerQueries(MANIFEST, () => ctx.api, { log });

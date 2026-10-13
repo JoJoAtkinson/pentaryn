@@ -23,7 +23,7 @@ const ops = (...names) => F.calls.filter(c => names.includes(c.op));
 const errors = () => ops("notify").filter(c => c.level === "error").map(c => c.message);
 
 /** Talo with one more known form, a beast whose prototype token is `proto` (profile "pw"). */
-function druid(proto, { files = FILES, token = false } = {}) {
+function druid(proto, { files = FILES, token = false, pack = null } = {}) {
   game.actors.clear();
   F.chat.length = 0;
   F.calls.length = 0;
@@ -33,8 +33,10 @@ function druid(proto, { files = FILES, token = false } = {}) {
   F.become({ userId: IDS.gm });
   game.users.get(IDS.gm).active = true;
   const { talo } = F.W.talo({ revertItem: token });
-  const wolf = F.W.beast("mmWolfSrc0000001", "Wolf", { img: "portraits/wolf.webp", prototypeToken: proto });
+  const wolf = F.W.beast("mmWolfSrc0000001", "Wolf", { img: "portraits/wolf.webp", prototypeToken: proto, pack });
   F.tokenImages.set(wolf.uuid, files);
+  F.wildcardFiles.clear();
+  if (core.isWildcardPath(proto?.texture?.src)) F.wildcardFiles.set(proto.texture.src, files);
   talo.items.get(IDS.ws).system.activities.get("wsAct").availableProfiles.push({ _id: "pw", name: "Wolf", uuid: wolf.uuid });
   if (token) {
     game.actors.delete(talo.id);
@@ -116,7 +118,8 @@ test("wildcard-art: a player's shift asks the active GM for the image — no pla
     assert.ok(form, "the form");
     assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
     assert.deepEqual(errors(), [], "no 'Error retrieving wildcard tokens'");
-    assert.deepEqual(ops("getTokenImages").map(c => c.user), [IDS.gm], "listed once, by the GM");
+    assert.deepEqual(ops("browse").map(c => c.user), [IDS.gm], "browsed once, by the GM");
+    assert.deepEqual(ops("getTokenImages"), [], "dnd5e's own random pick is skipped");
   } finally { restore(); random.mock.restore(); }
 });
 
@@ -155,4 +158,122 @@ test("wildcard-art: api.formImage({ uuid }) answers the image (the relay row); a
   assert.equal(await api.formImage({ uuid: "Actor.mmWolfSrc0000001" }), "tokens/wolf/wolf-1.webp");
   assert.equal(await api.formImage({ uuid: "Actor.nope000000000001" }), null);
   assert.equal(await api.formImage({}), null);
+});
+
+/* wildcard-art-compendium (defect wave 2): a beast taken straight from the compendium. Core's
+   getTokenImages() answers its literal wildcard path and clone() leaves its prototype token as it
+   was, so the form got the literal `wolf-*.webp` placeholder. formImage now browses the wildcard
+   itself (FilePicker, { wildcard: true }) and the image reaches the form through dnd5e's transform
+   data and the token swap, whether or not a clone takes. */
+
+const PACK = "dnd5e.monsters";
+
+test("wildcard-art-compendium: a GM's shift into a compendium wildcard beast gets the first sorted file, not the literal wildcard", async () => {
+  const random = randomLast();
+  try {
+    const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { pack: PACK });
+    const form = await T.shift(talo, "pw");
+    assert.ok(form, "the form");
+    assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
+    assert.equal(F.lastTransformData.prototypeToken.randomImg, false, "the form's own tokens never pick at random");
+    assert.equal(ops("clone").length, 1, "the fixture's compendium clone() takes nothing: the image rides dnd5e's transform data");
+    assert.deepEqual(ops("browse").map(c => [c.target, c.options.wildcard]), [[WILD, true]], "the wildcard is browsed");
+    assert.deepEqual(errors(), []);
+  } finally { random.mock.restore(); }
+});
+
+test("wildcard-art-compendium: a wildcard path without randomImg is still resolved", async () => {
+  const { talo } = druid({ randomImg: false, texture: { src: WILD } }, { pack: PACK });
+  await T.shift(talo, "pw");
+  assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
+});
+
+test("wildcard-art-compendium: an unlinked token druid's token gets the first sorted file from a compendium beast", async () => {
+  const random = randomLast();
+  try {
+    const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { token: true, pack: PACK });
+    const token = talo.token;
+    await T.shift(talo, "pw");
+    assert.equal(token.texture.src, "tokens/wolf/wolf-1.webp");
+  } finally { random.mock.restore(); }
+});
+
+test("wildcard-art-compendium: a compendium wildcard that matches nothing gives the portrait", async () => {
+  const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { files: [], pack: PACK });
+  await T.shift(talo, "pw");
+  assert.equal(F.lastTransformData.prototypeToken.texture.src, "portraits/wolf.webp");
+});
+
+test("wildcard-art-compendium: a player's shift asks the GM, who browses the compendium beast's wildcard", async () => {
+  const { talo } = druid({ randomImg: true, texture: { src: WILD } }, { pack: PACK });
+  const restore = gmAnswers();
+  try {
+    asPlayer();
+    await T.shift(talo, "pw");
+    F.become({ userId: IDS.gm });
+    assert.equal(F.lastTransformData.prototypeToken.texture.src, "tokens/wolf/wolf-1.webp");
+    assert.deepEqual(ops("browse").map(c => c.user), [IDS.gm], "browsed once, by the GM");
+    assert.deepEqual(errors(), []);
+  } finally { restore(); }
+});
+
+/* wildcard-art-compendium (verifier R2): a beast with randomImg on and no token path at all — core's
+   Assign Token with the wildcard box ticked drops texture.src. There are no files to list, so the form
+   gets the portrait and nobody is asked: a GM's query runs on its own client, so relaying from the GM
+   would call formImage again without end. Each case counts the relay handler, capped so a regression
+   fails instead of hanging. */
+
+/** Count `formImage` relay handler calls; past `cap` the handler throws so a loop cannot run on. */
+function countRelay(cap = 20) {
+  const real = CONFIG.queries[QUERY];
+  const counter = { n: 0 };
+  CONFIG.queries[QUERY] = async (...a) => {
+    if (++counter.n > cap) throw new Error("formImage relay runaway");
+    return real(...a);
+  };
+  counter.restore = () => { CONFIG.queries[QUERY] = real; };
+  return counter;
+}
+
+for (const [label, src, pack] of [
+  ["a world beast with a null token path", null, null],
+  ["a compendium beast with an empty token path", "", PACK],
+]) {
+  test(`wildcard-art-compendium: a GM's shift into ${label} and randomImg on gets the portrait, never relaying`, async () => {
+    const { talo } = druid({ randomImg: true, texture: { src } }, { pack });
+    const relay = countRelay();
+    try {
+      const form = await T.shift(talo, "pw");
+      assert.ok(form, "the form");
+      assert.equal(relay.n, 0, "the GM never asks itself");
+      assert.equal(F.lastTransformData.prototypeToken.texture.src, "portraits/wolf.webp");
+      assert.deepEqual(ops("browse"), [], "nothing to browse");
+      assert.deepEqual(errors(), []);
+    } finally { relay.restore(); }
+  });
+}
+
+test("wildcard-art-compendium: a player's shift into a beast with randomImg on and no token path gets the portrait without asking the GM", async () => {
+  const { talo } = druid({ randomImg: true, texture: { src: null } });
+  const restore = gmAnswers();
+  const relay = countRelay();
+  try {
+    asPlayer();
+    const form = await T.shift(talo, "pw");
+    F.become({ userId: IDS.gm });
+    assert.ok(form, "the form");
+    assert.equal(relay.n, 0, "no path, nothing for the GM to list");
+    assert.equal(F.lastTransformData.prototypeToken.texture.src, "portraits/wolf.webp");
+    assert.deepEqual(errors(), []);
+  } finally { relay.restore(); restore(); F.become({ userId: IDS.gm }); }
+});
+
+test("wildcard-art-compendium: the relay row on the GM's client answers a no-path beast with its portrait in one call", async () => {
+  druid({ randomImg: true, texture: { src: "" } }, { pack: PACK });
+  const relay = countRelay();
+  try {
+    const api = game.modules.get(MODULE).api;
+    assert.equal(await api.formImage({ uuid: game.actors.get("mmWolfSrc0000001")?.uuid ?? "Actor.mmWolfSrc0000001" }), "portraits/wolf.webp");
+    assert.equal(relay.n, 0, "answering never re-asks");
+  } finally { relay.restore(); }
 });
