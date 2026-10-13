@@ -78,9 +78,11 @@ def parent_repo(fork: dict) -> str | None:
 
 
 def _default_branch(repo: str) -> str | None:
-    data = _gh(["api", f"repos/{repo}", "--jq", ".default_branch"])
-    if isinstance(data, str):
-        return data
+    """Upstream's default branch. No ``--jq``: gh prints a jq string raw, not as JSON,
+    so ``_gh`` could never parse it — read the field from the full repo object."""
+    data = _gh(["api", f"repos/{repo}"])
+    if isinstance(data, dict) and isinstance(data.get("default_branch"), str):
+        return data["default_branch"]
     return None
 
 
