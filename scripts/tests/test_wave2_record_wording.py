@@ -81,3 +81,11 @@ def test_py_update_rob_4_measures_drift_against_master():
     step = " ".join(step.split())
     assert "upstream main" not in step
     assert "`master`" in step
+
+
+def test_readme_still_open_records_joes_riders_ruling():
+    """Joe kept the riders kit 1.2.0 re-vendor on 2026-10-13, so it no longer waits on his call."""
+    still_open = _read("README.md").split("## Still open", 1)[1]
+    riders = next(ln for ln in still_open.splitlines() if "riders re-vendor" in ln.lower())
+    assert "riders re-vendor 300acf1f kept (Joe, 2026-10-13)" in riders
+    assert "needs Joe's call" not in still_open

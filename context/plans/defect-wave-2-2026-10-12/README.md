@@ -377,8 +377,8 @@ FIX-3 forward fix: the shard keeps its 3 light settings, and a doused torch keep
   (`scratchRecordsInLog` 0, expected 1) on the pings branch alone. The group record never ran
   `make test`. The branch `fix2/pings-2026-10-12` still has the work, but its record did not
   survive the revert onto main.
-- **The riders re-vendor needs Joe's call:** keep `300acf1f`, or apply the strict rule (see
-  above).
+- **The riders re-vendor:** riders re-vendor 300acf1f kept (Joe, 2026-10-13). The strict rule
+  (see above) is not applied.
 - **walls has had no live check.** Joe deploys it. The steps are in [`walls.md`](walls.md). The
   py-update dry run also reports that `pentaryn-walls` in `Data/` differs from the repo at the same
   version.
