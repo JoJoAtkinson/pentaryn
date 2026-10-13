@@ -1460,6 +1460,48 @@ def test_tunnel_setup_fails_when_cloudflared_does_not_answer(monkeypatch, tmp_pa
     assert "setup complete" not in out
 
 
+# ── M9: one `cloudflared tunnel list` existence check ─────────────────────────
+# tunnel_up and tunnel_setup each ran their own copy of `cloudflared tunnel list`
+# plus the name check. Both now ask _tunnel_exists(), which carries the ac-4 timeout.
+
+def test_tunnel_exists_lists_with_the_cloudflared_timeout(monkeypatch):
+    """M9: _tunnel_exists runs `cloudflared tunnel list` with CF_TIMEOUT and finds the name."""
+    import subprocess
+    seen = []
+
+    def run(argv, **kw):
+        seen.append((list(argv), kw.get("timeout")))
+        return subprocess.CompletedProcess(argv, 0, stdout=f"id  {cfg.TUNNEL_NAME}\n", stderr="")
+    monkeypatch.setattr(service.subprocess, "run", run)
+    assert service._tunnel_exists() is True
+    assert seen == [(["cloudflared", "tunnel", "list"], service.CF_TIMEOUT)]
+    monkeypatch.setattr(service.subprocess, "run",
+                        lambda argv, **kw: subprocess.CompletedProcess(argv, 0, stdout="", stderr=""))
+    assert service._tunnel_exists() is False
+
+
+def test_tunnel_up_and_setup_share_the_existence_check(monkeypatch, tmp_path, capsys):
+    """M9: tunnel_up and tunnel_setup both consult _tunnel_exists, never their own list."""
+    import subprocess
+    _tunnel_ready(monkeypatch, tmp_path)
+    monkeypatch.setattr(service.shutil, "which", lambda name: "/usr/local/bin/cloudflared")
+    asked = []
+    monkeypatch.setattr(service, "_tunnel_exists", lambda: asked.append(1) or False)
+    runs = []
+
+    def run(argv, **kw):
+        runs.append(list(argv))
+        return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
+    monkeypatch.setattr(service.subprocess, "run", run)
+
+    assert service.tunnel_up() == 1
+    assert "doesn't exist" in capsys.readouterr().out
+    assert service.tunnel_setup() == 1   # create failed after "does not exist"
+    assert len(asked) == 2, "M9: each caller must ask _tunnel_exists once"
+    assert ["cloudflared", "tunnel", "list"] not in runs, runs
+    assert ["cloudflared", "tunnel", "create", cfg.TUNNEL_NAME] in runs
+
+
 # ── tunnel-logs -n (rob-9) ────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("n,expected", [

@@ -249,6 +249,14 @@ def _tunnel_lock():
             fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
 
+def _tunnel_exists() -> bool:
+    """Whether `cloudflared tunnel list` names cfg.TUNNEL_NAME (M9: the one copy of this
+    check). Carries CF_TIMEOUT (py-ops-ac-4); a TimeoutExpired is the caller's to report."""
+    listed = subprocess.run(["cloudflared", "tunnel", "list"],
+                            capture_output=True, text=True, timeout=CF_TIMEOUT)
+    return cfg.TUNNEL_NAME in (listed.stdout or "")
+
+
 def tunnel_up() -> int:
     # The tunnel publishes this machine's Foundry as vtt.atjoseph.com; only the primary
     # does that (design §8). On the alt this is a loud no-op, not a failure: "Foundry up,
@@ -268,12 +276,11 @@ def tunnel_up() -> int:
             _say("✗ cloudflared not authenticated — run: make tunnel-setup")
             return FAIL
         try:
-            listed = subprocess.run(["cloudflared", "tunnel", "list"],
-                                    capture_output=True, text=True, timeout=CF_TIMEOUT)
+            exists = _tunnel_exists()
         except subprocess.TimeoutExpired:
             _say(f"✗ cloudflared did not answer in {CF_TIMEOUT}s — tunnel not started")
             return FAIL
-        if cfg.TUNNEL_NAME not in (listed.stdout or ""):
+        if not exists:
             _say(f"✗ tunnel '{cfg.TUNNEL_NAME}' doesn't exist — run: make tunnel-setup")
             return FAIL
 
@@ -330,9 +337,7 @@ def tunnel_setup() -> int:
         if subprocess.run(["cloudflared", "tunnel", "login"]).returncode != 0:
             return FAIL
     try:
-        listed = subprocess.run(["cloudflared", "tunnel", "list"],
-                                capture_output=True, text=True, timeout=CF_TIMEOUT)
-        if cfg.TUNNEL_NAME not in (listed.stdout or ""):
+        if not _tunnel_exists():
             if subprocess.run(["cloudflared", "tunnel", "create", cfg.TUNNEL_NAME],
                               timeout=CF_TIMEOUT).returncode != 0:
                 return FAIL
