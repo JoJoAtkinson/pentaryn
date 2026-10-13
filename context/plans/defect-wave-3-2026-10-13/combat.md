@@ -45,3 +45,24 @@ Use scratch documents only (ZZ prefix) and delete them afterwards. Never use the
 - **combat-3**: put `ZZ Massive`, a character with 20 max HP, on a ZZ scratch scene and rename its token `ZZ Masked`. Set its HP to 0
   and apply 25 damage from a damage card. The public card and the GM whisper both say
   `ZZ Masked`, and neither says `ZZ Massive`. Delete the scratch actor and scene.
+
+## Live check result (FIX-W3, 2026-10-13)
+
+Run in the MCP bridge GM tab on world `pentaryn` (Foundry 14.369, dnd5e 6.0.6), no restart or reload.
+The served `api.mjs`, `shapes.mjs` and `turnflow/death.mjs` hash the same as main. Scratch docs were
+named `ZZ combat …` (so `ZZ combat Inspect`, `ZZ combat Massive`, token `ZZ combat Masked`, scene
+`ZZ combat Scratch`).
+
+| item | result | evidence |
+|---|---|---|
+| combat-1 | pass | `inspect("ZZ combat Inspect", null)` threw `PentarynError`, `code: "BAD_ARGS"`, "BAD_ARGS: inspect: opts must be an object or omitted, got null"; a number and a string gave the same with "got number" / "got string". Omitted opts and `{}` returned the full state (16 keys) and the same JSON |
+| combat-2 | pass | `ZZ combat Inspect` is the SRD Bandit Captain. With its Multiattack set to `makes two [[/item Scimitar]] attacks and one [[/item Dagger]] attack`, `plan()` returned 3 swings (Scimitar, Scimitar, Dagger), the same JSON as the pre-fix computation (`fullAttackPlanOf` with `chosenWeapon` first), and `inspect().plan` agreed |
+| combat-3 | pass | a linked character with 20 max HP at 0 HP, with its token renamed `ZZ combat Masked` on the viewed scratch scene, took 25 bludgeoning through `applyDamage` with a GM-roll DamageRoll card as `originatingMessage`. Public card: alias `ZZ combat Masked`, "ZZ combat Masked takes damage at 0 Hit Points: a Death Saving Throw failure (1 of 3)." GM whisper: "ZZ combat Masked took 25 damage, at or over their Hit Point maximum (20). …". Neither says `ZZ combat Massive` |
+
+Seen while checking, and not part of this wave: the SRD Bandit Captain's own 2014-style Multiattack text
+("makes three melee attacks: two with its [[/item …]]{scimitar} and one with its [[/item …]]{dagger}")
+does not parse, so `plan()` falls back to one swing. `parseMultiattack` handles only the 2024 forms it
+lists.
+
+Cleanup: the GM view went back to the active scene. The two ZZ actors, the scratch scene and the three
+ZZ chat messages were deleted. No ZZ actor, scene, item, message or combat is left.
