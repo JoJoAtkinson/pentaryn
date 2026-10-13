@@ -94,6 +94,11 @@ Declared changes:
 - dropbin-R8: a failed eye-texture load (missing file or a rejected load) is remembered; no eye
   shows and the console warns once per attempt, and the load is tried again only on the next
   `canvasReady`. It was retried, and warned, on every eye paint (every animation frame).
+- dropbin-R10: a malformed relayed ledger entry (not an object, a reason other than `drop`/`delete`,
+  a non-string `itemName`, a non-numeric `t` or `quantity`, an `item` that is neither null nor an
+  object) is one console warning (`pentaryn-dropbin | malformed ledger entry ignored`) and resolves
+  null; it is never appended. One entry that fails to append rejects only its own caller, and the
+  rest of its coalesced batch is still written; it rejected the whole batch before.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`

@@ -21,7 +21,7 @@
  */
 
 import {
-  MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
+  MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, isEntryShape, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
   briefOf, shouldCaptureDelete, restoreTarget, pileScene, isActiveGMSelf,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
@@ -81,9 +81,14 @@ function drainPreReady() {
 /**
  * Append one entry. GM-only — everything else routes here through socketlib.
  * De-dupes, because Item Piles hooks can fire on more than one client. Before `ready` the entry is
- * held and recorded at ready (DB-AC-2); settings.set is never called before ready.
+ * held and recorded at ready (DB-AC-2); settings.set is never called before ready. A malformed entry
+ * (isEntryShape) resolves null with one console warning and is never appended (dropbin-R10).
  */
 async function recordAsGM(entry) {
+  if (!isEntryShape(entry)) {
+    console.warn(`${MODULE} | malformed ledger entry ignored`, entry);
+    return null;
+  }
   if (!game.ready) return new Promise((resolve, reject) => preReady.push({ entry, resolve, reject }));
   if (!game.user.isGM) return null;
   const { n, duplicate } = await appendLedger(entry, DEDUPE_MS);

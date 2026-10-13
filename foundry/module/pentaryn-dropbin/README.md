@@ -153,7 +153,9 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   does not say who dropped; `fromActorName` does) — DB-AC-1. A delete off a sheet is captured by
   the deleting client; players relay it through socketlib (`executeAsGM`) to a GM, and a GM records
   locally. A relay that reaches a GM tab still loading (before `ready`) is held and recorded at
-  `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst).
+  `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst). A malformed relayed entry (bad reason, itemName, t, quantity or item) is one
+  console warning and resolves null, and one entry that fails to append rejects only its own relay; the
+  rest of its burst is still written — dropbin-R10.
   Two tabs of one GM account both record a drop and both receive a relay; they compute the same
   row, and the tail dedupe (same item name and source `_id`, actor, quantity and pile within 2 s) catches the
   sequential case; a second, distinct same-named item lost within 2 s is its own entry (dropbin-EC-2).

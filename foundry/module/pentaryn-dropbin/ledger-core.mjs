@@ -34,6 +34,15 @@ export function duplicateOfTail(log, entry, dedupeMs = DEDUPE_MS) {
 }
 
 /**
+ * The shape an entry must have to be appended (dropbin-R10): an object whose reason is 'drop' or
+ * 'delete', with a string itemName, numeric t and quantity, and an item that is null or an object.
+ * A relayed entry is checked before it joins a batch, so a malformed one cannot reject the others.
+ */
+export const isEntryShape = e =>
+  !!e && typeof e === "object" && (e.reason === "drop" || e.reason === "delete") && typeof e.itemName === "string"
+  && typeof e.t === "number" && typeof e.quantity === "number" && (e.item === null || typeof e.item === "object");
+
+/**
  * Append `entry` as number `counter + 1`, or recognise it as a repeat of the tail. Never mutates
  * its inputs. @returns {{ log, counter, n, duplicate }} — on a duplicate the log and counter are
  * the ones passed in and `n` is the tail's number.

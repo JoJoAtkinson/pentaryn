@@ -19,7 +19,7 @@ F.fire("socketlib.ready");
 const flush = async () => {
   for (let i = 0; i < 50; i++) await Promise.resolve();
 };
-const entry = itemName => ({ t: 0, reason: "delete", itemName, fromActorId: "a", fromActorName: "Ann", quantity: 1 });
+const entry = itemName => ({ t: 0, reason: "delete", itemName, fromActorId: "a", fromActorName: "Ann", quantity: 1, item: null });   // makeEntry always writes item (dropbin-R10 checks it)
 const writes = () => F.calls.filter(c => c.op === "settings.set");
 
 test("DB-AC-2: a relayed entry before ready writes nothing, then is recorded at ready in arrival order", async () => {
