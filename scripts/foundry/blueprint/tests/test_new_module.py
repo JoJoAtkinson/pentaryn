@@ -433,3 +433,19 @@ def test_py_blueprint_ext_8_full_only_agrees_with_c40_and_the_template():
                           new_module.planned_manifest(values, tier=tier, dnd5e=True).get("languages", [])]
     assert ("lang/en.json" in langs("full"), "lang/en.json" in langs("small")) == (True, False)
     assert "lang/en.json" in new_module.FULL_ONLY
+
+
+def test_run_checks_goes_through_the_public_run_gate(tmp_path, monkeypatch):
+    """py-blueprint-MAINT-12: run_checks calls `ops.modules.run_gate`, not the private
+    `_CHECKS` table, and stops at the first failing gate."""
+    from scripts.foundry.ops import modules as ops_modules
+    seen = []
+
+    def fake(spec, gate):
+        seen.append(gate)
+        return 1
+    monkeypatch.setattr(ops_modules, "run_gate", fake, raising=False)
+    target = tmp_path / "pentaryn-demo"
+    target.mkdir()
+    assert new_module.run_checks(target) == 1
+    assert seen == ["parse"]

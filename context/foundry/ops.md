@@ -44,7 +44,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | See what's in the cloud store | `make foundry-cloud` |
 | See which modules are in the cloud, and their fingerprints | `make foundry-bundles` · `make foundry-bundles-gc` lists what the sweep would delete (`YES=1` deletes) |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
-| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer through `make foundry-importer-install` (its code alone: module-check + install, nothing staged) or `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after); there is no `foundry-importer-sync`. The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving. Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
+| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer through `make foundry-importer-install` (its code alone: module-check + install, nothing staged) or `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after); there is no `foundry-importer-sync`. The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving; two syncs of one module take turns on `.pentaryn-sync/<id>.lock` (the second waits, then installs on top). Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
@@ -77,7 +77,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 | App | `Foundry Virtual Tabletop` in `/Applications` — launched via `open -a` (through `host.py`; BOSS uses `PENTARYN_START_CMD`) |
 | Local URL | <http://localhost:30000> |
 | Public URL | <https://vtt.atjoseph.com> |
-| Tunnel | `cloudflared`, named tunnel `ardenhaven`, pidfile `.run/cloudflared.pid`, log `.run/cloudflared.log` (both gitignored) |
+| Tunnel | `cloudflared`, named tunnel `ardenhaven`, pidfile `.run/cloudflared.pid`, log `.run/cloudflared.log`, start lock `.run/cloudflared.lock` (all gitignored; `tunnel-up` holds the lock from the pidfile check to the pidfile write, so overlapping runs start one cloudflared) |
 | Data root | `~/Library/Application Support/FoundryVTT` (`host.FOUNDRY_DATA`; `Data/` beneath it is `ops/config.py`'s `FOUNDRY_DATA_DIR`) |
 | Core | **v14.365** |
 | System | **dnd5e 5.3.3** |
@@ -206,10 +206,10 @@ there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed
 | ------ | ---- |
 | `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS |
 | `make foundry-boot` | The boot choice alone — `FROM=` to decide it |
-| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s |
+| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s. The pidfile is trusted only while its pid is alive **and** `ps` names it cloudflared; otherwise both commands delete it (`▸ stale pidfile removed`) and never signal that process |
 | `make tunnel-logs` | Last 40 lines of the cloudflared log |
 | `make tunnel-setup` | **One-time**: `cloudflared tunnel login`, create the tunnel, route DNS. Idempotent |
-| `make vtt` | Three independent probes: local HTTP · pidfile `kill -0` · public HTTP 200/302 |
+| `make vtt` | Three independent probes: local HTTP · pidfile `kill -0` + `ps` says cloudflared · public HTTP 200/302 |
 
 ### Where the logic lives
 
