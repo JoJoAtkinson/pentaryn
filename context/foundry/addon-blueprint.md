@@ -387,7 +387,10 @@ Hot hooks (`refreshToken`, `drawToken`, `sightRefresh`, `canvasPan`, `hoverToken
 `updateWorldTime`, Argon action-panel render, `pointermove`) read from a cache or `memo`, never
 iterate `game.actors`/`game.scenes`/`canvas.tokens.placeables`, and carry a `// hot: <cache>`
 comment (C49). World-wide reactions run on one client (`isActiveGM()`, `claimDocument` for two GM
-sessions), with batched writes and `coalesce`/`foundry.utils.debounce` for rebuilds. Who runs what, and why, is §5.9.
+sessions), with batched writes. A rebuild several hooks trigger uses `foundry.utils.debounce` (or
+another trailing variant) so the last change is not lost; `coalesce` is leading-edge and suits
+idempotent reads whose callers can share the in-flight result (kit-perf-3). Who runs what, and why,
+is §5.9.
 
 ### 5.6 Patches and `foundry/adjustments.yml`
 
@@ -585,8 +588,9 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   synchronous, read from a cache/`memo` (§5.5, C49) and never start an async job per call —
   `void (async () => …)()` is still one (C60). Defer with `perFrame` (latest args, once per frame),
   `foundry.utils.debounce` (trailing, `.cancel()`, callback errors **not** caught,
-  `common/utils/helpers.mjs:101-114`) or `coalesce` when several triggers want the same rebuild
-  (`lib/perf.mjs`).
+  `common/utils/helpers.mjs:101-114`) when several triggers want the same rebuild, or `coalesce`
+  (`lib/perf.mjs`) for an idempotent read callers can share — never a rebuild: a change that lands
+  during its run is lost (§5.5).
 - A loop over hundreds of documents with no `await` freezes canvas and socket. Batch first; where
   you must yield, do it every N items with `await new Promise(r => g.setTimeout(r, 0))` using the
   injected `g`, so tests drive it with `t.mock.timers`. Core has no `sleep`.
@@ -680,8 +684,9 @@ const refresh = perFrame(() => rebuildOverlay(cache), { g });   // hot: cache
 reg.on("refreshToken", (token) => { if (cache.has(token.id)) refresh(); }, { label: "overlay" });
 ```
 
-Burst coalescing: `const rebuild = coalesce(async () => { … })` — a call during a run gets that
-run's promise.
+Burst rebuilds: `const rebuild = foundry.utils.debounce(() => { … }, 100)` — the trailing call runs
+once after the burst and sees the last change. Shared reads: `const load = coalesce(async () => { … })`
+— a call during a run gets that run's promise, so use it only for an idempotent read (§5.5).
 
 #### 5.9.3 Anti-patterns
 

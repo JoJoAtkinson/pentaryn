@@ -4,8 +4,13 @@
  * `foundry.utils.debounce` / `foundry.utils.throttle`.
  *
  *   memo      cache a pure-ish read per key (a hot hook reading per-token state)
- *   coalesce  callers during one in-flight run share its promise (a rebuild several hooks ask for)
+ *   coalesce  callers during one in-flight run share its promise (an idempotent read: a fetch or
+ *             index load every caller can use)
  *   perFrame  run at most once per animation frame with the latest args (refreshToken, pointermove)
+ *
+ * coalesce is leading-edge: a change that lands during a run is not seen by it and no second run
+ * follows. A rebuild several hooks trigger uses `foundry.utils.debounce` (trailing) or another
+ * trailing variant, so the last change is not lost. (1.2.0 kit-perf-3)
  */
 
 /**
@@ -38,7 +43,7 @@ export function memo(fn, keyFn = (...args) => args[0], { ttlMs = Infinity, max =
 /**
  * One run at a time: a call while a run is in flight gets that run's promise (its own args are
  * ignored), including a call from inside fn's own synchronous prefix. The next call after it
- * settles starts a fresh run.
+ * settles starts a fresh run. For idempotent reads only — never a rebuild (see the header).
  */
 export function coalesce(fn) {
   let inflight = null;

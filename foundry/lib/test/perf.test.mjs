@@ -115,3 +115,33 @@ test("perFrame falls back to setTimeout 0 in node", async t => {
   t.mock.timers.tick(0);
   assert.deepEqual(seen, ["b"]);
 });
+
+// kit-perf-3 (final review 2026-10-12): coalesce is leading-edge — a call during a run gets that
+// run's promise and no second run follows, so a change landing mid-run is never seen. Ruling: the
+// perf.mjs header and blueprint §5.5 say coalesce suits idempotent reads whose callers can share the
+// in-flight result; a rebuild several hooks trigger needs foundry.utils.debounce or a trailing variant.
+test("kit-perf-3: perf.mjs header and blueprint §5.5 send rebuilds to debounce, coalesce to idempotent reads", async () => {
+  const src = readFileSync(fileURLToPath(new URL("../perf.mjs", import.meta.url)), "utf8");
+  const header = src.slice(0, src.indexOf("export function memo")).split("/**")[1];
+  const bp = readFileSync(fileURLToPath(new URL("../../../context/foundry/addon-blueprint.md", import.meta.url)), "utf8");
+  const s55 = bp.slice(bp.indexOf("### 5.5 Performance"), bp.indexOf("### 5.6"));
+  for (const [where, text] of [["perf.mjs header", header], ["blueprint §5.5", s55]]) {
+    for (const needle of ["idempotent", "foundry.utils.debounce", "trailing", "last change"]) {
+      assert.ok(text.includes(needle), `${where} does not mention "${needle}"`);
+    }
+  }
+  assert.ok(!header.includes("a rebuild several hooks ask for"), "perf.mjs header still offers coalesce for rebuilds");
+  for (const stale of ["`coalesce`/`foundry.utils.debounce` for rebuilds", "`coalesce` when several triggers want the same rebuild", "Burst coalescing: `const rebuild = coalesce("]) {
+    assert.ok(!bp.includes(stale), `blueprint still recommends coalesce for rebuilds: ${stale}`);
+  }
+  // and the documented hazard is real: a change landing mid-run is not seen and no rerun follows
+  let state = 1, runs = 0, release;
+  const rebuild = coalesce(async () => { runs++; const seen = state; await new Promise(r => { release = r; }); return seen; });
+  const first = rebuild();
+  state = 2;
+  const second = rebuild();
+  release();
+  assert.equal(await second, 1, "coalesce now reruns for a mid-run change — revisit kit-perf-3's docs");
+  assert.equal(await first, 1);
+  assert.equal(runs, 1);
+});
