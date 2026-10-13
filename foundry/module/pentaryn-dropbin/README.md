@@ -30,15 +30,18 @@ the dnd5e 6 rarity keys).
 - **Loot, never the sheet** (Joe, 2026-10-12: "Just loot, they can't open the char sheet. They're
   dead, so they can't see their stats or bio"). A player opens a corpse only through the loot
   window. Every other way to its actor sheet (Item Piles' Ctrl-double-click bypass, the Actors
-  sidebar, a link, the combat tracker, any `bypassItemPiles` render) is refused, and a forced open
-  shows the loot window instead. The GM is exempt (HUD: *Open character sheet (GM)*). The guard is
-  Item Piles' `item-piles-preRenderActorSheet` hook, so it needs Item Piles active; a sheet a player
-  already had open when the creature died stays open until they close it.
+  sidebar, a link, the combat tracker, any `bypassItemPiles` render) is refused and opens nothing,
+  also on a body whose pile Item Piles reverted. The loot window is only Item Piles' own plain
+  double-click, which keeps the `distance: 1` check. The GM is exempt (HUD: *Open character sheet
+  (GM)*). The guard is Item Piles' `item-piles-preRenderActorSheet` hook, so it needs Item Piles
+  active; a sheet a player already had open when the creature died stays open until they close it.
 - **Ownership:** Item Piles needs players to observe a pile. An unlinked corpse gives them OBSERVER
   on the token's own actor delta, and a revival gives back the delta map saved at death (none
   saved: the base actor's again). A **linked** NPC's token ignores its delta, so its corpse gives
   players OBSERVER (`ownership.default`) on the base actor itself, saved at the first death in the
-  actor's own `corpse`/`ownership` flags and written back on revival (dropbin-EC-3). Its Actors
+  actor's own `corpse`/`ownership` flags and written back on revival (dropbin-EC-3), or by the
+  active GM once the actor's last corpse token (or its scene) is deleted, checked again at every
+  `ready`. Its Actors
   sidebar row stays hidden from players (it is a pile actor). `inspect`'s `saved.ownership` is the
   token's delta map; a linked corpse's lives on the actor. Sight is off on a corpse and restored on
   revival.
@@ -127,7 +130,7 @@ n/a — no other module reads `flags.pentaryn-dropbin.*`. This module reads `fla
 ## Events
 
 n/a — emits none of its own beyond the kit's `pentaryn-dropbin.ready` (api) and `pentaryn.ready`.
-Listens to the 30 load-time and 6 post-ready hooks pinned in `test/golden/hooks.json` and
+Listens to the 33 load-time and 6 post-ready hooks pinned in `test/golden/hooks.json` and
 `test/golden/hooks-after-ready.json`.
 
 ## Patches and adjustments
@@ -140,7 +143,7 @@ Listens to the 30 load-time and 6 post-ready hooks pinned in `test/golden/hooks.
   registers inside an async `ready` after the pack indexes load, so attunement's runs first.
 - container locks: `item-piles-preRenderInterface`, `item-piles-preRenderActorSheet` (vetoes) and
   `item-piles-preRattleItemPile` (words only)
-- corpse sheets: `item-piles-preRenderActorSheet` (veto for players) and `renderItemPileInterface`
+- corpse sheets: `item-piles-preRenderActorSheet` (veto for players)
 - directory hiding: `renderActorDirectory`, `renderJournalDirectory`
 - Loot all reads Item Piles' private Svelte state (`app.svelte.appShell.$$.ctx`) to follow *Change*
 - Loot all finds the loot window's footer, its Close Lid / Leave buttons and the native Take All

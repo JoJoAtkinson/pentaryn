@@ -90,6 +90,14 @@ Declared changes:
   (Ctrl-double-click bypass, sidebar, links, `bypassItemPiles`): `item-piles-preRenderActorSheet`
   vetoes it and a forced open shows the loot window instead; unlinked corpses' sheets were reachable
   through the Ctrl bypass too. One more load-time hook (30).
+- dropbin-EC-3 repair: the corpse sheet veto opens nothing itself and always vetoes. It called Item
+  Piles' `renderItemPileInterface` before `return false`; that API throws synchronously on a body
+  whose pile was reverted, the hook runner swallowed the throw and the full sheet opened. On a live
+  pile it skipped Item Piles' `distance: 1` check, so a Ctrl-double-click looted a body across the
+  map. A linked corpse's base actor gets its saved map back (and loses our flags) once its last
+  corpse token, or that token's scene, is deleted, and at every `ready` for any such actor left
+  over; before, clearing a body off the map left players OBSERVER on the NPC. Three more load-time
+  registrations (`deleteToken`, `deleteScene`, a `ready`; 33).
 - dropbin-R7: a failed HUD *Revive* is one console warning
   (`pentaryn-dropbin | revive failed for <token>`) and one warn toast ("Could not revive <token>. See
   the console."), and the HUD stays open; it was an unhandled, unprefixed rejection with nothing on

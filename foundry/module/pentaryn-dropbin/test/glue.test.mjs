@@ -59,9 +59,9 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
-test("load-time registrations: 30, in today's order (golden/hooks.json)", () => {
+test("load-time registrations: 33, in today's order (golden/hooks.json)", () => {
   pinJSON("hooks", hooksAtLoad, import.meta.url);
-  assert.equal(hooksAtLoad.length, 30);
+  assert.equal(hooksAtLoad.length, 33);
 });
 
 test("i18nInit: the Item Piles i18n shim fills the legacy DND5E keys; one console line", async () => {

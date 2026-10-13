@@ -492,6 +492,18 @@
       "label": "corpse: no sheet"
     },
     {
+      "name": "deleteToken",
+      "label": "corpse: token deleted"
+    },
+    {
+      "name": "deleteScene",
+      "label": "corpse: scene deleted"
+    },
+    {
+      "name": "ready",
+      "label": "corpse base release"
+    },
+    {
       "name": "renderItemPileInventoryApp",
       "label": "loot: render"
     },

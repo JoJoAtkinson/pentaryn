@@ -27,14 +27,14 @@
  *     the base actor is exposed. Item Piles cannot render a pile for a user without it. The delta's
  *     own map is remembered and put back on revival (null: the base actor's again).
  *   - A linked token ignores its delta's ownership, so a linked NPC's corpse grants OBSERVER on the
- *     base actor itself, its map saved on the actor and put back on revival (dropbin-EC-3).
+ *     base actor itself, its map saved on the actor and put back on revival (dropbin-EC-3), or when
+ *     its last corpse token (or that token's scene) is deleted: see releaseBases.
  *   - No player opens a corpse's actor sheet, by any route (Joe: "Just loot, they can't open the
- *     char sheet"): see sheetGuard.
+ *     char sheet"): see sheetGuard. The loot window is only Item Piles' own, distance-checked.
  */
 
 import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot } from "./dropbin-core.mjs";
-import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles,
-  renderItemPileInterface } from "./piles.mjs";
+import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
 const EYE = "modules/pentaryn-dropbin/assets/icon-eye.webp";     // the module's own asset, never one world's (dropbin-EXT-8)
@@ -179,15 +179,58 @@ const isCorpseActor = actor => !!actor && (ourCorpse(actor) || (!!actor.isToken 
  * can't see their stats or bio"). Item Piles fires `item-piles-preRenderActorSheet` from every actor
  * sheet's render: the canvas double-click, its Ctrl "open the sheet" bypass, the Actors sidebar, a
  * link, the combat tracker, any `bypassItemPiles` render. A player's render of a corpse's sheet is
- * vetoed there; a forced open shows the loot window instead. The GM is exempt (HUD: Open sheet).
+ * vetoed there, always, and nothing else is done: opening the loot window from here skipped Item
+ * Piles' `distance: 1` check (a Ctrl-double-click across the map looted the body), and its API throws
+ * synchronously on a corpse whose pile is off (Item Piles reverted it), which lost the veto. A plain
+ * double-click on a corpse pile never renders a sheet: Item Piles opens its own loot window, with the
+ * distance check. The GM is exempt (HUD: Open sheet).
  */
-function sheetGuard(actor, forced) {
+function sheetGuard(actor) {
   if (game.user.isGM || !isCorpseActor(actor)) return;
-  if (forced === true || forced?.force === true) {
-    Promise.resolve(renderItemPileInterface(actor, { useDefaultCharacter: true }))
-      .catch(err => console.warn(`${MODULE} | loot window failed for ${actor.name}`, err));
-  }
   return false;
+}
+
+/** A token still on a scene of the world: neither it nor its scene was deleted. */
+const onLiveScene = t => !!t?.parent && !!game.scenes?.has(t.parent.id) && !!t.parent.tokens?.has(t.id);
+
+/**
+ * dropbin-EC-3: a linked corpse's base actor stays observed while any token of it is still our corpse.
+ * Deleting that token (or its scene) is not a revival, so nothing put the saved map back: players kept
+ * OBSERVER, and the sheet veto, on an NPC whose next token is a living creature. The active GM writes
+ * the map back once no corpse token of the actor is left (deleteToken, deleteScene, and every ready).
+ */
+async function releaseBases(actors) {
+  for (const actor of actors) {
+    try {
+      if (!ourCorpse(actor)) continue;
+      if ((actor.getDependentTokens?.() ?? []).some(t => ourCorpse(t) && onLiveScene(t))) continue;
+      await unobserveBase(actor);
+    } catch (err) {
+      console.warn(`${MODULE} | corpse: could not give back ${actor?.name}'s ownership`, err);
+    }
+  }
+}
+
+/** The world actors behind these deleted tokens that were linked corpses of ours. */
+const corpseBasesOf = tokenDocs => [...new Set(tokenDocs.filter(t => t?.actorLink && ourCorpse(t)).map(t => t.actorId))]
+  .map(id => game.actors?.get(id)).filter(Boolean);
+
+function onTokenDeleted(tokenDoc) {
+  if (!isGMRunner()) return;
+  const actors = corpseBasesOf([tokenDoc]);
+  if (actors.length) releaseBases(actors);   // not awaited (the hook stays synchronous); failures warn
+}
+
+function onSceneDeleted(scene) {
+  if (!isGMRunner()) return;
+  const actors = corpseBasesOf(Array.from(scene?.tokens ?? []));
+  if (actors.length) releaseBases(actors);
+}
+
+/** ready: a linked corpse's actor whose corpse tokens all went while no GM hook saw it. */
+async function releaseOrphanBases() {
+  if (!isGMRunner()) return;
+  await releaseBases(Array.from(game.actors ?? []).filter(a => ourCorpse(a)));
 }
 
 /** Make sure the actor carries Dead as the big overlay (adding it, or promoting a corner icon). */
@@ -512,7 +555,7 @@ function addHudButtons(app, element) {
 /*  Lifecycle                                   */
 /* -------------------------------------------- */
 
-/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD, the sheet guard. */
+/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD, the sheet guard, base release. */
 export function install(reg, ctx) {
   ctx.expose({ corpses });
   const on = (name, fn, label) => reg.on(name, fn, { label });
@@ -530,6 +573,9 @@ export function install(reg, ctx) {
   ctx.onReady(() => migrateLegacyEyes(), "corpse eye migration");
   on("renderTokenHUD", addHudButtons, "corpse HUD");
   on("item-piles-preRenderActorSheet", sheetGuard, "corpse: no sheet");
+  on("deleteToken", onTokenDeleted, "corpse: token deleted");
+  on("deleteScene", onSceneDeleted, "corpse: scene deleted");
+  ctx.onReady(() => releaseOrphanBases(), "corpse base release");
 }
 
 /** Cancel the pending debounced syncs. */
