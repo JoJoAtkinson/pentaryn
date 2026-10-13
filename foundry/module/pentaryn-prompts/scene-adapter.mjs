@@ -27,7 +27,8 @@ const coreSetting = settingReader("core", [{ key: "gridDiagonals", default: 0 }]
 /** dnd5e size → the marker size rank used for ordering (tiny 0 … grg 5). */
 const DND_RANK = { tiny: 0, sm: 1, med: 2, lg: 3, huge: 4, grg: 5 };
 
-const EYE = "assets/tokens/custom/props/icon-eye.webp";
+/** The icon a note without its own is drawn with (scene model and crops alike). */
+export const EYE = "assets/tokens/custom/props/icon-eye.webp";
 
 /**
  * Colour/number markers and anything in a markers folder are scaffolding, not context: an actor
@@ -152,7 +153,8 @@ export function actorXp(actor, tok = null) {
   return Number.isFinite(v) && v > 0 ? v : crXp(actor.system?.details?.cr);
 }
 
-function tokenImg(tok) {
+/** A token's art as drawn: the dynamic ring's subject when the ring is on, else its texture. */
+export function tokenImg(tok) {
   const ring = tok.ring;
   if (ring?.enabled && ring.subject?.texture) return ring.subject.texture;
   return tok.texture?.src ?? "";
@@ -171,11 +173,18 @@ function tryCore(tok, method, use) {
   }
 }
 
-function tokenGeometry(tok, g) {
-  // getSize: the real pixel footprint (hex rows/columns are not width × size)
+/**
+ * A token's drawn footprint in scene pixels. getSize is core's real footprint (hex rows/columns
+ * are not width × size); width × grid when it is absent or throws. Crops box this same rect.
+ */
+export function footprintRect(tok, g) {
   let size = null;
   tryCore(tok, "getSize", v => { size = v; });
-  const rect = { x: tok.x, y: tok.y, w: size?.width ?? tok.width * g, h: size?.height ?? tok.height * g };
+  return { x: tok.x, y: tok.y, w: size?.width ?? tok.width * g, h: size?.height ?? tok.height * g };
+}
+
+function tokenGeometry(tok, g) {
+  const rect = footprintRect(tok, g);
   const centre = { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, elevation: tok.elevation ?? 0 };
   let origin = centre, points = null, squares = null;
   tryCore(tok, "getMovementOrigin", v => { origin = v; });
@@ -301,7 +310,10 @@ function toHexCubes(grid, items) {
   for (const it of items) {
     let offsets = it.docName === "Token" && it.coreSquares ? it.squares : null;
     if (!offsets?.length) {
-      try { offsets = [grid.getOffset({ x: it.centre.x, y: it.centre.y })]; } catch { offsets = it.squares; }
+      try { offsets = [grid.getOffset({ x: it.centre.x, y: it.centre.y })]; } catch (err) {
+        log.debug("hex offset of an item centre (using its squares)", err);
+        offsets = it.squares;
+      }
     }
     it.squares = dedupeSquares(offsets.map(cube));
   }
@@ -393,16 +405,20 @@ export function seesCount(tokenDoc) {
 const EMBED_RE = /@Embed\[([^\]\s]+)[^\]]*\](\{[^}]*\})?/g;
 const embedCache = new Map();
 
-/** The HTML an `@Embed[uuid …]` stands for: a journal page's text, an item's or actor's description. */
+/**
+ * The HTML an `@Embed[uuid …]` stands for: a journal page's text, an item's or actor's description.
+ * Only a resolved lookup is cached (a genuine empty included); a throw (a pack not yet loaded) shows
+ * blank this time and is tried again on the next render (R5-note).
+ */
 async function embedHtml(uuid) {
   if (embedCache.has(uuid)) return embedCache.get(uuid);
-  let html = "";
+  let html;
   try {
     const doc = await fromUuid(uuid);
     html = doc?.text?.content ?? doc?.system?.description?.value ?? doc?.system?.details?.biography?.value
       ?? doc?.pages?.contents?.[0]?.text?.content ?? "";
     if (/@Embed\[/.test(html)) html = html.replace(EMBED_RE, "");   // one level only: no recursion loops
-  } catch { html = ""; }
+  } catch (err) { log.debug(`@Embed ${uuid} not resolved (shown blank)`, err); return ""; }
   embedCache.set(uuid, html);
   return html;
 }

@@ -31,13 +31,12 @@ test("marker sizes come from the flag on the token, else its actor; unknown size
   assert.equal(M.isPromptToken(F.s1.tokens.get("tokOrdinary00001")), false);
 });
 
-test("promptText normalises the flag; markerActor and markerActorIds find the six", () => {
+test("promptText normalises the flag; markerActor finds a marker by size", () => {
   assert.equal(M.promptText(F.s1.tokens.get("m1")), "a lantern");
   assert.equal(M.promptText({ flags: { [MODULE]: { prompt: "  a\r\n\n\n\nb  " } } }), "a\n\n\n\nb");
   assert.equal(M.promptText(null), "");
   assert.equal(M.markerActor("large").id, "markerActorlarge");
   assert.equal(M.markerActor("huge"), null);
-  assert.deepEqual([...M.markerActorIds()].sort(), ["markerActorlarge", "markerActormid00", "markerActorsmall", "markerActortiny0", "markerActorxl000", "markerActorxxl00"]);
 });
 
 test("ensureMarkers: nothing to do when the six hold what it wants (Color objects and hex case count as equal)", async () => {

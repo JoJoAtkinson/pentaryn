@@ -75,6 +75,43 @@ test("checkPatch refusals", async () => {
   F.CONFIG.DND5E.creatureTypes = saved;
 });
 
+test("[declared] R2: checkPatch refuses an unknown disposition word, as the real run does, and only after every earlier check", async () => {
+  await assert.rejects(P.checkPatch({ disposition: "angry" }), { code: "BAD_SPEC", message: "BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret" });
+  for (const disposition of ["hostile", "neutral", "friendly", "SECRET"]) {
+    assert.deepEqual(await P.checkPatch({ disposition }), { notes: [], defaults: [] }, disposition);
+  }
+  // a second bad field keeps the message it gave before: the disposition check is the last one
+  await assert.rejects(P.checkPatch({ size: "big", disposition: "angry" }), { message: "BAD_SPEC: patch.size must be tiny|small|medium|large|huge|gargantuan, got big" });
+  await assert.rejects(P.checkPatch({ disposition: "angry", recharge: { Breath: 1 } }), { message: "BAD_SPEC: patch.recharge[\"Breath\"]: 2-6" });
+  await assert.rejects(P.checkPatch({ disposition: "angry", traits: [{ name: "T", recharge: 7 }] }), { message: "BAD_SPEC: patch.traits[T].recharge: 2-6 (5 means \"Recharge 5-6\")" });
+});
+
+test("[declared] R3: checkPatch shape-checks removeItems, itemUpdates, set and the numeric fields", async () => {
+  const LIST = "BAD_SPEC: patch.removeItems: a list of item names or ids, e.g. [\"Scimitar\"]";
+  const UPD = "BAD_SPEC: patch.itemUpdates: a list of {item: <name or id>, set: {\"system.x\": value}}";
+  const SET = "BAD_SPEC: patch.set: an object of {\"system.path\": value}";
+  const HP = "BAD_SPEC: patch.hp: a number, or {max: <number>, formula: \"8d12+24\"}";
+  const cases = [
+    [{ removeItems: "Scimitar" }, LIST], [{ removeItems: [""] }, LIST], [{ removeItems: [3] }, LIST], [{ removeItems: [null] }, LIST],
+    [{ itemUpdates: { item: "Claw" } }, UPD], [{ itemUpdates: ["Claw"] }, UPD], [{ itemUpdates: [{ item: "Claw" }] }, UPD],
+    [{ itemUpdates: [{ item: "", set: {} }] }, UPD], [{ itemUpdates: [{ item: "Claw", set: [1] }] }, UPD], [{ itemUpdates: [{ item: 4, set: {} }] }, UPD],
+    [{ set: "system.x" }, SET], [{ set: [1, 2] }, SET], [{ set: null }, SET], [{ set: { "": 1 } }, SET],
+    [{ hp: "lots" }, HP], [{ hp: { formula: "8d12" } }, HP], [{ hp: { max: "x" } }, HP], [{ hp: { max: 10, formula: 7 } }, HP], [{ hp: null }, HP], [{ hp: true }, HP],
+    [{ ac: "plate" }, "BAD_SPEC: patch.ac: a number (flat AC), got plate"],
+    [{ ac: "" }, "BAD_SPEC: patch.ac: a number (flat AC), got "],
+    [{ cr: "boss" }, "BAD_SPEC: patch.cr: a number or a fraction like \"1/2\", got boss"],
+    [{ speed: "fast" }, "BAD_SPEC: patch.speed: a number (walking feet), got fast"],
+    [{ speed: [30] }, "BAD_SPEC: patch.speed: a number (walking feet), got 30"]
+  ];
+  for (const [patch, msg] of cases) await assert.rejects(P.checkPatch(patch), { code: "BAD_SPEC", message: msg }, JSON.stringify(patch));
+  // valid shapes still pass, with no new notes
+  const ok = { removeItems: ["Scimitar", "itClaw0000000001"], itemUpdates: [{ item: "Claw", set: { "system.damage.base.number": 2 } }],
+    set: { "system.attributes.movement.climb": 30 }, hp: 45, ac: "15", cr: "1/2", speed: 30 };
+  assert.deepEqual(await P.checkPatch(ok), { notes: [], defaults: [] });
+  for (const hp of [{ max: 80, formula: "8d12+24" }, { max: "80" }, "45"]) assert.deepEqual(await P.checkPatch({ hp }), { notes: [], defaults: [] }, JSON.stringify(hp));
+  assert.deepEqual(await P.checkPatch({ removeItems: [], itemUpdates: [], set: {}, cr: 0 }), { notes: [], defaults: [] });
+});
+
 /** A world actor this run owns, logging its writes. */
 function stubActor() {
   const items = new StubCollection([

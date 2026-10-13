@@ -48,7 +48,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "crops",
       params: [{ name: "opts", type: "{ call, encounters?: string[], cropsAs?: \"files\" | \"base64\" }" }],
-      returns: "{ crops: [{ encounter, scene, png | path, mime, squares } | { encounter, error }] }",
+      returns: "{ crops: [{ encounter, scene, png | path, mime, mimeType, squares } | { encounter, scene, error }] }",
       gm: true, writes: false, query: true, legacy: true, wire: BASE64,
       sideEffects: ["Data/pentaryn-prompts-crops/<call>/ (cropsAs \"files\")"],
       throws: ["CALL_UNKNOWN", "BAD_SPEC"],
@@ -112,7 +112,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "model",
       params: [{ name: "sceneId", optional: true, doc: "default: the viewed scene" }],
-      returns: "{ key, name, gridFt, doors, walls, squares, mapFt, regions, levels, warn, notes, dims, items, rel(aKey, bKey) }",
+      returns: "{ key, name, nav, gridFt, doors, walls, squares, mapFt, regions, levels, warn, notes, dims, items, rel(aKey, bKey) }",
       gm: false, writes: false, legacy: true, throws: ["SCENE_UNKNOWN"],
       doc: "The scene model the panel and the gather share: items and the lazy relation function.",
     },

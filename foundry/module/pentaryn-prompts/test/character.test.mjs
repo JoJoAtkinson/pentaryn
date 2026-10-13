@@ -264,6 +264,63 @@ test("the headless build: what chooseData gives each advancement, and the report
   }
 });
 
+test("EC-7: a spell listed twice in one call is added once, with a warning, in the preview and the real run", async () => {
+  const unstage = stage();
+  try {
+    const w = { name: "Twice", class: "Wizard", subclass: "Evoker", species: "Elf", background: "Sage", level: 3, abilities: ARRAY,
+      spells: ["Magic Missile", "Magic Missile"], spellbook: ["Fire Bolt", "Fire Bolt"] };
+    const mm = await C.findItem("Magic Missile", "spell"), fb = await C.findItem("Fire Bolt", "spell");
+    const resolved = { docs: { species: { name: "Elf", system: {} }, background: { name: "Sage", system: {} },
+      cls: { name: "Wizard", type: "class", system: { identifier: "wizard", levels: 1 } },
+      subclass: { name: "Evoker", uuid: "Compendium.dnd-players-handbook.classes.Item.scEvoker00000001" } },
+      level: 3, abilities: ARRAY, size: "sm", warnings: [], spells: { prepared: [mm, mm], book: [fb, fb] }, gear: [], starting: null };
+    const pre = await C.previewCharacter(w, resolved);
+    const { actor, report } = await C.buildCharacter(w, resolved);
+    for (const r of [pre, report]) {
+      assert.deepEqual(r.spells, ["Magic Missile"]);
+      assert.deepEqual(r.spellbook, ["Fire Bolt"]);
+      assert.ok(r.warnings.includes("Magic Missile listed twice — added once"), r.warnings.join(" | "));
+      assert.ok(r.warnings.includes("Fire Bolt listed twice — added once"), r.warnings.join(" | "));
+    }
+    assert.equal(actor._source.items.filter(i => i.name === "Magic Missile").length, 1);
+    assert.equal(actor._source.items.filter(i => i.name === "Fire Bolt").length, 1);
+  } finally {
+    unstage();
+  }
+});
+
+test("M10: a pool entry whose fromUuid rejects reads as its uuid in the preview and the real run (no throw mid-advancement)", async () => {
+  const unstage = stage();
+  const LOCKED = "Compendium.p.Item.locked";
+  const prevFrom = globalThis.fromUuid;
+  globalThis.fromUuid = async u => { if (u === LOCKED) throw new Error("pack locked"); return prevFrom(u); };
+  STEPS.Mystic = () => [
+    [adv("ItemChoice", "Picked", { configuration: { choices: { 1: { count: 1 } }, pool: [{ uuid: LOCKED }, { uuid: "Compendium.p.Item.a" }] } }), 1],
+    [adv("ItemChoice", "Defaulted", { configuration: { choices: { 1: { count: 2 } }, pool: [{ uuid: "Compendium.p.Item.a" }, { uuid: LOCKED }] } }), 1]
+  ];
+  try {
+    const w = { name: "Locked", class: "Mystic", species: "Elf", background: "Sage", level: 1, abilities: ARRAY,
+      choices: { "Mystic: Picked": ["Light"] } };
+    const resolved = { docs: { species: { name: "Elf", system: {} }, background: { name: "Sage", system: {} },
+      cls: { name: "Mystic", type: "class", system: { identifier: "mystic", levels: 1 } } },
+      level: 1, abilities: ARRAY, size: "sm", warnings: [], spells: { prepared: [], book: [] }, gear: [], starting: null };
+    applied.length = 0;
+    const pre = await C.previewCharacter(w, resolved);
+    const preApplied = applied.filter(([t]) => t === "Picked" || t === "Defaulted");
+    applied.length = 0;
+    const { report } = await C.buildCharacter(w, resolved);
+    const realApplied = applied.filter(([t]) => t === "Picked" || t === "Defaulted");
+    const line = `Mystic: Defaulted (level 1): picked Spell: Light, ${LOCKED} (no choice given; pool: Spell: Light, ${LOCKED})`;
+    for (const r of [pre, report]) assert.ok(r.defaults.includes(line), r.defaults.join(" | "));
+    assert.deepEqual(realApplied, preApplied);
+    assert.deepEqual(realApplied.map(([t, , d]) => [t, d.selected]), [["Picked", ["Compendium.p.Item.a"]], ["Defaulted", ["Compendium.p.Item.a", LOCKED]]]);
+  } finally {
+    delete STEPS.Mystic;
+    globalThis.fromUuid = prevFrom;
+    unstage();
+  }
+});
+
 test("the headless build: an ASI naming a missing feat, an ASI breaking its cap, and a missing subclass are BAD_SPEC; the half-built actor is deleted", async () => {
   const unstage = stage();
   try {

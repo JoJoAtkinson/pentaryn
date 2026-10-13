@@ -42,7 +42,9 @@ test("FEATURES in order register golden/hooks.json between init and ready, with 
     "hoverToken: marker tip", "canvasPan: hide tip", "renderPromptDialog: hide tip", "canvasTearDown: hide tip",
     "deleteToken: hide tip, close its box",
     "createWall: refresh panels", "updateWall: refresh panels", "deleteWall: refresh panels", "createToken: refresh panels",
-    "deleteToken: refresh panels", "createNote: refresh panels", "deleteNote: refresh panels",
+    "deleteToken: refresh panels", "createNote: refresh panels", "updateNote: refresh panels", "deleteNote: refresh panels",
+    "createAmbientLight: refresh panels", "updateAmbientLight: refresh panels", "deleteAmbientLight: refresh panels",
+    "createTile: refresh panels", "updateTile: refresh panels", "deleteTile: refresh panels",
     "updateToken: refresh panels when moved or renamed",
     "setup: double-click opens the box",
   ]);

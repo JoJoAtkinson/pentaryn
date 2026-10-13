@@ -31,13 +31,19 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
   the ruler or other hotkeys; ⌘/Ctrl shortcuts pass. Each pending open has its own buffer. Text no box
   claims within 3.5 s goes into the open box, else a toast. A window blur forgets held keys.
 - Every open is a **new window**; closing saves in the background, so the next drop never waits.
-  A fresh marker closed empty is deleted; one emptied by hand stays, red-tinted.
-- Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`.
-- **Size chips** swap the marker for another size centred on the same point, text carried.
+  A fresh marker closed empty is deleted; one emptied by hand stays, red-tinted. A marker whose
+  text failed to save is never deleted (it stays, with the save-failed toast). A **Delete** that
+  fails leaves the box open and still saving, with a could-not-delete toast.
+- Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`. A
+  marker never has two boxes: reopening one already open (or still saving) brings that box forward.
+- **Size chips** swap the marker for another size centred on the same point, text carried — keys
+  typed while the swap runs included (no swap when the text failed to save). One swap at a time:
+  the chips grey out while it runs, a second click (a double click) is ignored, and closing or
+  Delete waits for it to finish.
 - **Side panel:** what this marker can see (unlimited darkvision, doors as they stand, light
   ignored), nearest first; *Out of sight (within 60 ft)* with `door` / `wall` tags; anything blocked
   only by a door named above the list. Click pans, ⌘-click opens the sheet or box. It redraws when a
-  wall, door, note or token on the scene changes.
+  wall, door, note, light, tile or token on the scene changes.
 - **Hover** a marker: its text, size, footprint and how many things it sees.
 - Nameplate: `✎ ` + the text, lines joined by ` / `, cut at 40 characters.
 
@@ -71,7 +77,7 @@ query and the version. The twelve calls published before the migration keep thei
 |---|---|
 | `gather({scenes, crops, chars, unseenWithinFt, builtWithoutProvenance, maxPrompts, from, party, cropsAs})` | `{call, text, counts, manifest, crops, next, ms, version, party, partySource, cropsNote}` |
 | `list()` | `{scenes: [{id, name, nav, prompts, empty}]}` |
-| `crops({call, encounters, cropsAs})` | `{crops: [{encounter, scene, path \| png, mime, mimeType, squares}]}` |
+| `crops({call, encounters, cropsAs})` | `{crops: [{encounter, scene, path \| png, mime, mimeType, squares} \| {encounter, scene, error}]}` |
 | `replaceMany({call, replacements, dryRun, force, skipDryRun, party})` or `({specFile, dryRun})` — the batch | `{dryRun, call, text, results, remaining, encounters}` |
 | `replace(spec, opts)` — ONE replacement (run options from `opts` or the spec) | same |
 | `show({call, id})` / `show({sceneId, markerId})` | `{ok, sceneId, x, y}` (views the scene, pans, pings) |
@@ -108,8 +114,11 @@ row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY
 - `actor` — `{actorId}` (place a world actor; `copy: true` duplicates it) or `{uuid}` (a compendium
   actor, imported into `Foundry MCP Creatures`), plus `patch` (`actor-patch-adapter.mjs`, keys
   `PATCH_KEYS`): name, size, img, biography, hp, ac, cr (fractions read as numbers), speed,
-  disposition, `removeItems`, `addItems` (by name / uuid / inline `{data}`), `traits`, `recharge`,
-  `itemUpdates`, `set`, `creatureType`, `languages` (words → dnd5e keys). A type change without
+  disposition (hostile|neutral|friendly|secret), `removeItems`, `addItems` (by name / uuid / inline `{data}`), `traits`, `recharge`,
+  `itemUpdates`, `set`, `creatureType`, `languages` (words → dnd5e keys). The dry run refuses a
+  misshapen field with `BAD_SPEC` naming the shape wanted (`removeItems` a list of names/ids,
+  `itemUpdates` `[{item, set}]`, `set` an object, `hp` a number or `{max, formula}`, `ac`/`cr`/`speed`
+  numbers). A type change without
   `languages` clears the inherited ones; inline items whose text requires attunement are marked so.
 - `npc` — `{npc, features, patch}`, built here through the bridge module's own handlers
   (`CONFIG.queries["foundry-mcp-bridge.createNpcActor"]`), every field checked as the
@@ -120,7 +129,8 @@ row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY
   dnd5e's own advancements run headlessly with the caller's `choices` or a stated default
   (`DEFAULTED`); every problem is collected into one `BAD_SPEC`. The dry run builds it on an unsaved
   actor, so its `sheet:`, `DEFAULTED` and `WARN` lines are the real run's. Spell slots start full;
-  a Monk's weapons get Martial Arts.
+  a Monk's weapons get Martial Arts. A spell named twice in `spells` (or in `spellbook`) is added
+  once, with the warning `<spell> listed twice — added once`.
 - `hotspot` — `{name, description, items, size = 0.5, locked, icon, light}`: a clone of
   `Hotspot · Look (template)` (Item Piles); `light` is an AmbientLight config at its centre.
 - `note` — `{name, html, folderId, label, ownership = "observer", iconSize = 64, icon, light}`.

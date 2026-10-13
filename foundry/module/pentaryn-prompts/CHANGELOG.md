@@ -27,8 +27,76 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
 - **[declared] The side panel follows a rename** (PT 2026-10-12, the DP8 live check): an
   `updateToken` that changes a token's `name` or `texture` redraws the open panels, so renaming an
   actor in view (core renames its linked tokens with a name-only update) shows the new name.
+- **[declared] The side panel follows a ring or prompt edit** (EC-1): an `updateToken` that changes
+  a token's `ring` or its `flags.pentaryn-prompts.prompt` redraws the open panels too, so a
+  ring-subject swap, or a prompt edit saved without a nameplate change, shows at once.
+- **[declared] The side panel follows note edits, lights and tiles** (M1): `updateNote` and the
+  create/update/delete hooks for `AmbientLight` and `Tile` redraw the open panels too (the panel
+  lists provenance lights and tiles as rows), as the README already said; the 250 ms debounce
+  bounds the cost.
 - **[declared] A patch's fractional CR** (`"1/2"`) is written as 0.5, not `NaN`, so a real run's
   encounter XP matches its dry run.
+- **[declared] A bad `patch.disposition` word** (`"angry"`) is refused by the dry run too (R2):
+  `BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret`, checked after every other patch
+  field so a second bad field keeps its own message. The real run now refuses it at plan time, so
+  nothing is imported, copied or stamped first (no cleanup line, no `discarded` entry).
+- **[declared] The dialog's side panel escapes with `foundry.utils.escapeHTML`** (M17), as the tip
+  does, instead of a private helper: an apostrophe now reads `&#x27;` in the panel's HTML. Every
+  panel attribute is double-quoted, so this is consistency, not a hole; nothing changes on screen,
+  and the `dialog-panel` golden (no apostrophe in its fixture) is byte-identical.
+- **[declared] `markerActorIds` is retired from `markers-adapter.mjs`** (M16): nothing called it;
+  `markerActor(size)` still finds each of the six, and `api.status()` lists them through it.
+- **[declared] The type-ahead orphan toast is localised on every path** (M12): the adapter's
+  no-sink fallback reads `PENTARYN_PROMPTS.typeahead.orphan` through `_loc`, as the entry's sink
+  does; English is only the fallback where `_loc` is undefined (node). No change in English.
+- **[declared] A choice pool entry that fails to load reads as its uuid** (M10): an ItemChoice
+  pool entry whose `fromUuid` rejects (a locked or broken pack) is named by its uuid in the real
+  run's matching and `DEFAULTED` line, as the dry run already did, instead of throwing the build
+  mid-advancement.
+- **[declared] A spell listed twice in one call is added once** (EC-7): `spells` or `spellbook`
+  naming the same spell twice gives one copy and the warning `<spell> listed twice — added once`,
+  in the dry run's preview and the real run alike.
+- **[declared] A misshapen patch field is refused by the dry run** (R3): `removeItems` must be a
+  list of item names or ids, `itemUpdates` a list of `{item, set: {...}}`, `set` an object of
+  paths, `hp` a number or `{max, formula}`, and `ac`, `cr` (fractions allowed) and `speed` must
+  read as numbers. Each `BAD_SPEC` names the shape wanted; a valid patch runs as before.
+- **[declared] A failed save never deletes a marker's words** (R1): a fresh marker whose text did
+  not save stays on the scene (red tint, the save-failed toast) instead of being removed as empty,
+  and a size chip whose save failed does not swap, so the swap never carries stale text.
+- **[declared] A double click on a size chip swaps once** (EC-2): one click makes exactly one new
+  marker and one delete. The chips grey out (`pp-swapping`) while a swap runs and further clicks
+  are ignored; closing the box or Delete waits for the swap, so the closing save lands on the new
+  marker and Delete removes it rather than leaving an orphan.
+- **[declared] A size swap stops when its marker goes** (R4): a marker deleted elsewhere (another
+  tab, a replace) while a size chip is swapping it no longer gets a new marker made; if the new
+  marker was already created, it stays in place with the text, and the gone marker is not deleted a
+  second time.
+- **[declared] Keys typed during a size swap are kept** (EC-4): the new marker is made with the
+  text as it stands at the end of the swap, the box redraws with exactly what was typed, and an
+  autosave follows so anything typed mid-swap lands on the new marker (it used to snap back to the
+  text from when the chip was clicked).
+- **[declared] One box per marker, even when reopened mid-save** (EC-6): two opens of a marker
+  whose box is still saving (Esc, then straight back in, twice) now share one box instead of each
+  making their own.
+- **[declared] The manifest's `returns` strings match what crops and model return** (EXT-3): crops
+  names `mimeType` and the error row's `scene` (`{encounter, scene, error}`), and model names `nav`.
+  `test/ext3-returns.test.mjs` compares each row's key list with a real sample (the `crop-row`
+  golden, a renderCrops error row, a stub scene model), so the next drift fails the gate; the
+  `describe` golden is re-pinned. No behaviour change: only describe()'s text differs.
+- **[declared] Hex crops box each token's real footprint** (EXT-12): crops take the token box and
+  art from the scene model's exported `footprintRect` (core's `Token#getSize`, else width × grid),
+  `tokenImg` (the ring subject when the ring is on) and `EYE` (a note with no icon), so on a hex grid
+  the crop draws the same rect the gather measures. Square-grid crops are unchanged (the crop
+  goldens are byte-identical); `glue-exports` is re-pinned for the three new exports.
+- **[declared] A failed Delete leaves the box open and still saving** (prompts-U1): the box counts
+  as deleted only once `tok.delete()` lands. Before, a rejected delete left the box open but every
+  later save was skipped, so words typed after it were lost. A rejection now logs, shows "The prompt
+  marker could not be deleted; see the console." (`PENTARYN_PROMPTS.dialog.deleteFailed`), and the
+  box stays editable; the deleteToken hook still leaves a box whose own delete succeeded alone.
+  While the delete is in flight the box counts as going away: a second Delete click, a size chip
+  or Esc does not issue another delete or make a new marker (Esc waits, then saves only if the
+  delete failed); a failed delete reschedules the autosave; and a delete that fails because the
+  marker went elsewhere meanwhile closes the box quietly.
 - **[declared] Two gathers at once keep both manifests**: the ring writes through one
   `serialStore` (a parallel gather no longer makes the other's call id `CALL_UNKNOWN`).
 - **[declared] `ensureMarkers` no longer duplicates across two GM tabs** (§5.9.1): the folder and
@@ -133,6 +201,13 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   behind `CONFIG.debug["pentaryn-prompts"]`. With debug on, gather also prints where its time went
   (model, embeds, render, store, crops) and the stored manifest's size, and every `replaceMany`
   prints one summary line (prompts-lookup-18); the always-on gather line is unchanged.
+- **[declared] Console only (R5):** the last silent catches now print that debug line too — an
+  `@Embed` that does not resolve, a hex `getOffset` that throws, and the character build's
+  `fromUuid`, spell/item lookup, class spell list, `createWithContents` and `canEnchant`
+  fallbacks. What each falls back to is unchanged.
+- **[declared] (R5-note):** an `@Embed` whose lookup throws (a compendium not yet loaded) is no
+  longer remembered as blank for the rest of the page — the next panel render tries it again. A
+  document that really is empty is still cached.
 - Internals: `prompts-core.mjs`; `geometry-core.mjs` split into `core/*.mjs` behind the barrel;
   settings, keybindings and the manifest ring in `settings.mjs`; adapters (markers, scene, sight,
   crops, packs, character, actor-patch, npc, tokens, typeahead); features through the kit's hook
