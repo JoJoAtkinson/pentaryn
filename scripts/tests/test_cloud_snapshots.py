@@ -1770,6 +1770,23 @@ def test_verify_dies_naming_the_module_when_its_folder_changed_meanwhile(two_hos
     assert _tmp_files(mac) == [kept]                        # kept until Joe deletes it
 
 
+def test_verify_names_an_unparseable_vanished_bundle_instead_of_crashing(monkeypatch,
+                                                                         tmp_path):
+    """Review R5: a manifest name parse_bundle cannot read (a hand-edited or foreign
+    sidecar) that is missing from the cloud cannot be rebuilt — _verify_bundles must say
+    so with an _Incomplete naming it, as _rebuilder_or_incomplete does, never crash with
+    an AttributeError on `None.kind`."""
+    bad = "not-a-bundle-name.tar.gz"
+    assert bundles.parse_bundle(bad) is None
+    monkeypatch.setattr(bundles, "listing", lambda st, fresh=False: {})
+    monkeypatch.setattr(bundles, "manifest_names", lambda m: {bad})
+    with pytest.raises(cloud._Incomplete) as exc:
+        cloud._verify_bundles(None, "world-x", {}, {}, tmp_path)
+    msg = str(exc.value)
+    assert msg.startswith(f"{bad}: its bundle {bad} vanished from the cloud")
+    assert "snapshot world-x is incomplete" in msg
+
+
 # healing (§3.5 step 3)
 
 def test_healing_uploads_a_hand_deleted_bundle_and_still_skips(two_hosts, monkeypatch, capsys):

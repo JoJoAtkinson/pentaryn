@@ -1430,8 +1430,9 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
             src = rebuild(n)
             if src is None:
                 ref = bundles.parse_bundle(n)
+                what = f"{ref.kind} {ref.id}" if ref else n
                 raise _Incomplete(
-                    f"{ref.kind} {ref.id}: its bundle {n} vanished from the cloud and the "
+                    f"{what}: its bundle {n} vanished from the cloud and the "
                     f"local folder changed since — snapshot {name} is incomplete")
         log(f"bundle {n} vanished from the cloud during this backup — uploading it again")
         bundles.upload_one(st, src, n)
