@@ -346,6 +346,14 @@ export function install(reg) {
     drawBadges();
   }, { label: "worn: updateToken" });
 
+  // A hot re-import after uninstall (the entry's game.ready branch) runs install with the canvas already
+  // up, and canvasReady will not fire again: refill the marked set and repaint now, or the badges stay
+  // gone until a scene change. A normal load installs at init, before the world is ready — no-op there.
+  if (globalThis.game?.ready && globalThis.canvas?.ready) {
+    rebuildMarked();
+    drawBadges();
+  }
+
   // the worn-mark API paths (rows in api-manifest.mjs) — GM only, per token
   return { impl: { worn: readWorn, setWorn, clearWorn, wornDialog: openDialog } };
 }
