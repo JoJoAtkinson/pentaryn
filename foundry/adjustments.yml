@@ -70,7 +70,7 @@ adjustments:
     modules: [pentaryn-transform]
     files: [foundry/module/pentaryn-transform/wildshape-adapter.mjs, foundry/module/pentaryn-transform/hud-panels.mjs]
     markers: ["bonusUsedNow"]
-    what: re-marks "bonus action used" after Argon rebuilds the HUD on a token swap; dnd5e 6.0.6 — no change needed (Argon reads abilities.*.checkBonus through a dnd5e shim removed in 6.2)
+    what: re-marks "bonus action used" after Argon rebuilds the HUD on a token swap, and gives a linked form's Action/Bonus/Reaction/Special panels Argon's in-combat pip count while its token holds the combat seat (Foundry's inCombat looks up the combatant's actorId, still the druid's); dnd5e 6.0.6 — no change needed (Argon reads abilities.*.checkBonus through a dnd5e shim removed in 6.2)
     why: Argon keeps used-state on the panel instance, which a token swap destroys
     native_when: bonus-used state kept on the actor/combatant rather than the panel instance
     retire_class: guarded

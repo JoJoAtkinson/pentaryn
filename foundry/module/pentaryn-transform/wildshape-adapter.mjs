@@ -361,9 +361,11 @@ export async function refund(host, itemOrId) {
 export function metaFor(host, extra = {}) {
   const wsItem = findWildShapeItem(host.items);
   const act = wsItem ? activitiesOf(wsItem).find(isWildShapeActivity) : null;
+  // An unlinked druid is its token: its own name and picture, as the HUD's Return button (EC-5, FIX-3 [declared]).
+  const tok = host.isToken ? host.token : null;
   return {
     profile: null, wildShapeId: wsItem?.id ?? null, seconds: durationSeconds(act?.duration), traitsHtml: "",
-    hostId: host.id, hostName: host.name, hostImg: host.img, hostTemp: host.system?.attributes?.hp?.temp ?? 0,
+    hostId: host.id, hostName: tok?.name || host.name, hostImg: tok?.texture?.src || host.img, hostTemp: host.system?.attributes?.hp?.temp ?? 0,
     hostItemIds: host.items.map(i => i.id), hostEffectIds: host.effects.map(e => e.id),
     ...extra
   };
