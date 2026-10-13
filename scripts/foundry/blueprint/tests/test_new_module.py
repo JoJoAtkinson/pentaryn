@@ -149,6 +149,19 @@ def test_namespace_collision_found_in_source(tmp_path, source):
     assert rc == 2 and not target.exists()
 
 
+@pytest.mark.parametrize("source", [
+    "game.pentaryn = { ...game.pentaryn, demo: api };\n",
+    "game.pentaryn = { ...globalThis.$p, demo: api };\n",
+])
+def test_py_blueprint_e5_a_dotted_spread_operand_is_a_namespace_owner(tmp_path, source):
+    """PYB-E5: `{ ...game.pentaryn, ns: api }` publishes ns, as ops/index._PUBLISH_RE already reads it."""
+    mods = tmp_path / "mods"
+    _fake_module(mods, "pentaryn-other", source=source)
+    assert new_module.namespace_owner("demo", [mods]) == "pentaryn-other"
+    rc, target = gen(tmp_path, "demo", "--no-run", modules_root=mods)
+    assert rc == 2 and not target.exists()
+
+
 def test_css_prefix_collision_and_auto_pick(tmp_path):
     mods = tmp_path / "mods"
     _fake_module(mods, "pentaryn-other", css=".pd-thing { color: red; }\n")

@@ -91,9 +91,9 @@ def _flags_of(mod: Path) -> dict:
 
 
 def namespace_owner(ns: str, roots: list[Path]) -> str | None:
-    """A module that already publishes `ns`: declared, or found as game.pentaryn.<ns> / { ...current, <ns>: api }."""
+    """A module that already publishes `ns`: declared, or found as game.pentaryn.<ns> / { ...current or ...game.pentaryn, <ns>: api }."""
     src_res = [re.compile(rf"game\.pentaryn\.{re.escape(ns)}\b"),
-               re.compile(rf"\{{\s*\.\.\.\s*\w+\s*,\s*{re.escape(ns)}\s*:")]
+               re.compile(rf"\{{\s*\.\.\.\s*[\w.$]+\s*,\s*{re.escape(ns)}\s*:")]
     for root in roots:
         for mod in _modules(root):
             if _flags_of(mod).get("namespace") == ns:
