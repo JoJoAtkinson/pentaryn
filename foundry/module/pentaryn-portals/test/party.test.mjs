@@ -586,3 +586,15 @@ test("portals-async-1 [declared]: two GM tabs see one arrival on an occupied squ
   assert.deepEqual([arrived.x, arrived.y], [500, 900]);
   assert.equal(arrived.flags[MODULE]?.claims?.spread, undefined, "no stale claim rides the next hop's toObject()");
 });
+
+test("portals-async-3 [declared]: bringFollowers' keepId-refusal election is commented as right for embedded Tokens, so nobody swaps it for a flag claim", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../party.mjs", import.meta.url), "utf8");
+  const body = src.slice(src.indexOf("export async function bringFollowers"), src.indexOf("function onDeleteToken"));
+  const comment = body.slice(body.indexOf("await carryTo("), body.indexOf("if (!/already exists/i"));
+  assert.match(comment, /embedded Token/i, "names embedded Tokens");
+  assert.match(comment, /replaces/, "says the blueprint's world-document 'replaces' note does not apply");
+  assert.match(comment, /claimDocument[^\n]*\n[^\n]*spreadArrival|claimDocument[^\n]*spreadArrival/, "says claimDocument is for spreadArrival only");
+  assert.match(comment, /portals-async-3/, "carries the finding id");
+  assert.ok(!/claimDocument\(/.test(body), "bringFollowers itself takes no flag claim");
+});

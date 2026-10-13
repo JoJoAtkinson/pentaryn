@@ -105,6 +105,11 @@ export async function bringFollowers(scene, deleted, replacements) {
       // Two tabs on the GM account (the MCP bridge and a browser) both run this. carryTo creates
       // with keepId, so the server takes one create and refuses the other: that refusal is the
       // election (finding -28). Any other failure still rejects ("summons did not follow").
+      // Keep it this way (portals-async-3): these are embedded Tokens, and an embedded create with
+      // keepId and an _id the scene already holds is refused with "already exists". The
+      // blueprint's note that a keepId create *replaces* the document is about world documents
+      // (journals, actors) and does not apply here. Do not swap this for a flag claim:
+      // claimDocument is used only by spreadArrival (portals-async-1), never here.
       if (!/already exists/i.test(err?.message ?? "")) throw err;
       log?.debug("followers already carried by another session", err);
       continue;
