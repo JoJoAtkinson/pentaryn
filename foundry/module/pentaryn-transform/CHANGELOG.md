@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+- **Reverting from an unloaded compendium beast no longer gives the druid the beast's effects (R3,
+  defect wave 2).** wildshape-adapter.mjs `carryBack` read the beast's effect ids with
+  `fromUuidSync`, which answers an unloaded compendium beast with its index entry (no effects), so
+  the beast's own status effects were carried onto the druid. When the effects are not iterable it
+  now awaits `fromUuid`; a failed load is logged at debug ("form source for revert failed", with
+  the source uuid) and falls back to none, as before ([declared]; test "R3" in wildshape.test.mjs;
+  golden console-texts.json gains the row).
 - **A form whose beast fails to load is logged (M6, defect wave 2).** form-picker.mjs `formSource`
   swallowed a `fromUuid` failure with `catch { doc = null; }`; it now logs it at debug ("form source
   failed", with the uuid) and the tile still shows no tooltip source. The glue.test T-D3 scan now also

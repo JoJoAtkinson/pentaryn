@@ -250,7 +250,11 @@ async function carryBack(actor, { quiet, reason }) {
   const fa = actor.system.attributes ?? {};
   const formAttributes = { exhaustion: fa.exhaustion, inspiration: fa.inspiration };
   const sourceUuid = ws?.source;
-  const sourceEffectIds = (sourceUuid ? fromUuidSync(sourceUuid)?.effects?.map(e => e.id) : null) ?? [];
+  // R3: an unloaded compendium beast answers fromUuidSync with its index entry (no effects): load it.
+  const near = sourceUuid ? fromUuidSync(sourceUuid) : null;
+  const beast = !sourceUuid || typeof near?.effects?.[Symbol.iterator] === "function" ? near : await fromUuid(sourceUuid)
+    .catch(err => { log.debug("form source for revert failed", { source: sourceUuid }, err); return null; });
+  const sourceEffectIds = beast?.effects?.map(e => e.id) ?? [];
 
   if (!actor.isToken) await restoreTokensElsewhere(actor);
   settleTokens(actor);

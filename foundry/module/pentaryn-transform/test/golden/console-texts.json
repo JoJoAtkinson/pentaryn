@@ -142,6 +142,11 @@
   [
     "wildshape-adapter.mjs",
     "debug",
+    "form source for revert failed"
+  ],
+  [
+    "wildshape-adapter.mjs",
+    "debug",
     "traits enrichment failed"
   ],
   [
