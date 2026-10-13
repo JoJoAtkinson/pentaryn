@@ -1534,6 +1534,35 @@ def _expr_end(code: str, i: int) -> int:
     return i
 
 
+def _call_args(code: str, open_paren: int) -> list[str]:
+    """The top-level arguments of the call whose `(` is at `open_paren`, split on depth-0 `,`
+    only — never `;`, which the lexer injects after every `${…}` of a template literal."""
+    close, args, depth, start = match_paren(code, open_paren), [], 0, open_paren + 1
+    for i in range(open_paren + 1, close):
+        c = code[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif c == "," and depth == 0:
+            args.append(code[start:i])
+            start = i + 1
+    if code[start:close].strip():
+        args.append(code[start:close])
+    return args
+
+
+def _has_timeout(code: str, open_paren: int, opts_at: int) -> bool:
+    """The call at `open_paren` passes a timeout. When its last argument is an object literal,
+    that argument must be the options one (index `opts_at`) and name `timeout`; otherwise any
+    `timeout` in the call counts (a variable or spread may carry it)."""
+    args = _call_args(code, open_paren)
+    last = args[-1].strip() if args else ""
+    if last.startswith("{") and match_paren(last, 0) == len(last) - 1:
+        return len(args) > opts_at and bool(re.search(r"\btimeout\b", last))
+    return bool(re.search(r"\btimeout\b", code[open_paren:match_paren(code, open_paren) + 1]))
+
+
 def _arrow_body(code: str, q: int) -> str:
     if q < len(code) and code[q] == "{":
         return code[q:match_paren(code, q) + 1]
@@ -1640,7 +1669,7 @@ def c54(m):
     return ok() if not found else ("warn", found)
 
 
-@rule("C55", "fail", "every User#query / User.queryMany passes a timeout (queryGM exempt)")
+@rule("C55", "fail", "every User#query / User.queryMany passes a timeout in its options argument (queryGM exempt)")
 def c55(m):
     detail, unknown = [], []
     for rel, src in m.files.items():
@@ -1655,12 +1684,10 @@ def c55(m):
                 if last not in ("db", "sql", "index", "pool", "client"):
                     unknown.append(f"{where} {recv}.query( — is the receiver a User?")
                 continue
-            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
-            if not re.search(r"\btimeout\b", args):
+            if not _has_timeout(code, mm.end() - 1, 2):
                 detail.append(f"{where} {recv}.query( without timeout")
         for mm in re.finditer(r"(?<![\w$])(?:User\.)?queryMany\(", code):
-            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
-            if not re.search(r"\btimeout\b", args):
+            if not _has_timeout(code, mm.end() - 1, 3):
                 detail.append(f"{rel}:{src.line_of(mm.start())} queryMany( without timeout")
     if detail:
         return bad(detail + unknown)

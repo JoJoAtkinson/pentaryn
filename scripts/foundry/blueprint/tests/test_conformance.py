@@ -485,6 +485,26 @@ def test_c55_every_query_passes_a_timeout(tmp_path, code, want):
     assert res(one(tmp_path, code), "C55")["status"] == want
 
 
+# py-blueprint-AC-2: when the last argument is an object literal, the timeout must be in it and
+# it must be the options argument (not the data). Arguments split on depth-0 `,` only: the lexer
+# injects `;` after every `${…}`, so a two-interpolation template must not shift the arguments.
+C55_AC2_CASES = [
+    ('await gm.query("x.y", { timeout: 5 });', "fail"),                          # data arg only
+    ('await User.queryMany([gm], "x.y", { timeout: 5 });', "fail"),              # data arg only
+    ('await gm.query("x.y", { timeout: 5 }, {});', "fail"),                      # options lack it
+    ('await gm.query(`${A}.${B}`, {}, { timeout: 8000 });', "pass"),             # 12557b01 broke this
+    ('await gm.query(`${A}.${B}`, { a: `${C}${D}` }, { timeout: 8000 });', "pass"),
+    ('await User.queryMany(us, `${A}.${B}`, {}, { ...o, timeout: 1 });', "pass"),
+    ('await gm.query("x.y", {}, opts);', "fail"),                                # whole-call search
+    ('await gm.query("x.y", {}, { ...o, timeout });', "pass"),
+]
+
+
+@pytest.mark.parametrize("code,want", C55_AC2_CASES)
+def test_c55_timeout_in_the_options_argument_py_blueprint_ac_2(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C55")["status"] == want
+
+
 C56_CASES = [
     ('CONFIG.queries["m.x"] = guarded(f);', "fail"),
     ('CONFIG.queries[`${MODULE}.x`] = f;', "fail"),

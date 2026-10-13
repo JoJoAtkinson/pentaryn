@@ -530,7 +530,8 @@ listener. The active GM is a **user, not a tab** — and in this setup two tabs 
   answer (§5.9.2).
 - Without `timeout` the server releases a query only when the **sender** disconnects
   (`e.once("disconnect",u)` on the sender's socket); a recipient tab closing mid-query hangs it
-  forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` (C55; `queryMany` is
+  forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` in its **options**
+  argument, not the data (C55; `queryMany` is
   static `(users, name, data, options)`, `user.mjs:335`). `queryGM` defaults to 10000 ms and runs
   the handler locally on the GM's own client (`lib/queries.mjs:89-98`); a raw `User#query` to
   yourself still goes through the server (`user.mjs:305-321`).
@@ -934,7 +935,7 @@ both Warnings and Manual.
 | C52 | fail | a `legacyName` always has `until` |
 | C53 | fail | no `async` listener on a vetoable hook (`pre*`, `<pkg>.pre*`), inline or a named `async` function in the same file (§5.9) |
 | C54 | warn+manual | a `pre(Create\|Update\|Delete)<Doc>` listener gated on the active GM (runs on the initiator only) |
-| C55 | fail | every `User#query` / `User.queryMany` passes `timeout` (`queryGM` exempt; unknown receivers → manual) |
+| C55 | fail | every `User#query` / `User.queryMany` passes `timeout` in its options argument (an object-literal last argument must be the options and name it; otherwise any `timeout` in the call counts; `queryGM` exempt; unknown receivers → manual) |
 | C56 | fail | no hand-written `CONFIG.queries` assignment (`[…] =`, `.x =`, `??=`, `Object.assign`); reads pass |
 | C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`) |
 | C58 | fail | one `serialStore` per key across the module, at module scope or memoised (`x ??= serialStore(`) |
