@@ -23,24 +23,24 @@ def _tar(path, member_dir, marker):
         tar.add(member_dir, arcname="dnd5e")
 
 
-def _names(*names):
+def _natural_sorted(*names):
     return sorted(names, key=recover._natural_key)
 
 
 # ── The key itself (also M7's missing version-maths pins) ───────────────────
 
 def test_ec1_patch_digit_rollover_sorts_after():
-    assert _names("dnd5e-6.0.10.tar.gz", "dnd5e-6.0.9.tar.gz") == [
+    assert _natural_sorted("dnd5e-6.0.10.tar.gz", "dnd5e-6.0.9.tar.gz") == [
         "dnd5e-6.0.9.tar.gz", "dnd5e-6.0.10.tar.gz"]
 
 
 def test_ec1_core_build_rollover_sorts_after():
-    assert _names("app-14.100.tar.gz", "app-14.99.tar.gz") == [
+    assert _natural_sorted("app-14.100.tar.gz", "app-14.99.tar.gz") == [
         "app-14.99.tar.gz", "app-14.100.tar.gz"]
 
 
 def test_ec1_prerelease_sorts_below_its_release():
-    assert _names("dnd5e-6.1.0.tar.gz", "dnd5e-6.1.0-beta.1.tar.gz",
+    assert _natural_sorted("dnd5e-6.1.0.tar.gz", "dnd5e-6.1.0-beta.1.tar.gz",
                   "dnd5e-6.0.10.tar.gz") == [
         "dnd5e-6.0.10.tar.gz", "dnd5e-6.1.0-beta.1.tar.gz", "dnd5e-6.1.0.tar.gz"]
 

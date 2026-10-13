@@ -28,7 +28,7 @@ def _dead_pid() -> int:
     return p.pid
 
 
-def _age(path: Path, seconds: float) -> None:
+def _age_seconds(path: Path, seconds: float) -> None:
     t = time.time() - seconds
     os.utime(path, (t, t))
 
@@ -43,7 +43,7 @@ def test_ac4_ownerless_young_lock_is_held(lock_dir):
 
 def test_ac4_ownerless_old_lock_is_taken(lock_dir):
     lock_dir.mkdir()
-    _age(lock_dir, 120)
+    _age_seconds(lock_dir, 120)
     lock = state.Lock(lock_dir).acquire()
     assert lock.held and lock.owner()["pid"] == os.getpid()
     lock.release()
@@ -98,7 +98,7 @@ def test_ac4_racer_owner_after_remkdir_is_respected(lock_dir, monkeypatch):
 def _stale(lock_dir: Path) -> None:
     lock_dir.mkdir()
     (lock_dir / "owner.json").write_text(json.dumps({"pid": _dead_pid()}))
-    _age(lock_dir, 4 * 3600)
+    _age_seconds(lock_dir, 4 * 3600)
 
 
 def test_ac4_second_run_cannot_acquire_inside_a_stale_break(lock_dir, monkeypatch):
