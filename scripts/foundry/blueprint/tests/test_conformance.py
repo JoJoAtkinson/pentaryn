@@ -762,6 +762,27 @@ def test_c61_gate_and_write_in_an_imported_module_file(tmp_path):
     assert res(one(tmp_path / "w", write_, extra={"b.mjs": b}), "C61")["status"] == "warn"
 
 
+def test_c61_scores_a_handler_imported_from_another_module_file_py_blueprint_ac_4(tmp_path):
+    """A named handler imported from a sibling file is resolved there and scored, not skipped."""
+    code = 'import { onUpdate } from "./b.mjs";\nreg.on("updateActor", onUpdate);'
+    b = "export function onUpdate(a) { a.update({ x: 1 }); }\n"
+    r = res(one(tmp_path / "w", code, extra={"b.mjs": b}), "C61")
+    assert r["status"] == "warn"
+    assert r["detail"] == ["a.mjs:2 updateActor — no gate"]
+    b = "export const onUpdate = (a) => { if (!isActiveGM()) return; a.update({ x: 1 }); };\n"
+    assert res(one(tmp_path / "g", code, extra={"b.mjs": b}), "C61")["status"] == "pass"
+    b = "export function onUpdate(a) { seen.set(a.id, 1); }\n"                       # writes nothing
+    assert res(one(tmp_path / "n", code, extra={"b.mjs": b}), "C61")["status"] == "pass"
+
+
+def test_c61_reports_an_unresolved_named_handler_py_blueprint_ac_4(tmp_path):
+    """A handler named from outside the module's own files is listed for review, like C53 does."""
+    code = 'import { onUpdate } from "../elsewhere/x.mjs";\nreg.on("updateActor", onUpdate);'
+    r = res(one(tmp_path, code), "C61")
+    assert r["status"] == "warn"
+    assert r["detail"] == ["a.mjs:2 updateActor → onUpdate (not resolved — review by hand)"]
+
+
 def test_c05_follows_a_barrel_re_export(tmp_path):
     """`export * from` / `export { a } from` reach their file (prompts' geometry-core, ties' core/)."""
     d = tmp_path / "pentaryn-barrel"

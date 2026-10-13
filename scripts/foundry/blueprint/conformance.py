@@ -1924,16 +1924,37 @@ def c60(m):
     return ok() if not found else ("warn", found)
 
 
+def _imported_handler(more: tuple[str, ...], ident: str) -> tuple[str, str] | None:
+    """(body, file code) of the handler `ident` declared in one of the imported files `more`."""
+    for code in more:
+        probe = f"{code}\n({ident})"                    # handler_at reads a bare name at `pos`
+        _, body, _ = handler_at(probe, len(probe) - len(ident) - 1)
+        if body:
+            return body, code
+    return None
+
+
 @rule("C61", "warn+manual", "a writing create*/update*/delete* listener runs on one client (active-GM gate or claim)")
 def c61(m):
     found = []
     for ls in listeners(m):
-        if not DOC_EVENT.match(ls.name) or not ls.body:
+        if not DOC_EVENT.match(ls.name):
+            continue
+        more = _imported_code(m, ls.rel)
+        body, code = ls.body, m.code(ls.rel)
+        if not body and ls.ident:                    # `reg.on("updateActor", onUpdate)` imported
+            hit = _imported_handler(more, ls.ident)
+            if not hit:
+                found.append(f"{ls.rel}:{ls.line} {ls.name} → {ls.ident} (not resolved — review by hand)")
+                continue
+            body, code = hit
+            more = (m.code(ls.rel), *more)
+        if not body:
             continue
         # the write and the gate are both looked for in the body plus the functions it calls (same
         # file, then the module files it imports), so `void react(actor)` with the write in react()
         # is checked like an inline write, and an imported `isRunner()` wrapping pickRunner is a gate
-        scope = _with_called(m.code(ls.rel), ls.body, _imported_code(m, ls.rel))
+        scope = _with_called(code, body, more)
         if not DOC_WRITE.search(scope):
             continue
         if ACTIVE_GATE.search(scope) or CLAIM.search(scope):
