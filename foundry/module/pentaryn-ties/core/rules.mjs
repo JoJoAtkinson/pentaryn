@@ -1,7 +1,8 @@
 /**
  * Pure rules added after the S4 split (wave 3): the flat-roll miss verdict (ties-13), the fact-key
  * and flag-name grammar the GM-side files used to spell by hand (ties-14), the concealment clamp
- * (ties-9) and the first-name rule the roster and the inspect window share (ties-15).
+ * (ties-9), the first-name rule the roster and the inspect window share (ties-15) and the Personal
+ * category test the review panel and the Attributes tab share (ties-ui-EXT-6).
  *
  * NOT re-exported by the known-core.mjs barrel: that barrel's export list is pinned
  * (test/golden/known-core-exports.json) so a console macro that imports it never loses a name. Import
@@ -65,3 +66,13 @@ export function concealFor(raw, attrId) {
 
 /** "Caven Ashwell" → "Caven", "Talo, the Quiet" → "Talo"; a blank name → "" ; null → "?". */
 export const firstName = name => String(name ?? "").trim().split(/[\s,]/)[0] || String(name ?? "?");
+
+/* ── categories (ties-ui-EXT-6) ───────────────────────────────────────────── */
+
+/**
+ * Is this registry entry a PERSONAL attribute (one character's own history, category "personal")?
+ * Trimmed and case-blind, so "Personal" counts. The review panel files the row under its Personal tab
+ * by it; the Attributes tab draws "Clues on <carrier>" under one. Anything else — null included — is
+ * world-building.
+ */
+export const isPersonalEntry = entry => String(entry?.category ?? "").trim().toLowerCase() === "personal";

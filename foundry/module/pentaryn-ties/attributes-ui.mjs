@@ -46,6 +46,7 @@ import { grantedRegion } from "./known-ui.mjs";
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
 import { esc, bindRowToggle, makeOpenState, guardClick } from "./core/html.mjs";
+import { isPersonalEntry } from "./core/rules.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -314,7 +315,7 @@ function identifyBlock(row) {
  */
 export function personalCluesHTML(entry, carriersOf = null) {
   if (game.user?.isGM !== true || !entry?.id) return "";
-  if (String(entry.category ?? "").trim().toLowerCase() !== "personal") return "";
+  if (!isPersonalEntry(entry)) return "";
   // the review panel already built id → carrying actors for this render; pass it in (ties-27)
   const carriers = carriersOf
     ? carriersOf(entry.id)

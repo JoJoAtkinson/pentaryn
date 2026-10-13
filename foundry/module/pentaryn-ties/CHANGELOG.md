@@ -168,6 +168,11 @@ Changed (declared, no table-visible change): key lists are derived from their la
 world filter chips from `FILTER_LABEL`, the world tree's failed / pending / unknown tag from a new
 `STATE_LABEL`, the review panel's "was" rows from `FIELD_LABEL`. Same order, same markup. ties-ui-EXT-5.
 
+Changed (declared, no table-visible change): the "is this a Personal attribute?" test (category
+trimmed, case-blind, `personal`) is one `isPersonalEntry(entry)` in `core/rules.mjs`; the review panel's
+World / Personal tab split and the Attributes tab's "Clues on <carrier>" both call it instead of
+spelling it by hand. ties-ui-EXT-6.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

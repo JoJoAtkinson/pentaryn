@@ -45,6 +45,7 @@ import {
   selectAttributes
 } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
+import { isPersonalEntry } from "./core/rules.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
 import { reviewState, sortForReview, childrenOf, indexRegistry, readLore, REVIEW_SORTS, REGISTRY_SETTING } from "./known-core.mjs";
 import { LiveHooks } from "./ties-adapter.mjs";
@@ -378,7 +379,7 @@ export class AttributeReview extends ApplicationV2 {
       <i class="fa-solid fa-chevron-${open ? "up" : "down"} pt-review-caret"></i>
     </div>`;
 
-    const personal = String(e.category ?? "").trim().toLowerCase() === "personal";
+    const personal = isPersonalEntry(e);
     return `<li class="pt-review-row" data-id="${esc(e.id)}" data-tab="${personal ? "personal" : "world"}" data-state="${state}" data-needs="${state !== "reviewed"}" data-search="${esc(search)}">
       ${summary}${open ? this.detail(e, lore, who, kids, parent) : ""}</li>`;
   }
