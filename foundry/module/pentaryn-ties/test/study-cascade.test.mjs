@@ -208,10 +208,13 @@ test("combat: one inspection per combatant per round, marked not refused (ES-5)"
 });
 
 /*
- * M5 (final review 2026-10-12, ties-study): Joe's rule is "by the tenth you look paranoid", so the
- * last rung is the TENTH look — the sixth, seventh, eighth and ninth say nothing.
+ * M5 (final review 2026-10-12, ties-study; repaired 2026-10-13): the last rung is the SIXTH look.
+ * Joe's retune of 2026-08-23 ("at 2 … at 3 you are looking people up and down, at 5 careful now,
+ * at 6 you are looking paranoid", context/plans/foundry-encounter-log.md) replaced his earlier
+ * "by the tenth". The code was right; the doc comment in tempo.mjs was the stale half. Looks 7–11
+ * say nothing — each line lands once, on its exact count.
  */
-test("tempo: lines at the 2nd, 3rd, 5th and 10th look; a 20 ft move starts the count again", async () => {
+test("tempo: lines at the 2nd, 3rd, 5th and 6th look; a 20 ft move starts the count again", async () => {
   T().study.clearScoping();
   const said = [];
   for (let i = 1; i <= 11; i++) {
@@ -228,6 +231,6 @@ test("tempo: lines at the 2nd, 3rd, 5th and 10th look; a 20 ft move starts the c
   pinJSON("cascade-tempo", { said, all: T().study.scoping(), cleared: (T().study.clearScoping(PC), T().study.scoping(PC)) }, import.meta.url);
   assert.equal(said[1].emitted.length, 1);
   const spoke = said.filter(r => r.emitted?.length).map(r => r.look);
-  assert.deepEqual(spoke, [2, 3, 5, 10], "M5: the rungs land on the 2nd, 3rd, 5th and 10th look");
-  assert.match(said[9].emitted[0], /looks openly paranoid/, "M5: the paranoid line is the tenth look's");
+  assert.deepEqual(spoke, [2, 3, 5, 6], "M5: the rungs land on the 2nd, 3rd, 5th and 6th look (Joe, 2026-08-23)");
+  assert.match(said[5].emitted[0], /looks openly paranoid/, "M5: the paranoid line is the sixth look's");
 });

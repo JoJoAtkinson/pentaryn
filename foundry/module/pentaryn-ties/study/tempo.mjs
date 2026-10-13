@@ -15,9 +15,10 @@ import { canSee } from "../ties-adapter.mjs";
 /**
  * How obvious is it that this character is working the room?
  *
- * Joe's rule, and it is roleplay furniture rather than a mechanic: inspect two people and nobody
- * notices; by the third you are visibly studying the room; by the fifth you are sweeping it; by
- * the tenth you look paranoid. **Moving resets it** — *"if they look, move, look, move, they don't
+ * Joe's rule, and it is roleplay furniture rather than a mechanic: at the second look people might
+ * take offence; at the third you are looking people up and down; at the fifth, careful now; at the
+ * sixth you look paranoid (his 2026-08-23 retune, which replaced an earlier "by the tenth" — M5).
+ * **Moving resets it** — *"if they look, move, look, move, they don't
  * announce they are scoping people, which is how people do that in real life."*
  *
  * ## What this deliberately is NOT
@@ -42,13 +43,15 @@ import { canSee } from "../ties-adapter.mjs";
  * Keys are named for their count rather than numbered 1-2-3, so changing a threshold cannot leave
  * the strings quietly describing the wrong rung.
  *
- * The thresholds are 2, 3, 5, 10 — the last is Joe's "by the tenth you look paranoid" (M5).
+ * The thresholds are 2, 3, 5, 6 — Joe, 2026-08-23: "at 2 … at 3 you are looking people up and
+ * down, at 5 careful now, at 6 you are looking paranoid" (context/plans/foundry-encounter-log.md).
+ * An earlier doc line said "by the tenth"; that was the pre-retune rule, not this one (M5).
  */
 const SCOPE_STEPS = [
   { at: 2, key: "known.inspect.scope2", label: "PENTARYN_TIES.known.inspect.scope2" },
   { at: 3, key: "known.inspect.scope3", label: "PENTARYN_TIES.known.inspect.scope3" },
   { at: 5, key: "known.inspect.scope5", label: "PENTARYN_TIES.known.inspect.scope5" },
-  { at: 10, key: "known.inspect.scope10", label: "PENTARYN_TIES.known.inspect.scope10" }
+  { at: 6, key: "known.inspect.scope6", label: "PENTARYN_TIES.known.inspect.scope6" }
 ];
 
 /** Feet of movement that reads as "they moved on" and clears the count. */

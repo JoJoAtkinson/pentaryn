@@ -44,7 +44,7 @@
     "PENTARYN_TIES.known.inspect.scope2": "{name} gives a second stranger the once-over. People do notice being measured.",
     "PENTARYN_TIES.known.inspect.scope3": "{name} is looking people up and down.",
     "PENTARYN_TIES.known.inspect.scope5": "Careful now, {name}.",
-    "PENTARYN_TIES.known.inspect.scope10": "{name} looks openly paranoid."
+    "PENTARYN_TIES.known.inspect.scope6": "{name} looks openly paranoid."
   },
   "review.sort.": {
     "PENTARYN_TIES.review.sort.review": "Needs review first",

@@ -33,7 +33,9 @@
     },
     {
       "look": 6,
-      "emitted": [],
+      "emitted": [
+        "Token zzTokPc000000001 looks openly paranoid."
+      ],
       "state": 6
     },
     {
@@ -53,9 +55,7 @@
     },
     {
       "look": 10,
-      "emitted": [
-        "Token zzTokPc000000001 looks openly paranoid."
-      ],
+      "emitted": [],
       "state": 10
     },
     {
