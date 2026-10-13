@@ -395,6 +395,30 @@ test("Stop with the swing's roll window open closes that window unrolled; abortF
   F.calls.length = 0;
 });
 
+test("combat-core-ROB-2 [declared]: api.abort resolves a Token, name, id or UUID; a miss never aborts; no argument aborts any", async () => {
+  const a = act(fig, "longsword0000001");
+  const refs = [["token", ftok], ["name", fig.name], ["id", fig.id], ["uuid", fig.uuid], ["actor", fig], ["no argument", undefined]];
+  for (const [label, ref] of refs) {
+    let release;
+    a.script.attack.push(() => new Promise(r => { release = r; }));
+    const run = api.fullAttack(fig);
+    await drain();
+    // a ref that resolves to nothing, or to another actor, leaves the running sequence alone
+    for (const miss of ["Nobody At All", "zzzzzzzzzzzzzzzz", rog, rog.name, {}]) {
+      api.abort(miss);
+      assert.equal(seq.running().abort, false, `${label}: abort(${miss?.name ?? miss}) is a no-op`);
+    }
+    if (ref === undefined) api.abort(); else api.abort(ref);
+    assert.equal(seq.running().abort, true, `abort by ${label} stops the run`);
+    release(null);
+    assert.equal((await run).status, "stopped", label);
+    await tick(400);
+  }
+  F.foundry.applications.instances.clear();
+  reset(fig);
+  F.calls.length = 0;
+});
+
 test("a cancelled usage card pauses; a weapon with no attack activity stops with a warning", async () => {
   const a = act(fig, "longsword0000001");
   a.script.use.push(null);
@@ -572,6 +596,30 @@ test("follow-ups: Off-hand, Nick, Martial Arts, Hew, Pole Strike, unknown (golde
   F.calls.length = 0;
 });
 
+test("api.followUp with a missing or non-object followUp answers unknown, not a TypeError (combat-core-ROB-6)", async () => {
+  for (const f of [undefined, null, "offhand", 3]) {
+    F.calls.length = 0;
+    assert.deepEqual(await api.followUp(fig, f), { rolled: 0, status: "unknown" }, `combat-core-ROB-6: ${String(f)}`);
+    assert.deepEqual(F.calls.filter(c => c.op === "activity.rollAttack"), [], "nothing rolled");
+  }
+  F.calls.length = 0;
+});
+
+// combat-core-EXT-4 (repair): the SINGLE_SWING lookup only takes a string kind. A one-element array, or any
+// object whose toString names a table row, answered "unknown" under the old strict-equality ladder and
+// still does: nothing rolled, no bonusSpent, nothing written to the turn flag.
+test("combat-core-EXT-4: a non-string follow-up kind that coerces to a SINGLE_SWING key answers unknown", async () => {
+  const keyish = { toString: () => "hew" };
+  for (const [kind, weaponId] of [[["hew"], "glaive0000000001"], [["martial-arts"], "unarmedStrike001"], [["offhand"], "longsword0000001"], [keyish, "glaive0000000001"]]) {
+    F.calls.length = 0;
+    const before = JSON.stringify(sly.flags[MODULE]?.turn ?? null);
+    assert.deepEqual(await api.followUp(sly, { kind, weaponId }), { rolled: 0, status: "unknown" }, `combat-core-EXT-4: ${JSON.stringify(kind)}`);
+    assert.deepEqual(F.calls.filter(c => c.op === "activity.rollAttack"), [], "nothing rolled");
+    assert.equal(JSON.stringify(sly.flags[MODULE]?.turn ?? null), before, "the turn flag is untouched");
+  }
+  F.calls.length = 0;
+});
+
 test("Flurry of Blows: its own card spends the Focus first; missing / no Focus / cancelled (golden/sequence-flurry.json)", async () => {
   const rows = [];
   reset(mnk);
@@ -658,4 +706,49 @@ test("strip exports used by the loop: show / update / hide / picking / waitChoic
   assert.equal(stripEl(), null);
   strip.update({ status: "running" });   // no strip: no-op
   strip.picking(true);
+});
+
+// combat-core-M9: runSwings did three jobs in ~128 lines. The paused-choice branch (onPaused) and the
+// per-swing roll configuration (swingRollArgs) are file-private helpers; the run goldens above
+// (sequence-*.json) and the api-calls / plans / full-attack-plans goldens pin the behaviour unchanged.
+test("combat-core-M9: runSwings delegates the paused branch (onPaused) and the roll args (swingRollArgs)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../sequence.mjs", import.meta.url), "utf8");
+  assert.ok(/^async function onPaused\(/m.test(src), "onPaused is a file-private async helper");
+  assert.ok(/^function swingRollArgs\(/m.test(src), "swingRollArgs is a file-private sync helper (no await between use() and rollAttack)");
+  assert.doesNotMatch(src, /^export (async )?function (onPaused|swingRollArgs)\b/m, "neither helper is exported");
+  const start = src.indexOf("export async function runSwings(");
+  const end = src.indexOf("\n}\n", start);
+  const body = src.slice(start, end);
+  assert.match(body, /await onPaused\(/, "runSwings awaits onPaused");
+  assert.match(body, /swingRollArgs\(/, "runSwings builds each swing's roll through swingRollArgs");
+  assert.doesNotMatch(body, /waitChoice\(|config\.attackMode|pickTarget\(/, "the paused branch and the roll config left runSwings");
+  const n = body.split("\n").length;
+  assert.ok(n <= 95, `runSwings is ${n} lines (was ~128)`);
+});
+
+// combat-core-EXT-4: runFollowUp was an if-ladder with duplicated offhand / nick branches. A frozen,
+// file-private SINGLE_SWING table (kind → { mode, kind, records }) drives every one-swing follow-up;
+// Flurry keeps its own branch. golden/sequence-followups.json and sequence-flurry.json pin the results
+// and the recordFollowUp / bonusSpent order unchanged.
+test("combat-core-EXT-4: runFollowUp's one-swing follow-ups come from a frozen SINGLE_SWING table", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../sequence.mjs", import.meta.url), "utf8");
+  const decl = src.match(/^const SINGLE_SWING = Object\.freeze\(\{\n([\s\S]*?)\n\}\);/m);
+  assert.ok(decl, "combat-core-EXT-4: SINGLE_SWING is a file-private frozen table");
+  assert.doesNotMatch(src, /^export const SINGLE_SWING\b/m, "SINGLE_SWING is not exported");
+  const rows = Object.fromEntries([...decl[1].matchAll(/^\s+"?([a-z-]+)"?: Object\.freeze\(\{ mode: (null|"[a-z]+"), kind: "([a-z-]+)", records: (true|false) \}\),?$/gm)]
+    .map(m => [m[1], { mode: JSON.parse(m[2]), kind: m[3], records: m[4] === "true" }]));
+  assert.deepEqual(rows, {
+    offhand: { mode: "offhand", kind: "offhand", records: false },
+    nick: { mode: "offhand", kind: "nick", records: false },
+    "martial-arts": { mode: null, kind: "bonus", records: true },
+    hew: { mode: null, kind: "bonus", records: true },
+    "pole-strike": { mode: null, kind: "bonus", records: true },
+  }, "combat-core-EXT-4: the table's rows");
+  const start = src.indexOf("export async function runFollowUp(");
+  const body = src.slice(start, src.indexOf("\n}\n", start));
+  assert.match(body, /SINGLE_SWING\[f\.kind\]/, "runFollowUp looks the kind up in SINGLE_SWING");
+  assert.doesNotMatch(body, /f\.kind === "(offhand|nick|martial-arts|hew|pole-strike)"/, "no per-kind branch left for the table's kinds");
+  assert.match(body, /f\.kind === "flurry"/, "Flurry keeps its own branch");
 });

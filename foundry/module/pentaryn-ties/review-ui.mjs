@@ -18,8 +18,10 @@
  * i.e. Claude) un-reviews it and records which fields it touched. The sign-off stores a
  * `reviewedSnapshot`, and an open row shows the old text next to anything changed since.
  *
- * Every registry write is queued in attributes.mjs, so a field save, a Reviewed click and a
- * Claude write can never read-modify-write over each other. Rows keep their order while Joe works
+ * Every registry write is queued in attributes.mjs, but the queue is per tab (an in-memory chain
+ * on ONE client): a field save and a Reviewed click made here run one after the other. A Claude
+ * write (`A.update`) runs in the MCP bridge tab, not this one, so it and a save made here can race
+ * — each rewrites the whole setting and the second write wins. Rows keep their order while Joe works
  * (`this.order`); it is recomputed on open, on a sort change, after Reviewed/Unreview, and from
  * the Re-sort button. A refresh held back while Joe types is checked against what each open row
  * was drawn from (`this.base`): a row Claude changed underneath gets a reload banner, and a field

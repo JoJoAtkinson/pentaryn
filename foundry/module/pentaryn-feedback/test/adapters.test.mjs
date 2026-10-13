@@ -54,10 +54,33 @@ test("put creates each folder once per tab (EEXIST tolerated), uploads pretty JS
   const files = fileStore({ fp: s.fp, fetch: s.fetch, route: p => `/${p}` });
   await files.put("pentaryn-feedback/w/AAAA.json", { a: 1 });
   await files.put("pentaryn-feedback/w/BBBB.json", { b: 2 });
+  // the root's EEXIST marks it made like a success does: neither folder is asked for again
   assert.deepEqual(s.calls.filter(c => c[0] === "mkdir").map(c => c[2]), ["pentaryn-feedback", "pentaryn-feedback/w"]);
   const up = s.calls.find(c => c[0] === "upload");
   assert.deepEqual(up, ["upload", "data", "pentaryn-feedback/w", "AAAA.json", "application/json", { notify: false }]);
   assert.equal(s.disk.get("pentaryn-feedback/w/AAAA.json"), '{\n "a": 1\n}');
+});
+
+test("a mkdir that fails once (not EEXIST) is retried and succeeds on the next put (feedback-rob-3)", async () => {
+  const s = fakeServer();
+  let fail = true;
+  const fp = {
+    ...s.fp,
+    async createDirectory(source, dir) {
+      if (fail && dir === "pentaryn-feedback/w") {
+        s.calls.push(["mkdir", source, dir]);
+        fail = false;
+        throw new Error("EACCES: permission denied");
+      }
+      return s.fp.createDirectory(source, dir);
+    },
+  };
+  const files = fileStore({ fp, fetch: s.fetch, route: p => `/${p}` });
+  await assert.rejects(files.put("pentaryn-feedback/w/AAAA.json", { a: 1 }), { code: "INTERNAL" });
+  await files.put("pentaryn-feedback/w/BBBB.json", { b: 2 });   // the folder is asked for again
+  assert.deepEqual(s.calls.filter(c => c[0] === "mkdir").map(c => c[2]),
+    ["pentaryn-feedback", "pentaryn-feedback/w", "pentaryn-feedback/w"]);
+  assert.equal(s.disk.get("pentaryn-feedback/w/BBBB.json"), '{\n "b": 2\n}');
 });
 
 test("an upload refusal throws a coded error", async () => {
@@ -95,11 +118,22 @@ test("snapshot: every section present; a throwing section becomes { error } and 
   assert.equal(broken.world.id, "test-world");
 });
 
+test("feedback-M2: a throwing section or row keeps a redacted error", () => {
+  const g = { ...globalThis, game: { ...game, get combat() { throw new Error("combat broke token=abcdefghijklmnop"); } } };
+  assert.deepEqual(snapshot({ g }).combat, { error: "combat broke token=[redacted]" });
+  class BrokenSheet { get title() { throw new Error("title broke Bearer abc.def"); } }
+  const apps = new Map([["bad", Object.assign(new BrokenSheet(), { id: "bad" })]]);
+  const g2 = { ...globalThis, foundry: { ...foundry, applications: { ...foundry.applications, instances: apps } } };
+  assert.equal(snapshot({ g: g2 }).windows.find(w => w.cls === "?").error, "title broke Bearer [redacted]");
+});
+
 test("windowRow / attachSummary", () => {
   class ActorSheet5eCharacter {}
   assert.deepEqual(windowRow(Object.assign(new ActorSheet5eCharacter(), { id: "s1", title: "Caven" })), { id: "s1", cls: "ActorSheet5eCharacter", title: "Caven" });
   assert.deepEqual(attachSummary({ user: { name: "P" }, scene: { viewed: { name: "S" } }, chat: [1], windows: [1, 2], modules: [] }, { actions: 4, errors: 1 }),
-    { user: "P", scene: "S", actions: 4, errors: 1, chat: 1, windows: 2, modules: 0 });
+    { user: "P", scene: "S", controlled: 0, targeted: 0, actions: 4, errors: 1, chat: 1, windows: 2, modules: 0 });
+  assert.deepEqual(attachSummary({ tokens: { controlled: [1, 2], targeted: [1] } }),
+    { user: null, scene: null, controlled: 2, targeted: 1, actions: 0, errors: 0, chat: 0, windows: 0, modules: 0 });
 });
 
 test("snapshot: one bad row (a window whose title getter throws, an unreadable chat message) is a row with an error, not a lost section", () => {

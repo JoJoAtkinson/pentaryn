@@ -135,3 +135,32 @@ test("slotKind, mainPanel, settlePips", () => {
   assert.doesNotThrow(() => settlePips(null));
   assert.doesNotThrow(() => settlePips({}));
 });
+
+test("KIT-R6: a fresh button's rejected render is caught and warned through `log` (else g.console), never unhandled", async () => {
+  const unhandled = [];
+  const onUnhandled = (err) => unhandled.push(err);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const boom = new Error("render failed");
+    const failing = (id) => ({ id, element: { remove() {} }, render: () => Promise.reject(boom) });
+    const warned = [];
+    const log = { warn: (...args) => warned.push(args) };
+    const a = failing("a");
+    assert.doesNotThrow(() => applyButtons(panel([]), [a], [a], { log }));
+    const consoled = [];
+    const q = panel([]);
+    const b = failing("b");
+    applyButtons(q, [b], [b], { g: { console: { warn: (...args) => consoled.push(args) } } });
+    const ok = button("c");
+    applyButtons(panel([]), [ok], [ok], { log });
+    await new Promise(r => setTimeout(r, 0));
+    assert.equal(warned.length, 1);
+    assert.equal(warned[0].at(-1), boom);
+    assert.equal(consoled.length, 1);
+    assert.equal(consoled[0].at(-1), boom);
+    assert.equal(ok.rendered, true);
+    assert.deepEqual(unhandled, []);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+});

@@ -292,9 +292,10 @@
       "params": [
         {
           "name": "actor",
-          "type": "Actor",
-          "optional": true,
-          "resolve": false
+          "type": "Actor|Token|uuid|id|exact name",
+          "resolve": false,
+          "doc": "resolved by the member itself (never a substring); omitted: whatever is running; a miss aborts nothing",
+          "optional": true
         }
       ],
       "returns": "void",
@@ -836,6 +837,10 @@
       "label": "damage at 0 HP"
     },
     {
+      "name": "dnd5e.applyDamage",
+      "label": "damage at 0 HP: cards"
+    },
+    {
       "name": "ready",
       "label": "portrait conditions: wrap PortraitPanel"
     },
@@ -996,10 +1001,6 @@
       "label": "Argon item buttons: Pole Strike gate, duplicate slot"
     },
     {
-      "name": "updateToken",
-      "label": "a shape change ends a running sequence"
-    },
-    {
       "name": "dnd5e.preRollAttackV2",
       "label": "swing tag"
     },
@@ -1040,6 +1041,10 @@
       "label": "rider cards: combat over"
     },
     {
+      "name": "updateCombat",
+      "label": "rider session: turn moved"
+    },
+    {
       "name": "updateActor",
       "label": "rider cards: turn flag"
     },
@@ -1058,6 +1063,14 @@
     {
       "name": "createActor",
       "label": "seed a new character's weapon sets"
+    },
+    {
+      "name": "updateCombat",
+      "label": "sequence: turn moved"
+    },
+    {
+      "name": "updateToken",
+      "label": "sequence: shape change"
     }
   ],
   "patches": [
@@ -1118,6 +1131,7 @@
       "flags.pentaryn-combat.rider",
       "flags.pentaryn-combat.attack",
       "flags.pentaryn-combat.undone",
+      "flags.pentaryn-combat.claims",
       "flags.enhancedcombathud.weaponSets",
       "flags.dnd5e.last"
     ],

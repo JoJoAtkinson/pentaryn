@@ -1,6 +1,6 @@
 /**
  * The pieces two or more core files read: the private number/string clamps, the Known notes cap, the
- * attribute title cap and the share-row provenance helpers. NOT part of the known-core.mjs barrel —
+ * attribute title cap, the share-row provenance helpers and the kind study's rungs with its pass rule. NOT part of the known-core.mjs barrel —
  * each exported cap is re-exported by the file that owns its domain (core/known, core/attributes,
  * core/study), so the barrel's export list is what it was before the split.
  *
@@ -19,7 +19,17 @@
 export const KNOWN_NOTES_MAX = 8000;
 
 export const str = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
-export const num = (v, d) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : d);
+/*
+ * A number, or a numeric string (a form field), rounded; anything else takes the default. Typed
+ * first, as ties-core.mjs's own `num`: `Number(null | "" | [] | false)` is 0, so the old
+ * `Number.isFinite(Number(v))` read a missing or cleared DC as 0 and clamped it to 1 instead of the
+ * default 15 (M1, declared).
+ */
+export const num = (v, d) => {
+  if (typeof v === "number") return Number.isFinite(v) ? Math.round(v) : d;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Math.round(Number(v));
+  return d;
+};
 
 /**
  * A real number, or `null` — and it is `null` for `null`.
@@ -67,3 +77,19 @@ export const fromOf = rec => {
  * none, and `shareStatus` derives theirs from `total` against the row's DC instead.
  */
 export const passOf = rec => (typeof rec?.pass === "boolean" ? { pass: rec.pass } : {});
+
+/**
+ * The kind study's rungs, highest first — the order `tierOf` walks and the order an author reads.
+ * Owned by core/study.mjs (which re-exports it); here so the pass rule below sits in a leaf every core
+ * file can import, prose.mjs included, without a cycle.
+ */
+export const STUDY_RUNGS = [25, 20, 15, 0];
+
+/** The lowest rung that counts as recognising the kind at all (15); below it is a failure. */
+const KIND_PASS_RUNG = Math.min(...STUDY_RUNGS.filter(r => r > 0));
+
+/**
+ * Did this kind-study tier pass? `Number(tier) >= 15` — the rule nine sites used to spell by hand
+ * (ext-7). Public from core/rules.mjs; core files that core/rules.mjs reaches (prose.mjs) import it here.
+ */
+export const kindPassed = tier => Number(tier) >= KIND_PASS_RUNG;

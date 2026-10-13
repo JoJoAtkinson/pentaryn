@@ -18,7 +18,7 @@
  */
 
 import { cardHTML, esc, samplePoints as samplePointsAt } from "./portals-core.mjs";
-import { cardFor, destinationsOf, lookAt, moveRegionDocs, teleportParty } from "./scene-adapter.mjs";
+import { cardFor, destinationsOf, lookAt, moveRegionDocs, passageRevealed, teleportParty } from "./scene-adapter.mjs";
 import { PortalCard, configureCardApp } from "./card-app.mjs";
 import { BADGE_ROWS } from "./api-manifest.mjs";
 import { toPlain } from "./lib/api.mjs";
@@ -26,13 +26,13 @@ import { refOf } from "./lib/resolve.mjs";
 
 let badgeLayer = null;
 /**
- * Bumped by every draw and by canvas teardown. drawBadges awaits each badge's texture; a scene
+ * Bumped by every draw and by canvas teardown. drawBadges awaits the badges' textures; a scene
  * activation (canvasTearDown → badgeLayer = null) or a second draw (a region hook, canvasReady) in
  * that gap left the first draw adding to a null layer: "Cannot read properties of null (reading
  * 'addChild')" on the player client (usability Area 9). A draw that is no longer the latest stops.
  */
 let drawRun = 0;
-export const badges = []; // { region, x, y, r, revealed, bounds, sprite, cards }
+export const badges = []; // { region, x, y, r, revealed, bounds, pts, sprite, cards }
 /** Region uuids this client has seen in sight, so a badge stays once found even before fog saves. */
 export const seen = new Set();
 /** Region uuids whose Portal card window is in edit mode: their badge can be dragged. */
@@ -70,13 +70,21 @@ export async function drawBadges() {
   canvas.interface.addChild(layer);
   const stale = () => run !== drawRun || layer.destroyed || !canvas?.ready;
   const g = canvas.grid.size;
+  const todo = [];
   for (const region of canvas.scene.regions) {
     const dests = destinationsOf(region);
     if (!dests.length) continue;
     if (region.hidden && !game.user.isGM) continue;
-    const revealed = dests.every(d => d.behavior.system.revealed) || game.user.isGM;
+    const revealed = passageRevealed(region) || game.user.isGM;
     const b = region.bounds ?? region.object?.bounds;
     if (!b) continue;
+    todo.push({ region, dests, revealed, b, img: revealed ? cardFor(dests[0].region).img : null });
+  }
+  // perf-4: every badge's texture loads at once, not one badge after another. Keep the ?v=
+  // cache-buster: PIXI caches by the full URL, so a re-snapshot's new ?v= loads the new crop.
+  const loads = await Promise.allSettled(todo.map(t => (t.img ? foundry.canvas.loadTexture(t.img) : null)));
+  if (stale()) return;
+  todo.forEach(({ region, dests, revealed, b, img }, i) => {
     const r = g * 0.36;
     const x = b.x + b.width / 2, y = b.y - r * 0.55;
     const c = new PIXI.Container();
@@ -84,23 +92,19 @@ export async function drawBadges() {
     c.alpha = region.hidden ? 0.35 : 1;
     const back = new PIXI.Graphics().beginFill(0x120a24, 0.9).drawCircle(0, 0, r).endFill();
     c.addChild(back);
-    const first = cardFor(dests[0].region);
-    if (revealed && first.img) {
-      try {
-        const tex = await foundry.canvas.loadTexture(first.img.split("?")[0]);
-        if (tex) {
-          const spr = new PIXI.Sprite(tex);
-          const scale = (2 * r) / Math.min(tex.width, tex.height);
-          spr.scale.set(scale);
-          spr.anchor.set(0.5);
-          const mask = new PIXI.Graphics().beginFill(0xffffff).drawCircle(0, 0, r - 3).endFill();
-          c.addChild(spr, mask);
-          spr.mask = mask;
-        }
-      } catch (err) {
-        log?.warnOnce(`card image ${first.img}`, `card image ${first.img}`, err);
-      }
+    const load = loads[i];
+    if (img && load.status === "rejected") log?.warnOnce(`card image ${img}`, `card image ${img}`, load.reason);
+    const tex = load.status === "fulfilled" ? load.value : null;
+    if (tex) {
+      const spr = new PIXI.Sprite(tex);
+      const scale = (2 * r) / Math.min(tex.width, tex.height);
+      spr.scale.set(scale);
+      spr.anchor.set(0.5);
+      const mask = new PIXI.Graphics().beginFill(0xffffff).drawCircle(0, 0, r - 3).endFill();
+      c.addChild(spr, mask);
+      spr.mask = mask;
     } else {
+      // unrevealed, no card image, or the image failed to load
       const q = new PIXI.Text("?", { fontFamily: "Signika", fontSize: r * 1.1, fill: 0xd9c8ff });
       q.anchor.set(0.5);
       c.addChild(q);
@@ -124,13 +128,10 @@ export async function drawBadges() {
       mv.anchor.set(0.5); mv.position.set(-r * 0.72, -r * 0.72);
       c.addChild(sq, mv);
     }
-    if (stale()) {
-      try { c.destroy({ children: true }); } catch (err) { log?.debug("stale badge destroy", err); }
-      return;
-    }
     layer.addChild(c);
-    badges.push({ region, x, y, r, revealed, bounds: b, sprite: c, cards: dests.map(d => cardFor(d.region)) });
-  }
+    // perf-1: the square's sample points, once per draw — refreshBadgeSight runs on every sightRefresh
+    badges.push({ region, x, y, r, revealed, bounds: b, pts: samplePoints(b), sprite: c, cards: dests.map(d => cardFor(d.region)) });
+  });
   refreshBadgeSight();
 }
 
@@ -141,7 +142,7 @@ export const samplePoints = b => samplePointsAt(b, canvas.grid.size);
 export function refreshBadgeSight() {
   for (const badge of badges) {
     if (game.user.isGM || seen.has(badge.region.uuid)) { badge.sprite.visible = true; continue; }
-    const pts = samplePoints(badge.bounds);
+    const { pts } = badge;
     const now = pts.some(p => canvas.fog.isPointExplored(p))
       || canvas.visibility.testVisibility(pts, { tolerance: 0 });
     if (now) seen.add(badge.region.uuid);
@@ -176,7 +177,7 @@ export function showTip(badge, ev) {
   tip.style.top = `${ev.clientY + 18}px`;
   tip.style.display = "block";
 }
-export function hideTip() { if (tip) { tip.style.display = "none"; tip.dataset.key = ""; } }
+export function hideTip() { if (tip && tip.style.display !== "none") { tip.style.display = "none"; tip.dataset.key = ""; } }
 
 /* GM right-click menu */
 export function closeMenu() { menu?.remove(); menu = null; }
@@ -208,12 +209,13 @@ export function openMenu(badge, ev) {
 
 export function bindBoard() {
   const board = document.getElementById("board");
-  if (!board || board.dataset.ppBound) return;
-  board.dataset.ppBound = "1";
+  if (!board || board.dataset.pptBound) return;
+  board.dataset.pptBound = "1";
   // PIXI owns #board.style.cursor (it writes "var(--cursor-…)" and only rewrites on a mode change).
   // Touch it only while over an edit-mode badge, and put back exactly what was there on leaving;
   // writing "" on every move erased Foundry's hands and pentaryn-cursors' tool cursors.
   let priorCursor = null;
+  // hot: badges (badgeAt reads the drawn badge records; hideTip is a no-op once hidden)
   board.addEventListener("pointermove", ev => {
     if (drag) return;
     const b = badgeAt(ev.clientX, ev.clientY);
@@ -242,16 +244,22 @@ export function bindBoard() {
   board.addEventListener("pointermove", ev => {
     if (!drag) return;
     ev.stopImmediatePropagation();
+    if (dragGone(drag)) return abandonDrag();
     const p = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
     drag.badge.sprite.position.set(drag.bx + p.x - drag.start.x, drag.by + p.y - drag.start.y);
   }, true);
   board.addEventListener("pointerup", guard("badge drag release", async ev => {
     if (!drag) return;
     ev.stopImmediatePropagation();
+    if (dragGone(drag)) return abandonDrag();
     const d = drag; drag = null;
     const p = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
     await moveRegion(d.badge.region, p.x - d.start.x, p.y - d.start.y);
   }), true);
+  // The browser took the pointer away (a system gesture, a lost capture): drop the drag, write nothing.
+  // A normal release clears `drag` in pointerup first, so the lostpointercapture after it is a no-op.
+  board.addEventListener("pointercancel", abandonDrag, true);
+  board.addEventListener("lostpointercapture", abandonDrag, true);
   board.addEventListener("pointerleave", hideTip);
   board.addEventListener("contextmenu", ev => {
     if (!game.user.isGM) return;
@@ -262,6 +270,19 @@ export function bindBoard() {
     openMenu(b, ev);
   }, true);
   document.addEventListener("pointerdown", ev => { if (menu && !menu.contains(ev.target)) closeMenu(); }, true);
+}
+
+/**
+ * portals-edge-1: the dragged badge was redrawn away (a region hook, an edit toggle) or its region
+ * is no longer on the viewed scene (deleted, or the canvas moved on). Its drag must not write.
+ */
+const dragGone = d => !!d.badge.sprite.destroyed || canvas?.scene?.regions?.get(d.badge.region.id) !== d.badge.region;
+
+/** End a drag without writing: clear it and redraw, so a half-dragged badge snaps back. */
+function abandonDrag() {
+  if (!drag) return;
+  drag = null;
+  if (canvas?.ready) redrawNow();
 }
 
 /**
@@ -287,7 +308,7 @@ const REDRAW_MS = 50;
  */
 let queueDraw = null;
 
-function onCanvasTearDown() { queueDraw?.cancel(); hideTip(); closeMenu(); drawRun++; badges.length = 0; badgeLayer = null; }
+function onCanvasTearDown() { queueDraw?.cancel(); hideTip(); closeMenu(); drag = null; drawRun++; badges.length = 0; badgeLayer = null; }
 
 /** The API rows this feature contributes (api-manifest BADGE_ROWS). */
 export const contribution = () => ({ rows: BADGE_ROWS, impl: { open: PortalCard.open, redraw: drawBadges, badges: listBadges } });
@@ -315,7 +336,7 @@ export function install(reg, ctx) {
   return contribution();
 }
 
-/** Destroy the layer, hide the tip, close the menu. The #board listeners stay (dataset.ppBound). */
+/** Destroy the layer, hide the tip, close the menu. The #board listeners stay (dataset.pptBound). */
 export function uninstall() {
   try { badgeLayer?.destroy({ children: true }); } catch (err) { log?.debug("badge layer destroy", err); }
   onCanvasTearDown();

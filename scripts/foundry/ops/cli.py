@@ -85,9 +85,9 @@ def build_parser() -> argparse.ArgumentParser:
     add("verify", "Assert the staged actors.json is not served publicly.")
 
     # ── modules ──
-    # Derived, not hardcoded: adding a ModuleSpec is enough to make it syncable.
-    # "importer" is excluded because the actor pipeline stages it, not module-sync.
-    names = sorted(k for k in cfg.MODULES if k != "importer")
+    # Derived, not hardcoded: adding a ModuleSpec is enough to make it syncable, and
+    # `syncable=False` on the spec (the importer) keeps it out (EXT-6).
+    names = sorted(k for k, s in cfg.MODULES.items() if s.syncable)
     mcheck = add("module-check", "Prove a module's sources before it can reach Foundry.")
     # `importer` is checkable but not syncable: the actor pipeline stages it, and a
     # `module-sync importer` would put a second copy where Foundry loads modules from.
@@ -100,7 +100,7 @@ def build_parser() -> argparse.ArgumentParser:
     msync = add("module-sync", "Check, then copy a module into Foundry's Data/modules.")
     msync.add_argument("module", choices=names)
     # ── blueprint (scripts/foundry/blueprint/; playbook context/foundry/addon-blueprint.md) ──
-    # Thin wrappers: everything after the command is passed to the script unchanged.
+    # These rows exist for `--help`; _WRAPPERS below does the routing.
     rest = "arguments passed through unchanged"
     mnew = add("module-new", "Generate a module from the blueprint template: "
                              "<short> --title 'Pentaryn …' [--tier full|small] [--kit a,b] … "
@@ -126,6 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
 # The blueprint wrappers hand everything after the command to their script unchanged.
 # argparse's REMAINDER rejects a first token that starts with `-` (`--module`, `--json`),
 # so these are dispatched before parsing; the wrapped script owns its own `--help`.
+# `ops -- module-new …` still reaches argparse and is routed here after parsing.
 _WRAPPERS = {
     "module-new": lambda rest: modules.module_new(rest),
     "module-vendor": lambda rest: modules.module_vendor(rest),
@@ -155,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     c = args.command
+    if c in _WRAPPERS:       return _WRAPPERS[c](args.args)
 
     if c == "up":            return service.up()
     if c == "login":         return login_mod.login(
@@ -192,9 +194,6 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if report["ok"] else 1
         return modules.check(args.module)
     if c == "module-sync":   return modules.sync(args.module)
-    if c == "module-new":    return modules.module_new(args.args)
-    if c == "module-vendor": return modules.module_vendor(args.args)
-    if c == "module-conformance": return modules.module_conformance(args.args)
     if c == "module-index":  return index.main(check=args.check)
     if c == "walls-wasm":    return modules.walls_wasm()
     if c == "walls-bench":   return modules.walls_bench(args.grid)

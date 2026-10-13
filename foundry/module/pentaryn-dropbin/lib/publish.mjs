@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/publish.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/publish.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Publish a module's API. `game.modules.get(id).api` is canonical; `game.pentaryn.<ns>` is an
  * alias kept for the console, macros and the MCP bridge.
@@ -22,7 +22,7 @@ function publishedMap(g) {
   return g[PUBLISHED];
 }
 
-/** `{ when, at }` for one namespace, or null when it has not been published. */
+/** `{ when, at, module, alias }` for one namespace, or null when it has not been published. */
 export function publishedOf(ns, { g = globalThis } = {}) {
   const p = publishedMap(g)[ns];
   return p ? { ...p } : null;
@@ -80,16 +80,19 @@ export function installRoot(root, { g = globalThis } = {}) {
     }
     return out;
   });
-  // The ref is resolved ONCE (exact match, explicit scene scope), so every namespace inspects the
-  // same Document and an ambiguous name is reported once instead of per module.
-  define(root, "inspect", async (ref, opts = {}) => {
+  // The ref is resolved ONCE (explicit scene scope; a name matches as: exact name, then a unique
+  // case-insensitive exact name; never a substring), so every namespace inspects the same Document
+  // and an ambiguous name is reported once instead of per module.
+  // A null or non-object opts behaves like {} (KIT-R2).
+  define(root, "inspect", async (ref, opts) => {
+    const o = opts && typeof opts === "object" ? opts : {};
     const r = live();
-    const doc = resolveRef(ref, opts.kind ?? "actor", { sceneId: opts.sceneId, base: opts.base, g });
+    const doc = resolveRef(ref, o.kind ?? "actor", { sceneId: o.sceneId, base: o.base, g });
     const out = {};
     for (const ns of namespaces()) {
       if (typeof r[ns].inspect !== "function") continue;
       try {
-        out[ns] = await r[ns].inspect(doc, opts);
+        out[ns] = await r[ns].inspect(doc, o);
       } catch (err) {
         out[ns] = { error: err?.message ?? String(err), code: err?.code ?? null };
       }

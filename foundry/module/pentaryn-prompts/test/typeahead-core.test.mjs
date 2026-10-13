@@ -107,3 +107,15 @@ test("DP5: blur() forgets every swallowed code", () => {
   assert.equal(T.keyUp("KeyW"), false);
   assert.equal(T.keyUp("KeyQ"), false);
 });
+
+test("prompts-core-R4: a keyless keydown (no string key) is swallowed while capturing, never throws", () => {
+  const { T, ev } = rig();
+  const a = T.start();
+  T.keyDown(ev("a"));
+  for (const key of [undefined, null, 42]) {
+    assert.equal(T.keyDown(ev(key, { code: "" })), true, `key ${String(key)}: swallowed`);
+    assert.equal(T.keyDown(ev(key, { code: "", isComposing: true })), true, `composing key ${String(key)}: swallowed`);
+  }
+  assert.deepEqual(T.take(a), { text: "a", close: null }, "buffer untouched");
+  assert.equal(T.keyDown(ev(undefined, { code: "" })), false, "no ticket: passes");
+});

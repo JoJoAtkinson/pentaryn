@@ -88,6 +88,7 @@ import tempfile
 import time
 import zipfile
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -144,6 +145,7 @@ ZIP_NAME = re.compile(r"^([a-z][a-z0-9-]*)-(\d{2})\.zip$")
 # The host group is host.py's alphabet; host.validate_host refuses anything that would
 # read as part of the version group. `.safety` marks the copy a restore takes of the
 # state it is about to replace (see restore_snapshot).
+STAMP_FORMAT = "%Y-%m-%d-%H%M%S"   # UTC; snapshot names, heal jobs, replaced/ folders
 SNAPSHOT_NAME = re.compile(
     r"^world-(\d{4}-\d{2}-\d{2}-\d{6})(?:-fvtt([0-9.]+|unknown))?(?:-([a-z0-9-]+))?"
     r"(\.safety)?\.tar\.gz$")
@@ -195,15 +197,6 @@ def store() -> Storage:
         return storage_mod.get()
     except StorageError as exc:
         die(str(exc))
-
-
-def __getattr__(name: str):
-    # Back-compat for callers that imported the old module constants.
-    if name == "FOUNDRY_DATA":
-        return host.foundry_data()
-    if name == "CLOUD_ROOT":
-        return storage_mod.get().root
-    raise AttributeError(name)
 
 
 def server_running() -> bool:
@@ -341,6 +334,12 @@ def parse_snapshot(entry: Entry, folder: str = WORLD_BACKUPS) -> Snapshot | None
     return Snapshot(stamp=m.group(1), name=entry.name, host=m.group(3), core=m.group(2),
                     size=entry.size, mtime=entry.mtime, folder=folder,
                     safety=bool(m.group(4)))
+
+
+def snapshot_filename(when: datetime, core: str, host_: str, safety: bool = False) -> str:
+    """The one builder for a snapshot name; parse_snapshot reads it back unchanged."""
+    return (f"world-{when.strftime(STAMP_FORMAT)}-fvtt{core}-{host_}"
+            f"{'.safety' if safety else ''}.tar.gz")
 
 
 def snapshots(st: Storage | None = None, folder: str = WORLD_BACKUPS, *,
@@ -523,12 +522,6 @@ def _delete_snapshot(st: Storage, snap: Snapshot) -> None:
         pass
 
 
-def snapshot_core_version(path: Path | str) -> str | None:
-    """Pull the `-fvtt<version>` suffix back out of a snapshot filename."""
-    m = SNAPSHOT_NAME.match(Path(str(path)).name)
-    return m.group(2) if m else None
-
-
 def generation(version: str | None) -> str | None:
     """Foundry's generation is the leading integer: 14.365 -> 14."""
     if not version:
@@ -586,6 +579,14 @@ def _same_listing(prior: dict, e: Entry) -> bool:
             and abs(float(prior["mtime"]) - e.mtime) < 2.0)
 
 
+def _is_failure(exc: BaseException) -> bool:
+    """A StorageError, or a die() (SystemExit with a non-zero code): a failure to record
+    or warn about. A SystemExit(0/None) is a clean exit and is re-raised untouched."""
+    if isinstance(exc, SystemExit):
+        return exc.code not in (0, None)
+    return isinstance(exc, StorageError)
+
+
 def _lifecycle_warning(what: str, exc: BaseException | str, after: str) -> None:
     detail = f": {exc}" if str(exc) and not isinstance(exc, SystemExit) else ""
     print(f"  ⚠ {what}{detail} — {after}", file=sys.stderr)
@@ -603,7 +604,7 @@ def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
         st = ensure_cloud()
         zips = [e for e in st.ls(ASSETS_IN) if e.name.endswith(".zip")]
     except (StorageError, SystemExit) as exc:
-        if not if_reachable or (isinstance(exc, SystemExit) and exc.code in (0, None)):
+        if not if_reachable or not _is_failure(exc):
             if isinstance(exc, StorageError):
                 die(f"cannot list {ASSETS_IN}/: {exc}")
             raise
@@ -659,7 +660,11 @@ def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
                     f"append-only — add {kind}-{int(num) + 1:02d}.zip instead, or delete "
                     f"{dest} to force a re-extract.")
                 continue
-            count = _extract_pack(zp, e.name, pack, dest, problems)
+            try:
+                count = _extract_pack(zp, e.name, pack, dest, problems)
+            except (zipfile.BadZipFile, OSError) as exc:
+                problems.append(f"{e.name}: could not be unpacked: {exc}")
+                continue
             if count is None:
                 log(f"✗ {e.name} refused")
                 continue
@@ -690,7 +695,8 @@ def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
 
 def _extract_pack(zp: Path, zname: str, pack: str, dest: Path, problems: list) -> int | None:
     """Extract to a temp dir, then move into place, so an interrupted run never leaves a
-    half-populated pack the manifest would later call complete. None on a collision."""
+    half-populated pack the manifest would later call complete. None on a collision or a
+    member whose name normalises to nothing; folders that normalise to nothing are dropped."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=str(dest.parent)) as tmp:
         staging = Path(tmp) / pack
@@ -704,7 +710,12 @@ def _extract_pack(zp: Path, zname: str, pack: str, dest: Path, problems: list) -
                          if p not in ("__MACOSX",) and not p.startswith("._")]
                 if not parts or parts[-1] in JUNK_NAMES or parts[-1].startswith("."):
                     continue
-                rel = "/".join(kebab(p) for p in parts)
+                if not kebab(parts[-1]):
+                    problems.append(
+                        f"{zname}: '{info.filename}' normalises to nothing — "
+                        f"rename it inside the zip")
+                    return None
+                rel = "/".join(k for k in (kebab(p) for p in parts) if k)
                 if rel in seen:
                     problems.append(
                         f"{zname}: '{info.filename}' and '{seen[rel]}' both "
@@ -758,7 +769,7 @@ def snapshot_digest(manifest: dict | None = None) -> str:
     module — the fingerprint ignores LevelDB housekeeping — so the digest-skip holds."""
     if manifest is None:
         manifest = bundles.manifest(bundles.local_inventory())
-    m = {"modules": manifest.get("modules") or {}, "systems": manifest.get("systems") or {}}
+    m = bundles.sections(manifest)
     return hashlib.sha256((world_tree_digest() + "\n" + json.dumps(m, sort_keys=True))
                           .encode()).hexdigest()
 
@@ -855,7 +866,7 @@ def backup(reason: str = "manual", if_stopped: bool = False, background: bool = 
                 return _backup_background(ensure_cloud(), reason)
             _backup(ensure_cloud(), reason)
     except (StorageError, SystemExit) as exc:
-        if isinstance(exc, SystemExit) and exc.code in (0, None):
+        if not _is_failure(exc):
             raise
         _lifecycle_warning(f"the {reason} snapshot was not taken", exc,
                            "starting anyway; the shutdown backup (make vtt-down) tries again")
@@ -887,18 +898,20 @@ def _find_in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> Snapshot
 
 # ── The two halves: build a tar (stopped world), upload it (any time later) ───
 
+def _waiting_build() -> None:
+    """BUILD_LOCK's on_wait (_exclusive, _backup_background)."""
+    log("waiting for another snapshot build or restore on this machine to finish...")
+
+
 @contextmanager
 def _exclusive(wait: bool = True):
     """Both queue locks, build then upload (uploadq.py). Yields whether they were got;
     with `wait`, says what it is waiting for and blocks until they are."""
-    def waiting_build():
-        log("waiting for another snapshot build or restore on this machine to finish...")
-
     def waiting_upload():
         name = uploadq.read_status().get("name") or "a snapshot"
         log(f"waiting for the background upload of {name} to finish "
             "(make foundry-cloud shows it)...")
-    with uploadq.lock(uploadq.BUILD_LOCK, wait=wait, on_wait=waiting_build) as built:
+    with uploadq.lock(uploadq.BUILD_LOCK, wait=wait, on_wait=_waiting_build) as built:
         if not built:
             yield False
             return
@@ -1003,11 +1016,15 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
     taken = {s.name for s in existing} | {j.name for j in queued}
     when = datetime.now(timezone.utc)
     while True:  # a name is an identity (based_on, keep-local): never reuse one
-        stamp = when.strftime("%Y-%m-%d-%H%M%S")
-        name = f"world-{stamp}-fvtt{core}-{me}{'.safety' if safety else ''}.tar.gz"
+        name = snapshot_filename(when, core, me, safety)
         if name not in taken:
             break
         when += timedelta(seconds=1)
+    back = parse_snapshot(Entry(name, 0, 0.0))
+    if back is None or back.host != me:
+        die(f"snapshot name {name} would not read back as this machine's "
+            f"(host {me!r}, core {core!r}; it parses as host "
+            f"{back.host if back else None!r}) — nothing was built")
 
     tmp = tmp_dir() / name
     missing = sorted((loc for loc in inv.values() if loc.name not in have),
@@ -1025,8 +1042,8 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
     try:
         for loc in missing:
             bundles.build(loc, job.staging)
-        _build_world_tar(building, {"bundled": 1, "modules": manifest["modules"],
-                                    "systems": manifest["systems"], "host": me, "core": core})
+        _build_world_tar(building, {"bundled": 1, **bundles.sections(manifest),
+                                    "host": me, "core": core})
         os.replace(building, tmp)
         job.size = tmp.stat().st_size
         job.save()
@@ -1069,7 +1086,7 @@ def _heal_job(st: Storage, base: Snapshot, inv: dict, have: dict[str, Entry],
     me = host.host_name()
     when = datetime.now(timezone.utc)
     while True:
-        name = f"{uploadq.HEAL_PREFIX}{when:%Y-%m-%d-%H%M%S}-{me}"
+        name = f"{uploadq.HEAL_PREFIX}{when.strftime(STAMP_FORMAT)}-{me}"
         if not (tmp_dir() / (name + uploadq.JOB_SUFFIX)).exists():
             break
         when += timedelta(seconds=1)
@@ -1099,7 +1116,7 @@ def _upload_heal(st: Storage, job: uploadq.Job) -> None:
     except StorageError as exc:
         raise StorageError(f"cannot list {bundles.BUNDLES}/: {exc}") from exc
     staged = {n: job.staging / n for n in job.bundles}
-    rebuild = _rebuilder([], job.staging)
+    rebuild = _rebuilder(dest_dir=job.staging)
     for n in sorted(staged):
         if n in have or staged[n].is_file():
             continue
@@ -1168,6 +1185,12 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
     # runs on it. Preserve it now, while it is still inside the rolling window.
     promote_major_release(st, others)
 
+    true_parent = uploadq.resolve_parent(job.parent)
+    if true_parent != job.parent:                 # built while its parent was dropped
+        log(f"{job.name} now extends {true_parent or 'nothing'} "
+            f"({job.parent} never landed)")
+        job.parent = true_parent
+        job.save()
     state = bootstate.load()
     linked = state.based_on == job.parent
     if linked:
@@ -1183,7 +1206,7 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
     # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
     # only then delete the old. A safety copy never coalesces in either direction.
     superseded = (None if job.safety
-                  else _coalesce_target(others, me, None, contained))
+                  else _coalesce_target(others, me, contained))
     if superseded is not None and superseded.name in keep_names:
         superseded = None
 
@@ -1192,8 +1215,7 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
                "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
                "host": me}
     if bundled:
-        sidecar.update({"bundled": 1, "modules": job.manifest.get("modules") or {},
-                        "systems": job.manifest.get("systems") or {}})
+        sidecar.update({"bundled": 1, **bundles.sections(job.manifest)})
     upload_world = there is None or there.size != size
     if upload_world:
         fresh = {n: p for n, p in staged.items() if n not in have}
@@ -1217,6 +1239,9 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
         st.write_text(parent_rel(WORLD_BACKUPS, job.name),
                       json.dumps(sidecar, allow_nan=False) + "\n")
         if upload_world:
+            # Its cloud mtime is the landing time, as a bundle's is: a tar queued days
+            # ago would otherwise never look newer to the other host (review EC-5).
+            bundles.fresh_mtime(job.tar)
             st.upload(job.tar, f"{WORLD_BACKUPS}/{job.name}")
         if bundled:
             # The snapshot's name is up — on a re-run too, whose world upload was skipped:
@@ -1228,6 +1253,32 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
 
     entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == job.name), None)
     snap = parse_snapshot(entry or Entry(job.name, size, time.time()), WORLD_BACKUPS)
+    _after_landing(st, job, me, state, linked, superseded, keep_names, snap,
+                   lineage=(ancestors, ancestor_mtimes, origin))
+    return snap
+
+
+def _after_landing(st: Storage, job: uploadq.Job, me: str, state: bootstate.BootState,
+                   linked: bool, superseded: Snapshot | None, keep_names: set[str],
+                   snap: Snapshot, *, lineage: tuple) -> None:
+    """Everything after `job`'s snapshot `snap` is in the cloud, in this order (review
+    M10): the based-on record (only when `linked` and the record, reloaded now, still
+    names `job.parent` — else nothing is recorded or coalesced; `lineage` is the
+    (ancestors, their mtimes, origin_before) its sidecar carries), the job leaves the queue, the retired
+    `.last-digest` marker goes (primary only), the snapshot it coalesces (`superseded`)
+    is deleted, this host's own snapshots are pruned to its keep counts — never one in
+    `keep_names` — and the bundle GC runs."""
+    ancestors, ancestor_mtimes, origin = lineage
+    size = job.size
+    if linked:
+        # Reloaded: the upload took minutes, and a boot notice or a restore may have saved
+        # the record meanwhile — never write back the copy loaded before it (py-cloud-ac-1).
+        state = bootstate.load()
+        if state.based_on != job.parent:
+            log(f"⚠ this machine's based-on record moved to {state.based_on or 'empty'} "
+                f"while {job.name} uploaded (it extends {job.parent or 'nothing'}) — "
+                "uploaded with an unknown lineage, and not recording it")
+            linked, superseded = False, None
     if linked:
         state.record_snapshot(job.name, me, snap.mtime, job.digest, by="backup",
                               lineage=ancestors, lineage_mtimes=ancestor_mtimes,
@@ -1261,7 +1312,6 @@ def _upload_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Sn
         + (f", and {min(len(safeties), KEEP_SAFETY_COPIES)} of {KEEP_SAFETY_COPIES} "
            "restore safety copies" if safeties else ""))
     _gc_after_backup(st)
-    return snap
 
 
 def _unpublish(st: Storage, job: uploadq.Job) -> str:
@@ -1282,7 +1332,10 @@ def _unpublish(st: Storage, job: uploadq.Job) -> str:
 def _reparent_next(job: uploadq.Job) -> None:
     """`job` leaves the queue without landing: the job queued behind it was built to
     extend it (`parent = job.name`, never recorded now) — point it at `job.parent`, the
-    true parent, so it still uploads linked, recorded and coalescible."""
+    true parent, so it still uploads linked, recorded and coalescible. The drop is also
+    recorded (uploadq.record_dropped), for a job a concurrent build saves only after this
+    ran: _upload_job resolves its parent through that record."""
+    uploadq.record_dropped(job.name, job.parent)
     for j in uploadq.pending():
         if j.name != job.name and not j.heal and j.parent == job.name:
             j.parent = job.parent
@@ -1387,25 +1440,27 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
     folder is re-hashed right before it is tarred, never trusted from minutes ago."""
     now = bundles.listing(st, fresh=True)
     lost = sorted(n for n in bundles.manifest_names(manifest) if n not in now)
-    rebuild = _rebuilder([], dest_dir)
+    rebuild = _rebuilder(dest_dir=dest_dir)
     for n in lost:
         src = staged.get(n)
         if src is None or not src.exists():
             src = rebuild(n)
             if src is None:
                 ref = bundles.parse_bundle(n)
+                what = f"{ref.kind} {ref.id}" if ref else n
                 raise _Incomplete(
-                    f"{ref.kind} {ref.id}: its bundle {n} vanished from the cloud and the "
+                    f"{what}: its bundle {n} vanished from the cloud and the "
                     f"local folder changed since — snapshot {name} is incomplete")
         log(f"bundle {n} vanished from the cloud during this backup — uploading it again")
         bundles.upload_one(st, src, n)
 
 
-def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
+def _rebuilder(rebuilt: list[Path] | None = None, dest_dir: Path | None = None):
     """`rebuild(name)`: the bundle `name` built again from the live folder when that
-    folder's fingerprint still matches it (the inventory re-hashed, no cache, once per
-    rebuilder), else None. Each tar built is appended to `rebuilt` for the caller to
-    delete.
+    folder's fingerprint still matches it (that one folder re-hashed, no cache — never
+    the whole inventory, review PERF-1), else None. Each tar lands in `dest_dir` — every
+    caller passes the job's staging folder, so it goes with the job's drop(), never by
+    the caller — and, when `rebuilt` is given, is appended to it too (review M4).
 
     Only a stopped tree is tarred (review MC2): the upload half runs in the background
     uploader, which may still be going when vtt-up starts Foundry — and Foundry rewrites
@@ -1418,10 +1473,7 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
     An OSError from the hash or the tar (a file replaced mid-walk: Foundry's launch, a
     module sync swapping the folder) is a StorageError too, never a bare exception that
     escapes _run_job."""
-    live: dict | None = None
-
     def rebuild(n: str) -> Path | None:
-        nonlocal live
         ref = bundles.parse_bundle(n)
         if ref is None:
             return None
@@ -1433,9 +1485,7 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
             raise refuse
         src: Path | None = None
         try:
-            if live is None:
-                live = bundles.local_inventory(cache=False, warn=lambda _m: None)
-            loc = live.get(ref.key)
+            loc = bundles.local_one(ref.kind, ref.id)
             if loc is None or loc.name != n:
                 return None
             src = bundles.build(loc, dest_dir or (tmp_dir() / bundles.STAGING))
@@ -1456,7 +1506,8 @@ def _rebuilder(rebuilt: list[Path], dest_dir: Path | None = None):
                 src.unlink(missing_ok=True)
             raise StorageError(f"rebuilding bundle {n} from its module folder failed: "
                                f"{exc} — the next backup retries it", verb="copyto") from exc
-        rebuilt.append(src)
+        if rebuilt is not None:
+            rebuilt.append(src)
         return src
     return rebuild
 
@@ -1466,7 +1517,7 @@ def _rebuilder_or_incomplete(job: uploadq.Job):
     is gone and cannot be rebuilt (the folder changed since) is a bundle that exists
     nowhere, so the job can never complete — _Incomplete (dropped by _run_job), never
     the retryable StorageError upload_missing raises on a None."""
-    rebuild = _rebuilder([], job.staging)
+    rebuild = _rebuilder(dest_dir=job.staging)
 
     def must(n: str) -> Path:
         new = rebuild(n)
@@ -1519,14 +1570,31 @@ def _mark(st: Storage, skip: frozenset[str] = frozenset()
     out: set[str] = _queued_bundles()
     seen: set[str] = set()
     for folder in (WORLD_BACKUPS, MAJOR_RELEASES):
-        for s in snapshots(st, folder, fresh=True, must_exist=True):
-            if s.host is None or s.rel in skip:
-                continue
-            seen.add(s.rel)
-            m = _snapshot_manifest(st, s)
+        todo = [s for s in snapshots(st, folder, fresh=True, must_exist=True)
+                if s.host is not None and s.rel not in skip]
+        seen |= {s.rel for s in todo}
+        for m in _read_pooled(lambda s: _snapshot_manifest(st, s), todo):
             if m is not None:
                 out |= bundles.manifest_names(m)
     return out, seen
+
+
+# Sidecar reads in flight at once (PERF-3): each is one small `rclone cat`, so ~25 of them
+# one after another made the restore listing, status and GC's mark slow.
+SIDECAR_READERS = 4
+
+
+def _read_pooled(read, items: list) -> list:
+    """`read` over `items` through a small thread pool, results in the items' order. The
+    first item (in order) whose read raises raises here, as a serial loop's would; reads
+    not yet started are cancelled."""
+    if len(items) < 2:
+        return [read(i) for i in items]
+    pool = ThreadPoolExecutor(max_workers=SIDECAR_READERS)
+    try:
+        return list(pool.map(read, items))
+    finally:
+        pool.shutdown(wait=True, cancel_futures=True)
 
 
 def _queued_bundles() -> set[str]:
@@ -1576,17 +1644,30 @@ def _marker_from_head(head: bytes) -> tuple[bool, dict | None]:
         raise ValueError(f"not a gzip stream: {exc}") from exc
     try:
         with tarfile.open(fileobj=io.BytesIO(raw), mode="r:") as tar:
-            first = tar.next()
-            if first is None:
-                raise ValueError("no first member")
-            if first.name != SNAPSHOT_MARKER:
-                return False, None
-            fh = tar.extractfile(first) if first.isfile() else None
-            body = fh.read() if fh else b""
-            if len(body) != first.size:
-                raise ValueError(f"{SNAPSHOT_MARKER} is cut short")
+            return _parse_first_member(tar)
     except tarfile.TarError as exc:
         raise ValueError(f"not a readable tar head: {exc}") from exc
+
+
+def _parse_first_member(tar: tarfile.TarFile) -> tuple[bool, dict | None]:
+    """(marker present, its manifest) from `tar`'s FIRST member — the one parse both the
+    cloud head (_marker_from_head) and a local tar (_read_marker) use (review M16). A
+    first member that is not the marker → (False, None). No first member at all (a tar
+    whose first block is zeros), a marker cut short, or one that is not a valid bundled
+    manifest raises ValueError: none is ever read as "no marker" or as an empty one —
+    the GC mark then does nothing (DL4) and a restore refuses before the clear."""
+    first = tar.next()
+    if first is None:
+        raise ValueError("it has no first member")
+    if first.name != SNAPSHOT_MARKER:
+        return False, None
+    try:
+        fh = tar.extractfile(first) if first.isfile() else None
+        body = fh.read() if fh else b""
+    except (tarfile.TarError, EOFError) as exc:
+        raise ValueError(f"its {SNAPSHOT_MARKER} is cut short: {exc}") from exc
+    if len(body) != first.size:
+        raise ValueError(f"its {SNAPSHOT_MARKER} is cut short")
     try:
         parsed = _parse_manifest(json.loads(body))
     except ValueError:
@@ -1605,8 +1686,9 @@ def _manifest_from_tar_head(st: Storage, s: Snapshot) -> dict | None:
     try:
         _marked, m = _marker_from_head(head)
     except ValueError as exc:
-        raise StorageError(f"the sidecar of {s.rel} is missing or unreadable, and so is its "
-                           f"tar's {SNAPSHOT_MARKER} ({exc})", verb="cat") from exc
+        raise StorageError(f"the sidecar of {s.rel} is missing or unreadable, and its tar's "
+                           f"head cannot say what it references either: {exc}",
+                           verb="cat") from exc
     return m
 
 
@@ -1670,7 +1752,8 @@ def _ops_event(state: str, job: uploadq.Job, **extra) -> None:
 
 def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snapshot | None:
     """`_upload_job` with the status file and the ops log kept. Raises on failure (the
-    job stays queued), after recording the failure — except a job that can never
+    job stays queued), after recording the failure — any exception, not only a
+    StorageError, so the status never stays 'uploading' — except a job that can never
     complete (_Incomplete), which is dropped (_drop_job) and raises JobDropped."""
     t0 = time.time()
     uploadq.write_status(state="uploading", name=job.name, reason=job.reason,
@@ -1681,9 +1764,15 @@ def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snaps
     except _Incomplete as exc:
         raise _drop_job(job, str(exc), t0) from exc
     except (StorageError, SystemExit) as exc:
-        if isinstance(exc, SystemExit) and exc.code in (0, None):
+        if not _is_failure(exc):
             raise
         err = str(exc) if isinstance(exc, StorageError) else f"see {tmp_dir() / uploadq.LOG_FILE}"
+        uploadq.write_status(state="failed", name=job.name, reason=job.reason,
+                             size=job.size, started=t0, finished=time.time(), error=err)
+        _ops_event("failed", job, error=err, seconds=round(time.time() - t0, 1))
+        raise
+    except Exception as exc:  # noqa: BLE001 — recorded, then re-raised (R6)
+        err = f"{type(exc).__name__}: {exc}"
         uploadq.write_status(state="failed", name=job.name, reason=job.reason,
                              size=job.size, started=t0, finished=time.time(), error=err)
         _ops_event("failed", job, error=err, seconds=round(time.time() - t0, 1))
@@ -1725,26 +1814,41 @@ def _drop_job(job: uploadq.Job, why: str, t0: float) -> JobDropped:
     return JobDropped(err)
 
 
+class _StaysQueued(Exception):
+    """A job still first in the queue after _run_job returned for it (_queue_once)."""
+
+
+def _queue_once():
+    """Each queued job, oldest first, the queue re-read after each so a job queued
+    meanwhile is yielded too. The caller holds UPLOAD_LOCK and runs (or drops) each one;
+    a job still queued when it comes round again raises _StaysQueued — never a loop."""
+    seen: set[str] = set()
+    while (jobs := uploadq.pending()):
+        job = jobs[0]
+        if job.name in seen:
+            raise _StaysQueued(f"{job.name} stays queued after its upload — check {tmp_dir()}")
+        seen.add(job.name)
+        yield job
+
+
 def _drain(st: Storage, protect: str | None = None) -> None:
     """Upload everything queued, oldest first, blocking. The caller holds UPLOAD_LOCK.
     A failure dies: what is queued is a world state the cloud does not have yet. A job
     dropped as never completable is named and the next one goes on (the caller's own
     backup, after this, snapshots the tree as it is now).
     `protect`: a snapshot about to be restored, kept from coalescing and pruning."""
-    seen: set[str] = set()
-    while (jobs := uploadq.pending()):
-        job = jobs[0]
-        if job.name in seen:
-            die(f"{job.name} stays queued after its upload — check {tmp_dir()}")
-        seen.add(job.name)
-        log(f"an earlier snapshot is still queued — uploading {job.name} first")
-        try:
-            _run_job(st, job, protect)
-        except JobDropped as exc:
-            print(f"  ✗ {exc}", file=sys.stderr)
-        except StorageError as exc:
-            die(f"the queued upload of {job.name} failed again: {exc}\n"
-                f"    it is still on disk: {job.tar} — the next backup retries it")
+    try:
+        for job in _queue_once():
+            log(f"an earlier snapshot is still queued — uploading {job.name} first")
+            try:
+                _run_job(st, job, protect)
+            except JobDropped as exc:
+                print(f"  ✗ {exc}", file=sys.stderr)
+            except StorageError as exc:
+                die(f"the queued upload of {job.name} failed again: {exc}\n"
+                    f"    it is still on disk: {job.tar} — the next backup retries it")
+    except _StaysQueued as exc:
+        die(str(exc))
 
 
 def finish_uploads() -> None:
@@ -1766,9 +1870,7 @@ def _backup_background(st: Storage, reason: str) -> int:
     """Build the tar now (Foundry is stopped), queue it, and start the detached
     uploader. Waits only for another build; never for a running upload — a new tar
     queues behind it, extending it."""
-    def waiting_build():
-        log("waiting for another snapshot build or restore on this machine to finish...")
-    with uploadq.lock(uploadq.BUILD_LOCK, on_wait=waiting_build):
+    with uploadq.lock(uploadq.BUILD_LOCK, on_wait=_waiting_build):
         job = _build(st, reason)
     queued = uploadq.pending()
     if not queued:
@@ -1794,19 +1896,30 @@ def _job_size(job: uploadq.Job) -> str:
     """"45.0 MB" or "45.0 MB + 2 bundle(s) 1.20 GB": what the job uploads at most."""
     if job.heal or not job.bundles:
         return _mb(job.size)
-    staged = [job.staging / n for n in job.bundles]
-    total = sum(p.stat().st_size for p in staged if p.is_file())
+    total = sum(_size_or_zero(job.staging / n) for n in job.bundles)
     return f"{_mb(job.size)} + {len(job.bundles)} bundle(s) {_mb(total)}"
+
+
+def _size_or_zero(p: Path) -> int:
+    """`p`'s size, or 0 when it is gone — another process's `Job.drop` can remove a
+    staged tar while the status line sums them."""
+    try:
+        return p.stat().st_size
+    except OSError:
+        return 0
 
 
 def _spawn_uploader() -> int:
     """Start `upload-pending` detached (own session, no terminal), its output appended to
     .pentaryn-tmp/upload.log. On a Mac, `caffeinate -i -w` keeps idle sleep away while it
-    runs (closing the lid still sleeps). Returns its pid."""
+    runs (closing the lid still sleeps). Returns its pid. An over-2 MB log is rotated
+    only while no uploader runs — one still writing it would lose its output to the
+    unlinked file; the next spawn rotates it instead."""
     from scripts.foundry.ops import config as cfg
     logfile = tmp_dir() / uploadq.LOG_FILE
     try:
-        if logfile.stat().st_size > 2_000_000:
+        if (logfile.stat().st_size > 2_000_000
+                and not uploadq.busy(uploadq.UPLOAD_LOCK)):
             logfile.unlink()
     except OSError:
         pass
@@ -1842,7 +1955,7 @@ def upload_pending() -> int:
         try:
             st = ensure_cloud()
         except SystemExit as exc:
-            if exc.code in (0, None):
+            if not _is_failure(exc):
                 raise
             job = uploadq.pending()[0]
             uploadq.write_status(state="failed", name=job.name, reason=job.reason,
@@ -1850,41 +1963,39 @@ def upload_pending() -> int:
                                  error="the cloud is unreachable")
             _ops_event("failed", job, error="the cloud is unreachable")
             return 1
-        seen: set[str] = set()
-        while (jobs := uploadq.pending()):
-            job = jobs[0]
-            if job.name in seen:
-                print(f"  ✗ {job.name} stays queued after its upload — check {tmp_dir()}",
-                      file=sys.stderr)
-                return 1
-            seen.add(job.name)
-            try:
-                _run_job(st, job)
-            except JobDropped as exc:
-                print(f"  ✗ {exc}", file=sys.stderr)
-                continue
-            except (StorageError, SystemExit) as exc:
-                if isinstance(exc, SystemExit) and exc.code in (0, None):
-                    raise
-                if isinstance(exc, StorageError):
-                    print(f"  ✗ upload of {job.name} failed: {exc}", file=sys.stderr)
-                print(f"    it is still on disk: {job.tar} — the next backup (or "
-                      "make vtt-down) retries it", file=sys.stderr)
-                return 1
+        try:
+            for job in _queue_once():
+                try:
+                    _run_job(st, job)
+                except JobDropped as exc:
+                    print(f"  ✗ {exc}", file=sys.stderr)
+                    continue
+                except (StorageError, SystemExit) as exc:
+                    if not _is_failure(exc):
+                        raise
+                    if isinstance(exc, StorageError):
+                        print(f"  ✗ upload of {job.name} failed: {exc}", file=sys.stderr)
+                    print(f"    it is still on disk: {job.tar} — the next backup (or "
+                          "make vtt-down) retries it", file=sys.stderr)
+                    return 1
+        except _StaysQueued as exc:
+            print(f"  ✗ {exc}", file=sys.stderr)
+            return 1
     return 0
 
 
-def _coalesce_target(existing: list[Snapshot], me: str, protect: str | None = None,
+def _coalesce_target(existing: list[Snapshot], me: str,
                      contained: set[str] | None = None) -> Snapshot | None:
     """This host's newest regular snapshot, if young enough to be replaced. Never another
-    host's, never an untagged one, never a safety copy, never `protect` — and only one
-    the new snapshot's tree contains (`contained`: its based-on and lineage). After a
-    restore of another line, this host's newest may be the only copy of a session the
-    restore replaced (no safety copy was made: it was already in the cloud); replacing
-    it with a snapshot of the other line would lose that session."""
+    host's, never an untagged one, never a safety copy — and only one the new snapshot's
+    tree contains (`contained`: its based-on and lineage). After a restore of another
+    line, this host's newest may be the only copy of a session the restore replaced (no
+    safety copy was made: it was already in the cloud); replacing it with a snapshot of
+    the other line would lose that session. A protected snapshot is not filtered
+    here: the caller drops the result when its name is in keep_names."""
     mine = [s for s in own(existing, me) if not s.safety]
     last = newest(mine)
-    if last is None or last.name == protect:
+    if last is None:
         return None
     if contained is not None and last.name not in contained:
         return None
@@ -1986,7 +2097,7 @@ def _parse_manifest(data) -> dict | None:
     if not isinstance(data, dict) or not data.get("bundled"):
         return None
     out: dict[str, dict[str, str]] = {}
-    for kind, plural in (("module", "modules"), ("system", "systems")):
+    for kind, plural in bundles.manifest_sections():
         section = data.get(plural) or {}
         if not isinstance(section, dict):
             return None
@@ -2024,20 +2135,15 @@ def read_manifest(st: Storage, snap: Snapshot) -> dict | None:
 
 
 def _read_marker(tar_path: Path) -> tuple[bool, dict | None]:
-    """(marker present, its manifest) from the tar's FIRST member only. A marker that is
-    present but not a valid bundled manifest raises RestoreError."""
+    """(marker present, its manifest) from the tar's FIRST member only, parsed as the
+    cloud head is (_parse_first_member). No first member, or a marker that is present
+    but cut short or not a valid bundled manifest, raises RestoreError naming the file;
+    its callers add that nothing was touched."""
     with tarfile.open(tar_path, "r:gz") as tar:
-        first = tar.next()
-        if first is None or first.name != SNAPSHOT_MARKER:
-            return False, None
-        fh = tar.extractfile(first) if first.isfile() else None
         try:
-            parsed = _parse_manifest(json.loads(fh.read())) if fh else None
-        except ValueError:
-            parsed = None
-    if parsed is None:
-        raise RestoreError(f"{tar_path.name}: its {SNAPSHOT_MARKER} is not a valid manifest")
-    return True, parsed
+            return _parse_first_member(tar)
+        except ValueError as exc:
+            raise RestoreError(f"{tar_path.name}: {exc}") from exc
 
 
 @dataclass
@@ -2052,6 +2158,7 @@ class Fetched:
     extras: list[str]                  # "<kind>/<id>" here, absent from the manifest
     unchanged: list[str]               # "<kind>/<id>" here at the manifest's bundle
     cleanup: list[Path] = field(default_factory=list)   # temp files/dirs to remove
+    bundle_members: dict[str, list[str]] = field(default_factory=dict)  # name → verified names
 
 
 def _bundle_plan(manifest: dict, *, systems: bool = True, warn=None
@@ -2145,6 +2252,8 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
             # the whole stream, not just its first member: a corruption deeper in would
             # otherwise surface in apply_snapshot, after the clear (review R2)
             bundles.read_all(local_tar)
+        except RestoreError as exc:        # _read_marker's refusal already names the file
+            raise RestoreError(f"{exc} — nothing local was touched") from exc
         except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError) as exc:
             raise RestoreError(f"{snap.name} is not a readable snapshot — nothing local was "
                                f"touched: {exc}") from exc
@@ -2177,7 +2286,8 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
             # been touched — bundles.extract would find it after the world was cleared.
             for key, name in sorted(f.needed.items()):
                 try:
-                    bundles.verify(f.bundle_tars[name], *key.split("/", 1))
+                    f.bundle_members[name] = bundles.verify(f.bundle_tars[name],
+                                                            *bundles.split_key(key))
                 except ValueError as exc:
                     raise RestoreError(
                         f"bundle {name} of {snap.name} is not usable — nothing local was "
@@ -2236,7 +2346,7 @@ def _bundle_summary(plural: str, unchanged: int, installed: list[str], size: int
     out = (f"{plural}: {len(installed)} installed ({_mb(size)}), {unchanged} unchanged, "
            f"{len(removed)} removed")
     if left:
-        out += f", {len(left)} left ({', '.join(k.split('/', 1)[1] for k in left)})"
+        out += f", {len(left)} left ({', '.join(bundles.split_key(k)[1] for k in left)})"
     return out
 
 
@@ -2255,7 +2365,7 @@ def _destinations(needed: dict[str, str], systems: bool = True
     root = data_root()
     links, unbundled = [], []
     for key in sorted(needed):
-        kind, id = key.split("/", 1)
+        kind, id = bundles.split_key(key)
         if kind == "system" and not systems:
             continue
         dest = root / bundles.ROOTS[kind] / id
@@ -2271,7 +2381,7 @@ def _refuse_links(links: list[str], label: str, done: str) -> None:
     if not links:
         return
     root = data_root()
-    rels = [f"{bundles.ROOTS[k.split('/', 1)[0]]}/{k.split('/', 1)[1]}" for k in links]
+    rels = [bundles.key_rel(k) for k in links]
     where = ", ".join(f"{rel} → {(root / rel).resolve()}" for rel in rels)
     raise RestoreError(f"{label} names {', '.join(links)}, but here {where} is a symlink — a "
                        f"restore never replaces a link (no cloud copy holds what it points at). "
@@ -2282,17 +2392,14 @@ def _move_aside(keys: list[str]) -> list[str]:
     """Move each folder to REPLACED_DIRNAME/<UTC stamp>/<its relpath>; return the lines."""
     if not keys:
         return []
-    rels = []
-    for key in keys:
-        kind, id = key.split("/", 1)
-        rels.append(f"{bundles.ROOTS[kind]}/{id}")
     return _move_aside_rels(
-        rels, f"not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))} "
-              "— so no snapshot holds it")
+        [bundles.key_rel(key) for key in keys],
+        f"not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))} "
+        "— so no snapshot holds it")
 
 
 def _aside_stamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
+    return datetime.now(timezone.utc).strftime(STAMP_FORMAT)
 
 
 def _move_aside_rels(rels: list[str], why: str, stamp: str | None = None) -> list[str]:
@@ -2418,8 +2525,9 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
     for key, name in sorted(f.needed.items()):
         if not ours(key):
             continue
-        kind, id = key.split("/", 1)
-        bundles.extract(f.bundle_tars[name], kind, id, root)
+        kind, id = bundles.split_key(key)
+        bundles.extract(f.bundle_tars[name], kind, id, root,
+                        members=f.bundle_members.get(name))
         installed.append(key)
     for key in f.extras:
         if not ours(key):
@@ -2427,8 +2535,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
         if not had_world:
             left.append(key)
             continue
-        kind, id = key.split("/", 1)
-        path = root / bundles.ROOTS[kind] / id
+        path = root / bundles.key_rel(key)
         if path.is_dir() and not path.is_symlink():
             shutil.rmtree(path)
         removed.append(key)
@@ -2436,7 +2543,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
         log("left in place (no local world, so no cloud copy references them): "
             + ", ".join(left))
     parts = []
-    for kind, plural in (("module", "modules"), ("system", "systems")):
+    for kind, plural in bundles.manifest_sections():
         if kind == "system" and not systems:
             parts.append(f"{plural}: not touched")
             continue
@@ -2461,6 +2568,8 @@ def extract_snapshot(tar_path: Path, *, systems: bool = True) -> None:
     try:
         marked, manifest = _read_marker(tar_path)
         bundles.read_all(tar_path)
+    except RestoreError as exc:            # _read_marker's refusal already names the file
+        raise RestoreError(f"{exc} — nothing was touched") from exc
     except (tarfile.TarError, OSError, EOFError, zlib.error, ValueError) as exc:
         raise RestoreError(f"{tar_path.name} is not a readable snapshot — nothing was "
                            f"touched: {exc}") from exc
@@ -2511,6 +2620,26 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
         _restore_locked(st, snap, reason)
 
 
+def record_restored(st: Storage, snap: Snapshot, by: str, manifest: dict | None) -> None:
+    """The bootstate record of a restore of `snap` that has just been applied — one
+    record for `restore` and the updater rollback alike (review M15)."""
+    anc = read_lineage(st, snap)
+    # The digest of what `snap` holds — its world, as now on disk, and ITS manifest —
+    # not of the local tree: extras a world-less restore left in place are not in
+    # that manifest, so the next backup differs, uploads, and its manifest references
+    # them before any later restore may remove them (review DL5/R1, §1 #9).
+    digest = snapshot_digest(manifest) if manifest is not None else snapshot_digest()
+    bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, digest, by=by,
+                                     lineage=list(anc.names) if anc else [],
+                                     lineage_mtimes=list(anc.mtimes) if anc else [],
+                                     # unbounded (no edge recorded) is stored as None:
+                                     # edge = this snapshot's own mtime, which is sound
+                                     # — it holds nothing newer than itself
+                                     origin_before=_finite(anc.origin_before)
+                                     if anc else None,
+                                     clear_pending=True)
+
+
 def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
     try:
         f = fetch_snapshot(st, snap)
@@ -2536,22 +2665,7 @@ def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
             die(f"restore of {snap.name} refused: {exc}\n    {back}")
         except Exception as exc:  # noqa: BLE001
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
-        anc = read_lineage(st, snap)
-        # The digest of what `snap` holds — its world, as now on disk, and ITS manifest —
-        # not of the local tree: extras a world-less restore left in place are not in
-        # that manifest, so the next backup differs, uploads, and its manifest references
-        # them before any later restore may remove them (review DL5/R1, §1 #9).
-        digest = snapshot_digest(f.manifest) if f.manifest is not None else snapshot_digest()
-        bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, digest,
-                                         by=f"restore:{reason}",
-                                         lineage=list(anc.names) if anc else [],
-                                         lineage_mtimes=list(anc.mtimes) if anc else [],
-                                         # unbounded (no edge recorded) is stored as
-                                         # None: edge = this snapshot's own mtime, which
-                                         # is sound — it holds nothing newer than itself
-                                         origin_before=_finite(anc.origin_before)
-                                         if anc else None,
-                                         clear_pending=True)
+        record_restored(st, snap, f"restore:{reason}", f.manifest)
         log(f"restored {snap.name}" + (f" (the state it replaced: {before})" if before else ""))
     finally:
         discard_fetched(f)
@@ -2571,8 +2685,10 @@ def _snapshot_kind(st: Storage, s: Snapshot) -> str:
 
 def _print_listing(snaps: list[Snapshot], st: Storage | None = None) -> None:
     """One row per snapshot; with `st`, a full/bundled column after the host."""
-    for s in by_mtime(snaps):
-        kind = f"{_snapshot_kind(st, s):<7} " if st is not None else ""
+    rows = by_mtime(snaps)
+    kinds = (_read_pooled(lambda s: f"{_snapshot_kind(st, s):<7} ", rows)
+             if st is not None else [""] * len(rows))
+    for s, kind in zip(rows, kinds):
         print(f"      {s.name:<58} {s.host_label:<9} {kind}{_utc(s.mtime)}  "
               f"{s.core or '?':<8} {_mb(s.size):>9}")
 
@@ -2609,6 +2725,8 @@ def restore(which: str | None, yes: bool = False, reason: str = "manual") -> int
     if chosen is None:
         die(f"no such snapshot: {which}")
     if not yes:
+        if not sys.stdin.isatty():
+            die("refusing without a terminal — this replaces the world; pass --yes")
         print(f"  about to restore {chosen.name} ({chosen.host_label}) over {data_root()}")
         print("  the current state is archived first, so this is undoable")
         if input("  type 'restore' to continue: ").strip() != "restore":

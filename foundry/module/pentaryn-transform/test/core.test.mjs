@@ -21,7 +21,7 @@ test("core loads with no Foundry globals present", () => {
   }
 });
 
-// Guide step 2's explicit additive delta: the blueprint constants. The checkpoint golden stays the 39 names.
+// Guide step 2's explicit additive delta: the blueprint constants. The checkpoint golden is the 39 names less the dropped id alias (EXT-8: 38).
 const ADDED_S2 = ["CONTRACT", "CSS", "FLAG_SCOPE", "HOOKS", "I18N", "MODULE", "NS", "SHORT", "VERSION"];
 // Guide step 3's: the pure seams (-1, -2, -3, -4, -5, -6, -7, -10, -11, -13, -17, -22, -23).
 const ADDED_S3 = ["STARRY_IMG", "canRunAny", "constellationImgOf", "coveredMultiattackId", "earnsChalice", "formEntries",
@@ -34,21 +34,23 @@ const ADDED_86 = ["shapingPlan"];
 const ADDED_WILDCARD_ART = ["isWildcardPath", "pickFormImage"];
 // light-roundtrip: the druid token's own light, carried back on revert.
 const ADDED_LIGHT_ROUNDTRIP = ["handLight"];
-const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86, ...ADDED_WILDCARD_ART, ...ADDED_LIGHT_ROUNDTRIP];
+// EXT-7: the one Starry Form identity (identifier, name) the core and the adapter both match by.
+const ADDED_EXT7 = ["STARRY_FORM"];
+const ADDED = [...ADDED_S2, ...ADDED_S3, ...ADDED_86, ...ADDED_WILDCARD_ART, ...ADDED_LIGHT_ROUNDTRIP, ...ADDED_EXT7];
 
 test("export list of transform-core.mjs (step 2's barrel must re-export every name)", () => {
   const names = Object.keys(core).sort();
   pinJSON("core-exports", names.filter(n => !ADDED.includes(n)).map(k => [k, typeof core[k]]), file);
   for (const n of ADDED) assert.ok(names.includes(n), n);
-  assert.equal(names.length, 39 + ADDED.length);
+  assert.equal(names.length, 38 + ADDED.length);
 });
 
-test("constants: MODULE_ID is the manifest id; EFFECT_ID, Starry constants", () => {
+test("constants: MODULE is the manifest id; EFFECT_ID, Starry constants", () => {
   const manifest = manifestOf(ROOT);
-  assert.equal(core.MODULE_ID, manifest.id);
+  assert.equal(core.MODULE, manifest.id);
   assert.equal(core.EFFECT_ID.length, 16);
   pinJSON("core-constants", {
-    MODULE_ID: core.MODULE_ID, EFFECT_ID: core.EFFECT_ID, CONSTELLATIONS: core.CONSTELLATIONS,
+    MODULE: core.MODULE, EFFECT_ID: core.EFFECT_ID, CONSTELLATIONS: core.CONSTELLATIONS,
     STARRY_LIGHT: core.STARRY_LIGHT, STARRY_SECONDS: core.STARRY_SECONDS,
     frozen: [Object.isFrozen(core.CONSTELLATIONS), Object.isFrozen(core.STARRY_LIGHT)]
   }, file);
@@ -298,4 +300,31 @@ test("oracle legacyEarnsChalice (hud.mjs:781-788): the -6 table", async () => {
 test("oracle legacyPointerArms (hud.mjs:48-52): a move arms one check while none is queued (-11)", () => {
   assert.equal(LH.legacyPointerArms(false), true);
   assert.equal(LH.legacyPointerArms(true), false);
+});
+
+test("EC-3 planBonusBar: an id-less Argon button is kept while shifted (null wildShapeId never matches)", () => {
+  const RV = "revert000000001";
+  // Shifted: Wild Shape is stripped, so wildShapeId is null; Argon's item-less button has id null.
+  const shifted = core.planBonusBar([{ kind: "weaponSet" }, { kind: "item", id: null }, { kind: "item", id: RV }],
+    { wildShapeId: null, revertIds: [RV], shifted: true, revertId: RV, hasWildShape: true });
+  assert.ok(shifted.some(p => p.keep === 1), "the id-less item button stays on the bar");
+  // A split whose halves have no item is untouched too.
+  const split = core.planBonusBar([{ kind: "split", ids: [null, undefined] }],
+    { wildShapeId: null, revertIds: [], shifted: true, revertId: null, hasWildShape: true, ownReturn: false });
+  assert.deepEqual(split.filter(p => "keep" in p), [{ keep: 0 }]);
+  // Normal form with no Wild Shape item: an id-less button is kept, not taken for Wild Shape.
+  const normal = core.planBonusBar([{ kind: "item", id: null }], { wildShapeId: null, hasWildShape: true });
+  assert.deepEqual(normal, [{ keep: 0 }, { wildshape: true }]);
+});
+
+test("M5 portraitText: a Starry Form without starryLeft has an unknown end", () => {
+  const starry = { name: "Starry Form: Archer" };
+  assert.deepEqual(core.portraitText({ starry, worldTime: 100 }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: undefined }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: NaN }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: Infinity }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: "540" }), { what: "Starry Form: Archer", left: null });
+  // A known end still reads its duration.
+  assert.deepEqual(core.portraitText({ starry, starryLeft: 540 }), { what: "Starry Form: Archer", left: "9 minutes" });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: 0 }), { what: "Starry Form: Archer", left: "0 minutes" });
 });

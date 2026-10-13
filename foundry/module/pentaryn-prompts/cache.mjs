@@ -1,24 +1,22 @@
 /**
  * pentaryn-prompts — FEATURE: keeps the shared scene-model cache honest ([declared] DP8,
- * prompts-lookup-8). Every INVALIDATING_HOOKS change bumps the scene it touched, or drops the whole
- * cache when it feeds every scene (an actor, an item, a folder, a journal, core's diagonal rule).
+ * prompts-lookup-8). Each core/cache.mjs INVALIDATION hook bumps the scene it touched, or drops the
+ * whole cache when it feeds every scene (an actor, an item, a folder, a journal, core's diagonal rule).
  *
  * Installed at `ready` (the entry's late features): until then the cache is off (nothing cached), and
  * the import-time hook manifest (golden/hooks.json) stays as it was.
  */
 
-import { INVALIDATING_HOOKS, sceneCache } from "./core/cache.mjs";
-
-const SCENE_SELF = new Set(["updateScene", "deleteScene"]);
-const WORLD_WIDE = new Set(["updateActor", "createItem", "updateItem", "deleteItem", "updateFolder", "updateJournalEntry", "updateJournalEntryPage"]);
+import { INVALIDATING_HOOKS, INVALIDATION, sceneCache } from "./core/cache.mjs";
 
 function invalidate(hook, doc) {
-  if (hook === "updateSetting") {
+  const scope = INVALIDATION[hook];
+  if (scope === "setting") {
     if (doc?.key === "core.gridDiagonals") sceneCache.bumpAll();
     return;
   }
-  if (WORLD_WIDE.has(hook)) return sceneCache.bumpAll();
-  const sceneId = SCENE_SELF.has(hook) ? doc?.id : doc?.parent?.id;
+  if (scope === "world") return sceneCache.bumpAll();
+  const sceneId = scope === "self" ? doc?.id : doc?.parent?.id;
   if (sceneId) sceneCache.bump(sceneId);
 }
 

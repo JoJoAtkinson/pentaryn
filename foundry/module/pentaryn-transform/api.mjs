@@ -14,8 +14,9 @@ import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
 import {
-  shift, revert, forms, wildShapeActivity, original, isRevertItem, isWildShapeForm, activeFormOf, formImageFor
+  shift, revert, forms, wildShapeActivity, original, isRevertItem, isWildShapeForm, activeFormOf
 } from "./wildshape-adapter.mjs";
+import { formImageFor } from "./form-image-adapter.mjs";
 import { sweepSpentForms } from "./sweep-adapter.mjs";
 import { constellationOf, starrySecondsLeft } from "./starry-adapter.mjs";
 

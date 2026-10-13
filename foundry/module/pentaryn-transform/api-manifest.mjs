@@ -14,8 +14,10 @@ const ACTOR = { name: "actor", type: "Actor", doc: "the druid or the form they a
 const REF = { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring" };
 
 const WS = "flags.pentaryn-transform.wildshape";
-const REVERT = "flags.pentaryn-transform.revert";
+const REVERT = "flags.pentaryn-transform.revert";   // set by hand on an item; read, never written (EXT-1)
+const KEEP_IN_FORM = "flags.pentaryn-transform.keepInForm";   // set by hand: a feat that stays in the form
 const STARRY = "flags.pentaryn-transform.starry";
+const CLAIMS = "flags.pentaryn-transform.claims";   // one tab writes an automatic ending (transform-core-async-2)
 const LIGHT = "flags.pentaryn-senses.light";
 const HAND_LIGHT = "flags.dnd5e.previousTokenData.light";   // light-roundtrip: the druid token's own light
 const SENSES_TOKEN = ["flags.pentaryn-senses.itemLight", "flags.pentaryn-senses.itemLightPrior", "flags.pentaryn-senses.spellLight"];
@@ -71,9 +73,10 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "sweepSpentForms", legacy: true, params: [],
-      returns: "Promise<void>", gm: true, writes: true, sideEffects: ["deletes spent form actors"],
+      returns: "Promise<void>", gm: true, writes: true, sideEffects: ["deletes spent form actors", `${CLAIMS}.sweep`],
       doc: "Active GM only: delete transformed copies (flags.dnd5e.originalActor) with no token on any scene and "
-        + "older than 10 s; younger ones are checked again when old enough. Runs by itself after token traffic.",
+        + "first seen by this tab over 10 s ago; younger ones are checked again when old enough. Each form is "
+        + "claimed first, so with two tabs of the GM open only one deletes it. Runs by itself after token traffic.",
     },
     {
       path: "inspect",
@@ -100,9 +103,10 @@ export const MANIFEST = Object.freeze({
     },
   ],
   flags: {
-    writes: [WS, REVERT, STARRY, LIGHT, HAND_LIGHT],
+    writes: [WS, STARRY, LIGHT, HAND_LIGHT, CLAIMS],
     reads: ["flags.dnd5e.originalActor", "flags.dnd5e.isPolymorphed", "flags.dnd5e.transformOptions",
-      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT, ...SENSES_TOKEN],
+      "flags.dnd5e.previousTokenData", "flags.dnd5e.previousActorData", LIGHT, ...SENSES_TOKEN,
+      REVERT, KEEP_IN_FORM],
   },
   unlisted: [],
 });
@@ -115,7 +119,10 @@ export const STARRY_ROWS = Object.freeze([
     returns: "Promise<boolean> — whether the form is now up with that constellation", gm: false, writes: true,
     sideEffects: [STARRY, LIGHT, "the Wild Shape item's uses"],
     doc: "Take on Starry Form with this constellation (one Wild Shape use), or with Twinkling Constellations change "
-      + "it for free while the form is up. false (with a warning) when shifted, incapacitated or out of uses.",
+      + "it for free while the form is up. false (with a warning) when shifted, incapacitated or out of uses, "
+      + "or when the druid has no Starry Form feature or consume activity; false (silently) for an unknown "
+      + "constellation or no actor, while a call is already in progress for this druid, or when the "
+      + "activity's use is refused.",
   },
   {
     path: "starry.end", legacy: true,

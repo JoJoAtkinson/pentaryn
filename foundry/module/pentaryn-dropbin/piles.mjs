@@ -6,11 +6,25 @@
  * The writes (`turnTokensIntoItemPiles`, `revertTokensFromItemPiles`, `transferEverything`) are
  * only reached behind an `api()` check.
  *
+ * `SELECTORS` names the loot window's DOM that Loot all reads.
+ *
  * `storeOf(app)` reads Item Piles' private Svelte state (`app.svelte.appShell.$$.ctx`) to follow the
  * loot window's Change-recipient button; it fails soft (null) when that shape changes.
  */
 
 const itempiles = () => globalThis.game?.itempiles;
+
+/**
+ * Item Piles' loot window (ItemPileInventoryApp) DOM, as Loot all finds it: the footer, its direct
+ * buttons, the Close Lid (containers) / Leave icons Loot all sits before, and the native Take All
+ * icon. Re-check these against the window after an Item Piles update.
+ */
+export const SELECTORS = Object.freeze({
+  footer: "footer.sheet-footer",
+  footerButton: ":scope > button",
+  exitIcon: "i.fa-box, i.fa-sign-out-alt",
+  nativeTakeAllIcon: "i.fa-fist-raised",
+});
 
 /** `game.itempiles.API`, or undefined when Item Piles is not active. */
 export const api = () => itempiles()?.API;

@@ -1,5 +1,7 @@
-// Step 6 (C24): a failing canvas.ping is logged at debug, never swallowed silently, and never
-// stops the report: preview still posts exactly one chat card and returns the result.
+// Step 6 (C24): a failing refusal ping is logged at debug, never swallowed silently, and never
+// stops the report: preview still posts exactly one chat card and returns the result. Since
+// walls-edge-1 the ping is drawn locally with canvas.controls.drawPing (canvas.ping broadcast).
+// walls-rob-3: pings are drawn only when the reported scene is the one this client is viewing.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { wasmReady } from "./fixtures/engine.mjs";
@@ -12,7 +14,8 @@ F.fire("ready");
 await wasmReady;
 for (let i = 0; i < 20; i++) await Promise.resolve();
 const scene = makeScene(F, { id: "scenePing000001", name: "S", walls: houseWalls() });
-canvas.ping = () => { throw new Error("no canvas"); };
+canvas.scene = scene;
+canvas.controls.drawPing = () => { throw new Error("no canvas"); };
 
 const debugLines = async fn => {
   const lines = [];
@@ -46,20 +49,20 @@ test("ping throws, debug on: one debug line per refusal, labelled with the modul
   }
 });
 
-// canvas.ping is async in Foundry 14 (board.mjs `async ping(origin, options)`): a failure arrives
+// drawPing is async in Foundry 14 (ControlsLayer `async drawPing(position, options)`): a failure arrives
 // as a rejected promise, not a throw. It must reach the same debug line, never an unhandled rejection.
 const asyncPing = async fn => {
   const unhandled = [];
   const spy = err => unhandled.push(err);
   process.on("unhandledRejection", spy);
-  canvas.ping = async () => { throw new Error("no canvas"); };
+  canvas.controls.drawPing = async () => { throw new Error("no canvas"); };
   try {
     const got = await debugLines(fn);
     for (let i = 0; i < 20; i++) await Promise.resolve();
     await new Promise(r => setImmediate(r));
     return { ...got, unhandled };
   } finally {
-    canvas.ping = () => { throw new Error("no canvas"); };
+    canvas.controls.drawPing = () => { throw new Error("no canvas"); };
     process.off("unhandledRejection", spy);
   }
 };
@@ -85,4 +88,31 @@ test("ping rejects (async, as Foundry 14), debug off: one chat card, no debug li
   assert.equal(F.calls.slice(from).filter(c => c.op === "ChatMessage.create").length, 1);
   assert.deepEqual(lines, []);
   assert.equal(unhandled.length, 0);
+});
+
+// walls-rob-3: a sceneId that is not the viewed scene has coordinates that mean nothing on this
+// canvas. Its refusals stay on the chat card and in the console table; no marker is drawn.
+test("walls-rob-3: preview/run of a scene that is not the viewed one draws no ping, the card still lists every refusal", async () => {
+  const other = makeScene(F, { id: "scenePingOther1", name: "Elsewhere", walls: houseWalls() });
+  const drawn = [];
+  const keep = canvas.controls.drawPing;
+  canvas.controls.drawPing = at => { drawn.push(at); };
+  try {
+    for (const action of ["preview", "run"]) {
+      const from = F.calls.length;
+      const out = await withConsole(F, () => game.pentaryn.walls[action]({ sceneId: other.id, runId: `o-${action}` }));
+      assert.ok(out.refusals.length > 0, "the fixture scene has refusals");
+      assert.deepEqual(drawn, [], `${action}: no marker on the viewed canvas`);
+      const chats = F.calls.slice(from).filter(c => c.op === "ChatMessage.create");
+      assert.equal(chats.length, 1);
+      assert.match(chats[0].data.content, /Elsewhere/);
+      const tables = F.calls.slice(from).filter(c => c.op === "console.table");
+      assert.equal(tables.at(-1).args[0].length, out.refusals.length, "the console table lists every refusal");
+    }
+    // The viewed scene still pings, one per refusal.
+    const out = await withConsole(F, () => game.pentaryn.walls.preview({ sceneId: scene.id, runId: "v" }));
+    assert.equal(drawn.length, out.refusals.length);
+  } finally {
+    canvas.controls.drawPing = keep;
+  }
 });

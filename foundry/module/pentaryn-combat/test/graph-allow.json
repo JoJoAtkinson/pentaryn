@@ -9,6 +9,24 @@
     { "from": "hud/buttons-ui.mjs", "to": "sequence.mjs", "why": "runSwings / runFollowUp / running: what Full Attack and a follow-up click do" },
     { "from": "hud/buttons-ui.mjs", "to": "strip.mjs", "why": "pickWeapon: the weapon picker is the strip's DOM (ui → ui)" },
     { "from": "hud/bars.mjs", "to": "turn-riders.mjs", "why": "setReckless: the Special bar's Reckless toggle writes the rider feature's effect" },
-    { "from": "hud/bars.mjs", "to": "turnflow/drawers.mjs", "why": "placeOpenDrawers: applyButtons' `after` re-places an open drawer whose button moved" }
+    { "from": "hud/bars.mjs", "to": "turnflow/drawers.mjs", "why": "placeOpenDrawers: applyButtons' `after` re-places an open drawer whose button moved" },
+    { "from": "turnflow/action-buttons.mjs", "to": "context.mjs", "why": "tempHooks, opts: the one temporary-hook factory and the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/boundaries.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/death.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/dialogs.mjs", "to": "context.mjs", "why": "tempHooks, opts: the one temporary-hook factory and the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/drawers.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/effects.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/helper-token.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/manual-dice.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/movement.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/portrait.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "hud/bars.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "hud/picker.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "hud/tooltips.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "counting.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "patches.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "roll-dock.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turn-riders.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "sequence.mjs", "to": "context.mjs", "why": "tempHooks: the one temporary-hook factory (final review M7); never ctx or reg" }
   ]
 }

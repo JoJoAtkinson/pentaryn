@@ -1,0 +1,6 @@
+{
+  "doc": "Import edges allowed despite the direction table (use-doc §2, context/foundry/addon-blueprint.md). Each entry: {\"from\": \"a.mjs\", \"to\": \"b.mjs\", \"why\": \"…\"}. Keep it empty; every entry is a debt.",
+  "allow": [
+    { "from": "dropbin-core.mjs", "to": "lib/pins.mjs", "why": "journal-EXT-9: the pinned-journal rule moved to the kit (pins.mjs); core re-exports pinnedEntryIds by name for its older suites. The feature imports the kit directly; drop this edge when those suites import lib/pins.mjs" }
+  ]
+}

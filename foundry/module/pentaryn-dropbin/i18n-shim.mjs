@@ -34,8 +34,11 @@ export const LEGACY_KEYS = Object.freeze({
   Unknown: "COMMON.Unknown",
 });
 
-/** Last resort when the source key is missing too (should never happen on 6.0.6). */
-const LITERAL = Object.freeze({
+/**
+ * Last resort when the source key is missing too (should never happen on 6.0.6).
+ * Exactly the keys of LEGACY_KEYS — test/i18n-shim-keys.test.mjs holds them in step.
+ */
+export const LITERAL = Object.freeze({
   ItemRarityCommon: "Common",
   ItemRarityUncommon: "Uncommon",
   ItemRarityRare: "Rare",

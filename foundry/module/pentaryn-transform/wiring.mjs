@@ -4,9 +4,9 @@
  * module cache makes this one instance. GLUE: only the two entries import this file.
  *
  * A feature gets `(reg, ctx)` in `install`; `ctx.uninstall()` (the API's uninstall()) runs every
- * installed feature's `uninstall` newest first, removes every hook the registry recorded and undoes
- * the patch. ctx: log, reg, setting, emit (core HOOKS rows — none), api, contributions, exposed,
- * expose(), uninstall.
+ * installed feature's `uninstall` newest first (one that throws is logged by name and skipped), then
+ * removes every hook the registry recorded and undoes the patch. ctx: log, reg, setting, emit (core
+ * HOOKS rows — none), api, contributions, exposed, expose(), uninstall.
  */
 
 import { HOOKS, MODULE, VERSION } from "./transform-core.mjs";
@@ -35,16 +35,19 @@ export const ctx = {
 };
 
 /** Install one feature now; its contribution (API rows + impl), if any, is kept for buildApi. */
-export function installFeature(feature) {
+export function installFeature(feature, name = "feature") {
   const contribution = feature.install(reg, ctx);
-  installed.push(feature);
+  installed.push({ feature, name });
   if (contribution) ctx.contributions.push(contribution);
   return contribution;
 }
 
-/** Every installed feature's uninstall, newest first, then every recorded hook, then the patch. */
+/** Every installed feature's uninstall, newest first (a throw is logged and skipped, R3), then every
+ *  recorded hook, then the patch. */
 function uninstall() {
-  for (const f of installed.splice(0).reverse()) f.uninstall?.();
+  for (const { feature, name } of installed.splice(0).reverse()) {
+    try { feature.uninstall?.(); } catch (err) { log.warn(`${name}: uninstall failed`, err); }
+  }
   ctx.contributions.length = 0;
   reg.offAll();
   removePatches();

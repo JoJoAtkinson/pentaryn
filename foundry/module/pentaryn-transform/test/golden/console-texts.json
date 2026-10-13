@@ -10,6 +10,66 @@
     "body-swap animation guard skipped"
   ],
   [
+    "claim-adapter.mjs",
+    "debug",
+    "another session runs ${key} on ${doc.name}"
+  ],
+  [
+    "claim-adapter.mjs",
+    "debug",
+    "clearing the ${key} claim on ${doc.name} failed"
+  ],
+  [
+    "claim-adapter.mjs",
+    "debug",
+    "the ${key} claim on ${doc.name} was refused (already gone)"
+  ],
+  [
+    "form-image-adapter.mjs",
+    "debug",
+    "asking the GM for the form image failed"
+  ],
+  [
+    "form-image-adapter.mjs",
+    "debug",
+    "form image: no such document"
+  ],
+  [
+    "form-image-adapter.mjs",
+    "debug",
+    "wildcard token images failed"
+  ],
+  [
+    "form-image-adapter.mjs",
+    "warn",
+    "form token image failed"
+  ],
+  [
+    "form-image-adapter.mjs",
+    "warn",
+    "form token image not applied"
+  ],
+  [
+    "form-picker.mjs",
+    "debug",
+    "form source failed"
+  ],
+  [
+    "form-picker.mjs",
+    "warn",
+    "constellation tile click failed"
+  ],
+  [
+    "form-picker.mjs",
+    "warn",
+    "form tile click failed"
+  ],
+  [
+    "form-picker.mjs",
+    "warn",
+    "return button click failed"
+  ],
+  [
     "hud-panels.mjs",
     "error",
     "HUD composition failed"
@@ -18,6 +78,11 @@
     "hud-panels.mjs",
     "warnOnce",
     "combat multiattack read failed"
+  ],
+  [
+    "hud-panels.mjs",
+    "warn",
+    "Bonus bar rebuild failed"
   ],
   [
     "hud-panels.mjs",
@@ -71,6 +136,21 @@
   ],
   [
     "sweep-adapter.mjs",
+    "debug",
+    "another session sweeps ${spent.length - mine.length} form(s)"
+  ],
+  [
+    "sweep-adapter.mjs",
+    "debug",
+    "clearing the sweep claim on ${a.name} failed"
+  ],
+  [
+    "sweep-adapter.mjs",
+    "debug",
+    "the sweep claim on ${a.name} was refused (already gone)"
+  ],
+  [
+    "sweep-adapter.mjs",
     "warn",
     "sweep failed"
   ],
@@ -82,22 +162,12 @@
   [
     "wildshape-adapter.mjs",
     "debug",
-    "asking the GM for the form image failed"
-  ],
-  [
-    "wildshape-adapter.mjs",
-    "debug",
-    "form image: no such document"
+    "form source for revert failed"
   ],
   [
     "wildshape-adapter.mjs",
     "debug",
     "traits enrichment failed"
-  ],
-  [
-    "wildshape-adapter.mjs",
-    "debug",
-    "wildcard token images failed"
   ],
   [
     "wildshape-adapter.mjs",
@@ -118,16 +188,6 @@
     "wildshape-adapter.mjs",
     "warn",
     "ending Starry Form failed"
-  ],
-  [
-    "wildshape-adapter.mjs",
-    "warn",
-    "form token image failed"
-  ],
-  [
-    "wildshape-adapter.mjs",
-    "warn",
-    "form token image not applied"
   ],
   [
     "wildshape-adapter.mjs",
@@ -187,11 +247,21 @@
   [
     "wildshape.mjs",
     "warn",
+    "long rest: no original for ${form.name}, resting the form"
+  ],
+  [
+    "wildshape.mjs",
+    "warn",
     "short rest on the form failed"
   ],
   [
     "wildshape.mjs",
     "warn",
     "short rest on the original failed"
+  ],
+  [
+    "wiring.mjs",
+    "warn",
+    "${name}: uninstall failed"
   ]
 ]

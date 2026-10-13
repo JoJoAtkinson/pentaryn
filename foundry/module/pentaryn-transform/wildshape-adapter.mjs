@@ -1,7 +1,8 @@
 /**
  * Pentaryn Transform — ADAPTER: Wild Shape on live documents. The lookups (original, the Wild Shape
  * activity, the known forms), the shift and the revert with everything dnd5e leaves to the table,
- * the chat line, the bonus-action mark, and who runs the automatic endings.
+ * the chat line and the bonus-action mark. Who runs the automatic endings is claim-adapter.mjs's;
+ * the form's token image and trait text are form-image-adapter.mjs's (EXT-8).
  *
  * dnd5e 6 fires dnd5e.preUseActivity (return false cancels) and dnd5e.postUseActivity on the client
  * of the user who used the activity, so a player's click shifts and reverts with the player's own
@@ -13,12 +14,11 @@
 
 import {
   MODULE, activitiesOf, isWildShapeActivity, shapingPlan, durationSeconds, formatDuration,
-  usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, runnerIs, withArticle,
-  formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate, formEntries,
-  isWildcardPath, pickFormImage
+  usesLeft, useSyncUpdates, carriedConditions, endedInForm, attributeSync, shiftBlock, withArticle,
+  formTempHP, withoutOrigin, pruneFavorites, findWildShapeItem, wildShapeActivityOf, refundUpdate, formEntries
 } from "./transform-core.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { queryGM } from "./lib/queries.mjs";
+import { wildcardFormImage, shiftSource, traitsHtml } from "./form-image-adapter.mjs";
 import { dnd5eAllowsPolymorphing } from "./settings.mjs";
 
 const log = makeLog(MODULE);
@@ -157,7 +157,7 @@ export function bonusUsedNow(tokenId) {
 
 /* ── revert ──────────────────────────────────────────────────────────────── */
 
-const reverting = new Set();   // form actor uuids
+const reverting = new Map();   // form actor uuid → Promise<Actor|null>: this client's revert in flight
 
 /**
  * dnd5e's revert moves back only the tokens on this client's canvas, then (as GM) deletes the
@@ -228,46 +228,61 @@ export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
   }
   const key = actor.uuid;
   if (reverting.has(key)) return null;
-  reverting.add(key);
+  // Registered before the first await: dnd5e.revertOriginalForm (onOutsideRevert) reads it, and a
+  // Long Rest that lands mid-revert waits on it (transform-core-async-3).
+  let settle;
+  reverting.set(key, new Promise(resolve => { settle = resolve; }));
+  let back = null;
   try {
-    const ws = actor.getFlag(MODULE, "wildshape") ?? null;
-    const formItems = actor.items.map(i => i.toObject());
-    const formEffects = actor.effects.map(e => e.toObject());
-    const fa = actor.system.attributes ?? {};
-    const formAttributes = { exhaustion: fa.exhaustion, inspiration: fa.inspiration };
-    const sourceUuid = ws?.source;
-    const sourceEffectIds = (sourceUuid ? fromUuidSync(sourceUuid)?.effects?.map(e => e.id) : null) ?? [];
-
-    if (!actor.isToken) await restoreTokensElsewhere(actor);
-    settleTokens(actor);
-
-    const result = await actor.revertOriginalForm({ renderSheet: false });
-    const back = result instanceof Actor ? result : (result?.actor ?? null);
-    if (!back) return null;
-
-    const updates = useSyncUpdates(formItems, back.items.map(i => i.toObject()));
-    if (updates.length) await back.updateEmbeddedDocuments("Item", updates);
-    const ba = back.system.attributes ?? {};
-    const attributes = attributeSync(formAttributes, { exhaustion: ba.exhaustion, inspiration: ba.inspiration });
-    if (!foundry.utils.isEmpty(attributes)) await back.update(attributes);
-
-    // Effects only for Wild Shape forms this module shaped: it knows which effects went in and
-    // which are the beast's own. A Polymorph form's beast effects must not land on the original.
-    if (ws) {
-      await endOnDruid(back, endedInForm(ws.carried, formEffects, back.effects.map(e => e.toObject())));
-      const carried = carriedConditions(formEffects, {
-        originalEffectIds: back.effects.map(e => e.id),
-        originalStatuses: Array.from(back.statuses ?? []),
-        sourceEffectIds
-      }).map(withoutOrigin);
-      if (carried.length) await back.createEmbeddedDocuments("ActiveEffect", carried, { keepId: true });
-    }
-
-    if (!quiet) say(back, _loc(RETURN_LINES[reason] ?? RETURN_LINES.manual, { name: back.name }));
+    back = await carryBack(actor, { quiet, reason });
     return back;
   } finally {
     reverting.delete(key);
+    settle(back);
   }
+}
+
+/** revert()'s body, once the form is claimed in `reverting`. */
+async function carryBack(actor, { quiet, reason }) {
+  const ws = actor.getFlag(MODULE, "wildshape") ?? null;
+  const formItems = actor.items.map(i => i.toObject());
+  const formEffects = actor.effects.map(e => e.toObject());
+  const fa = actor.system.attributes ?? {};
+  const formAttributes = { exhaustion: fa.exhaustion, inspiration: fa.inspiration };
+  const sourceUuid = ws?.source;
+  // R3: an unloaded compendium beast answers fromUuidSync with its index entry (no effects): load it.
+  const near = sourceUuid ? fromUuidSync(sourceUuid) : null;
+  const beast = !sourceUuid || typeof near?.effects?.[Symbol.iterator] === "function" ? near : await fromUuid(sourceUuid)
+    .catch(err => { log.debug("form source for revert failed", { source: sourceUuid }, err); return null; });
+  const sourceEffectIds = beast?.effects?.map(e => e.id) ?? [];
+
+  if (!actor.isToken) await restoreTokensElsewhere(actor);
+  settleTokens(actor);
+
+  const result = await actor.revertOriginalForm({ renderSheet: false });
+  const back = result instanceof Actor ? result : (result?.actor ?? null);
+  if (!back) return null;
+
+  const updates = useSyncUpdates(formItems, back.items.map(i => i.toObject()));
+  if (updates.length) await back.updateEmbeddedDocuments("Item", updates);
+  const ba = back.system.attributes ?? {};
+  const attributes = attributeSync(formAttributes, { exhaustion: ba.exhaustion, inspiration: ba.inspiration });
+  if (!foundry.utils.isEmpty(attributes)) await back.update(attributes);
+
+  // Effects only for Wild Shape forms this module shaped: it knows which effects went in and
+  // which are the beast's own. A Polymorph form's beast effects must not land on the original.
+  if (ws) {
+    await endOnDruid(back, endedInForm(ws.carried, formEffects, back.effects.map(e => e.toObject())));
+    const carried = carriedConditions(formEffects, {
+      originalEffectIds: back.effects.map(e => e.id),
+      originalStatuses: Array.from(back.statuses ?? []),
+      sourceEffectIds
+    }).map(withoutOrigin);
+    if (carried.length) await back.createEmbeddedDocuments("ActiveEffect", carried, { keepId: true });
+  }
+
+  if (!quiet) say(back, _loc(RETURN_LINES[reason] ?? RETURN_LINES.manual, { name: back.name }));
+  return back;
 }
 
 /**
@@ -335,24 +350,10 @@ export async function shift(actor, profileId) {
   }
 }
 
-/** Normalised trait text for the form's duration effect, enriched against the beast. */
-async function traitsHtml(source) {
-  const TE = foundry.applications.ux.TextEditor.implementation;
-  const parts = [];
-  for (const item of source.items) {
-    if (item.type !== "feat" || item.system.type?.value !== "monster") continue;
-    if (activitiesOf(item).length) continue;               // passive traits only
-    const html = await TE.enrichHTML(item.system.description?.value ?? "", {
-      relativeTo: item, rollData: item.getRollData?.() ?? {}, secrets: false
-    });
-    parts.push(`<p><strong>${item.name}.</strong> ${html.replace(/^<p>|<\/p>$/g, "")}</p>`);
-  }
-  return parts.join("");
-}
-
-async function refund(host, itemId) {
-  const item = host?.items.get(itemId);
-  const update = refundUpdate(item?.system.uses);
+/** Give back one spent use of `host`'s Wild Shape item (the item or its id); writes nothing when none is spent. */
+export async function refund(host, itemOrId) {
+  const item = typeof itemOrId === "string" ? host?.items.get(itemOrId) : itemOrId;
+  const update = refundUpdate(item?.system?.uses);
   if (update) await item.update(update);
 }
 
@@ -409,65 +410,6 @@ async function shapeTokenForm(form, source, meta) {
   await form.update(update);
 }
 
-/* ── the form's token image (wildcard-art) ───────────────────────────────── */
-
-/** True for a beast whose prototype token names a wildcard (dnd5e would pick one of its files at random). */
-function hasWildcardToken(source) {
-  const proto = source?.prototypeToken;
-  return !!proto?.randomImg || isWildcardPath(proto?.texture?.src);
-}
-
-/**
- * The token image a Wild Shape form of `source` gets, the same every time (pickFormImage). Listing a
- * wildcard's files needs FILES_BROWSE or ownership of the beast (core's requestTokenImages); a player
- * without either asks the active GM (the `formImage` relay row), and with no GM gets the portrait.
- * @returns {Promise<string|null>}
- */
-export async function formImage(source) {
-  const src = source?.prototypeToken?.texture?.src ?? null;
-  const wildcard = hasWildcardToken(source);
-  let images = [];
-  if (wildcard && (game.user.isGM || game.user.can?.("FILES_BROWSE") || source.isOwner)) {
-    images = await source.getTokenImages().catch(err => {
-      log.debug("wildcard token images failed", { source: source.uuid }, err);
-      return [];
-    });
-  } else if (wildcard && source?.uuid) {
-    const img = await queryGM(`${MODULE}.formImage`, { uuid: source.uuid }, { timeout: 5000 }).catch(err => {
-      log.debug("asking the GM for the form image failed", { source: source.uuid }, err?.message ?? err);
-      return null;
-    });
-    if (img) images = [img];
-  }
-  return pickFormImage({ src, wildcard, images, portrait: source?.img ?? null });
-}
-
-/** The relay row: `formImage` for an Actor uuid, on the GM's client (null when it is no Actor). */
-export async function formImageFor({ uuid } = {}) {
-  if (typeof uuid !== "string" || !uuid) return null;
-  const source = await fromUuid(uuid).catch(err => {
-    log.debug("form image: no such document", { uuid }, err?.message ?? err);
-    return null;
-  });
-  return source?.documentName === "Actor" ? formImage(source) : null;
-}
-
-/**
- * `source`, or for a wildcard beast a copy whose prototype token names its one image, so dnd5e copies
- * that image onto the form and its tokens (linked and unlinked alike) and never picks one at random.
- */
-async function withFormImage(source) {
-  if (!hasWildcardToken(source)) return source;              // dnd5e copies a concrete image as it is
-  const img = await formImage(source).catch(err => { log.warn("form token image failed", err); return null; });
-  if (!img) return source;
-  try {
-    return source.clone({ prototypeToken: { randomImg: false, texture: { src: img } } }, { keepId: true });
-  } catch (err) {
-    log.warn("form token image not applied", err);
-    return source;
-  }
-}
-
 /** Transform `host` into the profile's source; refunds the use when the shift does not happen. */
 export async function doShift(host, activity, profileId, uuid) {
   const itemId = activity.item.id;
@@ -485,10 +427,10 @@ export async function doShift(host, activity, profileId, uuid) {
     return null;
   }
   const seconds = durationSeconds(activity.duration);
-  const shape = await withFormImage(source);
+  const formImg = await wildcardFormImage(source);
   // Snapshot the druid now: for an unlinked token, `host` IS the form once transformInto returns.
   const meta = metaFor(host, {
-    profile: profileId, wildShapeId: itemId, seconds, traitsHtml: await traitsHtml(source).catch(err => {
+    profile: profileId, wildShapeId: itemId, seconds, formImg, traitsHtml: await traitsHtml(source).catch(err => {
       log.debug("traits enrichment failed", { source: source.uuid }, err);
       return "";
     })
@@ -504,7 +446,7 @@ export async function doShift(host, activity, profileId, uuid) {
   let form = null;
   try {
     settleTokens(host);
-    await host.transformInto(shape, activity.settings, { renderSheet: false });
+    await host.transformInto(shiftSource(source, formImg), activity.settings, { renderSheet: false });
     if (token) form = token.actor?.isPolymorphed ? token.actor : null;
     else form = game.actors.find(a => a.isPolymorphed && a.getFlag("dnd5e", "originalActor") === host.id
       && !before.has(a.id)) ?? null;
@@ -530,22 +472,16 @@ export async function doShift(host, activity, profileId, uuid) {
   return form;
 }
 
-/* ── ending without a click ──────────────────────────────────────────────── */
-
-/** True for exactly one user for this actor (the active GM, else the first active owner), in every tab of that user (README "Two sessions"). */
-export function isRunner(actor) {
-  const activeGMId = game.users.activeGM?.id ?? null;
-  // A connected GM always wins pickRunner: no owner scan (transform-creatures-1).
-  if (activeGMId) return runnerIs(game.user.id, { activeGMId, ownerIds: [] });
-  const ownerIds = game.users.filter(u => u.active && !u.isGM && actor.testUserPermission(u, "OWNER")).map(u => u.id);
-  return runnerIs(game.user.id, { activeGMId, ownerIds });
-}
-
 /* ── what the hooks (wildshape.mjs) read across the gap ──────────────────── */
 
 /** True while this client's revert() of that form is running. */
 export function isReverting(uuid) {
   return reverting.has(uuid);
+}
+
+/** The promise of this client's revert of that form while it runs (resolves to the original, or null). */
+export function revertInFlight(uuid) {
+  return reverting.get(uuid);
 }
 
 /** The druid's shaping meta doShift() left for dnd5e.transformActor, if a shift is in flight. */

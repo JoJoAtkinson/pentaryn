@@ -19,8 +19,11 @@
       "FromTargets": "the roller's targets",
       "Empty": "No creatures inside the area.",
       "Superseded": "Superseded by a newer damage roll for this area. Apply from that one.",
+      "AreaLocked": "This tray's area can no longer change: damage has been applied from it, or a newer roll superseded it.",
+      "NotActiveGm": "Only the active GM can change the area.",
       "Waiting": "waiting",
       "WaitingTip": "Waiting for the player to roll from the request card.",
+      "NoDcTip": "This save has no DC, so it is neither a pass nor a fail. Set the multiplier by hand.",
       "Reroll": "Re-roll this save",
       "RollFor": "Roll this save for the player",
       "Applied": "applied",
@@ -83,8 +86,8 @@
         "Hint": "Outline a card's Effects tray and mark it \"Not applied yet\" until someone applies its effects. Cards older than an hour are left alone."
       },
       "carefulSpell": {
-        "Name": "Careful Spell protects allies in the area",
-        "Hint": "After a sorcerer uses Careful Spell, it applies to the next spell they cast (in combat, on the same turn) and then ends. If that spell's area calls for a save, it marks up to their Charisma modifier of their own side (same token disposition, player characters first, never the caster) as protected: an automatic success and no damage on a half-damage spell. No request card for them. The GM can change any row in the tray."
+        "Name": "Careful Spell protects the creatures the player chooses",
+        "Hint": "When a sorcerer uses Careful Spell, they pick up to their Charisma modifier (minimum one) of the creatures they can see on their scene, and a chat card names them (or says nobody was chosen, if they skip). The next save spell's tray marks exactly those creatures protected: an automatic success and no damage on a half-damage spell, no request card. Then it ends; a spell with no save leaves it waiting, and using it again replaces the choice. The GM can protect or unprotect any row in the tray with its shield."
       },
       "refundCancelledArea": {
         "Name": "Refund a cancelled area",
@@ -114,7 +117,14 @@
       }
     },
     "Careful": {
-      "Armed": "Careful Spell: your next spell uses it. If its area calls for a save, up to {n} of your side (players first) succeed automatically and take no damage on a half-damage spell. The GM can change any row.",
+      "PickTitle": "Careful Spell",
+      "PickHint": "Choose who it protects (up to {n}). On your next spell that calls for a saving throw, they succeed automatically and take no damage where a success would halve it. Skip to choose nobody; the GM can protect creatures on the tray.",
+      "PickOk": "Protect them",
+      "PickSkip": "Skip",
+      "Card": "{caster} uses Careful Spell: {names}",
+      "CardNobody": "{caster} uses Careful Spell: nobody chosen (the GM can protect creatures on the save tray)",
+      "Protect": "Careful Spell: protect this creature (an automatic success, no damage where a success halves it)",
+      "Unprotect": "Careful Spell: take the protection off (back to its own save)",
       "Row": "protected",
       "RowTip": "Careful Spell: an automatic success, and no damage where a success halves it.",
       "Head": "Careful Spell protects: {names}"
@@ -125,7 +135,8 @@
       "superseded": "Re-rolled: the newer damage card for this spell is the one that counts."
     },
     "Refund": {
-      "Done": "{item}: placement cancelled, so nothing was spent. The slot, charge or uses are back."
+      "Done": "{item}: placement cancelled, so nothing was spent. The slot, charge or uses are back.",
+      "Ended": "{item}: placement cancelled, so its concentration ended and its card was removed."
     }
   }
 }

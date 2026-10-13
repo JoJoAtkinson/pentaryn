@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/test-kit/foundry-stub.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/test-kit/foundry-stub.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * A Foundry stand-in for node tests. Enough of `game`, `Hooks`, `CONFIG`, `ui`, `canvas` and the
  * document API to load a module's entry, fire its lifecycle hooks and record what it did.
@@ -28,6 +28,30 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_APP = "/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app";
 let idSeq = 0;
+
+/**
+ * Every ref kind, mirroring resolve.mjs KINDS (kit-ext-7; a kit test asserts the two are equal —
+ * the stub cannot import resolve.mjs, which a small-tier module does not vendor). A `collection`
+ * kind is a `game` collection seeded from installFoundry's option of the same name; an `embedded`
+ * kind lives on a Scene. fromUuidSync walks both, plus owned documents (`Actor.<id>.Item.<id>`
+ * reads the actor's `items`, by a kind's collection name).
+ */
+export const STUB_KINDS = Object.freeze(Object.fromEntries(Object.entries({
+  actor: { doc: "Actor", collection: "actors" },
+  token: { doc: "Token", embedded: "tokens" },
+  item: { doc: "Item", collection: "items" },
+  scene: { doc: "Scene", collection: "scenes" },
+  user: { doc: "User", collection: "users" },
+  journal: { doc: "JournalEntry", collection: "journal" },
+  message: { doc: "ChatMessage", collection: "messages" },
+  macro: { doc: "Macro", collection: "macros" },
+  region: { doc: "Region", embedded: "regions" },
+  combat: { doc: "Combat", collection: "combats" },
+  table: { doc: "RollTable", collection: "tables" },
+  folder: { doc: "Folder", collection: "folders" },
+  playlist: { doc: "Playlist", collection: "playlists" },
+}).map(([k, v]) => [k, Object.freeze(v)])));
+const KIND_OF_DOC = new Map(Object.values(STUB_KINDS).map(k => [k.doc, k]));
 
 /** A deterministic 16-character id. */
 export function stubId(prefix = "x") {
@@ -189,7 +213,8 @@ function applyUpdate(doc, changes) {
 
 /**
  * A plain stand-in Document. `data` fields land on the object; `system` and `flags` default to {}.
- * update/delete/setFlag/unsetFlag log to `F.calls` and fire the matching pre/update hooks.
+ * update/delete/setFlag/unsetFlag fire the vetoable pre<Op><Doc> hook first (a `false` resolves
+ * undefined and changes nothing, as Foundry does), then log to `F.calls` and fire update/delete<Doc>.
  */
 export function makeDoc(documentName, data = {}, { parent = null, collection = null } = {}) {
   const doc = {
@@ -239,9 +264,11 @@ export function makeDoc(documentName, data = {}, { parent = null, collection = n
     },
     async delete(options = {}) {
       const F = current;
+      const userId = F?.game.user?.id ?? null;
+      if (F && F.Hooks.call(`preDelete${documentName}`, this, options, userId) === false) return undefined;
       this.collection?.delete?.(this.id);
       F?.calls.push({ op: "delete", documentName, uuid: this.uuid });
-      F?.Hooks.callAll(`delete${documentName}`, this, options, F?.game.user?.id ?? null);
+      F?.Hooks.callAll(`delete${documentName}`, this, options, userId);
       return this;
     },
     toObject() {
@@ -341,9 +368,9 @@ const LOGGER_LEVELS = ["debug", "info", "log", "warn", "error"];
  * @returns {Promise<object>} F
  */
 export async function installFoundry({
-  user, users = [], settings = {}, lang = {}, actors = [], scenes = [], messages = [], items = [],
-  journal = [], modules = [], activeScopes = [], socketId = "socket-gm-1", system = { id: "dnd5e", version: "6.0.6" },
-  realFoundryUtils = true, appRoot = process.env.FOUNDRY_APP_ROOT ?? DEFAULT_APP, currentScene = null,
+  user, users = [], settings = {}, lang = {}, modules = [], activeScopes = [], socketId = "socket-gm-1",
+  system = { id: "dnd5e", version: "6.0.6" }, realFoundryUtils = true, appRoot = process.env.FOUNDRY_APP_ROOT ?? DEFAULT_APP,
+  currentScene = null, ...seeds   // one list per STUB_KINDS world collection: actors, items, scenes, messages, journal, macros, combats, tables, folders, playlists
 } = {}) {
   const common = realFoundryUtils ? await loadCommon(appRoot) : { utils: shimUtils(), CONST: SHIM_CONST, source: "shim", build: null };
   const saved = Object.fromEntries(GLOBALS.map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]));
@@ -449,9 +476,11 @@ export async function installFoundry({
   /* users */
   const me = user?.documentName ? user : makeUser({ id: "gmUser0000000001", name: "Gamemaster", isGM: true, ...(user ?? {}) });
   const userColl = new StubCollection([me, ...users.map(u => (u.documentName ? u : makeUser(u)))]);
+  // Foundry's UserCollection#getDesignatedUser: the highest role, then the lowest id
+  // (client/documents/collections/users.mjs:87-96)
   Object.defineProperty(userColl, "activeGM", {
     get() {
-      return this.contents.filter(u => u.isGM && u.active).sort((a, b) => a.id.localeCompare(b.id))[0] ?? null;
+      return this.contents.filter(u => u.isGM && u.active).sort((a, b) => (b.role ?? 0) - (a.role ?? 0) || a.id.localeCompare(b.id))[0] ?? null;
     },
   });
 
@@ -526,11 +555,9 @@ export async function installFoundry({
     settings: gameSettings,
     i18n,
     modules: moduleColl,
-    actors: collectionOf(actors, "Actor"),
-    items: collectionOf(items, "Item"),
-    scenes: collectionOf(scenes, "Scene"),
-    messages: collectionOf(messages, "ChatMessage"),
-    journal: collectionOf(journal, "JournalEntry"),
+    ...Object.fromEntries(Object.values(STUB_KINDS)
+      .filter(k => k.collection && k.collection !== "users")
+      .map(k => [k.collection, collectionOf(seeds[k.collection], k.doc)])),
     socket: {
       id: socketId,
       emit: (...args) => F.calls.push({ op: "socket.emit", args: F.plain(args) }),
@@ -559,15 +586,33 @@ export async function installFoundry({
   const scene = currentScene ? game.scenes.get(currentScene) ?? null : null;
   const canvasStub = { ready: !!scene, scene, tokens: { placeables: [] }, grid: { size: 100 } };
 
+  // `<Doc>.<id>` from the kind's game collection, then each `.<Doc>.<id>` pair from the parent's
+  // embedded (Scene tokens/regions) or owned (an Actor's items) collection — a Map or an array.
+  // A Token is Foundry's special parent (TokenDocument#getEmbeddedCollection): its `Actor.<id>` is
+  // its synthetic `actor` (keyed by `actorId`; the actor's own id is accepted too, so the stub's
+  // uuid getter round-trips), and its `Item.<id>` reads that actor's items.
+  const childOf = (coll, id) =>
+    (typeof coll?.get === "function" ? coll.get(id) : Array.isArray(coll) ? coll.find(d => d?.id === id) : null) ?? null;
   const fromUuidSync = uuid => {
     const parts = String(uuid ?? "").split(".");
-    if (parts[0] === "Scene" && parts.length >= 4) {
-      const s = game.scenes.get(parts[1]);
-      const coll = parts[2] === "Token" ? s?.tokens : parts[2] === "Region" ? s?.regions : null;
-      return coll?.get(parts[3]) ?? null;
+    if (parts.length < 2 || parts.length % 2) return null;
+    const top = KIND_OF_DOC.get(parts[0])?.collection;
+    let doc = top ? game[top]?.get?.(parts[1]) ?? null : null;
+    for (let i = 2; doc && i < parts.length; i += 2) {
+      const [name, id] = [parts[i], parts[i + 1]];
+      if (doc.documentName === "Token" && name === "Actor") {
+        const actor = doc.actor ?? null;
+        doc = actor && (id === doc.actorId || id === actor.id) ? actor : null;
+        continue;
+      }
+      if (doc.documentName === "Token" && name === "Item") {
+        doc = childOf(doc.actor?.items, id);
+        continue;
+      }
+      const k = KIND_OF_DOC.get(name);
+      doc = k ? childOf(doc[k.embedded ?? k.collection], id) : null;
     }
-    const map = { Actor: game.actors, Item: game.items, Scene: game.scenes, ChatMessage: game.messages, JournalEntry: game.journal, User: game.users };
-    return parts.length === 2 ? map[parts[0]]?.get(parts[1]) ?? null : null;
+    return doc;
   };
 
   const CONFIG = {

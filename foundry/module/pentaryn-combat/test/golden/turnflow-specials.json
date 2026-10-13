@@ -317,5 +317,64 @@
         "name": "Shove"
       }
     ]
+  },
+  {
+    "name": "Dodge (off turn)",
+    "special": "dodge",
+    "actionUsed": false,
+    "paints": 2,
+    "turn": null,
+    "effects": [],
+    "statuses": [
+      "dodging"
+    ],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Dodge"
+      },
+      {
+        "op": "toggleStatusEffect",
+        "uuid": "Actor.fighter000000001",
+        "status": "dodging",
+        "active": true
+      }
+    ]
+  },
+  {
+    "name": "Hide (off turn)",
+    "special": "hide",
+    "actionUsed": false,
+    "paints": 2,
+    "turn": null,
+    "effects": [],
+    "statuses": [
+      "hiding"
+    ],
+    "calls": [
+      {
+        "op": "argon.special",
+        "name": "Hide"
+      },
+      {
+        "op": "rollSkill",
+        "uuid": "Actor.fighter000000001",
+        "config": {
+          "skill": "ste",
+          "target": 15
+        }
+      },
+      {
+        "op": "toggleStatusEffect",
+        "uuid": "Actor.fighter000000001",
+        "status": "hiding",
+        "active": true
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Stealth 17 vs DC 15: you are hidden. Your total is the DC to find you."
+      }
+    ]
   }
 ]

@@ -9,7 +9,8 @@
 //     *character* becomes one "delete" entry with the full item source), restore(n) onto the ZZ
 //     actor (no new entry), the refusals (unknown entry, unknown actor), and the corpse/loot
 //     helpers that are pure reads (isDead, recipientFor as the GM).
-//   - `golden.declared`: D-D1 (kit surface, `module.api`, frozen), `list(n, {brief})`,
+//   - `golden.declared`: D-D1 (kit surface, `module.api`, frozen), `list(n, {brief})`, isDead(null)
+//     ("false"; "undefined" before dropbin-M5),
 //     restoreResult, inspect, selftest (items-journal-28), the GM ready line's ledger size.
 // The ledger is a world setting with no per-entry delete. This run SAVES the `log` and `counter`
 // settings first and, once its own entry is in, PUTS THEM BACK exactly (only when the ledger grew
@@ -117,8 +118,9 @@ try {
 
   // ── pure corpse / loot reads ─────────────────────────────────────────────────
   const hp = (value, max) => ({ system: { attributes: { hp: { value, max } } }, statuses: new Set() });
-  S.isDead = [hp(0, 10), hp(5, 10), hp(0, 0), hp(-3, 10), { system: {}, statuses: new Set(["dead"]) }, null]
-    .map(a => { try { return String(B.corpses.isDead(a)); } catch (e) { return caught(e); } });
+  const isDeadOf = a => { try { return String(B.corpses.isDead(a)); } catch (e) { return caught(e); } };
+  S.isDead = [hp(0, 10), hp(5, 10), hp(0, 0), hp(-3, 10), { system: {}, statuses: new Set(["dead"]) }].map(isDeadOf);
+  D.isDeadNull = isDeadOf(null);   // dropbin-M5 (declared): "false"; it was "undefined" before the fix
   S.recipientForGM = await probe(() => B.loot.recipientFor(null)?.id ?? null);
 
   // ── the delete capture, on a ZZ character ────────────────────────────────────

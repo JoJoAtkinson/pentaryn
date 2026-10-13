@@ -5,7 +5,7 @@
  */
 
 import { multiattackPlan } from "./multiattack.mjs";
-import { attackActions, swingsLeft } from "./turn.mjs";
+import { ATTACK_ACTION_KINDS, attackActions, swingsLeft } from "./turn.mjs";
 import { extraSwings } from "./weapons.mjs";
 
 /**
@@ -111,7 +111,7 @@ export function planSummary(swings = [], count = 0) {
 export function pausedNote({ kinds = [], paid = false } = {}) {
   const list = (Array.isArray(kinds) ? kinds : []).filter(Boolean);
   if (paid) return "flurry";
-  if (list.length && list.every(k => k !== "main" && k !== "nick")) return "bonus";
+  if (list.length && list.every(k => !ATTACK_ACTION_KINDS.includes(k))) return "bonus";
   return "main";
 }
 

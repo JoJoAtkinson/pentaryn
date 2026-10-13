@@ -160,6 +160,9 @@ class _Lexer:
                     buf.append(src[j])
                     j += 1
                 self._push("".join(buf), line, template=False)
+                # A `\` line continuation puts a newline inside the string; emit it so
+                # every later line number stays right (rob-12).
+                self._emit_newlines(src.count("\n", i, j))
                 i = j + 1
                 continue
 
@@ -249,11 +252,21 @@ class _Lexer:
         return i
 
 
+# (resolved path, st_mtime_ns, st_size) → (code, strings). One check runs the imports
+# gate and then the i18n gate over the same files; this lets the second reuse the
+# first's lex, while an edited file (new mtime or size) is lexed afresh. (perf-2)
+_SCANS: dict[tuple[Path, int, int], tuple[str, list[Str]]] = {}
+
+
 def scan(path: Path) -> Source:
     """Read a file into code-with-markers plus the literals that were lifted out."""
-    lx = _Lexer()
-    lx.feed(path.read_text(encoding="utf-8"))
-    return Source(path, "".join(lx.out), lx.strings)
+    st = path.stat()
+    key = (path.resolve(), st.st_mtime_ns, st.st_size)
+    if (hit := _SCANS.get(key)) is None:
+        lx = _Lexer()
+        lx.feed(path.read_text(encoding="utf-8"))
+        hit = _SCANS[key] = ("".join(lx.out), lx.strings)
+    return Source(path, *hit)
 
 
 # ── imports and exports ───────────────────────────────────────────────────────
@@ -269,7 +282,7 @@ class Import:
 
 
 _RE_IMPORT = re.compile(
-    rf"(?<![\w$.])import\s*(?![\(.])(?:([^;]*?)\s*from\s*)?(\x01\d+\x01)")
+    rf"(?<![\w$.])import\s*(?![\(.])(?:([^;\x01]*?)\s*from\s*)?(\x01\d+\x01)")
 _RE_DYNAMIC = re.compile(
     rf"(?:const|let|var)\s*(?:\{{([^}}]*)\}}|{IDENT})\s*=\s*(?:await\s+)?import\(\s*([^)]*?)\s*\)")
 _RE_DYNAMIC_BARE = re.compile(r"(?<![\w$.])import\(\s*([^)]*?)\s*\)")

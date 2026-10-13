@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
-import { boot, flush, MODULE } from "./fixtures/world.mjs";
+import { boot, advance, flush, MODULE } from "./fixtures/world.mjs";
 import { fireball, damage, IDS, GM_ID, PLAYER_ID } from "./fixtures/fireball.mjs";
 import { root, dispatch } from "./fixtures/dom.mjs";
 import { seams } from "./fixtures/seams.mjs";
@@ -28,13 +28,14 @@ test("trayHTML over the resolution states (golden/tray-html.json)", () => {
   const superseded = { ...clone(base), superseded: true };
   const careful = clone(base);
   protectRows(careful.rows, [IDS.cv], "half");
-  careful.careful = { names: ["Caven"], max: 3 };
+  careful.careful = { names: ["Caven"], ids: [IDS.cv] };
   const picker = { ...clone(base), regions: [{ id: IDS.region, name: "Fireball" }, { id: "regionOther00001", name: "Fireball <2>" }] };
+  const pickerLocked = { ...clone(picker), superseded: true };   // aoe-edge-2: the picker is disabled
   const targets = { ...clone(base), region: null, rows: [] };
   const unknownAbility = { ...clone(base), ability: "str", dc: undefined };
   pinJSON("tray-html", {
     fresh: T.trayHTML(base, msg), applied: T.trayHTML(applied, msg), superseded: T.trayHTML(superseded, msg),
-    careful: T.trayHTML(careful, msg), picker: T.trayHTML(picker, msg), targets: T.trayHTML(targets), unknownAbility: T.trayHTML(unknownAbility),
+    careful: T.trayHTML(careful, msg), picker: T.trayHTML(picker, msg), pickerLocked: T.trayHTML(pickerLocked, msg), targets: T.trayHTML(targets), unknownAbility: T.trayHTML(unknownAbility),
   }, import.meta.url);
 });
 
@@ -131,6 +132,8 @@ test("tray clicks: apply (button disabled), reroll-all, reroll, rollfor, ping; i
   assert.deepEqual(ping.calls, [["create", [PLAYER_ID]]]);
   const rollfor = await click(`[data-row="${IDS.cv}"] [data-pa="rollfor"]`);
   assert.deepEqual(rollfor.calls, [["rollSavingThrow", "Actor.actCaven00000001"]]);
+  await advance(800);                                  // AC-1: the save's matchSave claim settles
+  await flush(8);
   const apply = await click('[data-pa="apply"]');
   assert.equal(apply.el.disabled, true);
   assert.deepEqual(apply.calls.map(c => c[1]), ["Actor.actGoblin0000001", "Actor.actGoblin0000002", "Actor.actCaven00000001"], "Caven has a save now (rollfor)");

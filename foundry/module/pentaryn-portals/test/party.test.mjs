@@ -2,7 +2,7 @@
 // party (confirm, same scene, cross scene), lookAt, arrivals stepping off an occupied square, and
 // summons following a PC through a native teleport (deleteToken → bringFollowers).
 // Characterisation of 0.4.4: unchanged code.
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import { boot, console$, MODULE, P1, P2, GM } from "./fixtures/world.mjs";
@@ -56,6 +56,13 @@ function hall({ tokens = null } = {}) {
 }
 const ops = n => W.callsSince(n, ["createEmbedded", "deleteEmbedded", "updateEmbedded", "update", "notify", "DialogV2.confirm", "scene.view", "pullUsers", "animatePan"]);
 const strip = r => { const { doc, ...rest } = r; void doc; return rest; };
+/** Await `p` while spreadArrival's claim (portals-async-1)'s 750 ms settle timer (mocked) is advanced. */
+async function settle(p) {
+  let done = false;
+  p.then(() => { done = true; }, () => { done = true; });
+  for (let i = 0; i < 20 && !done; i++) { await W.flush(); mock.timers.tick(750); }
+  return p;
+}
 
 /* ── who counts ───────────────────────────────────────────────────────── */
 
@@ -162,7 +169,7 @@ test("confirmParty: lists each record, followers 'lands beside <PC>' (golden/con
   W.confirm = true;
 });
 
-test("confirmParty: a closed/rejected dialog → false; the setting off → true without a dialog; nobody → warn, false", async () => {
+test("confirmParty: a closed/rejected dialog → false; the setting off → true without a dialog; nobody → warn, false either way", async () => {
   const H = hall();
   const party = S.partyRecords(H.s);
   W.confirm = "reject";
@@ -172,7 +179,9 @@ test("confirmParty: a closed/rejected dialog → false; the setting off → true
   let n = F.calls.length;
   assert.equal(await S.confirmParty(party, "X"), true);
   assert.equal(W.callsSince(n, ["DialogV2.confirm"]).length, 0);
-  assert.equal(await S.confirmParty([], "X"), true, "setting off: even an empty party goes ahead");
+  n = F.calls.length;
+  assert.equal(await S.confirmParty([], "X"), false, "setting off: an empty party still stops [declared] (portals-edge-4)");
+  assert.deepEqual(W.callsSince(n, ["notify", "DialogV2.confirm"]), [{ op: "notify", level: "warn", message: "Teleport party: nobody on this scene counts as the party." }]);
   await game.settings.set(MODULE, "confirmPartyTeleport", true);
   n = F.calls.length;
   assert.equal(await S.confirmParty([], "X"), false);
@@ -223,6 +232,68 @@ test("teleportParty, another scene: carry, pull the active players, view it, toa
   assert.equal(F.canvas.scene, H.pit);
 });
 
+/** ROB-2: the GM's confirm dialog stays open while `during` runs (a token deleted mid-dialog). */
+async function withDialog(during, fn) {
+  const api = foundry.applications.api.DialogV2, real = api.confirm;
+  api.confirm = async opts => { const ans = await real(opts); during(); return ans; };
+  try { return await fn(); } finally { api.confirm = real; }
+}
+
+test("teleportParty, another scene: a token deleted while the confirm is open is dropped, not recreated [declared] (ROB-2)", async () => {
+  const H = hall();
+  F.canvas.scene = H.s;
+  W.confirm = true;
+  const n = F.calls.length;
+  const out = await withDialog(() => H.s.tokens.delete(`tSkel${H.k}`), () => S.teleportParty(H.pitGate));
+  assert.deepEqual(out, { moved: 4, cancelled: false });
+  const seen = ops(n);
+  assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "createEmbedded", "deleteEmbedded", "pullUsers", "scene.view", "notify"]);
+  const ids = ["tCav", "tMar", "tEye", "tSteed"].map(i => `${i}${H.k}`);
+  assert.deepEqual(seen[1].ids, ids);
+  assert.deepEqual(seen[2].ids, ids);
+  assert.equal(H.pit.tokens.get(`tSkel${H.k}`), undefined);
+  assert.equal(seen[5].message, "4 party tokens moved to The Fighting Pit.");
+});
+
+test("teleportParty, same scene: a token deleted mid-dialog is left out; nobody left → warn, { moved: 0, cancelled: true } [declared] (ROB-2)", async () => {
+  const H = hall({ tokens: k => [{ id: `tCav${k}`, name: "Caven", actorId: "CAV", actorLink: true, x: 100, y: 200 },
+    { id: `tMar${k}`, name: "Marrith", actorId: "MAR", actorLink: true, x: 200, y: 200 }] });
+  const cell = W.region(H.s, { id: `Cell${H.k}`, name: "Cell", bounds: { x: 2000, y: 2000, width: 100, height: 100 }, flags: { [MODULE]: { title: "The Cell" } } });
+  F.canvas.scene = H.s;
+  W.confirm = true;
+  let n = F.calls.length;
+  let out = await withDialog(() => H.s.tokens.delete(`tMar${H.k}`), () => S.teleportParty(cell));
+  assert.deepEqual(out, { moved: 1, cancelled: false });
+  let seen = ops(n);
+  assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "updateEmbedded", "notify"]);
+  assert.deepEqual(seen[1].updates.map(u => u._id), [`tCav${H.k}`]);
+  n = F.calls.length;
+  out = await withDialog(() => H.s.tokens.delete(`tCav${H.k}`), () => S.teleportParty(cell));
+  assert.deepEqual(out, { moved: 0, cancelled: true });
+  seen = ops(n);
+  assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "notify"]);
+  assert.equal(seen[1].level, "warn");
+  assert.equal(seen[1].message, "Teleport party: nobody on this scene counts as the party.");
+});
+
+test("teleportParty, empty party with the confirm skipped: warn, { moved: 0, cancelled: true }, nobody pulled, no view, no toast [declared] (portals-edge-4)", async () => {
+  const H = hall({ tokens: k => [{ id: `tGuard${k}`, name: "Guard", actorId: "GUARD", x: 1100, y: 200 }] });
+  F.canvas.scene = H.s;
+  const nobody = [{ op: "notify", level: "warn", message: "Teleport party: nobody on this scene counts as the party." }];
+  let n = F.calls.length;
+  assert.deepEqual(await S.teleportParty(H.pitGate, { confirm: false }), { moved: 0, cancelled: true }, "confirm:false");
+  assert.deepEqual(ops(n), nobody);
+  await game.settings.set(MODULE, "confirmPartyTeleport", false);
+  n = F.calls.length;
+  assert.deepEqual(await S.teleportParty(H.pitGate), { moved: 0, cancelled: true }, "setting off");
+  assert.deepEqual(ops(n), nobody);
+  await game.settings.set(MODULE, "confirmPartyTeleport", true);
+  n = F.calls.length;
+  assert.deepEqual(await S.teleportParty(H.pitGate), { moved: 0, cancelled: true }, "setting on: one warn, no dialog");
+  assert.deepEqual(ops(n), nobody);
+  assert.equal(F.canvas.scene, H.s);
+});
+
 test("teleportParty / lookAt: a player or no region → nothing", async () => {
   const H = hall();
   F.canvas.scene = H.s;
@@ -234,6 +305,16 @@ test("teleportParty / lookAt: a player or no region → nothing", async () => {
   await S.lookAt(H.pitGate);
   F.become({ userId: GM });
   assert.deepEqual(ops(n), []);
+});
+
+test("teleportParty with no scene on the canvas: nothing, no TypeError [declared] (portals-edge-5)", async () => {
+  const H = hall();
+  const n = F.calls.length;
+  F.canvas.scene = null;
+  try {
+    assert.equal(await S.teleportParty(H.pitGate, { confirm: false }), undefined);
+    assert.deepEqual(ops(n), []);
+  } finally { F.canvas.scene = H.s; }
 });
 
 test("lookAt: pans the GM's own view (switching scene first if needed) and says nobody moved", async () => {
@@ -264,8 +345,9 @@ function arrivalScene(occupant) {
 test("spreadArrival: on an occupied square → one teleport update to the first free ring square", async () => {
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
   const n = F.calls.length;
-  assert.equal(await S.spreadArrival(arrived), arrived);
-  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ x: 500, y: 900 }]);
+  assert.equal(await settle(S.spreadArrival(arrived)), arrived);
+  // [declared] portals-async-1: the tab claims the token first; the claim leaves with the move
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ "flags.pentaryn-portals.claims.spread": "socket-gm-1" }, { x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }]);
   assert.deepEqual([arrived.x, arrived.y], [500, 900]);
 });
 
@@ -326,7 +408,7 @@ test("bringFollowers: two PCs to one scene → each PC's own, then the co-owned 
   const H = hall();
   const { deleted, replacements } = await walkThrough(H, ["tCav", "tMar"]);
   const n = F.calls.length;
-  await S.bringFollowers(H.s, deleted, replacements);
+  await settle(S.bringFollowers(H.s, deleted, replacements));   // Marrith lands on Caven: a claimed spread
   assert.deepEqual(ops(n).filter(c => c.op === "notify").map(c => c.message), [
     "Caven brought Skeleton to Fighting Pit.",
     "Marrith brought Arcane Eye to Fighting Pit.",
@@ -406,6 +488,7 @@ test("deleteToken hook: needs replacements and the active GM; one delete operati
   F.fire("deleteToken", deleted[1], options);
   assert.deepEqual(ops(n), [], "deferred a tick");
   await W.tick(12);
+  for (let i = 0; i < 6; i++) { mock.timers.tick(750); await W.flush(); }   // Marrith's spread claim settles
   assert.equal(ops(n).filter(c => c.op === "notify").length, 3, "both PCs in one pass: own summons + the shared steed");
   const H2 = hall();
   const w2 = await walkThrough(H2);
@@ -433,11 +516,12 @@ test("gaps: a replacement uuid fromUuid rejects is skipped; a real token's centr
   assert.deepEqual(seen, [{ x: 150, y: 250, elevation: 15 }]);
 });
 
-test("gaps: spreadArrival stays put when the nearest free square is its own (an off-grid overlap)", async () => {
+test("gaps: spreadArrival steps off an off-grid overlap too; its own square is tested by footprint, not centre [declared] (portals-edge-2)", async () => {
+  // The guard covers the arrival's top-left quarter. Before, the centre point was free, so it stayed put on him.
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD", x: 550, y: 950 });
   const n = F.calls.length;
-  await S.spreadArrival(arrived);
-  assert.deepEqual(W.callsSince(n, ["update"]), []);
+  await settle(S.spreadArrival(arrived));
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes).filter(c => "x" in c), [{ x: 700, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }]);
 });
 
 test("gaps: a follower with no PC to stand by reads 'follower'; a destination with no nav name uses its name", async () => {
@@ -451,4 +535,66 @@ test("gaps: a follower with no PC to stand by reads 'follower'; a destination wi
   const m = F.calls.length;
   await S.bringFollowers(H.s, deleted, replacements);
   assert.deepEqual(ops(m).filter(c => c.op === "notify").map(c => c.message), ["Caven brought Skeleton to Drow City — Fighting Pit (set-piece)."]);
+});
+
+/* ── portals-edge-2: footprints (last, so the hall() ids above stay put) ── */
+
+/** Every pair of boxes that share area (touching edges do not count). */
+const overlaps = boxes => boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b =>
+  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h).map(b => [a.id, b.id]));
+const landedBoxes = (toks, places) => toks.map((t, i) => ({ id: t.id, x: places[i].x, y: places[i].y, w: t.width * 100, h: t.height * 100 }));
+
+test("portals-edge-2: landing tests each token's footprint, so a Large token never lands over a stander or the party", () => {
+  // A stander one square down-right of the centre square: a 2×2 centred there would cover it.
+  const dest = W.scene({ id: "LandBig", name: "Land", tokens: [{ id: "Stander2", x: 200, y: 200 }] });
+  const big = W.token(W.scene({ id: "FromBig2", name: "From" }), { id: "mBig2", x: 0, y: 0, width: 2, height: 2 });
+  const smalls = [1, 2, 3, 4, 5, 6].map(i => W.token(W.scene({ id: `FromS${i}`, name: "From" }), { id: `s${i}`, x: 0, y: 0 }));
+  const toks = [big, ...smalls];
+  const places = S.landingPlaces(dest, toks, 150, 150);
+  const standing = { id: "Stander2", x: 200, y: 200, w: 100, h: 100 };
+  assert.deepEqual(overlaps([standing, ...landedBoxes(toks, places)]), [], "no landed box overlaps a stander or another landed box");
+  for (const p of places) assert.ok(p.x % 100 === 0 && p.y % 100 === 0, "whole squares");
+
+  // Grouped (Teleport party): the 2×2 Steed lands beside its owners without covering any of them.
+  const H = hall();
+  const party = S.partyRecords(H.s);
+  const ptoks = party.map(r => r.doc);
+  assert.deepEqual(overlaps(landedBoxes(ptoks, S.landingPlaces(H.pit, ptoks, 1050, 550, party))), []);
+});
+
+/* ── two GM tabs (portals-async-1) ───────────────────────────────────── */
+
+
+test("portals-async-1 [declared]: two GM tabs see one arrival on an occupied square — one tab claims it and moves it once; the claim leaves with the move", async () => {
+  const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
+  // Each tab writes through the server: neither sees the other's write before it has decided.
+  const real = arrived.update;
+  arrived.update = function (changes, options) { return W.flush(1).then(() => real.call(this, changes, options)); };
+  const n = F.calls.length;
+  let a, b;
+  try {
+    F.become({ socketId: "socket-bridge" });
+    a = S.spreadArrival(arrived);              // the MCP bridge tab
+    F.become({ socketId: "socket-browser" });
+    b = S.spreadArrival(arrived);              // a GM browser tab, same user
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  await settle(Promise.all([a, b]));
+  const moves = W.callsSince(n, ["update"]).filter(c => "x" in c.changes);
+  assert.deepEqual(moves.map(c => c.changes), [{ x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }], "moved once");
+  assert.deepEqual([arrived.x, arrived.y], [500, 900]);
+  assert.equal(arrived.flags[MODULE]?.claims?.spread, undefined, "no stale claim rides the next hop's toObject()");
+});
+
+test("portals-async-3 [declared]: bringFollowers' keepId-refusal election is commented as right for embedded Tokens, so nobody swaps it for a flag claim", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../party.mjs", import.meta.url), "utf8");
+  const body = src.slice(src.indexOf("export async function bringFollowers"), src.indexOf("function onDeleteToken"));
+  const comment = body.slice(body.indexOf("await carryTo("), body.indexOf("if (!/already exists/i"));
+  assert.match(comment, /embedded Token/i, "names embedded Tokens");
+  assert.match(comment, /replaces/, "says the blueprint's world-document 'replaces' note does not apply");
+  assert.match(comment, /claimDocument[^\n]*\n[^\n]*spreadArrival|claimDocument[^\n]*spreadArrival/, "says claimDocument is for spreadArrival only");
+  assert.match(comment, /portals-async-3/, "carries the finding id");
+  assert.ok(!/claimDocument\(/.test(body), "bringFollowers itself takes no flag claim");
 });

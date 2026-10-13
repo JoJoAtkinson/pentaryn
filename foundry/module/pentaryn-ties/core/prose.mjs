@@ -5,6 +5,8 @@
  * Pure: no Foundry global (split out of known-core.mjs, which re-exports this file — S4, ties-36).
  */
 
+import { kindPassed } from "./shared.mjs";
+
 /* ── enricher flattening: the guard, not a convenience ────────────────────── */
 
 const UNRESOLVED = /\[\[|@UUID\[|&(?:amp;)?[A-Za-z]+\[/;
@@ -162,7 +164,7 @@ export function studyDescription({ authored = "", derived = "", tier = 0, none =
   const said = v => (isBlankProse(String(v ?? "")) ? "" : String(v).trim());
   const a = said(authored);
   if (a) return a;
-  if (!(Number(tier) >= 15)) return "";
+  if (!kindPassed(tier)) return "";
   return said(derived) || said(none);
 }
 

@@ -119,8 +119,10 @@ function onPreCreateEffect(effect) {
   if (actor?.documentName !== "Actor" || !effect._stats?.duplicateSource) return;
   const spell = spellOf(effect);
   if (!spell) return;
+  // The cheap tests first: only an enabled effect of the same name has its spell looked up (aoe-perf-2).
   const old = sameSpellEffect({ name: effect.name, spell },
-    actor.effects.filter(e => e.id !== effect.id).map(e => ({ id: e.id, name: e.name, disabled: e.disabled, spell: spellOf(e) })));
+    actor.effects.filter(e => e.id !== effect.id && !e.disabled && e.name === effect.name)
+      .map(e => ({ id: e.id, name: e.name, disabled: e.disabled, spell: spellOf(e) })));
   if (old) actor.effects.get(old)?.delete().catch(err => log.warn(`replace ${effect.name}`, err));
 }
 
@@ -167,10 +169,11 @@ function isApplier(userId) {
 /**
  * Apply a card's effects to its caster if the card is meant for them. Returns the reason and
  * what was applied, or null. Safe to call twice: a recorded card is skipped.
- * @param {ChatMessage} message
+ * @param {ChatMessage|string} message  the card, or its id (an unknown id → null)
  * @param {{force?: boolean}} [opts]  force ignores the setting (manual use from the console)
  */
 export async function selfApply(message, { force = false } = {}) {
+  message = messageFrom(message);
   if (!message || (!force && !setting("autoApplySelf"))) return null;
   if (aoeFlags(message).effectsApplied?.auto || inflight.has(message.id)) return null;
   inflight.add(message.id);

@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/patch.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/patch.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * The only way a module changes someone else's prototype. Every patch is recorded with its
  * adjustments row id (foundry/adjustments.yml), which `describe().patches` reports.
@@ -11,6 +11,8 @@
  * Migration rule: an existing patch keeps its marker literal at the call site, in the module's own
  * file, because adjustments rows grep for it there.
  */
+
+import { logOrConsole } from "./log.mjs";
 
 const records = [];
 
@@ -38,8 +40,7 @@ function recordPatch(row, undo) {
 }
 
 function warn(log, g, moduleId, msg) {
-  if (log) log.warn(msg);
-  else g.console?.warn(`${moduleId} | ${msg}`);
+  logOrConsole(moduleId, log, { g }).warn(msg);
 }
 
 /**
@@ -135,7 +136,10 @@ export function patches() {
   return records.map(({ moduleId, label, name, marker, via, adjustments }) => ({ moduleId, label, name, marker, via, adjustments }));
 }
 
-/** Undo every patch, newest first. */
+/**
+ * Undo every patch, newest first. Each handle drops its own record only when its undo succeeded, so
+ * a patch another wrapper keeps live stays listed and a later wrap with its marker reuses it (KIT-R1).
+ */
 export function unwrapAll() {
-  for (const r of records.splice(0).reverse()) r.handle.unwrap();
+  for (const r of [...records].reverse()) r.handle.unwrap();
 }

@@ -21,7 +21,9 @@ have to guess, it refuses and names the endpoint and the reason. System-agnostic
 ## What the player sees
 
 Nothing. Every effect is GM-side: walls appear or move on the scene, a GM-whispered chat card
-reports the run, and refused endpoints get a transient `canvas.ping()`.
+reports the run, and refused endpoints get a transient pulse drawn on the GM's own canvas only
+(`canvas.controls.drawPing`, never the broadcast `canvas.ping`) — only when the reported scene is
+the one the GM is viewing; another scene's refusals are listed on the card and in the console only.
 
 ## Settings
 
@@ -51,8 +53,13 @@ Ask it what it offers: `game.pentaryn.walls.describe()` (offline: `test/golden/d
 
 The engine result is `{creates, updates, refusals, lints, log, report}`. `preview`, `run` and
 `undo` are one-at-a-time across keybindings, macros and the API. They throw `Error` with no scene
-(`"pentaryn-walls: no scene — open one, or pass a sceneId."`). `undo`, `makeMacro`, `runEngine`
+(`"pentaryn-walls: no scene — open one, or pass a sceneId."`), or naming a `sceneId` that matches
+no scene (`'pentaryn-walls: no scene with id "<sceneId>".'`). `preview`, `run`, `undo` and
+`analyze` take `null` as no argument at all: the viewed scene and the defaults. `undo`, `makeMacro`, `runEngine`
 and `backends` keep their legacy shapes (`legacy: true`).
+`makeMacro` gives each action's macro a fixed id, so two overlapping calls or two GM tabs still
+make one `Walls: <action>` macro. A macro made before the fixed id is reused by name only if it is a
+script macro; a same-named chat macro is left alone.
 
 ## Data written
 
@@ -64,14 +71,20 @@ winning):
 
 | Key | On | Meaning |
 |---|---|---|
-| `run` | created and updated walls | the run id (an ISO timestamp); undo peels back the latest |
-| `generated` | created walls | `true`: undo deletes it |
+| `run` | created walls | the run that created it (an ISO timestamp, `.` written `,`); later runs never rewrite it |
+| `generated` | created walls | `true`: undoing its creating run deletes it |
 | `rule`, `kind`, `sources` | created walls (js engine) | which rule built it and from what |
-| `rule`, `priorC` | updated walls | the rule, and the coordinates undo restores |
+| `moves.<run>` | updated walls | per run that trimmed, welded or moved it: the coordinates that run first found it at |
+| `rule` | updated walls | the rule of the latest move |
 
-Undo restores with `{"flags.<scope>": _del}` for each scope the wall carries a stamp in
-(`pentaryn-walls`, `wall-autocomplete`; needs Foundry 14). Nothing in world
-settings besides `backend`.
+Undo takes the latest run id across every `run` and `moves` key — ISO-timestamped ids by time, and
+any of them before a non-ISO id (those rank below every ISO run, by string order; walls-edge-5) — and
+it deletes the walls that run
+created and gives every wall with a `moves.<run>` entry those coordinates back — so undoing run 2
+restores a run-1 wall that run 2 moved instead of deleting it (walls-edge-2). It then deletes
+`flags.<scope>.moves.<run>`, or the whole stamp (`{"flags.<scope>": _del}` for each scope the wall
+carries one in; needs Foundry 14) once no run is left on the wall. Older stamps — a flat `run` +
+`priorC` on an updated wall — still undo. Nothing in world settings besides `backend`.
 
 ## Flags other modules read
 
@@ -98,11 +111,11 @@ GM tabs each publish their own API; a run in one does not lock the other.
 
 - **A rule:** add it in `core/engine.mjs` `enumerate()` with its `PRIORITY`, add a fixture to
   `test/fixtures/corpus.mjs`, then either mirror it in `wasm/src/lib.rs` (rebuild with
-  `make foundry-walls-wasm`) or make `runWasm` delegate the case to js, as it does for Levels.
+  `make foundry-walls-wasm`) or make the wasm `accepts(walls, opts)` refuse the case so it runs on js, as it does for Levels.
   The JS engine is the reference: change it first, then port. Give it a refusal reason in
   `diagnose()` (it re-checks F1/F2 by hand), and a new act kind also needs `applyInstance()` and
   the batch box (`boxOf`) in `runEngine`.
-- **A backend:** `register({name, run(walls, opts), available()})` from its own adapter file,
+- **A backend:** `register({name, run(walls, opts), available(), accepts?(walls, opts)})` from its own adapter file,
   returning the `runEngine` shape. `compare()` then diffs it against js, the bench gains a column,
   and `node test/corpus.mjs --backend=<name>` runs the corpus on it.
 - **An API method:** a row in `api-manifest.mjs`, the action in `actions.mjs` (exposed through
@@ -114,6 +127,8 @@ GM tabs each publish their own API; a run in one does not lock the other.
   `toObject()` (`planUndo` does).
 - The wasm engine knows nothing of Levels, the `rule` stamp (always `X1`), the create flags or
   the log; `canonical(r, {extended: true})` shows the first two. Geometry is identical.
+- `weldEps` and `pinEps` are fixed inside `lib.rs`, not passed over the ABI: a run that overrides
+  either goes to js (the wasm row's `accepts(walls, opts)`), like a Levels scene.
 - Keybindings register at `init` only; a new row needs a reload.
 - Do not add a top-level `await` to `backend-wasm.mjs`: it delayed the entry past `ready` once,
   and the API never attached. The load is fire-and-forget; `ready` awaits its promise.
@@ -150,7 +165,7 @@ make foundry-walls-bench [N=20]                           # scaling curve, every
 - `test/core.test.mjs`, `test/core-render.test.mjs`, `test/undo.test.mjs`,
   `test/engine-shape.test.mjs`, `test/backends.test.mjs`, `test/scopes.test.mjs`,
   `test/migrate.test.mjs` — the pure core and the migration.
-- `test/glue.test.mjs` (and `glue-*.test.mjs`), `test/hooks.test.mjs`, `test/api.test.mjs`,
+- `test/glue.test.mjs` (and `glue-*.test.mjs`, `undo-history.test.mjs`), `test/hooks.test.mjs`, `test/api.test.mjs`,
   `test/features.test.mjs`, `test/settings.test.mjs`, `test/i18n.test.mjs` — the Foundry side
   against the kit stub.
 
@@ -158,5 +173,6 @@ make foundry-walls-bench [N=20]                           # scaling curve, every
 
 `make foundry-walls-sync` (copy, not symlink — re-copy after every change), then reload. A
 `module.json` change needs a Foundry restart. After sync the GM console shows
-`pentaryn-walls | ready — backends: js, wasm. …`; a failed `.wasm` load adds
+`pentaryn-walls | ready — backends: js, wasm. …` (its keys and API list come from `KEYBINDINGS`
+and the manifest's GM rows); a failed `.wasm` load adds
 `(wasm unavailable: …)`.

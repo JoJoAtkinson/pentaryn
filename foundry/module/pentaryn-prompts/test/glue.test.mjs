@@ -24,9 +24,9 @@ test("import: prints nothing, adds one capturing keyup listener and (DP5) one bl
   assert.equal(F.dom.window.listeners.keyup[0].capture, true);
 });
 
-test("hooks registered at import, in order (20 rows)", () => {
+test("hooks registered at import, in order (27 rows)", () => {
   const rows = F.hooks.map(({ kind, name }) => ({ kind, name }));
-  assert.equal(rows.length, 20);
+  assert.equal(rows.length, 27);
   pinJSON("hooks", rows, import.meta.url);
 });
 
@@ -276,7 +276,7 @@ test("hoverToken: no tip while that marker's own box is open; none for a player"
 
 /* ── panel refresh hooks ────────────────────────────────────────────────── */
 
-test("wall, door, note and token hooks refresh the open box's panel (250 ms debounce); a token update only when it moved or renamed", async t => {
+test("wall, door, note, light, tile and token hooks refresh the open box's panel (250 ms debounce); a token update only when it moved or renamed", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const m1 = F.s1.tokens.get("m1");
   const app = await PromptDialog.open(m1);
@@ -286,7 +286,8 @@ test("wall, door, note and token hooks refresh the open box's panel (250 ms debo
   const first = panel();
   assert.match(first, /^<header class="pp-head"><span>In sight · 2<\/span><span class="pp-map">100 × 50 ft<\/span><\/header>/);
   const wall = { parent: F.s1 };
-  for (const h of ["createWall", "updateWall", "deleteWall", "createNote", "deleteNote"]) {
+  for (const h of ["createWall", "updateWall", "deleteWall", "createNote", "updateNote", "deleteNote",
+    "createAmbientLight", "updateAmbientLight", "deleteAmbientLight", "createTile", "updateTile", "deleteTile"]) {
     app.element.querySelector("[data-panel]").innerHTML = "stale";
     F.fire(h, wall);
     t.mock.timers.tick(249);

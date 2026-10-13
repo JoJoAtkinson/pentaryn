@@ -1,8 +1,9 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/resolve.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/resolve.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * One reference resolver for every API boundary. A ref may be a Document, a placeable (`.document`),
- * a UUID, a 16-character id, or an exact name — never a substring. Substring matching is a
- * convenience of the MCP bridge's own tools and must not reach a write path here.
+ * a UUID, a 16-character id, or a name matched as: exact name, then a unique case-insensitive
+ * exact name; never a substring. Substring matching is a convenience of the MCP bridge's own tools
+ * and must not reach a write path here.
  *
  * Scene scope is explicit: `sceneId` names a scene, `"current"` means the viewing client's canvas,
  * and nothing at all means every scene in order. There is no implicit `canvas.scene`, because the
@@ -11,17 +12,26 @@
 
 import { codedError } from "./errors.mjs";
 
-const DOC = {
-  actor: "Actor", token: "Token", item: "Item", scene: "Scene", user: "User",
-  journal: "JournalEntry", message: "ChatMessage", macro: "Macro", region: "Region",
-  combat: "Combat", table: "RollTable", folder: "Folder", playlist: "Playlist",
-};
-const COLLECTION = {
-  actor: "actors", item: "items", scene: "scenes", user: "users", journal: "journal",
-  message: "messages", macro: "macros", combat: "combats", table: "tables",
-  folder: "folders", playlist: "playlists",
-};
-const EMBEDDED = { token: "tokens", region: "regions" };
+/**
+ * Every ref kind the kit resolves, in one table (kit-ext-6): its documentName, and either the world
+ * collection on `game` or the embedded collection on a Scene. buildApi throws at load on a ref param
+ * whose kind is not a key here.
+ */
+export const KINDS = Object.freeze(Object.fromEntries(Object.entries({
+  actor: { doc: "Actor", collection: "actors" },
+  token: { doc: "Token", embedded: "tokens" },
+  item: { doc: "Item", collection: "items" },
+  scene: { doc: "Scene", collection: "scenes" },
+  user: { doc: "User", collection: "users" },
+  journal: { doc: "JournalEntry", collection: "journal" },
+  message: { doc: "ChatMessage", collection: "messages" },
+  macro: { doc: "Macro", collection: "macros" },
+  region: { doc: "Region", embedded: "regions" },
+  combat: { doc: "Combat", collection: "combats" },
+  table: { doc: "RollTable", collection: "tables" },
+  folder: { doc: "Folder", collection: "folders" },
+  playlist: { doc: "Playlist", collection: "playlists" },
+}).map(([k, v]) => [k, Object.freeze(v)])));
 const ID = /^[A-Za-z0-9]{16}$/;
 const UUID = /^(?:Compendium\.|[A-Z][A-Za-z]+\.[A-Za-z0-9]{16}(?:\.|$))/;
 
@@ -42,15 +52,20 @@ function scenesFor(sceneId, g) {
   return listOf(g.game.scenes);
 }
 
-/** Token → actor, per `base`: the world actor (`base: true`) or the token's own (synthetic) actor. */
+/** Token → actor, per `base`: the world actor (`base: true`) or the token's own (synthetic) actor.
+ *  A synthetic Actor itself is mapped the same way in adapt(). */
 function actorOfToken(tokenDoc, base, g) {
   if (!tokenDoc) return null;
   return base ? g.game.actors?.get?.(tokenDoc.actorId) ?? null : tokenDoc.actor ?? null;
 }
 
 function adapt(doc, kind, base, g) {
-  const want = DOC[kind] ?? kind;
+  const want = KINDS[kind]?.doc ?? kind;
   if (!doc) return null;
+  // A token's synthetic Actor asked for as the base: the world actor (1.2.0, names-ext-3).
+  if (kind === "actor" && base && doc.documentName === "Actor" && doc.isToken) {
+    return g.game.actors?.get?.(doc.token?.actorId ?? doc.id) ?? null;
+  }
   if (doc.documentName === want) return doc;
   if (kind === "actor" && doc.documentName === "Token") return actorOfToken(doc, base, g);
   throw codedError("BAD_ARGS", `expected ${want}, got ${doc.documentName}`);
@@ -99,15 +114,20 @@ export function resolveRef(ref, kind = "actor", { base = false, sceneId, require
     } catch {
       doc = null;
     }
+    // An unloaded compendium document comes back as its index entry, which has no documentName (KIT-R5).
+    if (doc && !doc.documentName && ref.startsWith("Compendium.")) {
+      throw codedError("NOT_FOUND", `${ref}: compendium document not loaded; load it with fromUuid first`);
+    }
     if (doc) return adapt(doc, kind, base, g) ?? miss();
     if (UUID.test(ref)) return miss();
     // a name with a period in it ("Mr. Brine") falls through to the name lookup
   }
 
   // (3) a 16-character id
-  const embedded = EMBEDDED[kind];
+  const embedded = KINDS[kind]?.embedded;
+  const collection = KINDS[kind]?.collection;
   if (ID.test(ref)) {
-    const coll = COLLECTION[kind] ? g.game[COLLECTION[kind]] : null;
+    const coll = collection ? g.game[collection] : null;
     const direct = coll?.get?.(ref);
     if (direct) return direct;
     if (kind === "actor" || embedded) {
@@ -121,7 +141,7 @@ export function resolveRef(ref, kind = "actor", { base = false, sceneId, require
   // (4) an exact name, then a case-insensitive one
   let candidates;
   if (embedded) candidates = scenesFor(sceneId, g).flatMap(s => listOf(s?.[embedded]));
-  else candidates = listOf(COLLECTION[kind] ? g.game[COLLECTION[kind]] : null);
+  else candidates = listOf(collection ? g.game[collection] : null);
   const named = byName(candidates, ref, kind);
   if (named) return named;
 

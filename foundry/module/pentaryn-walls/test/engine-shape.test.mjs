@@ -50,3 +50,17 @@ test("senses-walls-cursors-5: no per-call obstacle copy in the hot scans (alloca
   assert.ok(five.filter <= 107 && five.set <= 761, JSON.stringify(five));
   assert.ok(ten.filter <= 407 && ten.set <= 3121, JSON.stringify(ten));
 });
+
+// walls-EXT-3: threshold support was dead code — readWalls never passes `threshold`, and the
+// only preset that sets one (window) infers solid anyway. Dropped from the seg shape,
+// profileFrom and the create payload, so a threshold on an input wall never reaches a create.
+test("walls-EXT-3: the engine carries no wall threshold — a thresholded terrain square grows plain terrain walls", () => {
+  assert.doesNotMatch(ENGINE, /threshold/);
+  const th = { light: 5, sight: 5, sound: null, attenuation: false };
+  const t = (x0, y0, x1, y1, id) => ({ _id: id, c: [x0, y0, x1, y1], light: 10, sight: 10, sound: 10,
+    move: 20, door: 0, ds: 0, dir: 0, levels: [], threshold: th });
+  const { creates } = runEngine([t(400, 0, 600, 0, "n"), t(1000, 400, 1000, 600, "e"),
+    t(400, 1000, 600, 1000, "s"), t(0, 400, 0, 600, "w")], { gridSize: 100, runId: "x" });
+  assert.equal(creates.length, 8);
+  for (const c of creates) assert.ok(!("threshold" in c), JSON.stringify(c));
+});

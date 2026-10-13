@@ -171,11 +171,38 @@ def apply_status(report: dict[str, Any], status: str, note: str = "", by: str = 
     return {**report, "status": status, "history": history}
 
 
+def _flock_within(fh: Any, lock: Path) -> None:
+    """Exclusive `flock` on `fh`, giving up after DND_MCP_TOOL_TIMEOUT seconds (py-mcp-ac-3).
+
+    The MCP server cannot kill a thread, so this deadline is what bounds an in-process
+    handler: it raises "could not lock <file> within Ns" rather than holding its worker
+    slot forever. Same env and default (60s) as subprocess tools; <=0 waits without limit.
+    """
+    try:
+        limit = int(os.environ.get("DND_MCP_TOOL_TIMEOUT") or 60)
+    except ValueError:
+        limit = 60
+    if limit <= 0:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        return
+    deadline = time.monotonic() + limit
+    while True:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except BlockingIOError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"could not lock {lock} within {limit}s (set DND_MCP_TOOL_TIMEOUT to adjust)"
+                ) from None
+            time.sleep(0.05)
+
+
 @contextlib.contextmanager
 def _locked(path: Path) -> Iterator[None]:
     lock = path.with_name(path.name + ".lock")
     with open(lock, "a+") as fh:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        _flock_within(fh, lock)
         try:
             yield
         finally:
@@ -521,7 +548,7 @@ MCP_TOOLS = [
             "required": [],
             "additionalProperties": False,
         },
-        "annotations": _RO,
+        "annotations": {"title": "List feedback reports", **_RO},
     },
     {
         "name": "feedback_next",
@@ -542,7 +569,7 @@ MCP_TOOLS = [
             "required": [],
             "additionalProperties": False,
         },
-        "annotations": _RO,
+        "annotations": {"title": "Next feedback report", **_RO},
     },
     {
         "name": "feedback_get",
@@ -560,7 +587,7 @@ MCP_TOOLS = [
             "required": ["id"],
             "additionalProperties": False,
         },
-        "annotations": _RO,
+        "annotations": {"title": "Get a feedback report", **_RO},
     },
     {
         "name": "feedback_resolve",
@@ -580,7 +607,7 @@ MCP_TOOLS = [
             "required": ["id", "status"],
             "additionalProperties": False,
         },
-        "annotations": _RW,
+        "annotations": {"title": "Resolve a feedback report", **_RW},
     },
 ]
 

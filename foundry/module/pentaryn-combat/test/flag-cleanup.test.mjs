@@ -18,15 +18,21 @@ const A = makeActor({ id: "flagsA0000000001", name: "A", flags: { [MODULE]: { tu
 const B = makeActor({ id: "flagsB0000000001", name: "B", flags: { [MODULE]: { turn: { key: "nocombat" } } } });
 const C = makeActor({ id: "flagsC0000000001", name: "C", flags: { [MODULE]: { reaction: { combatId: "gone" } } } });
 
-test("the orphan sweep at ready: one write per actor, the same final flags; the turn key is visible to updateActor", async () => {
+test("ac-5: the orphan sweep at ready is ONE Actor.updateDocuments batch (A and C), the same final flags; the turn key is visible to updateActor", async () => {
   const seen = [];
   const id = F.Hooks.on("updateActor", (a, changes) => { if (foundry.utils.hasProperty(changes, `flags.${MODULE}.turn`)) seen.push(a.id); });
   F.calls.length = 0;
   F.fire("ready");
   await drain();
   F.Hooks.off("updateActor", id);
-  const writes = F.calls.filter(c => c.op === "update" && [A.uuid, B.uuid, C.uuid].includes(c.uuid));
-  assert.equal(writes.length, 2, "A once, C once, B untouched");
+  const single = F.calls.filter(c => c.op === "update" && [A.uuid, B.uuid, C.uuid].includes(c.uuid));
+  assert.equal(single.length, 0, "no per-actor writes");
+  const batches = F.calls.filter(c => c.op === "Actor.updateDocuments");
+  assert.equal(batches.length, 1, "one batch for every actor with orphan keys");
+  assert.deepEqual(batches[0].updates, [
+    { _id: A.id, flags: { [MODULE]: { turn: "<_del>", reaction: "<_del>" } } },
+    { _id: C.id, flags: { [MODULE]: { reaction: "<_del>" } } },
+  ], "A and C in one batch, B untouched");
   assert.deepEqual(A.flags[MODULE], {});
   assert.deepEqual(B.flags[MODULE], { turn: { key: "nocombat" } });
   assert.deepEqual(C.flags[MODULE], {});

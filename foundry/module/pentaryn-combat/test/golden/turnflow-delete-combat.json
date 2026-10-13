@@ -24,16 +24,17 @@
   ],
   "later": [
     {
-      "op": "update",
-      "documentName": "Actor",
-      "uuid": "Actor.rogue00000000001",
-      "changes": {
-        "flags": {
-          "pentaryn-combat": {
-            "reaction": "<_del>"
+      "op": "Actor.updateDocuments",
+      "updates": [
+        {
+          "_id": "rogue00000000001",
+          "flags": {
+            "pentaryn-combat": {
+              "reaction": "<_del>"
+            }
           }
         }
-      }
+      ]
     }
   ],
   "flags": {

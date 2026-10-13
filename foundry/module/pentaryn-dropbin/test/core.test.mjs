@@ -3,6 +3,7 @@
 // run on the oracle's makeRecorder (today's recordAsGM with its store injected) under mocked timers.
 import { IMPLS } from "./fixtures/impls.mjs";
 import * as oracle from "./fixtures/legacy-dropbin.mjs";
+import { restoreTarget } from "../ledger-core.mjs";
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 
@@ -27,7 +28,16 @@ for (const [label, M] of IMPLS) {
   });
 
   test(`${label}: dedupeKey`, () => {
-    assert.equal(M.dedupeKey({ reason: "drop", itemName: "Sword", fromActorId: "a", quantity: 2 }), "drop|Sword|a|2");
+    const x = { reason: "drop", itemName: "Sword", fromActorId: "a", quantity: 2 };
+    const sourced = { ...x, item: { _id: "i1" }, pileUuid: "Scene.s.Token.p" };
+    // declared (dropbin-EC-2): the core adds the item source's _id and the pileUuid; the oracle did not
+    if (label === "oracle") {
+      assert.equal(M.dedupeKey(x), "drop|Sword|a|2");
+      assert.equal(M.dedupeKey(sourced), "drop|Sword|a|2");
+    } else {
+      assert.equal(M.dedupeKey(x), "drop|Sword|a|2||");
+      assert.equal(M.dedupeKey(sourced), "drop|Sword|a|2|i1|Scene.s.Token.p");
+    }
   });
 
   test(`${label}: normaliseDeltas, listLast, findEntry, searchLog`, () => {
@@ -183,7 +193,7 @@ test("submit routing: GM records, a player with socketlib relays, neither warns 
   assert.deepEqual(calls, [["record", "A"], ["executeAsGM", "record", "B"], ["warn", "pentaryn-dropbin | no socketlib and not a GM — entry dropped"]]);
 });
 
-test("restore target resolution: an Actor, then an id or name, else the actor it left", () => {
+test("restore target resolution: an Actor, a TokenDocument, an id, name or UUID; only no target is the actor it left (dropbin-R3)", () => {
   const ann = { id: "a", name: "Ann" }, bo = { id: "b", name: "Bo" };
   const actors = { get: id => ({ a: ann, b: bo })[id] ?? undefined, getName: n => [ann, bo].find(x => x.name === n) };
   const isActor = x => x === ann || x === bo;
@@ -192,5 +202,33 @@ test("restore target resolution: an Actor, then an id or name, else the actor it
   assert.equal(oracle.restoreTarget("b", e, { isActor, actors }), bo);
   assert.equal(oracle.restoreTarget("Bo", e, { isActor, actors }), bo);
   assert.equal(oracle.restoreTarget(null, e, { isActor, actors }), ann);
-  assert.equal(oracle.restoreTarget("nobody", e, { isActor, actors }), ann);
+  assert.equal(oracle.restoreTarget("nobody", e, { isActor, actors }), ann, "the oracle fell back (R3)");
+  const tok = { documentName: "Token", actor: bo }, fromUuid = u => ({ "Actor.b": bo, "Scene.s.Token.t": tok })[u] ?? null;
+  const core = (t, deps = {}) => restoreTarget(t, e, { isActor, actors, fromUuid, ...deps });
+  assert.deepEqual([bo, "b", "Bo", tok, "Actor.b", "Scene.s.Token.t"].map(t => core(t)), [bo, bo, bo, bo, bo, bo]);
+  for (const t of [null, undefined]) assert.equal(core(t), ann);
+  for (const t of ["nobody", "Actor.zz", "Scene.s", 7, {}, { documentName: "Token", actor: null }]) assert.equal(core(t), null, String(t));
+  assert.equal(core("Actor.b", { fromUuid: () => { throw new Error("bad uuid"); } }), null, "a throwing fromUuidSync is no target");
+  assert.equal(core("Actor.b", { fromUuid: undefined }), null, "no fromUuid: a UUID does not resolve");
+  assert.equal(restoreTarget(null, { fromActorId: "gone" }, { isActor, actors }), null);
+});
+
+test("dropbin-R4: with no target, the synthetic token actor the item left (by fromActorUuid) comes before the base actor", () => {
+  const base = { id: "a", name: "Goblin" }, synth = { id: "a", name: "Goblin", isToken: true }, other = { id: "b", name: "Bo" };
+  const actors = { get: id => ({ a: base, b: other })[id] ?? undefined, getName: () => undefined };
+  const isActor = x => x === base || x === synth || x === other;
+  const live = { "Scene.s.Token.t.Actor.a": synth, "Actor.a": base, "Scene.s.Token.u": { documentName: "Token", actor: synth } };
+  const fromUuid = u => live[u] ?? null;
+  const e = uuid => ({ fromActorId: "a", fromActorUuid: uuid });
+  const r = (entry, deps = {}) => restoreTarget(null, entry, { isActor, actors, fromUuid, ...deps });
+  assert.equal(r(e("Scene.s.Token.t.Actor.a")), synth, "the token still exists: its synthetic actor");
+  assert.equal(r(e("Scene.s.Token.u")), synth, "a Token UUID resolves to its actor");
+  assert.equal(r(e("Actor.a")), base, "a linked actor is the world actor");
+  assert.equal(r(e("Scene.s.Token.gone.Actor.a")), base, "the token is gone: the base actor");
+  assert.equal(r(e(null)), base, "an old entry with no uuid: the base actor");
+  assert.equal(r(e("Scene.s.Token.t.Actor.a"), { fromUuid: () => { throw new Error("bad uuid"); } }), base, "a throwing fromUuidSync falls back");
+  assert.equal(r(e("Scene.s.Token.t.Actor.a"), { fromUuid: () => ({ documentName: "Scene" }) }), base, "a non-actor falls back");
+  assert.equal(r(e("Scene.s.Token.t.Actor.a"), { fromUuid: undefined }), base, "no fromUuid: the base actor");
+  assert.equal(restoreTarget(undefined, e("Scene.s.Token.t.Actor.a"), { isActor, actors, fromUuid }), synth);
+  assert.equal(restoreTarget(other, e("Scene.s.Token.t.Actor.a"), { isActor, actors, fromUuid }), other, "an explicit target still wins");
 });

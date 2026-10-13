@@ -60,3 +60,103 @@ test("kit version, KIT_VERSION and every header agree", async () => {
     assert.ok(readme.includes(`| \`${rel}\` |`), `README.md table has no \`${rel}\` row`);
   }
 });
+
+// kit-1.2.0 (defect wave 2, Joe 2026-10-12): the final-review kit fixes ship as kit 1.2.0.
+test("kit-1.2.0: kit.json, KIT_VERSION and the README changelog name 1.2.0", async () => {
+  const { KIT_VERSION } = await import("../errors.mjs");
+  assert.equal(kit.version, "1.2.0", "kit.json version is not 1.2.0");
+  assert.equal(KIT_VERSION, "1.2.0", "errors.mjs KIT_VERSION is not 1.2.0");
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  assert.match(readme, /^1\.2\.0 \(/m, "README.md changelog has no 1.2.0 entry");
+});
+
+// KIT-M3 (final review 2026-10-12): the argon-tooltip.css row said the migration was still partial
+// (@import, "riders waits"). It must name every module that vendors the file, each of which lists
+// lib/argon-tooltip.css in its module.json styles.
+test("KIT-M3: the argon-tooltip.css README row names every module that lists it in module.json styles", () => {
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const row = readme.split("\n").find(l => l.startsWith("| `argon-tooltip.css` |"));
+  assert.ok(row, "README.md has no argon-tooltip.css row");
+  assert.doesNotMatch(row, /@import/, "row still describes an @import");
+  assert.doesNotMatch(row, /waits/, "row still says a module waits");
+  const modDir = new URL("../../module/", import.meta.url);
+  const vendors = readdirSync(fileURLToPath(modDir))
+    .filter(m => existsSync(fileURLToPath(new URL(`${m}/lib/argon-tooltip.css`, modDir))));
+  assert.ok(vendors.length > 0, "no module vendors lib/argon-tooltip.css");
+  for (const m of vendors) {
+    const styles = readJSON(new URL(`${m}/module.json`, modDir)).styles ?? [];
+    assert.ok(styles.includes("lib/argon-tooltip.css"), `${m} vendors lib/argon-tooltip.css but its module.json styles omit it`);
+    const short = m.replace(/^pentaryn-/, "");
+    assert.match(row, new RegExp(`\\b${short}\\b`), `README row does not name ${short}`);
+  }
+});
+
+// KIT-M9 (final review 2026-10-12): the foundry-stub row left out stubId and the harness row left
+// out sourceFiles. Every README table row for a .mjs file must list exactly the module's named
+// exports — a backticked identifier (optionally with its call signature) in the Exports cell is an
+// export; the names after "→" are members of a returned object, not exports.
+test("KIT-M9: each README .mjs row's Exports cell equals that file's named exports", async () => {
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const rows = readme.split("\n").filter(l => /^\| `[^`]+\.mjs` \|/.test(l));
+  assert.ok(rows.length > 0, "README.md has no .mjs rows");
+  for (const row of rows) {
+    const [, file, exportsCell] = row.split("|").map(c => c.trim());
+    const rel = file.slice(1, -1);
+    const listed = new Set();
+    for (const m of exportsCell.matchAll(/(→\s*)?`([^`]+)`/g)) {
+      if (m[1]) continue;
+      const id = /^([A-Za-z_$][\w$]*)(\(.*\))?$/.exec(m[2]);
+      if (id) listed.add(id[1]);
+    }
+    const actual = new Set(Object.keys(await import(new URL(`../${rel}`, import.meta.url).href)));
+    assert.deepEqual([...listed].sort(), [...actual].sort(), `README.md \`${rel}\` row lists the wrong exports`);
+  }
+});
+
+// KIT-M7 (final review 2026-10-12): isCoded, withRef and installRoot have no consumer outside the
+// kit. Ruling: keep all three exported (dropping an export is a breaking change at a minor bump) and
+// say so in the README row. The marker must track reality — present while no module source outside
+// its vendored lib/ and test/kit/ names the export, gone once one does.
+test("KIT-M7: the README marks isCoded, withRef and installRoot 'exported for modules; no consumer yet' while no module uses them", () => {
+  const readme = readFileSync(fileURLToPath(new URL("../README.md", import.meta.url)), "utf8");
+  const modulesDir = new URL("../../module/", import.meta.url);
+  const sources = [];
+  const walk = (dir, rel) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const r = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || /^[^/]+\/(lib|test\/kit)$/.test(r)) continue;
+        walk(new URL(`${e.name}/`, dir), r);
+      } else if (/\.(mjs|js)$/.test(e.name)) sources.push(readFileSync(new URL(e.name, dir), "utf8"));
+    }
+  };
+  walk(modulesDir, "");
+  assert.ok(sources.length > 0, "no module sources found under foundry/module/");
+  for (const [file, name] of [["errors.mjs", "isCoded"], ["resolve.mjs", "withRef"], ["publish.mjs", "installRoot"]]) {
+    const row = readme.split("\n").find(l => l.startsWith(`| \`${file}\` |`));
+    assert.ok(row, `README.md has no ${file} row`);
+    const notes = row.split("|").map(c => c.trim())[3];
+    const marked = notes.includes(`\`${name}\`: exported for modules; no consumer yet`);
+    const used = sources.some(s => new RegExp(`\\b${name}\\b`).test(s));
+    assert.equal(marked, !used, used
+      ? `a module now uses ${name}; drop its "no consumer yet" marker from the README ${file} row`
+      : `README.md ${file} row does not mark \`${name}\`: exported for modules; no consumer yet`);
+  }
+});
+
+// KIT-M6-followup (final review 2026-10-12): the queries row listed "resolve", which queries.mjs
+// never imports (it imports errors and api; api's own row already carries resolve). A dep the file
+// does not import and another of its deps already reaches is dead weight in the manifest. (A dep a
+// file does not import but nothing else reaches stays legal: patch-libwrapper is a route for patch.)
+test("KIT-M6-followup: no kit.json row lists an unimported dep another of its deps already reaches", () => {
+  for (const [file, imports] of Object.entries(graph)) {
+    const name = file.replace(/\.mjs$/, "");
+    const direct = new Set(imports.map(i => i.replace(/\.mjs$/, "")));
+    const deps = kit.files[name]?.deps ?? [];
+    for (const d of deps) {
+      if (direct.has(d)) continue;
+      const viaOthers = deps.filter(o => o !== d).some(o => closure(o).has(d));
+      assert.ok(!viaOthers, `kit.json deps for "${name}" list "${d}", which ${file} does not import and another dep already reaches`);
+    }
+  }
+});

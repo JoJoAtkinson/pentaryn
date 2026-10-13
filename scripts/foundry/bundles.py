@@ -27,7 +27,7 @@ import time
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, NamedTuple
+from typing import Callable, Iterable, Iterator, NamedTuple
 
 from scripts.foundry import host
 from scripts.foundry.storage import (CONTENT_ADDRESSED, JUNK_NAMES, Entry, Storage,
@@ -35,8 +35,22 @@ from scripts.foundry.storage import (CONTENT_ADDRESSED, JUNK_NAMES, Entry, Stora
 
 BUNDLES = "bundles"                       # the cloud subfolder (flat, shared by both hosts)
 assert BUNDLES in CONTENT_ADDRESSED       # its uploads never delete on a size mismatch (DL7)
-ROOTS = {"module": "Data/modules", "system": "Data/systems"}
-MANIFEST_FILE = {"module": "module.json", "system": "system.json"}
+
+
+class Kind(NamedTuple):
+    root: str             # under FOUNDRY_DATA
+    manifest_file: str    # what makes a folder under `root` a bundle
+    plural: str           # its section in a manifest, a marker and a sidecar
+
+
+# The one place a bundle kind is spelled (review EXT-1). Its order is the order of a
+# manifest's sections, so a sidecar's bytes and the snapshot digest depend on it.
+KINDS = {
+    "module": Kind("Data/modules", "module.json", "modules"),
+    "system": Kind("Data/systems", "system.json", "systems"),
+}
+ROOTS = {kind: k.root for kind, k in KINDS.items()}
+MANIFEST_FILE = {kind: k.manifest_file for kind, k in KINDS.items()}
 FP_LEN = 16
 GC_GRACE_SECONDS = 7 * 86400
 CACHE_FILENAME = "pentaryn-bundle-cache.json"   # beside pentaryn-boot.json, outside snapshots
@@ -46,12 +60,12 @@ STAGING = "bundles"                       # under .pentaryn-tmp/
 EXTRACT = "extract"                       # under .pentaryn-tmp/
 LEVELDB_MARKER = "CURRENT"
 LEVELDB_HOUSEKEEPING = {"LOCK", "LOG", "LOG.old", "CURRENT"}      # + MANIFEST-* + empty *.log
-BUNDLE_NAME = re.compile(r"^(module|system)@([^@/]+)@([^@/]*)@([0-9a-f]{16})\.tar\.gz$")
+BUNDLE_NAME = re.compile(rf"^({'|'.join(KINDS)})@([^@/]+)@([^@/]*)@([0-9a-f]{{16}})\.tar\.gz$")
 CHUNK = 1024 * 1024
 
 _VERSION_BAD = re.compile(r"[^A-Za-z0-9.+_-]")
 _FP_RE = re.compile(r"^[0-9a-f]{16}$")
-_PLURAL = {"module": "modules", "system": "systems"}
+_PLURAL = {kind: k.plural for kind, k in KINDS.items()}
 
 
 def log(msg: str) -> None:
@@ -287,49 +301,88 @@ def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = 
         with os.scandir(root) as it:
             entries = sorted(it, key=lambda e: e.name)
         for e in entries:
-            name, where = e.name, f"{rel_root}/{e.name}"
             path = Path(e.path)
             why = _skip_reason(kind, path)
             if why is not None:
                 if why:
                     say(why)
                 continue
-            mf = path / MANIFEST_FILE[kind]
-            try:
-                meta = json.loads(mf.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                meta = None
-            if not isinstance(meta, dict):
-                say(f"⚠ {where}: {MANIFEST_FILE[kind]} is not a JSON object — "
-                    f"bundled under version 0")
-                version = "0"
-            else:
-                version = sanitize_version(meta.get("version"))
-                mid = meta.get("id")
-                if mid is not None and mid != name:
-                    say(f"⚠ {where}: {MANIFEST_FILE[kind]} says id {mid!r} — "
-                        f"bundled under the folder name {name!r}")
-            files = _walk(path)
-            key = f"{kind}/{name}"
-            hit = old.get(key)
-            sig = _sig(files)
-            if hit is not None and hit["sig"] == sig:
-                fp = hit["fp"]
-            else:
-                fp = fingerprint(path, files=files).fp
-            new[key] = _entry(files, fp, version, sig)
-            inv[key] = Local(kind, name, version, fp, path, new[key]["files"],
-                             new[key]["bytes"])
+            key = f"{kind}/{e.name}"
+            loc, new[key] = _locate(kind, path, old, say)
+            inv[key] = loc
     if cache and save and new != old:
         _save_cache(cache_path, new)
     return inv
 
 
+def _locate(kind: str, path: Path, old: dict[str, dict], say: Callable[[str], None]
+            ) -> tuple[Local, dict]:
+    """One bundle folder (already past _skip_reason): its Local and its cache entry,
+    reusing `old`'s fingerprint when the stat signature matches."""
+    name, where = path.name, f"{ROOTS[kind]}/{path.name}"
+    mf = path / MANIFEST_FILE[kind]
+    try:
+        meta = json.loads(mf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = None
+    if not isinstance(meta, dict):
+        say(f"⚠ {where}: {MANIFEST_FILE[kind]} is not a JSON object — "
+            f"bundled under version 0")
+        version = "0"
+    else:
+        version = sanitize_version(meta.get("version"))
+        mid = meta.get("id")
+        if mid is not None and mid != name:
+            say(f"⚠ {where}: {MANIFEST_FILE[kind]} says id {mid!r} — "
+                f"bundled under the folder name {name!r}")
+    files = _walk(path)
+    hit = old.get(f"{kind}/{name}")
+    sig = _sig(files)
+    if hit is not None and hit["sig"] == sig:
+        fp = hit["fp"]
+    else:
+        fp = fingerprint(path, files=files).fp
+    entry = _entry(files, fp, version, sig)
+    return Local(kind, name, version, fp, path, entry["files"], entry["bytes"]), entry
+
+
+def local_one(kind: str, id: str, *, cache: bool = False,
+              warn: Callable[[str], None] | None = None) -> Local | None:
+    """The one bundle "<kind>/<id>" as local_inventory would list it, hashing only that
+    folder (review PERF-1: a rebuild of one bundle must not re-hash every module and
+    system), or None where the inventory would have no such key — no folder, a skipped
+    one, a name that cannot be a bundle. With `cache`, a matching stat signature reuses
+    the cached fingerprint; the cache is never written (it holds every folder, and this
+    looked at one). Warnings are silent unless `warn` is given."""
+    try:
+        _check_id(kind, id)
+    except ValueError:
+        return None
+    path = host.foundry_data() / ROOTS[kind] / id
+    if _skip_reason(kind, path) is not None:
+        return None
+    old = _load_cache(host.foundry_data() / CACHE_FILENAME) if cache else {}
+    return _locate(kind, path, old, warn or (lambda _m: None))[0]
+
+
 # ── the manifest ─────────────────────────────────────────────────────────────
+
+def manifest_sections() -> Iterator[tuple[str, str]]:
+    """(kind, plural) for every bundle kind, in KINDS order — the order of a manifest's
+    sections."""
+    for kind, k in KINDS.items():
+        yield kind, k.plural
+
+
+def sections(m: dict) -> dict[str, dict[str, str]]:
+    """Just the manifest sections of `m` (a manifest, a marker, a sidecar), each one
+    present ({} when missing or empty), in KINDS order."""
+    return {plural: m.get(plural) or {} for _kind, plural in manifest_sections()}
+
 
 def manifest(inv: dict[str, Local]) -> dict:
     """{"modules": {id: bundle name}, "systems": {id: bundle name}}, keys sorted."""
-    out: dict[str, dict[str, str]] = {"modules": {}, "systems": {}}
+    out: dict[str, dict[str, str]] = {plural: {} for _kind, plural in manifest_sections()}
     for loc in sorted(inv.values(), key=lambda l: (l.kind, l.id)):
         out[_PLURAL[loc.kind]][loc.id] = loc.name
     return out
@@ -338,10 +391,22 @@ def manifest(inv: dict[str, Local]) -> dict:
 def manifest_keys(m: dict) -> dict[str, str]:
     """"<kind>/<id>" → bundle name, for every entry of a manifest."""
     out: dict[str, str] = {}
-    for kind, plural in _PLURAL.items():
+    for kind, plural in manifest_sections():
         for id, name in sorted((m.get(plural) or {}).items()):
             out[f"{kind}/{id}"] = name
     return out
+
+
+def split_key(key: str) -> tuple[str, str]:
+    """"<kind>/<id>" → (kind, id) — the one place a manifest key is taken apart (EXT-4)."""
+    kind, id = key.split("/", 1)
+    return kind, id
+
+
+def key_rel(key: str) -> str:
+    """"<kind>/<id>" → its folder under the data root, e.g. "Data/modules/<id>"."""
+    kind, id = split_key(key)
+    return f"{ROOTS[kind]}/{id}"
 
 
 def manifest_names(m: dict) -> set[str]:
@@ -427,22 +492,28 @@ def read_all(tar: Path) -> list[str]:
     return names
 
 
-def verify(tar: Path, kind: str, id: str) -> None:
+def verify(tar: Path, kind: str, id: str) -> list[str]:
     """A downloaded bundle is whole and holds only `<id>` and `<id>/…`: read_all, then the
-    member check extract does. Raises ValueError."""
+    member check extract does. Returns the member names read, for extract(members=…) to
+    skip its own names pass. Raises ValueError."""
     _check_id(kind, id)
-    _check_members(Path(tar).name, id, read_all(tar))
+    names = read_all(tar)
+    _check_members(Path(tar).name, id, names)
+    return names
 
 
-def extract(tar: Path, kind: str, id: str, data_root: Path, *, seed_cache: bool = True
-            ) -> None:
+def extract(tar: Path, kind: str, id: str, data_root: Path, *,
+            members: list[str] | None = None, seed_cache: bool = True) -> None:
     """Put the bundle `tar` in place as data_root/<kind root>/<id>.
 
-    Every member is checked to be `<id>` or under `<id>/` before anything is written.
-    The tar is extracted (filter='data') to .pentaryn-tmp/extract/<id>; the folder in
-    place, if any, is moved aside, the new one renamed in, and the old one removed — on a
-    failed swap the old one is put back. The staging area is left clean either way. With
-    `seed_cache`, the cache learns the extracted folder's fingerprint from the tar's name,
+    Every member is checked to be `<id>` or under `<id>/` before anything is written:
+    `members` — the names verify() returned for this tar — are checked as given, else
+    the tar is read once for its names. The tar is then extracted in one streaming pass
+    (filter='data') to .pentaryn-tmp/extract/<id>, refusing any member not among those
+    names and a stream that ends before all of them (a tar cut short after verify); the
+    folder in place, if any, is moved aside, the new one renamed in, and the old one
+    removed — on a failed swap the old one is put back. The staging area is left clean
+    either way. With `seed_cache`, the cache learns the extracted folder's fingerprint from the tar's name,
     so the next backup does not hash what it just downloaded."""
     tar, data_root = Path(tar), Path(data_root)
     _check_id(kind, id)
@@ -451,15 +522,29 @@ def extract(tar: Path, kind: str, id: str, data_root: Path, *, seed_cache: bool 
         raise ValueError(f"{dest} is a symlink — refusing to replace it")
     exdir = data_root / TMP_DIRNAME / EXTRACT
     staged, aside = exdir / id, exdir / f".old-{id}"
-    with tarfile.open(tar, "r:gz") as tf:
-        members = tf.getmembers()
-        _check_members(tar.name, id, [m.name for m in members])
+    names = read_all(tar) if members is None else list(members)
+    _check_members(tar.name, id, names)
+    allowed, seen = set(names), set()
+
+    def checked(tf: tarfile.TarFile):
+        for m in tf:
+            if m.name not in allowed:
+                raise ValueError(f"{tar.name}: member {m.name!r} was not in it when it was "
+                                 f"checked — refused")
+            seen.add(m.name)
+            yield m
+
+    with tarfile.open(tar, "r|gz") as tf:
         try:
             for leftover in (staged, aside):
                 if leftover.exists() or leftover.is_symlink():
                     shutil.rmtree(leftover)
             exdir.mkdir(parents=True, exist_ok=True)
-            tf.extractall(exdir, members=members, filter="data")
+            tf.extractall(exdir, members=checked(tf), filter="data")
+            if seen != allowed:                  # the stream ended short (cut after verify)
+                missing = sorted(allowed - seen)
+                raise ValueError(f"{tar.name}: ended before {len(missing)} checked "
+                                 f"member(s), e.g. {missing[0]!r} — refused")
             if not staged.is_dir():
                 raise ValueError(f"{tar.name}: holds no {id}/ folder")
             dest.parent.mkdir(parents=True, exist_ok=True)

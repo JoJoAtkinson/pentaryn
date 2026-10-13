@@ -47,9 +47,10 @@ test("labels and order; exposed accessors; uninstall + offAll leaves nothing reg
     "on:deleteJournalEntry — deleteJournalEntry: refresh bars (own journal)",
     "on:updateItem — updateItem: refresh item bars",
   ]);
+  // journal-M7: only what api.mjs reads is exposed — refreshBars, applySinglePage and findFolder are not
   assert.deepEqual(Object.keys(ctx.exposed).sort(), [
-    "applySinglePage", "ensureAll", "ensureFor", "ensurePersonalJournal", "findFolder", "lastSkip", "openSaved", "personal",
-    "personalsOf", "refreshBars", "report", "save", "savedStatus",
+    "ensureAll", "ensureFor", "ensurePersonalJournal", "lastSkip", "openSaved", "personal",
+    "personalsOf", "report", "save", "savedStatus",
   ]);
   bar.uninstall();
   personal.uninstall();

@@ -5,7 +5,8 @@
  * Every row published before the migration keeps its signature (`legacy: true`): `restore`
  * returns the Notification its refusal toasted or the created Item; `export`/`clear` return
  * false for a player. Every param is `resolve: false`, so buildApi resolves nothing per call;
- * `inspect(ref)` resolves its own ref (a Token or an Actor, by document, UUID, id or exact name).
+ * `inspect(ref)` resolves its own ref (a Token or an Actor, by document, UUID, id or exact name;
+ * several tokens of one name throw AMBIGUOUS — the bridge relies on that code).
  */
 
 import { CONTRACT, MODULE, NS, VERSION } from "./dropbin-core.mjs";
@@ -15,7 +16,13 @@ const ACTOR = { name: "actor", type: "Actor", resolve: false };
 const APP = { name: "app", type: "ItemPileInventoryApp", resolve: false, doc: "an open Item Piles loot window" };
 const N = { name: "n", type: "number|string", doc: "the ledger number" };
 
-const corpseRow = (path, params, returns, doc, extra = {}) => ({ path, params, returns, gm: false, writes: false, legacy: true, doc, ...extra });
+// What a corpse conversion writes (dropbin-EXT-2): sync runs either one, revive runs sync.
+const CORPSE_FLAGS = ["flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership"];
+const TO_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Dead)", "flags.core.overlay"];
+const FROM_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Lootable, removed)"];
+const SYNC_WRITES = [...new Set([...TO_CORPSE_WRITES, ...FROM_CORPSE_WRITES])];
+
+const legacyRow = (path, params, returns, doc, extra = {}) => ({ path, params, returns, gm: false, writes: false, legacy: true, doc, ...extra });
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -24,29 +31,29 @@ export const MANIFEST = Object.freeze({
   contract: CONTRACT,
   flagScope: MODULE,
   rows: [
-    corpseRow("corpses.sync", [ACTOR], "Promise<void>",
-      "Active GM: turn each eligible token of the actor into a corpse pile (dead) or back (alive). No-op elsewhere or without Item Piles.",
-      { gm: true, writes: true, sideEffects: ["Item Piles pile flags", "flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership", "delta.ownership", "sight.enabled", "ActiveEffect (Dead)"] }),
-    corpseRow("corpses.toCorpse", [TOKEN_DOC], "Promise<void>",
-      "Make this token a lootable corpse pile now (players get OBSERVER on its delta; sight off; Dead as the overlay).",
-      { gm: true, writes: true, sideEffects: ["Item Piles pile flags", "flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership", "delta.ownership", "sight.enabled", "ActiveEffect (Dead)"] }),
-    corpseRow("corpses.fromCorpse", [TOKEN_DOC], "Promise<void>",
-      "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership.",
-      { gm: true, writes: true, sideEffects: ["Item Piles pile flags", "flags.pentaryn-dropbin.*", "delta.ownership", "sight.enabled"] }),
-    corpseRow("corpses.isDead", [ACTOR], "boolean",
+    legacyRow("corpses.sync", [ACTOR], "Promise<void>",
+      "Active GM: turn each eligible token of the actor, on every scene, into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done.",
+      { gm: true, writes: true, sideEffects: SYNC_WRITES }),
+    legacyRow("corpses.toCorpse", [TOKEN_DOC], "Promise<void>",
+      "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). Already our corpse pile: only a lost OBSERVER map or sight-off is written again. A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done.",
+      { gm: true, writes: true, sideEffects: TO_CORPSE_WRITES }),
+    legacyRow("corpses.fromCorpse", [TOKEN_DOC], "Promise<void>",
+      "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership (a linked token: its base actor's). Without Item Piles or given a non-TokenDocument, one console warning and nothing done.",
+      { gm: true, writes: true, sideEffects: FROM_CORPSE_WRITES }),
+    legacyRow("corpses.isDead", [ACTOR], "boolean",
       "Dead by the corpse rule: hp 0 or below with hp.max > 0, or the dead status."),
-    corpseRow("corpses.revive", [TOKEN_DOC], "Promise<void>",
+    legacyRow("corpses.revive", [TOKEN_DOC], "Promise<void>",
       "The HUD's Revive: clear Dead, raise hp to 1, then sync (the pile reverts).",
-      { gm: true, writes: true, sideEffects: ["ActiveEffect (Dead)", "system.attributes.hp.value"] }),
-    corpseRow("corpses.paintEye", [{ name: "token", type: "Token", resolve: false, doc: "the canvas placeable" }], "void",
+      { gm: true, writes: true, sideEffects: ["ActiveEffect (Dead)", "system.attributes.hp.value", ...FROM_CORPSE_WRITES] }),
+    legacyRow("corpses.paintEye", [{ name: "token", type: "Token", resolve: false, doc: "the canvas placeable" }], "void",
       "Draw or hide the lootable eye on one token (this client only; no document)."),
-    corpseRow("corpses.paintAllEyes", [], "void", "paintEye on every token of the viewed scene."),
-    corpseRow("corpses.migrateLegacyEyes", [], "Promise<void>",
+    legacyRow("corpses.paintAllEyes", [], "void", "paintEye on every token of the viewed scene."),
+    legacyRow("corpses.migrateLegacyEyes", [], "Promise<void>",
       "Active GM: remove the pre-overlay 'Lootable' effects and make Dead the overlay. Runs once at ready.",
       { gm: true, writes: true, sideEffects: ["ActiveEffect (Lootable, removed)", "flags.core.overlay"] }),
-    corpseRow("loot.install", [APP], "boolean", "Add (or repaint) the Loot all button in one open loot window; false when it cannot."),
-    corpseRow("loot.refreshAll", [], "void", "Repaint every tracked Loot all button."),
-    corpseRow("loot.recipientFor", [APP], "Actor | null",
+    legacyRow("loot.install", [APP], "boolean", "Add (or repaint) the Loot all button in one open loot window; false when it cannot."),
+    legacyRow("loot.refreshAll", [], "void", "Repaint every tracked Loot all button."),
+    legacyRow("loot.recipientFor", [APP], "Actor | null",
       "Who Loot all would loot into: the window's recipient, else the user's character, else their first owned character (players)."),
     {
       path: "all", params: [], returns: "Entry[]", gm: false, writes: false, legacy: true,
@@ -70,7 +77,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "restore",
-      params: [N, { name: "target", type: "Actor|id|exact name", optional: true, resolve: false, doc: "default: the actor it left" }],
+      params: [N, { name: "target", type: "Actor|TokenDocument|uuid|id|exact name", optional: true, resolve: false, doc: "default: the actor it left; a target that does not resolve is no-actor" }],
       returns: "Promise<Item | Notification>", gm: true, writes: true, legacy: true,
       sideEffects: ["Item (created on the target actor)"],
       doc: "GM: recreate entry #n on the actor it left (or target) and toast. A refusal returns the warn/error Notification it showed.",
@@ -87,7 +94,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "restoreResult",
-      params: [N, { name: "target", type: "Actor|id|exact name", optional: true, resolve: false, doc: "default: the actor it left" }],
+      params: [N, { name: "target", type: "Actor|TokenDocument|uuid|id|exact name", optional: true, resolve: false, doc: "default: the actor it left; a target that does not resolve is no-actor" }],
       returns: '{ ok: true, item, actor } | { ok: false, reason: "not-gm" | "no-entry" | "no-actor" | "not-created" }',
       gm: true, writes: true, since: "0.2.2",
       sideEffects: ["Item (created on the target actor)"],
@@ -96,7 +103,8 @@ export const MANIFEST = Object.freeze({
     {
       path: "inspect",
       params: [{ name: "ref", kind: "token", type: "Token|TokenDocument|Actor|uuid|id|exact name", resolve: false,
-        doc: "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId)" }],
+        doc: "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId). By name, a token wins; several tokens of that name throw AMBIGUOUS, pass the token uuid/id or the actor" },
+        { name: "opts", type: "{ sceneId? }", optional: true, doc: "sceneId: the one scene to look in (\"current\" = this client's canvas); default every scene" }],
       returns: "{ token, actor, dead, corpse, noLoot, pile, saved } | { actor, dead, noLoot, pile, corpses: [...] }",
       gm: false, writes: false, since: "0.2.2",
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],

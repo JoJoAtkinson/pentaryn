@@ -91,10 +91,10 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 |---|---|
 | `scripts/foundry/update/admin.py` | Foundry's local admin HTTP API + app process lifecycle. **Start here** — the API's quirks are documented in its module docstring. |
 | `scripts/foundry/update/inventory.py` | On-disk scan of `Data/{modules,systems}`; classifies tracked / protected / local / forked. |
-| `scripts/foundry/update/upstream.py` | Version resolution + release notes (manifest, GitHub, GitLab, r2, Forge). Semver-ish comparison lives here. |
-| `scripts/foundry/update/risk.py` | The deterministic `auto`/`review`/`hold` table, policy loading, the "seen" state. |
+| `scripts/foundry/update/upstream.py` | Version resolution + release notes (manifest, GitHub, GitLab, r2, Forge). Semver-ish comparison lives here. A failed, stalled (timeout) or missing `gh` returns `None` — the package is unresolved (HOLD), as on a 404, never a crashed run. A manifest payload that is not a JSON object is treated the same (HOLD, "could not resolve an upstream version"); a `compatibility`/`relationships` that is not an object is ignored — the earlier source's value is kept, or `{}` — so it does not hold the package on its own (ROB-11). |
+| `scripts/foundry/update/risk.py` | The deterministic `auto`/`review`/`hold` table, policy loading, the "seen" state. A `requires`/`conflicts`/`systems` that is not a list, an entry in one that is not an object, or an `id`/`name` that is not a string holds the package with reason `malformed manifest` (ROB-11). |
 | `scripts/foundry/update/plan.py` | Assembles `plan.json`. Standalone vs Foundry-assisted modes. |
-| `scripts/foundry/update/forks.py` | `gh`-driven fork drift. Report only, never merges. |
+| `scripts/foundry/update/forks.py` | `gh`-driven fork drift. Report only, never merges. A stalled or missing `gh` reads as no forks, not a crash. |
 | `scripts/foundry/update/adjudicate.py` | Sandboxed `claude -p` that grades `review` items. |
 | `scripts/foundry/update/llm.py` | **The one way to call `claude -p`.** Builds the sandboxed argv, refuses tools for untrusted input, heartbeats the status file, enforces timeout/budget, parses cost. |
 | `scripts/foundry/update/escalate.py` | Triage (T0) and impact analysis (T1): facts, floor/ceiling, validators, source bundle, analysis cache, plan writer. |
@@ -104,6 +104,7 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `scripts/foundry/update/recover.py` | The failure-class recovery matrix + backup artefacts. The world rollback point is this host's based-on snapshot (else its own newest), downloaded to temp before extracting. |
 | `scripts/foundry/update/report.py` | Scrubbing, LLM prose, plain fallback, git commit/push. |
 | `scripts/foundry/update/state.py` | mkdir lock, run status file, entry state. |
+| `scripts/foundry/update/children.py` | Registry of the run's `claude -p` / `node` children; on SIGTERM `cli run` terminates them and exits 143 through its `finally` blocks (AC-6). |
 | `scripts/foundry/update/notify.py` | The three notification classes. Prints instead of posting off the Mac. |
 | `scripts/foundry/update/cli.py` | `scan` `run` `status` `notify` `admin-configure` `recover-service`. |
 | `scripts/foundry/admin_password.py` | The admin secret: env → Infisical → macOS keychain. |
@@ -119,10 +120,17 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `foundry/cloudflared/config.yml` | Tunnel ingress; blocks the admin surface. |
 | `foundry/logs/auto-updates/` | Per-run `.md` + `.json`, committed and pushed. |
 
-Runtime state (all gitignored) lives in `.state/`: `vtt-update.lock/` (a **directory** —
-macOS has no `flock`), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
+Runtime state (all gitignored) lives in `.state/`: `vtt-update.lock/` (a **directory**, so
+the shell side can see it — macOS ships no `flock(1)`; every create, stale-break and
+release of it happens under a Python `fcntl.flock` on `vtt-update.lock.guard`, so two runs
+racing a stale lock get exactly one holder; a lock with no `owner.json` counts as held for
+its first 60 s, a release never removes a lock another run has taken over, and any
+filesystem failure while taking it reports it held rather than crashing), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
 `vtt-update-cache/`, `vtt-update-analysis/` (T1 cache, one JSON per package × key),
 `vtt-update-dry-plans/` (plans from dry runs), `core-rollback/`, `system-aside/`, `logs/`.
+The rollback tars in `core-rollback/` and `system-aside/` are written as `<name>.partial`
+and renamed only once complete, so an interrupted stash leaves nothing at the final name
+and the next run takes a fresh copy instead of trusting a truncated one.
 
 ---
 
@@ -241,7 +249,7 @@ every package action 400 while `authenticate()` reported success.
 | A package **never seen before** goes to `review` | A module installed on Thursday shouldn't auto-update Saturday before anyone has looked once. Held packages are **excluded** from the seen file so they keep getting reviewed. |
 | Dry runs never write `vtt-update.seen.json` | Otherwise a dry run silently disarms the guard above. |
 | `dnd5e` treated like any other module | Joe's call: the rolling snapshots are the safety net for its irreversible migration. |
-| Core **generation** change always holds | Foundry's own `willDisableModules`. That is a hands-on migration. |
+| Core **generation** change always holds | Foundry disables every module not re-verified for the new generation. `risk.classify_core` compares the generations itself (see "Other measured facts" above). That is a hands-on migration. |
 | Adjudicator and report run with **no tools and no MCP** | Release notes are attacker-controlled text and this repo's MCP config has `eval-js` and Infisical one call away. `--strict-mcp-config --mcp-config '{"mcpServers":{}}' --disallowed-tools …`. |
 | Per-package `createBackup`, not a full snapshot | A full snapshot copies 2.7 GB of unchanged premium art weekly. Per-package is 3 s and is exactly what `recover_module` restores from. `retention.full_snapshot: true` re-enables the full one. |
 | Both worlds smoked, sequentially | `ardenhaven` and `space-journey` migrate independently, each on its own launch. Smoking one leaves the other to migrate unobserved. |
@@ -395,11 +403,20 @@ the cost line adds "+ up to $X unreported".
 **Time.** The step stops at the earlier of `window.latest − reserve_minutes` and its own
 `max_minutes` (40). `vtt-update.sh`'s backstop is 90 min + `max_minutes` = 7 800 s
 (`escalate.wrapper_timeout()`) — not a flat three hours, which put the kill (07:06) after
-the 06:12 watchdog with nothing left to notice it. And whoever kills the run now cleans
+the 06:12 watchdog with nothing left to notice it. `max_minutes` is clamped to 90 so the
+backstop always fires before the lock is old enough to read as stale (3 h); a clamp is
+listed in the run's `ceiling_reasons`. The kill is SIGTERM, then SIGKILL ten seconds
+later; on the TERM, `cli run` terminates every `claude -p` and `node` smoke child it
+registered (`children.py`) and exits 143 through its `finally` blocks, so nothing is
+orphaned and the lock is released (AC-6). And whoever kills the run now cleans
 up after it: on a 143/137 exit the wrapper runs `cli killed`, which marks the status
 `failed`/`killed`, restores service from the entry state, removes the lock if its owner is
 dead (`make vtt-up` refuses while it exists) and notifies. The watchdog stays quiet about
-a `killed` run; its own dead-run path now also removes a dead owner's lock.
+a `killed` run; its own dead-run path now also removes a dead owner's lock. And it only
+*suspects* death (20 min of status silence), so `recover-service` checks first: while the
+lock owner's pid is alive it prints `run <pid> still alive — not restoring service`, leaves
+world, tunnel and entry state alone, and the watchdog sends "update run is slow" instead of
+"died". A hung-but-alive run is the backstop's to clean up (`cli killed`).
 
 **Adjustments registry.** `foundry/adjustments.yml`: `packages`, `modules`, `files`,
 `markers` (strings that must still be in the files), `what`, `why`, `native_when`,
@@ -464,6 +481,9 @@ Every one of these was invisible to unit tests and would have silently broken pr
    deactivates first, and waits `SETTLE_SECONDS` because the world's LevelDB closes
    *after* `/api/status` reports inactive (otherwise the next launch logs
    `LEVEL_DATABASE_NOT_OPEN` and the error-log check blames the update).
+   If the graceful deactivate is refused it restarts the app instead; if *that* fails
+   (a wedged Electron makes `quit_app`/`start_app` time out), the world is recorded as
+   a failed smoke (`could not return to setup: <exc>`) and the run still recovers.
 
 5. **`/auth` reports a correct admin password as wrong whenever a world is live.**
    Not a wrong password and not a lapsed secret — the route short-circuits on

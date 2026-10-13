@@ -15,8 +15,8 @@
     "err": "Cannot add property ties, object is not extensible"
   },
   {
-    "level": "error",
-    "text": "pentaryn-ties | ready step failed: migrate legacy flags",
+    "level": "warn",
+    "text": "pentaryn-ties | ZZ Caven: legacy ties migration refused — left for the next load",
     "err": "zz setFlag refused"
   },
   {

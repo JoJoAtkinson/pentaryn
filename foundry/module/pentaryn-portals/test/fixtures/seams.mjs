@@ -21,7 +21,7 @@ export async function seams() {
     recordOf: adapter.recordOf, partyRecords: adapter.partyRecords, landingPlaces: adapter.landingPlaces, carryTo: adapter.carryTo,
     confirmParty: adapter.confirmParty, teleportParty: adapter.teleportParty,
     spreadArrival: party.spreadArrival, bringFollowers: party.bringFollowers, cameThroughPortal: party.cameThroughPortal,
-    linkRegions: adapter.linkRegions, destinationsOf: adapter.destinationsOf,
+    linkRegions: adapter.linkRegions, destinationsOf: adapter.destinationsOf, passageRevealed: adapter.passageRevealed,
     teleportBehaviors: adapter.teleportBehaviors, toAbsolute: adapter.toAbsolute, folderNames: adapter.folderNames, lookAt: adapter.lookAt,
     setEditing: badges.setEditing, badgeAt: badges.badgeAt, showTip: badges.showTip, hideTip: badges.hideTip,
     openMenu: badges.openMenu, closeMenu: badges.closeMenu, bindBoard: badges.bindBoard,

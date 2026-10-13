@@ -143,8 +143,9 @@ def _compat_ok(up: Upstream, core_version: str, system_version: str | None,
     """
     ok = True
     core_gen = generation(core_version)
-    min_core = up.compatibility.get("minimum")
-    max_core = up.compatibility.get("maximum")
+    compat = up.compatibility if isinstance(up.compatibility, dict) else {}
+    min_core = compat.get("minimum")
+    max_core = compat.get("maximum")
 
     if min_core and core_gen is not None and generation(min_core) is not None:
         if generation(min_core) > core_gen:
@@ -155,23 +156,55 @@ def _compat_ok(up: Upstream, core_version: str, system_version: str | None,
             reasons.append(f"supports core up to {max_core}, running {core_version}")
             ok = False
 
-    rel = up.relationships or {}
-    for dep in rel.get("requires", []) or []:
-        dep_id = dep.get("id") or dep.get("name")
+    # A third-party manifest we cannot read is held for a human, never a crash (ROB-11):
+    # a non-list requires/conflicts/systems, a non-object entry, or a non-string id.
+    rel = up.relationships if isinstance(up.relationships, dict) else {}
+    malformed = False
+
+    def _entries(key: str) -> list:
+        nonlocal malformed
+        value = rel.get(key)
+        if not value:  # absent, null or empty: nothing declared
+            return []
+        if not isinstance(value, list):
+            malformed = True
+            return []
+        return value
+
+    def _entry_id(entry, *keys: str) -> str | None:
+        nonlocal malformed
+        if not isinstance(entry, dict):
+            malformed = True
+            return None
+        for key in keys:
+            value = entry.get(key)
+            if value is None or value == "":
+                continue
+            if not isinstance(value, str):
+                malformed = True
+                return None
+            return value
+        return None
+
+    for dep in _entries("requires"):
+        dep_id = _entry_id(dep, "id", "name")
         if dep_id and dep_id not in installed_ids:
             reasons.append(f"requires {dep_id}, which is not installed")
             ok = False
-    for conflict in rel.get("conflicts", []) or []:
-        c_id = conflict.get("id") or conflict.get("name")
+    for conflict in _entries("conflicts"):
+        c_id = _entry_id(conflict, "id", "name")
         if c_id and c_id in installed_ids:
             reasons.append(f"declares a conflict with installed {c_id}")
             ok = False
-    systems = rel.get("systems", []) or []
-    if systems and system_version is not None:
-        ids = {s.get("id") for s in systems if s.get("id")}
+    systems = _entries("systems") if system_version is not None else []
+    if systems:
+        ids = {s_id for s in systems if (s_id := _entry_id(s, "id"))}
         if ids and "dnd5e" not in ids:
             reasons.append(f"targets systems {sorted(ids)}, not dnd5e")
             ok = False
+    if malformed:
+        reasons.append("malformed manifest")
+        ok = False
     return ok
 
 
@@ -260,7 +293,7 @@ def classify_core(status_version: str, target: dict | None, preview: dict | None
         d.reasons = [
             f"generation change {running_gen} -> {target_gen}: Foundry disables every "
             "module that has not been re-verified for the new generation. This is the "
-            "hands-on migration — do it deliberately, not at 06:00."
+            "hands-on migration — do it deliberately, not at 04:06."
         ]
         return d
 

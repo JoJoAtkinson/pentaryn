@@ -155,3 +155,25 @@ test("J16: when another wrapper sits on top, unwrap() cannot restore and the rec
   assert.equal(Sheet.prototype.open, original);
   assert.deepEqual(patches(), []);
 });
+
+test("KIT-R1: unwrapAll keeps the record of a patch a foreign wrapper keeps live, so it is not stacked twice", () => {
+  class Sheet { open() { return "sheet"; } close() { return "closed"; } }
+  const original = Sheet.prototype.open;
+  const spec = { target: Sheet.prototype, name: "open", marker: "__pentarynKitR1", adjustments: "x-kit-r1" };
+  const h = wrapMethod("pentaryn-x", spec, w => `ours:${w()}`, { g: {} });
+  const other = wrapMethod("pentaryn-x", { target: Sheet.prototype, name: "close", marker: "__pentarynKitR1c", adjustments: "x-kit-r1c" },
+    w => `ours:${w()}`, { g: {} });
+  const ours = Sheet.prototype.open;
+  Sheet.prototype.open = function () { return `theirs:${ours.call(this)}`; };   // a later, foreign wrap
+  unwrapAll();
+  assert.equal(new Sheet().close(), "closed", "the undoable patch is gone");
+  assert.equal(new Sheet().open(), "theirs:ours:sheet", "the foreign wrap is left alone");
+  assert.deepEqual(patches().map(p => p.marker), ["__pentarynKitR1"], "the still-live patch stays listed");
+  assert.equal(wrapMethod("pentaryn-x", spec, w => `again:${w()}`, { g: {} }), h, "a re-wrap returns the live handle");
+  assert.equal(new Sheet().open(), "theirs:ours:sheet", "not stacked a second time");
+  Sheet.prototype.open = ours;                       // the foreign wrap goes away
+  unwrapAll();
+  assert.equal(Sheet.prototype.open, original);
+  assert.deepEqual(patches(), []);
+  other.unwrap();                                    // already undone: a no-op
+});

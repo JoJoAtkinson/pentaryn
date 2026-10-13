@@ -42,6 +42,18 @@ def test_verify_behind_access_with_the_tunnel_up_fails(monkeypatch):
     assert pipeline.verify() == 1
 
 
+@pytest.mark.repo
+def test_readme_documents_verify_skip_behind_access():
+    """M16: the foundry-verify row named only the unreachable-root skip; verify() also
+    passes when Cloudflare Access answers and this host's tunnel is down, and fails (asking
+    for a browser check) with the tunnel up behind Access."""
+    readme = (cfg.REPO_ROOT / "scripts/foundry/README.md").read_text(encoding="utf-8")
+    row = next(line for line in readme.splitlines() if line.startswith("| `make foundry-verify`"))
+    assert "only when the root itself is unreachable" not in row
+    assert "Cloudflare Access" in row and "tunnel is not running" in row
+    assert "browser" in row
+
+
 def test_access_gated_reads_the_login_redirect(monkeypatch):
     login = "https://team.cloudflareaccess.com/cdn-cgi/access/login/vtt.atjoseph.com?x=1"
     monkeypatch.undo()
@@ -96,6 +108,22 @@ def test_clean_only_fails_loudly_if_the_file_survives(monkeypatch, tmp_path):
     # unlink "succeeds" but the file is still there — a read-only parent dir, say.
     monkeypatch.setattr(type(staged), "unlink", lambda self, **kw: None)
     assert pipeline.clean_only() == 1
+
+
+def test_clean_only_reports_a_refused_delete_instead_of_tracing_back(monkeypatch, tmp_path, capsys):
+    """rob-5: a PermissionError from unlink must print the ✗ line and return FAIL, not raise."""
+    staged = tmp_path / "actors.json"
+    staged.write_text("{}")
+    monkeypatch.setattr(cfg, "ACTORS_STAGED", staged)
+
+    def refuse(self, **kw):
+        raise PermissionError(13, "Permission denied", str(self))
+    monkeypatch.setattr(type(staged), "unlink", refuse)
+    assert pipeline.clean_only() == 1
+    out = capsys.readouterr()
+    text = out.out + out.err
+    assert "still on disk — check permissions" in text
+    assert "Permission denied" in text
 
 
 # ── run_import(): three ways out, all three delete ────────────────────────────
@@ -346,7 +374,7 @@ def test_bridge_status_json_fails_only_on_an_orphan_holder(monkeypatch):
                          orphan=True)
     assert bridge.status_report([live])["ok"] is True
     assert bridge.status_report([orphan])["ok"] is False
-    assert bridge.status_report([])["holder"] is None
+    assert bridge.status_report([])["holders"] == []
 
 
 @pytest.mark.parametrize("cmd, fn", [("module-vendor", "vendor"),
@@ -375,6 +403,24 @@ def test_blueprint_wrappers_accept_a_leading_option(monkeypatch, cmd, fn, argv):
     monkeypatch.setattr(mod, "main", lambda a: seen.append(a) or 0)
     assert cli.main([cmd, *argv]) == 0
     assert seen == [argv]
+
+
+@pytest.mark.parametrize("argv", [
+    ["module-new", "demo", "--title", "T"],
+    ["--", "module-new", "demo", "--title", "T"],
+    ["--", "module-vendor", "check", "--all"],
+])
+def test_blueprint_wrappers_route_once_through_the_table(monkeypatch, argv):
+    # M10: `ops -- module-new …` reaches argparse and used to be routed by a second,
+    # hand-copied `if c == "module-…"` ladder; both spellings now go through _WRAPPERS.
+    seen = []
+    cmd = argv[1] if argv[0] == "--" else argv[0]
+    rest = argv[2:] if argv[0] == "--" else argv[1:]
+    for fn in ("module_new", "module_vendor", "module_conformance"):
+        monkeypatch.setattr(cli.modules, fn, lambda *a: pytest.fail("routed around _WRAPPERS"))
+    monkeypatch.setitem(cli._WRAPPERS, cmd, lambda r: seen.append(r) or 5)
+    assert cli.main(argv) == 5
+    assert seen == [rest]
 
 
 def test_module_new_installs_into_foundry_module_unless_out_is_given(monkeypatch):
@@ -515,13 +561,16 @@ def test_pipeline_access_gated_shares_the_status_rule(monkeypatch):
     assert pipeline._access_gated(cfg.ACTORS_URL) is True
 
 
-@pytest.mark.parametrize(
-    "code,location,expected",
-    [(0, "", None), (302, "/setup", False), (302, "/join", True), (200, "", True)],
-)
-def test_world_is_launched(monkeypatch, code, location, expected):
-    monkeypatch.setattr(service, "_probe", lambda url, t: (code, location))
-    assert service.world_is_launched() is expected
+def test_world_is_launched_is_gone_M4():
+    # M4: nothing in production called world_is_launched — status_report reads the
+    # /setup redirect itself — so the helper and its test were dead weight.
+    assert not hasattr(service, "world_is_launched")
+
+
+def test_config_has_no_foundry_app_M5():
+    # M5: config.FOUNDRY_APP was "only for messages" and no message read it — the
+    # launch-failure message names host.foundry_app_root() instead.
+    assert not hasattr(cfg, "FOUNDRY_APP")
 
 
 # ── the world guard ───────────────────────────────────────────────────────────
@@ -646,7 +695,7 @@ def test_real_after_sync_has_exactly_one_source():
     it, else the config tuple. A module carrying both (mid-move to module.json) must say the same
     thing in both; a generated module (pentaryn-feedback) carries only module.json."""
     for name, spec in cfg.MODULES.items():
-        manifest = cfg._read_json(spec.src / "module.json") or {}
+        manifest = cfg.read_json(spec.src / "module.json") or {}
         lines = ((manifest.get("flags") or {}).get("pentaryn") or {}).get("afterSync")
         if lines:
             assert spec.after_sync == tuple(lines), name
@@ -803,6 +852,20 @@ def test_pick_world_without_a_terminal_never_switches_the_live_world(monkeypatch
     assert login._pick_world("ardenhaven", None, prompt=False) == "ardenhaven"
 
 
+def test_pick_world_without_a_terminal_rejects_a_configured_world_not_on_disk(monkeypatch):
+    """EC-14: `login --no-prompt` with nothing running fell back to cfg.WORLD_NAME
+    unchecked and asked Foundry to activate a world that is not there. It must fail
+    the same way an explicit --world typo does."""
+    monkeypatch.setattr(cfg, "WORLD_NAME", "gone-world")
+    monkeypatch.setattr(login, "worlds_on_disk", lambda: [
+        {"id": "ardenhaven", "title": "A", "system": "dnd5e", "played_label": "2026-01-01"},
+        {"id": "space-journey", "title": "SJ", "system": "dnd5e", "played_label": "2026-08-22"},
+    ])
+    with pytest.raises(RuntimeError, match=r"no world named 'gone-world' on disk — have: "
+                                           r"ardenhaven, space-journey"):
+        login._pick_world(None, None, prompt=False)
+
+
 def test_pick_world_menu_defaults_to_the_running_world(monkeypatch):
     seen = {}
 
@@ -857,6 +920,51 @@ def test_ensure_world_launches_when_nothing_is_running(fake_admin):
     fa = fake_admin(False, None)
     login._ensure_world(fa, "space-journey", prompt=False)
     assert not fa.deactivated and fa.launched == ["space-journey"]
+
+
+def test_login_asks_foundry_for_its_status_once(monkeypatch, fake_admin):
+    """M15: login() read ``fa.status().world if fa.status().active`` — two GET /api/status
+    calls, which could also disagree if the world changed between them."""
+    fa = fake_admin(True, "ardenhaven")
+    calls = []
+    real_status = fa.status
+    fa.status = lambda: calls.append(1) or real_status()
+    picked = {}
+
+    def stop_at_pick(active, world, prompt):
+        picked["active"] = active
+        raise RuntimeError("stop here")
+
+    monkeypatch.setattr(login.service, "up", lambda: login.OK)
+    monkeypatch.setattr(login, "foundry_admin_password", lambda: "pw")
+    monkeypatch.setattr(login, "FoundryAdmin", lambda **kw: fa)
+    monkeypatch.setattr(login, "_pick_world", stop_at_pick)
+    monkeypatch.setattr(login, "_say", lambda *a, **k: None)
+    assert login.login(world="ardenhaven", user="Gamemaster", prompt=False) == login.FAIL
+    assert picked["active"] == "ardenhaven"
+    assert len(calls) == 1
+
+
+def test_login_accepts_a_user_record_with_only_an_id_key(monkeypatch, fake_admin):
+    """rob-6: ``who["_id"] or who.get("id")`` raised KeyError on a join-data user that
+    carries only ``id``, so the ``id`` fallback never ran and login traced back."""
+    fa = fake_admin(True, "ardenhaven")
+    fa.authenticate = lambda: None
+    fa.join_data = lambda: {"users": [{"id": "gm1", "name": "Gamemaster", "role": 4}]}
+    logged = []
+
+    def login_as(uid):
+        logged.append(uid)
+        raise RuntimeError("stop here")
+
+    fa.login_as = login_as
+    monkeypatch.setattr(login, "worlds_on_disk", lambda: [{"id": "ardenhaven"}])
+    monkeypatch.setattr(login.service, "up", lambda: login.OK)
+    monkeypatch.setattr(login, "foundry_admin_password", lambda: "pw")
+    monkeypatch.setattr(login, "FoundryAdmin", lambda **kw: fa)
+    monkeypatch.setattr(login, "_say", lambda *a, **k: None)
+    assert login.login(world="ardenhaven", user="Gamemaster", prompt=False) == login.FAIL
+    assert logged == ["gm1"]
 
 
 def test_handoff_is_single_use_and_nonce_guarded():
@@ -1170,3 +1278,271 @@ def test_tunnel_pid_rejects_non_positive_pids(monkeypatch, tmp_path, capsys, con
     assert "tunnel already down" in capsys.readouterr().out
     assert not [c for c in calls if c[0] <= 0]
     assert not [c for c in calls if c[1] == 15]
+
+
+# ── EC-3: a stale tunnel pidfile whose pid now belongs to another process ─────
+# A pidfile outlives cloudflared, and the OS hands its number to whatever starts
+# next. `kill -0` only proves *some* process holds the pid, so tunnel-up said
+# "already up" and tunnel-down SIGTERMed an unrelated process.
+
+@pytest.fixture
+def reused_pid(monkeypatch, tmp_path):
+    """The pidfile names a live pid that is not cloudflared."""
+    import os
+    import subprocess
+    pidfile = tmp_path / "cloudflared.pid"
+    pidfile.write_text(str(os.getpid()))   # alive, and certainly not cloudflared
+    monkeypatch.setattr(cfg, "CF_PID", pidfile)
+    monkeypatch.setattr(cfg, "RUN_DIR", tmp_path)
+    real_run = subprocess.run
+    monkeypatch.setattr(service.subprocess, "run", lambda argv, **kw: (
+        real_run(argv, **kw) if argv[:2] == ["ps", "-p"]
+        else pytest.fail(f"unexpected process {argv}")))
+    kills = []
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: kills.append((pid, sig)))
+    return pidfile, kills
+
+
+def test_tunnel_pid_ignores_a_pid_that_is_not_cloudflared(reused_pid):
+    """EC-3: a reused pid is not the tunnel."""
+    assert service._tunnel_pid() is None
+
+
+def test_tunnel_down_never_signals_a_reused_pid(reused_pid, capsys):
+    """EC-3: tunnel-down removes the stale pidfile and says so, killing nothing."""
+    pidfile, kills = reused_pid
+    assert service.tunnel_down() == 0
+    assert [k for k in kills if k[1] != 0] == []
+    assert not pidfile.exists()
+    out = capsys.readouterr().out
+    assert "stale pidfile removed" in out and "tunnel already down" in out
+
+
+def test_tunnel_up_does_not_call_a_reused_pid_already_up(reused_pid, monkeypatch, capsys):
+    """EC-3: tunnel-up drops the stale pidfile and goes on to start the tunnel."""
+    pidfile, _ = reused_pid
+    monkeypatch.setattr(service.host, "require_primary", lambda *a, **kw: None)
+    monkeypatch.setattr(service, "CF_CERT", pidfile.parent / "missing-cert.pem")
+    assert service.tunnel_up() == 1   # reached the cert check, i.e. not "already up"
+    out = capsys.readouterr().out
+    assert "already up" not in out and "stale pidfile removed" in out
+    assert not pidfile.exists()
+
+
+def test_tunnel_pid_trusts_a_live_cloudflared(monkeypatch, tmp_path):
+    """EC-3: the real tunnel still reads as up (ps names it by full path on macOS)."""
+    import subprocess
+    pidfile = tmp_path / "cloudflared.pid"
+    pidfile.write_text("4242")
+    monkeypatch.setattr(cfg, "CF_PID", pidfile)
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: None)
+    monkeypatch.setattr(service.subprocess, "run", lambda argv, **kw: subprocess.CompletedProcess(
+        argv, 0, stdout="/opt/homebrew/bin/cloudflared\n", stderr=""))
+    assert service._tunnel_pid() == 4242
+
+
+# ── py-ops-ac-3: overlapping tunnel-up runs start one cloudflared, not two ────
+# tunnel_up checked the pidfile, then (seconds later, after `cloudflared tunnel list`)
+# started cloudflared and wrote the pidfile. Two runs in that window both saw "no
+# tunnel" and both started one. An flock on RUN_DIR/cloudflared.lock now spans the
+# check through the pidfile write, so the second run waits and then sees it up.
+
+def test_overlapping_tunnel_up_runs_start_one_cloudflared(monkeypatch, tmp_path, capsys):
+    """py-ops-ac-3: two concurrent tunnel-up runs → one Popen, one 'already up'."""
+    import threading
+    monkeypatch.setattr(cfg, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(cfg, "CF_PID", tmp_path / "cloudflared.pid")
+    monkeypatch.setattr(cfg, "CF_LOG", tmp_path / "cloudflared.log")
+    cert = tmp_path / "cert.pem"
+    cert.write_text("x")
+    monkeypatch.setattr(service, "CF_CERT", cert)
+    monkeypatch.setattr(service.host, "require_primary", lambda *a, **kw: None)
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: None)
+    monkeypatch.setattr(service, "_is_cloudflared", lambda pid: True)
+    monkeypatch.setattr(service.time, "sleep", lambda s: None)
+
+    # Hold whoever reaches `cloudflared tunnel list` until the other run gets there too
+    # (or 1 s passes, which is what happens once the lock makes the other run wait).
+    both_listed = threading.Barrier(2, timeout=1.0)
+
+    def fake_run(argv, **kw):
+        try:
+            both_listed.wait()
+        except threading.BrokenBarrierError:
+            pass
+        import subprocess
+        return subprocess.CompletedProcess(argv, 0, stdout=f"{cfg.TUNNEL_NAME}\n", stderr="")
+
+    started = []
+
+    class FakePopen:
+        def __init__(self, argv, **kw):
+            started.append(argv)
+            self.pid = 40000 + len(started)
+
+    monkeypatch.setattr(service.subprocess, "run", fake_run)
+    monkeypatch.setattr(service.subprocess, "Popen", FakePopen)
+
+    results = []
+    runs = [threading.Thread(target=lambda: results.append(service.tunnel_up()))
+            for _ in range(2)]
+    for t in runs:
+        t.start()
+    for t in runs:
+        t.join(timeout=10)
+
+    assert results == [0, 0]
+    assert len(started) == 1, f"py-ops-ac-3: {len(started)} cloudflared processes started"
+    out = capsys.readouterr().out
+    assert out.count("starting tunnel") == 1 and "tunnel already up" in out
+
+
+# ── py-ops-ac-4: ps, lsof and `cloudflared tunnel list` carry a timeout ───────
+# bridge.py's ps/lsof and service.py's `cloudflared tunnel list` ran with no timeout,
+# so a wedged ps or a cloudflared stuck on the network hung `make` forever. Each call
+# now carries one (10 s for ps/lsof, 20 s for cloudflared) and a timeout is a ✗ line
+# and FAIL, not a hang.
+
+def _hung_run(calls):
+    """A subprocess.run that records its kwargs and behaves as a hung command would
+    once its timeout fires. With no timeout it fails the test instead of hanging."""
+    import subprocess
+
+    def run(argv, **kw):
+        calls.append((list(argv), kw.get("timeout")))
+        if kw.get("timeout") is None:
+            raise AssertionError(f"py-ops-ac-4: {argv[0]} run with no timeout")
+        raise subprocess.TimeoutExpired(argv, kw["timeout"])
+    return run
+
+
+@pytest.mark.parametrize("call", ["status", "status_json", "clean", "clean_dry"])
+def test_bridge_commands_fail_on_a_hung_ps_instead_of_hanging(call, monkeypatch, capsys):
+    """py-ops-ac-4: a hung ps/lsof → bridge status/clean print ✗ and return FAIL."""
+    import json
+    from scripts.foundry.ops import bridge
+    calls = []
+    monkeypatch.setattr(bridge.subprocess, "run", _hung_run(calls))
+    monkeypatch.setattr(bridge.time, "sleep", lambda s: None)
+    rc = {"status": lambda: bridge.status(),
+          "status_json": lambda: bridge.status(as_json=True),
+          "clean": lambda: bridge.clean(),
+          "clean_dry": lambda: bridge.clean(dry_run=True)}[call]()
+    assert rc == 1
+    assert calls and all(t == 10 for _, t in calls), calls
+    out = capsys.readouterr().out
+    if call == "status_json":
+        assert json.loads(out)["ok"] is False
+    else:
+        assert "✗" in out and "did not answer" in out
+
+
+def test_bridge_ps_and_lsof_carry_a_timeout(monkeypatch):
+    """py-ops-ac-4: every ps/lsof call in a scan passes timeout=10."""
+    import subprocess
+    from scripts.foundry.ops import bridge
+    seen = []
+
+    def run(argv, **kw):
+        seen.append((argv[0], kw.get("timeout")))
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+    monkeypatch.setattr(bridge.subprocess, "run", run)
+    bridge.scan()
+    bridge._comms()
+    assert {a for a, _ in seen} == {"ps", "lsof"}
+    assert all(t == 10 for _, t in seen), seen
+
+
+def _tunnel_ready(monkeypatch, tmp_path):
+    monkeypatch.setattr(cfg, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(cfg, "CF_PID", tmp_path / "cloudflared.pid")
+    cert = tmp_path / "cert.pem"
+    cert.write_text("x")
+    monkeypatch.setattr(service, "CF_CERT", cert)
+    monkeypatch.setattr(service.host, "require_primary", lambda *a, **kw: None)
+
+
+def test_tunnel_up_fails_when_cloudflared_does_not_answer(monkeypatch, tmp_path, capsys):
+    """py-ops-ac-4: a hung `cloudflared tunnel list` → ✗ 'cloudflared did not answer', FAIL."""
+    _tunnel_ready(monkeypatch, tmp_path)
+    calls = []
+    monkeypatch.setattr(service.subprocess, "run", _hung_run(calls))
+    monkeypatch.setattr(service.subprocess, "Popen",
+                        lambda *a, **kw: pytest.fail("started cloudflared after a timeout"))
+    assert service.tunnel_up() == 1
+    assert ["cloudflared", "tunnel", "list"] in [a for a, _ in calls]
+    assert all(t == 20 for a, t in calls if a[0] == "cloudflared"), calls
+    out = capsys.readouterr().out
+    assert "✗" in out and "cloudflared did not answer" in out
+    assert not cfg.CF_PID.exists()
+
+
+def test_tunnel_setup_fails_when_cloudflared_does_not_answer(monkeypatch, tmp_path, capsys):
+    """py-ops-ac-4: tunnel-setup's list/create/route calls time out into a ✗ line."""
+    _tunnel_ready(monkeypatch, tmp_path)
+    monkeypatch.setattr(service.shutil, "which", lambda name: "/usr/local/bin/cloudflared")
+    calls = []
+    monkeypatch.setattr(service.subprocess, "run", _hung_run(calls))
+    assert service.tunnel_setup() == 1
+    assert calls and all(t == 20 for _, t in calls), calls
+    out = capsys.readouterr().out
+    assert "✗" in out and "cloudflared did not answer" in out
+    assert "setup complete" not in out
+
+
+# ── M9: one `cloudflared tunnel list` existence check ─────────────────────────
+# tunnel_up and tunnel_setup each ran their own copy of `cloudflared tunnel list`
+# plus the name check. Both now ask _tunnel_exists(), which carries the ac-4 timeout.
+
+def test_tunnel_exists_lists_with_the_cloudflared_timeout(monkeypatch):
+    """M9: _tunnel_exists runs `cloudflared tunnel list` with CF_TIMEOUT and finds the name."""
+    import subprocess
+    seen = []
+
+    def run(argv, **kw):
+        seen.append((list(argv), kw.get("timeout")))
+        return subprocess.CompletedProcess(argv, 0, stdout=f"id  {cfg.TUNNEL_NAME}\n", stderr="")
+    monkeypatch.setattr(service.subprocess, "run", run)
+    assert service._tunnel_exists() is True
+    assert seen == [(["cloudflared", "tunnel", "list"], service.CF_TIMEOUT)]
+    monkeypatch.setattr(service.subprocess, "run",
+                        lambda argv, **kw: subprocess.CompletedProcess(argv, 0, stdout="", stderr=""))
+    assert service._tunnel_exists() is False
+
+
+def test_tunnel_up_and_setup_share_the_existence_check(monkeypatch, tmp_path, capsys):
+    """M9: tunnel_up and tunnel_setup both consult _tunnel_exists, never their own list."""
+    import subprocess
+    _tunnel_ready(monkeypatch, tmp_path)
+    monkeypatch.setattr(service.shutil, "which", lambda name: "/usr/local/bin/cloudflared")
+    asked = []
+    monkeypatch.setattr(service, "_tunnel_exists", lambda: asked.append(1) or False)
+    runs = []
+
+    def run(argv, **kw):
+        runs.append(list(argv))
+        return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
+    monkeypatch.setattr(service.subprocess, "run", run)
+
+    assert service.tunnel_up() == 1
+    assert "doesn't exist" in capsys.readouterr().out
+    assert service.tunnel_setup() == 1   # create failed after "does not exist"
+    assert len(asked) == 2, "M9: each caller must ask _tunnel_exists once"
+    assert ["cloudflared", "tunnel", "list"] not in runs, runs
+    assert ["cloudflared", "tunnel", "create", cfg.TUNNEL_NAME] in runs
+
+
+# ── tunnel-logs -n (rob-9) ────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("n,expected", [
+    (2, "three\nfour"),
+    (0, ""),      # [-0:] used to print the whole log
+    (-1, ""),     # [--1:] used to print everything but the first line
+])
+def test_tunnel_logs_prints_only_the_last_n_lines(monkeypatch, tmp_path, capsys, n, expected):
+    """rob-9: `tunnel-logs -n 0` printed the whole log and a negative -n misbehaved."""
+    log = tmp_path / "cloudflared.log"
+    log.write_text("one\ntwo\nthree\nfour\n")
+    monkeypatch.setattr(cfg, "CF_LOG", log)
+    assert service.tunnel_logs(n) == 0
+    assert capsys.readouterr().out == (expected + "\n" if expected else "")

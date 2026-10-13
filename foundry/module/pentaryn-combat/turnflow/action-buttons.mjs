@@ -14,18 +14,12 @@ import { setting } from "../settings.mjs";
 import { combatContext, turnOf, updateTurn, countFor, chosenWeapon } from "../shapes.mjs";
 import { mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
 import { expectRoll, forgetRoll } from "../sequence.mjs";
+import { tempHooks, opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
-/**
- * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
- * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
- */
-let hooks = null;
-const temp = {
-  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
-  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
-};
+let hooks = null;                       // the registry install() was given; temporary hooks go through it
+const temp = tempHooks(() => hooks);
 
 /** Argon's updateActionUse paints used pips only when the pip count didn't change; twice settles it. */
 function paint(panel) {
@@ -42,17 +36,16 @@ function swingsPerAction(actor) {
   try { return countFor(actor, chosenWeapon(actor), { multiattackOn: setting("multiattack") }); } catch { return 1; }
 }
 
-async function addTurnEffect(actor, kind, img) {
-  const changes = kind === "dash" ? dashBase(actor) : [];
-  await actor.createEmbeddedDocuments("ActiveEffect", [{
+async function addTurnEffect(actor, kind, img, changes = []) {
+  await actor.createEmbeddedDocuments("ActiveEffect", [core.turnEffectData({
+    module: MODULE,
+    kind,
     name: _loc(core.keyFor("Turn.Effect", kind)),
     img: img || "icons/svg/wingfoot.svg",
-    description: `<p>${_loc(core.keyFor("Turn.EffectText", kind))}</p>`,
-    transfer: false,
-    origin: actor.uuid,
-    system: { changes },
-    flags: { [MODULE]: { until: "turnEnd", special: kind }, dnd5e: { isTemporary: true } }
-  }]);
+    description: _loc(core.keyFor("Turn.EffectText", kind)),
+    changes,
+    origin: actor.uuid
+  })]);
 }
 
 /** Dash adds your Speed after modifiers; a second Dash this turn adds the same again, not double. */
@@ -78,22 +71,38 @@ async function rollHide(actor) {
   }
 }
 
+/**
+ * What each special action does after Argon's click, one row per core.SPECIAL_ACTIONS kind.
+ * `swing`: it is one of the Attack action's swings (Shove), so no Action pip is spent (core's
+ * recordSpecialAction counts the swing). `onTurn`: only on your own turn in combat, after the
+ * record. `always`: on or off your turn.
+ */
+export const AFTER = Object.freeze({
+  dash: Object.freeze({ onTurn: (actor, btn) => addTurnEffect(actor, "dash", btn.item?.img, dashBase(actor)) }),
+  disengage: Object.freeze({ onTurn: (actor, btn) => addTurnEffect(actor, "disengage", btn.item?.img) }),
+  // Argon toggles Dodging: a second Dodge would have switched it off.
+  dodge: Object.freeze({ always: async (actor) => { if (!actor.statuses?.has?.("dodging")) await actor.toggleStatusEffect("dodging", { active: true }); } }),
+  hide: Object.freeze({ always: (actor) => rollHide(actor) }),
+  ready: Object.freeze({}),
+  shove: Object.freeze({ swing: true }),
+});
+
 async function afterSpecial(actor, kind, btn) {
+  const row = AFTER[kind] ?? {};
   const ctx = combatContext(actor);
   const mine = ctx.inCombat && ctx.isOwnTurn;
   // Spend the Action pip Argon meant to spend (pentaryn's swing pips read the turn flag below).
-  if (mine && kind !== "shove") {
+  if (mine && !row.swing) {
     const action = mainPanel("DND5E.Action");
     if (action) { action.isActionUsed = true; paint(action); }
   }
   // An item the actor owns ran through dnd5e: postUseActivity already counted it; only the pip was missing.
   if (btn.actorItem) return;
-  if (mine) await updateTurn(actor, t => core.recordSpecialAction(t, kind));
-  if (kind === "dash" && mine) await addTurnEffect(actor, "dash", btn.item?.img);
-  if (kind === "disengage" && mine) await addTurnEffect(actor, "disengage", btn.item?.img);
-  // Argon toggles Dodging: a second Dodge would have switched it off.
-  if (kind === "dodge" && !actor.statuses?.has?.("dodging")) await actor.toggleStatusEffect("dodging", { active: true });
-  if (kind === "hide") await rollHide(actor);
+  if (mine) {
+    await updateTurn(actor, t => core.recordSpecialAction(t, kind));
+    await row.onTurn?.(actor, btn);
+  }
+  await row.always?.(actor, btn);
 }
 
 function wrapSpecial(btn) {
@@ -109,8 +118,8 @@ function wrapSpecial(btn) {
     if (ctx.inCombat && ctx.isOwnTurn) {
       const turn = turnOf(actor);
       const left = core.actionsLeft(turn, swingsPerAction(actor));
-      const shoveOk = kind === "shove" && core.swingsLeft(swingsPerAction(actor), turn, { inCombat: true }) > 0;
-      if (!left && !shoveOk) ui.notifications.warn(_loc("PENTARYN_COMBAT.Turn.NoActionLeft", { action: btn.label }));
+      const swingOk = !!AFTER[kind]?.swing && core.swingsLeft(swingsPerAction(actor), turn, { inCombat: true }) > 0;
+      if (!left && !swingOk) ui.notifications.warn(_loc("PENTARYN_COMBAT.Turn.NoActionLeft", { action: btn.label }));
     }
     await own.call(btn, event);
     try { await afterSpecial(actor, kind, btn); } catch (err) { log.warn(`${kind}`, err); }
@@ -170,8 +179,6 @@ const onActionPanel = (panel) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 // hot: per-button markers (_pcSpecial, _pcOA); no world iteration
 export function install(reg) {

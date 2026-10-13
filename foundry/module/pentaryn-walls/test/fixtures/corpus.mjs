@@ -15,7 +15,7 @@ const w = (x0, y0, x1, y1, extra = {}) => ({
   light: 20, move: 20, sight: 20, sound: 20, door: 0, ds: 0, dir: 0, levels: [],
   ...extra
 });
-/** Foundry's window preset: proximity sight + threshold (walls.mjs:469). */
+/** Foundry's window preset (proximity sight/light). Its threshold is irrelevant: windows infer solid. */
 const win = (x0, y0, x1, y1, extra = {}) => w(x0, y0, x1, y1, {light: 30, sight: 30, ...extra});
 const door = (x0, y0, x1, y1, extra = {}) => w(x0, y0, x1, y1, {door: 1, ...extra});
 const terrain = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {light: 10, sight: 10, sound: 10, ...e});

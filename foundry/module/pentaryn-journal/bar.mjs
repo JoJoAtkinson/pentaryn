@@ -1,7 +1,7 @@
 /**
- * Pentaryn Player Journal — FEATURE: the bar. "Add to my journal" under every eye readable (a
- * JournalEntry opened from a scene Note pin, its image popout, an item opened from an eye pile):
- * the footer itself, saving into the personal journal, the glow on the new entry, the single-page
+ * Pentaryn Player Journal — FEATURE: the bar. "Add to my journal" under any journal (or its image
+ * popout) the player can observe but does not own, pinned by a scene Note or not, and under any item
+ * in an inspectable eye pile (README "Who sees it"): the footer itself, saving into the personal journal, the glow on the new entry, the single-page
  * view for one-page eyes, and the provenance line (only names the player already sees).
  *
  * ⚠ Privacy. The copy is made on the player's own client, from the raw HTML that client already
@@ -13,9 +13,10 @@
  */
 
 import {
-  MODULE, escapeHTML, findSaved, isMine, isPersonal, makePinnedCache, needsItemRefresh, placeFrom, planSave, singlePage,
+  MODULE, escapeHTML, findSaved, isMine, isPersonal, needsItemRefresh, placeFrom, planSave, singlePage,
   skipReason, status,
 } from "./journal-core.mjs";
+import { PIN_HOOKS, makePinnedCache, pinsChanged } from "./lib/pins.mjs";
 import { setting, whenChanged } from "./settings.mjs";
 import { descriptorsFor, targetFor as targetForApp } from "./sources-adapter.mjs";
 
@@ -109,7 +110,8 @@ async function saveNow(target, { near } = {}) {
   if (plan.update.length) await journal.updateEmbeddedDocuments("JournalEntryPage", plan.update);
   const pageId = created[0]?.id ?? plan.update[0]?._id ?? plan.existing[0];
   const fresh = created.length > 0;
-  await openSaved(journal, pageId, { justAdded: fresh, near });
+  // The copy exists now: a window that will not open must not turn that into a failed save (journal-rob-6).
+  try { await openSaved(journal, pageId, { justAdded: fresh, near }); } catch (err) { ctx.log.warn("open after save failed", err); }
   const name = journal.pages.get(pageId)?.name ?? "";
   if (fresh) ui.notifications.info(game.i18n.format("PENTARYN_JOURNAL.notify.added", { name }));
   else if (plan.update.length) ui.notifications.info(game.i18n.format("PENTARYN_JOURNAL.notify.updated", { name }));
@@ -169,7 +171,7 @@ function applyHighlight(app, element, options) {
 
 const busy = new WeakSet();
 
-/** `pages`: the user's journal pages, when the caller already has them (one personal() per action). */
+/** `pages`: the user's journal pages, when the caller already has them (one personal() per action or refresh pass). */
 function savedStatus(target, pages = ctx.exposed.personal()?.pages.contents ?? []) {
   const sources = descriptorsFor(target);
   const st = status(pages, sources);
@@ -185,12 +187,13 @@ function sinceText(ts) {
   try { return foundry.utils.timeSince(ts); } catch { return new Date(ts).toLocaleDateString(); }
 }
 
-function fillBar(app, bar, target) {
-  if (busy.has(app)) {
+/** `shown`: savedStatus(target), or null while the window is busy adding. */
+function fillBar(bar, shown) {
+  if (!shown) {
     bar.innerHTML = `<button type="button" class="pj-add" disabled><i class="fa-solid fa-spinner fa-spin"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.adding"))}</span></button>`;
     return;
   }
-  const { st, saved } = savedStatus(target);
+  const { st, saved } = shown;
   const add = `<button type="button" class="pj-add" data-pj="add"><i class="fa-solid fa-book-medical"></i> <span>${barEsc(game.i18n.localize("PENTARYN_JOURNAL.add"))}</span></button>`;
   if (st === "saved") {
     const when = saved?.flags?.[MODULE]?.source?.updatedAt ?? saved?.flags?.[MODULE]?.source?.savedAt;
@@ -233,15 +236,20 @@ async function onBarClick(app, ev) {
 }
 
 /**
- * Put the bar on a window, refresh it, or take it off. Idempotent; called on every render.
+ * Put the bar on a window, refresh it, or take it off (no target, or no page this user can see).
+ * Idempotent; called on every render.
  * It is a footer on the window ROOT, after .window-content, so part re-renders never touch it.
+ * `userPages`: () → the user's journal pages, looked up once per refreshBarsNow pass (journal-perf-4);
+ * the render hooks leave it out and savedStatus looks them up.
  */
-function decorate(app) {
+function decorate(app, userPages) {
   const root = app?.element;
   if (!(root instanceof HTMLElement)) return;
   let bar = root.querySelector(":scope > .pj-bar");
   const target = targetFor(app);
-  if (!target) {
+  const shown = target && !busy.has(app) ? savedStatus(target, userPages?.()) : null;
+  // No page this user can see: a bar there would add nothing, so it is hidden too (journal-EC-3).
+  if (!target || shown?.sources.length === 0) {
     barKind.delete(app);
     bar?.remove();
     root.classList.remove("pentaryn-journal-readable");
@@ -256,7 +264,7 @@ function decorate(app) {
     bar.addEventListener("click", ev => onBarClick(app, ev).catch(err => ctx.log.warn("bar click failed", err)));
   }
   root.classList.add("pentaryn-journal-readable");
-  fillBar(app, bar, target);
+  fillBar(bar, shown);
 }
 
 /** app → the kind of target its bar shows ("entry" | "image" | "item"), while it has one. */
@@ -270,9 +278,11 @@ function openBarKinds() {
 }
 
 function refreshBarsNow() {
+  let pages;   // looked up on the first bar that needs it, then shared by the rest of the pass
+  const userPages = () => (pages ??= ctx.exposed.personal()?.pages.contents ?? []);
   for (const app of foundry.applications.instances.values()) {
     if (!app.rendered) continue;
-    try { decorate(app); } catch (err) { ctx.log.warn("bar refresh skipped", err); }
+    try { decorate(app, userPages); } catch (err) { ctx.log.warn("bar refresh skipped", err); }
   }
 }
 /** Every bar, 100 ms after the last of a burst of changes (created in install: needs foundry). */
@@ -284,20 +294,20 @@ const personalSheet = () => ctx.exposed.personal()?.sheet;
 /**
  * Which journals a scene Note pins, cached (items-journal-38): applySinglePage runs on every journal
  * render, and the answer used to walk every scene's notes each time. Forgotten whenever a Note or a
- * Scene is created, updated or deleted (a Scene update only when it changes `notes`, pinned-cache).
+ * Scene is created, updated or deleted (a Scene update only when it changes `notes`, pinned-cache):
+ * the kit's PIN_HOOKS and pinsChanged (lib/pins.mjs, journal-EXT-9).
  * Those six listeners are registered on first use (always after ready: only a journal render asks),
  * not at load — the load-time hook manifest stays as it was.
  */
 const pins = makePinnedCache(() => game.scenes);
-const PIN_HOOKS = ["createNote", "updateNote", "deleteNote", "createScene", "deleteScene"];
 let watchingPins = false;
 
 function isEyeReadable(entry) {
   if (!watchingPins) {
     watchingPins = true;
-    for (const h of PIN_HOOKS) ctx.reg.on(h, () => pins.invalidate(), { label: `${h}: forget pinned journals` });
-    ctx.reg.on("updateScene", (_scene, changed) => { if (changed && "notes" in changed) pins.invalidate(); },
-      { label: "updateScene: forget pinned journals when its notes change" });
+    for (const h of PIN_HOOKS) {
+      ctx.reg.on(h, (_doc, changed) => { if (pinsChanged(h, changed)) pins.invalidate(); }, { label: `${h}: forget pinned journals` });
+    }
   }
   return pins.has(entry.id);
 }
@@ -335,7 +345,10 @@ export function install(reg, context) {
   offSettings.push(
     whenChanged("gmButton", () => refreshBars()),
     whenChanged("singlePageReadables", () => {
-      for (const a of foundry.applications.instances.values()) if (a.rendered && a.document?.documentName === "JournalEntry") applySinglePage(a);
+      for (const a of foundry.applications.instances.values()) {
+        if (!(a.rendered && a.document?.documentName === "JournalEntry")) continue;
+        try { applySinglePage(a); } catch (err) { ctx.log.warn("single-page skipped", err); }
+      }
     }),
   );
 
@@ -372,7 +385,7 @@ export function install(reg, context) {
   // Only an item bar can change with an item (items-journal-33); entry and image bars never read items.
   reg.on("updateItem", () => { if (needsItemRefresh(openBarKinds())) refreshBars(); }, { label: "updateItem: refresh item bars" });
 
-  ctx.expose({ save, openSaved, savedStatus, refreshBars: () => refreshBars(), applySinglePage, lastSkip: () => lastSkip });
+  ctx.expose({ save, openSaved, savedStatus, lastSkip: () => lastSkip });
 }
 
 export function uninstall() {

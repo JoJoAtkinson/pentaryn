@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApi, describe, maxDepth, surfaceOf, toPlain } from "../api.mjs";
+import * as kitApi from "../api.mjs";
 import { CODES, RESERVED } from "../errors.mjs";
 import { maxDepth as harnessDepth } from "../test-kit/harness.mjs";
 
 const doc = { documentName: "Actor", id: "aaaaaaaaaaaaaaaa", name: "Aldric", uuid: "Actor.aaaaaaaaaaaaaaaa" };
-globalThis.game = { actors: new Map([[doc.id, doc]]) };   // resolveRef's default global, for ref rows
+const g = { game: { actors: new Map([[doc.id, doc]]) } };   // the injected global ref rows resolve against (KIT-M4)
 
 const MANIFEST = Object.freeze({
   module: "pentaryn-x", namespace: "x", version: "0.1.0", contract: "pentaryn-x/api@1", flagScope: "pentaryn-x",
@@ -23,7 +24,7 @@ const impl = {
 };
 
 test("builds dotted paths, resolves ref params, freezes every level", () => {
-  const api = buildApi(MANIFEST, impl, { members: { settings: () => ({ on: true }) } });
+  const api = buildApi(MANIFEST, impl, { members: { settings: () => ({ on: true }) }, g });
   assert.ok(Object.isFrozen(api) && Object.isFrozen(api.store));
   assert.deepEqual(api.inspect("Aldric"), { name: "Aldric" });
   assert.throws(() => api.inspect("Nobody"), /NOT_FOUND/);
@@ -96,6 +97,7 @@ test("describe() is plain JSON in the published shape", () => {
 
 test("surfaceOf and maxDepth", () => {
   const api = buildApi(MANIFEST, impl);
+  assert.deepEqual(Object.keys(api).slice(-6), ["version", "contract", "settings", "trace", "uninstall", "describe"]);
   const s = surfaceOf(api);
   assert.equal(s["store.list"], "list");
   assert.equal(s.version, "string");
@@ -126,36 +128,43 @@ test("toPlain: documents → refs, collections, dates, functions, depth cap, cyc
 });
 
 test("ref rows take scene scope and base from the call's opts; writes return fail() on a bad ref", async () => {
-  const saved = globalThis.game;
   const tok = (id, sceneId) => ({ documentName: "Token", id, name: "Goblin", uuid: `Scene.${sceneId}.Token.${id}`, actorId: doc.id, actor: doc });
   const s1 = { documentName: "Scene", id: "scene00000000001", name: "One", tokens: new Map([["tok0000000000001", tok("tok0000000000001", "scene00000000001")]]) };
   const s2 = { documentName: "Scene", id: "scene00000000002", name: "Two", tokens: new Map([["tok0000000000002", tok("tok0000000000002", "scene00000000002")]]) };
-  globalThis.game = { actors: new Map([[doc.id, doc]]), scenes: new Map([[s1.id, s1], [s2.id, s2]]) };
-  try {
-    const M = {
-      ...MANIFEST,
-      rows: [
-        { path: "peek", params: [{ name: "ref", kind: "token" }, { name: "opts", optional: true }], returns: "string", gm: false, writes: false, doc: "read" },
-        { path: "mark", params: [{ name: "ref", kind: "actor" }, { name: "opts" }], returns: "ok|fail", gm: true, writes: true, doc: "write" },
-      ],
-    };
-    const seen = [];
-    const api = buildApi(M, {
-      peek: function peek(t, opts) { seen.push(opts); return t.id; },
-      mark: async function mark(actor) { return { ok: true, id: actor.id }; },
-    });
-    assert.throws(() => api.peek("Goblin"), /AMBIGUOUS: 2 tokens named Goblin/);
-    assert.equal(api.peek("Goblin", { sceneId: s1.id }), "tok0000000000001");
-    assert.equal(api.peek("Goblin", { sceneId: s2.id }), "tok0000000000002");
-    assert.deepEqual(seen.at(-1), { sceneId: s2.id });                   // opts still reach the impl
-    assert.equal(api.peek.name, "peek");
-    assert.deepEqual(await api.mark("Nobody", {}), { ok: false, code: "NOT_FOUND", reason: "NOT_FOUND: actor Nobody" });
-    assert.deepEqual(await api.mark(42, {}), { ok: false, code: "BAD_ARGS", reason: "BAD_ARGS: not a actor reference" });
-    assert.deepEqual(await api.mark("Aldric", {}), { ok: true, id: doc.id });
-    assert.throws(() => api.peek("Nobody", { sceneId: s1.id }), /NOT_FOUND/);   // reads still throw
-  } finally {
-    globalThis.game = saved;
-  }
+  const world = { game: { actors: new Map([[doc.id, doc]]), scenes: new Map([[s1.id, s1], [s2.id, s2]]) } };
+  const M = {
+    ...MANIFEST,
+    rows: [
+      { path: "peek", params: [{ name: "ref", kind: "token" }, { name: "opts", optional: true }], returns: "string", gm: false, writes: false, doc: "read" },
+      { path: "mark", params: [{ name: "ref", kind: "actor" }, { name: "opts" }], returns: "ok|fail", gm: true, writes: true, doc: "write" },
+    ],
+  };
+  const seen = [];
+  const api = buildApi(M, {
+    peek: function peek(t, opts) { seen.push(opts); return t.id; },
+    mark: async function mark(actor) { return { ok: true, id: actor.id }; },
+  }, { g: world });
+  assert.throws(() => api.peek("Goblin"), /AMBIGUOUS: 2 tokens named Goblin/);
+  assert.equal(api.peek("Goblin", { sceneId: s1.id }), "tok0000000000001");
+  assert.equal(api.peek("Goblin", { sceneId: s2.id }), "tok0000000000002");
+  assert.deepEqual(seen.at(-1), { sceneId: s2.id });                   // opts still reach the impl
+  assert.equal(api.peek.name, "peek");
+  assert.deepEqual(await api.mark("Nobody", {}), { ok: false, code: "NOT_FOUND", reason: "NOT_FOUND: actor Nobody" });
+  assert.deepEqual(await api.mark(42, {}), { ok: false, code: "BAD_ARGS", reason: "BAD_ARGS: not a actor reference" });
+  assert.deepEqual(await api.mark("Aldric", {}), { ok: true, id: doc.id });
+  assert.throws(() => api.peek("Nobody", { sceneId: s1.id }), /NOT_FOUND/);   // reads still throw
+});
+
+test("KIT-M4: buildApi takes an injected g and resolves ref rows against it, never globalThis.game", async () => {
+  const other = { documentName: "Actor", id: "bbbbbbbbbbbbbbbb", name: "Brenna", uuid: "Actor.bbbbbbbbbbbbbbbb" };
+  const injected = { game: { actors: new Map([[other.id, other]]) } };
+  const M = { ...MANIFEST, rows: [...MANIFEST.rows, { path: "mark", params: [{ name: "ref", kind: "actor" }, { name: "opts" }], returns: "ok|fail", gm: true, writes: true, doc: "write" }] };
+  const api = buildApi(M, { ...impl, mark: async function mark(actor) { return { ok: true, id: actor.id }; } }, { g: injected });
+  assert.deepEqual(api.inspect("Brenna"), { name: "Brenna" });
+  assert.throws(() => api.inspect("Aldric"), /NOT_FOUND/);            // not on the injected world
+  assert.equal(api.report("Aldric"), undefined);
+  assert.deepEqual(await api.mark("Brenna", {}), { ok: true, id: other.id });
+  assert.deepEqual(await api.mark("Aldric", {}), { ok: false, code: "NOT_FOUND", reason: "NOT_FOUND: actor Aldric" });
 });
 
 test("K5: an unlisted table is published as a frozen copy; the module's own table and a namespace are never frozen", async () => {
@@ -215,4 +224,92 @@ test("kit and harness maxDepth stay identical", () => {
   cyclic.a.back = cyclic;
   for (const v of [1, {}, { a: { b: [1] } }, null, cyclic]) assert.equal(harnessDepth(v), maxDepth(v));
   assert.equal(maxDepth(cyclic), 2);
+});
+
+test("kit-ext-5: describe()'s optional method fields come from one ordered field table", async () => {
+  const { OPTIONAL_METHOD_FIELDS } = await import("../api.mjs");
+  assert.ok(Array.isArray(OPTIONAL_METHOD_FIELDS), "api.mjs exports OPTIONAL_METHOD_FIELDS");
+  assert.deepEqual(OPTIONAL_METHOD_FIELDS.map(f => f.key),
+    ["queryName", "relay", "dryRun", "nullWhen", "throws", "legacy", "since"]);
+  assert.equal(Object.isFrozen(OPTIONAL_METHOD_FIELDS), true);
+  // every field set: keys land in the published order, each after its anchor
+  const full = { path: "all", params: [], returns: "x", gm: true, writes: true, query: true, queryName: "q",
+    relay: true, dryRun: true, sideEffects: ["s"], nullWhen: "gone", throws: ["NOT_GM"], legacy: true,
+    since: "1.2.0", doc: "d" };
+  const m = describe({ ...MANIFEST, rows: [full] }).methods[0];
+  assert.deepEqual(Object.keys(m), ["path", "params", "returns", "gm", "writes", "query", "queryName", "relay",
+    "dryRun", "sideEffects", "nullWhen", "throws", "legacy", "since", "doc"]);
+  assert.deepEqual([m.queryName, m.relay, m.dryRun, m.nullWhen, m.throws, m.legacy, m.since],
+    ["q", true, true, "gone", ["NOT_GM"], true, "1.2.0"]);
+  // none set: no optional key appears; a queryName without query stays hidden; truthy flags publish as true
+  const bare = describe({ ...MANIFEST, rows: [{ path: "b", queryName: "q", relay: 1, legacy: "yes" }] }).methods[0];
+  assert.deepEqual(Object.keys(bare), ["path", "params", "returns", "gm", "writes", "query", "relay",
+    "sideEffects", "legacy", "doc"]);
+  assert.equal(bare.relay, true);
+  assert.equal(bare.legacy, true);
+});
+
+test("kit-ext-6: one KINDS table; a ref param naming an unknown kind throws at load", async () => {
+  const { KINDS } = await import("../resolve.mjs");
+  assert.ok(KINDS && Object.isFrozen(KINDS), "resolve.mjs exports a frozen KINDS table");
+  assert.deepEqual(Object.keys(KINDS), ["actor", "token", "item", "scene", "user", "journal", "message", "macro",
+    "region", "combat", "table", "folder", "playlist"]);
+  assert.deepEqual(KINDS.actor, { doc: "Actor", collection: "actors" });
+  assert.deepEqual(KINDS.token, { doc: "Token", embedded: "tokens" });
+  for (const k of Object.values(KINDS)) assert.ok(Object.isFrozen(k) && k.doc && (k.collection || k.embedded));
+  const typo = { ...MANIFEST, rows: [{ path: "peek", params: [{ name: "ref", kind: "tokn" }], returns: "x", gm: false, writes: false, doc: "" }] };
+  assert.throws(() => buildApi(typo, { peek: () => 1 }), /pentaryn-x: API row "peek" ref kind "tokn" is not a kit kind/);
+  // a contribution's row is checked the same way
+  assert.throws(() => buildApi(MANIFEST, impl, { contributions: [{ rows: typo.rows, impl: { peek: () => 1 } }] }), /ref kind "tokn"/);
+  // the kit never resolves a resolve:false / resolve:"self" param, so its kind is descriptive only (aoe's inspect: "any")
+  for (const resolve of [false, "self"]) {
+    const raw = { ...MANIFEST, rows: [{ path: "peek", params: [{ name: "ref", kind: "any", resolve }], returns: "x", gm: false, writes: false, doc: "" }] };
+    assert.doesNotThrow(() => buildApi(raw, { peek: () => 1 }));
+  }
+  // no kind means actor, as before
+  const bare = { ...MANIFEST, rows: [{ path: "peek", params: [{ name: "ref" }], returns: "x", gm: false, writes: false, doc: "" }] };
+  assert.doesNotThrow(() => buildApi(bare, { peek: () => 1 }));
+});
+
+test("kit-ext-3-followup: one MEMBER_DEFAULTS table, keyed by errors.RESERVED, drives buildApi's kit members", async () => {
+  const { MEMBER_DEFAULTS } = await import("../api.mjs");
+  assert.ok(MEMBER_DEFAULTS && typeof MEMBER_DEFAULTS === "object", "api.mjs exports MEMBER_DEFAULTS");
+  assert.equal(Object.isFrozen(MEMBER_DEFAULTS), true);
+  assert.deepEqual(Object.keys(MEMBER_DEFAULTS).sort(), [...RESERVED].sort(), "one entry per RESERVED name");
+  // the published key order (legacy-surface goldens pin it) is unchanged
+  assert.deepEqual(Object.keys(MEMBER_DEFAULTS), ["version", "contract", "settings", "trace", "uninstall", "describe", "inspect", "selftest"]);
+  const by = via => Object.keys(MEMBER_DEFAULTS).filter(k => MEMBER_DEFAULTS[k].via === via).sort();
+  assert.deepEqual(by("built"), ["contract", "describe", "version"]);
+  assert.deepEqual(by("member"), ["settings", "trace", "uninstall"]);
+  assert.deepEqual(by("optional"), ["inspect", "selftest"]);
+  for (const e of Object.values(MEMBER_DEFAULTS)) assert.equal(Object.isFrozen(e), true);
+  // the table, not a hand list, decides: members are accepted, everything else refused
+  for (const name of by("member")) assert.doesNotThrow(() => buildApi(MANIFEST, impl, { members: { [name]: () => 1 } }), name);
+  for (const name of [...by("built"), ...by("optional")]) {
+    assert.throws(() => buildApi(MANIFEST, impl, { members: { [name]: () => 1 } }), /not a kit member/, name);
+  }
+  // defaults unchanged: anonymous fallbacks (surface goldens read "function"), built values from the manifest
+  const api = buildApi(MANIFEST, impl);
+  assert.deepEqual([api.settings(), api.trace(), api.uninstall()], [{}, [], undefined]);
+  assert.deepEqual([api.version, api.contract], [MANIFEST.version, MANIFEST.contract]);
+  assert.deepEqual(Object.keys(api).slice(-6), ["version", "contract", "settings", "trace", "uninstall", "describe"]);
+  const s = surfaceOf(api);
+  for (const k of ["settings", "trace", "uninstall", "describe"]) assert.equal(s[k], "function", k);
+  assert.throws(() => buildApi({ ...MANIFEST, version: undefined }, impl), /version missing/);
+});
+
+test("EXT-8: htmlRoot unwraps a render hook's element-or-jQuery argument", () => {
+  const { htmlRoot } = kitApi;
+  assert.equal(typeof htmlRoot, "function", "api.mjs exports htmlRoot");
+  class HTMLElement {}
+  const gEl = { HTMLElement };
+  const el = new HTMLElement();
+  assert.equal(htmlRoot(el, { g: gEl }), el);                                     // element → itself
+  assert.equal(htmlRoot({ jquery: "3.7.1", 0: el, length: 1 }, { g: gEl }), el);  // jQuery wrapper → el[0]
+  assert.equal(htmlRoot({ jquery: "3.7.1", length: 0 }, { g: gEl }), undefined);  // empty wrapper
+  for (const other of [undefined, null, "", 0, {}, [el], { 0: el }, "<div>"]) {
+    assert.equal(htmlRoot(other, { g: gEl }), undefined, `else → undefined: ${String(other)}`);
+  }
+  assert.equal(htmlRoot(el, { g: {} }), undefined);                               // no DOM (node) → undefined, never a ReferenceError
+  assert.equal(htmlRoot(el), undefined);                                          // default g = globalThis; node has no HTMLElement
 });

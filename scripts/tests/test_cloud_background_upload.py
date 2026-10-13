@@ -18,6 +18,7 @@ import time
 import pytest
 
 from cloud_fakes import FakeRclone
+from cloud_fakes import sidecar as _sidecar
 from scripts.foundry import bootstate, bundles, cloud, storage, uploadq
 from scripts.foundry.storage import RcloneStorage
 
@@ -143,6 +144,37 @@ def test_coalescing_pruning_and_lineage_are_unchanged(two_hosts, spawned):
         assert anc == [first]
 
 
+def test_the_post_landing_retention_is_its_own_step(two_hosts, spawned, monkeypatch,
+                                                    capsys):
+    """Review M10: `_upload_job` publishes; `_after_landing` does what follows a landed
+    snapshot — the record, the queue drop, coalescing, pruning, GC — in the same order
+    and with the same log lines as when it was one function."""
+    seen = []
+    real = cloud._after_landing
+
+    def spy(st, job, me, state, linked, superseded, keep_names, snap, **kw):
+        seen.append((job.name, me, linked, superseded and superseded.name, snap.name,
+                     job.tar.exists() or uploadq.pending() != []))
+        return real(st, job, me, state, linked, superseded, keep_names, snap, **kw)
+
+    monkeypatch.setattr(cloud, "_after_landing", spy)
+    with two_hosts.use("mac") as data:
+        cloud.backup("shutdown")
+        first = bootstate.load().based_on
+        _edit(data, "second session")
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        capsys.readouterr()
+        cloud.upload_pending()
+        out = capsys.readouterr().out
+        assert seen[-1] == (job.name, "mac", True, first, job.name, True)
+        assert bootstate.load().based_on == job.name and uploadq.pending() == []
+        landed, replaced, kept = (out.index(f"snapshot → {job.name} ("),
+                                  out.index(f"replaced {first} ("),
+                                  out.index(" snapshots kept for mac"))
+        assert landed < replaced < kept
+
+
 # ── bootstate moves only when the upload completes; a failure is retried ─────
 
 def test_a_failed_upload_records_nothing_and_leaves_the_job(two_hosts, spawned, monkeypatch):
@@ -161,6 +193,27 @@ def test_a_failed_upload_records_nothing_and_leaves_the_job(two_hosts, spawned, 
         assert cloud.upload_pending() == 0                     # the retry
         assert bootstate.load().based_on == job.name
         assert _snaps(two_hosts.cloud) == [job.name]
+
+
+def test_an_unexpected_error_marks_the_upload_failed_r6(two_hosts, spawned, monkeypatch):
+    """R6: a non-StorageError (an OSError, a bug) must not leave the status 'uploading'
+    with nobody uploading — it is recorded as failed, logged, and still raised."""
+    from scripts.foundry.ops import config as cfg
+
+    def boom(*_a, **_k):
+        raise OSError("disk vanished")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        monkeypatch.setattr(cloud, "_upload_job", boom)
+        with pytest.raises(OSError, match="disk vanished"):
+            cloud._run_job(storage.get(), job)
+        st = uploadq.read_status()
+        assert st["state"] == "failed" and st["error"] == "OSError: disk vanished"
+        assert [j.name for j in uploadq.pending()] == [job.name]   # still queued
+    lines = [json.loads(x) for f in cfg.OPS_LOG_DIR.glob("ops-*.jsonl")
+             for x in f.read_text().splitlines()]
+    assert [x["state"] for x in lines if x.get("snapshot") == job.name][-1] == "failed"
 
 
 def test_a_crashed_upload_is_retried_by_the_next_blocking_backup(two_hosts, spawned):
@@ -223,6 +276,20 @@ def test_a_crashed_build_leaves_nothing_queued(two_hosts, spawned, monkeypatch):
         assert not list(uploadq.tmp_dir().glob("*" + uploadq.BUILDING_SUFFIX))
         assert cloud.backup("shutdown", background=True) == 0    # the lock was released
         assert len(uploadq.pending()) == 1
+
+
+def test_a_name_that_does_not_round_trip_is_refused_ext_3(two_hosts, spawned, monkeypatch,
+                                                           capsys):
+    """EXT-3: a snapshot name must parse back with this host's tag — a core version like
+    `15.0-beta` would make `fvtt15.0-beta-mac` read as host `beta-mac`."""
+    monkeypatch.setattr(cloud, "core_version", lambda: "15.0-beta")
+    with two_hosts.use("mac"):
+        with pytest.raises(SystemExit):
+            cloud.backup("shutdown", background=True)
+        assert uploadq.pending() == [] and spawned == []
+        assert not list(uploadq.tmp_dir().glob("world-*"))
+    err = capsys.readouterr().err
+    assert "15.0-beta" in err and "beta-mac" in err
 
 
 # ── the lock: no duplicates, no corrupt record ──────────────────────────────
@@ -428,10 +495,6 @@ def _tools_bundle(cloud_dir):
     return n
 
 
-def _sidecar(cloud_dir, name):
-    return json.loads((cloud_dir / "world-backups" / f"{name}.parent").read_text())
-
-
 def _local_hash(root):
     """Data/ and Config/ — the local world, its modules and systems — by path, bytes and
     mtime (the temp dir, the bundle cache and the boot state are not the tree)."""
@@ -458,7 +521,7 @@ def _sweep_after_build(monkeypatch, cloud_dir, name, *, only_safety=False):
             (cloud_dir / "bundles" / name).unlink()
         return job
     monkeypatch.setattr(cloud, "_build", build)
-    monkeypatch.setattr(cloud, "_rebuilder", lambda rebuilt, dest_dir=None: (lambda n: None))
+    monkeypatch.setattr(cloud, "_rebuilder", lambda rebuilt=None, dest_dir=None: (lambda n: None))
 
 
 def test_a_background_job_stages_and_uploads_the_bundles_the_cloud_lacks(two_hosts,
@@ -578,6 +641,21 @@ def test_a_job_built_days_before_it_runs_lands_its_bundles_with_a_fresh_mtime(tw
         assert cloud.upload_pending() == 0
         for n in job.bundles:
             assert time.time() - (two_hosts.cloud / "bundles" / n).stat().st_mtime < 3600
+
+
+def test_a_late_uploaded_world_tar_lands_with_a_fresh_mtime_ec_5(two_hosts, spawned):
+    """Review EC-5: the world tar's cloud mtime is the landing time, as a bundle's is
+    (bundles.fresh_mtime) — a queued tar built days ago must not land with its build
+    mtime, or the other host never sees it as newer."""
+    with two_hosts.use("mac") as data:
+        _edit(data, "late")
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        old = time.time() - 8 * DAY
+        os.utime(job.tar, (old, old))
+        assert cloud.upload_pending() == 0
+        landed = two_hosts.cloud / "world-backups" / job.name
+        assert time.time() - landed.stat().st_mtime < 3600
 
 
 @pytest.mark.parametrize("at", ["first check", "second check"])
@@ -782,3 +860,152 @@ def test_tmp_dirname_has_one_source():
     cloud.tmp_dir() is uploadq.tmp_dir(), one scratch directory."""
     assert cloud.TMP_DIRNAME == bundles.TMP_DIRNAME == uploadq.TMP_DIRNAME
     assert cloud.tmp_dir() == uploadq.tmp_dir()
+
+
+@pytest.mark.parametrize("bad", ["2026-10-11", None, "missing"])
+def test_a_job_with_a_non_numeric_created_still_loads_and_sorts(two_hosts, bad):
+    """Review R4: a job file whose `created` is a string sorted against a numeric one
+    crashed pending() (str < float). Every job still loads — a null/missing/string
+    created sorts as 0.0, first — so in_flight() keeps protecting its world."""
+    with two_hosts.use("mac"):
+        def job(name, created):
+            data = {"name": name, "reason": "shutdown", "digest": "d", "parent": None,
+                    "host": "mac", "size": 1, "created": created,
+                    "safety": False, "protect": None}
+            if created == "missing":
+                del data["created"]
+            (uploadq.tmp_dir() / f"{name}{uploadq.JOB_SUFFIX}").write_text(
+                json.dumps(data))
+        job("world-b.tar.gz", time.time())
+        job("world-a.tar.gz", bad)
+        assert [j.name for j in uploadq.pending()] == ["world-a.tar.gz", "world-b.tar.gz"]
+        assert uploadq.in_flight() == "world-b.tar.gz"           # the newest, as before
+        (uploadq.tmp_dir() / f"world-b.tar.gz{uploadq.JOB_SUFFIX}").unlink()
+        assert uploadq.in_flight() == "world-a.tar.gz"           # still protected alone
+
+
+# ── py-cloud-ac-1: the record is written from a fresh bootstate, never a stale one ──
+
+def _during_world_upload(monkeypatch, action):
+    """Run `action` while the uploader copies a world tar up (minutes, in real life)."""
+    real = storage.FolderStorage.upload
+
+    def slow(self, src, rel):
+        if rel.startswith(f"{cloud.WORLD_BACKUPS}/world-"):
+            action()
+        return real(self, src, rel)
+    monkeypatch.setattr(storage.FolderStorage, "upload", slow)
+
+
+def test_a_bootstate_write_during_the_upload_is_kept_py_cloud_ac_1(two_hosts, spawned,
+                                                                    monkeypatch):
+    """py-cloud-ac-1: the uploader recorded from the BootState it loaded before the
+    upload, writing back over anything saved meanwhile (here a boot notice)."""
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        _during_world_upload(monkeypatch, lambda: bootstate.load().set_pending(
+            "boss-20990101-000000.tar.gz", 123.0))
+        assert cloud.upload_pending() == 0
+        st = bootstate.load()
+    assert st.based_on == job.name
+    assert (st.pending_newer, st.pending_newer_mtime) == ("boss-20990101-000000.tar.gz",
+                                                          123.0)
+
+
+def test_a_record_moved_during_the_upload_is_not_overwritten_py_cloud_ac_1(
+        two_hosts, spawned, monkeypatch, capsys):
+    """py-cloud-ac-1: a restore recorded while the upload ran is the tree on disk now —
+    the landed snapshot was built from the old one and must not take the record back."""
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown", background=True)
+        [job] = uploadq.pending()
+        _during_world_upload(monkeypatch, lambda: bootstate.load().record_snapshot(
+            "boss-20990101-000000.tar.gz", "boss", 123.0, "d1g3st", by="restore",
+            clear_pending=True))
+        capsys.readouterr()
+        assert cloud.upload_pending() == 0
+        out = capsys.readouterr().out
+        st = bootstate.load()
+        assert uploadq.pending() == []
+    assert (st.based_on, st.by) == ("boss-20990101-000000.tar.gz", "restore")
+    assert "unknown lineage, and not recording it" in out
+    assert job.name in _snaps(two_hosts.cloud)
+
+
+def test_job_size_survives_a_bundle_dropped_mid_sum_ec_8(tmp_path, monkeypatch):
+    """Review EC-8: `_job_size` checked is_file() then stat()ed each staged bundle tar,
+    so a `Job.drop` landing between the two (another process finishing the job) raised
+    FileNotFoundError out of the status line. A vanished tar now counts as 0 bytes."""
+    monkeypatch.setattr(uploadq, "tmp_dir", lambda: tmp_path)
+    job = uploadq.Job(name="mac-20260101-000000.tar.gz", reason="shutdown", digest="d",
+                      parent=None, host="mac", size=1_000_000, created=0.0,
+                      manifest={"modules": {}, "systems": {}},
+                      bundles=["kept.tar.gz", "dropped.tar.gz"])
+    job.staging.mkdir(parents=True)
+    (job.staging / "kept.tar.gz").write_bytes(b"x" * 2_000_000)
+    # The race: is_file() saw both tars, then the drop removed one before stat().
+    monkeypatch.setattr(type(job.staging), "is_file", lambda self: True)
+    assert cloud._job_size(job) == (f"{cloud._mb(1_000_000)} + 2 bundle(s) "
+                                    f"{cloud._mb(2_000_000)}")
+
+
+def _spawn_with_fake_popen(monkeypatch):
+    """Run the real `_spawn_uploader` without starting a process or caffeinate."""
+    class FakeProc:
+        pid = 4242
+    monkeypatch.setattr(cloud.subprocess, "Popen", lambda *a, **k: FakeProc())
+    monkeypatch.setattr(cloud.shutil, "which", lambda name: None)
+    return cloud._spawn_uploader()
+
+
+def test_upload_log_is_not_rotated_under_a_running_uploader_py_cloud_ac_3(
+        two_hosts, held, monkeypatch):
+    """Review py-cloud-ac-3: `_spawn_uploader` unlinked an over-2 MB upload.log even
+    while a running uploader still wrote to it, so that uploader's output went to an
+    unlinked inode nobody could read. Rotation now waits for the upload lock to be free;
+    the next spawn rotates it."""
+    with two_hosts.use("mac"):
+        logfile = cloud.tmp_dir() / uploadq.LOG_FILE
+        logfile.write_bytes(b"old progress\n" + b"x" * 2_100_000)
+        h = held(uploadq.UPLOAD_LOCK)
+        assert _spawn_with_fake_popen(monkeypatch) == 4242
+        assert logfile.read_bytes().startswith(b"old progress\n")   # kept
+        h.release()
+        _spawn_with_fake_popen(monkeypatch)
+        assert not logfile.read_bytes().startswith(b"old progress\n")  # rotated now
+        assert logfile.stat().st_size < 1000
+
+
+def test_one_queue_loop_one_failure_test_one_wait_message_ext_8(monkeypatch):
+    """Review EXT-8 (+ M11): _drain and upload_pending walk the queue through one
+    _queue_once generator (oldest first, re-read after each job, a job that stays queued
+    is refused), test a failure with one _is_failure helper, and _exclusive and
+    _backup_background share one module-level _waiting_build. Messages unchanged."""
+    from types import SimpleNamespace
+    stuck = SimpleNamespace(name="world-a.tar.gz")
+    queue = [[SimpleNamespace(name="world-0.tar.gz"), stuck], [stuck], [stuck]]
+    monkeypatch.setattr(uploadq, "pending", lambda: queue.pop(0) if queue else [])
+    walk = cloud._queue_once()
+    assert next(walk).name == "world-0.tar.gz"
+    assert next(walk) is stuck
+    with pytest.raises(cloud._StaysQueued, match="world-a.tar.gz stays queued after its "
+                                                 "upload — check "):
+        next(walk)
+    monkeypatch.setattr(uploadq, "pending", lambda: [])
+    assert list(cloud._queue_once()) == []
+
+    assert cloud._is_failure(storage.StorageError("x"))
+    assert cloud._is_failure(SystemExit(1))
+    assert not cloud._is_failure(SystemExit(0))
+    assert not cloud._is_failure(SystemExit(None))
+    assert not cloud._is_failure(RuntimeError("x"))
+
+    said = []
+    monkeypatch.setattr(cloud, "log", said.append)
+    cloud._waiting_build()
+    assert said == ["waiting for another snapshot build or restore on this machine to finish..."]
+    src = open(cloud.__file__, encoding="utf-8").read()
+    assert src.count("stays queued after its upload") == 1
+    assert src.count("waiting for another snapshot build") == 1
+    assert "code in (0, None)" not in src and src.count("code not in (0, None)") == 1

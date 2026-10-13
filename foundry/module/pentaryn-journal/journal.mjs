@@ -1,8 +1,9 @@
 /**
  * Pentaryn Player Journal (pentaryn-journal) — ENTRY: esmodules[0]. Wiring only, no logic.
  *
- * An "Add to my journal" bar under every eye readable copies what the player was shown, GM secrets
- * stripped, into their own personal journal (README "What the player sees").
+ * An "Add to my journal" bar under any journal the player can observe but does not own (and any item
+ * in an inspectable eye pile) copies what the player was shown, GM secrets stripped, into their own
+ * personal journal (README "What the player sees").
  *
  * Files, by layer (core → adapters → features → api):
  *   journal-core.mjs     PURE constants and rules: sanitize, planSave, status, the visibility rules

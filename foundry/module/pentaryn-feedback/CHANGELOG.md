@@ -2,6 +2,64 @@
 
 ## Unreleased — 2026-10-12 (W3L live-check fix; `module.json` stays 0.1.2, code-only sync)
 
+- **[declared] The notify wrap passes the caller's arguments through untouched** (feedback-M9):
+  the README says every wrap hands the original exactly what it was given, but the
+  `Notifications#notify` wrap filled an omitted type with `"info"` before calling core. It now
+  takes `(message, ...rest)`, records `rest[0] ?? "info"` as the level and calls the original
+  with the caller's own arguments, so core applies its own default. A glue test pins it.
+- **[declared] The recorder's storage state is `persisted`** (feedback-M8): `recorder.mjs` kept
+  its sessionStorage key, flush timer and dirty flag in a file-local `store`, the same name as the
+  report store `store()` elsewhere in the module. Renamed to `persisted` (same shape); a core test
+  pins the name. No behaviour change.
+- **[declared] One history default** (feedback-M7): the `historySize` default of 200 was a bare
+  literal in the settings row, the recorder's pre-ready fallback and `historyMax`'s junk case. Core
+  now has `LIMITS.actionsDefault = 200` and all three read it; a core test pins the settings row to
+  it. Still 200 — no behaviour change.
+- **[declared] One table of recorder action kinds** (feedback-EXT-6): the kinds the recorder
+  pushes were scattered literals, and the Python renderer test's case list had fallen behind (no
+  `tool`, `use`, `combat` or `notify`). Core now exports a frozen `ACTION_KINDS`; `core.test` scans
+  `recorder.mjs` and core for every `kind: "…"` literal against it, and the Python test reads it
+  from `feedback-core.mjs` and fails on a kind `action_line` has no case for. No timeline change.
+- **[declared] Windows without an id are throttled per class** (feedback-EC-5 + perf-4): the
+  render throttle keyed on `row.id ?? row.cls`, but `clip()` had already turned a null id into
+  `""`, so every id-less window shared one empty key and a second id-less window opened inside
+  2 s was dropped from the action log. Both the throttle and the close now key on
+  `row.id || row.cls`.
+- **[declared] "What gets attached" lists every section a report carries** (feedback-EXT-7): the
+  fold-out left out the world/system/Foundry versions, the selected and targeted tokens, the combat
+  round/turn and the browser details. Rows now come from `ATTACH_ROWS` in `dialog.mjs`, one per
+  section (four new `Dialog.Attach.*` keys; `attachSummary` adds the token counts), and a test
+  refuses a section in `OBJECT_SECTIONS`/`LIST_SECTIONS` (or the two rings) without a row.
+- **[declared] The GM's report list reads files in parallel** (feedback-async-3 + perf-2):
+  `readAll` awaited one GET per report file before starting the next, so `list`/`inspect` cost one
+  round trip per filed report. It now keeps up to `LIMITS.readsInFlight` (6) GETs in flight and
+  stores each result by index, so the order, EC-3's skip rules and their warn lines (in file
+  order) are unchanged. No per-tab cache.
+- **[declared] The report store logs through the module** (feedback-M10): `fileStore` took a
+  `log` option nobody passed, so its `createDirectory` and `browse` debug lines never fired. The
+  entry's setup now wires `useStore(fileStore({ log }))` when no store is active yet (a test's
+  memory store is kept). The lines stay debug level — console only, with
+  `CONFIG.debug["pentaryn-feedback"] = true`.
+- **[declared] The API manifest builds its strings from core** (feedback-EXT-1-followup): the
+  report-file path, queue flag and the category/status unions in `api-manifest.mjs` were literals;
+  they now come from `STORE_DIR`, `FLAG_SCOPE`, `QUEUE_KEY`, `CATEGORY_KEYS` and `STATUSES`, so a
+  core rename can no longer leave describe() stale. `golden/describe.json` is byte-identical; a
+  source test refuses the literals coming back.
+- **[declared] A hot patch mid-filing no longer files a report twice** (feedback-async-4):
+  `uninstall()` cleared the per-user ingest chains while one could still be writing, so the
+  re-install's `ready` ingest read the same queue entry and uploaded it again (a second toast,
+  audit line and bucket token). `uninstall()` now leaves the chains alone (each removes itself when
+  it settles), so the new ingest waits for the one in flight; retries, buckets and the reporter's
+  gap are still cleared.
+- **[declared] Escape closes a dialog opened while the last one was still closing**
+  (feedback-async-1): `open()` during the old dialog's close animation built a new dialog, and the
+  old close then deleted the new one's `foundry.applications.instances` entry, so Escape no longer
+  closed it. `ReportDialog.close()` now keeps its promise and `open()` waits for it before deciding
+  whether to reuse or build. The node stub closes synchronously, so the glue test models Foundry's
+  async close; still wants one live check (bug button, Escape, bug button mid-fade, Escape).
+- **[declared] A null argument gets a fail(), not a TypeError** (feedback-rob-2): `submit(null)`,
+  `submit(draft, null)`, `ingest(null)` and `resolve(null)` threw while destructuring despite "never
+  throws"; each entry now treats null as `{}`, so the call answers BAD_ARGS / NOT_GM / NOT_FOUND.
 - **[declared] `inspect` reaches an Actor from a string**, which is all the MCP bridge can send:
   `pentaryn-read {ns:"feedback", path:"inspect", ref:"Actor.<id>"}` answered `expected User, got Actor`,
   and an actor's name `NOT_FOUND: user <name>`. A string ref is still a user first; otherwise an
@@ -11,6 +69,35 @@
   finite `t` outside the Date range passed `validateReport` and then threw in `normaliseReport`,
   so every later ingest of that user failed. `validateReport` now refuses such a `t`, and ingest
   drops any entry that cannot be normalised with a `refused report` warning and files the rest.
+- **[declared] selftest checks both console wraps** (feedback-EXT-2): it hard-coded
+  `feedback-console-error` and never looked at `console.warn`. The recorder now exports
+  `CONSOLE_PATCHES` and exposes it as `ctx.exposed.consolePatches`; the check, renamed
+  "console wraps match captureConsole", passes only when every wrap's adjustments row is present
+  exactly when `captureConsole` is on, and its detail is `{ captureConsole, wraps: { "console.error",
+  "console.warn" } }` (each true when wrapped). describe() is unchanged.
+- **[declared] Every error message in a report is redacted** (feedback-M2): the recorder's own
+  failures and a failed snapshot section or row (`sectionErrors`, a window row's `error`) were only
+  clipped, so `token=…`, Bearer tokens and URL query strings survived there; they now go through
+  `redact()` like the error ring. The player's report text and document/user names stay clip-only,
+  and the README privacy line, the core header and the `redact()` doc now say exactly that.
+- **[declared] A failed folder create no longer breaks every later upload in that tab**
+  (feedback-rob-3/EC-4): `ensureDir` remembered a folder as made even when `createDirectory`
+  failed for a reason other than "already exists", so each later `put()` skipped the mkdir and its
+  upload was refused until reload. A folder is now remembered only when the create succeeds or the
+  error says `EEXIST` / "already exists"; any other failure is retried on the next `put()`.
+- **[declared] One bad report file no longer breaks `list` or `inspect`** (feedback-EC-3, rob-4,
+  perf-5): `readAll` promised "unreadable files skipped", but a corrupt file or a GET answering
+  403/500 made `list()` reject and set `inspect`'s `reports` to null, and an array-valued file
+  listed as a row of nulls. Each file is now read in its own try/catch, only a non-array object
+  is kept, and every skipped path logs one `pentaryn-feedback | report file … skipped` warning;
+  `count` counts only the readable reports. `inspect`'s remaining null case (the folder listing
+  itself failing) also warns now.
+- **[declared] The `ingest` relay checks its sender** (feedback-async-2): kit 1.2.0 forwards core's
+  query ctx to relay rows, so a non-GM player asking to file another user's queue now gets
+  `fail("REFUSED", "only that user or a GM may ask to file their queue")`. The user themselves, a
+  GM, and a call with no ctx (the bridge's socket path, a local call) behave as before. The
+  manifest doc says so (describe() golden updated for that string); the README pitfall naming kit
+  1.1.0 is rewritten for 1.2.0.
 
 ## 0.1.2 — 2026-10-11 (live-check fix)
 

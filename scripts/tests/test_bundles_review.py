@@ -13,45 +13,26 @@ from __future__ import annotations
 import json
 import os
 import time
+from functools import partial
 
 import pytest
 
 from bundle_fakes import foundry_launch, make_leveldb_pack, make_module
+from cloud_fakes import install, make_edit
+from cloud_fakes import bundle_names as _bundle_names
+from cloud_fakes import names as _names
 from scripts.foundry import bootstate, bundles, cloud, storage
 from scripts.foundry.storage import StorageError
 
 DAY = 86400.0
-_bump = [0]
 
 
-# ── helpers (local copies; the snapshot tests' helpers are module-private) ────
+# ── helpers (shared, from cloud_fakes — M14) ──────────────────────────────────
 
-def _install(root):
-    mods = root / "Data/modules"
-    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": b"map " * 2048})
-    make_module(mods, "tools", version="1.1", packs=1)
-    d = root / "Data/systems/dnd5e"
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "system.json").write_text(json.dumps({"id": "dnd5e", "version": "5.12"}))
-    (d / "dnd5e.mjs").write_text("export const dnd5e = 1;\n")
-    return root
+_install = partial(install, maps_extra=b"map " * 2048, system="5.12")
 
 
-def _edit(root, text="edit"):
-    f = root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    _bump[0] += 5
-    t = time.time() + _bump[0]
-    os.utime(f, (t, t))
-
-
-def _names(cloud_dir, sub="world-backups"):
-    return sorted(p.name for p in (cloud_dir / sub).iterdir()
-                  if not p.name.endswith(cloud.PARENT_SUFFIX))
-
-
-def _bundle_names(cloud_dir):
-    return sorted(p.name for p in (cloud_dir / "bundles").iterdir())
+_edit = make_edit(step=5)
 
 
 # ── PL1: staged bundle tars from a failed upload are never cleaned up ─────────

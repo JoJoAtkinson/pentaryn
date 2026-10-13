@@ -119,7 +119,7 @@ export function makeActor(F, data, { items = [] } = {}) {
     F.calls.push({ op: "createEmbeddedDocuments", on: actor.name, type, data: F.plain(list), options: F.plain(options) });
     return list.map(d => makeDoc(type, d, { parent: actor }));
   };
-  actor.getActiveTokens = () => [];
+  actor.getDependentTokens = () => [];
   F.game.actors.set(actor.id, actor);
   return actor;
 }

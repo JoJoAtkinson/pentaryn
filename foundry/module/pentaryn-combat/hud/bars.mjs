@@ -11,7 +11,7 @@
  *
  * Registration order is kept literally (the hooks golden pins it): the composition listener, the
  * bar re-checks, the pip listeners (with their own render and round listeners), then Argon's own
- * item buttons and the shape-change abort.
+ * item buttons (the turn-moved and shape-change aborts are the runner's own listeners, M8).
  */
 
 import * as core from "../combat-core.mjs";
@@ -20,11 +20,11 @@ import { makeLog } from "../lib/log.mjs";
 import { setting, riderMode, setRiderMode } from "../settings.mjs";
 import { weaponsOf, featuresOf, combatContext, turnOf, newTurn, turnSettled, isReckless, riderDiceFor, followUpsFor } from "../shapes.mjs";
 import { applyButtons, dropStrayTooltip, itemButtonClass, mainPanel, protoDescriptor, settlePips } from "../argon.mjs";
-import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, wireButtons } from "./buttons-ui.mjs";
+import { FALLBACK_IMG, argonClasses, fullAttackState, liveButtons, stateBurst, wireButtons } from "./buttons-ui.mjs";
 import { onBonusAction, onBonusSpent, onOffhand, onOtherAction, onPanelRenderedPips, onReaction, onRoundPips, onUsage } from "./pips-bar.mjs";
-import { running, abortFor, pruneSession as pruneRolls } from "../sequence.mjs";
-import { setReckless, pruneSession as pruneRiders } from "../turn-riders.mjs";
+import { setReckless } from "../turn-riders.mjs";
 import { placeOpenDrawers } from "../turnflow/drawers.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -64,17 +64,17 @@ function actionSig(actor) {
   return JSON.stringify([!!(st.worth && (st.weaponId || st.ma)), st.weaponId ?? st.plan.weaponId ?? null]);
 }
 
-function bonusSig(actor, panel) {
+function bonusSig(actor, panel, fuOnce) {
   const gate = setting("gateFollowUps") ? core.poleStrikeOpen({ turn: turnOf(actor), weapons: weaponsOf(actor) }) : null;
-  const fu = setting("followUps") ? bonusFollowUps(actor, panel).map(f => [f.kind, f.weaponId, f.count ?? null, f.disabled ?? null]) : [];
+  const fu = setting("followUps") ? bonusFollowUps(actor, panel, fuOnce).map(f => [f.kind, f.weaponId, f.count ?? null, f.disabled ?? null]) : [];
   return JSON.stringify([gate, fu]);
 }
 
 // Anything this turn already spent or offered: out of combat, it is what puts "New turn" on the Special bar.
 const turnTouched = (turn) => !!(turn.attackAction.swings || Object.keys(turn.riders).length || turn.followUps.length || turn.nick);
 
-function specialSig(actor) {
-  const fu = setting("followUps") ? freeFollowUps(actor).map(f => [f.kind, f.weaponId]) : [];
+function specialSig(actor, fuOnce) {
+  const fu = setting("followUps") ? freeFollowUps(actor, fuOnce).map(f => [f.kind, f.weaponId]) : [];
   const riders = setting("riderOffers") ? core.ridersFor(featuresOf(actor)).filter(r => r.auto).map(r => [r.key, riderMode(r.key)]) : [];
   const turn = turnOf(actor);
   const touched = turnTouched(turn);
@@ -90,18 +90,21 @@ function recklessShown(actor) {
 // order is the order checkBars re-renders stale bars in: Action, Bonus, Special.
 const BARS = {
   "DND5E.Action": { sig: (a) => actionSig(a), compose: composeActionBar },
-  "DND5E.BonusAction": { sig: (a, p) => bonusSig(a, p), compose: composeBonusBar },
-  "DND5E.Special": { sig: (a) => specialSig(a), compose: composeSpecialBar }
+  "DND5E.BonusAction": { sig: (a, p, fu) => bonusSig(a, p, fu), compose: composeBonusBar },
+  "DND5E.Special": { sig: (a, p, fu) => specialSig(a, fu), compose: composeSpecialBar }
 };
 
-/** Re-render the bars whose signature changed since they were composed. */
-function checkBars(actor) {
+/**
+ * Re-render the bars whose signature changed since they were composed. The Bonus and Special
+ * signatures share one follow-ups computation (`fu`, perf-2): the caller's, or this check's own.
+ */
+function checkBars(actor, fu = followUpsOnce(actor)) {
   if (!actor || actor !== ui.ARGON?._actor) return;
   const stale = [];
   for (const [label, { sig }] of Object.entries(BARS)) {
     const p = mainPanel(label);
     if (!p || p._pcSig === undefined) continue;
-    try { if (sig(actor, p) !== p._pcSig) stale.push(label); } catch (err) { log.debug("bar signature (next render recomposes)", err); }
+    try { if (sig(actor, p, fu) !== p._pcSig) stale.push(label); } catch (err) { log.debug("bar signature (next render recomposes)", err); }
   }
   if (stale.length) rerender(stale);
 }
@@ -128,9 +131,28 @@ function followUpsNow(actor, bonusPanel) {
   return followUpsFor(actor, { bonusFree });
 }
 
-/** The follow-ups that cost a bonus action (the Bonus bar's) and the free ones (the Special bar's). */
-function bonusFollowUps(actor, bonusPanel) { return followUpsNow(actor, bonusPanel).filter(f => !f.free); }
-function freeFollowUps(actor) { return followUpsNow(actor, mainPanel("DND5E.BonusAction")).filter(f => f.free); }
+/**
+ * perf-2: one flag write read the follow-ups three times (the Bonus and Special signatures, the off-hand
+ * slot re-check). This thunk works them out on first use against the Bonus bar and keeps the result for
+ * its callers; a throw is kept too and rethrown to each, so each still logs its own debug line.
+ */
+function followUpsOnce(actor) {
+  let kept = null;
+  return () => {
+    if (!kept) {
+      try { kept = { value: followUpsNow(actor, mainPanel("DND5E.BonusAction")) }; } catch (error) { kept = { error }; }
+    }
+    if ("error" in kept) throw kept.error;
+    return kept.value;
+  };
+}
+
+/**
+ * The follow-ups that cost a bonus action (the Bonus bar's) and the free ones (the Special bar's).
+ * `fu` is a shared followUpsOnce thunk; without one each call works them out afresh.
+ */
+function bonusFollowUps(actor, bonusPanel, fu = () => followUpsNow(actor, bonusPanel)) { return fu().filter(f => !f.free); }
+function freeFollowUps(actor, fu = () => followUpsNow(actor, mainPanel("DND5E.BonusAction"))) { return fu().filter(f => f.free); }
 
 /**
  * Polearm Master's Pole Strike (its bonus-action attack activity). Not the feat as a whole: its
@@ -369,44 +391,44 @@ const onActorUpdated = (actor, changes) => {
     const reaction = mainPanel("DND5E.Reaction");
     if (reaction?.isActionUsed) { reaction.isActionUsed = false; reaction.updateActionUse(); }
   }
-  refreshAll();
   // Follow-ups appear as soon as they are earned (also mid-sequence: Hew after a crit on swing 1);
-  // a bar is rebuilt only when what it shows changed.
-  checkBars(actor);
-  recheckSlots(actor);
+  // a bar is rebuilt only when what it shows changed. One burst: fullAttackState is worked out once (perf-1),
+  // and so are the follow-ups (perf-2).
+  stateBurst(() => { const fu = followUpsOnce(actor); refreshAll(); checkBars(actor, fu); recheckSlots(actor, fu); });
 };
 
 /** Nick spent leaves the Bonus bar's buttons unchanged, so its off-hand slot is re-checked on its own. */
-function recheckSlots(actor) {
+function recheckSlots(actor, fu) {
   try {
     const bonus = mainPanel("DND5E.BonusAction");
-    if (bonus && setting("followUps")) hideDuplicateSlots(bonus, bonusFollowUps(actor, bonus), actor);
+    if (bonus && setting("followUps")) hideDuplicateSlots(bonus, bonusFollowUps(actor, bonus, fu), actor);
   } catch (err) { log.debug("off-hand slot re-check (the next render re-checks)", err); }
 }
 
 // The last swing's flag write can land after the sequence ended; re-check once it has.
 const onSequenceEnd = (actor) => {
   if (!actor || actor !== ui.ARGON?._actor) return;
-  turnSettled(actor).then(() => { refreshAll(); checkBars(actor); recheckSlots(actor); });
+  return turnSettled(actor)
+    .then(() => stateBurst(() => { const fu = followUpsOnce(actor); refreshAll(); checkBars(actor, fu); recheckSlots(actor, fu); }))
+    .catch(err => log.debug("bars: sequence ended", err));   // the HUD may have closed meanwhile (ac-3)
 };
 
+// The session maps' pruning and the turn-moved / shape-change aborts are the runner's and the
+// riders' own listeners (M8); the bars only repaint.
 const onCombatUpdated = (combat, changes) => {
   if (!("turn" in changes) && !("round" in changes)) return;
-  // combat-riders-29: the session maps' stale entries go at each turn change.
-  pruneRiders();
-  pruneRolls();
-  // The turn moved on under a running or paused sequence: its remaining swings belong to that turn.
-  const r = running();
-  if (r?.actor) { const c = combatContext(r.actor); if (c.inCombat && !c.isOwnTurn) abortFor(r.actor); }
   const actor = ui.ARGON?._actor;
   if (!actor) return;
-  refreshAll();
-  checkBars(actor);
+  stateBurst(() => { refreshAll(); checkBars(actor); });
 };
 
 // Combat over (in-combat → nocombat key, "New turn" may appear); a weapon equipped or a Focus Point
 // spent elsewhere (follow-ups depend on both).
-const onCombatDeleted = () => { const a = ui.ARGON?._actor; if (a) setTimeout(() => { refreshAll(); checkBars(a); }, core.DELAYS.afterArgon); };
+const onCombatDeleted = () => {
+  const a = ui.ARGON?._actor;
+  if (!a) return;
+  setTimeout(() => { try { refreshAll(); checkBars(a); } catch (err) { log.debug("bars: combat over (HUD closed)", err); } }, core.DELAYS.afterArgon);
+};
 const onItemUpdated = (item) => { const a = ui.ARGON?._actor; if (a && item?.parent === a) checkBars(a); };
 // Reckless on/off (from our toggle, the sheet, or its expiry at turn start) flips the Special-bar toggle.
 const onEffectChanged = (effect) => { const a = ui.ARGON?._actor; if (a && effect?.parent === a) checkBars(a); };
@@ -423,16 +445,7 @@ const onItemButtonRendered = (button, element, actor) => {
   } catch (err) { log.debug("off-hand slot check", err); }   // never break Argon's render
 };
 
-// A shift or revert (a new body) of the running creature's own token ends its sequence (edge-2).
-const onTokenUpdated = (doc, changes) => {
-  const r = running();
-  if (!r || !("actorId" in (changes ?? {})) || !r.tokenIds?.has(doc?.id)) return;
-  abortFor(r.actor);
-};
-
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   wireButtons({ rerender });
@@ -458,7 +471,6 @@ export function install(reg) {
   reg.on("updateCombat", onRoundPips, opts("pips: repaint at a new round"));
   reg.on("pentarynCombat.offhand", onOffhand, opts("pips: off-hand by hand gives the Action back"));
   reg.on("renderItemButtonArgonComponent", onItemButtonRendered, opts("Argon item buttons: Pole Strike gate, duplicate slot"));
-  reg.on("updateToken", onTokenUpdated, opts("a shape change ends a running sequence"));
 }
 
 export function uninstall() {

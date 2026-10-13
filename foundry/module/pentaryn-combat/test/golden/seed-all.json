@@ -171,7 +171,24 @@
       }
     }
   ],
+  "updates": [
+    "fighter000000001",
+    "rogue00000000001",
+    "barbarian0000001",
+    "slayer0000000001",
+    "fighterFlag00001",
+    "seedFighter00001",
+    "seedFighter00002",
+    "seedRogue0000001",
+    "seedFighter00003",
+    "seedFighter00004"
+  ],
   "console": [
+    {
+      "level": "warn",
+      "text": "pentaryn-combat | weapon-set seed failed for Broken",
+      "err": "locked"
+    },
     {
       "level": "info",
       "text": "pentaryn-combat | weapon sets seeded for Fighter",
@@ -221,11 +238,6 @@
       "level": "info",
       "text": "pentaryn-combat | weapon sets seeded for Fighter",
       "err": "{\"1\":{\"primary\":\"Actor.seedFighter00004.Item.longsword0000001\",\"secondary\":\"Actor.seedFighter00004.Item.dagger0000000001\"},\"2\":{\"primary\":\"Actor.seedFighter00004.Item.shortbow00000001\",\"secondary\":null},\"3\":{\"primary\":null,\"secondary\":null}}"
-    },
-    {
-      "level": "warn",
-      "text": "pentaryn-combat | weapon-set seed failed for Broken",
-      "err": "locked"
     }
   ]
 }

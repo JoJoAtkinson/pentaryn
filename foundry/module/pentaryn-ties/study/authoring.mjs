@@ -7,7 +7,7 @@
 
 import { describeAttribute } from "../attributes.mjs";
 import { MODULE } from "../ties-core.mjs";
-import { rolledMiss, CONCEAL_FLAG } from "../core/rules.mjs";
+import { kindPassed, rolledMiss, CONCEAL_FLAG } from "../core/rules.mjs";
 import {
   KIND_KEY,
   KIND_OF_FLAG,
@@ -131,7 +131,7 @@ export function beliefs(actor) {
    */
   const passOfRow = (parsed, rec) => {
     if (rec.from) return true; // a share is never a failure, whatever it replaced
-    if (parsed.ns === "kind") return Number(rec.tier) >= 15;
+    if (parsed.ns === "kind") return kindPassed(rec.tier);
     if (typeof rec.pass === "boolean") return rec.pass;
     if (typeof rec.total !== "number") return rec.delivered || String(rec.text ?? "").trim() ? true : null;
     if (parsed.ns === "lore") {

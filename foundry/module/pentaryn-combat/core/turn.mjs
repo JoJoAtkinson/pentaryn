@@ -4,8 +4,8 @@
  * unchanged).
  */
 
-import { followUps } from "./followups.mjs";
-import { actionsLeft } from "./turnflow.mjs";
+/** The swing kinds that are part of the Attack action (a Nick swing rides on it; PHB 2024). */
+export const ATTACK_ACTION_KINDS = Object.freeze(["main", "nick"]);
 
 /** The key that makes the flag self-invalidating: a different key = a fresh turn, no reset write. */
 export function turnKey({ combatId = null, round = null, turn = null, inCombat = false } = {}) {
@@ -78,7 +78,7 @@ export function classifySwing({ tagged = null, activation = "action", attackMode
 export function recordSwing(turn, { kind, weaponId = null, crit = false, melee = true } = {}) {
   const t = readTurn(turn, turn?.key);
   const a = { ...t.attackAction, weapons: [...t.attackAction.weapons] };
-  if (kind === "main" || kind === "nick") {
+  if (ATTACK_ACTION_KINDS.includes(kind)) {
     if (kind === "main") a.swings += 1;
     if (weaponId && !a.weapons.includes(weaponId)) a.weapons.push(weaponId);
   }
@@ -134,6 +134,16 @@ export function recordSurge(turn) {
 /** Actions this turn that can still be the Attack action: 1 + Action Surges − other Actions taken. */
 export function attackActions(turn) {
   return Math.max(0, 1 + (Number(turn?.surges) || 0) - otherActionsOf(turn));
+}
+
+/**
+ * Actions still free this turn: 1 + Action Surges, minus other Actions taken, minus Attack actions
+ * begun (a Fighter 5 who swung once has begun one Attack action: `count` = 2 swings per action).
+ */
+export function actionsLeft(turn, count = 1) {
+  const swings = Number(turn?.attackAction?.swings) || 0;
+  const per = Math.max(1, Number(count) || 1);
+  return Math.max(0, 1 + (Number(turn?.surges) || 0) - otherActionsOf(turn) - Math.ceil(swings / per));
 }
 
 /** Rider bookkeeping: "used", "auto:<messageId>", or cleared (Undo). */

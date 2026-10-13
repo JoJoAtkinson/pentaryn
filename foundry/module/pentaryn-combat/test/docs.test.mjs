@@ -25,3 +25,26 @@ test("every top-level .mjs and both entries are under Files; at most 250 lines; 
   assert.ok(readme.trimEnd().split("\n").length <= 250, String(readme.trimEnd().split("\n").length));
   assert.equal(/\b\d+\s+(fixtures|cases|checks|assertions)\b/.test(readme), false);
 });
+
+test("combat-core-M14: per-player paragraph appears once; Data written turn shape names every manifest turn key", () => {
+  assert.equal(readme.split("Per player (user flags, not settings)").length - 1, 1);
+  const row = readme.split("\n").find(l => l.includes("`flags.pentaryn-combat.turn`"));
+  const shape = row.match(/`\{attackAction[^}]*\}`/)?.[0] ?? "";
+  const keys = MANIFEST.rows.find(r => r.path === "turn").returns.replace(/[{}\s]/g, "").split(",").filter(k => k !== "key");
+  for (const k of keys) assert.ok(shape.includes(k), k);
+});
+
+test("no paragraph is repeated (M9: the 'Per player' paragraph appeared twice)", () => {
+  const paras = readme.split(/\n\s*\n/).map(p => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const seen = new Set();
+  for (const p of paras) { assert.equal(seen.has(p), false, p.slice(0, 80)); seen.add(p); }
+});
+
+test("ext-11: the 'follow-up kind' recipe names both HUD branches, and they exist in code", () => {
+  const row = section("Extending").split("\n").find(l => l.startsWith("- **A follow-up kind:**")) ?? "";
+  for (const s of ["getTooltipData", "hud/buttons-ui.mjs", "hideDuplicateSlots", "hud/bars.mjs"]) assert.ok(row.includes(s), s);
+  const ui = readFileSync(new URL("../hud/buttons-ui.mjs", import.meta.url), "utf8");
+  const bars = readFileSync(new URL("../hud/bars.mjs", import.meta.url), "utf8");
+  assert.match(ui, /async getTooltipData\(\)[\s\S]*core\.keyFor\("FollowUpText", k === "offhand" && this\.followUp\.via/);
+  assert.match(bars, /function hideDuplicateSlots\(/);
+});

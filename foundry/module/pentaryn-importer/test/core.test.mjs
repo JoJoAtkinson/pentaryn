@@ -91,7 +91,8 @@ for (const [label, M] of IMPLS) {
 
   // Rows here and in golden/prepare.json pin Foundry's getProperty semantics on plain JSON (the oracle
   // calls it at :474 and :532): a literal dotted key wins ("flags.pentaryn.slug" as one key), a string
-  // entry throws the `in` operator's TypeError. Step 2's getPath must reproduce them (copy the body).
+  // entry throws the `in` operator's TypeError (the oracle's row in the importer-R4 test below; the
+  // core refuses a non-object entry before it gets there). Step 2's getPath must reproduce them (copy the body).
   test(`${label}: lintFormulas — hostile table (golden/lint.json)`, async () => {
     const act = (extra = {}) => ({ flags: { pentaryn: { slug: "s" } }, ...extra });
     await characterise("lint", actors => M.lintFormulas(actors), [
@@ -149,9 +150,57 @@ for (const [label, M] of IMPLS) {
       { ...f, items: [null] },
       { ...f, folder: "f", _stats: { a: 1 }, ownership: { default: 3 }, expected: null, system: { attributes: { hp: { value: 4 } } } },
       { ...f, prototypeToken: { texture: null, name: "T" } },
-      "a string entry",
-      null,
     ], { file: import.meta.url });
+  });
+
+  // importer-R4 [declared]: the non-object rows left the shared table above, because the core now
+  // refuses them as PentarynAbort REFUSED where the verbatim oracle still throws its TypeError.
+  test(`${label}: preparePayload — a non-object entry (importer-R4)`, () => {
+    const thrown = entry => {
+      try {
+        M.preparePayload(entry);
+      } catch (err) {
+        return [err.name, err.message, err.code ?? null];
+      }
+      return null;
+    };
+    const why = "Each element of actors is one Actor; refusing the run rather than guessing what it meant.";
+    const want = label === "oracle"
+      ? [
+        ["TypeError", "Cannot use 'in' operator to search for 'flags.pentaryn.slug' in a string entry", null],
+        ["TypeError", "Cannot read properties of null (reading 'expected')", null],
+        ["PentarynAbort", "An actor entry (name undefined) has no flags.pentaryn.slug. The slug is the upsert key; refusing the run rather than creating an unmatched Actor.", null],
+      ]
+      : [
+        ["PentarynAbort", `An actor entry is not an object (got "a string entry"). ${why}`, "REFUSED"],
+        ["PentarynAbort", `An actor entry is not an object (got null). ${why}`, "REFUSED"],
+        ["PentarynAbort", `An actor entry is not an object (got [{"flags":{"pentaryn":{"slug":"x"}}}]). ${why}`, "REFUSED"],
+      ];
+    same(["a string entry", null, [{ flags: { pentaryn: { slug: "x" } } }]].map(thrown), want);
+  });
+
+  // importer-EC4 [declared]: two Items on one entry with the same flags.pentaryn.action used to pass
+  // (the readback's find() matched both rows to one live Item). The core now refuses the entry in
+  // the R1 pre-pass, before any write; the verbatim oracle still accepts it.
+  test(`${label}: preparePayload — a duplicate item action on one entry (importer-EC4)`, () => {
+    const thrown = entry => {
+      try {
+        M.preparePayload(entry);
+      } catch (err) {
+        return [err.name, err.message, err.code ?? null];
+      }
+      return null;
+    };
+    const act = action => ({ name: action, flags: { pentaryn: { action } } });
+    const dup = { name: "D", flags: { pentaryn: { slug: "d" } }, items: [act("bite"), act("claw"), act("bite")] };
+    const distinct = { flags: { pentaryn: { slug: "d" } }, items: [act("bite"), act("claw"), { name: "no action" }, { name: "none" }, "odd"] };
+    assert.equal(thrown(distinct), null, "distinct actions, unflagged items and non-objects are not this refusal");
+    same(thrown(dup), label === "oracle" ? null : [
+      "PentarynAbort",
+      "Actor \"d\" has two items with flags.pentaryn.action \"bite\". The action is the upsert key for "
+        + "its Items; refusing the run rather than letting one row shadow the other.",
+      "REFUSED",
+    ]);
   });
 
   test(`${label}: toUpdatePayload / toCreatePayload`, () => {

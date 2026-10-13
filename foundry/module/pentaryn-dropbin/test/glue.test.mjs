@@ -59,9 +59,9 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
-test("load-time registrations: 29, in today's order (golden/hooks.json)", () => {
+test("load-time registrations: 33, in today's order (golden/hooks.json)", () => {
   pinJSON("hooks", hooksAtLoad, import.meta.url);
-  assert.equal(hooksAtLoad.length, 29);
+  assert.equal(hooksAtLoad.length, 33);
 });
 
 test("i18nInit: the Item Piles i18n shim fills the legacy DND5E keys; one console line", async () => {
@@ -126,14 +126,21 @@ test("published API: the legacy keys (a floor); corpses and loot keys pinned", (
 
 const sword = () => ann.items.get("itemSword0000001");
 
-test("drop capture without socketlib as a player: 'entry dropped' warning, nothing written", async () => {
+// DB-AC-1 [declared]: Item Piles' drop hook runs on every client; a player's client records no drop (the
+// active GM's does), so the player paths below are driven by a delete off the player's own sheet.
+test("capture without socketlib as a player: a drop is not this client's to record; a delete is the 'entry dropped' warning, nothing written", async () => {
   F.become({ userId: PLAYER });
   const from = mark();
+  const dropLines = await withConsole(async () => {
+    Hooks.callAll("item-piles-dropItem", { actor: ann }, scene.tokens.get("tokChest00000001"), [{ item: sword(), quantity: -1 }], { x: 5, y: 6 });
+    await flush();
+  });
   const lines = await withConsole(async () => {
-    Hooks.callAll("item-piles-dropItem", { actor: ann }, chest, [{ item: sword(), quantity: -1 }], { x: 5, y: 6 });
+    Hooks.call("preDeleteItem", sword(), {}, PLAYER);
     await flush();
   });
   F.become({ userId: GM });
+  assert.deepEqual(dropLines, []);
   assert.deepEqual(lines, [["warn", "pentaryn-dropbin | no socketlib and not a GM — entry dropped", "<obj>"]]);
   assert.deepEqual(since(from, "settings.set"), []);
 });
@@ -147,7 +154,7 @@ test("socketlib.ready registers the module and the record handler", () => {
 test("drop capture as the GM: counter, log, console line, the mirror upload after the debounce; the same drop within 2 s writes nothing", async () => {
   const from = mark();
   const lines = await withConsole(async () => {
-    Hooks.callAll("item-piles-dropItem", { actor: ann }, chest, [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
+    Hooks.callAll("item-piles-dropItem", { actor: ann }, scene.tokens.get("tokChest00000001"), [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
     await flush();
   });
   const ops = () => since(from).filter(c => ["settings.set", "upload"].includes(c.op))
@@ -157,7 +164,7 @@ test("drop capture as the GM: counter, log, console line, the mirror upload afte
   assert.deepEqual(lines, [["log", "pentaryn-dropbin | #1 drop: Sword from Ann"]]);
   pinJSON("ledger-entry", game.pentaryn.dropbin.get(1), import.meta.url);
   const again = mark();
-  Hooks.callAll("item-piles-dropItem", { actor: ann }, chest, [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
+  Hooks.callAll("item-piles-dropItem", { actor: ann }, scene.tokens.get("tokChest00000001"), [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
   await flush();
   assert.deepEqual(since(again).filter(c => ["settings.set", "upload"].includes(c.op)), []);
   mock.timers.tick(2000);
@@ -167,16 +174,19 @@ test("drop capture as the GM: counter, log, console line, the mirror upload afte
   ]);
 });
 
-test("drop capture as a player with socketlib: one executeAsGM('record', entry)", async () => {
+test("capture as a player with socketlib: a drop relays nothing (DB-AC-1); a delete is one executeAsGM('record', entry)", async () => {
   F.become({ userId: PLAYER });
   const from = mark();
   Hooks.callAll("item-piles-dropItem", ann, "Scene.x.Token.y", { item: sword(), quantity: 3 }, null);
+  await flush();
+  assert.deepEqual(since(from, "executeAsGM"), []);
+  Hooks.call("preDeleteItem", sword(), {}, PLAYER);
   await flush();
   F.become({ userId: GM });
   const relays = since(from, "executeAsGM");
   assert.equal(relays.length, 1);
   assert.equal(relays[0].name, "record");
-  assert.deepEqual([relays[0].data.reason, relays[0].data.quantity, relays[0].data.pileUuid, relays[0].data.userId], ["drop", 3, "Scene.x.Token.y", PLAYER]);
+  assert.deepEqual([relays[0].data.reason, relays[0].data.quantity, relays[0].data.pileUuid, relays[0].data.userId], ["delete", 1, null, PLAYER]);
 });
 
 // items-journal-18 — two drops in one call raced the read-modify-write (both got #2). Flipped by guide step 8
@@ -330,4 +340,32 @@ test("loot: renderItemPileInventoryApp adds a 'Loot all' button to the footer an
   btn.click();
   await flush();
   assert.deepEqual(since(from, "transferEverything").map(c => c.args), [["Gear Pile", "Ann", {}]]);
+});
+
+// dropbin-EXT-5 — Loot all's last fallback (a player's first owned character) hard-coded the "character"
+// type; in a system whose Item Piles ACTOR_CLASS_TYPE is another type it found nothing (or the wrong
+// actor). Flipped by the [declared] fix: it filters on Item Piles' ACTOR_CLASS_TYPE, and on "character"
+// only when Item Piles is absent — matching the ledger's delete capture.
+test("dropbin-EXT-5: Loot all's fallback recipient uses Item Piles' ACTOR_CLASS_TYPE, 'character' without Item Piles", () => {
+  const API = game.itempiles.API;
+  const pc = makeActor(F, { id: "actorHero0000001", name: "Hero", type: "hero" });
+  Object.defineProperty(pc, "isOwner", { value: true, configurable: true });
+  Object.defineProperty(ann, "isOwner", { value: true, configurable: true });
+  const keepType = API.ACTOR_CLASS_TYPE;
+  const keepIP = game.itempiles;
+  F.become({ userId: PLAYER });
+  try {
+    assert.equal(game.user.character ?? null, null);
+    API.ACTOR_CLASS_TYPE = "hero";
+    assert.equal(game.pentaryn.dropbin.loot.recipientFor({})?.name, "Hero");
+    API.ACTOR_CLASS_TYPE = "character";
+    assert.equal(game.pentaryn.dropbin.loot.recipientFor({})?.name, "Ann");
+    delete game.itempiles;
+    assert.equal(game.pentaryn.dropbin.loot.recipientFor({})?.name, "Ann");
+  } finally {
+    game.itempiles = keepIP;
+    API.ACTOR_CLASS_TYPE = keepType;
+    F.become({ userId: GM });
+    F.game.actors.delete(pc.id);
+  }
 });

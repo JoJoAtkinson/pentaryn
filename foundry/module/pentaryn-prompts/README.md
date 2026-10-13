@@ -31,13 +31,19 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
   the ruler or other hotkeys; ⌘/Ctrl shortcuts pass. Each pending open has its own buffer. Text no box
   claims within 3.5 s goes into the open box, else a toast. A window blur forgets held keys.
 - Every open is a **new window**; closing saves in the background, so the next drop never waits.
-  A fresh marker closed empty is deleted; one emptied by hand stays, red-tinted.
-- Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`.
-- **Size chips** swap the marker for another size centred on the same point, text carried.
+  A fresh marker closed empty is deleted; one emptied by hand stays, red-tinted. A marker whose
+  text failed to save is never deleted (it stays, with the save-failed toast). A **Delete** that
+  fails leaves the box open and still saving, with a could-not-delete toast.
+- Reopen: **double-click** a marker, the **Token HUD** bubble button, Shift+P, or `open(id)`. A
+  marker never has two boxes: reopening one already open (or still saving) brings that box forward.
+- **Size chips** swap the marker for another size centred on the same point, text carried — keys
+  typed while the swap runs included (no swap when the text failed to save). One swap at a time:
+  the chips grey out while it runs, a second click (a double click) is ignored, and closing or
+  Delete waits for it to finish.
 - **Side panel:** what this marker can see (unlimited darkvision, doors as they stand, light
   ignored), nearest first; *Out of sight (within 60 ft)* with `door` / `wall` tags; anything blocked
   only by a door named above the list. Click pans, ⌘-click opens the sheet or box. It redraws when a
-  wall, door, note or token on the scene changes.
+  wall, door, note, light, tile or token on the scene changes.
 - **Hover** a marker: its text, size, footprint and how many things it sees.
 - Nameplate: `✎ ` + the text, lines joined by ` / `, cut at 40 characters.
 
@@ -57,6 +63,8 @@ name. Every marker token is born hidden, sightless and size-locked. Art: `assets
 | `lastCalls` | world, hidden store | `[]` | The last five gather manifests (replace and crops read them) |
 
 Every read is live (`settings.mjs` `setting()`), so a change applies without a reload.
+The defaults of `gatherChars`, `unseenWithinFt`, `cropMaxPerCall`, `cropLongSidePx` and
+`cropsDefault` live once in `core/defaults.mjs` `DEFAULTS`; change a default there, not in a fallback.
 
 ## API — `game.pentaryn.prompts`
 
@@ -69,7 +77,7 @@ query and the version. The twelve calls published before the migration keep thei
 |---|---|
 | `gather({scenes, crops, chars, unseenWithinFt, builtWithoutProvenance, maxPrompts, from, party, cropsAs})` | `{call, text, counts, manifest, crops, next, ms, version, party, partySource, cropsNote}` |
 | `list()` | `{scenes: [{id, name, nav, prompts, empty}]}` |
-| `crops({call, encounters, cropsAs})` | `{crops: [{encounter, scene, path \| png, mime, mimeType, squares}]}` |
+| `crops({call, encounters, cropsAs})` | `{crops: [{encounter, scene, path \| png, mime, mimeType, squares} \| {encounter, scene, error}]}` |
 | `replaceMany({call, replacements, dryRun, force, skipDryRun, party})` or `({specFile, dryRun})` — the batch | `{dryRun, call, text, results, remaining, encounters}` |
 | `replace(spec, opts)` — ONE replacement (run options from `opts` or the spec) | same |
 | `show({call, id})` / `show({sceneId, markerId})` | `{ok, sceneId, x, y}` (views the scene, pans, pings) |
@@ -83,7 +91,8 @@ hold `"current"`). `crops`: `"auto"` · `true`/`"on"` · `false`/`"off"`. `crops
 default: `Data/pentaryn-prompts-crops/<call>/E1.webp`, no base64 in an eval-js result) or `"base64"`
 (what the queries get; the bridge turns them into MCP images). `party`: `"4x5"`, `{size, level}` or
 `[levels]`; the text's `<party>` line names it and its source, or says none is set. Paging: at most
-`maxPrompts` (60) after the first scene; pass `next` as `from` with the same `scenes`. `specFile`: a JSON
+`maxPrompts` (60) after the first scene; pass `next` as `from` with the same `scenes` (under `"all"`, a
+`from` that has since lost its prompts resumes at the next prompted scene after it). `specFile`: a JSON
 file under the Data dir (`pentaryn-prompts-specs/<name>.json`): replacements, or `{call, party, replacements}`.
 `place` and a drop arm the keyboard capture on the **calling** client for up to 3.5 s.
 
@@ -91,7 +100,7 @@ file under the Data dir (`pentaryn-prompts-specs/<name>.json`): replacements, or
 `pentaryn-prompts.list`, `.gather`, `.crops`, `.replace` (= `replaceMany`), `.show`; a query before
 the API is published answers `NOT_READY`. **Errors are** `Error("<CODE>: detail")`: `TEXT_CHANGED`
 (replace: the prompt was edited after the gather), `MARKER_GONE` (show, replace: the marker is gone;
-replace says what replaced it or what it was resized to), `CALL_UNKNOWN` (crops, show, replace: no
+replace says what replaced it, what it was resized to, or that another GM tab is replacing it), `CALL_UNKNOWN` (crops, show, replace: no
 stored manifest), `SCENE_UNKNOWN` (gather, show, replace, `model`), `BAD_SPEC` (any bad argument, per
 row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY_RUN_REQUIRED`
 (replace: more than 5 without a dry run of the same set). The fork adds `MODULE_MISSING` and
@@ -105,8 +114,11 @@ row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY
 - `actor` — `{actorId}` (place a world actor; `copy: true` duplicates it) or `{uuid}` (a compendium
   actor, imported into `Foundry MCP Creatures`), plus `patch` (`actor-patch-adapter.mjs`, keys
   `PATCH_KEYS`): name, size, img, biography, hp, ac, cr (fractions read as numbers), speed,
-  disposition, `removeItems`, `addItems` (by name / uuid / inline `{data}`), `traits`, `recharge`,
-  `itemUpdates`, `set`, `creatureType`, `languages` (words → dnd5e keys). A type change without
+  disposition (hostile|neutral|friendly|secret), `removeItems`, `addItems` (by name / uuid / inline `{data}`), `traits`, `recharge`,
+  `itemUpdates`, `set`, `creatureType`, `languages` (words → dnd5e keys). The dry run refuses a
+  misshapen field with `BAD_SPEC` naming the shape wanted (`removeItems` a list of names/ids,
+  `itemUpdates` `[{item, set}]`, `set` an object, `hp` a number or `{max, formula}`, `ac`/`cr`/`speed`
+  numbers). A type change without
   `languages` clears the inherited ones; inline items whose text requires attunement are marked so.
 - `npc` — `{npc, features, patch}`, built here through the bridge module's own handlers
   (`CONFIG.queries["foundry-mcp-bridge.createNpcActor"]`), every field checked as the
@@ -117,7 +129,8 @@ row in replace), `NOT_GM` (every query), `CREATE_FAILED` (replace rows) and `DRY
   dnd5e's own advancements run headlessly with the caller's `choices` or a stated default
   (`DEFAULTED`); every problem is collected into one `BAD_SPEC`. The dry run builds it on an unsaved
   actor, so its `sheet:`, `DEFAULTED` and `WARN` lines are the real run's. Spell slots start full;
-  a Monk's weapons get Martial Arts.
+  a Monk's weapons get Martial Arts. A spell named twice in `spells` (or in `spellbook`) is added
+  once, with the warning `<spell> listed twice — added once`.
 - `hotspot` — `{name, description, items, size = 0.5, locked, icon, light}`: a clone of
   `Hotspot · Look (template)` (Item Piles); `light` is an AmbientLight config at its centre.
 - `note` — `{name, html, folderId, label, ownership = "observer", iconSize = 64, icon, light}`.
@@ -127,7 +140,10 @@ Results are flat rows (strings, numbers, booleans, lists of strings), built by `
 `text` is the readback the MCP tool prints. Placement: same footprint → the marker's own x/y; other
 creature footprints centred and snapped; hotspots and tiles centred unsnapped; notes and lights on the
 centre. Every created document, actor and journal carries the provenance. A failed replacement keeps
-its marker, and what this module created for it is deleted again (`discarded`).
+its marker, and what this module created for it is deleted again (`discarded`). The replaced markers
+on a scene go in one delete; a marker already gone (another GM deleted it mid-run) is left out and
+its row keeps its replacement with a WARN saying so, and if the delete still fails each marker is
+deleted on its own, so a refusal leaves only that row `markerDeleted=false` with a WARN naming it.
 
 ### The gather, briefly
 
@@ -161,7 +177,8 @@ the table is in `context/foundry/markers.md`.
 
 None emitted (`renderPromptDialog` is core's ApplicationV2 hook). The hooks it listens to are
 `test/golden/hooks.json` (registered at import), plus the scene-model cache's invalidation hooks
-(`core/cache.mjs` `INVALIDATING_HOOKS`), registered at `ready`.
+(`core/cache.mjs` `INVALIDATION`, hook → scope; `INVALIDATING_HOOKS` is its keys), registered at
+`ready`.
 
 ## Patches and adjustments
 
@@ -178,8 +195,12 @@ subclass (the box): no row, nothing of core's is changed.
 Everything is GM-only. `ensureMarkers` runs on the active GM, which is every tab of that user;
 its creates use fixed ids with `keepId`, so two tabs make one folder and one actor per size. The
 queries are GM-guarded; the fork reaches them through the bridge module, which calls the handler in
-its own GM tab. A `User#query` to the GM would run in **every** tab of that user, and `replace` is
-not idempotent across tabs — keep calling it through the bridge. The side panel, hover tip and keyboard capture are per client.
+its own GM tab. A `User#query` to the GM would run in **every** tab of that user — keep calling
+`replace` through the bridge. Overlapping `replace` runs in one tab queue per scene (the later one
+re-reads its markers, so one the earlier run built reports `MARKER_GONE`), and a real run claims
+each marker across tabs (`claimDocument`, `flags.pentaryn-prompts.claims.replace`) before it builds:
+a marker another tab holds fails that row only. A claim left on a marker that was not replaced is
+taken off; `force` takes over one left by a tab that went away mid-run. The side panel, hover tip and keyboard capture are per client.
 
 ## Extending
 

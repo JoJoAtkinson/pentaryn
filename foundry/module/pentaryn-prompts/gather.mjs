@@ -2,11 +2,12 @@
  * pentaryn-prompts — the one-call context export (plan §5), the manifest ring, list and show.
  */
 
-import { MODULE, VERSION, GATHER_CHARS, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
+import { MODULE, VERSION, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE, parseParty } from "./geometry-core.mjs";
 import { sceneModel, promptTokens, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { promptText } from "./markers-adapter.mjs";
 import { renderCrops } from "./crops-adapter.mjs";
 import { cropsDecision } from "./core/text.mjs";
+import { DEFAULTS } from "./core/defaults.mjs";
 import { pageScenes } from "./core/paging.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
 import { CROP_DIR } from "./prompts-core.mjs";
@@ -36,8 +37,9 @@ export function resolveScene(ref) {
 function pickScenes(scenes, from, countOf) {
   let list;
   const refs = sceneRefs(scenes);
-  if (refs === "all") {
-    list = scenesInNavOrder().filter(s => countOf(s) > 0);
+  const ordered = refs === "all" ? scenesInNavOrder() : null;
+  if (ordered) {
+    list = ordered.filter(s => countOf(s) > 0);
   } else {
     const seen = new Set();
     list = [];
@@ -54,7 +56,14 @@ function pickScenes(scenes, from, countOf) {
     }
   }
   if (from) {
-    const start = list.findIndex(s => s.id === from);
+    let start = list.findIndex(s => s.id === from);
+    // "all", and the next scene lost its prompts since the last page: carry on with the first listed
+    // scene after it in navigation order, an empty page when none is (prompts-core-EC-7)
+    const at = start < 0 && ordered ? ordered.findIndex(s => s.id === from) : -1;
+    if (at >= 0) {
+      const after = list.findIndex(s => ordered.indexOf(s) > at);
+      start = after < 0 ? list.length : after;
+    }
     if (start < 0) throw codedError("SCENE_UNKNOWN", `next scene ${from} is not in this gather`);
     list = list.slice(start);
   }
@@ -74,13 +83,17 @@ export { manifests, manifestFor };
  */
 export async function gather(opts = {}) {
   const {
-    scenes = "all", crops = setting("cropsDefault", "auto"), chars = setting("gatherChars", GATHER_CHARS),
-    unseenWithinFt = setting("unseenWithinFt", 60), builtWithoutProvenance = true, maxPrompts = 60, from = null,
+    scenes = "all", crops = setting("cropsDefault", DEFAULTS.cropsDefault), chars = setting("gatherChars", DEFAULTS.gatherChars),
+    unseenWithinFt = setting("unseenWithinFt", DEFAULTS.unseenWithinFt), builtWithoutProvenance = true, maxPrompts = 60, from = null,
     party: partyArg = null, cropsAs = "files"
   } = opts ?? {};
-  const worldParty = setting("party", "") || null;
-  const party = partyArg ?? worldParty;
-  const partySource = partyArg ? "call" : worldParty ? "setting" : null;
+  // a call party that cannot be read (or "") is not given: the world party stands (prompts-core-EC-3)
+  const callParty = parseParty(partyArg) ? partyArg : null;
+  const worldSetting = setting("party", "");
+  const worldParty = parseParty(worldSetting) ? worldSetting : null;
+  const party = callParty ?? worldParty;
+  const partySource = callParty ? "call" : worldParty ? "setting" : null;
+  const partyUnreadable = partyArg != null && partyArg !== "" && !callParty;
   const t0 = performance.now();
   // each scene's prompt count once (prompts-lookup-23): the "all" filter and the paging share it
   const counted = new Map();
@@ -101,22 +114,20 @@ export async function gather(opts = {}) {
 
   // crops only where there is a picture: a scene with no background image or tiles crops to grey
   const cropPlan = cropsDecision(crops, models.map(m => ({ hasArt: sceneHasArt(game.scenes.get(m.key)) })));
-  const { view, manifest } = buildView(models, { unseenWithinFt, next, party, partySource, cropsNote: cropPlan.note });
+  const { view, manifest } = buildView(models, { unseenWithinFt, next, party, partySource, partyUnreadable, cropsNote: cropPlan.note });
   const text = renderGather(view, { chars });
   const tRender = performance.now();
   manifest.at = Date.now();
-  // ids only: an API caller may pass Scene documents, and this lands in a world setting
-  manifest.opts = { scenes: Array.isArray(scenes) ? list.map(s => s.id) : scenes, unseenWithinFt, chars, party: view.party };
+  // ids only: an API caller may pass Scene documents (one, or a list), and this lands in a world setting
+  const storedScenes = scenes?.documentName === "Scene" ? [scenes.id] : Array.isArray(scenes) ? list.map(s => s.id) : scenes;
+  manifest.opts = { scenes: storedScenes, unseenWithinFt, chars, party: view.party };
   await storeManifest(manifest);
   const tStore = performance.now();
 
   const wantCrops = cropPlan.want;
   let images = [];
   if (wantCrops && Object.keys(manifest.encounters).length) {
-    const max = setting("cropMaxPerCall", 6);
-    const ids = Object.keys(manifest.encounters).sort(idCompare).slice(0, max);
-    images = await renderCrops(manifest, ids, { longSide: setting("cropLongSidePx", 768) });
-    if (cropsAs === "files") images = await cropsToFiles(manifest.call, images);
+    images = await cropImages(manifest, { ids: Object.keys(manifest.encounters).sort(idCompare), cropsAs });
   }
   const tEnd = performance.now();
   const ms = Math.round(tEnd - t0);
@@ -175,9 +186,18 @@ export async function crops({ call, encounters, cropsAs = "files" } = {}) {
   if (!manifest) throw codedError("CALL_UNKNOWN", String(call));
   const ids = (encounters?.length ? encounters : Object.keys(manifest.encounters)).filter(e => manifest.encounters[e]);
   if (!ids.length) throw codedError("BAD_SPEC", "no such encounter in this call");
-  const max = setting("cropMaxPerCall", 6);
-  const images = await renderCrops(manifest, ids.slice(0, max), { longSide: setting("cropLongSidePx", 768) });
-  return { crops: cropsAs === "files" ? await cropsToFiles(call, images) : images };
+  return { crops: await cropImages(manifest, { ids, cropsAs }) };
+}
+
+/**
+ * The crops for `ids` (the first cropMaxPerCall of them, in the order given) at cropLongSidePx,
+ * uploaded as files unless `cropsAs` is "base64" — the one crop path gather() and crops() share
+ * (prompts-core-M7).
+ */
+async function cropImages(manifest, { ids, cropsAs }) {
+  const max = setting("cropMaxPerCall", DEFAULTS.cropMaxPerCall);
+  const images = await renderCrops(manifest, ids.slice(0, max), { longSide: setting("cropLongSidePx", DEFAULTS.cropLongSidePx) });
+  return cropsAs === "files" ? await cropsToFiles(manifest.call, images) : images;
 }
 
 /** `list()` → `{scenes: [{id, name, nav, prompts, empty}]}` for scenes holding prompt markers. */

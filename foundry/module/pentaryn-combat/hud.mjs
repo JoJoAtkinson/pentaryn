@@ -29,9 +29,10 @@ import * as tooltips from "./hud/tooltips.mjs";
 import * as picker from "./hud/picker.mjs";
 import * as bars from "./hud/bars.mjs";
 
-for (const feature of [actionButtons, boundaries, helperToken, dialogs, death, portrait, patches, manualDice, effects, drawers]) installFeature(feature);
+const install = features => { for (const [name, feature] of Object.entries(features)) installFeature(feature, name); };
+install({ actionButtons, boundaries, helperToken, dialogs, death, portrait, patches, manualDice, effects, drawers });
 patches.installReady(reg, null);
-installFeature(movement);
+installFeature(movement, "movement");
 
 // Then the HUD's own features, in the order hud.mjs registered them before the split.
-for (const feature of [tooltips, picker, bars]) installFeature(feature);
+install({ tooltips, picker, bars });

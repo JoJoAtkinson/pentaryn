@@ -38,3 +38,44 @@ test("every context/… or playbooks/… path cited by the module resolves", () 
 test("module.json cites a doc that exists", () => {
   assert.deepEqual(unresolved("module.json"), []);
 });
+
+// walls-M2: run()'s ABI doc in lib.rs names what backend-wasm.mjs actually marshals: 11 input fields per
+// wall, a 5-int output header, 8-wide create rows and the component rows. It stays exactly three `///`
+// lines so the panic Location line numbers baked into wall-engine.wasm (and so its sha) do not move.
+test("lib.rs run() ABI doc matches the marshaller in three lines (walls-M2)", () => {
+  const rs = readFileSync(new URL("wasm/src/lib.rs", ROOT), "utf8").split("\n");
+  const at = rs.findIndex(l => l.startsWith('pub extern "C" fn run('));
+  assert.equal(rs[at - 1], "#[no_mangle]");
+  const doc = [];
+  for (let i = at - 2; rs[i]?.startsWith("///"); i--) doc.unshift(rs[i]);
+  assert.equal(doc.length, 3, "the doc block must stay three lines (wasm reproducibility)");
+  assert.equal(at + 1, 697, "run() must not move (wasm reproducibility)");
+  const text = doc.join("\n").replace(/\s+/g, "");
+
+  const js = readFileSync(new URL("backend-wasm.mjs", ROOT), "utf8");
+  const slots = [...js.matchAll(/buf\[o \+ (\d+)\] = (?:\(stampOf\(w\)|w)\.(\w+)(?![\w[])/g)]
+    .map(m => [Number(m[1]), m[2]]).sort((a, b) => a[0] - b[0]).map(s => s[1]);
+  const input = ["x0", "y0", "x1", "y1", ...slots];
+  assert.equal(input.length, 11);
+  assert.ok(text.includes(`[n,(${input.join(",")})*n]`), doc.join("\n"));
+
+  assert.match(js, /const \[nc, nu, nr, iterations, nComp\] = out;/);
+  for (const part of ["[creates,updates,refusals,iterations,components,",
+                      "creates*(x0,y0,x1,y1,light,sight,sound,move)", "updates*(segIdx,x0,y0,x1,y1)",
+                      "refusals*(x,y)", "components*(walls,dangling)]"])
+    assert.ok(text.includes(part), part);
+});
+
+// walls-M12: the entry's file map puts each thing where it lives. walls-core exports exclusive(); the
+// busy lock object itself is declared in actions.mjs, so the map names it on the actions line.
+test("entry file map: exclusive() in walls-core, the busy lock in actions (walls-M12)", () => {
+  const read = f => readFileSync(new URL(f, ROOT), "utf8");
+  const map = read("pentaryn-walls.mjs").split("\n");
+  const row = name => map.find(l => new RegExp(`^ \\*\\s+${name.replace(".", "\\.")}\\s`).test(l));
+  assert.match(read("walls-core.mjs"), /^export function exclusive\(/m);
+  assert.match(read("actions.mjs"), /^const lock = \{busy: false\};$/m);
+  assert.doesNotMatch(read("walls-core.mjs"), /^const lock\b/m);
+  assert.match(row("walls-core.mjs"), /exclusive\(\)/);
+  assert.doesNotMatch(row("walls-core.mjs"), /busy lock/);
+  assert.match(row("actions.mjs"), /busy lock/);
+});

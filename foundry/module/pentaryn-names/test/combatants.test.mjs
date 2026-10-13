@@ -118,3 +118,48 @@ test("PT3-9: api.sync repairs combatants too; the count and toast stay token lab
   assert.equal(await api.sync(actor, "Bob", "Rob"), 0);
   assert.deepEqual(combatWrites(), [], "a second call finds nothing: a combat with no change gets no write");
 });
+
+// [declared] names-edge-3 (final review 2026-10-12, Joe's ruling): a refused combatant write on a GM
+// client is logged once with the module prefix and the rename carries on: the token toast still
+// shows and api.sync still resolves with the token count. Before, the combatant rejection skipped
+// the toast and rejected sync (and the hook logged the generic "relabel after rename failed").
+async function withRefusedCombat(fn) {
+  const combat = game.combats.get(COMBAT.a);
+  const keep = combat.updateEmbeddedDocuments;
+  const keepWarn = console.warn;
+  const warns = [];
+  combat.updateEmbeddedDocuments = async () => { throw new Error("ZZ combatant update refused"); };
+  console.warn = (...args) => warns.push(args.map(a => (a instanceof Error ? `${a.name}: ${a.message}` : a)));
+  try {
+    await fn();
+  } finally {
+    combat.updateEmbeddedDocuments = keep;
+    console.warn = keepWarn;
+  }
+  return warns;
+}
+const edge3Warn = [`pentaryn-names | relabel combatants after rename failed`, { actor: `Actor.${IDS.bob}`, from: "Bob", to: "Rob" }, "Error: ZZ combatant update refused"];
+
+test("names-edge-3: a GM rename whose combatant write is refused still toasts the token count and logs once", async () => {
+  resetAll();
+  const warns = await withRefusedCombat(async () => {
+    await game.actors.get(IDS.bob).update({ name: "Rob" });
+    await flush();
+  });
+  assert.deepEqual(warns, [edge3Warn]);
+  const toasts = effects(F.calls).filter(c => c.op === "notify");
+  assert.deepEqual(toasts.map(c => c.message), ['Token labels updated to "Rob" (3).']);
+  assert.equal(game.combats.get(COMBAT.b).combatants.get("cbtBob0000000002").name, "Bob", "the pass stopped at the refused combat");
+});
+
+test("names-edge-3: api.sync resolves with the token count when a combatant write is refused", async () => {
+  resetAll();
+  const actor = game.actors.get(IDS.bob);
+  let result;
+  const warns = await withRefusedCombat(async () => {
+    result = await api.sync(actor, "Bob", "Rob");
+  });
+  assert.equal(result, 3);
+  assert.deepEqual(warns, [edge3Warn]);
+  assert.deepEqual(effects(F.calls).filter(c => c.op === "notify").map(c => c.message), ['Token labels updated to "Rob" (3).']);
+});
