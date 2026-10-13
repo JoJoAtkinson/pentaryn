@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **A Starry Form with no known end reads just its name (M5, defect wave 2).** core/hud.mjs
+  `portraitText` left `starryLeft` undefined when absent, so the portrait line read "0 minutes" left
+  instead of the unknown end its JSDoc promises. `starryLeft` now defaults to null and any non-finite
+  value is unknown (`left: null`), so the line is just the form's name ([declared]; test "M5
+  portraitText" in core.test.mjs; goldens unchanged).
 - **One feature's failed uninstall no longer strands the rest (R3, defect wave 2).** wiring.mjs
   `ctx.uninstall()` ran each feature's `uninstall` bare, so a throw skipped the remaining features,
   `reg.offAll()` and `removePatches()`. Each uninstall now runs in try/catch and logs

@@ -258,12 +258,13 @@ export function recoveryLines(recovery, periods, allLabel) {
 
 /**
  * The portrait line's data while a form or Starry Form is up: `{ what, left }` (left a duration
- * text, or null when the end time is unknown), or null for no line. The glue localizes it.
+ * text, or null when the end time is unknown: a missing or non-finite endsAt / starryLeft), or null
+ * for no line. The glue localizes it.
  * @param {{ ws: { name }|null, endsAt?: number|null, starry: { name }|null, starryLeft?: number|null, worldTime: number }} o
  */
-export function portraitText({ ws = null, endsAt = null, starry = null, starryLeft, worldTime = 0 } = {}) {
+export function portraitText({ ws = null, endsAt = null, starry = null, starryLeft = null, worldTime = 0 } = {}) {
   if (ws) return { what: ws.name, left: Number.isFinite(endsAt) ? formatDuration(endsAt - worldTime) : null };
-  if (starry) return { what: starry.name, left: starryLeft !== null ? formatDuration(starryLeft) : null };
+  if (starry) return { what: starry.name, left: Number.isFinite(starryLeft) ? formatDuration(starryLeft) : null };
   return null;
 }
 

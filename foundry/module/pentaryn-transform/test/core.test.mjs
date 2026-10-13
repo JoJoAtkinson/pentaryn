@@ -316,3 +316,15 @@ test("EC-3 planBonusBar: an id-less Argon button is kept while shifted (null wil
   const normal = core.planBonusBar([{ kind: "item", id: null }], { wildShapeId: null, hasWildShape: true });
   assert.deepEqual(normal, [{ keep: 0 }, { wildshape: true }]);
 });
+
+test("M5 portraitText: a Starry Form without starryLeft has an unknown end", () => {
+  const starry = { name: "Starry Form: Archer" };
+  assert.deepEqual(core.portraitText({ starry, worldTime: 100 }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: undefined }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: NaN }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: Infinity }), { what: "Starry Form: Archer", left: null });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: "540" }), { what: "Starry Form: Archer", left: null });
+  // A known end still reads its duration.
+  assert.deepEqual(core.portraitText({ starry, starryLeft: 540 }), { what: "Starry Form: Archer", left: "9 minutes" });
+  assert.deepEqual(core.portraitText({ starry, starryLeft: 0 }), { what: "Starry Form: Archer", left: "0 minutes" });
+});
