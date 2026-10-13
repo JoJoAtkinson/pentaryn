@@ -72,3 +72,12 @@ def test_py_cloud_every_cited_test_is_in_the_file_it_names():
     rows = {ln.split("|")[1].strip(): ln for ln in text.splitlines() if ln.startswith("| ")}
     assert "`test_review_fixes.py::test_perf1_rebuilding_one_bundle_hashes_only_that_folder`" in rows["PERF-1"]
     assert "`test_review_fixes.py::test_m4_rebuilder_rebuilt_is_optional" in rows["M4"]
+
+
+def test_py_update_rob_4_measures_drift_against_master():
+    """The MCP fork's upstream (adambdooley/foundry-vtt-mcp) defaults to master, not main."""
+    text = _read("py-update.md")
+    step = text[text.index("- **M9, M10, M11, ROB-4:**"):].split("\n- ")[0].split("\n\n")[0]
+    step = " ".join(step.split())
+    assert "upstream main" not in step
+    assert "`master`" in step
