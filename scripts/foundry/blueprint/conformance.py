@@ -106,6 +106,7 @@ class Module:
     registry_root: Path
     all_manifests: dict[str, dict | None] = field(default_factory=dict)   # None: unreadable (C38 says so)
     registry_error: str | None = None            # why the registry could not be loaded (C47/C32 fail on it)
+    package_scan: dict[bool, dict[str, list[str]]] = field(default_factory=dict, repr=False, compare=False)
 
     @property
     def id(self) -> str:
@@ -308,17 +309,22 @@ def feature_files(m: Module) -> set[str]:
 
 
 def package_hits(m: Module, *, include_lib: bool = True) -> dict[str, list[str]]:
-    """package id → files whose code names it (comments stripped, adjustments.py's id rule + aliases)."""
+    """package id → files whose code names it (comments stripped, adjustments.py's id rule + aliases).
+    Memoised on the Module per include_lib, so C09 and C47 share one scan (perf-2)."""
+    if include_lib in m.package_scan:
+        return m.package_scan[include_lib]
     paths = [m.dir / rel for rel in m.files]
     if include_lib:
         paths += [m.dir / rel for rel in m.lib_files]
+    table = package_aliases(m).items()
     hits: dict[str, list[str]] = {}
     for path in paths:
         code = adj.strip_comments(path.read_text(encoding="utf-8", errors="replace"), path.suffix)
         low = code.lower()
-        for pkg, aliases in package_aliases(m).items():
+        for pkg, aliases in table:
             if adj.id_pattern(pkg).search(code) or any(a.lower() in low for a in aliases):
                 hits.setdefault(pkg, []).append(path.relative_to(m.dir).as_posix())
+    m.package_scan[include_lib] = hits
     return hits
 
 

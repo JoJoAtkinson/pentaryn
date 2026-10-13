@@ -228,6 +228,34 @@ def test_wait_modules_are_reported(tmp_path, monkeypatch, capsys):
     assert isinstance(conformance.WAIT, dict)
 
 
+def test_package_hits_scans_once_per_module_py_blueprint_perf_2(tmp_path, monkeypatch):
+    """C09 and C47 share one package scan; the alias table is built once, not once per file."""
+    d = _tiny(tmp_path, files={"one.mjs": "export const piles = globalThis.itempiles;\n",
+                               "two.mjs": "export {};\n", "three.mjs": "export {};\n"})
+    calls = {"aliases": 0, "strip": 0}
+    real_aliases, real_strip = conformance.package_aliases, conformance.adj.strip_comments
+
+    def aliases(*a, **k):
+        calls["aliases"] += 1
+        return real_aliases(*a, **k)
+
+    def strip(*a, **k):
+        calls["strip"] += 1
+        return real_strip(*a, **k)
+
+    monkeypatch.setattr(conformance, "package_aliases", aliases)
+    monkeypatch.setattr(conformance.adj, "strip_comments", strip)
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    first = conformance.package_hits(m)
+    assert conformance.package_hits(m) is first
+    assert "item-piles" in first
+    assert calls == {"aliases": 1, "strip": 3}, calls
+    # include_lib=False is its own scan, still cached
+    conformance.package_hits(m, include_lib=False)
+    conformance.package_hits(m, include_lib=False)
+    assert calls == {"aliases": 2, "strip": 6}, calls
+
+
 # ── gap-fill: lock tier fallback and scorer fixes R2–R9 ──────────────────────
 
 def test_tier_falls_back_to_the_lock_before_wave_7(tmp_path):
