@@ -97,3 +97,10 @@ Branch `fix2/dropbin-live-2026-10-13`, declared. The FIX-2 live check of DB-AC-1
 Tests: `test/drop-capture.test.mjs` (object/actor-only/vetoed targets, resolvePile),
 `test/drop-merge.test.mjs` (delete-then-drop is one row; a hand delete then another item's drop is two;
 appendEntry merge rules). Gate `make foundry-dropbin-check`: 188 tests, 40 checks, conformance 100 %.
+
+Live re-check (2026-10-13, GM viewing ZZ scene A, Item Piles' own `dropItems` socket handler, ZZ Hero
+→ empty ground on ZZ scene B, twice): exactly two rows, both `drop`, sceneName `ZZ dropbin B`, each
+with its new pile's token uuid and x/y; no `delete` rows. **DB-AC-1 passes.** Not fixed (open
+follow-up): a drop onto an existing pile (`_transferItems`) is still `delete` + `drop`, because the
+item gets a new `_id` on the pile; pairing them needs Item Piles' `preTransferItems` deltas, not a
+name match (which would collapse a real same-named hand delete, dropbin-EC-2).
