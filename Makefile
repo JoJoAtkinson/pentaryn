@@ -191,8 +191,8 @@ foundry-import:     ; @$(OPS) import
 foundry-clean:      ; @$(OPS) clean
 foundry-clean-only: ; @$(OPS) clean-only
 foundry-verify:     ; @$(OPS) verify
-# The importer's code alone (module-check + install, nothing staged): module-sync refuses it, and
-# foundry-sync stages actors.json with it. There is no foundry-importer-sync.
+# The importer's code alone (module-check + install, nothing staged). foundry-sync stages actors.json
+# with it; foundry-importer-sync (the foundry-%-sync pattern below) only prints module-sync's refusal.
 foundry-importer-install: ; @$(OPS) importer-install
 
 # ─── Foundry ⇄ OneDrive ─────────────────────────────────────────────────
@@ -270,8 +270,15 @@ foundry-module-new:
 	@$(OPS) module-new $(M) --title "$(TITLE)" --tier $(if $(TIER),$(TIER),full) $(ARGS)
 # Regenerate the Module APIs table in context/foundry/README.md (check-context fails when stale).
 # `--check` (or CHECK=1) only reports a stale table. GNU make reads `--check` as its own
-# --check-symlink-times (-L, by unambiguous prefix), so it reaches us as an L in MAKEFLAGS' flag word.
-INDEX_CHECK = $(if $(or $(CHECK),$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS))))),--check,)
+# --check-symlink-times (-L, by unambiguous prefix), so it reaches us only as an L among MAKEFLAGS'
+# short flags. MAKEFLAGS has no one shape (make 3.81: `L`, `nL`, ` --no-print-directory -sL`,
+# `L -- M=x`, a bare `WORLD=x` with no flags at all; 4.x: `L --no-print-directory -- M=x`), so:
+# drop the command-line assignments (they are exactly MAKEOVERRIDES), then look for the L in the
+# short-flag words alone — the first word when it has no dash, and every single-dash word. Long
+# options (--x, --x=y, the bare --) and option arguments (`-I Lib` -> `I Lib`) never count.
+MAKEFLAGS_NO_VARS = $(subst $(MAKEOVERRIDES),,$(MAKEFLAGS))
+MAKE_SHORT_FLAGS = $(filter-out -%,$(firstword $(MAKEFLAGS_NO_VARS))) $(filter-out --%,$(filter -%,$(MAKEFLAGS_NO_VARS)))
+INDEX_CHECK = $(if $(or $(CHECK),$(findstring L,$(MAKE_SHORT_FLAGS))),--check,)
 foundry-module-index: ; @$(OPS) module-index $(INDEX_CHECK)
 # Score against rules C01–C62: every module, or M=<short>; MD=1 for the markdown table.
 foundry-conformance: ; @$(OPS) module-conformance $(if $(M),--module $(M),) $(if $(MD),--markdown,)

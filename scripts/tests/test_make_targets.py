@@ -196,14 +196,18 @@ def test_foundry_down_takes_the_shutdown_backup_after_the_server_stops_wave3_1()
 
 @pytest.mark.parametrize("argv", [("vtt-down",), ("vtt-down", "WAIT=1")])
 def test_vtt_down_backs_up_exactly_once_wave3_1(argv):
-    """vtt-down reaches the backup through foundry-down; it must not take a second one."""
+    """vtt-down reaches the backup through foundry-down; it must not take a second one.
+    A regression guard, not a red-first test: vtt-down already backed up once before
+    wave 3 (from its own recipe), and this pins that moving the backup into foundry-down
+    did not double it."""
     out = _dry_args(*argv)
     assert out.count("scripts.foundry.cloud backup") == 1, out
     assert out.count("ops down") == 1
 
 
 def test_a_restart_backs_up_once_wave3_1():
-    """down then up: the shutdown backup, then the pre-launch one that skips an unchanged world."""
+    """down then up: one shutdown backup, before the app starts again. foundry-up takes no
+    pre-launch backup (only vtt-up's foundry-backup-safe does)."""
     out = _dry_args("foundry-down", "foundry-up")
     assert out.count("cloud backup --reason shutdown") == 1
     assert out.index("cloud backup --reason shutdown") < out.index("ops up")
@@ -217,3 +221,93 @@ def test_foundry_module_index_passes_check_through_wave3_2():
     assert "module-index" in plain and "--check" not in plain
     assert "module-index --check" in _dry_args("foundry-module-index", "--check")
     assert "module-index --check" in _dry_args("foundry-module-index", "CHECK=1")
+
+
+# `make -n` puts an `n` first in MAKEFLAGS, which hides both shapes that broke the first
+# INDEX_CHECK: long options first (` --no-print-directory -L`) and no flags at all, where
+# MAKEFLAGS is only the command-line assignments (`M=Lookup`). So these run make for real,
+# with a second makefile that swaps OPS for a stub (recipes expand OPS when they run, so the
+# later definition wins) — no `-n`, and no assignment unless the row is about one.
+
+def _index_run(tmp_path, *argv, ops="echo OPS"):
+    probe = tmp_path / "probe.mk"
+    probe.write_text(f"OPS := {ops}\n", encoding="utf-8")
+    return subprocess.run(["make", "-f", "Makefile", "-f", str(probe), "foundry-module-index", *argv],
+                          cwd=cfg.REPO_ROOT, capture_output=True, text=True, timeout=120)
+
+
+@pytest.mark.parametrize("argv", [
+    ("--check",),
+    ("--no-print-directory", "--check"),
+    ("-s", "--no-print-directory", "--check"),
+    ("-k", "-j2", "--no-print-directory", "--check"),
+    ("--check", "M=Lookup"),
+    ("--check", "-I", "Lib"),
+    ("--check-symlink-times",),
+    ("-L",),
+    ("CHECK=1",),
+], ids=" ".join)
+def test_foundry_module_index_check_in_every_makeflags_shape_wave3_2(tmp_path, argv):
+    proc = _index_run(tmp_path, *argv)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip().splitlines()[-1] == "OPS module-index --check", proc.stdout
+
+
+@pytest.mark.parametrize("argv", [
+    (),
+    ("WORLD=ardenford",),
+    ("M=Lookup",),
+    ("--no-print-directory", "WORLD=Lx"),
+    ("TITLE=Pentaryn Lore", "ARGS=--kit -L"),
+    ("-I", "Lib"),
+    ("-s",),
+    ("-j2",),
+], ids=lambda a: " ".join(a) or "plain")
+def test_foundry_module_index_regenerates_without_check_wave3_2(tmp_path, argv):
+    """No --check asked: a capital L in an assignment or an option's argument is not -L."""
+    proc = _index_run(tmp_path, *argv)
+    assert proc.returncode == 0, proc.stderr
+    assert proc.stdout.strip().splitlines()[-1] == "OPS module-index", proc.stdout
+
+
+_INDEX_SHIM = """\
+import sys
+from pathlib import Path
+sys.path.insert(0, ".")
+from scripts.foundry.ops import cli, index
+readme = Path(sys.argv[1])
+is_current, write = index.is_current, index.write
+index.is_current = lambda _readme=None, root=None: is_current(readme, root)
+index.write = lambda _readme=None, root=None: write(readme, root)
+sys.exit(cli.main(sys.argv[2:]))
+"""
+
+
+def _stale_readme(tmp_path):
+    from scripts.foundry.ops import index
+    readme = tmp_path / "README.md"
+    readme.write_text(index.README.read_text(encoding="utf-8")
+                      .replace(index.END, "| stale | row |\n" + index.END), encoding="utf-8")
+    shim = tmp_path / "index_shim.py"
+    shim.write_text(_INDEX_SHIM, encoding="utf-8")
+    return readme, f"cd $(ROOT) && $(PY) {shim} {readme}"
+
+
+def test_foundry_module_index_check_leaves_a_stale_table_wave3_2(tmp_path):
+    """End to end against a throwaway README: the real ops CLI, reached through the real
+    recipe, in the shape that broke (`--no-print-directory --check`)."""
+    readme, ops = _stale_readme(tmp_path)
+    before = readme.read_text(encoding="utf-8")
+    proc = _index_run(tmp_path, "--no-print-directory", "--check", ops=ops)
+    assert proc.returncode != 0, proc.stdout
+    assert "module index stale" in proc.stdout
+    assert readme.read_text(encoding="utf-8") == before
+
+
+def test_foundry_module_index_with_an_assignment_regenerates_wave3_2(tmp_path):
+    """No --check asked, but an assignment with a capital L: the table is rewritten."""
+    readme, ops = _stale_readme(tmp_path)
+    proc = _index_run(tmp_path, "M=Lookup", ops=ops)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "module index rewritten" in proc.stdout
+    assert "| stale | row |" not in readme.read_text(encoding="utf-8")
