@@ -12,6 +12,9 @@ Declared changes (DB-AC-1 live):
   client before firing the drop hook, so the sheet-delete capture wrote a `delete` row first. A drop
   whose item `_id` and actor match the tail `delete` row within 2 s now takes that row's place and
   number (`dropReplacesTail`). A hand delete, or a drop of another item, still keeps its own row.
+  A drop onto an existing pile is still two rows (Item Piles' transfer gives the item a new `_id`
+  on the pile, so the match by `_id` cannot pair them; matching by name would merge a real
+  same-named hand delete — dropbin-EC-2).
 
 ## 0.2.3 — 2026-10-11 (wave 2 live check, PT3-1 again)
 
