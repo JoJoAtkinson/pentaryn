@@ -128,7 +128,7 @@ class ModuleSpec:
         self.name = name
         self.check = (check,) if isinstance(check, str) else tuple(check)
         self._after_sync = tuple(after_sync)
-        unknown = [c for c in self.check if c not in (*self.CHECKS, "none")]
+        unknown = [c for c in self.check if c not in self.CHECKS]
         if unknown:
             raise ValueError(f"{name}: unknown check(s) {unknown}")
 
