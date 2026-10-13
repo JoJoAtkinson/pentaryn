@@ -230,6 +230,7 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
           await updateActor(actor, toUpdatePayload(data), ActorClass);
         }
       }
+
       const itemResult = await replaceItems(actor, items, unmanagedItems, slug);
       if (itemResult.unmanaged.length) {
         log.warn(
