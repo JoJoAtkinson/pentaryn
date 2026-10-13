@@ -143,3 +143,20 @@ test("KIT-M7: the README marks isCoded, withRef and installRoot 'exported for mo
       : `README.md ${file} row does not mark \`${name}\`: exported for modules; no consumer yet`);
   }
 });
+
+// KIT-M6-followup (final review 2026-10-12): the queries row listed "resolve", which queries.mjs
+// never imports (it imports errors and api; api's own row already carries resolve). A dep the file
+// does not import and another of its deps already reaches is dead weight in the manifest. (A dep a
+// file does not import but nothing else reaches stays legal: patch-libwrapper is a route for patch.)
+test("KIT-M6-followup: no kit.json row lists an unimported dep another of its deps already reaches", () => {
+  for (const [file, imports] of Object.entries(graph)) {
+    const name = file.replace(/\.mjs$/, "");
+    const direct = new Set(imports.map(i => i.replace(/\.mjs$/, "")));
+    const deps = kit.files[name]?.deps ?? [];
+    for (const d of deps) {
+      if (direct.has(d)) continue;
+      const viaOthers = deps.filter(o => o !== d).some(o => closure(o).has(d));
+      assert.ok(!viaOthers, `kit.json deps for "${name}" list "${d}", which ${file} does not import and another dep already reaches`);
+    }
+  }
+});

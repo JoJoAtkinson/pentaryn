@@ -8,7 +8,7 @@
     "resolve":  { "deps": ["errors"] },
     "settings": { "deps": ["errors"] },
     "api":      { "deps": ["errors", "resolve"] },
-    "queries":  { "deps": ["errors", "api", "resolve"] },
+    "queries":  { "deps": ["errors", "api"] },
     "election": { "deps": ["errors"] },
     "patch":    { "deps": ["log"] },
     "patch-libwrapper": { "deps": ["patch", "log"], "packages": ["lib-wrapper"] },

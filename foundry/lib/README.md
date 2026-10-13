@@ -198,3 +198,8 @@ per name, in the order the members land on the API (`via`: `built`, `member` or 
 RESERVED name has no entry or an entry is not RESERVED. Reserved-name refusal, the members
 `buildApi` accepts and every default are unchanged — the RESERVED guard test and every surface and
 describe golden — and the published key order — are untouched.
+KIT-M6-followup (declared, manifest only): kit.json's `queries` row listed a `resolve` dep that
+`queries.mjs` never imports (it imports `errors` and `api`, and `api`'s row already carries
+`resolve`). The row is now `["errors", "api"]`; vendoring closes over `api → resolve`, so every
+module vendors the same files and no vendored byte changes. A kit test refuses a row that lists a
+dep its file does not import when another of its deps already reaches it.
