@@ -1284,3 +1284,59 @@ def test_tunnel_pid_trusts_a_live_cloudflared(monkeypatch, tmp_path):
     monkeypatch.setattr(service.subprocess, "run", lambda argv, **kw: subprocess.CompletedProcess(
         argv, 0, stdout="/opt/homebrew/bin/cloudflared\n", stderr=""))
     assert service._tunnel_pid() == 4242
+
+
+# ── py-ops-ac-3: overlapping tunnel-up runs start one cloudflared, not two ────
+# tunnel_up checked the pidfile, then (seconds later, after `cloudflared tunnel list`)
+# started cloudflared and wrote the pidfile. Two runs in that window both saw "no
+# tunnel" and both started one. An flock on RUN_DIR/cloudflared.lock now spans the
+# check through the pidfile write, so the second run waits and then sees it up.
+
+def test_overlapping_tunnel_up_runs_start_one_cloudflared(monkeypatch, tmp_path, capsys):
+    """py-ops-ac-3: two concurrent tunnel-up runs → one Popen, one 'already up'."""
+    import threading
+    monkeypatch.setattr(cfg, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(cfg, "CF_PID", tmp_path / "cloudflared.pid")
+    monkeypatch.setattr(cfg, "CF_LOG", tmp_path / "cloudflared.log")
+    cert = tmp_path / "cert.pem"
+    cert.write_text("x")
+    monkeypatch.setattr(service, "CF_CERT", cert)
+    monkeypatch.setattr(service.host, "require_primary", lambda *a, **kw: None)
+    monkeypatch.setattr(service.os, "kill", lambda pid, sig: None)
+    monkeypatch.setattr(service, "_is_cloudflared", lambda pid: True)
+    monkeypatch.setattr(service.time, "sleep", lambda s: None)
+
+    # Hold whoever reaches `cloudflared tunnel list` until the other run gets there too
+    # (or 1 s passes, which is what happens once the lock makes the other run wait).
+    both_listed = threading.Barrier(2, timeout=1.0)
+
+    def fake_run(argv, **kw):
+        try:
+            both_listed.wait()
+        except threading.BrokenBarrierError:
+            pass
+        import subprocess
+        return subprocess.CompletedProcess(argv, 0, stdout=f"{cfg.TUNNEL_NAME}\n", stderr="")
+
+    started = []
+
+    class FakePopen:
+        def __init__(self, argv, **kw):
+            started.append(argv)
+            self.pid = 40000 + len(started)
+
+    monkeypatch.setattr(service.subprocess, "run", fake_run)
+    monkeypatch.setattr(service.subprocess, "Popen", FakePopen)
+
+    results = []
+    runs = [threading.Thread(target=lambda: results.append(service.tunnel_up()))
+            for _ in range(2)]
+    for t in runs:
+        t.start()
+    for t in runs:
+        t.join(timeout=10)
+
+    assert results == [0, 0]
+    assert len(started) == 1, f"py-ops-ac-3: {len(started)} cloudflared processes started"
+    out = capsys.readouterr().out
+    assert out.count("starting tunnel") == 1 and "tunnel already up" in out

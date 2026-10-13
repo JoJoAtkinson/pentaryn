@@ -77,7 +77,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 | App | `Foundry Virtual Tabletop` in `/Applications` — launched via `open -a` (through `host.py`; BOSS uses `PENTARYN_START_CMD`) |
 | Local URL | <http://localhost:30000> |
 | Public URL | <https://vtt.atjoseph.com> |
-| Tunnel | `cloudflared`, named tunnel `ardenhaven`, pidfile `.run/cloudflared.pid`, log `.run/cloudflared.log` (both gitignored) |
+| Tunnel | `cloudflared`, named tunnel `ardenhaven`, pidfile `.run/cloudflared.pid`, log `.run/cloudflared.log`, start lock `.run/cloudflared.lock` (all gitignored; `tunnel-up` holds the lock from the pidfile check to the pidfile write, so overlapping runs start one cloudflared) |
 | Data root | `~/Library/Application Support/FoundryVTT` (`host.FOUNDRY_DATA`; `Data/` beneath it is `ops/config.py`'s `FOUNDRY_DATA_DIR`) |
 | Core | **v14.365** |
 | System | **dnd5e 5.3.3** |
