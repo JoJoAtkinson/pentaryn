@@ -1,6 +1,6 @@
 # Defect wave 2 (2026-10-12): py-ops
 
-**Read this when** you need the history of defect wave 2 (2026-10-12) for the py-ops group
+**Read this when:** you need the history of defect wave 2 (2026-10-12) for the py-ops group
 (`scripts/foundry/ops/` and the blueprint generator's gate call). This is a record, not instructions. The use-doc is
 [`context/foundry/ops.md`](../../foundry/ops.md).
 
