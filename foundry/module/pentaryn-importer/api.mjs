@@ -11,8 +11,8 @@ import {
 } from "./importer-core.mjs";
 import {
   TAG, assertItemsAddressable, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
-  fetchJsonWithTimeout, indexActorsBySlug, log, refuse, replaceItems, reportSummary,
-  runExpectedAssertions, shout, stampContentHash, storedHash
+  createOrJoin, fetchJsonWithTimeout, indexActorsBySlug, log, refuse, replaceItems, reportSummary,
+  runExpectedAssertions, shout, stampContentHash, storedHash, updateActor
 } from "./documents-adapter.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { buildApi } from "./lib/api.mjs";
@@ -50,6 +50,12 @@ import { publishedOf } from "./lib/publish.mjs";
 
 /** True while an `importActors` call is in flight on this client. */
 let running = false;
+
+/** The ctx of the published API: its `exposed.watchCreates` comes from create-watch.mjs (wave-3 importer 2). */
+let CTX = null;
+
+/** How many times one actor is written again after another GM tab replaced it mid-write (wave-3 importer 2). */
+const MAX_REWRITES = 2;
 
 /**
  * Import (upsert) the NPC Actors described by `actors.json`.
@@ -207,28 +213,51 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       }
 
       let actor = existing;
+      let joined = false;                        // another GM tab created it; this run updates it
+      let replaced = false;                      // ...and this run's own create replaced that tab's actor
       if (actor) {
-        // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld.
-        await actor.update(toUpdatePayload(data), { render: false });
+        // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld. A change
+        // Foundry refuses (it resolves undefined, no throw) fails this actor: no Items, no stamp.
+        await updateActor(actor, toUpdatePayload(data), ActorClass);
       } else {
-        // CREATE under the slug's own id (importer-AC-2): another GM tab creating the same slug asks for
-        // the same id. Foundry 14.369's server does NOT refuse a keepId create over a world Actor that
-        // already holds the id — it silently replaces it — so look first: the other tab's create
-        // broadcast has put its actor in game.actors, and that actor is never overwritten.
-        const id = idForSlug(slug);
-        const holder = game.actors.get(id);
-        if (holder) {
-          if (foundry.utils.getProperty(holder, `flags.${FLAG_SCOPE}.slug`) === slug) {
-            throw new Error("created concurrently by another GM tab — re-run");
-          }
-          throw new Error(`id ${id} is already held by Actor "${holder.name}" — not overwritten`);
-        }
-        actor = await ActorClass.create({ ...toCreatePayload(data), _id: id }, { keepId: true, renderSheet: false });
-        if (!actor) throw new Error("Actor.create returned nothing");
+        // CREATE under the slug's own id (importer-AC-2) — or join another GM tab's create of the same
+        // slug, then take the update path (wave-3 importer 2). See createOrJoin.
+        ({ actor, joined, replaced } = await createOrJoin(ActorClass, { ...toCreatePayload(data), _id: idForSlug(slug) }, slug,
+          CTX?.exposed?.watchCreates ?? null));
         bySlug.set(slug, actor);                 // a later entry with the same slug updates it
+        if (joined) {
+          // Skip on a matching stamp only when this run sent no create. After a same-instant join our
+          // replace may have wiped Items the other tab wrote before it, and that tab's stamp can still
+          // land afterwards on our replacement — so the stamp says nothing about the live Items.
+          // Rewriting is safe: the other tab has finished (we waited for its stamp, its last write).
+          if (!replaced && !force && incomingHash && (storedHash(actor) === incomingHash)) {
+            skipped.push(slug);
+            log.info(`skip   ${slug} — created by another GM tab with this contentHash (${incomingHash.slice(0, 20)}…)`);
+            continue;
+          }
+          await updateActor(actor, toUpdatePayload(data), ActorClass);
+        }
       }
 
-      const itemResult = await replaceItems(actor, items, unmanagedItems, slug);
+      let itemResult = await replaceItems(actor, items, unmanagedItems, slug);
+
+      // Another GM tab's same-instant create may have replaced the instance in game.actors since ours
+      // resolved (wave-3 importer 2) — before or after the Items above reached the server. A replace
+      // handled after them wiped them, so the actor and its Items are written again on the live
+      // instance (that tab joins and waits for our stamp before it writes). Bounded: a third replace
+      // fails this actor, unstamped, so the next run retries it.
+      for (let rewrites = 0; ; rewrites++) {
+        const live = game.actors.get(actor.id);
+        if (!live || live === actor) break;
+        if (rewrites >= MAX_REWRITES) {
+          throw new Error(`replaced by another GM tab ${rewrites + 1} times while it was written — re-run`);
+        }
+        log.warn(`${slug}: another GM tab replaced this actor while it was written — writing it again on the live actor`);
+        actor = live;
+        await updateActor(actor, toUpdatePayload(data), ActorClass);
+        itemResult = await replaceItems(actor, items, unmanagedItems, slug);
+      }
+
       if (itemResult.unmanaged.length) {
         log.warn(
           `${slug}: left ${itemResult.unmanaged.length} hand-added Item(s) in place `
@@ -251,10 +280,11 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       await stampContentHash(actor, incomingHash);
       // importer-R6: only a stamped actor counts as created/updated — a failure above lands in
       // failed[] alone, so each actor has exactly one outcome in the summary.
-      (existing ? updated : created).push(slug);
+      const isUpdate = Boolean(existing) || joined;
+      (isUpdate ? updated : created).push(slug);
 
       log.info(
-        `${existing ? "update" : "create"} ${slug} — ${itemResult.created} item(s) written, `
+        `${isUpdate ? "update" : "create"} ${slug} — ${itemResult.created} item(s) written, `
         + `${itemResult.deleted} replaced`
       );
     } catch (cause) {
@@ -364,6 +394,7 @@ export function legacyRoot() {
  * @param {{log: object, reg: object, uninstall: Function, api: object|null}} ctx
  */
 export function buildApiFor(ctx) {
+  CTX = ctx;
   return buildApi(MANIFEST, {
     import: importActors,
     selftest: () => selftest(ctx),

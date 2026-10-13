@@ -533,6 +533,131 @@ async function replaceItems(actor, itemsData, unmanagedItems, slug) {
   };
 }
 
+/** How long a tab that joins another tab's create waits for that tab's content-hash stamp (ms). */
+const JOIN_WAIT_MS = 10000;
+/** How often it looks while waiting (ms). */
+const JOIN_POLL_MS = 250;
+
+/**
+ * Create a NEW actor under its slug's id — or, when another GM tab is creating the same slug, join
+ * that tab's actor instead (importer-AC-2; wave-3 importer item 2, [declared]).
+ *
+ * Foundry 14.369's server replaces a world Actor on a `keepId` create over an id it already holds,
+ * with no error, so the create itself is not idempotent. Three cases:
+ *
+ *   - the id is already in game.actors (the other tab's create broadcast came before our look):
+ *     never send a create. A holder without this slug is refused; one with it is joined.
+ *   - two creates in the same instant both pass the look. The server handles them one at a time and
+ *     answers the first tab before it handles the second, so the tab whose create lands SECOND has
+ *     the first tab's `createActor` broadcast before its own response. That tab saw a foreign
+ *     instance of the id arrive before its own, so it joins (`replaced: true`). Its replace has put
+ *     its own data in place and may have wiped Items the first tab wrote before it — the server
+ *     can handle the first tab's Items create before this tab's create when this tab's latency is
+ *     higher — while the first tab's stamp may still land afterwards. So a replacing join never
+ *     skips on the stamp: it waits for it, then rewrites the actor and its Items (api.mjs).
+ *   - the first tab sees nothing at once; the second tab's replace swaps the instance in its
+ *     game.actors a moment later, possibly after its Items were written. The caller therefore
+ *     checks the live instance after its Item write and, if it was replaced, writes the actor and
+ *     its Items again on the live one before its readback (api.mjs).
+ *
+ * Joining = wait for the other tab's content-hash stamp (its last write), then let the caller take
+ * the update path. A look-first join (no create sent) skips when the stamped hash is the incoming
+ * one; a replacing join does not. No stamp within JOIN_WAIT_MS (the other tab failed or stopped) →
+ * the joining tab updates the actor itself. So exactly one actor results, the second tab's write is
+ * an update, and whichever tab writes last leaves the Items and the stamp together.
+ *
+ * The `createActor` watch is create-watch.mjs's `watchCreates`, live only for the create's round
+ * trip. Without it (the feature not installed) the same-instant case is not detected.
+ *
+ * @param {typeof Actor} ActorClass
+ * @param {object} payload  the create payload, `_id` = idForSlug(slug)
+ * @param {string} slug
+ * @param {((id: string) => {seen: Actor[], stop: () => void})|null} watchCreates
+ * @returns {Promise<{actor: Actor, joined: boolean, replaced: boolean}>}  `replaced`: this tab's own
+ *   create was handled after the other tab's, so it replaced that tab's actor
+ * @throws {Error} a per-actor failure: the id is held by an actor without this slug, or the joined
+ *   actor was deleted while waiting
+ */
+async function createOrJoin(ActorClass, payload, slug, watchCreates) {
+  const id = payload._id;
+  const holder = game.actors.get(id);
+  if (holder) {
+    if (foundry.utils.getProperty(holder, `flags.${FLAG_SCOPE}.slug`) !== slug) {
+      throw new Error(`id ${id} is already held by Actor "${holder.name}" — not overwritten`);
+    }
+    log.warn(`${slug}: another GM tab created this actor during the run — joining it as an update`);
+    return { actor: await awaitStamp(id, slug), joined: true, replaced: false };
+  }
+  const { seen, stop } = watchCreates?.(id) ?? { seen: [], stop: () => {} };   // instances of the id, in arrival order
+  let actor;
+  try {
+    actor = await ActorClass.create(payload, { keepId: true, renderSheet: false });
+  } finally {
+    stop();
+  }
+  if (!actor) throw new Error("Actor.create returned nothing");
+  // Second only if a foreign instance arrived BEFORE our own: one that arrives after it is the other
+  // tab's replace of ours, and that tab is the one standing down.
+  const ours = seen.indexOf(actor);
+  if (!seen.slice(0, ours < 0 ? seen.length : ours).some(doc => doc !== actor)) return { actor, joined: false, replaced: false };
+  log.warn(`${slug}: another GM tab created this actor in the same instant — joining it as an update`);
+  return { actor: await awaitStamp(id, slug), joined: true, replaced: true };
+}
+
+/**
+ * Wait for the creating tab's content-hash stamp on actor `id`, up to JOIN_WAIT_MS.
+ * @param {string} id
+ * @param {string} slug
+ * @returns {Promise<Actor>} the live actor, stamped or not
+ */
+async function awaitStamp(id, slug) {
+  for (let waited = 0; ; waited += JOIN_POLL_MS) {
+    const live = game.actors.get(id);
+    if (!live) throw new Error("deleted by another GM tab while this run waited for it — re-run");
+    if (storedHash(live)) return live;
+    if (waited >= JOIN_WAIT_MS) {
+      log.warn(`${slug}: no content hash from the other GM tab after ${JOIN_WAIT_MS} ms — updating it here`);
+      return live;
+    }
+    await new Promise(resolve => setTimeout(resolve, JOIN_POLL_MS));
+  }
+}
+
+/**
+ * Update an existing Actor in place, and throw when Foundry refused the change (wave-3 importer
+ * item 1, [declared]).
+ *
+ * Foundry 14's client does not throw on an invalid update. `#preUpdateDocumentArray`
+ * (client/data/client-backend.mjs) runs a dry-run `updateSource`; on a validation error — a blank
+ * `name`, say — it shows an error toast, drops that document from the request and `update()`
+ * resolves `undefined`. Without this check the run went on, the readback passed against the old
+ * values, the new content hash was stamped and the change was never retried.
+ *
+ * `undefined` is also what a genuine no-op returns (an empty diff is never sent), so on `undefined`
+ * the same dry run is repeated here, the way the client did it: a throw is a refusal, a non-empty
+ * diff is a pre-update veto, an empty one is a no-op and fine.
+ *
+ * @param {Actor} actor
+ * @param {object} payload            `toUpdatePayload(data)`
+ * @param {typeof Actor} ActorClass   `getDocumentClass("Actor")`, for its static `cleanData`
+ * @throws {Error} a plain Error (a per-actor failure) when the update was refused
+ */
+async function updateActor(actor, payload, ActorClass) {
+  const result = await actor.update(payload, { render: false });
+  if (result) return;
+  let diff;
+  try {
+    const changes = ActorClass.cleanData(foundry.utils.deepClone(payload), { migrate: true, sanitize: true, partial: true },
+      { creation: false, model: actor, source: actor._source });
+    diff = actor.updateSource(changes, { clean: true, dryRun: true, fallback: false });
+  } catch (cause) {
+    throw new Error(`update refused by Foundry — ${String(cause?.message ?? cause).split("] ").pop().trim()}`);
+  }
+  if (diff && !foundry.utils.isEmpty(diff)) {
+    throw new Error("update refused by Foundry — a preUpdateActor hook or _preUpdate vetoed it");
+  }
+}
+
 /**
  * Stamp `flags.pentaryn.contentHash` — the last write for an actor, and only once every item has
  * been created and every assertion has passed.
@@ -602,6 +727,6 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
 export {
   TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout,
   assertVersionGate, assertNoBadFormulas, assertPrototypeToken, assertActivityIdsSurvived,
-  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, replaceItems, stampContentHash,
+  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, replaceItems, stampContentHash, updateActor, createOrJoin,
   reportSummary
 };
