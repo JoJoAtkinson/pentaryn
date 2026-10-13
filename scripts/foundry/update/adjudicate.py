@@ -43,7 +43,7 @@ TIMEOUT_SECONDS = 600
 BUDGET_USD = 1.50
 
 SYSTEM_RULES = """\
-You are grading Foundry VTT package updates for an unattended 06:00 Saturday job.
+You are grading Foundry VTT package updates for an unattended 04:06 Saturday job.
 
 For each candidate you get: the package, the version jump, and the upstream release
 notes between the installed version and the target.

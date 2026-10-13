@@ -272,7 +272,7 @@ def classify_core(status_version: str, target: dict | None, preview: dict | None
         d.reasons = [
             f"generation change {running_gen} -> {target_gen}: Foundry disables every "
             "module that has not been re-verified for the new generation. This is the "
-            "hands-on migration — do it deliberately, not at 06:00."
+            "hands-on migration — do it deliberately, not at 04:06."
         ]
         return d
 
