@@ -11,7 +11,9 @@ import { bootWorld } from "./fixtures/world.mjs";
 
 await bootWorld({ settings: { "pentaryn-ties.attributes": [] } });
 const A = await import("../attributes.mjs");
-const ids = () => (game.settings.get("pentaryn-ties", "attributes") ?? []).map(e => e.id);
+// the stored registry's entries — not ties-ui-ACC-6's `{ stamp: "registry", rev, by }` element,
+// which every write appends and every reader drops
+const ids = () => (game.settings.get("pentaryn-ties", "attributes") ?? []).filter(e => e?.stamp === undefined).map(e => e.id);
 
 test("EC-2: two concurrent ensure calls for one new title — one creates, one answers existed:true (before: collision)", async () => {
   const [a, b] = await Promise.all([A.ensureAttribute("Tide Order", { dc: 13 }), A.ensureAttribute("Tide Order", { dc: 18 })]);

@@ -1,16 +1,15 @@
 /**
  * Pentaryn NPC Ties — the player's double-click look menu (FEATURE).
  *
- * Moved out of the entry (guide S7). Imports ui, adapter, settings and the study conduit (a domain
- * file — graph-allow, gap G1).
+ * Moved out of the entry (guide S7). Imports ui, adapter and settings; the inspection goes through
+ * look-app's `examine`, the one Inspect gesture every door calls (ties-ui-EXT-10).
  */
 
 import { mayWrite } from "./settings.mjs";
-import { inspectorFor } from "./ties-adapter.mjs";
+import { inspectorFor, subjectOfToken } from "./ties-adapter.mjs";
 import { openTieDialogFor } from "./tie-dialog.mjs";
-import { openLook } from "./look-app.mjs";
+import { examine, openLook } from "./look-app.mjs";
 import { fileHovered } from "./known-ui.mjs";
-import { inspect } from "./study.mjs";
 import { readFlag } from "./lib/flags.mjs";
 
 /*
@@ -35,14 +34,17 @@ function closeLookMenu() {
 function openLookMenu(token, ev) {
   closeLookMenu();
   const who = inspectorFor();
-  const subject = token.actor ?? game.actors.get(token.document.actorId);
-  if (!who || !subject || subject.id === who.id) return;
+  const subject = subjectOfToken(token);
+  if (!subject || subject.id === who?.id) return;
 
   /*
    * Two items, the same two for every target. "Take a closer look" opens the player's Look window
    * FIRST and then inspects — the window's opening never waits on, or depends on, what the dice
    * do. "What I know about them" opens the same window with no inspect at all: no stub card, no
    * roll, no tempo tell — reading your own notebook is not looking someone over.
+   * Both need an inspector, so a player with no assigned character gets the menu without them
+   * (ties-ui-E7): the tie and notebook items below still show, and the notebook warns
+   * 'needCharacter' on its own.
    */
   const menu = document.createElement("nav");
   menu.className = "pt-look-menu";
@@ -59,15 +61,16 @@ function openLookMenu(token, ev) {
     });
     menu.appendChild(b);
   };
-  item("fa-eye", game.i18n.localize("PENTARYN_TIES.known.inspect.button"),
-    game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name }), async () => {
-      openLook(who, subject);
-      await inspect(who, subject);
-    });
-  item("fa-book-open-reader", game.i18n.localize("PENTARYN_TIES.known.look.menu"),
-    game.i18n.format("PENTARYN_TIES.known.look.menuTip", { name: token.name }), async () => {
-      openLook(who, subject);
-    });
+  if (who) {
+    item("fa-eye", game.i18n.localize("PENTARYN_TIES.known.inspect.button"),
+      game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name }), async () => {
+        await examine(who, subject);
+      });
+    item("fa-book-open-reader", game.i18n.localize("PENTARYN_TIES.known.look.menu"),
+      game.i18n.format("PENTARYN_TIES.known.look.menuTip", { name: token.name }), async () => {
+        openLook(who, subject);
+      });
+  }
   /*
    * The two writing keys (6 and 5) on the menu too (usability run 2026-10, U-7-1): Joe's rule is
    * that no player action may be reachable only through a key nobody told them about. Both take

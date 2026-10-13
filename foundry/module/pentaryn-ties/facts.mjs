@@ -22,6 +22,30 @@ import { factOrder, LORE_FLAG, BELIEFS_FLAG, GRANTED_FLAG, identMissKey, readGra
 import { readFlag } from "./lib/flags.mjs";
 
 /**
+ * The heading each fact group draws under, per surface (ties-ui-EXT-4): `look` is the player's
+ * Look window, `preview` the GM's Player view, and `kindPage` the kind group's heading when a
+ * separate kind actor files the study under its own page. Literal keys, so the i18n gate sees
+ * every one. A group this table does not know is headed with its own name (`groupLabelKey` →
+ * null) — labelled, never dropped, never filed under another group's heading.
+ */
+export const GROUP_LABEL = Object.freeze({
+  ident: Object.freeze({ look: "PENTARYN_TIES.known.look.groupIdent", preview: "PENTARYN_TIES.known.share.groupIdent" }),
+  attr: Object.freeze({ look: "PENTARYN_TIES.known.look.groupAttr", preview: "PENTARYN_TIES.known.share.groupAttr" }),
+  lore: Object.freeze({ look: "PENTARYN_TIES.known.look.groupLore", preview: "PENTARYN_TIES.known.share.groupLore" }),
+  kind: Object.freeze({
+    look: "PENTARYN_TIES.known.look.groupKind",
+    preview: "PENTARYN_TIES.known.share.groupKind",
+    kindPage: Object.freeze({ look: "PENTARYN_TIES.known.look.groupKindPage", preview: "PENTARYN_TIES.known.share.groupKindPage" })
+  })
+});
+
+/** `group`'s heading key on `surface` ("look" | "preview"), or null for a group GROUP_LABEL does not know. */
+export function groupLabelKey(group, surface, { kindPage = false } = {}) {
+  const row = Object.hasOwn(GROUP_LABEL, group) ? GROUP_LABEL[group] : null;
+  return (kindPage && row?.kindPage?.[surface]) || row?.[surface] || null;
+}
+
+/**
  * → `{ base, kind, registry, carried, facts }`.
  *
  * `onBase` (default) reads the **world actor** behind an unlinked token: grants are keyed and

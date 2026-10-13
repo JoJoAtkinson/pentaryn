@@ -118,13 +118,13 @@
           "type": "Actor"
         }
       ],
-      "returns": "Promise<Application>",
+      "returns": "Application|null",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Open the standalone ties editor for an actor."
+      "doc": "Open (or front) the standalone ties editor for an actor."
     },
     {
       "path": "addTie",
@@ -931,8 +931,8 @@
       "params": [
         {
           "name": "character",
-          "type": "Actor",
-          "doc": "a player character"
+          "type": "Actor|id",
+          "doc": "a player character, or the id on its belief row (a deleted character's row still clears)"
         },
         {
           "name": "subject",
@@ -1349,13 +1349,13 @@
           "doc": "the creature or person studied"
         }
       ],
-      "returns": "Promise<InspectPreview|null>",
+      "returns": "InspectPreview|null",
       "gm": true,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "GM: the inspect window — player view, who-knows tags, simulated rolls."
+      "doc": "GM: the inspect window, one per subject — player view, who-knows tags, simulated rolls."
     },
     {
       "path": "study.share",
@@ -1858,13 +1858,13 @@
     {
       "path": "attributes.openReview",
       "params": [],
-      "returns": "Promise<AttributeReview>",
+      "returns": "AttributeReview|null",
       "gm": true,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "GM: the Attribute Review panel."
+      "doc": "GM: the Attribute Review panel (one window; a second open fronts it)."
     },
     {
       "path": "attributes.selected",
@@ -2490,6 +2490,10 @@
     {
       "name": "refreshToken",
       "label": "worn: refreshToken"
+    },
+    {
+      "name": "createToken",
+      "label": "worn: createToken"
     },
     {
       "name": "deleteToken",

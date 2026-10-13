@@ -26,10 +26,17 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, FALLBACK_ART } from "./core/html.mjs";
 
 /** The single live window, and who it is about. */
 let current = { app: null, actorId: null };
+
+/**
+ * The press being built. toggle() awaits enrichHTML before it records the window, so a second
+ * press inside that await would see "nothing open" and build a second card. Each press waits for
+ * the one before it, then toggles as normal against what that one left open.
+ */
+let inFlight = Promise.resolve();
 
 /** Foundry moved TextEditor under applications.ux in v13; keep the old path as a fallback. */
 const editor = () => foundry.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
@@ -59,10 +66,15 @@ export async function close() {
  */
 export async function toggle() {
   if (!game.user?.isGM) return null;
+  // Read the face now: the press is about who was under the cursor when the key went down.
+  const actor = subject()?.actor ?? null;
+  const run = inFlight.then(() => toggleFor(actor));
+  inFlight = run.catch(() => null);
+  return run;
+}
 
-  const token = subject();
-  const actor = token?.actor ?? null;
-
+/** One press, run after the press before it has finished. */
+async function toggleFor(actor) {
   // An open window always closes first, so a second press is always "put that away".
   if (current.app?.rendered) {
     const wasAbout = current.actorId;
@@ -85,7 +97,7 @@ export async function toggle() {
     ? await editor().enrichHTML(raw, { async: true, relativeTo: actor, secrets: true })
     : `<p><em>${(_loc("PENTARYN_TIES.describe.empty") || "No description written.")}</em></p>`;
 
-  const art = actor.img || actor.prototypeToken?.texture?.src || "icons/svg/mystery-man.svg";
+  const art = actor.img || actor.prototypeToken?.texture?.src || FALLBACK_ART;
   const content = `<div class="pt-describe">
     <img class="pt-describe-art" src="${esc(art)}" alt="" />
     <div class="pt-describe-body">${body}</div>
@@ -110,7 +122,8 @@ export async function toggle() {
     ],
     // Closing by any route — the ✕, Escape, the button — must clear the handle, or the
     // next press thinks a dead window is still open and swallows itself as a "toggle off".
-    close: () => { if (current.actorId === actor.id) current = { app: null, actorId: null }; },
+    // Compare the window, not the actor: a stale card's late close must not drop a newer card's handle.
+    close: () => { if (current.app === app) current = { app: null, actorId: null }; },
     rejectClose: false
   });
 

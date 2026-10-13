@@ -23,16 +23,14 @@
  */
 
 import { MODULE, stanceOf } from "./ties-core.mjs";
-import { readWorn } from "./ties-adapter.mjs";
-import { canSee, read, stanceLabel } from "./ties-adapter.mjs";
+import { canSee, read, readWorn, stanceLabel } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { PIN_SETTING, setting, mayWrite } from "./settings.mjs";
+import { FALLBACK_ART } from "./core/html.mjs";
 
 const log = makeLog(MODULE);
 
 const LAYER_ID = "pentaryn-ties-cards";
-export { PIN_SETTING }; // the setting row lives in settings.mjs (CLIENT_STATE)
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor, colour } */
 const cards = new Map();
@@ -88,12 +86,14 @@ function layer() {
 
 /** Canvas coordinates → screen pixels. Foundry's board fills the window, so fixed positioning lands. */
 function toScreen(x, y) {
-  try {
-    const p = canvas.stage.toGlobal({ x, y });
-    return { x: p.x, y: p.y };
-  } catch {
-    return { x: 0, y: 0 };
-  }
+  return log.swallow(
+    "popups: canvas point off-stage",
+    () => {
+      const p = canvas.stage.toGlobal({ x, y });
+      return { x: p.x, y: p.y };
+    },
+    { x: 0, y: 0 }
+  );
 }
 
 /* -------------------------------------------- */
@@ -326,6 +326,15 @@ export function closeAll() {
   notify();
 }
 
+/**
+ * Uninstall: take the card layer out of the DOM and forget every card. Deliberately NOT savePinned —
+ * the memo stays as last saved, so the re-import's restorePinned brings the same cards back (ties-ui-M8).
+ */
+export function teardown() {
+  cards.clear();
+  document.getElementById(LAYER_ID)?.remove();
+}
+
 export function anyTransient() {
   for (const rec of cards.values()) if (!rec.pinned) return true;
   return false;
@@ -343,10 +352,20 @@ function savePinned() {
         const box = r.el.getBoundingClientRect();
         return { sourceId: r.sourceId, tieId: r.tieId, x: Math.round(box.left), y: Math.round(box.top) };
       });
-    game.settings.set(MODULE, PIN_SETTING, keep);
+    // not awaited: the save is a memo, and a rejection lands here with the prefix, not unhandled
+    game.settings.set(MODULE, PIN_SETTING, keep).catch(err => log.warn(`could not save pinned cards`, err));
   } catch (err) {
     log.warn(`could not save pinned cards`, err);
   }
+}
+
+/**
+ * A saved pin coordinate, or 20 when it is missing or not a number. 0 is kept — place() clamps a
+ * card dragged to the screen edge to 0, so the edge is a position we save (ties-ui-E5).
+ */
+export function pinnedCoord(v) {
+  const n = Number(v);
+  return v == null || v === "" || !Number.isFinite(n) ? 20 : n;
 }
 
 /**
@@ -380,7 +399,7 @@ export function restorePinned() {
     const k = key(actor.id, tie.id);
     if (cards.has(k)) continue;
     const rec = mount(k, { tie, token, sourceId: actor.id, showNotes: true, pinned: true, anchor: null });
-    place(rec, Number(entry.x) || 20, Number(entry.y) || 20);
+    place(rec, pinnedCoord(entry.x), pinnedCoord(entry.y));
   }
   notify();
 }

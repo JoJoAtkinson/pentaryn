@@ -29,11 +29,8 @@
 
 import { MODULE, NOTES_MAX, clampNotes } from "./ties-core.mjs";
 import { esc } from "./core/html.mjs";
-import { WORN_FLAG, WORN_BY_MAX as BY_MAX, docOf, readWorn } from "./ties-adapter.mjs";
+import { WORN_FLAG, WORN_BY_MAX as BY_MAX, docOf, dropLayer, framePainter, interfaceLayer, readWorn } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
-
-// the read half lives in the adapter (popups reads it too); re-exported for this file's importers
-export { WORN_FLAG, readWorn };
 
 const log = makeLog(MODULE);
 
@@ -82,27 +79,10 @@ export async function clearWorn(token) {
  * (an unchanged plan keeps the layer as drawn), so "badge with no mark" and "mark with no badge"
  * are unrepresentable rather than fixed.
  */
-const state = { badges: null, painted: null };
-
-function badgeLayer() {
-  if (state.badges && !state.badges.destroyed) return state.badges;
-  if (!canvas?.ready || !canvas.interface) return null;
-  const c = new PIXI.Container();
-  c.eventMode = "none";
-  c.zIndex = 1001; // just above the wires
-  canvas.interface.addChild(c);
-  state.badges = c;
-  return c;
-}
+const state = { layer: null, z: 1001 /* just above the wires */, name: "badge", painted: null };
 
 function dropBadges() {
-  if (!state.badges) return;
-  try {
-    if (!state.badges.destroyed) state.badges.destroy({ children: true });
-  } catch (e) {
-    log.warn(`badge teardown`, e);
-  }
-  state.badges = null;
+  dropLayer(state);
   state.painted = null;
 }
 
@@ -161,21 +141,40 @@ export function planKey(plan) {
 }
 
 /**
- * Coalesce to one repaint per frame — refreshToken fires per animation step per token.
+ * Coalesce to one repaint per frame (`perFrame`, via framePainter) — refreshToken fires per
+ * animation step per token.
  * hot: the badge layer. Players never paint it, so they never schedule the frame (ties-24, B7).
  */
-let queued = 0;
+const frame = framePainter(() => paintBadges(), "badge");
 export function drawBadges() {
   if (!game.user?.isGM) return;
-  if (queued) return;
-  queued = requestAnimationFrame(() => {
-    queued = 0;
-    try {
-      paintBadges();
-    } catch (e) {
-      log.warn(`badge paint`, e);
-    }
-  });
+  frame.draw();
+}
+
+/**
+ * The ids of this canvas's marked tokens (ties-ui-perf-10) — a scheduling gate, never the paint's
+ * source: the plan is still derived from the token flags, so a stale id costs one idle frame, not a
+ * wrong badge. Rebuilt on canvasReady, kept by createToken / updateToken (flag writes) / deleteToken,
+ * so refreshToken — every token's every animation step — only asks for a frame for a marked token.
+ * GM only, like the layer: a player never fills it.
+ */
+const marked = new Set();
+
+function rebuildMarked() {
+  marked.clear();
+  if (!game.user?.isGM) return;
+  for (const p of canvas?.tokens?.placeables ?? []) {
+    const id = p?.id ?? p?.document?.id;
+    if (id && readWorn(p.document)) marked.add(id);
+  }
+}
+
+/** Re-read one token's mark into the set. */
+function trackMark(doc) {
+  const id = doc?.id;
+  if (!id || !game.user?.isGM) return;
+  if (readWorn(doc)) marked.add(id);
+  else marked.delete(id);
 }
 
 function paintBadges() {
@@ -186,9 +185,9 @@ function paintBadges() {
 
   // refreshToken fires for every token's every animation step; most frames move no marked token
   const key = planKey(plan);
-  if (key === state.painted && state.badges && !state.badges.destroyed) return;
+  if (key === state.painted && state.layer && !state.layer.destroyed) return;
 
-  const layer = badgeLayer();
+  const layer = interfaceLayer(state, () => new PIXI.Container());
   if (!layer) return;
   layer.removeChildren().forEach(c => c.destroy({ children: true }));
   state.painted = null; // set only once every badge is drawn: a throw mid-paint retries next frame
@@ -316,22 +315,52 @@ export function install(reg) {
 
   // Foundry destroys canvas.interface under us — drop the handle, same as the wires.
   reg.on("canvasTearDown", () => {
-    state.badges = null;
+    state.layer = null;
     state.painted = null;
+    marked.clear();
   }, { label: "worn: canvasTearDown" });
 
-  reg.on("canvasReady", () => drawBadges(), { label: "worn: canvasReady" });
-  // hot: state.badges — drawBadges only schedules one frame; badges ride their tokens
-  reg.on("refreshToken", () => drawBadges(), { label: "worn: refreshToken" });
-  reg.on("deleteToken", () => drawBadges(), { label: "worn: deleteToken" });
-  reg.on("updateToken", (_doc, changes) => {
+  reg.on("canvasReady", () => {
+    rebuildMarked();
+    drawBadges();
+  }, { label: "worn: canvasReady" });
+  // hot: state.layer — drawBadges only schedules one frame; badges ride their tokens, and only a
+  // marked token's step asks for it (ties-ui-perf-10)
+  reg.on("refreshToken", token => {
+    const id = token?.id ?? token?.document?.id;
+    if (id && marked.has(id)) drawBadges();
+  }, { label: "worn: refreshToken" });
+  // a pasted or dragged-in token can arrive already marked
+  reg.on("createToken", doc => {
+    trackMark(doc);
+    if (marked.has(doc?.id)) drawBadges();
+  }, { label: "worn: createToken" });
+  reg.on("deleteToken", doc => {
+    marked.delete(doc?.id);
+    drawBadges();
+  }, { label: "worn: deleteToken" });
+  reg.on("updateToken", (doc, changes) => {
     // only a flag write can change what is marked; movement is refreshToken's job
-    if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined) drawBadges();
+    if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) === undefined) return;
+    trackMark(doc);
+    drawBadges();
   }, { label: "worn: updateToken" });
+
+  // A hot re-import after uninstall (the entry's game.ready branch) runs install with the canvas already
+  // up, and canvasReady will not fire again: refill the marked set and repaint now, or the badges stay
+  // gone until a scene change. A normal load installs at init, before the world is ready — no-op there.
+  if (globalThis.game?.ready && globalThis.canvas?.ready) {
+    rebuildMarked();
+    drawBadges();
+  }
 
   // the worn-mark API paths (rows in api-manifest.mjs) — GM only, per token
   return { impl: { worn: readWorn, setWorn, clearWorn, wornDialog: openDialog } };
 }
 
-/** The entry's reg.offAll() removes the hooks; worn keeps no other state worth dropping. */
-export function uninstall() {}
+/** The entry's reg.offAll() removes the hooks; this cancels a queued paint and drops the badge layer (ties-ui-M8). */
+export function uninstall() {
+  frame.cancel();
+  dropBadges();
+  marked.clear();
+}

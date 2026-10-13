@@ -25,7 +25,10 @@
  * (`this.order`); it is recomputed on open, on a sort change, after Reviewed/Unreview, and from
  * the Re-sort button. A refresh held back while Joe types is checked against what each open row
  * was drawn from (`this.base`): a row Claude changed underneath gets a reload banner, and a field
- * whose stored value moved is refused rather than saved over Claude's change.
+ * whose stored value moved is refused rather than saved over Claude's change. A write from another
+ * GM tab still in flight when Joe saved is caught by the registry's version stamp (attributes.mjs):
+ * his field is re-applied on top of it, or — if that tab moved the same field — the row is flagged
+ * stale (ties-ui-ACC-6).
  *
  * The ticked boxes live in a user flag (`attrSelected`) so Claude can read them with
  * `game.pentaryn.ties.attributes.selected()` — see context/foundry/attribute-review.md.
@@ -45,11 +48,24 @@ import {
   unreviewAttribute,
   selectionIds,
   selectAttributes,
-  SELECTION_FLAG
+  onRegistryConflict
 } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
+import { isPersonalEntry } from "./core/rules.mjs";
+import { skillOptionsHTML, skillLabelOf, openOrFront } from "./core/html.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
-import { reviewState, sortForReview, childrenOf, indexRegistry, readLore, REVIEW_SORTS, REGISTRY_SETTING } from "./known-core.mjs";
+import {
+  reviewState,
+  sortForReview,
+  childrenOf,
+  indexRegistry,
+  readLore,
+  REVIEW_SORTS,
+  REGISTRY_SETTING,
+  LORE_DC_MIN,
+  LORE_DC_MAX
+} from "./known-core.mjs";
+import { LiveHooks } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -83,9 +99,10 @@ const HOLD_LABEL = Object.freeze({
 const { ApplicationV2 } = foundry.applications.api;
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
-const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
 const CARRIERS_SHOWN = 8;
 const SETTING_KEY = `${MODULE}.${REGISTRY_SETTING}`;
+/** The embedded item types `derivedFor` reads an actor's derived ids from. */
+const DERIVED_ITEM_TYPES = new Set(["race", "background"]);
 
 /** "2h ago" with the ISO time as tooltip; `null` → the "before timestamps" dash. */
 function when(ms) {
@@ -132,13 +149,10 @@ export class AttributeReview extends ApplicationV2 {
       ui.notifications.warn(_loc("PENTARYN_TIES.review.gmOnly"));
       return null;
     }
-    const existing = foundry.applications.instances?.get?.(AttributeReview.DEFAULT_OPTIONS.id);
-    if (existing) {
-      existing.render({ force: true });
-      existing.bringToFront?.();
-      return existing;
-    }
-    return new AttributeReview().render({ force: true });
+    const pool = foundry.applications.instances?.values?.() ?? [];
+    return openOrFront(pool, w => w instanceof AttributeReview, () => new AttributeReview(), {
+      onError: err => log.error(`attribute review`, err)
+    });
   }
 
   constructor(options = {}) {
@@ -163,7 +177,7 @@ export class AttributeReview extends ApplicationV2 {
     this.inflight = new Map();
     this.selWrites = Promise.resolve();
     this.selWriting = 0;
-    this.hookIds = null;
+    this.live = new LiveHooks();
   }
 
   /* ── live refresh ──────────────────────────────────────────────────────── */
@@ -223,45 +237,67 @@ export class AttributeReview extends ApplicationV2 {
     setTimeout(() => this.pendingRender && this.safeRender(), 0);
   }
 
+  /** Registry writes land in bursts (a Claude batch, a cascade): one repaint, 150 ms after the last. */
   attachHooks() {
-    if (this.hookIds) return;
-    this.hookIds = {
-      updateSetting: Hooks.on("updateSetting", s => {
-        if (s?.key === SETTING_KEY) this.safeRender();
-      }),
-      createSetting: Hooks.on("createSetting", s => {
-        if (s?.key === SETTING_KEY) this.safeRender();
-      }),
-      updateUser: Hooks.on("updateUser", (user, changes) => {
-        if (user?.id !== game.user?.id) return;
-        if (!foundry.utils.hasProperty(changes ?? {}, `flags.${MODULE}`)) return;
-        if (this.selWriting > 0) return; // our own write in flight; the set is already right
-        this.selection = new Set(selectionIds());
-        this.syncSelectionDOM();
-      })
+    const onRegistry = s => {
+      if (s?.key === SETTING_KEY) this.live.debounce(() => this.safeRender());
     };
+    const onActor = () => this.dropCarriers();
+    // derivedFor reads the species and background items: a swap there moves an actor's ids too
+    const onItem = item => {
+      if (item?.parent && DERIVED_ITEM_TYPES.has(item.type)) this.dropCarriers();
+    };
+    this.live.start([
+      ["updateSetting", onRegistry],
+      ["createSetting", onRegistry],
+      ["createActor", onActor],
+      ["updateActor", onActor],
+      ["deleteActor", onActor],
+      ["createItem", onItem],
+      ["updateItem", onItem],
+      ["deleteItem", onItem],
+      [
+        "updateUser",
+        (user, changes) => {
+          if (user?.id !== game.user?.id) return;
+          if (!foundry.utils.hasProperty(changes ?? {}, `flags.${MODULE}`)) return;
+          if (this.selWriting > 0) return; // our own write in flight; the set is already right
+          this.selection = new Set(selectionIds());
+          this.syncSelectionDOM();
+        }
+      ]
+    ]);
+    // another tab's write landed on top of a save and moved the same field: Joe must see it
+    this.offConflict?.();
+    this.offConflict = onRegistryConflict(({ id }) => {
+      if (this.base.has(id)) this.flagStale(id);
+    });
   }
 
   async _onClose(options) {
-    if (this.hookIds) for (const [hook, id] of Object.entries(this.hookIds)) Hooks.off(hook, id);
-    this.hookIds = null;
+    this.live.stop();
+    this.dropCarriers();
+    this.offConflict?.();
+    this.offConflict = null;
     return super._onClose?.(options);
   }
 
   /* ── data ──────────────────────────────────────────────────────────────── */
 
-  /** id → carrier actor names, computed per render (world actors; unlinked tokens not counted). */
+  /**
+   * id → carrier actor names (world actors; unlinked tokens not counted). The walk is kept between
+   * renders while the window watches the world — expanding a row repaints without re-walking every
+   * actor — and dropped when an actor, or the species/background item its derived ids read, is
+   * created, changed or deleted (ties-ui-perf-11). Not kept before the hooks are up or after close.
+   */
   carriers() {
+    if (this.carrierMap && this.live?.watching) return this.carrierMap;
     const map = new Map();
     // the same walk, keeping the actors too: the personal-clue rows need them (ties-27)
     const actors = new Map();
     for (const actor of game.actors?.contents ?? []) {
-      let ids = [];
-      try {
-        ids = attributeIdsOf(actor, kindActorOf);
-      } catch {
-        continue;
-      }
+      const ids = log.swallow("review: carrier ids unreadable", () => attributeIdsOf(actor, kindActorOf), null);
+      if (!ids) continue;
       for (const id of ids) {
         if (!map.has(id)) map.set(id, []);
         map.get(id).push(actor.name);
@@ -270,7 +306,13 @@ export class AttributeReview extends ApplicationV2 {
       }
     }
     this.carrierActors = actors;
+    this.carrierMap = this.live?.watching ? map : null;
     return map;
+  }
+
+  /** Forget the carrier walk; the next render walks the world again. */
+  dropCarriers() {
+    this.carrierMap = null;
   }
 
   /* ── render ────────────────────────────────────────────────────────────── */
@@ -302,11 +344,11 @@ export class AttributeReview extends ApplicationV2 {
       m => `<option value="${m}" ${m === this.sort ? "selected" : ""}>${esc(_loc(SORT_LABEL[m] ?? `PENTARYN_TIES.review.sort.${m}`))}</option>`
     ).join("");
     const chip = (k, label) =>
-      `<button type="button" class="pt-chip ${this.filter === k ? "pt-chip-on" : ""}" data-filter="${k}">${label}</button>`;
+      `<button type="button" class="pt-filter-chip ${this.filter === k ? "pt-filter-chip-on" : ""}" data-filter="${k}">${label}</button>`;
 
     // Scope filter, beside the others: Global (reusable world-building) or Personal (one character's history)
     const scope = k =>
-      `<button type="button" class="pt-chip pt-review-tab ${this.tab === k ? "pt-chip-on" : ""}" data-tab="${k}">${esc(_loc(TAB_LABEL[k] ?? `PENTARYN_TIES.review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
+      `<button type="button" class="pt-filter-chip pt-review-tab ${this.tab === k ? "pt-filter-chip-on" : ""}" data-tab="${k}">${esc(_loc(TAB_LABEL[k] ?? `PENTARYN_TIES.review.tab.${k}`))} (<span data-count="tab-${k}">0</span>)</button>`;
     const head = `<header class="pt-review-head">
       <div class="pt-review-bar">
         <input type="search" class="pt-review-search" placeholder="${esc(_loc("PENTARYN_TIES.review.search"))}" value="${esc(this.search)}">
@@ -383,17 +425,13 @@ export class AttributeReview extends ApplicationV2 {
       <i class="fa-solid fa-chevron-${open ? "up" : "down"} pt-review-caret"></i>
     </div>`;
 
-    const personal = String(e.category ?? "").trim().toLowerCase() === "personal";
+    const personal = isPersonalEntry(e);
     return `<li class="pt-review-row" data-id="${esc(e.id)}" data-tab="${personal ? "personal" : "world"}" data-state="${state}" data-needs="${state !== "reviewed"}" data-search="${esc(search)}">
       ${summary}${open ? this.detail(e, lore, who, kids, parent) : ""}</li>`;
   }
 
   skillSelect(name, value, extra = "") {
-    const skills = CONFIG.DND5E?.skills ?? {};
-    const keys = Object.keys(skills);
-    if (value && !keys.includes(value)) keys.unshift(value);
-    const opts = keys.map(k => `<option value="${esc(k)}" ${k === value ? "selected" : ""}>${esc(skillLabel(k))}</option>`).join("");
-    return `<select ${name ? `data-field="${name}"` : ""} ${extra}>${opts}</select>`;
+    return `<select ${name ? `data-field="${name}"` : ""} ${extra}>${skillOptionsHTML(value)}</select>`;
   }
 
   detail(e, lore, who, kids, parent) {
@@ -407,15 +445,15 @@ export class AttributeReview extends ApplicationV2 {
     const shown = v => (v === null || v === undefined || v === "" ? "—" : typeof v === "string" ? v : JSON.stringify(v));
     const was = (k, cur, label = "") =>
       snap && k in snap && !same(snap[k], cur)
-        ? `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b>${label ? ` ${esc(label)}:` : ""} ${esc(k === "skill" ? skillLabel(snap[k]) : shown(snap[k]))}</p>`
+        ? `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b>${label ? ` ${esc(label)}:` : ""} ${esc(k === "skill" ? skillLabelOf(snap[k]) : shown(snap[k]))}</p>`
         : "";
     const fields = `<div class="pt-review-fields">
       ${field(_loc("PENTARYN_TIES.review.field.title"), `<input type="text" data-field="title" value="${esc(e.title)}">`)}
       ${field(_loc("PENTARYN_TIES.review.field.category"), `<input type="text" data-field="category" value="${esc(e.category)}">`)}
       ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("skill", e.skill))}
-      ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-field="dc" value="${e.dc}">`)}
+      ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" step="1" data-field="dc" value="${e.dc}">`)}
     </div>
-    ${["title", "category", "skill", "dc"].map(k => was(k, e[k], _loc(FIELD_LABEL[k] ?? `PENTARYN_TIES.review.field.${k}`))).join("")}
+    ${Object.keys(FIELD_LABEL).map(k => was(k, e[k], _loc(FIELD_LABEL[k]))).join("")}
     ${field(_loc("PENTARYN_TIES.review.field.reveal"), `<textarea data-field="reveal">${esc(e.reveal)}</textarea>`)}
     ${was("reveal", e.reveal)}
     ${field(_loc("PENTARYN_TIES.review.field.miss"), `<textarea data-field="miss">${esc(e.miss)}</textarea>`)}
@@ -448,7 +486,7 @@ export class AttributeReview extends ApplicationV2 {
     const loreWas = (r, k) => {
       const old = snapLore?.get(r.id);
       if (!old || same(old[k], r[k])) return "";
-      return `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b> ${esc(k === "skill" ? skillLabel(old[k]) : shown(old[k]))}</p>`;
+      return `<p class="pt-review-was"><b>${esc(_loc("PENTARYN_TIES.review.was"))}</b> ${esc(k === "skill" ? skillLabelOf(old[k]) : shown(old[k]))}</p>`;
     };
     const removed = snapLore ? [...snapLore.values()].filter(o => !lore.some(r => r.id === o.id)) : [];
 
@@ -459,7 +497,7 @@ export class AttributeReview extends ApplicationV2 {
           <div class="pt-review-fields">
             ${field(`${n + 1}. ${_loc("PENTARYN_TIES.review.field.label")}`, `<input type="text" data-lore-field="label" value="${esc(r.label)}">`)}
             ${field(_loc("PENTARYN_TIES.review.field.skill"), this.skillSelect("", r.skill, `data-lore-field="skill"`))}
-            ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="1" max="40" step="1" data-lore-field="dc" value="${r.dc}">`)}
+            ${field(_loc("PENTARYN_TIES.review.field.dc"), `<input type="number" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" step="1" data-lore-field="dc" value="${r.dc}">`)}
             <span class="pt-review-loreid"><code>${esc(r.id)}</code> ${loreTag(r)}</span>
           </div>
           ${["label", "skill", "dc"].map(k => loreWas(r, k)).join("")}
@@ -687,14 +725,14 @@ export class AttributeReview extends ApplicationV2 {
     for (const btn of root.querySelectorAll(".pt-review-tab")) {
       btn.addEventListener("click", () => {
         this.tab = btn.dataset.tab;
-        for (const b of root.querySelectorAll(".pt-review-tab")) b.classList.toggle("pt-chip-on", b === btn);
+        for (const b of root.querySelectorAll(".pt-review-tab")) b.classList.toggle("pt-filter-chip-on", b === btn);
         this.applyFilter();
       });
     }
     for (const btn of root.querySelectorAll("[data-filter]")) {
       btn.addEventListener("click", () => {
         this.filter = btn.dataset.filter;
-        for (const b of root.querySelectorAll("[data-filter]")) b.classList.toggle("pt-chip-on", b === btn);
+        for (const b of root.querySelectorAll("[data-filter]")) b.classList.toggle("pt-filter-chip-on", b === btn);
         this.applyFilter();
       });
     }
@@ -764,4 +802,3 @@ export class AttributeReview extends ApplicationV2 {
 }
 
 export const openReview = () => AttributeReview.open();
-export { SELECTION_FLAG };

@@ -83,3 +83,35 @@ test("ties-46: the preview refreshes its roster when a player picks a character,
   assert.equal(renders, 2, "an hp change does nothing");
   pv._onClose({});
 });
+
+test("ties-ui-perf-9: the Look window ignores an unrelated actor's update before flattening its changes", () => {
+  const OTHER = "zzOther000000001";
+  const other = { id: OTHER, name: "ZZ Bystander" };
+  const gm = game.user;
+  game.user = game.users.get(PLAYER);
+  const w = new LookWindow(game.actors.get(PC), game.actors.get(NPC));
+  let queued = 0;
+  w.queueLive = () => queued++;
+  w._onFirstRender({}, {});
+  const real = foundry.utils.flattenObject;
+  let flattened = 0;
+  foundry.utils.flattenObject = o => {
+    flattened++;
+    return real ? real(o) : o;
+  };
+  try {
+    F.fire("updateActor", other, { flags: { "pentaryn-ties": { granted: { x: 1 } } }, name: "Renamed" });
+    assert.equal(flattened, 0, "an actor that is neither the character, the subject nor its kind is never flattened");
+    assert.equal(queued, 0);
+    F.fire("updateActor", game.actors.get(NPC), { name: "ZZ Brakka II" });
+    assert.equal(queued, 1, "the subject's rename still refreshes");
+    F.fire("updateActor", game.actors.get(PC), { flags: { "pentaryn-ties": { granted: { x: 1 } } } });
+    assert.equal(queued, 2, "the character's grant still refreshes");
+    F.fire("updateActor", game.actors.get(PC), { system: { attributes: { hp: { value: 3 } } } });
+    assert.equal(queued, 2, "the character's hp change does nothing");
+  } finally {
+    foundry.utils.flattenObject = real;
+    w._onClose({});
+    game.user = gm;
+  }
+});

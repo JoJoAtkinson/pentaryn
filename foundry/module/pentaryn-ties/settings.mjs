@@ -240,3 +240,17 @@ export function mayWrite(user = game.user) {
     return false; // settings not registered yet: refuse rather than guess
   }
 }
+
+/**
+ * May this user act on this actor — run a key on it, see its sheet tabs? The GM always; a player
+ * only on an actor they own, and only while `mayWrite` lets them at all.
+ *
+ * ONE copy (ties-ui-EXT-11): the canvas keys (overlay.mjs) and the sheet tabs (sheet.mjs) each used
+ * to write it, both through `setting()` — which before the settings register answers the default,
+ * `true`. `mayWrite` refuses there instead, which is the stricter and intended answer.
+ */
+export function mayActOn(actor) {
+  if (!actor) return false;
+  if (game.user?.isGM) return true;
+  return mayWrite() && actor.isOwner === true;
+}

@@ -284,6 +284,11 @@
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 2,
+              "by": "socket-gm-1"
             }
           ]
         }
@@ -528,6 +533,11 @@
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 3,
+              "by": "socket-gm-1"
             }
           ]
         }
@@ -808,6 +818,11 @@
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 4,
+              "by": "socket-gm-1"
             }
           ]
         }
@@ -1065,6 +1080,11 @@
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 5,
+              "by": "socket-gm-1"
             }
           ]
         }
@@ -1297,6 +1317,11 @@
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 6,
+              "by": "socket-gm-1"
             }
           ]
         }
@@ -1523,6 +1548,11 @@
                 "icon"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 7,
+              "by": "socket-gm-1"
             }
           ]
         }

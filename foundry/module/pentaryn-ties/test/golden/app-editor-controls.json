@@ -116,7 +116,6 @@
         "field": "notes"
       },
       "events": [
-        "change",
         "input",
         "blur"
       ]
@@ -291,8 +290,7 @@
       },
       "events": [
         "click"
-      ],
-      "delegated": true
+      ]
     }
   ],
   "rows": [
@@ -616,40 +614,6 @@
       "dataset": {
         "field": "notes"
       },
-      "type": "change",
-      "calls": [
-        {
-          "op": "update",
-          "documentName": "Actor",
-          "uuid": "Actor.zzNpc00000000001",
-          "changes": {
-            "flags.pentaryn-ties.ties": [
-              {
-                "id": "zzPc000000000001",
-                "name": "ZZ Caven",
-                "word": "zz typed word",
-                "notes": "zz typed notes",
-                "stance": 0,
-                "strength": 5
-              }
-            ]
-          }
-        }
-      ],
-      "console": [],
-      "after": {
-        "className": "pt-notes-text",
-        "parent": "pt-field pt-field-notes",
-        "value": "zz typed notes"
-      }
-    },
-    {
-      "nth": 0,
-      "tag": "TEXTAREA",
-      "className": "pt-notes-text",
-      "dataset": {
-        "field": "notes"
-      },
       "type": "input",
       "calls": [
         {
@@ -888,7 +852,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 12,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "<p>He owes the guild.</p>",
                 "miss": "<p>Shifty.</p>",
                 "hold": null
@@ -905,7 +869,7 @@
       "console": [],
       "after": {
         "parent": "pt-field",
-        "value": "inv"
+        "value": "rel"
       }
     },
     {
@@ -926,7 +890,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "<p>He owes the guild.</p>",
                 "miss": "<p>Shifty.</p>",
                 "hold": null
@@ -965,7 +929,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "<p>He owes the guild.</p>",
                 "miss": "<p>Shifty.</p>",
                 "hold": true
@@ -1003,7 +967,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "zz typed text",
                 "miss": "<p>Shifty.</p>",
                 "hold": true
@@ -1041,7 +1005,7 @@
                 "id": "l1",
                 "label": "zz typed label",
                 "dc": 7,
-                "skill": "inv",
+                "skill": "rel",
                 "text": "zz typed text",
                 "miss": "zz typed miss",
                 "hold": true
@@ -1100,7 +1064,13 @@
         "action": "belief-reset"
       },
       "type": "click",
-      "calls": [],
+      "calls": [
+        {
+          "op": "DialogV2.confirm",
+          "title": "Let them roll again?",
+          "content": "<p>ZZ Caven may study ZZ Brakka again.</p><p class=\"pt-hint\">They keep everything they already learned, and their own notes are untouched. A new roll replaces what this one told them.</p>"
+        }
+      ],
       "console": [],
       "after": {
         "className": "pt-textbtn",

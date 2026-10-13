@@ -43,10 +43,10 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size } from "./popups.mjs";
-import { canSee, read } from "./ties-adapter.mjs";
+import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show, size, teardown } from "./popups.mjs";
+import { canSee, dropLayer, framePainter, interfaceLayer, read } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { setting } from "./settings.mjs";
+import { mayActOn, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -55,7 +55,10 @@ const log = makeLog(MODULE);
  * and `tieId` is the single person key 7 last put up. There is deliberately NO "is it
  * showing" boolean here — see the ⚠ note above showAll().
  */
-const state = { wires: null, actorId: null, mode: null, tieId: null };
+const state = { actorId: null, mode: null, tieId: null };
+
+/** The wire layer: one PIXI Graphics on canvas.interface (interfaceLayer / dropLayer, ties-adapter.mjs). */
+const wires = { layer: null, z: 1000, name: "wire" };
 
 /* -------------------------------------------- */
 /*  Who, and how far                            */
@@ -87,10 +90,7 @@ function soleOwnedToken() {
 
 /** Rule 1. A player drives their own character and nobody else's. */
 function permitted(actor) {
-  if (!actor) return false;
-  if (game.user.isGM) return true;
-  if (!setting("playerAccess")) return false;
-  return actor.isOwner === true;
+  return mayActOn(actor);
 }
 
 /*
@@ -145,45 +145,18 @@ function strokeLine(g, from, to, colour, alpha, width) {
   }
 }
 
-function wireLayer() {
-  if (state.wires && !state.wires.destroyed) return state.wires;
-  if (!canvas?.ready || !canvas.interface) return null;
-  const g = new PIXI.Graphics();
-  g.eventMode = "none";
-  g.zIndex = 1000;
-  canvas.interface.addChild(g);
-  state.wires = g;
-  return g;
-}
-
-function dropWires() {
-  if (!state.wires) return;
-  try {
-    if (!state.wires.destroyed) state.wires.destroy({ children: true });
-  } catch (e) {
-    log.warn(`wire teardown`, e);
-  }
-  state.wires = null;
-}
+const dropWires = () => dropLayer(wires);
 
 /**
- * Coalesce to one repaint per frame. `refreshToken` fires per animation step per token,
- * and painting reads every card's bounding box — which forces a layout. Once a frame is
- * plenty for a line that follows a token.
+ * Coalesce to one repaint per frame (`perFrame`, via framePainter). `refreshToken` fires per
+ * animation step per token, and painting reads every card's bounding box — which forces a layout.
+ * Once a frame is plenty for a line that follows a token.
  */
-let queued = 0;
+const frame = framePainter(() => paintWires(), "wire");
 export function drawWires() {
-  // hot: state.wires — no card and no wire layer means nothing to paint and nothing to drop (ties-25)
-  if (!size() && !state.wires) return;
-  if (queued) return;
-  queued = requestAnimationFrame(() => {
-    queued = 0;
-    try {
-      paintWires();
-    } catch (e) {
-      log.warn(`wire paint`, e);
-    }
-  });
+  // hot: wires.layer — no card and no wire layer means nothing to paint and nothing to drop (ties-25)
+  if (!size() && !wires.layer) return;
+  frame.draw();
 }
 
 /**
@@ -195,12 +168,19 @@ function paintWires() {
   const live = liveCards();
   if (!live.length) return dropWires();
 
-  const g = wireLayer();
+  const g = interfaceLayer(wires, () => new PIXI.Graphics());
   if (!g) return;
   g.clear();
 
   const near = nearDistance();
   const width = Math.max(1, canvas.grid.size * 0.022);
+
+  // the first token per actor, from one pass — not a placeables scan per card (ties-ui-perf-4)
+  const firstToken = new Map();
+  for (const p of canvas.tokens.placeables) {
+    const id = p.actor?.id;
+    if (id && !firstToken.has(id)) firstToken.set(id, p);
+  }
 
   for (const card of live) {
     /**
@@ -222,18 +202,14 @@ function paintWires() {
     if (card.pinned) {
       // leash: screen pixels back into canvas space, so the wire tracks the card as the
       // map is panned and zoomed underneath it
-      let from;
-      try {
-        from = canvas.stage.toLocal({ x: card.screen.x, y: card.screen.y });
-      } catch {
-        continue;
-      }
+      const from = log.swallow("overlay: pinned card off-stage", () => canvas.stage.toLocal({ x: card.screen.x, y: card.screen.y }), null);
+      if (!from) continue;
       strokeLine(g, from, to, card.colour, 0.5, width);
       continue;
     }
 
     // reach: only worth a line once the card has stopped being obviously "that one there"
-    const src = canvas.tokens.placeables.find(p => p.actor?.id === card.sourceId);
+    const src = firstToken.get(card.sourceId);
     if (src && gridsApart(src, target) > near) {
       strokeLine(g, centerOf(src), to, card.colour, 0.5, width);
     }
@@ -460,13 +436,6 @@ export function showOne() {
   }
 }
 
-/**
- * 0.3.0 name, kept for anything that imported this module directly. `install()`'s impl table binds
- * `show`/`cards` straight to `showAll`, so nothing in the repo reaches it — it exists only
- * so an outside importer does not break.
- */
-export const toggle = showAll;
-
 /* -------------------------------------------- */
 /*  Hooks                                       */
 /* -------------------------------------------- */
@@ -483,7 +452,7 @@ export function install(reg) {
 
   reg.on("canvasTearDown", () => {
     // Foundry destroys canvas.interface under us — drop the handle rather than the cards.
-    state.wires = null;
+    wires.layer = null;
     state.actorId = null;
     state.mode = null;
     state.tieId = null;
@@ -501,16 +470,23 @@ export function install(reg) {
   }, { label: "overlay: canvasPan" });
 
   // a tie who walks out of sight (or into it) while cards are up
-  // hot: state.wires — drawWires only schedules one frame; the paint reads the live card set
+  // hot: wires.layer — drawWires only schedules one frame; the paint reads the live card set
   reg.on("refreshToken", () => drawWires(), { label: "overlay: refreshToken" });
-  // hot: state.wires
+  // hot: wires.layer
   reg.on("sightRefresh", () => drawWires(), { label: "overlay: sightRefresh" });
 
   // the cards' API paths (rows in api-manifest.mjs)
   return { impl: { show: showAll, showAll, showOne, cards: showAll, clear, closeAllCards: closeAll } };
 }
 
-/** The entry's reg.offAll() removes the hooks; this drops the card-set subscription. */
+/**
+ * The entry's reg.offAll() removes the hooks; this drops the card-set subscription, cancels a queued
+ * paint, drops the wire layer and takes the cards down — the pinned memo is left as saved, so a hot
+ * re-import restores the same cards (ties-ui-M8).
+ */
 export function uninstall() {
   setOnChange(null);
+  frame.cancel();
+  dropWires();
+  teardown();
 }

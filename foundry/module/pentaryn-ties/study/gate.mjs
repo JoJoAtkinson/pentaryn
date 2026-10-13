@@ -249,12 +249,23 @@ export function pending() {
  * ask for or an affordance whose click is refused — and the second is worse, because the
  * refusal is a message a plain failure would never produce.
  */
-export async function reset(character, subject, loreId = null, attrId = null) {
+export async function reset(characterOrId, subject, loreId = null, attrId = null) {
   if (!game.user?.isGM) return false;
   const fact = factFrom(subject, loreId, attrId);
-  if (!character || !fact) return false;
+  /*
+   * By ledger id (ties-ui-rob-4): a belief row outlives a deleted character, and the GM must
+   * still be able to clear it. An id resolves to the actor when one exists; when none does,
+   * only the belief row is cleared — there is no studied flag left to clear and no name to show.
+   */
+  const characterId = typeof characterOrId === "string" ? characterOrId : characterOrId?.id;
+  if (!characterId || !fact) return false;
+  const character = typeof characterOrId === "string" ? game.actors?.get(characterId) ?? null : characterOrId;
 
-  await putBelief(fact, character.id, null);
+  await putBelief(fact, characterId, null);
+  if (!character) {
+    ui.notifications.info(_loc("PENTARYN_TIES.known.study.notify.resetOrphan", { kind: fact.name }));
+    return true;
+  }
   if (studiedOf(character)[fact.axis][fact.lockKey]) {
     await character.update({ [`flags.${MODULE}.${STUDIED_FLAG}.${fact.axis}.${fact.lockKey}`]: _del });
   }

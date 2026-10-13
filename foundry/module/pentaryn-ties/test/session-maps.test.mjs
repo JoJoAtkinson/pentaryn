@@ -48,3 +48,19 @@ test("deleteActor drops the actor's cosmetic state in every map", () => {
   assert.equal(lore._sizes().open, 0);
   assert.deepEqual(known._sizes(), { expanded: 0, shownHidden: 0 });
 });
+
+test("ties-ui-EXT-2: every SHEET_TABS row owns its forget(actorId), and deleteActor loops over the rows", async () => {
+  const { SHEET_TABS } = await import("../sheet.mjs");
+  assert.ok(Array.isArray(SHEET_TABS), "SHEET_TABS is exported for the sweep to be checked");
+  for (const spec of SHEET_TABS) assert.equal(typeof spec.forget, "function", `${spec.id} has forget`);
+  const seen = [];
+  const saved = SHEET_TABS.map(spec => spec.forget);
+  SHEET_TABS.forEach((spec, i) => { spec.forget = id => { seen.push([spec.id, id]); saved[i](id); }; });
+  try {
+    F.fire("deleteActor", { id: NPC });
+  } finally {
+    SHEET_TABS.forEach((spec, i) => { spec.forget = saved[i]; });
+  }
+  assert.deepEqual(seen, SHEET_TABS.map(spec => [spec.id, NPC]));
+  assert.deepEqual(F.hookErrors ?? [], []);
+});

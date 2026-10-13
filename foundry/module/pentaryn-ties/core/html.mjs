@@ -3,13 +3,93 @@
  * line byte for byte (ties-15). The three windows that escape with `foundry.utils.escapeHTML` (look,
  * preview, review-ui) keep it: it writes a different entity for `'`, and their markup is pinned.
  *
- * Pure: no Foundry global. NOT on the known-core.mjs barrel — import it by path.
+ * Pure: no Foundry global at import time — the skill helpers read `CONFIG` and `game.i18n` only when
+ * called. NOT on the known-core.mjs barrel — import it by path.
  */
 
 const ENTITY = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 
 /** @param {*} s  anything; null and undefined escape to "" */
 export const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ENTITY[c]);
+
+/** What a portrait with no image — or no actor left at all — shows. Foundry ships it (ties-ui-M14). */
+export const FALLBACK_ART = "icons/svg/mystery-man.svg";
+
+/**
+ * A keybinding's key code as a hint shows it: "Digit6" → "6", "KeyQ" → "Q", anything else as is,
+ * nothing bound → "?". The caller reads the live binding (`game.keybindings`) and hands the code in,
+ * so a rebound key is never misnamed (ties-ui-M14).
+ */
+export const keyLabel = code => String(code ?? "").replace(/^Digit/, "").replace(/^Key/, "") || "?";
+
+/**
+ * The "GM only" badge: an eye-slash and the localized `PENTARYN_TIES.gmOnly`, on a section only a GM
+ * is drawn. Authoring, the two mutual-pair panels and the told-count line each pasted this markup
+ * (ties-ui-EXT-15); it reads `game.i18n` only when called.
+ */
+export const gmBadge = () =>
+  `<span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(globalThis.game?.i18n?.localize?.("PENTARYN_TIES.gmOnly") ?? "PENTARYN_TIES.gmOnly")}</span>`;
+
+/**
+ * Find-or-create for a window (ties-ui-EXT-16). The first window in `pool` that `match` picks is
+ * un-minimized, re-rendered and brought to the front; with none, `make()` builds one (and registers it
+ * wherever the caller keeps it) and it is rendered. Either way `render({ force: true })` is not
+ * awaited: a rejection goes to `onError`. Returns the window — not a promise.
+ *
+ * TiesEditor, AttributeReview, LookWindow and InspectPreview each had their own version of this.
+ * @param {Iterable<object>} pool   the windows to search (an instance registry, a Map's values)
+ * @param {(w: object) => boolean} match
+ * @param {() => object} make
+ * @param {{ onError?: (err: Error) => void }} [options]
+ */
+export function openOrFront(pool, match, make, { onError } = {}) {
+  let win = null;
+  for (const w of pool ?? []) {
+    if (match(w)) {
+      win = w;
+      break;
+    }
+  }
+  const fresh = !win;
+  if (fresh) win = make();
+  else if (win.minimized) win.maximize?.();
+  const shown = win.render({ force: true });
+  if (onError) shown?.catch?.(onError);
+  if (!fresh) win.bringToFront?.();
+  return win;
+}
+
+/* ── skills (ties-ui-EXT-8) ──────────────────────────────────────────────── */
+/*
+ * The world's skill list, read off CONFIG at call time rather than hardcoded, so a GM's homebrew skill
+ * is authorable. Four windows each built their own dropdown and label and disagreed on order,
+ * localization and what to do with a skill the world no longer defines; these are the one rule.
+ */
+
+const worldSkills = () => globalThis.CONFIG?.DND5E?.skills ?? {};
+const has = (skills, key) => Object.prototype.hasOwnProperty.call(skills, key);
+
+/** A skill's localized label, or the bare key when this world does not define it. */
+export function skillLabelOf(key) {
+  const skills = worldSkills();
+  const label = has(skills, key) ? skills[key]?.label : null;
+  return label ? (globalThis.game?.i18n?.localize?.(label) ?? label) : String(key ?? "");
+}
+
+/**
+ * `<option>`s for a skill `<select>`: CONFIG.DND5E.skills in config order, localized. A `selected`
+ * key this world lacks is kept as its own first option ("hmb (not in this world)") rather than
+ * dropped — a dropped value falls to the first option and the next save retargets the check.
+ */
+export function skillOptionsHTML(selected) {
+  const skills = worldSkills();
+  const entries = Object.keys(skills).map(k => [k, skillLabelOf(k)]);
+  if (selected && !has(skills, selected)) {
+    const missing = globalThis.game?.i18n?.format?.("PENTARYN_TIES.lore.skillMissing", { skill: selected }) ?? selected;
+    entries.unshift([selected, missing]);
+  }
+  return entries.map(([k, label]) => `<option value="${esc(k)}"${k === selected ? " selected" : ""}>${esc(label)}</option>`).join("");
+}
 
 /* ── row fragments (ties-18) ─────────────────────────────────────────────── */
 /*
@@ -73,6 +153,105 @@ export function bindRowToggle(head, row, { wrap, mode = "attr", onToggle = () =>
     ev.preventDefault(); // Space would scroll the panel instead
     toggle();
   });
+}
+
+/* ── notes autosave and summary swap (ties-ui-EXT-3) ─────────────────────── */
+
+/**
+ * Autosave a row's notes while typing: `save(value)` runs `ms` after the last keystroke. A textarea
+ * fires `change` only on blur, and closing the sheet removes it without a blur, so `change` alone
+ * would quietly bin a paragraph.
+ *
+ * Blur FLUSHES a pending save, never cancels it (ties-ui-M1): cancelling lost whatever was typed in
+ * the last `ms` before focus left — and the sheet's close button takes focus first. A blur with
+ * nothing pending saves nothing, and a flushed save does not run again when its timer would have.
+ * The Ties and Known tabs each carried a copy of this, and the copies drifted (M1 was the Known one).
+ */
+export function bindNotesAutosave(textarea, save, { ms = 700 } = {}) {
+  let pending = null;
+  const fire = () => {
+    pending = null;
+    return save(textarea.value);
+  };
+  textarea.addEventListener("input", () => {
+    clearTimeout(pending);
+    pending = setTimeout(fire, ms);
+  });
+  textarea.addEventListener("blur", () => {
+    if (pending === null) return;
+    clearTimeout(pending);
+    fire();
+  });
+}
+
+/**
+ * Is this a write's refused answer — `{ ok: false, reason: "writeFailed" }`, the write contract's
+ * "Foundry refused or failed the write" (attributes.mjs, R8)? Every other answer (`{ ok: true }`, a
+ * refusal such as `noLore`, `undefined`) is not.
+ */
+export const isWriteFailed = out => !!out && typeof out === "object" && out.ok === false && out.reason === "writeFailed";
+
+/**
+ * An async click that writes: hold `btn` disabled while `fn` runs — a double-click must not queue a
+ * second write — and enable it again in `finally`, so a write that fails does not leave a dead
+ * button. A throw goes to `log.error(op, err)` and `notify(op, err)` (the caller's toast); the
+ * handlers used to await with no catch and lost both (ties-ui-rob-7). Pure: the caller hands in its
+ * logger and toast.
+ *
+ * A write that no longer throws but ANSWERS `writeFailed` (ties-core R8: `markLearned`,
+ * `grantKnowledge`, `repairAllAncestry`) is the same failure: `fn` returns that answer and it is
+ * logged and toasted exactly as a throw was, with an `Error("writeFailed")` in place of the throw.
+ * Returns `fn`'s answer (undefined after a throw).
+ */
+export async function guardClick(op, btn, fn, { log, notify } = {}) {
+  btn.disabled = true;
+  try {
+    const out = await fn();
+    if (isWriteFailed(out)) {
+      const err = new Error(out.reason);
+      log?.error(op, err);
+      notify?.(op, err);
+    }
+    return out;
+  } catch (err) {
+    log?.error(op, err);
+    notify?.(op, err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/**
+ * Swap a row's `.pt-summary` for fresh markup in place — a full repaint would tear the caret out of
+ * the textarea still being typed in — and hand the new node to `rebind`. Returns it, or null when the
+ * row has no summary.
+ *
+ * The node is taken BEFORE the swap: `replaceWith` moves it out of its holder, so reading
+ * `holder.firstElementChild` afterwards is null (the Known tab's copy once did, and every autosave
+ * threw).
+ */
+export function replaceSummary(row, html, rebind) {
+  const head = row.querySelector(".pt-summary");
+  if (!head) return null;
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const next = holder.firstElementChild;
+  head.replaceWith(next);
+  rebind?.(next);
+  return next;
+}
+
+/**
+ * Re-wire a summary replaced in place (by `replaceSummary`) with the same row toggle the full bind
+ * gives it — without it a row behaves differently depending on whether its summary happened to be
+ * repainted — and without re-registering every listener in the panel. `onToggle` and `focus` as for
+ * `bindRowToggle`. A repaint that produced nothing (no head, or a row with no detail) is a no-op, not
+ * a throw that takes the tab down. The Ties and Known tabs each carried a copy (ties-ui-M14).
+ */
+export function bindSummary(head, row, { onToggle, focus } = {}) {
+  const wrap = row?.querySelector(".pt-detail-wrap");
+  if (!head || !wrap) return;
+  bindRowToggle(head, row, { wrap, onToggle, focus });
 }
 
 /**

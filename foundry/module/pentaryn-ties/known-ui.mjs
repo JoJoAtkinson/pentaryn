@@ -35,14 +35,15 @@ import {
   STUDY_RUNGS,
   grantsForEntry,
   visibleAttributesFor,
+  indexRegistry,
   isBlankProse,
   BELIEFS_FLAG
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
-import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse } from "./core/html.mjs";
+import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, guardClick } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { categoriesFor, categoryLabel, readKnown, writeKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
+import { categoriesFor, categoryLabel, readKnown, hideKnown, addKnown, setKnownField, notebookActor } from "./known-data.mjs";
 
 // the data half moved to known-data.mjs (S12); its public names are still reachable here
 export {
@@ -58,6 +59,8 @@ export {
 } from "./known-data.mjs";
 
 const log = makeLog(MODULE);
+/** A click whose write throws: the console line and the toast (ties-ui-rob-7). */
+const CLICK = { log, notify: () => ui.notifications?.error(_loc("PENTARYN_TIES.notify.clickFailed")) };
 
 /**
  * The tab id, exported so the entry point and the "open this entry" path cannot drift apart:
@@ -65,8 +68,6 @@ const log = makeLog(MODULE);
  * copies of it is how a canvas key quietly starts landing on the Ties tab instead.
  */
 export const KNOWN_TAB_ID = "known";
-
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /**
  * Which rows are expanded, per actor — the same cosmetic state the ties panel keeps, and
@@ -122,8 +123,7 @@ async function knownCandidates(actor) {
  * look to find out what it had become.
  */
 function knownKey() {
-  const bound = game.keybindings?.get?.(MODULE, "fileKnown")?.[0]?.key ?? "";
-  return bound.replace(/^Digit/, "").replace(/^Key/, "") || "?";
+  return keyLabel(game.keybindings?.get?.(MODULE, "fileKnown")?.[0]?.key);
 }
 
 /**
@@ -180,8 +180,15 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
  *
  * The row is expanded through the same Map the tab's own toggle writes, so the paint that
  * follows renders it open — no second repaint, and nothing to keep in step with the DOM.
+ *
+ * Asking for a tucked-away (hidden) entry by name un-hides **that entry only** — a real write,
+ * the same one its Unhide button makes, not a transient "show hidden" toggle — and repaints the
+ * Known section in place, because an already-open sheet would otherwise keep the paint that
+ * filtered the row out (ties-ui-E2, declared).
  */
 export async function openKnownEntry(actor, id) {
+  const list = readKnown(actor);
+  const unhid = !!list.find(e => e.id === id)?.hidden && (await hideKnown(actor, id, false));
   setExpanded(actor.id, id, true);
   const sheet = actor?.sheet;
   if (!sheet) return false;
@@ -198,6 +205,14 @@ export async function openKnownEntry(actor, id) {
   const root = sheet.element instanceof HTMLElement ? sheet.element : sheet.element?.[0];
   const section = root?.querySelector(`[data-tab="${KNOWN_TAB_ID}"].tab`);
   if (!section) return true; // tab switched off in settings, or the markup moved — the write stands
+  if (unhid) {
+    // the injector's own paint (sheet.mjs), so the repainted rows are wired exactly as a fresh one
+    const repaint = () => {
+      section.innerHTML = buildKnownHTML(actor);
+      bindKnown(section.firstElementChild, actor, repaint);
+    };
+    repaint();
+  }
   if (!section.classList.contains("active")) root.querySelector(`nav.tabs [data-tab="${KNOWN_TAB_ID}"]`)?.click();
   const row = section.querySelector(`.pt-row[data-id="${CSS.escape(id)}"]`);
   if (row && !row.classList.contains("pt-open")) row.querySelector(".pt-summary")?.click();
@@ -491,8 +506,9 @@ export function buildKnownHTML(actor) {
    * rogue already filed, so the join needs the subject's groups, not just its id.
    */
   const attrsFor = new Map();
-  // the registry cannot change mid-paint: read (and clamp) it once, not once per entry (ties-23)
-  const registryNow = registryOf();
+  // the registry cannot change mid-paint: read (and clamp) it once, not once per entry (ties-23),
+  // and index it once too — the per-entry filter would otherwise re-clamp it per row (ties-ui-perf-7)
+  const registryIndex = indexRegistry(registryOf());
   /*
    * The study state per row, computed once here rather than inside the row builder — it walks
    * the kind's items to answer "is there anything to learn", and a notebook of thirty entries
@@ -512,7 +528,7 @@ export function buildKnownHTML(actor) {
       subject
         ? visibleAttributesFor({
             carried: attributeIdsOf(subject, kindActorOf),
-            registry: registryNow,
+            index: registryIndex,
             beliefs: subject.getFlag(MODULE, BELIEFS_FLAG) ?? {},
             characterId: actor.id,
             isGM
@@ -623,12 +639,14 @@ export function bindKnown(root, actor, rerender = () => {}) {
    * spent. A repaint conditional on the answer would be the answer.
    */
   root.querySelectorAll('[data-action="study"]').forEach(btn => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       const subject = game.actors?.get(btn.dataset.id);
       if (!subject) return;
-      btn.disabled = true; // one gesture, one roll — a double-click must not queue two
-      await requestStudy(actor, subject);
-      rerender();
+      // one gesture, one roll — disabled while it runs, so a double-click cannot queue two
+      return guardClick("study", btn, async () => {
+        await requestStudy(actor, subject);
+        rerender();
+      }, CLICK);
     });
   });
 
@@ -638,12 +656,14 @@ export function bindKnown(root, actor, rerender = () => {}) {
    * this client looking identical — one fewer row on offer, nothing else.
    */
   root.querySelectorAll('[data-action="lore"]').forEach(btn => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", () => {
       const subject = game.actors?.get(btn.dataset.id);
       if (!subject) return;
-      btn.disabled = true; // one gesture, one roll — a double-click must not queue two
-      await requestLore(actor, subject, btn.dataset.lore);
-      rerender();
+      // one gesture, one roll — disabled while it runs, so a double-click cannot queue two
+      return guardClick("lore", btn, async () => {
+        await requestLore(actor, subject, btn.dataset.lore);
+        rerender();
+      }, CLICK);
     });
   });
 
@@ -683,48 +703,27 @@ export function bindKnown(root, actor, rerender = () => {}) {
       rerender();
     });
 
-    /**
-     * A textarea only fires `change` on blur, and closing the sheet removes the element
-     * without ever blurring it — which would quietly bin a page of notes. Autosave while
-     * typing, on the ties panel's 700ms.
-     *
-     * Blur FLUSHES a pending save rather than cancelling it (ties-ui-M1): cancelling lost
-     * whatever was typed in the last 700ms before focus left — and the sheet's close button
-     * takes focus first, so closing the sheet lost it too.
+    /*
+     * Autosave while typing, on the Ties tab's 700 ms; blur flushes a pending save rather than
+     * cancelling it (ties-ui-M1). Shared with the Ties tab (ties-ui-EXT-3). The preview line is
+     * hidden by CSS while the row is open, so the swap is invisible until the row closes — which is
+     * exactly when it must already be right.
      */
     const notes = row.querySelector('[data-field="notes"]');
     if (notes) {
-      let pending = null;
-      const save = async () => {
-        pending = null;
-        if (!(await setKnownField(actor, id, "notes", notes.value))) return;
-        const entry = readKnown(actor).find(e => e.id === id);
-        const head = row.querySelector(".pt-summary");
-        if (!entry || !head) return;
-        const fresh = document.createElement("div");
-        fresh.innerHTML = summary(entry, { open: row.classList.contains("pt-open"), canEdit });
-        /*
-         * Grab the node BEFORE the swap. `replaceWith` moves it out of `fresh`, so reading
-         * `fresh.firstElementChild` afterwards is null — and the rebind then threw on every
-         * autosave, leaving the new summary with no click handler until the next full
-         * repaint. Caught in the console on the first typing test; `editor.mjs` gets this
-         * right and this is the line that was not copied from it.
-         */
-        const next = fresh.firstElementChild;
-        // the preview is hidden by CSS while the row is open, so this is invisible until
-        // the row closes — which is exactly when it must already be right
-        head.replaceWith(next);
-        bindSummary(next, row, actor);
-      };
-      notes.addEventListener("input", () => {
-        clearTimeout(pending);
-        pending = setTimeout(save, 700);
-      });
-      notes.addEventListener("blur", () => {
-        if (pending === null) return;
-        clearTimeout(pending);
-        save();
-      });
+      bindNotesAutosave(
+        notes,
+        async value => {
+          if (!(await setKnownField(actor, id, "notes", value))) return;
+          const entry = readKnown(actor).find(e => e.id === id);
+          if (!entry) return;
+          const html = summary(entry, { open: row.classList.contains("pt-open"), canEdit });
+          replaceSummary(row, html, next =>
+            bindSummary(next, row, { onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="notes"]' })
+          );
+        },
+        { ms: 700 }
+      );
     }
   });
 
@@ -737,10 +736,10 @@ export function bindKnown(root, actor, rerender = () => {}) {
    */
   root.querySelectorAll('[data-action="hide"]').forEach(btn => {
     btn.addEventListener("click", async () => {
-      const list = readKnown(actor);
-      const entry = list.find(e => e.id === btn.dataset.id);
+      const entry = readKnown(actor).find(e => e.id === btn.dataset.id);
       if (!entry) return;
-      await writeKnown(actor, list.map(e => (e.id === entry.id ? { ...e, hidden: !e.hidden } : e)));
+      // the button says Hide or Unhide from this paint; the write reads the list in the actor's queue
+      await hideKnown(actor, entry.id, !entry.hidden);
       setExpanded(actor.id, btn.dataset.id, false);
       rerender();
     });
@@ -754,13 +753,6 @@ export function bindKnown(root, actor, rerender = () => {}) {
   });
 
   root.querySelector('[data-action="known-add"]')?.addEventListener("click", () => openAddPicker(actor, rerender));
-}
-
-/** Re-wire a summary replaced in place, so a partial repaint doesn't double every listener. */
-function bindSummary(head, row, actor) {
-  const wrap = row?.querySelector(".pt-detail-wrap");
-  if (!head || !wrap) return; // a repaint that produced nothing must not take the tab down
-  bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="notes"]' });
 }
 
 /**

@@ -68,13 +68,15 @@ import {
   kindActorOf, studySkillFor, studyStateFor, composeStudyPayload, factStatus, shareFact, forgetFact
 } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
-import { subjectFacts } from "./facts.mjs";
+import { subjectFacts, groupLabelKey } from "./facts.mjs";
 import {
   rollableLore, loreOfferable, loreOutcome, tierOf, studyOffsetOf, STUDY_OFFSET_FLAG, LORE_FLAG,
   planStep, identificationLadder, indexRegistry, identifiedKey, holdResolved, combineAdvantage,
-  ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
+  ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels,
+  STUDY_RUNGS
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName, kindPassed } from "./core/rules.mjs";
+import { FALLBACK_ART, skillLabelOf, openOrFront } from "./core/html.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -106,7 +108,9 @@ const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 const pct = p => `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%`;
 /** d20 + mod ≥ dc. Ability checks have no automatic success or failure on a 20 or a 1. */
 const chance = (mod, dc) => Math.max(0, Math.min(1, (21 - (dc - mod)) / 20));
-const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
+
+/** The kind study's top tier — what "knows it all" means (ties-ui-EXT-13). */
+const STUDY_TOP = Math.max(...STUDY_RUNGS);
 
 const PROF = { none: 0, prof: 1, expert: 2 };
 
@@ -115,6 +119,13 @@ const PROF = { none: 0, prof: 1, expert: 2 };
  * deletion is a `_del` value on a beliefs path, so its flattened key is the path itself (ES-6).
  */
 export const LEDGER_ONLY = new RegExp(`^(_id$|_stats\\.|flags\\.${MODULE.replace(/[-.]/g, "\\$&")}\\.beliefs(\\.|$))`);
+
+/**
+ * One preview per subject on this client (ties-ui-EXT-16): a second flask click fronts and re-renders
+ * the open one. Keyed by uuid, so two unlinked tokens of one actor each get their own.
+ */
+const previews = new Map();
+const subjectKey = subject => subject.uuid ?? subject.id;
 
 export class InspectPreview extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
@@ -127,14 +138,23 @@ export class InspectPreview extends ApplicationV2 {
   /** @param {Actor} subject */
   static open(subject) {
     if (!game.user?.isGM) return null;
-    if (!subject) return ui.notifications.warn(_loc("PENTARYN_TIES.preview.noToken"));
-    return new InspectPreview(subject).render(true);
+    if (!subject) {
+      ui.notifications.warn(_loc("PENTARYN_TIES.preview.noToken"));
+      return null;
+    }
+    const key = subjectKey(subject);
+    return openOrFront(previews.values(), w => w.key === key, () => {
+      const win = new InspectPreview(subject);
+      previews.set(key, win);
+      return win;
+    }, { onError: err => log.error(`inspect preview`, err) });
   }
 
   constructor(subject, options = {}) {
     if (!game.user?.isGM) throw new Error(`${MODULE} | inspect preview is GM only`);
     super(options);
     this.subject = subject;
+    this.key = subjectKey(subject);
     // "player": what a player who passed everything sees, with the GM's per-PC switches.
     // "simulate": the dice bench, unchanged.
     this.mode = "player";
@@ -306,7 +326,7 @@ export class InspectPreview extends ApplicationV2 {
       const { skill, label } = studySkillFor(k);
       const off = studyOffsetOf(readFlag(k, MODULE, STUDY_OFFSET_FLAG));
       if (off === "auto") {
-        kind = { actor: k, skill, auto: true, spent: state.spent, text: await composeStudyPayload(k, 25, label) };
+        kind = { actor: k, skill, auto: true, spent: state.spent, text: await composeStudyPayload(k, STUDY_TOP, label) };
       } else {
         const shift = typeof off === "number" ? off : 0;
         const mod = this.modFor(skill);
@@ -315,7 +335,7 @@ export class InspectPreview extends ApplicationV2 {
         const tier = tierOf(total, shift);
         kind = {
           actor: k, skill, mod, die, total, tier, shift, spent: state.spent,
-          odds: [15, 20, 25].map(t => ({ t, p: chance(mod, t + shift) })),
+          odds: STUDY_RUNGS.filter(r => r > 0).reverse().map(t => ({ t, p: chance(mod, t + shift) })),
           text: await composeStudyPayload(k, tier, label)
         };
       }
@@ -386,7 +406,7 @@ export class InspectPreview extends ApplicationV2 {
           ? `<span class="pv-dice">${_loc("PENTARYN_TIES.preview.noRoll", { why: r.bypass ? _loc("PENTARYN_TIES.preview.bypass") : _loc("PENTARYN_TIES.preview.autoScale") })}</span>`
           : `${dice(r)}${r.adv ? ` <span class="pv-dice">${_loc("PENTARYN_TIES.preview.advantage")}</span>` : ""}`;
         html += `<div class="pv-row">
-          <div class="pv-head"><img src="${esc(r.entry.icon)}"><b>${esc(r.entry.title)}</b> <span class="pv-skill">${esc(skillLabel(r.skill))}</span>
+          <div class="pv-head"><img src="${esc(r.entry.icon)}"><b>${esc(r.entry.title)}</b> <span class="pv-skill">${esc(skillLabelOf(r.skill))}</span>
           ${how} ${badge(r)}
           <span class="pv-odds" data-tooltip="${_loc("PENTARYN_TIES.preview.oddsTip")}">${pct(r.p)} · ${pct(r.cumulative)}</span></div>
           ${r.hold ? `<p class="pv-note">${_loc("PENTARYN_TIES.preview.held")}</p>` : ""}
@@ -416,7 +436,7 @@ export class InspectPreview extends ApplicationV2 {
     else if (k.auto) html += `${k.spent ? `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>` : ""}<p>${_loc("PENTARYN_TIES.preview.common", { name: esc(k.actor.name) })}</p>${said(k.text, true)}`;
     else {
       if (k.spent) html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>`;
-      html += `<div class="pv-row"><div class="pv-head"><img src="${esc(k.actor.img)}"><b>${esc(k.actor.name)}</b> <span class="pv-skill">${esc(skillLabel(k.skill))}</span>
+      html += `<div class="pv-row"><div class="pv-head"><img src="${esc(k.actor.img)}"><b>${esc(k.actor.name)}</b> <span class="pv-skill">${esc(skillLabelOf(k.skill))}</span>
         <span class="pv-dice">${k.die} ${k.mod >= 0 ? "+" : "−"} ${Math.abs(k.mod)} = <b>${k.total}</b></span>
         <span class="${kindPassed(k.tier) ? "pv-pass" : "pv-fail"}">${_loc("PENTARYN_TIES.preview.tier", { tier: k.tier })}${
           // below 15 is a failure: nothing at all, unless the GM authored rung 0 (the one lie)
@@ -425,7 +445,7 @@ export class InspectPreview extends ApplicationV2 {
         <details ${kindPassed(k.tier) ? "" : "open"}><summary>${_loc("PENTARYN_TIES.preview.whatTold")}</summary>${said(k.text, kindPassed(k.tier))}</details></div>`;
     }
     if (this.missingSkills?.size)
-      html = `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.missingSkills", { skills: [...this.missingSkills].map(x => esc(skillLabel(x))).join(", ") })}</p>` + html;
+      html = `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.missingSkills", { skills: [...this.missingSkills].map(x => esc(skillLabelOf(x))).join(", ") })}</p>` + html;
     html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.notModelled")}</p>`;
     return html;
   }
@@ -440,8 +460,10 @@ export class InspectPreview extends ApplicationV2 {
   async renderPlayerView() {
     const subject = this.subject;
     const pcs = this.playerCharacters();
-    this.pcKey = pcs.map(pc => pc.id).join(",");
-    this.specs = [];
+    // built locally and published after the last await: a click or refreshSwitches during the render
+    // reads the previous, consistent set (ties-ui-ACC-2)
+    const pcKey = pcs.map(pc => pc.id).join(",");
+    const specs = [];
     /*
      * Which facts, in what order, under what key: `subjectFacts` → known-core's `factOrder`, the
      * same list the player's Look window (`look-app.mjs`) filters by their `granted` map. Shared so the
@@ -460,47 +482,50 @@ export class InspectPreview extends ApplicationV2 {
       const e = describeAttribute(x.attrId);
       const reveal = String(e.reveal ?? "");
       const note = x.parentId ? _loc("PENTARYN_TIES.known.share.afterParent", { parent: describeAttribute(x.parentId).title }) : null;
-      return this.factCard({ icon: e.icon, source: e.title, text: reveal }, { ns: "ident", subjectId: subject.id, attrId: x.attrId }, pcs, {
+      return this.factCard(specs, { icon: e.icon, source: e.title, text: reveal }, { ns: "ident", subjectId: subject.id, attrId: x.attrId }, pcs, {
         blank: !reveal.trim() ? _loc("PENTARYN_TIES.known.share.blankReveal") : null, note
       });
     });
-    if (idCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupIdent"), idCards]);
+    if (idCards.length) groups.push([_loc(groupLabelKey("ident", "preview")), idCards]);
 
     const attrCards = [];
     for (const x of facts.filter(x => x.group === "attr")) {
       const e = describeAttribute(x.attrId);
       const row = attributeLore(x.attrId).find(r => r.id === x.factId);
       if (!row) continue;
-      attrCards.push(this.factCard(
+      attrCards.push(this.factCard(specs,
         { icon: e.icon, source: `${e.title} — ${row.label}`, text: row.text },
         { ns: "attr", subjectId: subject.id, attrId: x.attrId, factId: x.factId }, pcs,
         { blank: !row.text.trim() ? _loc("PENTARYN_TIES.known.share.blankText") : null,
           note: x.secret ? _loc("PENTARYN_TIES.known.share.secretLore", { name: subject.name, attr: e.title }) : null }
       ));
     }
-    if (attrCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupAttr"), attrCards]);
+    if (attrCards.length) groups.push([_loc(groupLabelKey("attr", "preview")), attrCards]);
 
-    const ownCards = facts.filter(x => x.group === "lore").map(x => ownRows.get(x.factId)).filter(Boolean).map(row => this.factCard(
+    const ownCards = facts.filter(x => x.group === "lore").map(x => ownRows.get(x.factId)).filter(Boolean).map(row => this.factCard(specs,
       { icon: subject.img, source: row.label, text: row.text },
       { ns: "lore", subjectId: subject.id, factId: row.id }, pcs,
       { blank: !row.text.trim() ? _loc("PENTARYN_TIES.known.share.blankText") : null }
     ));
-    if (ownCards.length) groups.push([_loc("PENTARYN_TIES.known.share.groupLore", { name: subject.name }), ownCards]);
+    if (ownCards.length) groups.push([_loc(groupLabelKey("lore", "preview"), { name: subject.name }), ownCards]);
 
     const state = studyStateFor(null, subject);
     const kind = state.kind ?? null;
     if (kind && state.content) {
-      const text = await composeStudyPayload(kind, 25, state.skillLabel);
+      const text = await composeStudyPayload(kind, STUDY_TOP, state.skillLabel);
       // a separate kind actor's study files under the KIND's page on the Known tab, not this one's
-      const kindLabel = kind.id !== subject.id ? _loc("PENTARYN_TIES.known.share.groupKindPage", { kind: kind.name }) : _loc("PENTARYN_TIES.known.share.groupKind");
-      groups.push([kindLabel, [this.factCard(
+      const kindLabel = _loc(groupLabelKey("kind", "preview", { kindPage: kind.id !== subject.id }), { kind: kind.name });
+      groups.push([kindLabel, [this.factCard(specs,
         { icon: kind.img, source: kind.name, text }, { ns: "kind", subjectId: subject.id }, pcs,
         { note: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "auto" ? _loc("PENTARYN_TIES.known.share.kindAuto") : null }
       )]]);
     }
 
+    this.specs = specs;
+    this.pcKey = pcKey;
+
     const head = `<div class="pt-summary pv-entry-head">
-      <img class="pt-portrait" src="${esc(subject.img || "icons/svg/mystery-man.svg")}" alt="" />
+      <img class="pt-portrait" src="${esc(subject.img || FALLBACK_ART)}" alt="" />
       <span class="pt-who"><span class="pt-name">${esc(subject.name)}</span>
       ${kind && kind.id !== subject.id ? `<span class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: kind.name }))}</span>` : ""}</span>
     </div>`;
@@ -519,13 +544,16 @@ export class InspectPreview extends ApplicationV2 {
     return html + `</div>`;
   }
 
-  /** One grant card plus the GM switch row. `blank` replaces the row: nothing there to share. */
-  factCard(g, spec, pcs, { blank = null, note = null, textHTML = null } = {}) {
-    const i = this.specs.push({ spec, label: g.source }) - 1;
+  /**
+   * One grant card plus the GM switch row, its fact pushed onto `specs` (the render's own list, not
+   * yet `this.specs`). `blank` replaces the row: nothing there to share.
+   */
+  factCard(specs, g, spec, pcs, { blank = null, note = null, textHTML = null } = {}) {
+    const i = specs.push({ spec, label: g.source }) - 1;
     const extra = blank
       ? `<p class="pv-silent pv-gm">${esc(blank)}</p>`
       : `<div class="pv-gm">${note ? `<span class="pv-gm-note">${esc(note)}</span>` : ""}
-          ${pcs.length ? this.switchRow(i, pcs) : ""}</div>`;
+          ${pcs.length ? this.switchRow(spec, i, pcs) : ""}</div>`;
     return grantCard(blank ? { ...g, text: g.text || "—" } : g, { extra, textHTML });
   }
 
@@ -547,7 +575,7 @@ export class InspectPreview extends ApplicationV2 {
       case "passed":
         state = "on";
         // a kind held below the top tier is not "knows it all": the click tells them the rest
-        act = spec.ns === "kind" && Number(st.tier ?? 0) < 25 ? "raise" : "rolled";
+        act = spec.ns === "kind" && Number(st.tier ?? 0) < STUDY_TOP ? "raise" : "rolled";
         tip = st.total != null
           ? _loc("PENTARYN_TIES.known.share.sw.passed", { name, how: `${rolled}${tier}` })
           : _loc("PENTARYN_TIES.known.share.sw.auto", { name });
@@ -577,9 +605,8 @@ export class InspectPreview extends ApplicationV2 {
     return { st, state, act, tip, name };
   }
 
-  /** The switch row for fact `i`: a switch per PC, then "Share with all". */
-  switchRow(i, pcs) {
-    const { spec } = this.specs[i];
+  /** The switch row for fact `i` (`spec`): a switch per PC, then "Share with all". */
+  switchRow(spec, i, pcs) {
     const states = pcs.map(pc => ({ pc, s: this.switchState(spec, pc) }));
     const anyOff = states.some(x => x.s.act === "share");
     return `<div class="pv-switches" data-fact="${i}">
@@ -779,12 +806,13 @@ export class InspectPreview extends ApplicationV2 {
 
   _onClose(options) {
     this.unwatch();
+    if (previews.get(this.key) === this) previews.delete(this.key);
     return super._onClose?.(options);
   }
 
   loreRow(r, locked, badge, dice, said) {
     return `<div class="pv-row ${locked ? "pv-dim" : ""}">
-      <div class="pv-head"><b>${esc(r.row.label)}</b> <span class="pv-skill">${esc(skillLabel(r.row.skill))}</span>
+      <div class="pv-head"><b>${esc(r.row.label)}</b> <span class="pv-skill">${esc(skillLabelOf(r.row.skill))}</span>
       ${dice(r)} ${badge(r)} <span class="pv-odds">${pct(r.p)}</span></div>${said(r.text, r.pass)}</div>`;
   }
 

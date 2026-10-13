@@ -4,7 +4,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { setting } from "./settings.mjs";
+import { mayActOn, setting } from "./settings.mjs";
 import { TiesEditor, buildHTML, bind, forgetActor } from "./editor.mjs";
 import { KNOWN_TAB_ID, buildKnownHTML, bindKnown, forgetKnownActor, openAddPicker, fileHovered, openKnownEntry } from "./known-ui.mjs";
 import { ATTR_TAB_ID, buildAttributesHTML, bindAttributes, forgetAttributesActor } from "./attributes-ui.mjs";
@@ -22,7 +22,7 @@ const TAB = "ties";
 /*
  * dnd5e 5.x actor sheets are ApplicationV2 with nav.tabs[data-group=primary] and a
  * div.tab-body of section.tab[data-tab]. We append one of each and activate it by hand
- * (see activate() in injectOneTab — not changeTab). Everything here is best-effort: if the
+ * (see activateTab() — not changeTab). Everything here is best-effort: if the
  * markup moves, we bail silently and the header button still opens the editor.
  */
 
@@ -33,8 +33,7 @@ const TAB = "ties";
  */
 function mayView(actor) {
   if (!(actor instanceof Actor)) return false;
-  if (game.user?.isGM) return true;
-  return setting("playerAccess") === true && actor.isOwner === true;
+  return mayActOn(actor);
 }
 
 /**
@@ -50,15 +49,20 @@ function mayView(actor) {
  * it is a player's notebook about the world, and an NPC does not keep one (design decision
  * 1). Nothing else varies per tab, and if a third tab ever needs more than this, add the
  * field here rather than a branch in the loop.
+ *
+ * `forget(actorId)` drops the tab's session-lifetime cosmetic state for a deleted actor (open
+ * rows, toggles, filters); the deleteActor sweep in `install` loops over the rows, so a new tab
+ * cannot be added without saying what it forgets (ties-ui-EXT-2).
  */
-const SHEET_TABS = [
+export const SHEET_TABS = [
   {
     id: TAB,
     icon: "fa-solid fa-people-arrows",
     tooltip: "PENTARYN_TIES.title",
     shows: () => true,
     build: actor => buildHTML(actor),
-    bind: (root, actor, repaint) => bind(root, actor, repaint)
+    bind: (root, actor, repaint) => bind(root, actor, repaint),
+    forget: actorId => forgetActor(actorId)
   },
   {
     id: KNOWN_TAB_ID,
@@ -66,7 +70,8 @@ const SHEET_TABS = [
     tooltip: "PENTARYN_TIES.known.title",
     shows: actor => actor?.type === "character",
     build: actor => buildKnownHTML(actor),
-    bind: (root, actor, repaint) => bindKnown(root, actor, repaint)
+    bind: (root, actor, repaint) => bindKnown(root, actor, repaint),
+    forget: actorId => forgetKnownActor(actorId)
   },
   {
     id: ATTR_TAB_ID,
@@ -81,7 +86,12 @@ const SHEET_TABS = [
      */
     shows: () => true,
     build: actor => buildAttributesHTML(actor),
-    bind: (root, actor, repaint) => bindAttributes(root, actor, repaint)
+    bind: (root, actor, repaint) => bindAttributes(root, actor, repaint),
+    // ties-31: the Attributes tab's and the actor's lore editor's cosmetic state
+    forget: actorId => {
+      forgetAttributesActor(actorId);
+      forgetLoreKey(`lore:${actorId}`);
+    }
   }
 ];
 
@@ -149,42 +159,54 @@ function injectOneTab(app, root, nav, body, actor, spec) {
   };
   paint();
 
-  /**
-   * Activate our tab by hand rather than through `app.changeTab()`.
-   *
-   * changeTab() RETURNS EARLY when `tabGroups[group]` already equals the tab and `force` is unset.
-   * That bites exactly when it matters: the GM is on the Ties tab, something re-renders the sheet,
-   * dnd5e rebuilds the DOM and activates nothing (it does not know "ties"), and the early return
-   * means our re-activation silently does nothing — leaving a BLANK sheet body.
-   *
-   * The deactivate sweep is deliberately over-broad — every `[data-tab]` in the nav and both
-   * body shapes — which is also what makes a SECOND injected tab safe: switching to Known
-   * clears Ties by the same line that clears Features, with no list of our own tabs to keep
-   * in step.
+  /*
+   * Bind the link ONCE (ties-ui-E9). A body-only re-render leaves the link (already bound) and
+   * drops the section, so we land here with a fresh section: that only needs the repaint above.
+   * The handler therefore must not close over `section` — it finds the live one at click time.
    */
-  const activate = () => {
-    root
-      .querySelectorAll('nav.tabs [data-tab], .tab-body > [data-tab], .sheet-body > [data-tab]')
-      .forEach(el => el.classList.remove("active"));
-    link.classList.add("active");
-    section.classList.add("active");
-    if (app.tabGroups) app.tabGroups.primary = spec.id;
-    // dnd5e mirrors the active tab onto the root element as `tab-<name>`
-    root.classList.forEach(c => {
-      if (c.startsWith("tab-")) root.classList.remove(c);
+  if (link.dataset.ptBound !== "1") {
+    link.addEventListener("click", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      activateTab(app, root, link, spec.id);
     });
-    root.classList.add(`tab-${spec.id}`);
-  };
-
-  link.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    activate();
-  });
-  link.dataset.ptBound = "1";
+    link.dataset.ptBound = "1";
+  }
 
   // restore ourselves after a re-render that happened while this tab was open
-  if (app.tabGroups?.primary === spec.id) activate();
+  if (app.tabGroups?.primary === spec.id) activateTab(app, root, link, spec.id);
+}
+
+/**
+ * Activate one of our tabs by hand rather than through `app.changeTab()`.
+ *
+ * changeTab() RETURNS EARLY when `tabGroups[group]` already equals the tab and `force` is unset.
+ * That bites exactly when it matters: the GM is on the Ties tab, something re-renders the sheet,
+ * dnd5e rebuilds the DOM and activates nothing (it does not know "ties"), and the early return
+ * means our re-activation silently does nothing — leaving a BLANK sheet body.
+ *
+ * The deactivate sweep is deliberately over-broad — every `[data-tab]` in the nav and both
+ * body shapes — which is also what makes a SECOND injected tab safe: switching to Known
+ * clears Ties by the same line that clears Features, with no list of our own tabs to keep
+ * in step.
+ *
+ * The section is looked up now, not remembered: a re-render may have replaced it since the
+ * link was bound (ties-ui-E9).
+ */
+function activateTab(app, root, link, id) {
+  const body = root.querySelector("div.tab-body") ?? root.querySelector(".sheet-body");
+  const section = body?.querySelector(`:scope > [data-tab="${id}"]`);
+  root
+    .querySelectorAll('nav.tabs [data-tab], .tab-body > [data-tab], .sheet-body > [data-tab]')
+    .forEach(el => el.classList.remove("active"));
+  link.classList.add("active");
+  section?.classList.add("active");
+  if (app.tabGroups) app.tabGroups.primary = id;
+  // dnd5e mirrors the active tab onto the root element as `tab-<name>`
+  root.classList.forEach(c => {
+    if (c.startsWith("tab-")) root.classList.remove(c);
+  });
+  root.classList.add(`tab-${id}`);
 }
 
 /** Header button — the robust host, independent of the sheet's tab markup. */
@@ -228,15 +250,12 @@ function firstThisDispatch(element) {
  * four sheet render hooks (each keeps its own try/catch; the text is pinned).
  */
 export function install(reg) {
-  // The editor keeps which note panels are open in a module-level Map keyed by actor id.
-  // Nothing else references a deleted actor's entry, so drop it rather than hold it for the
-  // rest of the session.
+  // Each tab keeps cosmetic state (open note panels, toggles, filters) in module-level Maps keyed
+  // by actor id. Nothing else references a deleted actor's entry, so each tab's `forget` drops it
+  // rather than hold it for the rest of the session (ties-ui-EXT-2: one loop, not a hand list).
   reg.on("deleteActor", actor => {
-    forgetActor(actor.id);
-    forgetKnownActor(actor.id);
-    // ties-31: the Attributes tab's and the lore editor's cosmetic state for that actor too
-    forgetAttributesActor(actor.id);
-    forgetLoreKey(`lore:${actor.id}`);
+    const id = actor.id;
+    for (const spec of SHEET_TABS) spec.forget(id);
   }, { label: "sheet: forget a deleted actor" });
 
   for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderActorSheetV2", "renderActorSheet"]) {

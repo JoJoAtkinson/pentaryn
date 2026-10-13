@@ -27,7 +27,7 @@ reverse side (the relay — never overwrites written text). Removing a tie remov
 a player the GM's client removes the NPC's row back (the relay's `remove-reverse`).
 
 **Known.** A second tab, on character sheets only: one page per creature or person they have met,
-filed under Sentient or Beasts. **`5`** files whoever you hover and opens the page. **What is this?**
+filed under Sentient or Beasts. **`5`** files whoever you hover and opens the page (un-hiding it if it was hidden). **What is this?**
 on a page throws a blind Study check on the GM's client (one attempt per kind, ever): 15 / 20 / 25
 buys description, defences, attacks — written in the GM's words, which at low tiers may be wrong.
 
@@ -142,10 +142,14 @@ are GM-written; the registry and the knowledge/belief stores queue their writes 
 **per tab** only. Attribute links and unlinks (`attributes.link`/`unlink`/`repair`) share the
 registry's queue, so a script's `Promise.all` of several links on one actor lands every one. Two GM tabs writing the same setting at once (a Review-panel save racing a bridge
 `A.update`) each rewrite the whole value, and the second write wins — a setting cannot be claimed.
+Each actor's ties and Known arrays have their own per-actor queue (`serial(actorId, fn)` in
+`ties-adapter.mjs` — read inside `fn`, after the previous write landed); it is a separate chain from
+the registry's, so neither ever waits on the other.
 
 ## Extending
 
-- **A sheet tab:** a spec row in `SHEET_TABS` (`sheet.mjs`) — id, icon, tooltip, `shows`, `build`, `bind`.
+- **A sheet tab:** a spec row in `SHEET_TABS` (`sheet.mjs`) — id, icon, tooltip, `shows`, `build`, `bind`,
+  `forget(actorId)` (drop its per-actor cosmetic state; the `deleteActor` sweep loops over the rows).
 - **A GM socket action:** a row in the caller's `listen({ action: { run, gmOnly } })` table
   (`socket-adapter.mjs`) — never another `game.socket.on`.
 - **An API path:** a row in `api-manifest.mjs` plus its function in `api.mjs`, or a feature's
@@ -167,14 +171,15 @@ registry's queue, so a script's `Promise.all` of several links on one actor land
 
 - **An unlinked token's actor is not the actor.** Ties data lives on the world actor (`baseActorOf`);
   writing through `token.actor` lands on the token's delta and is lost to every other token.
-- **Never nest the registry's queued writes** (links and unlinks included) — a queued write that awaits another waits on itself.
+- **Never nest the registry's queued writes** (links and unlinks included), nor one actor's `serial`
+  writes — a queued write that awaits another on the same queue waits on itself.
 - **`Actor#update` merges.** Deleting a ledger row needs core's `_del` value, never the v14-deprecated `-=key`; writing the
   object back without the key does nothing. Drop a beliefs row only through `dropBeliefRow` (study/claim.mjs), which
   removes the whole flag when the last row goes instead of leaving `beliefs: {}` behind; several of one
   character's rows go in one update through its `beliefRowsDrop` (AC-5).
 - **`Number(null)` is 0.** Nullable numbers go through `numOrNull`; a "rolled 0" is a different lie.
 - **`isVisible`, never `visible`.** On v14 `Token#visible` is true for walled-off and hidden tokens.
-- **A setting read before `init`** returns the row default through `setting()`; `mayWrite` refuses instead.
+- **A setting read before `init`** returns the row default through `setting()`; `mayWrite` (and `mayActOn`, the per-actor gate the keys and sheet tabs share) refuses instead.
 
 ## Files
 
@@ -183,7 +188,7 @@ registry's queue, so a script's `Promise.all` of several links on one actor land
 | `pentaryn-ties.mjs` | entry | wiring: keys, init/ready, the features in order, publish |
 | `ties-core.mjs` | core | identity constants, tie clamps, the mirror rules |
 | `known-core.mjs` → `core/*.mjs` | core | barrel over known, study, lore, attributes, ledgers, roster, prose, facts; plus `core/rules.mjs`, `core/html.mjs`, `core/shared.mjs` |
-| `settings.mjs` | settings | `SETTINGS`, `KEYBINDINGS`, `setting()`, `mayWrite` |
+| `settings.mjs` | settings | `SETTINGS`, `KEYBINDINGS`, `setting()`, `mayWrite`, `mayActOn` |
 | `api-manifest.mjs`, `api.mjs` | manifest, api | the rows; implementations, `inspect`, `selftest`, `buildApiFor` |
 | `ties-adapter.mjs`, `socket-adapter.mjs` | adapter | the ties data layer, `canSee`, `inspectorFor`, `readWorn`; the module socket |
 | `conduit.mjs`, `token-hud.mjs`, `look-menu.mjs`, `sheet.mjs`, `overlay.mjs`, `worn.mjs`, `item-marks.mjs` | feature | `install(reg, ctx)` / `uninstall()` each |

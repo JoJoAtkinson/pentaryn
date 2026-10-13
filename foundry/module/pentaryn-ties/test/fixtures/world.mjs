@@ -192,9 +192,17 @@ export async function bootWorld({
 
   // frames: queued, never run on their own — `F.flushFrames()` runs what is queued
   F.frames = [];
+  const frameIds = new Map();
+  let frameSeq = 0;
   globalThis.requestAnimationFrame = fn => {
     F.frames.push(fn);
-    return F.frames.length;
+    frameIds.set(++frameSeq, fn);
+    return frameSeq;
+  };
+  globalThis.cancelAnimationFrame = id => {
+    const i = F.frames.indexOf(frameIds.get(id));
+    if (i >= 0) F.frames.splice(i, 1);
+    frameIds.delete(id);
   };
   F.flushFrames = () => {
     const run = F.frames.splice(0);

@@ -439,7 +439,9 @@ carriers, and in their world-knowledge list.
 Beyond "are they in it", an attribute carries **lore rows** — separate facts, each with its own
 DC and its own one-shot lock. Players do not roll these from the Attributes tab: the GM hands
 them over ("Mark as learned", or `S.share` with `ns: "attr"`), and the DC is the guide for
-whether a character would plausibly know it:
+whether a character would plausibly know it. On a character's own tab "Mark as learned" grants to
+that character; on an NPC's tab it grants to **your assigned character** (no assigned character, no
+button):
 
 ```js
 const entry = A.lookup("ashfallcompany");

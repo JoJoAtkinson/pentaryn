@@ -76,7 +76,7 @@
         "action": "lore",
         "id": "zzNpc00000000001",
         "lore": "l1",
-        "tooltip": "Roll Investigation against DC 7 to find out: zz typed label"
+        "tooltip": "Roll Religion against DC 7 to find out: zz typed label"
       },
       "events": [
         "click"
@@ -402,7 +402,7 @@
         "action": "lore",
         "id": "zzNpc00000000001",
         "lore": "l1",
-        "tooltip": "Roll Investigation against DC 7 to find out: zz typed label"
+        "tooltip": "Roll Religion against DC 7 to find out: zz typed label"
       },
       "type": "click",
       "calls": [

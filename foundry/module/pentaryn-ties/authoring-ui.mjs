@@ -32,10 +32,7 @@ import { MODULE } from "./ties-core.mjs";
 import { LORE_FLAG, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore-ui.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf, writeLoreRows } from "./study.mjs";
-import { esc } from "./core/html.mjs";
-
-const gmBadge = () =>
-  `<span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>`;
+import { esc, gmBadge } from "./core/html.mjs";
 
 /**
  * The kind dropdown.
@@ -85,10 +82,14 @@ function beliefRow(row) {
     row.ns === "kind"
       ? _loc("PENTARYN_TIES.authoring.beliefMetaKind", { tier: row.tier ?? "—", total: row.total ?? "—" })
       : _loc("PENTARYN_TIES.authoring.beliefMetaLore", { total: row.total ?? "—" });
+  // a row can outlive its character (ties-ui-rob-4): tag it, offer no Deliver, keep Reset
+  const orphan = !game.actors?.get(row.characterId);
   return `<li class="pt-belief${row.pending ? " pt-belief-pending" : ""}"
       data-character="${esc(row.characterId)}" data-ns="${esc(row.ns)}" data-fact="${esc(row.factId)}">
     <div class="pt-belief-head">
-      <span class="pt-belief-who">${esc(row.character)}</span>
+      <span class="pt-belief-who">${esc(row.character)}</span>${
+        orphan ? `<span class="pt-belief-tag pt-belief-orphan">${esc(_loc("PENTARYN_TIES.authoring.beliefDeleted"))}</span>` : ""
+      }
       <span class="pt-belief-fact">${esc(row.fact)}</span>
       <span class="pt-belief-meta">${esc(meta)}</span>
       ${
@@ -104,7 +105,9 @@ function beliefRow(row) {
     <div class="pt-belief-actions">
       ${
         row.pending
-          ? `<button type="button" class="pt-textbtn" data-action="belief-deliver">
+          ? orphan
+            ? ""
+            : `<button type="button" class="pt-textbtn" data-action="belief-deliver">
               <i class="fa-solid fa-paper-plane"></i> ${esc(_loc("PENTARYN_TIES.known.study.deliver"))}
             </button>`
           : `<span class="pt-belief-when">${esc(_loc("PENTARYN_TIES.authoring.delivered", { when: row.delivered }))}</span>`
@@ -164,21 +167,23 @@ export function bindAuthoring(root, actor, rerender = () => {}) {
     const character = game.actors?.get(li.dataset.character);
     const loreId = li.dataset.ns === "lore" ? li.dataset.fact : null;
 
-    li.querySelector("[data-action='belief-deliver']")?.addEventListener("click", async () => {
+    li.querySelector('[data-action="belief-deliver"]')?.addEventListener("click", async () => {
       await deliver(character, actor, loreId);
       rerender();
     });
 
-    li.querySelector("[data-action='belief-reset']")?.addEventListener("click", async () => {
+    li.querySelector('[data-action="belief-reset"]')?.addEventListener("click", async () => {
       const go = await foundry.applications.api.DialogV2.confirm({
         window: { title: _loc("PENTARYN_TIES.authoring.resetTitle") },
-        content:
-          `<p>${esc(_loc("PENTARYN_TIES.authoring.resetBody", { character: character?.name ?? "?", actor: actor.name }))}</p>` +
-          // decision 22, said where the GM is about to act on it rather than only in the plan
-          `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.authoring.resetKeeps"))}</p>`
+        content: character
+          ? `<p>${esc(_loc("PENTARYN_TIES.authoring.resetBody", { character: character.name, actor: actor.name }))}</p>` +
+            // decision 22, said where the GM is about to act on it rather than only in the plan
+            `<p class="pt-hint">${esc(_loc("PENTARYN_TIES.authoring.resetKeeps"))}</p>`
+          : `<p>${esc(_loc("PENTARYN_TIES.authoring.resetBodyOrphan", { actor: actor.name }))}</p>`
       });
       if (!go) return;
-      await reset(character, actor, loreId);
+      // by ledger id (ties-ui-rob-4): a deleted character's row still clears
+      await reset(character ?? li.dataset.character, actor, loreId);
       rerender();
     });
   }

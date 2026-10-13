@@ -28,16 +28,13 @@
 
 import { read, write, baseActorOf } from "./ties-adapter.mjs";
 import { mayWrite } from "./settings.mjs";
-
-export { baseActorOf };
 import { pips, stanceSelect } from "./editor.mjs";
 import { MODULE, resolveMirror, NOTES_MAX, clampStance, clampStrength } from "./ties-core.mjs";
-import { esc } from "./core/html.mjs";
+import { esc, FALLBACK_ART } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 const artOf = actor => actor?.img || FALLBACK_ART;
 
 /**
@@ -273,35 +270,72 @@ export class TieDialog extends ApplicationV2 {
     const target = this.target;
     const options = this.sourceOptions();
     const targetFace = this.#facadeFor(target);
+    const tie = this.existing();
 
     /*
-     * Who you can write on drives this, not your role. A player owns one character, so there
-     * is nothing to choose and it renders as a link to them — a dropdown of one is a question
-     * with a single answer. A GM owns everything on the scene and gets the real picker, which
-     * opens UNSELECTED: defaulting to the alphabetically-first of forty actors is a
-     * wrong-direction landmine once prose starts seeding off it.
+     * Until both ends are known there is no direction, and with no direction the word and
+     * the notes have nothing to be *about* — so the fields stay disabled rather than
+     * inviting prose that would have nowhere to go.
      */
-    const sourcePicker =
-      this.sourceLocked && source
-        ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(source.id)}"
+    const ready = !!source && !!target;
+    const dis = ready ? "" : " disabled";
+
+    return `<div class="pt-dlg">
+      <div class="pt-dlg-pair">
+        <span class="pt-dlg-side">
+          <img class="pt-portrait" src="${esc(artOf(source))}" alt="" />
+          <span class="pt-dlg-side-label">${esc(_loc("PENTARYN_TIES.dialog.source"))}</span>
+          ${this.#sourcePickerHTML(source, options)}
+        </span>
+        <span class="pt-dlg-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
+        <span class="pt-dlg-side">
+          <img class="pt-portrait" src="${esc(target ? targetFace.img : FALLBACK_ART)}" alt="" />
+          <span class="pt-dlg-side-label">${esc(_loc("PENTARYN_TIES.dialog.target"))}</span>
+          ${this.#targetPickerHTML(source, target, targetFace)}
+        </span>
+      </div>
+
+      ${this.#statusHTML(source, target, options, tie, targetFace)}
+
+      ${this.#fieldsHTML(source, target, tie, targetFace, ready, dis)}
+
+      <div class="pt-dlg-actions">
+        <button type="button" class="pt-dlg-save"${dis}><i class="fa-solid fa-check"></i> ${esc(_loc("PENTARYN_TIES.dialog.save"))}</button>
+        <button type="button" class="pt-dlg-cancel">${esc(_loc("PENTARYN_TIES.dialog.cancel"))}</button>
+      </div>
+    </div>`;
+  }
+
+  /**
+   * Who you can write on drives this, not your role. A player owns one character, so there
+   * is nothing to choose and it renders as a link to them — a dropdown of one is a question
+   * with a single answer. A GM owns everything on the scene and gets the real picker, which
+   * opens UNSELECTED: defaulting to the alphabetically-first of forty actors is a
+   * wrong-direction landmine once prose starts seeding off it.
+   */
+  #sourcePickerHTML(source, options) {
+    return this.sourceLocked && source
+      ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(source.id)}"
              data-tooltip="${esc(_loc("PENTARYN_TIES.row.openSheet"))}" role="link" tabindex="0">${esc(source.name)}</a>`
-        : options.length === 1
-          ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(options[0].id)}"
+      : options.length === 1
+        ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(options[0].id)}"
                data-tooltip="${esc(_loc("PENTARYN_TIES.row.openSheet"))}" role="link" tabindex="0">${esc(options[0].name)}</a>`
-          : options.length
-            ? `<select class="pt-dlg-source" aria-label="${esc(_loc("PENTARYN_TIES.dialog.source"))}" data-tooltip="${esc(_loc("PENTARYN_TIES.dialog.sourceHint"))}">
+        : options.length
+          ? `<select class="pt-dlg-source" aria-label="${esc(_loc("PENTARYN_TIES.dialog.source"))}" data-tooltip="${esc(_loc("PENTARYN_TIES.dialog.sourceHint"))}">
                 <option value=""${source ? "" : " selected"}>${esc(_loc("PENTARYN_TIES.dialog.pickSource"))}</option>
                 ${options
                   .map(a => `<option value="${esc(a.id)}"${a.id === source?.id ? " selected" : ""}>${esc(a.name)}</option>`)
                   .join("")}
               </select>`
-            : `<span class="pt-dlg-fixed">${esc(_loc("PENTARYN_TIES.dialog.noOwned"))}</span>`;
+          : `<span class="pt-dlg-fixed">${esc(_loc("PENTARYN_TIES.dialog.noOwned"))}</span>`;
+  }
 
-    const targetPicker =
-      target && this.targetLocked
-        ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(target.id)}"
+  /** The far end: a locked link wearing the facade's name, or the candidate dropdown. */
+  #targetPickerHTML(source, target, targetFace) {
+    return target && this.targetLocked
+      ? `<a class="pt-dlg-fixed pt-dlg-link" data-action="open" data-id="${esc(target.id)}"
              data-tooltip="${esc(_loc("PENTARYN_TIES.row.openSheet"))}" role="link" tabindex="0">${esc(targetFace.name)}</a>`
-        : `<select class="pt-dlg-target" aria-label="${esc(_loc("PENTARYN_TIES.dialog.target"))}">
+      : `<select class="pt-dlg-target" aria-label="${esc(_loc("PENTARYN_TIES.dialog.target"))}">
             <option value="">${esc(_loc("PENTARYN_TIES.dialog.pickTarget"))}</option>
             ${targetCandidates(source?.id, this.targetScope)
               .map(
@@ -312,8 +346,26 @@ export class TieDialog extends ApplicationV2 {
               )
               .join("")}
           </select>`;
+  }
 
-    const tie = this.existing();
+  /** The one line under the pair: what to pick next, or whether this edits or creates. */
+  #statusHTML(source, target, options, tie, targetFace) {
+    return !source
+      ? options.length
+        ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.pickSourceFirst"))}</p>`
+        : `<p class="pt-dlg-note notification warning">${esc(_loc("PENTARYN_TIES.dialog.noOwned"))}</p>`
+      : !target
+        ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.pickTargetFirst"))}</p>`
+        : tie
+          ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.editing", { a: source.name, b: targetFace.name }))}</p>`
+          : `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.creating", { a: source.name, b: targetFace.name }))}</p>`;
+  }
+
+  /**
+   * The form: word, stance, strength and notes, each directed field followed by its mirror
+   * box when the other side is writable. Also records `this.loaded`.
+   */
+  #fieldsHTML(source, target, tie, targetFace, ready, dis) {
     const rev = this.reverse();
     // what this render put in the fields, for #keepOrDropDraft to compare against
     this.loaded = tie ? { word: tie.word, notes: tie.notes } : null;
@@ -325,24 +377,6 @@ export class TieDialog extends ApplicationV2 {
       reverseWord: "",
       reverseNotes: ""
     };
-
-    /*
-     * Until both ends are known there is no direction, and with no direction the word and
-     * the notes have nothing to be *about* — so the fields stay disabled rather than
-     * inviting prose that would have nowhere to go.
-     */
-    const ready = !!source && !!target;
-    const dis = ready ? "" : " disabled";
-
-    const status = !source
-      ? options.length
-        ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.pickSourceFirst"))}</p>`
-        : `<p class="pt-dlg-note notification warning">${esc(_loc("PENTARYN_TIES.dialog.noOwned"))}</p>`
-      : !target
-        ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.pickTargetFirst"))}</p>`
-        : tie
-          ? `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.editing", { a: source.name, b: targetFace.name }))}</p>`
-          : `<p class="pt-dlg-note">${esc(_loc("PENTARYN_TIES.dialog.creating", { a: source.name, b: targetFace.name }))}</p>`;
 
     /*
      * ── The mirror pair ──────────────────────────────────────────────────
@@ -363,49 +397,7 @@ export class TieDialog extends ApplicationV2 {
      * what they are to an NPC never sees them, because that write would be refused by the
      * server whatever it said — which is also why their own edits cannot silently rewrite
      * an NPC's side.
-     */
-    const writableReverse = ready && target.isOwner === true;
-
-    /*
-     * Trim only, and case-sensitive. A trailing newline out of a textarea is editor noise;
-     * anything else — a one-character typo fix included — is authorship, and under this
-     * model text that differs IS the definition of diverged. Nothing else is normalised,
-     * because collapsing whitespace would make two visibly different paragraphs "the same".
-     */
-    const diverged = (mineNow, theirs) =>
-      !!theirs && !!String(theirs).trim() && String(theirs).trim() !== String(mineNow ?? "").trim();
-
-    const mirrorBox = (field, theirs, mineStored, labelKey) => {
-      const isDiverged = diverged(mineStored, theirs);
-      const shown = isDiverged ? String(theirs) : "";
-      // remember what we PUT in the box, so Save can tell "untouched" from "typed"
-      const seeded = shown;
-      const long = field === "reverseNotes";
-      const common = `class="pt-dlg-mirror-input${isDiverged ? " pt-diverged" : ""}" data-field="${field}"
-        data-mirrors="${field === "reverseNotes" ? "notes" : "word"}" data-seeded="${esc(seeded)}"`;
-      return `<label class="pt-field pt-dlg-reverse">
-        <span class="pt-field-label">${esc(_loc(labelKey, { a: targetFace.name, b: source.name }))}</span>
-        ${
-          long
-            ? `<textarea ${common} rows="3" maxlength="${NOTES_MAX}"
-                 data-empty-hint="${esc(_loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}"
-                 placeholder="${esc(draft.notes || _loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}">${esc(shown)}</textarea>`
-            : `<input type="text" ${common} value="${esc(shown)}"
-                 data-empty-hint="${esc(_loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}"
-                 placeholder="${esc(draft.word || _loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}" />`
-        }
-        <span class="pt-dlg-mirror-hint">${esc(_loc(isDiverged ? "PENTARYN_TIES.dialog.mirrorDiverged" : "PENTARYN_TIES.dialog.mirrorLinked"))}</span>
-      </label>`;
-    };
-
-    const reverseWordField = writableReverse
-      ? mirrorBox("reverseWord", rev?.word, tie?.word, "PENTARYN_TIES.dialog.reverseWordLabel")
-      : "";
-    const reverseNotesField = writableReverse
-      ? mirrorBox("reverseNotes", rev?.notes, tie?.notes, "PENTARYN_TIES.dialog.reverseNotesLabel")
-      : "";
-
-    /*
+     *
      * The mirror boxes say what the other side will get, in the place you would look for
      * it. A paragraph restating that was left over from the seed-if-empty design and had
      * gone actively wrong: it promised "nothing there will be touched" for a reverse side
@@ -415,25 +407,13 @@ export class TieDialog extends ApplicationV2 {
      * Nothing is said about an unwritable target either. That write is delegated to a GM
      * client, silently, and a player can act on none of it.
      */
+    const writableReverse = ready && target.isOwner === true;
+    const mirror = (field, theirs, mineStored, labelKey) =>
+      writableReverse ? this.#mirrorBoxHTML(field, theirs, mineStored, labelKey, source, targetFace, draft) : "";
+    const reverseWordField = mirror("reverseWord", rev?.word, tie?.word, "PENTARYN_TIES.dialog.reverseWordLabel");
+    const reverseNotesField = mirror("reverseNotes", rev?.notes, tie?.notes, "PENTARYN_TIES.dialog.reverseNotesLabel");
 
-    return `<div class="pt-dlg">
-      <div class="pt-dlg-pair">
-        <span class="pt-dlg-side">
-          <img class="pt-portrait" src="${esc(artOf(source))}" alt="" />
-          <span class="pt-dlg-side-label">${esc(_loc("PENTARYN_TIES.dialog.source"))}</span>
-          ${sourcePicker}
-        </span>
-        <span class="pt-dlg-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
-        <span class="pt-dlg-side">
-          <img class="pt-portrait" src="${esc(target ? targetFace.img : FALLBACK_ART)}" alt="" />
-          <span class="pt-dlg-side-label">${esc(_loc("PENTARYN_TIES.dialog.target"))}</span>
-          ${targetPicker}
-        </span>
-      </div>
-
-      ${status}
-
-      <div class="pt-fields">
+    return `<div class="pt-fields">
         <label class="pt-field">
           <span class="pt-field-label">${esc(
             ready ? _loc("PENTARYN_TIES.row.wordLabelOf", { name: targetFace.name }) : _loc("PENTARYN_TIES.row.wordLabelPending")
@@ -463,13 +443,38 @@ export class TieDialog extends ApplicationV2 {
                   )}"${dis}>${esc(draft.notes)}</textarea>
       </label>
 
-      ${reverseNotesField}
+      ${reverseNotesField}`;
+  }
 
-      <div class="pt-dlg-actions">
-        <button type="button" class="pt-dlg-save"${dis}><i class="fa-solid fa-check"></i> ${esc(_loc("PENTARYN_TIES.dialog.save"))}</button>
-        <button type="button" class="pt-dlg-cancel">${esc(_loc("PENTARYN_TIES.dialog.cancel"))}</button>
-      </div>
-    </div>`;
+  /** One mirror box: blank and greyed behind your text when LINKED, the other side's text when DIVERGED. */
+  #mirrorBoxHTML(field, theirs, mineStored, labelKey, source, targetFace, draft) {
+    /*
+     * Trim only, and case-sensitive. A trailing newline out of a textarea is editor noise;
+     * anything else — a one-character typo fix included — is authorship, and under this
+     * model text that differs IS the definition of diverged. Nothing else is normalised,
+     * because collapsing whitespace would make two visibly different paragraphs "the same".
+     */
+    const isDiverged =
+      !!theirs && !!String(theirs).trim() && String(theirs).trim() !== String(mineStored ?? "").trim();
+    const shown = isDiverged ? String(theirs) : "";
+    // remember what we PUT in the box, so Save can tell "untouched" from "typed"
+    const seeded = shown;
+    const long = field === "reverseNotes";
+    const common = `class="pt-dlg-mirror-input${isDiverged ? " pt-diverged" : ""}" data-field="${field}"
+        data-mirrors="${field === "reverseNotes" ? "notes" : "word"}" data-seeded="${esc(seeded)}"`;
+    return `<label class="pt-field pt-dlg-reverse">
+        <span class="pt-field-label">${esc(_loc(labelKey, { a: targetFace.name, b: source.name }))}</span>
+        ${
+          long
+            ? `<textarea ${common} rows="3" maxlength="${NOTES_MAX}"
+                 data-empty-hint="${esc(_loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}"
+                 placeholder="${esc(draft.notes || _loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}">${esc(shown)}</textarea>`
+            : `<input type="text" ${common} value="${esc(shown)}"
+                 data-empty-hint="${esc(_loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}"
+                 placeholder="${esc(draft.word || _loc("PENTARYN_TIES.dialog.mirrorNothingYet"))}" />`
+        }
+        <span class="pt-dlg-mirror-hint">${esc(_loc(isDiverged ? "PENTARYN_TIES.dialog.mirrorDiverged" : "PENTARYN_TIES.dialog.mirrorLinked"))}</span>
+      </label>`;
   }
 
   _replaceHTML(result, content) {

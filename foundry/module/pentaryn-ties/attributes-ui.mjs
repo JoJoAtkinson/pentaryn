@@ -30,12 +30,13 @@ import {
   deleteAttribute,
   linkAttribute,
   unlinkAttribute,
-  searchAttributes,
+  attributeCandidates,
+  searchCandidates,
   knownWorld,
   knowledgeTree,
   grantKnowledge,
   brokenAncestry,
-  repairAncestry,
+  repairAllAncestry,
   authorEntry,
   markLearned
 } from "./attributes.mjs";
@@ -44,8 +45,25 @@ import { grantedRegion } from "./known-ui.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
-import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
-import { esc, bindRowToggle, makeOpenState } from "./core/html.mjs";
+import {
+  grantsForEntry,
+  GRANTED_FLAG,
+  HELP_SCALE,
+  CARRIED_SCALE,
+  helpFor,
+  rollableLore,
+  LORE_FLAG,
+  LORE_DC_MIN,
+  LORE_DC_MAX,
+  LORE_DC_DEFAULT
+} from "./known-core.mjs";
+import { esc, bindRowToggle, makeOpenState, guardClick, skillOptionsHTML, skillLabelOf, gmBadge } from "./core/html.mjs";
+import { isPersonalEntry } from "./core/rules.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
+/** A click whose write throws: the console line and the toast (ties-ui-rob-7). */
+const CLICK = { log, notify: () => ui.notifications?.error(_loc("PENTARYN_TIES.notify.clickFailed")) };
 
 /** The help-scale labels (literal keys, so the i18n gate sees each one). */
 const HELP_LABEL = Object.freeze({
@@ -65,6 +83,12 @@ const FILTER_LABEL = Object.freeze({
   unknown: "PENTARYN_TIES.attributes.filter.unknown",
   pending: "PENTARYN_TIES.attributes.filter.pending",
   failed: "PENTARYN_TIES.attributes.filter.failed"
+});
+/** The world tree's state tags (a `known` node carries none). */
+const STATE_LABEL = Object.freeze({
+  failed: "PENTARYN_TIES.attributes.state.failed",
+  pending: "PENTARYN_TIES.attributes.state.pending",
+  unknown: "PENTARYN_TIES.attributes.state.unknown"
 });
 
 export const ATTR_TAB_ID = "attributes";
@@ -150,7 +174,7 @@ function grantsFor(viewer, attrId) {
  * this they have already decided.
  */
 function offersBlock(actor, subject, attrId) {
-  if (!game.user?.isGM) return "";
+  if (!game.user?.isGM || !actor) return ""; // nobody to grant to: no button rather than a dead one
   const rows = attrLoreStateFor(actor, subject, attrId).filter(r => r.available);
   if (!rows.length) return "";
   return `<div class="pt-lore-offers pt-gm-only">
@@ -274,13 +298,11 @@ function sourceBlock(row) {
  * is blank: empty is a legitimate choice.
  */
 function identifyBlock(row) {
-  const skills = Object.entries(CONFIG.DND5E?.skills ?? {});
-  const opt = skills.map(([k, v]) => `<option value="${k}"${k === row.skill ? " selected" : ""}>${esc(game.i18n.localize(v.label ?? k))}</option>`).join("");
   return `<div class="pt-identify">
       <div class="pt-identify-head"><i class="fa-solid fa-eye" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.attributes.identifyHeading"))}
-        <select data-attr-field="skill" data-id="${esc(row.id)}">${opt}</select>
+        <select data-attr-field="skill" data-id="${esc(row.id)}">${skillOptionsHTML(row.skill)}</select>
         <span>${esc(_loc("PENTARYN_TIES.attributes.identifyDC"))}</span>
-        <input type="number" min="1" max="40" data-attr-field="dc" data-id="${esc(row.id)}" value="${esc(row.dc ?? 15)}">
+        <input type="number" min="${LORE_DC_MIN}" max="${LORE_DC_MAX}" data-attr-field="dc" data-id="${esc(row.id)}" value="${esc(row.dc ?? LORE_DC_DEFAULT)}">
       </div>
       <label class="pt-field pt-field-stacked">
         <span class="pt-field-label">${esc(_loc("PENTARYN_TIES.attributes.identifySuccess"))}</span>
@@ -303,31 +325,18 @@ function identifyBlock(row) {
  */
 export function personalCluesHTML(entry, carriersOf = null) {
   if (game.user?.isGM !== true || !entry?.id) return "";
-  if (String(entry.category ?? "").trim().toLowerCase() !== "personal") return "";
+  if (!isPersonalEntry(entry)) return "";
   // the review panel already built id → carrying actors for this render; pass it in (ties-27)
   const carriers = carriersOf
     ? carriersOf(entry.id)
-    : (game.actors?.contents ?? []).filter(a => {
-        try {
-          return attributeIdsOf(a, kindActorOf).includes(entry.id);
-        } catch {
-          return false;
-        }
-      });
+    : (game.actors?.contents ?? []).filter(a =>
+        log.swallow("attributes: carrier ids unreadable", () => attributeIdsOf(a, kindActorOf).includes(entry.id), false)
+      );
   if (!carriers.length) return "";
-  const skill = k => {
-    const label = CONFIG.DND5E?.skills?.[k]?.label;
-    return label ? game.i18n.localize(label) : k;
-  };
   const lines = carriers.map(a => {
-    let rows = [];
-    try {
-      rows = rollableLore(a.getFlag(MODULE, LORE_FLAG));
-    } catch {
-      rows = [];
-    }
+    const rows = log.swallow("attributes: carrier lore unreadable", () => rollableLore(a.getFlag(MODULE, LORE_FLAG)), []);
     const list = rows.length
-      ? rows.map(r => `${r.label} (${skill(r.skill)} ${r.dc})`).join(", ")
+      ? rows.map(r => `${r.label} (${skillLabelOf(r.skill)} ${r.dc})`).join(", ")
       : _loc("PENTARYN_TIES.attributes.cluesNone");
     return `<p class="pt-clues" data-tooltip="${esc(_loc("PENTARYN_TIES.attributes.cluesTip"))}">
       <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -336,7 +345,24 @@ export function personalCluesHTML(entry, carriersOf = null) {
   return `<div class="pt-clues-box">${lines.join("")}</div>`;
 }
 
-function detail(row, { actor, isGM, viewer }) {
+/**
+ * id → the world actors carrying it, in one walk of `game.actors` — the same actors, in the same
+ * order, as `personalCluesHTML`'s own walk. A paint builds it at most once (ties-ui-perf-2).
+ */
+function carrierMap() {
+  const map = new Map();
+  for (const a of game.actors?.contents ?? []) {
+    const ids = log.swallow("attributes: carrier ids unreadable", () => new Set(attributeIdsOf(a, kindActorOf)), null);
+    if (!ids) continue;
+    for (const id of ids) {
+      if (!map.has(id)) map.set(id, []);
+      map.get(id).push(a);
+    }
+  }
+  return map;
+}
+
+function detail(row, { actor, isGM, viewer, carriersOf }) {
   const grants = grantedRegion(grantsFor(viewer, row.id)); // the Known tab's own region (ties-17)
   const offers = offersBlock(viewer, actor, row.id);
 
@@ -355,7 +381,7 @@ function detail(row, { actor, isGM, viewer }) {
   return `<div class="pt-detail pt-attr-detail">
     ${grants}
     ${offers}
-    ${personalCluesHTML(row)}
+    ${personalCluesHTML(row, carriersOf)}
     ${
       row.authored
         ? `<div class="pt-fields pt-attr-fields">
@@ -449,17 +475,17 @@ function worldKnowledgeSection(character, isGM) {
    * never be in is itself a statement that those states exist for them.
    */
   const active = worldFilter.get(character.id) ?? "all";
-  const filters = ["all", "unknown", "pending", "failed"];
+  const filters = Object.keys(FILTER_LABEL);
   const bar = isGM
     ? `<div class="pt-world-filter" role="group" aria-label="${esc(_loc("PENTARYN_TIES.attributes.filterLabel"))}">
         ${filters
           .map(
-            k => `<button type="button" class="pt-chip${k === active ? " pt-chip-on" : ""}"
-                    data-action="world-filter" data-filter="${k}">${esc(_loc(FILTER_LABEL[k] ?? `PENTARYN_TIES.attributes.filter.${k}`))}</button>`
+            k => `<button type="button" class="pt-filter-chip${k === active ? " pt-filter-chip-on" : ""}"
+                    data-action="world-filter" data-filter="${k}">${esc(_loc(FILTER_LABEL[k]))}</button>`
           )
           .join("")}
-        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-collapse">${esc(_loc("PENTARYN_TIES.attributes.collapseAll"))}</button>
-        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-expand">${esc(_loc("PENTARYN_TIES.attributes.expandAll"))}</button>
+        <button type="button" class="pt-filter-chip pt-filter-chip-quiet" data-action="world-collapse">${esc(_loc("PENTARYN_TIES.attributes.collapseAll"))}</button>
+        <button type="button" class="pt-filter-chip pt-filter-chip-quiet" data-action="world-expand">${esc(_loc("PENTARYN_TIES.attributes.expandAll"))}</button>
       </div>`
     : "";
 
@@ -507,14 +533,9 @@ function worldNode(node, isGM, characterId) {
       </button>`
     : `<span class="pt-twisty pt-twisty-leaf" aria-hidden="true"></span>`;
 
-  const tag =
-    node.state === "failed"
-      ? `<span class="pt-attr-tag pt-state-failed">${esc(_loc("PENTARYN_TIES.attributes.state.failed"))}</span>`
-      : node.state === "pending"
-        ? `<span class="pt-attr-tag pt-state-pending">${esc(_loc("PENTARYN_TIES.attributes.state.pending"))}</span>`
-        : node.state === "unknown"
-          ? `<span class="pt-attr-tag pt-state-unknown">${esc(_loc("PENTARYN_TIES.attributes.state.unknown"))}</span>`
-          : "";
+  const tag = Object.hasOwn(STATE_LABEL, node.state)
+    ? `<span class="pt-attr-tag pt-state-${node.state}">${esc(_loc(STATE_LABEL[node.state]))}</span>`
+    : "";
 
   /*
    * ⚠ **GM only, and this is the leak the whole view is built to refuse.** "2 of 7 told" states
@@ -581,7 +602,7 @@ function grantControl(character) {
   return `<div class="pt-add-bar pt-attr-add pt-grant-control" data-character="${esc(character.id)}">
     <div class="pt-inbound-head">
       <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.attributes.grantHeading"))}</span>
-      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
+      ${gmBadge()}
     </div>
     <input type="search" class="pt-attr-search pt-grant-search"
            placeholder="${esc(_loc("PENTARYN_TIES.attributes.grantPlaceholder"))}"
@@ -618,25 +639,32 @@ function ancestryWarning(actor) {
 }
 
 /**
- * `viewer` is whose knowledge is shown; `actor` is whose attributes are listed.
+ * Whose knowledge an Attributes tab is for — **one rule for build and bind** (ties-ui-M11).
  *
- * On a character's own tab they are the same actor. On an NPC's tab a GM is looking at the
- * NPC's attributes, and there is no viewer whose grants make sense to show — so grants and
- * offers are simply absent there rather than borrowed from someone.
+ * A character's own sheet is its own viewer. On anyone else's sheet — an NPC, including one a
+ * player happens to own — it is the user's assigned character, player and GM alike, so a GM who
+ * presses Mark as learned on an NPC tab grants to the character they have assigned. No assigned
+ * character means no viewer: grants and offers are absent rather than drawn as dead buttons.
+ * An explicit `viewer` wins.
+ */
+export function viewerFor(actor, viewer = null) {
+  return viewer ?? (actor?.type === "character" ? actor : game.user?.character ?? null);
+}
+
+/**
+ * `viewer` is whose knowledge is shown; `actor` is whose attributes are listed. See `viewerFor`.
  */
 export function buildAttributesHTML(actor, viewer = null) {
   const isGM = game.user?.isGM === true;
-  /*
-   * Whose knowledge filters this sheet. Their own character is themselves; on anyone else's sheet
-   * — including an NPC a player happens to own — it is the character they play, so what they see
-   * is what that character has actually worked out.
-   */
-  const who = viewer ?? (actor?.type === "character" ? actor : game.user?.character ?? null);
+  const who = viewerFor(actor, viewer);
   const rows = attributesOf(actor, resolver, { viewer: who });
   const open = openFor(actor.id);
   // One registry read per paint, and only if an authored row asks: it cannot change mid-paint.
   let regList = null;
   const regOnce = () => (regList ??= registry());
+  // Who carries what, for the personal rows' clue lines: one world walk per paint, only if one asks.
+  let carriers = null;
+  const carriersOf = id => (carriers ??= carrierMap()).get(id) ?? [];
 
   const body = rows.length
     ? `<ul class="pt-list pt-attr-list">${rows
@@ -646,7 +674,8 @@ export function buildAttributesHTML(actor, viewer = null) {
             <div class="pt-detail-wrap"${open.has(r.id) ? "" : " hidden"}>${detail(r, {
               actor,
               isGM,
-              viewer: who
+              viewer: who,
+              carriersOf
             })}</div>
           </li>`
         )
@@ -670,7 +699,7 @@ export function buildAttributesHTML(actor, viewer = null) {
   </div>`;
 }
 
-export function bindAttributes(root, actor, rerender = () => {}) {
+export function bindAttributes(root, actor, rerender = () => {}, viewerArg = null) {
   /*
    * ⚠ `root` **is** the `.pentaryn-attributes` element, not a wrapper around it.
    *
@@ -690,7 +719,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
   if (!box || !actor) return;
   const isGM = game.user?.isGM === true;
   const open = openFor(actor.id);
-  const viewer = actor?.type === "character" ? actor : null;
+  const viewer = viewerFor(actor, viewerArg); // the same viewer the build drew for
 
   for (const head of box.querySelectorAll(".pt-attr-summary")) {
     const li = head.closest(".pt-row");
@@ -707,17 +736,22 @@ export function bindAttributes(root, actor, rerender = () => {}) {
    * pass text straight into the viewer's granted flag, which is the same store the identification
    * cascade commits to, so it renders identically to something they worked out themselves.
    */
-  for (const btn of box.querySelectorAll("[data-action='attr-learned']")) {
-    btn.addEventListener("click", async () => {
+  // double-quoted so the test DOM (fixtures/dom.mjs) binds it too and the goldens press it for real
+  for (const btn of box.querySelectorAll('[data-action="attr-learned"]')) {
+    btn.addEventListener("click", () => {
       if (!game.user?.isGM || !viewer) return;
-      btn.disabled = true;
-      const attrId = btn.dataset.attr;
-      const loreId = btn.dataset.lore;
-      const row = (describeAttribute(attrId)?.lore ?? []).find(r => r.id === loreId);
-      if (row && (await markLearned(viewer, attrId, [loreId])).ok) {
-        ui.notifications.info(_loc("PENTARYN_TIES.attributes.learnedDone", { label: row.label, who: viewer.name }));
-      }
-      rerender();
+      return guardClick("attr-learned", btn, async () => {
+        const attrId = btn.dataset.attr;
+        const loreId = btn.dataset.lore;
+        const row = (describeAttribute(attrId)?.lore ?? []).find(r => r.id === loreId);
+        // a refused save answers writeFailed (R8); returned, guardClick logs and toasts it
+        const done = row ? await markLearned(viewer, attrId, [loreId]) : null;
+        if (done?.ok) {
+          ui.notifications.info(_loc("PENTARYN_TIES.attributes.learnedDone", { label: row.label, who: viewer.name }));
+        }
+        rerender();
+        return done;
+      }, CLICK);
     });
   }
 
@@ -803,32 +837,40 @@ export function bindAttributes(root, actor, rerender = () => {}) {
    */
   bindWorldTree(box);
 
-  for (const btn of box.querySelectorAll("[data-action='tell-one']")) {
-    btn.addEventListener("click", async () => {
+  // double-quoted so the test DOM binds them too
+  for (const btn of box.querySelectorAll('[data-action="tell-one"]')) {
+    btn.addEventListener("click", () => {
       const who = game.actors?.get(btn.closest(".pt-world")?.dataset.character ?? "");
       if (!who) return;
-      btn.disabled = true;
-      await grantKnowledge(who, btn.dataset.id);
-      rerender();
+      return guardClick("tell-one", btn, async () => {
+        const told = await grantKnowledge(who, btn.dataset.id);
+        rerender();
+        return told; // writeFailed (R8) is guardClick's failure path
+      }, CLICK);
     });
   }
 
-  for (const btn of box.querySelectorAll("[data-action='release-one']")) {
-    btn.addEventListener("click", async () => {
+  for (const btn of box.querySelectorAll('[data-action="release-one"]')) {
+    btn.addEventListener("click", () => {
       const who = game.actors?.get(btn.closest(".pt-world")?.dataset.character ?? "");
       if (!who) return;
-      btn.disabled = true;
-      const freed = await releaseHeldAttribute(who, btn.dataset.id);
-      if (!freed) ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.releaseNone"));
-      rerender();
+      return guardClick("release-one", btn, async () => {
+        const freed = await releaseHeldAttribute(who, btn.dataset.id);
+        if (!freed) ui.notifications?.warn(_loc("PENTARYN_TIES.attributes.releaseNone"));
+        rerender();
+      }, CLICK);
     });
   }
 
-  box.querySelector("[data-action='attr-repair']")?.addEventListener("click", async () => {
-    // repair = re-link each broken membership, which materialises what it already implied
-    for (const { id, missing } of brokenAncestry(actor, resolver)) if (missing) await repairAncestry(actor, id);
+  // double-quoted so the test DOM (fixtures/dom.mjs) binds it too
+  const repair = box.querySelector('[data-action="attr-repair"]');
+  // repair = re-link every broken membership in one update, which materialises what it already
+  // implied; disabled while it runs so a double-click cannot queue a second pass (ties-ui-ACC-4)
+  repair?.addEventListener("click", () => guardClick("attr-repair", repair, async () => {
+    const fixed = await repairAllAncestry(actor, resolver);
     rerender();
-  });
+    return fixed; // writeFailed (R8) is guardClick's failure path
+  }, CLICK));
 }
 
 /**
@@ -878,7 +920,7 @@ function bindWorldTree(box) {
   const applyFilter = key => {
     worldFilter.set(characterId, key);
     for (const b of wrap.querySelectorAll("[data-action='world-filter']"))
-      b.classList.toggle("pt-chip-on", b.dataset.filter === key);
+      b.classList.toggle("pt-filter-chip-on", b.dataset.filter === key);
 
     const matches = li => key === "all" || li.dataset.state === key;
     const keep = li => {
@@ -917,8 +959,10 @@ function bindGrant(box, rerender) {
   const character = game.actors?.get(wrap.dataset.character);
   if (!character) return;
 
+  // the world-derived candidates, gathered once per focus (ties-ui-perf-6)
+  let candidates = null;
   const paint = () => {
-    const { matches, canCreate } = searchAttributes(input.value, resolver);
+    const { matches, canCreate } = searchCandidates(input.value, (candidates ??= attributeCandidates(resolver)));
     /*
      * ⚠ Only attributes they actually **know** are filtered out — never the ones they FAILED.
      *
@@ -966,8 +1010,19 @@ function bindGrant(box, rerender) {
       });
     }
   };
-  input.addEventListener("input", paint);
-  input.addEventListener("focus", paint);
+  bindPaintEvents(input, paint, () => (candidates = null));
+}
+
+/**
+ * Focus paints at once from a fresh candidate list; typing repaints once the GM pauses (120 ms),
+ * reusing that list — one world walk per focus, not one per keystroke (ties-ui-perf-6).
+ */
+function bindPaintEvents(input, paint, refresh) {
+  input.addEventListener("input", foundry.utils.debounce(paint, 120));
+  input.addEventListener("focus", () => {
+    refresh();
+    paint();
+  });
 }
 
 /** The autocomplete: one list of registry entries and every derived id present in the world. */
@@ -978,8 +1033,10 @@ function bindSearch(box, actor, rerender) {
 
   const carried = new Set(attributeIdsOf(actor, resolver));
 
+  // the world-derived candidates, gathered once per focus (ties-ui-perf-6)
+  let candidates = null;
   const paint = () => {
-    const { matches, canCreate, collidesWith } = searchAttributes(input.value, resolver);
+    const { matches, canCreate, collidesWith } = searchCandidates(input.value, (candidates ??= attributeCandidates(resolver)));
     const rows = matches
       .filter(m => !carried.has(m.id))
       .slice(0, 12)
@@ -1027,6 +1084,5 @@ function bindSearch(box, actor, rerender) {
     }
   };
 
-  input.addEventListener("input", paint);
-  input.addEventListener("focus", paint);
+  bindPaintEvents(input, paint, () => (candidates = null));
 }

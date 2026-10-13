@@ -1613,7 +1613,7 @@
   gap: 0.25rem;
   margin: 0.3rem 0 0.4rem;
 }
-.pentaryn-ties .pt-chip {
+.pentaryn-ties .pt-filter-chip {
   flex: 0 0 auto;
   padding: 0.1rem 0.45rem;
   font-size: 0.72rem;
@@ -1625,12 +1625,12 @@
   cursor: pointer;
   width: auto;
 }
-.pentaryn-ties .pt-chip:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
-.pentaryn-ties .pt-chip-on {
+.pentaryn-ties .pt-filter-chip:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.pentaryn-ties .pt-filter-chip-on {
   background: color-mix(in srgb, currentColor 16%, transparent);
   font-weight: 600;
 }
-.pentaryn-ties .pt-chip-quiet { opacity: 0.65; border-style: dashed; }
+.pentaryn-ties .pt-filter-chip-quiet { opacity: 0.65; border-style: dashed; }
 
 /*
  * The action follows the item rather than the right-hand edge.

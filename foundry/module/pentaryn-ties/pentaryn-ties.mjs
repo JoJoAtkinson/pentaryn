@@ -3,7 +3,7 @@
  *
  * Files, in load order (the README "Files" table has the roles):
  *   ties-core.mjs, core/*.mjs (known-core.mjs barrel)   PURE rules
- *   settings.mjs           SETTINGS / KEYBINDINGS tables, setting(), mayWrite
+ *   settings.mjs           SETTINGS / KEYBINDINGS tables, setting(), mayWrite, mayActOn
  *   ties-adapter.mjs, socket-adapter.mjs   ADAPTERS: canvas reads, the module socket
  *   conduit.mjs            FEATURE: socket listeners at ready, the tempo-clearing hooks
  *   token-hud.mjs          FEATURE: Token HUD buttons, the Attribute Review control

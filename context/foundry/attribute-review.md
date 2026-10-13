@@ -99,12 +99,19 @@ return A.list().sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0)).slice(
 - **Registry writes are queued per tab only** (`serial` in `attributes.mjs` is an in-memory chain
   on one client). Your `A.update` runs in the bridge tab; Joe's panel save or Reviewed click runs in
   his browser tab. If they land together they race: each rewrites the whole registry setting and the
-  **second write wins** (last-write-wins, no merge). The reload banner and refused save (below)
-  cover your write landing *before* his save; they cannot stop two writes in flight at once.
-- The panel **live-refreshes** when you write, but defers while Joe has a text field focused (not
-  the search box), so your write cannot eat his draft. If you change an entry whose row he has
+  **second write wins** at the setting (no merge). The version stamp (below) then has the overwritten
+  tab re-apply its own change once; the reload banner and refused save cover your write landing
+  *before* his save.
+- The panel **live-refreshes** when you write (once, 150 ms after the last write of a burst), but
+  defers while Joe has a text field focused (not the search box), so your write cannot eat his draft. If you change an entry whose row he has
   open meanwhile, that row shows **"Changed by Claude — click to reload"**, and a save of a field
   you changed is **refused** rather than written over your change.
+- **Writes from two GM tabs** (the bridge and Joe's) are caught by a version stamp: every registry
+  write stores `{ stamp: "registry", rev, by }` as one extra element of the setting (readers drop
+  it). So in an ad-hoc eval read the registry with `api.attributes.list()`, not the raw
+  `game.settings.get("pentaryn-ties", "attributes")`, which ends with that non-entry row. A write that lands on top of another tab's without having seen it makes the overwritten
+  tab re-apply its own change once; if both changed the **same field** the later one stands and
+  Joe's open row gets the reload banner.
 - **Rows keep their place** while he works. Order is recomputed on open, on a sort change, after
   Reviewed/Unreview, and from the **Re-sort** button; an entry you create appears at the top.
 - A panel edit that would rename onto another entry's name is refused (same rule as `A.update`)

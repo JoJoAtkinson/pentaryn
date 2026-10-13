@@ -30,7 +30,7 @@ test("init adds the overlay, worn and item-mark hooks (golden/hooks-after-init.j
   pinJSON("hooks-after-init", afterInit, import.meta.url);
   assert.deepEqual(afterInit.map(h => `${h.kind}:${h.name}`), [
     "on:canvasTearDown", "on:canvasReady", "on:canvasPan", "on:refreshToken", "on:sightRefresh",
-    "on:renderTokenHUD", "on:canvasTearDown", "on:canvasReady", "on:refreshToken", "on:deleteToken", "on:updateToken",
+    "on:renderTokenHUD", "on:canvasTearDown", "on:canvasReady", "on:refreshToken", "on:createToken", "on:deleteToken", "on:updateToken",
     "on:renderBaseActorSheet",
   ]);
 });

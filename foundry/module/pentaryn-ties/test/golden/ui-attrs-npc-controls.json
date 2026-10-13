@@ -11,21 +11,6 @@
     },
     {
       "nth": 0,
-      "tag": "BUTTON",
-      "className": "pt-textbtn pt-lore-btn",
-      "dataset": {
-        "action": "attr-learned",
-        "attr": "city",
-        "lore": "c1",
-        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
-      },
-      "events": [
-        "click"
-      ],
-      "delegated": true
-    },
-    {
-      "nth": 0,
       "tag": "INPUT",
       "dataset": {
         "attrField": "title",
@@ -351,23 +336,6 @@
     },
     {
       "nth": 0,
-      "tag": "BUTTON",
-      "className": "pt-textbtn pt-lore-btn",
-      "dataset": {
-        "action": "attr-learned",
-        "attr": "city",
-        "lore": "c1",
-        "tooltip": "Hand “zz typed label” over now. No roll — you have already decided."
-      },
-      "type": "click",
-      "calls": [],
-      "console": [],
-      "after": {
-        "className": "pt-textbtn pt-lore-btn"
-      }
-    },
-    {
-      "nth": 0,
       "tag": "INPUT",
       "dataset": {
         "attrField": "title",
@@ -441,7 +409,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -499,6 +467,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 24,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -563,7 +536,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -621,6 +594,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 25,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -667,7 +645,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "ins",
+                  "skill": "arc",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -725,6 +703,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 26,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -868,7 +851,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "inv",
+                  "skill": "ins",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": true
@@ -926,6 +909,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 27,
+              "by": "socket-gm-1"
             }
           ]
         },
@@ -936,7 +924,7 @@
       "console": [],
       "after": {
         "parent": "pt-field",
-        "value": "inv"
+        "value": "ins"
       }
     },
     {
@@ -989,7 +977,7 @@
                   "id": "c1",
                   "label": "zz typed label",
                   "dc": 7,
-                  "skill": "inv",
+                  "skill": "ins",
                   "text": "zz typed text",
                   "miss": "zz typed miss",
                   "hold": false
@@ -1047,6 +1035,11 @@
                 "miss"
               ],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 28,
+              "by": "socket-gm-1"
             }
           ]
         },

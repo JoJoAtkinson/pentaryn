@@ -129,6 +129,11 @@
         "reviewedAt": null,
         "touched": [],
         "reviewedSnapshot": null
+      },
+      {
+        "stamp": "registry",
+        "rev": 1,
+        "by": "socket-gm-1"
       }
     ]
   },

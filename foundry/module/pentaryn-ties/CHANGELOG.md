@@ -39,12 +39,101 @@ Changed (declared, no table-visible change): `runCascade` is split into its plan
 writer per namespace (`resolveShared`, `shareRecipients`, `shareIdent`, `shareLore`, `shareKind`). The
 cascade and share goldens are byte-identical. M12.
 
+Fixed (declared): the Attribute Review keeps its carrier walk while open and drops it on
+`createActor`/`updateActor`/`deleteActor` (and a species/background item's create, update or delete),
+so expanding a row repaints without walking every world actor; the carriers shown are unchanged.
+ties-ui-perf-11.
+
+Fixed (declared): the worn badges keep the ids of the scene's marked tokens (rebuilt on
+`canvasReady`, kept by a new `createToken` hook, `updateToken` flag writes and `deleteToken`), so a
+token's animation step asks for a badge repaint only when that token is marked; the badges drawn are
+unchanged. A hot re-import after `uninstall()` refills the set and repaints at install when the canvas
+is already up, so the badges come back without a `canvasReady`. ties-ui-perf-10.
+
+Fixed (declared): the Look window's `updateActor` hook checks the actor against the character, the
+subject and its kind before flattening the change, so an unrelated actor's update returns at once;
+what refreshes the window is unchanged. ties-ui-perf-9.
+
+Fixed (declared): a Known-tab paint indexes the attribute registry once and hands that index to
+every entry's secrecy filter, instead of each entry re-clamping the whole registry; what the tab shows
+is unchanged. `visibleAttributesFor` takes an `index` (an `indexRegistry()` result or its `byId` Map)
+in place of `registry`; the list form still works. ties-ui-perf-7.
+
+Fixed (declared): the Attributes tab's two GM autocompletes (add an attribute, tell a character)
+repaint once the GM pauses typing (120 ms) instead of on every keystroke, and gather the world's
+attribute ids once per focus instead of walking every actor per letter; focus still paints at once.
+New `attributes.mjs` helpers `attributeCandidates` / `searchCandidates`; `attributes.search` is
+unchanged. ties-ui-perf-6.
+
+Fixed (declared): the tie wires find each card's source token from one pass over the scene's
+tokens per frame instead of one scan per card; the wires drawn are unchanged. ties-ui-perf-4.
+
+Fixed (declared): a save in the Attribute Review is no longer lost under a write from another GM
+tab (the bridge) that was already on its way. Every registry write stores a version stamp
+`{ rev, by }`; a tab whose write was overwritten by one that never saw it re-applies its own change
+once, and if both changed the same field the review row is flagged for reload. ties-ui-ACC-6.
+
+Fixed (declared): the Attributes tab's ancestry **Fix it** button links every missing parent in one
+save (`repairAllAncestry` in `attributes.mjs`) instead of one save per broken membership, is greyed
+out while it works so a double-click cannot run it twice, and repaints the tab once. ties-ui-ACC-4.
+
+Fixed (declared, integration with ties-core): **Fix it** (`repairAllAncestry`) now runs through the
+registry's write queue with its link-flag reads inside, as `link`/`unlink`/`repair` do since
+ties-core-U3, so a Fix it racing a script's link on the same actor lands both. The registry queue and
+each actor's ties/Known queue (`serial` in `ties-adapter.mjs`) are separate chains: neither waits on
+the other, so neither reorders or deadlocks the other — EC-2's concurrent `ensure` still answers
+created + `existed: true` beside quick ties edits. Pinned by `test/review-queues-together.test.mjs`.
+ties-ui-ACC-4 x ties-core-U3/EC-2.
+
 Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in both directions, as its
 confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
 sender must own their character and have removed their own side). ties-ui-E3.
 
+Fixed (declared): a player with **no assigned character** now gets the double-click menu too — the
+tie and notebook items (the notebook still warns that you need a character); *Take a closer look* and
+*What I know about them* show only once a character is assigned. ties-ui-E7.
+
 Fixed (declared): the Known tab's **notes** keep the last words typed before you click away or close
 the sheet — leaving the box now saves a pending autosave at once instead of dropping it. ties-ui-M1.
+
+Fixed (declared): key 5 (or `known.open`) on a **hidden** Known entry opens its page instead of
+showing nothing — that one entry is un-hidden (as its Unhide button would) and the Known tab repaints
+in place, so an already-open sheet shows it too. Other hidden entries stay hidden. ties-ui-E2.
+
+Fixed (declared): two quick edits on one sheet no longer undo each other — a word then a strength pip,
+a field then a Remove, two Known fields in a row. Each actor's ties and Known writes run one at a time,
+reading the list after the previous save landed (`serial` in `ties-adapter.mjs`). ties-ui-ACC-3.
+
+Fixed (declared): the stance chip (the dot plus its word) looks like a chip again, not a filter
+button — the GM's filter and tab buttons (Attributes world filter, Review tabs and filters) are now
+`pt-filter-chip` / `pt-filter-chip-on` / `pt-filter-chip-quiet`, so `.pt-chip` is the stance chip's
+alone and its narrow-sheet dot-only override works again. ties-ui-M2.
+
+Changed (declared, no table-visible change): each `SHEET_TABS` row in `sheet.mjs` now carries
+`forget(actorId)`, and the `deleteActor` sweep loops over the rows instead of a hand list, so a new
+sheet tab says what it forgets. ties-ui-EXT-2.
+
+Fixed (declared): the Ties tab's **notes** save the same way the Known tab's do — one shared autosave
+(`bindNotesAutosave` and `replaceSummary` in `core/html.mjs`), so leaving the box saves the last words
+typed once, not twice (its extra `change` save is gone). ties-ui-EXT-3.
+
+Changed (declared): the fact groups' headings in the player's Look window and the GM's Player view
+come from one `GROUP_LABEL` table in `facts.mjs` instead of string ladders. The four groups read as
+before; a group the table does not know is headed with its own name instead of "What they are".
+ties-ui-EXT-4.
+
+Fixed (declared): a switch clicked on the Inspect window's **Player view** while it is still
+redrawing acts on the fact it was drawn for — the redraw builds its fact list and PC roster aside and
+swaps them in only once finished, so a click or a switch refresh mid-redraw reads the previous,
+consistent set instead of a half-built one. ties-ui-ACC-2.
+
+Fixed (declared): the GM's **Attributes** tab finds who carries each personal attribute in one walk
+of the world's actors per paint (built only if a personal row asks), instead of one walk per personal
+row; the "Clues on …" lines are byte-identical. ties-ui-perf-2.
+
+Fixed (declared): the GM's **Attribute Review** repaints once, 150 ms after the last of a burst of
+registry writes (a Claude batch, a cascade), instead of once per write; it watches through the shared
+`LiveHooks` kit and drops a pending repaint on close. ties-ui-perf-5 (with ACC-5).
 
 Fixed (declared): **Write an entry for this** on a kind row stores the kind actor's own id. The
 `kind:` id was lowercased, so the entry never matched its actor and a second click said
@@ -208,6 +297,139 @@ Fixed (declared): a GM **Share** of a kind to several characters composes the ti
 and gives every recipient the same words (an inline roll in it resolves once, not per recipient);
 it used to compose the page again for each recipient. `grantKind` takes the composed page as a
 `text` option and composes its own only when none is given. perf-4.
+
+Fixed (declared): a **pinned card** left flush against the left or top edge of the screen comes back
+there after a reload instead of 20px in — a saved 0 is a real position (`pinnedCoord` in `popups.mjs`);
+only a missing or non-numeric coordinate still falls back to 20. ties-ui-E5.
+
+Fixed (declared): **Mark as learned on an NPC's Attributes tab** grants to your assigned character
+(GM or player alike) and the toast names who received it; before, the button drew but did nothing.
+With no assigned character the button is not drawn. One `viewerFor` in `attributes-ui.mjs` now
+decides the tab's viewer for both drawing and clicking. ties-ui-M11.
+
+Fixed (declared): a **belief row for a deleted character** can be cleared. The GM's "What they
+believe" list tags it "(deleted)", offers no Deliver, and its "Let them roll again" clears the row by
+the id on the ledger; the toast names nobody. `study.reset` accepts a character or its id.
+ties-ui-rob-4.
+
+Fixed (declared): two quick presses of **9** no longer open two description cards. The second press
+waits for the first card to finish building, then toggles as usual — same face closes it, another face
+swaps to that face — and an old card's late close no longer makes the next press open a duplicate.
+ties-ui-E4.
+
+Fixed (declared): `study.preview(null)` (no token hovered or selected) still warns "Hover or select a
+token to preview." but now returns `null`, as the manifest's `Promise<InspectPreview|null>` says, instead
+of the warning's notification object. ties-ui-M9.
+
+Fixed (declared, no table-visible change): four re-exports nobody imported are gone — `WORN_FLAG`/`readWorn`
+from `worn.mjs`, `PIN_SETTING` from `popups.mjs`, `baseActorOf` from `tie-dialog.mjs`, `SELECTION_FLAG`
+from `review-ui.mjs`; import them from their homes (`ties-adapter.mjs`, `settings.mjs`, `attributes.mjs`).
+`popups.mjs` imports `ties-adapter.mjs` once. The public API is unchanged. ties-ui-M5.
+
+Fixed (declared, no table-visible change): `overlay.mjs` no longer exports `toggle`, the 0.3.0 alias of
+`showAll` nothing imported — import `showAll`. The API rows (`show`, `showAll`, `cards`) are unchanged.
+ties-ui-M6.
+
+Fixed (declared, no table-visible change): the Ties tab's editing pass no longer binds a tie `change`
+handler on the authoring section's lore rows (selector `.pt-row:not([data-inbound]):not(.pt-lore-row)`);
+lore rows are saved by the lore editor alone. ties-ui-M7.
+
+Fixed (declared): `game.pentaryn.ties.uninstall()` now cleans the canvas up — the worn badges and the
+tie wires are removed and their queued repaints cancelled, and the cards come down (new
+`popups.teardown()`, called from `overlay.uninstall`). The pinned-cards memo is NOT rewritten, so a hot
+re-import brings the same pinned cards back once instead of drawing a second set. ties-ui-M8.
+
+Fixed (declared, no table-visible change): `TieDialog._renderHTML` is split into private builders —
+`#sourcePickerHTML`, `#targetPickerHTML`, `#statusHTML`, `#fieldsHTML` and `#mirrorBoxHTML`. The
+dialog's markup is byte-identical in every state (pinned per state in `app-tie-dialog-states-html`).
+ties-ui-M12.
+
+Changed (declared, no table-visible change): helpers the UI files copied now live once —
+`keyLabel`, `bindSummary` and `FALLBACK_ART` in `core/html.mjs` (the Ties and Known tabs' key hints
+and in-place summary rebinds, and the mystery-man portrait seven files spelled out), and the "open
+the tie dialog or say it is unavailable" try/catch once in `editor.mjs` (`openTieDialog`). Markup and
+behaviour unchanged. ties-ui-M14.
+
+Fixed (declared, console only): a pinned-cards save the server refuses, or a Look window that fails to
+draw, now logs `pentaryn-ties | could not save pinned cards` (warning) or `pentaryn-ties | look window`
+(error) instead of an unprefixed unhandled rejection. Nothing on screen changes. ties-ui-rob-5.
+
+Fixed (declared, console only): six silent fallbacks now leave a debug line (with
+`CONFIG.debug["pentaryn-ties"] = true`) through `log.swallow` — the review panel's and the personal-clue
+carrier walks (`carrier ids unreadable`), a carrier's unreadable lore, a pinned card's leash off-stage
+and a card's screen point off-stage. Each keeps its old fallback, so nothing on screen changes.
+ties-ui-rob-6.
+
+Fixed (declared): the inspect eye, Study, Lore, Mark as learned, Tell them and Release buttons run
+through one `guardClick` (`core/html.mjs`) — disabled while their write runs, and enabled again when it
+ends. A write that throws now logs `pentaryn-ties | <action>` (error) and shows "That didn't go through
+— see the console." instead of leaving the button dead with an unprefixed unhandled rejection. The HUD
+eye is no longer left disabled after a finished inspection. ties-ui-rob-7.
+
+Fixed (declared, integration with ties-core R8): ties-core's writes no longer throw on a refused save —
+`markLearned`, `grantKnowledge` and `repairAllAncestry` answer `{ ok: false, reason: "writeFailed" }`.
+`guardClick` treats that answer as its failure path, so **Mark as learned**, **Tell them** and **Fix it**
+show the same thing a throw did: the button enabled again, `pentaryn-ties | <action>` (error) in the
+console beside the write's own warning, and "That didn't go through — see the console."; Mark as
+learned shows no "learned" toast. ties-ui-rob-7 x R8.
+
+Changed (declared, no table-visible change): key lists are derived from their label tables — the
+world filter chips from `FILTER_LABEL`, the world tree's failed / pending / unknown tag from a new
+`STATE_LABEL`, the review panel's "was" rows from `FIELD_LABEL`. Same order, same markup. ties-ui-EXT-5.
+
+Changed (declared, no table-visible change): the "is this a Personal attribute?" test (category
+trimmed, case-blind, `personal`) is one `isPersonalEntry(entry)` in `core/rules.mjs`; the review panel's
+World / Personal tab split and the Attributes tab's "Clues on <carrier>" both call it instead of
+spelling it by hand. ties-ui-EXT-6.
+
+Changed (declared, no table-visible change): every DC input — the Attributes tab's identify DC and
+the review panel's entry and lore-row DCs — takes its min, max and default from `LORE_DC_MIN /
+LORE_DC_MAX / LORE_DC_DEFAULT` (core/lore.mjs, via known-core) instead of a literal 1 / 40 / 15, as
+the lore-row editor already did. ties-ui-EXT-7.
+
+Changed (declared): every **skill** dropdown — the lore-row editor, the Attributes tab's identify
+check, the review panel's entry and lore rows — lists the world's skills in dnd5e's own order with
+localized names (the lore editor used to sort them A–Z), and a skill the world no longer defines stays
+selected as "<key> (not in this world)" instead of the identify check silently switching to the first
+skill on its next save. Skill names in the Inspect preview and the review panel's "was" lines are
+localized too. One `skillOptionsHTML` / `skillLabelOf` in `core/html.mjs`. ties-ui-EXT-8.
+
+Changed (declared, no table-visible change): the tie wires and the worn badges no longer carry their
+own copy of the once-per-frame scheduler and the canvas-layer helpers. Both paint through one
+`framePainter` (the kit's `perFrame`, cancellable on uninstall) and one `interfaceLayer` / `dropLayer`
+pair in `ties-adapter.mjs`. Same frames, same pixels (canvas goldens byte-identical). ties-ui-EXT-9.
+
+Changed (declared, no table-visible change): the Inspect gesture is written once. The HUD eye and the
+double-click menu's "Take a closer look" both call `examine(who, subject)` in `look-app.mjs` (the
+player's Look window first, then the inspection) and resolve the creature with `subjectOfToken(token)`
+in `ties-adapter.mjs`; the GM's flask uses `subjectOfToken` too. Neither door imports the study conduit
+any more (two graph-allow debts retired). Door goldens byte-identical. ties-ui-EXT-10.
+
+Changed (declared): "the GM, or player access on and the player owns it" is written once, as
+`mayActOn(actor)` in `settings.mjs`; the canvas tie keys (`overlay.mjs`) and the sheet tabs
+(`sheet.mjs`) both ask it. It reads player access through `mayWrite`, so before the settings register a
+player is refused rather than let through on the setting's default. ties-ui-EXT-11.
+
+Changed (declared): the Inspect preview reads the kind-study ladder from `known-core` instead of
+hard-coding it: the dice bench's odds list is the positive `STUDY_RUNGS`, lowest first; the top tier
+(the composed study, the Share switch's "click tells them the rest") is `Math.max(...STUDY_RUNGS)`; the
+pass line is ties-core's `kindPassed(tier)` (ext-7). Same numbers today. ties-ui-EXT-13.
+
+Changed (declared, no table-visible change): the "GM only" badge is written once, as `gmBadge()` in
+`core/html.mjs`; the authoring section, the two mutual-pair panels and the told-count line call it.
+Markup byte-identical. ties-ui-EXT-15.
+
+Changed (declared): the Inspect preview is one window per subject — a second flask click on the same
+token fronts and re-renders the open preview instead of stacking another (two unlinked tokens of one
+actor still get one each). TiesEditor, AttributeReview, the Look window and the preview share one
+`openOrFront(pool, match, make)` in `core/html.mjs`: an open window is un-minimized, re-rendered and
+fronted (the ties editor used to front without re-rendering). `edit`, `study.preview` and
+`attributes.openReview` return the window (or `null`), not a promise. ties-ui-EXT-16.
+
+Fixed (declared): a sheet re-render that rebuilds only the tab body no longer stacks another click
+listener on each surviving Ties/Known/Attributes nav link. The link is bound once (`data-pt-bound`) and
+finds its section at click time (`:scope > [data-tab=id]`); a fresh section under a surviving link is
+only repainted (and re-activated if that tab was open). ties-ui-E9.
 
 Fixed (declared, no table-visible change): the kind study's pass rung (15) is one rule,
 `kindPassed(tier)` in `core/rules.mjs`, read off `STUDY_RUNGS` (now kept in `core/shared.mjs`, still

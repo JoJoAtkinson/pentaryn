@@ -18,15 +18,12 @@
  */
 
 import { MODULE, STANCES, NOTES_MAX, clampStance, clampStrength, stanceOf } from "./ties-core.mjs";
-import { read, inbound, presentActorIds, write, removeTie, stanceLabel } from "./ties-adapter.mjs";
+import { read, inbound, presentActorIds, editTie, removeTie, stanceLabel } from "./ties-adapter.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring-ui.mjs";
-import { esc, bindRowToggle, makeOpenState, notesPreview, notesProse, wordCell } from "./core/html.mjs";
+import { esc, bindRowToggle, bindSummary, makeOpenState, notesPreview, notesProse, wordCell, bindNotesAutosave, replaceSummary, keyLabel, FALLBACK_ART, gmBadge, openOrFront } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
-
-/** What a tie with no portrait — or no actor left at all — shows. Foundry ships it. */
-const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /**
  * The portrait, or the mystery man when there is no actor left to ask.
@@ -67,8 +64,7 @@ const setExpanded = expanded.set;
  * look to find out what it had become.
  */
 function addTieKey() {
-  const bound = game.keybindings?.get?.(MODULE, "addTie")?.[0]?.key ?? "";
-  return bound.replace(/^Digit/, "").replace(/^Key/, "") || "?";
+  return keyLabel(game.keybindings?.get?.(MODULE, "addTie")?.[0]?.key);
 }
 
 /** Drop a deleted actor's row state; nothing else holds a reference to it. */
@@ -183,7 +179,7 @@ function theirSide(reply) {
   return `<div class="pt-their-side">
     <div class="pt-their-head">
       <span class="pt-their-title">${esc(_loc("PENTARYN_TIES.reply.heading", { name: reply.name }))}</span>
-      <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
+      ${gmBadge()}
     </div>
     <div class="pt-their-line">${word}${stanceChip(reply.stance, { labelled: !!reply.word })}${pips(
       reply.strength,
@@ -357,7 +353,7 @@ export function buildHTML(actor) {
   const inboundSection = orphans.length
     ? `<div class="pt-inbound-head">
         <span class="pt-inbound-title">${esc(_loc("PENTARYN_TIES.inbound.heading"))}</span>
-        <span class="pt-gm-badge"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> ${esc(_loc("PENTARYN_TIES.gmOnly"))}</span>
+        ${gmBadge()}
       </div>
       <p class="pt-inbound-hint">${esc(_loc("PENTARYN_TIES.inbound.hint"))}</p>
       <ul class="pt-list pt-list-inbound">
@@ -425,13 +421,7 @@ export function bind(root, actor, rerender = () => {}) {
     btn.addEventListener("click", async () => {
       const author = game.actors.get(btn.dataset.id);
       if (!author) return;
-      try {
-        const { TieDialog } = await import("./tie-dialog.mjs");
-        TieDialog.open({ source: author, target: actor, onSaved: rerender });
-      } catch (err) {
-        log.error("the tie dialog failed to open", err);
-        ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
-      }
+      await openTieDialog({ source: author, target: actor, onSaved: rerender });
     });
   });
 
@@ -439,17 +429,13 @@ export function bind(root, actor, rerender = () => {}) {
 
   /* ── editing, inside an expanded row ─────────────────────────────────── */
 
-  root.querySelectorAll(".pt-row:not([data-inbound])").forEach(row => {
+  // the authoring section's lore rows are .pt-rows too; lore-ui binds those (ties-ui-M7)
+  root.querySelectorAll(".pt-row:not([data-inbound]):not(.pt-lore-row)").forEach(row => {
     const id = row.dataset.id;
 
-    const saveField = async (field, value) => {
-      const list = read(actor);
-      const entry = list.find(x => x.id === id);
-      if (!entry) return null;
-      entry[field] = value;
-      await write(actor, list);
-      return entry;
-    };
+    // read-modify-write inside the actor's queue, so a quick second edit reads the first one's
+    // result instead of undoing it (ties-ui-ACC-3)
+    const saveField = (field, value) => editTie(actor, id, field, value);
 
     /*
      * Word, stance and notes change what the summary says but not where the row sits, so
@@ -458,17 +444,16 @@ export function bind(root, actor, rerender = () => {}) {
      */
     const repaintSummary = () => {
       const tie = read(actor).find(x => x.id === id);
-      const head = row.querySelector(".pt-summary");
-      if (!tie || !head) return;
-      const fresh = document.createElement("div");
+      if (!tie) return;
       const reply = replies.get(id) ?? null;
-      fresh.innerHTML = summary(tie, { open: row.classList.contains("pt-open"), canEdit, reply });
-      const next = fresh.firstElementChild;
-      head.replaceWith(next);
-      bindSummary(next, row, actor);
+      const html = summary(tie, { open: row.classList.contains("pt-open"), canEdit, reply });
+      replaceSummary(row, html, next =>
+        bindSummary(next, row, { onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' })
+      );
     };
 
-    row.querySelectorAll("[data-field]").forEach(input => {
+    // notes are the autosave's below; a `change` here as well saved the same text twice on blur
+    row.querySelectorAll('[data-field]:not([data-field="notes"])').forEach(input => {
       input.addEventListener("change", async () => {
         const value = input.dataset.field === "stance" ? Number(input.value) : input.value;
         if (!(await saveField(input.dataset.field, value))) return;
@@ -484,21 +469,17 @@ export function bind(root, actor, rerender = () => {}) {
       });
     });
 
-    /**
-     * A textarea only fires `change` on blur, and closing the sheet removes the element
-     * without ever blurring it — which would quietly bin a paragraph. Autosave while typing.
-     */
+    // autosave while typing; blur flushes the last keystrokes rather than dropping them (ties-ui-EXT-3)
     const notes = row.querySelector('[data-field="notes"]');
     if (notes) {
-      let pending = null;
-      notes.addEventListener("input", () => {
-        clearTimeout(pending);
-        pending = setTimeout(async () => {
-          await saveField("notes", notes.value);
+      bindNotesAutosave(
+        notes,
+        async value => {
+          if (!(await saveField("notes", value))) return;
           repaintSummary();
-        }, 700);
-      });
-      notes.addEventListener("blur", () => clearTimeout(pending));
+        },
+        { ms: 700 }
+      );
     }
   });
 
@@ -528,27 +509,21 @@ export function bind(root, actor, rerender = () => {}) {
     });
   });
 
-  root.querySelector('[data-action="add"]')?.addEventListener("click", async () => {
-    try {
-      const { TieDialog } = await import("./tie-dialog.mjs");
-      TieDialog.open({ source: actor, onSaved: rerender });
-    } catch (err) {
-      log.error("the tie dialog failed to open", err);
-      ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
-    }
-  });
+  root.querySelector('[data-action="add"]')?.addEventListener("click", () => openTieDialog({ source: actor, onSaved: rerender }));
 }
 
 /**
- * Re-wire a summary that was replaced in place. Kept separate from `bind()` so a partial
- * repaint cannot re-register every listener in the panel a second time.
+ * Open the tie dialog (loaded on first use), or say it is unavailable — the tab's Add button and
+ * the GM's per-author edit buttons share this one try/catch (ties-ui-M14).
  */
-function bindSummary(head, row, actor) {
-  const wrap = row.querySelector(".pt-detail-wrap");
-  if (!wrap) return;
-  // the same toggle as the full bind's; without it a row behaves differently depending on
-  // whether its summary happened to be repainted since the last render
-  bindRowToggle(head, row, { wrap, onToggle: open => setExpanded(actor.id, row.dataset.id, open), focus: '[data-field="word"]' });
+async function openTieDialog(opts) {
+  try {
+    const { TieDialog } = await import("./tie-dialog.mjs");
+    TieDialog.open(opts);
+  } catch (err) {
+    log.error("the tie dialog failed to open", err);
+    ui.notifications.error(_loc("PENTARYN_TIES.notify.dialogUnavailable"));
+  }
 }
 
 /** Standalone window — the fallback host, and the one the header button opens. */
@@ -584,11 +559,8 @@ export class TiesEditor extends ApplicationV2 {
     if (!actor) return null;
     // ApplicationV2 instances live in foundry.applications.instances, not ui.windows
     const pool = [...(foundry.applications?.instances?.values?.() ?? []), ...Object.values(ui.windows ?? {})];
-    const existing = pool.find(w => w instanceof TiesEditor && w.actor?.id === actor.id);
-    if (existing) {
-      existing.bringToFront?.();
-      return existing;
-    }
-    return new TiesEditor(actor).render(true);
+    return openOrFront(pool, w => w instanceof TiesEditor && w.actor?.id === actor.id, () => new TiesEditor(actor), {
+      onError: err => log.error(`ties editor`, err)
+    });
   }
 }

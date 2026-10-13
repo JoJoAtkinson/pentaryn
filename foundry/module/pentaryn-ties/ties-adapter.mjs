@@ -17,6 +17,7 @@
 import { stanceOf, clampStance, clampStrength, clampNotes, clampWord, FLAG, LEGACY_SCOPE, MODULE } from "./ties-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { perFrame } from "./lib/perf.mjs";
 
 const log = makeLog(MODULE);
 
@@ -80,6 +81,20 @@ export function stanceLabel(v) {
 export function baseActorOf(token) {
   const id = token?.document?.actorId ?? token?.actorId ?? null;
   return id ? game.actors?.get(id) ?? null : null;
+}
+
+/**
+ * The creature a token shows, for the Inspect doors (the HUD eye, the look menu, the GM's flask):
+ * the token's own actor — the synthetic one for an unlinked token, so the study reads what is on the
+ * canvas — else the world actor by `actorId`, else null (ties-ui-EXT-10). Ties go through
+ * `baseActorOf` instead (see its warning).
+ *
+ * @param {object|null} token  a Token placeable
+ * @returns {object|null}
+ */
+export function subjectOfToken(token) {
+  if (!token) return null;
+  return token.actor ?? game.actors?.get(token.document?.actorId) ?? null;
 }
 
 /**
@@ -218,8 +233,47 @@ const toStored = list =>
   }));
 
 /**
+ * **One actor's ties and Known writes run one at a time** (ties-ui-ACC-3). Each edit reads the
+ * actor's whole array, changes one row and writes the whole array back, and the local copy only
+ * changes when the server answers — so two edits inside one round trip (a word then a strength pip,
+ * a field then a Remove) would each read the old array and the second would silently undo the
+ * first. Put the READ inside `fn`: it then runs after the previous write on that actor has landed.
+ * Keyed by actor id, so different actors never wait on each other. ⚠ Never call a serialised
+ * function from inside another on the same actor — it would wait on itself. `fn` runs even if the
+ * previous one threw; its own result or throw is returned.
+ */
+const chains = new Map();
+export function serial(actorId, fn) {
+  const key = actorId ?? "";
+  const run = (chains.get(key) ?? Promise.resolve()).then(fn);
+  const tail = run.catch(() => {});
+  chains.set(key, tail);
+  tail.then(() => {
+    if (chains.get(key) === tail) chains.delete(key);
+  });
+  return run;
+}
+
+/**
+ * Change one field of one edge — read and write inside the actor's queue. Returns the edited
+ * entry, or null when the edge is gone or the write was refused (R8: write answers false).
+ */
+export function editTie(actor, targetId, field, value) {
+  if (!actor || !targetId) return Promise.resolve(null);
+  return serial(actor.id, async () => {
+    const list = read(actor);
+    const entry = list.find(t => t.id === targetId);
+    if (!entry) return null;
+    entry[field] = value;
+    return (await write(actor, list)) ? entry : null;
+  });
+}
+
+/**
  * `render: false` is load-bearing. A plain setFlag re-renders the actor sheet, which destroys the
  * injected Ties tab mid-edit (focus loss, and the tab deactivates). Callers repaint deliberately.
+ *
+ * Unqueued: a read-modify-write goes through `serial(actor.id, …)` around both halves (see above).
  */
 export async function write(actor, list, { render = false } = {}) {
   if (!actor) return false;
@@ -253,7 +307,7 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
   if (!actor || !targetActor || actor.id === targetActor.id) return false;
   const { reciprocal = true, reverseWord = word, reverseStance = stance, reverseNotes } = opts;
 
-  const upsert = async (from, to, w, st, nt) => {
+  const upsert = (from, to, w, st, nt) => serial(from?.id, async () => {
     if (!from?.isOwner) return false; // a player's mirror lands on an actor they can't write
     const list = read(from);
     const prev = list.find(t => t.id === to.id);
@@ -267,7 +321,7 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
       strength
     });
     return write(from, kept);
-  };
+  });
   // Report what actually happened. Returning a flat `true` after silently skipping an
   // unwritable side would tell a caller the edge exists when it doesn't.
   const wrote = await upsert(actor, targetActor, word, stance, notes);
@@ -278,23 +332,22 @@ export async function setTie(actor, targetActor, { word = "", notes, stance = 0,
 /** Set just the notes on an existing edge. False if the edge isn't there or the write was refused. */
 export async function setNotes(actor, targetId, notes = "") {
   if (!actor || !targetId) return false;
-  const list = read(actor);
-  const entry = list.find(t => t.id === targetId);
-  if (!entry) return false;
-  entry.notes = clampNotes(notes);
-  return write(actor, list);
+  // read and write inside the actor's queue (ties-ui-ACC-3); a refused write answers false (M11)
+  return !!(await editTie(actor, targetId, "notes", clampNotes(notes)));
 }
 
-/** Remove an edge. `bothWays` also removes the mirror. */
+/** Remove an edge. `bothWays` also removes the mirror. Each side's read happens in its actor's queue. */
 export async function removeTie(actor, targetId, { bothWays = true } = {}) {
   if (!actor || !targetId) return false;
-  const removed = await write(actor, read(actor).filter(t => t.id !== targetId));
+  const removed = await serial(actor.id, () => write(actor, read(actor).filter(t => t.id !== targetId)));
   if (bothWays) {
     const other = game.actors?.get(targetId);
-    const mirror = other?.isOwner ? read(other) : [];
-    // only write if there is actually a mirror to remove — a no-op write still fires an update
-    if (other && mirror.some(t => t.id === actor.id)) {
-      await write(other, mirror.filter(t => t.id !== actor.id));
+    if (other) {
+      await serial(other.id, async () => {
+        const mirror = other.isOwner ? read(other) : [];
+        // only write if there is actually a mirror to remove — a no-op write still fires an update
+        if (mirror.some(t => t.id === actor.id)) await write(other, mirror.filter(t => t.id !== actor.id));
+      });
     }
   }
   return removed;
@@ -467,3 +520,72 @@ export class LiveHooks {
   }
 }
 
+/* -------------------------------------------- */
+/*  Client-only canvas layers (ties-ui-EXT-9)   */
+/* -------------------------------------------- */
+
+/**
+ * The PIXI layer a painter draws on — the wires (overlay.mjs) and the worn badges (worn.mjs) — made
+ * on first paint and kept on `state.layer`. Pointer-transparent, stacked at `state.z` on
+ * canvas.interface, which exists in this browser alone (never a world document). Null until the
+ * canvas is ready.
+ *
+ * @param {{ layer: object|null, z: number, name: string }} state
+ * @param {() => object} make  a fresh PIXI display object
+ */
+export function interfaceLayer(state, make) {
+  if (state.layer && !state.layer.destroyed) return state.layer;
+  if (!canvas?.ready || !canvas.interface) return null;
+  const layer = make();
+  layer.eventMode = "none";
+  layer.zIndex = state.z;
+  canvas.interface.addChild(layer);
+  state.layer = layer;
+  return layer;
+}
+
+/** Destroy the layer (children and all) and forget it. A teardown that throws is logged, never raised. */
+export function dropLayer(state) {
+  if (!state.layer) return;
+  try {
+    if (!state.layer.destroyed) state.layer.destroy({ children: true });
+  } catch (e) {
+    log.warn(`${state.name} teardown`, e);
+  }
+  state.layer = null;
+}
+
+/**
+ * `paint` at most once per animation frame, through the kit's `perFrame` — refreshToken fires per
+ * animation step per token, and once a frame is plenty for something that follows a token. A paint
+ * that throws is logged as `<name> paint`. `cancel()` drops a queued frame (uninstall, ties-ui-M8).
+ *
+ * @param {() => void} paint
+ * @param {string} name
+ * @returns {{ draw: () => void, cancel: () => void }}
+ */
+export function framePainter(paint, name) {
+  let id = 0;
+  const g = {
+    requestAnimationFrame: cb => (id = requestAnimationFrame(() => {
+      id = 0;
+      cb();
+    }))
+  };
+  const make = () => perFrame(() => {
+    try {
+      paint();
+    } catch (e) {
+      log.warn(`${name} paint`, e);
+    }
+  }, { g });
+  let run = make();
+  return {
+    draw: () => run(),
+    cancel() {
+      if (id) cancelAnimationFrame(id);
+      id = 0;
+      run = make(); // perFrame cannot be told its frame was cancelled: a fresh one is not waiting on it
+    }
+  };
+}

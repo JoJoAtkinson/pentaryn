@@ -39,8 +39,8 @@
  * Every observable consequence of a completed roll must be identical for a triumph, a failure and
  * a deliberate lie. The window keeps that in three ways:
  *
- *   1. **It opens before the dice, every time.** Each door calls `openLook` synchronously, first,
- *      then `Study.inspect`. Same moment, same frame, whatever the target carries and whether the
+ *   1. **It opens before the dice, every time.** Each door calls `examine` below, which calls
+ *      `openLook` synchronously, first, then `Study.inspect`. Same moment, same frame, whatever the target carries and whether the
  *      inspect is then refused (no GM, combat tempo, kill switch). Its opening is never a function
  *      of the result, because the result does not exist yet.
  *   2. **Only grants draw.** A locked, held or in-flight fact — or a failure with no written
@@ -67,10 +67,11 @@
 import { MODULE } from "./ties-core.mjs";
 import { LiveHooks } from "./ties-adapter.mjs";
 import { mayWrite } from "./settings.mjs";
-import { kindActorOf } from "./study.mjs";
+import { inspect, kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
-import { subjectFacts, knowsAbout } from "./facts.mjs";
+import { subjectFacts, knowsAbout, groupLabelKey } from "./facts.mjs";
 import { REGISTRY_SETTING, touchesFlagScope } from "./known-core.mjs";
+import { FALLBACK_ART, openOrFront } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -104,17 +105,12 @@ export class LookWindow extends ApplicationV2 {
     if (!mayWrite()) return null;
     if (!character?.isOwner || !subject || subject.id === character.id) return null;
     const key = pairKey(character, subject);
-    const existing = open.get(key);
-    if (existing) {
-      if (existing.minimized) existing.maximize?.();
-      existing.render({ force: true });
-      existing.bringToFront?.();
-      return existing;
-    }
-    const win = new LookWindow(character, subject);
-    open.set(key, win);
-    win.render({ force: true });
-    return win;
+    // the render is not awaited: a failed one is logged with the prefix rather than left unhandled
+    return openOrFront(open.values(), w => w.pair === key, () => {
+      const win = new LookWindow(character, subject);
+      open.set(key, win);
+      return win;
+    }, { onError: err => log.error(`look window`, err) });
   }
 
   constructor(character, subject, options = {}) {
@@ -163,11 +159,10 @@ export class LookWindow extends ApplicationV2 {
 
   groupLabel(group, base, kind) {
     const name = this.subject?.name ?? base?.name ?? "?";
-    if (group === "ident") return _loc("PENTARYN_TIES.known.look.groupIdent");
-    if (group === "attr") return _loc("PENTARYN_TIES.known.look.groupAttr");
-    if (group === "lore") return _loc("PENTARYN_TIES.known.look.groupLore", { name });
     // a separate kind actor's study files under the KIND's page on the Known tab
-    return kind && base && kind.id !== base.id ? _loc("PENTARYN_TIES.known.look.groupKindPage", { kind: kind.name }) : _loc("PENTARYN_TIES.known.look.groupKind");
+    const key = groupLabelKey(group, "look", { kindPage: !!(kind && base && kind.id !== base.id) });
+    // a group GROUP_LABEL does not know is headed with its own name, never another group's
+    return key ? _loc(key, { name, kind: kind?.name ?? "" }) : String(group);
   }
 
   /** The whole window body, as a string. Sync, so a live refresh can compare before it paints. */
@@ -179,7 +174,7 @@ export class LookWindow extends ApplicationV2 {
     const kindLine = kind && base && kind.id !== base.id
       ? `<span class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: kind.name }))}</span>` : "";
     const head = `<div class="pt-summary pt-look-head">
-      <img class="pt-portrait" src="${esc(subject?.img || "icons/svg/mystery-man.svg")}" alt="">
+      <img class="pt-portrait" src="${esc(subject?.img || FALLBACK_ART)}" alt="">
       <span class="pt-who"><span class="pt-name">${esc(name)}</span>${kindLine}</span>
     </div>`;
 
@@ -241,16 +236,19 @@ export class LookWindow extends ApplicationV2 {
     const regKey = `${MODULE}.${REGISTRY_SETTING}`;
     const onActor = (actor, changes = {}) => {
       if (!actor) return;
+      const isCharacter = actor.id === this.character.id;
+      if (!isCharacter && actor.id !== this.base.id) {
+        const kindId = log.swallow("look: kind pointer unreadable", () => kindActorOf(this.base)?.id ?? null, null);
+        if (!kindId || actor.id !== kindId) return;
+      }
+      // only the window's own actors get their changes flattened
       const keys = Object.keys(foundry.utils.flattenObject(changes ?? {}));
       const flags = keys.some(k => touchesFlagScope(k, MODULE));
-      if (actor.id === this.character.id) {
+      if (isCharacter) {
         if (flags) this.queueLive();
         return;
       }
-      const kindId = log.swallow("look: kind pointer unreadable", () => kindActorOf(this.base)?.id ?? null, null);
-      if (actor.id === this.base.id || (kindId && actor.id === kindId)) {
-        if (flags || keys.some(k => k === "name" || k === "img")) this.queueLive();
-      }
+      if (flags || keys.some(k => k === "name" || k === "img")) this.queueLive();
     };
     const onSetting = setting => {
       if ((setting?.key ?? "") === regKey) this.queueLive();
@@ -299,3 +297,14 @@ export const openLook = (character, subject) => {
     return null;
   }
 };
+
+/**
+ * The Inspect gesture, for every door (the HUD eye, the look menu's "Take a closer look"): the
+ * player's Look window opens FIRST — synchronously, before the dice, whatever the inspect then does
+ * (point 1 above) — and then the inspection runs. For a GM `openLook` is null, so only the inspect
+ * runs (ties-ui-EXT-10).
+ */
+export async function examine(who, subject) {
+  openLook(who, subject);
+  return inspect(who, subject);
+}

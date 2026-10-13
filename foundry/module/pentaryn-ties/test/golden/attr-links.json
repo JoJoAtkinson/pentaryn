@@ -444,6 +444,11 @@
               "reviewedAt": null,
               "touched": [],
               "reviewedSnapshot": null
+            },
+            {
+              "stamp": "registry",
+              "rev": 14,
+              "by": "socket-gm-1"
             }
           ]
         }
