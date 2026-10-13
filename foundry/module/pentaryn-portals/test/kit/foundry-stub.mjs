@@ -29,6 +29,30 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_APP = "/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app";
 let idSeq = 0;
 
+/**
+ * Every ref kind, mirroring resolve.mjs KINDS (kit-ext-7; a kit test asserts the two are equal —
+ * the stub cannot import resolve.mjs, which a small-tier module does not vendor). A `collection`
+ * kind is a `game` collection seeded from installFoundry's option of the same name; an `embedded`
+ * kind lives on a Scene. fromUuidSync walks both, plus owned documents (`Actor.<id>.Item.<id>`
+ * reads the actor's `items`, by a kind's collection name).
+ */
+export const STUB_KINDS = Object.freeze(Object.fromEntries(Object.entries({
+  actor: { doc: "Actor", collection: "actors" },
+  token: { doc: "Token", embedded: "tokens" },
+  item: { doc: "Item", collection: "items" },
+  scene: { doc: "Scene", collection: "scenes" },
+  user: { doc: "User", collection: "users" },
+  journal: { doc: "JournalEntry", collection: "journal" },
+  message: { doc: "ChatMessage", collection: "messages" },
+  macro: { doc: "Macro", collection: "macros" },
+  region: { doc: "Region", embedded: "regions" },
+  combat: { doc: "Combat", collection: "combats" },
+  table: { doc: "RollTable", collection: "tables" },
+  folder: { doc: "Folder", collection: "folders" },
+  playlist: { doc: "Playlist", collection: "playlists" },
+}).map(([k, v]) => [k, Object.freeze(v)])));
+const KIND_OF_DOC = new Map(Object.values(STUB_KINDS).map(k => [k.doc, k]));
+
 /** A deterministic 16-character id. */
 export function stubId(prefix = "x") {
   idSeq += 1;
@@ -344,9 +368,9 @@ const LOGGER_LEVELS = ["debug", "info", "log", "warn", "error"];
  * @returns {Promise<object>} F
  */
 export async function installFoundry({
-  user, users = [], settings = {}, lang = {}, actors = [], scenes = [], messages = [], items = [],
-  journal = [], modules = [], activeScopes = [], socketId = "socket-gm-1", system = { id: "dnd5e", version: "6.0.6" },
-  realFoundryUtils = true, appRoot = process.env.FOUNDRY_APP_ROOT ?? DEFAULT_APP, currentScene = null,
+  user, users = [], settings = {}, lang = {}, modules = [], activeScopes = [], socketId = "socket-gm-1",
+  system = { id: "dnd5e", version: "6.0.6" }, realFoundryUtils = true, appRoot = process.env.FOUNDRY_APP_ROOT ?? DEFAULT_APP,
+  currentScene = null, ...seeds   // one list per STUB_KINDS world collection: actors, items, scenes, messages, journal, macros, combats, tables, folders, playlists
 } = {}) {
   const common = realFoundryUtils ? await loadCommon(appRoot) : { utils: shimUtils(), CONST: SHIM_CONST, source: "shim", build: null };
   const saved = Object.fromEntries(GLOBALS.map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]));
@@ -531,11 +555,9 @@ export async function installFoundry({
     settings: gameSettings,
     i18n,
     modules: moduleColl,
-    actors: collectionOf(actors, "Actor"),
-    items: collectionOf(items, "Item"),
-    scenes: collectionOf(scenes, "Scene"),
-    messages: collectionOf(messages, "ChatMessage"),
-    journal: collectionOf(journal, "JournalEntry"),
+    ...Object.fromEntries(Object.values(STUB_KINDS)
+      .filter(k => k.collection && k.collection !== "users")
+      .map(k => [k.collection, collectionOf(seeds[k.collection], k.doc)])),
     socket: {
       id: socketId,
       emit: (...args) => F.calls.push({ op: "socket.emit", args: F.plain(args) }),
@@ -564,15 +586,19 @@ export async function installFoundry({
   const scene = currentScene ? game.scenes.get(currentScene) ?? null : null;
   const canvasStub = { ready: !!scene, scene, tokens: { placeables: [] }, grid: { size: 100 } };
 
+  // `<Doc>.<id>` from the kind's game collection, then each `.<Doc>.<id>` pair from the parent's
+  // embedded (Scene tokens/regions) or owned (an Actor's items) collection — a Map or an array.
   const fromUuidSync = uuid => {
     const parts = String(uuid ?? "").split(".");
-    if (parts[0] === "Scene" && parts.length >= 4) {
-      const s = game.scenes.get(parts[1]);
-      const coll = parts[2] === "Token" ? s?.tokens : parts[2] === "Region" ? s?.regions : null;
-      return coll?.get(parts[3]) ?? null;
+    if (parts.length < 2 || parts.length % 2) return null;
+    const top = KIND_OF_DOC.get(parts[0])?.collection;
+    let doc = top ? game[top]?.get?.(parts[1]) ?? null : null;
+    for (let i = 2; doc && i < parts.length; i += 2) {
+      const k = KIND_OF_DOC.get(parts[i]);
+      const coll = k ? doc[k.embedded ?? k.collection] : null;
+      doc = (typeof coll?.get === "function" ? coll.get(parts[i + 1]) : Array.isArray(coll) ? coll.find(d => d?.id === parts[i + 1]) : null) ?? null;
     }
-    const map = { Actor: game.actors, Item: game.items, Scene: game.scenes, ChatMessage: game.messages, JournalEntry: game.journal, User: game.users };
-    return parts.length === 2 ? map[parts[0]]?.get(parts[1]) ?? null : null;
+    return doc;
   };
 
   const CONFIG = {
