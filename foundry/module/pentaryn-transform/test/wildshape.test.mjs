@@ -283,6 +283,16 @@ test("shift on an unlinked token: no transformActor; the form is shaped afterwar
   assert.equal(F.chat[0].speaker.actor, form.id);
 });
 
+test("[declared] FIX-3 live item 7 (EC-5): an unlinked token's revert item reads the token's own name and picture, not the base actor's", async () => {
+  const { talo, token } = tokenDruid();
+  token.name = "ZZ Thornback";
+  token.texture = { src: "icons/svg/cowled.svg" };
+  talo._tokens[0].name = "ZZ Thornback";
+  const form = await T.shift(talo, "p1");
+  const ret = form.items.get(IDS.revert);
+  assert.deepEqual([ret.name, ret.img], ["Return to ZZ Thornback", "icons/svg/cowled.svg"]);
+});
+
 test("shapeTokenForm failing after the shift: logged, the use is NOT refunded, the chat line still goes", async () => {
   const { talo, token } = tokenDruid();
   const realTransform = talo.transformInto;

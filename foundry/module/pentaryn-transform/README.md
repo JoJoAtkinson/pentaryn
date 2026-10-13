@@ -139,7 +139,7 @@ rest hooks, core document hooks and Argon's render hooks (`test/golden/hooks.jso
 | `core-token-swap-no-animation` | `bodyswap.mjs`, `wildshape-adapter.mjs` | a body swap never animates; tokens are settled before dnd5e reads them |
 | `argon-panel-injection` | `hud-panels.mjs`, `form-picker.mjs` | the Bonus / Action / Special bars recomposed in `render*ArgonComponent` |
 | `argon-target-picker-cancel` | `argon.mjs` | a right-button `mouseup` cancels Argon's private target picker |
-| `argon-bonus-used-tracking` | `wildshape-adapter.mjs`, `hud-panels.mjs` | the bonus pip re-marked after the HUD rebinds |
+| `argon-bonus-used-tracking` | `wildshape-adapter.mjs`, `hud-panels.mjs` | the bonus pip re-marked after the HUD rebinds; a linked form's bars count it as in combat while its token holds the seat (the combatant keeps the druid's actorId) |
 | `argon-portrait-hp` | `hud-panels.mjs` | `99+12 / 99` instead of `111/99` |
 | `argon-tooltip-clear` | `argon.mjs` | stale tooltips dropped |
 

@@ -180,11 +180,37 @@ function composeSpecialBar(panel, actor) {
   applyButtons(panel, next, fresh, { log });
 }
 
+// A linked druid's form keeps the druid's combat seat: dnd5e swaps the token onto the form, but the
+// combatant's actorId stays the druid's, so Foundry's actor.inCombat answers false for the form and
+// Argon's dnd5e panels (maxActions = inCombat ? 1 : null) drew no pips at all, the Bonus pip a HUD
+// Wild Shape spends included (FIX-3 live, [declared]). Those four panels count the form as in combat
+// while the viewed combat seats one of its tokens; Legendary/Lair/Mythic keep Argon's own answer.
+const PIP_PANELS = new Set(["DND5E.Action", "DND5E.BonusAction", "DND5E.Reaction", "DND5E.Special"]);
+function seated(actor) {
+  if (!actor?.isPolymorphed || actor.isToken) return false;
+  return !!game.combat?.combatants?.some?.(c => c?.token?.actorId === actor.id);
+}
+function seatFormPips(panel, actor) {
+  if (!PIP_PANELS.has(panel?.label) || !actor?.isPolymorphed || actor.isToken || Object.hasOwn(panel, "maxActions")) return;
+  let argon = null;
+  for (let o = Object.getPrototypeOf(panel); o && !argon; o = Object.getPrototypeOf(o)) {
+    argon = Object.getOwnPropertyDescriptor(o, "maxActions") ?? null;
+  }
+  const own = () => (argon?.get ? argon.get.call(panel) : (argon?.value ?? null));
+  Object.defineProperty(panel, "maxActions", {
+    configurable: true,
+    get() { return own() ?? (seated(panel.actor ?? actor) ? 1 : null); }
+  });
+  // Argon drew the pips before this hook; draw them again now the count is known.
+  if (seated(actor)) settlePips(panel);
+}
+
 function onActionPanelRender(panel, element, actor) {
   // hot: the panel's actor only (its items/effects, map lookups, combat's coversMultiattack); no world iteration
   if (panel) composed.add(panel);
   try {
     const a = actor ?? panel.actor;
+    seatFormPips(panel, a);
     if (panel?.label === "DND5E.BonusAction") composeBonusBar(panel, a);
     else if (panel?.label === "DND5E.Action") composeActionBar(panel, a);
     else if (panel?.label === "DND5E.Special") composeSpecialBar(panel, a);
@@ -341,7 +367,7 @@ function onStarryUpdate(effect, changes) {
   const paths = Object.keys(foundry.utils.flattenObject(changes ?? {})).filter(k => k !== "_id" && !k.startsWith("_stats"));
   if (paths.length && paths.every(k => k === STARRY_LEFT)) return;
   onStarryChange(effect);
-  onStarryRecast(effect, changes);
+  onStarryRecast(effect);
 }
 
 /* ── Chalice: offered when it is earned (Area 4, D6) ─────────────────────── */
@@ -391,14 +417,16 @@ function onChaliceUse(activity, usageConfig) {
   } catch (err) { log.warn("Chalice offer skipped", err); }
 }
 
-// Starry Form ended or changed constellation: no Chalice to take (EC-2: an update clears the offer
-// only when it moves the form off the Chalice, so a swap away and back within the minute is dark).
-const STARRY_CONSTELLATION = `flags.${MODULE}.starry.constellation`;
+// Starry Form ended or changed constellation: no Chalice to take (EC-2: an update that leaves the
+// form off the Chalice clears the offer, so a swap away and back is dark). The effect's own flag is
+// read after the update, never the changes: applyStarry writes non-recursively, and core v14 then
+// hands this hook the whole flags object as one ForcedReplacement, which flattenObject keeps as a
+// leaf (FIX-3 live, [declared]). Only a Chalice form can hold an offer, so this clears no live one.
 function onStarryEnd(effect) {
   if (effect?.getFlag?.(MODULE, "starry") && effect.parent instanceof Actor) setChalice(effect.parent, false);
 }
-function onStarryRecast(effect, changes) {
-  const c = foundry.utils.flattenObject(changes ?? {})[STARRY_CONSTELLATION];
+function onStarryRecast(effect) {
+  const c = effect?.getFlag?.(MODULE, "starry")?.constellation;
   if (c !== undefined && c !== "chalice") onStarryEnd(effect);
 }
 

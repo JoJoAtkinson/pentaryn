@@ -4,6 +4,26 @@
 
 ## Unreleased
 
+- **A 0 HP auto-revert keeps its return line when the form was Bloodied (FIX-3 live, defect wave 2).**
+  The revert copied the form's dnd5e Bloodied effect back to the druid with `keepId`, while dnd5e
+  was already creating its own Bloodied there from the mirrored HP: the server refused the copy
+  ("_id [dnd5ebloodied000] already exists"), the revert stopped and no return line was posted.
+  `carriedConditions` now leaves Bloodied to dnd5e, like exhaustion ([declared]; tests "FIX-3 live
+  item 1" in core.test.mjs and lifecycle.test.mjs).
+- **A linked druid's form shows Argon's action pips in combat (FIX-3 live, EC-4).** dnd5e swaps the
+  token onto the form but the combatant's actorId stays the druid's, so `form.inCombat` is false and
+  Argon drew no pips on any bar; the Bonus pip a HUD Wild Shape spends never showed. The Action,
+  Bonus, Reaction and Special panels of a linked form now count it as in combat while the viewed
+  combat seats one of its tokens ([declared]; test "FIX-3 live item 6" in hud-bars.test.mjs).
+- **An unlinked druid's revert item takes the token's own picture (FIX-3 live, EC-5).** The
+  "Return to ZZ Thornback" item kept the base actor's portrait; `metaFor` now takes an unlinked
+  druid's name and image from its token, as the HUD's own Return button does ([declared]; test
+  "FIX-3 live item 7" in wildshape.test.mjs).
+- **A Starry swap away from the Chalice ends the pulse live too (FIX-3 live, EC-2).** applyStarry
+  writes non-recursively, so core v14 hands `updateActiveEffect` the flags as one ForcedReplacement,
+  which `flattenObject` keeps as a leaf: the constellation change was never seen. The Chalice offer
+  now reads the effect's own constellation after the update ([declared]; test "FIX-3 live item 9"
+  in hud-bars.test.mjs).
 - **A failed HUD button render is logged as transform's (KIT-R6, kit 1.2.0).** The kit's
   `applyButtons` now catches a fresh button's rejected render and warns `pentaryn-transform | argon
   button render failed` instead of leaving an unhandled rejection; the three bar composers pass

@@ -207,8 +207,13 @@ export function useSyncUpdates(formItems, originalItems) {
   return updates;
 }
 
-/** Statuses dnd5e drives from an actor attribute (exhaustion level): carried back as the attribute. */
-const ATTRIBUTE_STATUSES = new Set(["exhaustion"]);
+/**
+ * Statuses dnd5e drives from an actor attribute, never carried back as an effect: exhaustion comes
+ * back as the attribute; Bloodied dnd5e sets on the druid itself from the HP the revert mirrors back,
+ * and its create is still in flight when the carry runs, so a keepId copy of the form's collides and
+ * the revert lost its return line (FIX-3 live, [declared]).
+ */
+const ATTRIBUTE_STATUSES = new Set(["exhaustion", "bloodied"]);
 
 /**
  * Condition effects gained while in the form that the original should keep: a Stunned or

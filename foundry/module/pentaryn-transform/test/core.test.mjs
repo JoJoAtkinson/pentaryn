@@ -328,3 +328,9 @@ test("M5 portraitText: a Starry Form without starryLeft has an unknown end", () 
   assert.deepEqual(core.portraitText({ starry, starryLeft: 540 }), { what: "Starry Form: Archer", left: "9 minutes" });
   assert.deepEqual(core.portraitText({ starry, starryLeft: 0 }), { what: "Starry Form: Archer", left: "0 minutes" });
 });
+
+test("[declared] FIX-3 live item 1: Bloodied is not carried back — dnd5e sets it on the druid from the mirrored HP", () => {
+  const bloodied = { _id: "dnd5ebloodied000", name: "Bloodied", statuses: ["bloodied"] };
+  const prone = { _id: "dnd5eprone000000", name: "Prone", statuses: ["prone"] };
+  assert.deepEqual(core.carriedConditions([bloodied, prone]).map(e => e._id), ["dnd5eprone000000"]);
+});
