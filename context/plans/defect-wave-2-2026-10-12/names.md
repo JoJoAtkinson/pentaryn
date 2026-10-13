@@ -40,3 +40,14 @@ Use only ZZ-prefixed scratch documents: an NPC actor `ZZ Bob` with one placed to
 
 **names-maint-2-manifest**
 1. Code only (documentation in `api-manifest.mjs`).
+
+## FIX-3 (2026-10-13): names-ac-3 failed live, forward fix
+
+**Live failure.** On `ZZ Bob` (an NPC with actorLink and one token on `ZZ Names Test`), running `a.update({name:"ZZ Mid"}); await a.update({name:"ZZ Fin"})` twice left the prototype and the token on `ZZ Mid`. Only one toast appeared. Both `preUpdateActor` calls ran before either server reply, so both recorded `ZZ Bob` as the old name. The second relabel then looked for `ZZ Bob`, found nothing and wrote nothing. `rename-chain.test.mjs` hid this because its stub changed `actor.name` between the two pre-hooks.
+
+**Fix (branch `fix2/names-live-2026-10-13`).**
+- `cd011bd9`: failing test first. The stub now keeps the old name until the reply lands. New cases cover a reply that lands after the first chain drained, and another user's rename that lands between my send and my reply.
+- `f3176616` `[declared]`: `preUpdateActor` also writes `pentarynLanded[id]` to the update options. This is the number of renames of that actor that had landed on this client when the update was sent. `updateActor` counts landed renames for each actor. If one landed after the send, it relabels from the name that rename left. updateActor fires in server order. This adds a new update-options key. The chaining is unchanged.
+- The gate passes: `make foundry-names-check` 71/71 and `make foundry-modules-check` (all 20 modules). Goldens are unchanged. The module is synced and the GM tab reloaded. No restart was needed because `module.json` is unchanged.
+
+**Live re-check (passes, run twice).** After each run the actor, prototype and token all read `ZZ Fin`. Two toasts appeared: `Token labels updated to "ZZ Mid" (2).` and `Token labels updated to "ZZ Fin" (2).` On the same build, rob-2 `sync("ZZ Fin")` returned `{ok:false, code:"BAD_ARGS"}` with no toast and no label change, and maint-1 `sync(...) instanceof Promise` returned `true`. Both scratch documents were deleted and no ZZ documents remain.
