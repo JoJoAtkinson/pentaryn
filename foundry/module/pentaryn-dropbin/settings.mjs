@@ -64,13 +64,22 @@ async function drain(items) {
   if (batch === items) batch = null;   // later arrivals start the next batch, queued behind this one
   try {
     let log = readLog(), counter = setting("counter") ?? 0;
-    const results = items.map(it => {
-      const r = appendEntry(log, counter, it.entry, it.dedupeMs);
-      ({ log, counter } = r);
-      return r;
-    });
-    if (results.some(r => !r.duplicate)) await writeLedger({ n: counter, log });
-    items.forEach((it, i) => it.resolve({ n: results[i].n, duplicate: results[i].duplicate, log }));
+    const ok = [];
+    for (const it of items) {   // dropbin-R10: an entry appendEntry throws on rejects its caller only
+      try {
+        const r = appendEntry(log, counter, it.entry, it.dedupeMs);
+        ({ log, counter } = r);
+        ok.push([it, r]);
+      } catch (err) {
+        it.reject(err);
+      }
+    }
+    try {
+      if (ok.some(([, r]) => !r.duplicate)) await writeLedger({ n: counter, log });
+      for (const [it, r] of ok) it.resolve({ n: r.n, duplicate: r.duplicate, log });
+    } catch (err) {
+      for (const [it] of ok) it.reject(err);
+    }
   } catch (err) {
     for (const it of items) it.reject(err);
   }
@@ -79,7 +88,8 @@ async function drain(items) {
 /**
  * Append `entry` to the ledger, serialised and coalesced. Resolves `{ n, log, duplicate }`: on a
  * duplicate of the tail (same key within `dedupeMs`) nothing is written for it and `n` is the
- * tail's. A failed write rejects the callers in that batch only; later appends still run.
+ * tail's. A failed write rejects the callers in that batch only; later appends still run. An entry
+ * the append throws on rejects its own caller only; the rest of its batch is still written.
  */
 export function appendLedger(entry, dedupeMs = DEDUPE_MS) {
   return new Promise((resolve, reject) => {

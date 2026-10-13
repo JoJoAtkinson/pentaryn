@@ -470,7 +470,7 @@ The letter's sign-off now reads "Written as she spoke, for Ilvessa, steward to t
 **Lootable corpses (2026-10-06):** `foundry/module/pentaryn-dropbin/corpses.mjs`, imported by `dropbin.mjs`. Not a make target: copy both files to `Data/modules/pentaryn-dropbin/` by hand.
 
 - **Trigger:** an NPC token becomes an Item Piles **pile** when its HP reaches 0 or it gets the `dead` status. Only the active GM converts.
-- **The pile:** `distance: 1`, it keeps the body's art, `deleteWhenEmpty: false`, and players get OBSERVER on the **token delta only**, never on the base actor.
+- **The pile:** `distance: 1`, it keeps the body's art, `deleteWhenEmpty: false`, and players get OBSERVER on the **token delta only**, never on the base actor. (Since dropbin-EC-3, 2026-10-12: a *linked* NPC's corpse grants OBSERVER on its base actor, given back on revival or when its last corpse token is deleted; see the module README.)
 - **The mark:** the body gets the same eye overlay as the loot hotspots (a "Lootable" effect), plus a small Dead icon.
 - **Healing back above 0** reverts it and removes the eye. Any HP increase to above 0 on one of our corpses also clears its Dead status. Without that, the "Dead status counts as dead" rule kept a corpse healed to 65 HP lootable (fixed 2026-10-06).
 - **Opting out:** `flags.pentaryn-dropbin.noLoot = true` on a token or actor keeps a 0-HP NPC unlootable, for one taken alive.

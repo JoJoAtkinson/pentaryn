@@ -6,7 +6,8 @@
  * source object, so `restore(n)` is faithful after the pile, actor or scene is long gone.
  *
  * Two capture paths, registered at `ready`:
- *   1. Item Piles' drop hook — an item dropped onto the canvas as a pile.
+ *   1. Item Piles' drop hook — an item dropped onto the canvas as a pile. Item Piles fires it on
+ *      every client, so only the active GM user's client records it (DB-AC-1), on the pile's scene.
  *   2. Core `preDeleteItem` — an item removed from a character sheet outright, captured in the
  *      PRE hook because after deletion the data is unreachable.
  *
@@ -20,12 +21,12 @@
  */
 
 import {
-  MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
-  briefOf, shouldCaptureDelete, restoreTarget,
+  MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
+  briefOf, shouldCaptureDelete, restoreTarget, pileScene, isActiveGMSelf,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
 import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
-import { registerRecord, hasSocket, executeAsGM, resetSocket } from "./socketlib-adapter.mjs";
+import { registerRecord, hasSocket, executeAsGM, resetSocket, socketlibPresent } from "./socketlib-adapter.mjs";
 
 /* ------------------------------------------------------------------ storage */
 
@@ -65,11 +66,36 @@ function cancelMirror() {
 }
 
 /**
+ * Entries relayed before `ready` (DB-AC-2): the relay is registered at socketlib.ready, when world
+ * settings cannot be written yet. Each waits here and is recorded at ready, in arrival order.
+ */
+let preReady = [];
+
+/** Record the held entries in arrival order; each relay's promise settles with its number. */
+function drainPreReady() {
+  const held = preReady;
+  preReady = [];
+  for (const it of held) recordAsGM(it.entry).then(it.resolve, it.reject);
+}
+
+/**
  * Append one entry. GM-only — everything else routes here through socketlib.
- * De-dupes, because Item Piles hooks can fire on more than one client.
+ * De-dupes, because Item Piles hooks can fire on more than one client. Before `ready` the entry is
+ * held and recorded at ready (DB-AC-2); settings.set is never called before ready. A malformed entry
+ * (isEntryShape) resolves null with one console warning and is never appended (dropbin-R10); so is
+ * one whose userId is not an existing GM or the owner of its still-existing actor (DB-AC-3).
  */
 async function recordAsGM(entry) {
+  if (!isEntryShape(entry)) {
+    console.warn(`${MODULE} | malformed ledger entry ignored`, entry);
+    return null;
+  }
+  if (!game.ready) return new Promise((resolve, reject) => preReady.push({ entry, resolve, reject }));
   if (!game.user.isGM) return null;
+  if (!isPlausibleSender(entry, { users: game.users, actors: game.actors })) {
+    console.warn(`${MODULE} | ledger entry refused: its user is unknown, or neither a GM nor the actor's owner`, entry);
+    return null;
+  }
   const { n, duplicate } = await appendLedger(entry, DEDUPE_MS);
   if (duplicate) return n;
   mirrorSoon();
@@ -95,8 +121,8 @@ function submit(entry) {
   return null;
 }
 
-function baseEntry(reason, actor, item, quantity) {
-  return makeEntry(reason, { actor, item, quantity, user: game.user, scene: canvas?.scene, now: Date.now() });
+function baseEntry(reason, actor, item, quantity, scene = canvas?.scene) {
+  return makeEntry(reason, { actor, item, quantity, user: game.user, scene, now: Date.now() });
 }
 
 /* ------------------------------------------------------------------- capture */
@@ -104,15 +130,20 @@ function baseEntry(reason, actor, item, quantity) {
 function registerCapture(reg) {
   const DROP = dropHook();
 
-  // 1. dropped onto the canvas as an Item Pile
+  // 1. dropped onto the canvas as an Item Pile. Item Piles calls the hook on every client
+  // (DB-AC-1): the active GM user records it — the corpses' runner rule — and the scene is the
+  // pile token's, not this client's canvas. Two tabs of that GM both record; the tail dedupe
+  // catches the second.
   if (DROP) {
     reg.on(DROP, (source, target, itemDeltas, position) => {
+      if (!isActiveGMSelf(game.users)) return;
       try {
         const actor = source?.actor ?? source;
+        const scene = pileScene(typeof target === "string" ? globalThis.fromUuidSync?.(target) : target);
         for (const d of normaliseDeltas(itemDeltas)) {
           const doc = d?.item ?? d;
           const obj = doc?.toObject ? doc.toObject() : foundry.utils.duplicate(doc ?? {});
-          const e = baseEntry("drop", actor, obj, Math.abs(d?.quantity ?? obj?.system?.quantity ?? 1));
+          const e = baseEntry("drop", actor, obj, Math.abs(d?.quantity ?? obj?.system?.quantity ?? 1), scene);
           e.x = position?.x ?? null;
           e.y = position?.y ?? null;
           e.pileUuid = target?.uuid ?? (typeof target === "string" ? target : null);
@@ -141,7 +172,8 @@ function registerCapture(reg) {
 
 const all = () => readLog();
 /** The last n entries, newest first; `{brief: true}` drops the item sources (items-journal-28). */
-function list(n = 20, { brief = false } = {}) {
+function list(n = 20, opts) {
+  const brief = !!opts?.brief;
   const out = listLast(readLog(), n);
   return brief ? out.map(briefOf) : out;
 }
@@ -151,20 +183,32 @@ const search = text => searchLog(readLog(), text);
 /**
  * Recreate entry #n with no toast (items-journal-28): `{ok: true, item, actor}`, or
  * `{ok: false, reason: "not-gm" | "no-entry" | "no-actor" | "not-created"}`
- * (not-created: a preCreateItem listener vetoed the item). Defaults to the actor it left.
+ * (not-created: a preCreateItem listener vetoed the item, the create threw — logged once — or the
+ * entry has no item source). Never rejects. Defaults to the actor it left.
  */
 async function restoreResult(n, target = null) {
   if (!game.user.isGM) return { ok: false, reason: "not-gm" };
   const entry = findEntry(readLog(), n);
   if (!entry) return { ok: false, reason: "no-entry" };
 
-  const actor = restoreTarget(target, entry, { isActor: x => x instanceof Actor, actors: game.actors });
+  const actor = restoreTarget(target, entry, {
+    isActor: x => x instanceof Actor, actors: game.actors, fromUuid: u => globalThis.fromUuidSync?.(u),
+  });
   if (!actor) return { ok: false, reason: "no-actor" };
 
+  // an entry with no item source has nothing to recreate (dropbin-R5)
+  if (!entry.item || typeof entry.item !== "object") return { ok: false, reason: "not-created" };
   const obj = foundry.utils.duplicate(entry.item);
   delete obj._id;
-  // {restoring: true} tags our own restore for other modules; nothing reads it today (items-journal-27)
-  const [made] = await actor.createEmbeddedDocuments("Item", [obj], { [MODULE]: { restoring: true } });
+  let made;
+  try {
+    // {restoring: true} tags our own restore for other modules; nothing reads it today (items-journal-27)
+    [made] = await actor.createEmbeddedDocuments("Item", [obj], { [MODULE]: { restoring: true } });
+  } catch (err) {
+    // a server/validation error is a coded refusal, not a rejection (dropbin-R5)
+    console.warn(`${MODULE} | restore #${entry.n} failed`, err);
+    return { ok: false, reason: "not-created" };
+  }
   // a preCreateItem listener that vetoes the item resolves the create to []
   if (!made) return { ok: false, reason: "not-created" };
   return { ok: true, item: made, actor };
@@ -211,12 +255,12 @@ async function clear() {
 /* --------------------------------------------------------------- lifecycle */
 
 /**
- * socketlib.ready → register the relay; ready → the capture hooks, then the entry's publish
- * (one ready handler, as before the migration).
+ * socketlib.ready → register the relay; ready → record any entry relayed before ready (DB-AC-2),
+ * the capture hooks, then the entry's publish (one ready handler, as before the migration).
  */
 export function install(reg, ctx) {
   ctx.expose({ ledger: { all, list, get, search, restore, restoreResult, export: exportMirror, clear } });
-  if (globalThis.game?.ready && globalThis.socketlib) {
+  if (globalThis.game?.ready && socketlibPresent()) {
     // a hot re-import after ready: socketlib.ready has fired already (socketlib hands back the
     // module's existing socket)
     try { registerRecord(recordAsGM); } catch (err) { ctx.log.warn("hot patch: the ledger relay was not re-registered", err); }
@@ -226,6 +270,7 @@ export function install(reg, ctx) {
     }, { label: "socketlib.ready" });
   }
   ctx.onReady(() => {
+    drainPreReady();
     registerCapture(reg);
     ctx.publish();
   }, "ledger ready");

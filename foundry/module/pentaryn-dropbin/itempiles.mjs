@@ -19,7 +19,7 @@
  */
 
 import {
-  MODULE, LOCK_SOUND, lockedContainer, pileFlags, isPileFlagged, planLockSounds, planEyesNeedView,
+  MODULE, LOCK_SOUND, lockedContainer, lockFloatToken, pileFlags, isPileFlagged, planLockSounds, planEyesNeedView,
   isActiveGMSelf,
 } from "./dropbin-core.mjs";
 import { pinnedEntryIds } from "./lib/pins.mjs";
@@ -113,17 +113,30 @@ function lockedContainerData(target) {
   return data ? { actor, data } : null;
 }
 
-function announceLocked(actor, { playSound }) {
+/** The toast names the actor; the float goes on the hook's own chest (lockFloatToken, dropbin-R9). */
+function announceLocked(target, actor, { playSound }) {
   if (playSound) {
     try { foundry.audio.AudioHelper.play({ src: LOCK_SOUND, volume: 0.8 }, true); }
     catch (err) { console.warn(`${MODULE} | could not play the lock sound`, err); }
   }
   ui.notifications.warn(_loc("PENTARYN_DROPBIN.lock.toast", { name: actor?.name ?? "It" }));
   try {
-    const tok = canvas.tokens?.placeables.find(t => t.actor?.id === actor?.id);
+    const tok = lockFloatToken(target, actor, canvas.tokens?.placeables);
     if (tok) canvas.interface.createScrollingText(tok.center, _loc("PENTARYN_DROPBIN.lock.float"), {
       anchor: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 28, fill: "#d8433a", stroke: 0x000000, strokeThickness: 4 });
   } catch (err) { log?.debug("announceLocked: no canvas (off-screen); the notification is enough", err); }
+}
+
+/**
+ * The veto behind both lock hooks (one body, dropbin-M6): a player is refused a locked container with
+ * the sound, the toast and the float; the GM, and anything not locked, falls through.
+ */
+function refuseIfLocked(target) {
+  if (game.user.isGM) return;
+  const hit = lockedContainerData(target);
+  if (!hit) return;
+  announceLocked(target, hit.actor, { playSound: true });
+  return false;                         // cancels the render — this is the actual lock
 }
 
 /**
@@ -219,13 +232,7 @@ function pinnedJournalTest() {
 
 /** ready: the three lock hooks, a repaint of the player's sidebar, then the GM backfills. */
 async function armLocks(reg) {
-  reg.on("item-piles-preRenderInterface", (target) => {
-    if (game.user.isGM) return;
-    const hit = lockedContainerData(target);
-    if (!hit) return;
-    announceLocked(hit.actor, { playSound: true });
-    return false;                       // cancels the render — this is the actual lock
-  }, { label: "lock: interface" });
+  reg.on("item-piles-preRenderInterface", refuseIfLocked, { label: "lock: interface" });
 
   // Item Piles has a "force open default sheet" keybind — Left Ctrl out of the
   // box — and holding it makes the module stand aside entirely, so a Ctrl-click
@@ -234,20 +241,14 @@ async function armLocks(reg) {
   // interface is being rendered. Refuse the sheet itself: returning false from
   // item-piles' own preRenderActorSheet hook suppresses the render, and it fires
   // for ApplicationV2 sheets and for the bypass alike.
-  reg.on("item-piles-preRenderActorSheet", (doc) => {
-    if (game.user.isGM) return;
-    const hit = lockedContainerData(doc);
-    if (!hit) return;
-    announceLocked(hit.actor, { playSound: true });
-    return false;
-  }, { label: "lock: actor sheet" });
+  reg.on("item-piles-preRenderActorSheet", refuseIfLocked, { label: "lock: actor sheet" });
 
   // The canvas double-click already refuses and plays lockedSound itself; all
   // this adds is the words. PRE_RATTLE is local to the clicking client, unlike
   // RATTLE, which item-piles broadcasts to everyone.
   reg.on("item-piles-preRattleItemPile", (actor) => {
     if (game.user.isGM) return;
-    announceLocked(actor, { playSound: false });
+    announceLocked(actor, actor, { playSound: false });
   }, { label: "lock: rattle" });
 
   // The directory hooks above were registered at load time, but the sidebar has

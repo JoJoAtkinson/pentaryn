@@ -4,7 +4,8 @@
 // no-op, `null` replaces), which is what left a revived enemy's full sheet open to every player.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { PLAYER, addScene, dropbinWorld, makeActor } from "./fixtures/world.mjs";
+import { GM, PLAYER, addScene, dropbinWorld, makeActor } from "./fixtures/world.mjs";
+import { makeToken } from "./kit/foundry-stub.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -12,7 +13,7 @@ const MOD = "pentaryn-dropbin";
 const F = await dropbinWorld();
 await import("../dropbin.mjs");
 const { corpses } = await import("../corpses.mjs");
-const { OBSERVER, NONE } = CONST.DOCUMENT_OWNERSHIP_LEVELS;
+const { OBSERVER, NONE, OWNER } = CONST.DOCUMENT_OWNERSHIP_LEVELS;
 
 let seq = 0;
 /** An unlinked hostile goblin token at 0 HP on its own scene; `delta.ownership` as given. */
@@ -82,6 +83,34 @@ test("PT3-1: a corpse that stopped being a pile and is re-piled keeps the pre-de
   assert.equal(playerLevel(tok), NONE);
 });
 
+test("dropbin-EC-6: a pile that is already our corpse but lost its OBSERVER write (and sight) is repaired", async () => {
+  // The corpse flags landed but the OBSERVER map (and sight off) did not: toCorpse returned at the
+  // isPile check, so players never got the loot window. It now re-writes just those two fields.
+  const shared = { default: NONE, [PLAYER]: OBSERVER };
+  const tok = goblin({ ...shared }, { [MOD]: { corpse: true, sight: true, ownership: { ...shared } },
+    "item-piles": { data: { enabled: true } } });
+  const piles = F.calls.filter(c => c.op === "turnTokensIntoItemPiles").length;
+  await corpses.toCorpse(tok);
+  assert.equal(tok.delta.ownership.default, OBSERVER, "players observe the body again");
+  assert.equal(tok.sight.enabled, false, "sight is off again");
+  assert.deepEqual(tok.flags[MOD], { corpse: true, sight: true, ownership: shared }, "saved flags untouched");
+  assert.equal(F.calls.filter(c => c.op === "turnTokensIntoItemPiles").length, piles, "no new pile call");
+  await corpses.fromCorpse(tok);
+  assert.deepEqual(tok.delta.ownership, shared, "a revival still puts the pre-death map back");
+  assert.equal(tok.sight.enabled, true);
+});
+
+test("dropbin-EC-6: a healthy corpse pile is left alone (no write)", async () => {
+  const tok = goblin({ default: OBSERVER }, { [MOD]: { corpse: true, sight: true, ownership: null },
+    "item-piles": { data: { enabled: true } } });
+  tok.sight.enabled = false;
+  let writes = 0;
+  const update = tok.update.bind(tok);
+  tok.update = async (...a) => { writes++; return update(...a); };
+  await corpses.toCorpse(tok);
+  assert.equal(writes, 0);
+});
+
 /* ── PT3-1 live (wave 2): the server's copy of delta.ownership can differ from the clients' ──────── */
 
 // Foundry 14.369 (seen live on fresh scenes): the server can drop a delta write it already broadcast,
@@ -124,4 +153,365 @@ test("PT3-1 live: a saved per-token map the server still holds comes back on the
   await corpses.fromCorpse(tok);
   assert.deepEqual(tok.delta.ownership, shared, "the clients get the saved map, not OBSERVER");
   assert.deepEqual(server.ownership, shared, "and the server holds it");
+});
+
+/* ── dropbin-EC-4: two syncs on one token never convert it in parallel ──────────────────────────── */
+
+// HUD Revive runs its own sync while the 150 ms debounced sync (queued by Revive's own hp write) can
+// fire mid-conversion. Both saw "our corpse", both reverted, and the second one's ForcedDeletion of
+// delta.ownership landed after the first had put the saved map back: a creature shared with a
+// player came back unshared. A second sync for a token in flight now waits and re-checks.
+test("dropbin-EC-4: two concurrent syncs on a revived corpse revert it once and keep the saved map", async () => {
+  const shared = { default: NONE, [PLAYER]: OBSERVER };
+  const tok = goblin({ ...shared });
+  await corpses.toCorpse(tok);
+  tok.actor.system.attributes.hp.value = 3;               // healed: the body is alive again
+  tok.actor.statuses.delete("dead");
+  const before = F.calls.filter(c => c.op === "revertTokensFromItemPiles").length;
+  await Promise.all([corpses.sync(tok.actor), corpses.sync(tok.actor)]);
+  assert.equal(F.calls.filter(c => c.op === "revertTokensFromItemPiles").length - before, 1, "reverted once");
+  assert.deepEqual(tok.delta.ownership, shared, "the saved map survives the second sync");
+  assert.deepEqual(tok.flags[MOD], {});
+});
+
+test("dropbin-EC-4: HUD Revive cancels the debounced sync its own hp write queued", async () => {
+  const tok = goblin(null);
+  await corpses.toCorpse(tok);
+  tok.actor.update = async changes => {                    // the hp write fires updateActor, as Foundry does
+    const expanded = foundry.utils.expandObject(changes);
+    foundry.utils.mergeObject(tok.actor, expanded);
+    Hooks.callAll("updateActor", tok.actor, expanded, {}, game.user.id);
+  };
+  const reverts = () => F.calls.filter(c => c.op === "revertTokensFromItemPiles").length;
+  const before = reverts();
+  const p = corpses.revive(tok);
+  // the debounced timer fires while Revive's own sync is still converting
+  await Promise.resolve();
+  mock.timers.tick(200);
+  await p;
+  mock.timers.tick(200);
+  await new Promise(r => setImmediate(r));
+  assert.equal(reverts() - before, 1, "one revert, not a second from the timer");
+  assert.equal(tok.delta.ownership ?? null, null);
+});
+
+/* ── dropbin-R6: the legacy writers refuse bad input with one warning and never half-apply ──────── */
+
+/** Run fn with console.warn captured; returns the warnings' first arguments. */
+async function warnings(fn) {
+  const seen = [];
+  const keep = console.warn;
+  console.warn = (...a) => seen.push(String(a[0]));
+  try { await fn(); } finally { console.warn = keep; }
+  return seen;
+}
+
+test("dropbin-R6: without Item Piles, toCorpse/fromCorpse/sync return early with one prefixed warning", async () => {
+  const live = goblin(null);
+  const dead = goblin({ default: OBSERVER }, { [MOD]: { corpse: true, sight: true, ownership: null } });
+  const ip = F.game.itempiles;
+  F.game.itempiles = undefined;
+  const before = F.calls.length;
+  try {
+    for (const run of [() => corpses.toCorpse(live), () => corpses.fromCorpse(dead), () => corpses.sync(live.actor)]) {
+      const seen = await warnings(run);
+      assert.equal(seen.length, 1, JSON.stringify(seen));
+      assert.match(seen[0], /^pentaryn-dropbin \| corpses\.\w+: Item Piles is not active/);
+    }
+  } finally {
+    F.game.itempiles = ip;
+  }
+  assert.equal(F.calls.slice(before).filter(c => c.op === "update").length, 0, "nothing written");
+  assert.equal(live.flags[MOD]?.corpse, undefined);
+  assert.equal(dead.flags[MOD].corpse, true);
+});
+
+test("dropbin-R6: a wrong argument is one prefixed warning, not a raw TypeError", async () => {
+  const tok = goblin(null);
+  const cases = [
+    [() => corpses.toCorpse(tok.actor), /corpses\.toCorpse: expected a TokenDocument, got Actor/],
+    [() => corpses.toCorpse(undefined), /corpses\.toCorpse: expected a TokenDocument/],
+    [() => corpses.fromCorpse(null), /corpses\.fromCorpse: expected a TokenDocument/],
+    [() => corpses.sync(tok), /corpses\.sync: expected an Actor, got Token/],
+    [() => corpses.sync(undefined), /corpses\.sync: expected an Actor/],
+  ];
+  for (const [run, re] of cases) {
+    const seen = await warnings(run);
+    assert.equal(seen.length, 1, JSON.stringify(seen));
+    assert.match(seen[0], /^pentaryn-dropbin \| /);
+    assert.match(seen[0], re);
+  }
+  assert.equal(tok.flags[MOD]?.corpse, undefined, "the token was not converted");
+});
+
+test("dropbin-R6: a failed corpse-flag write reverts the pile toCorpse just made", async () => {
+  const tok = goblin(null);
+  const boom = new Error("server refused");
+  tok.update = async () => { throw boom; };
+  const reverts = () => F.calls.filter(c => c.op === "revertTokensFromItemPiles").length;
+  const before = reverts();
+  await assert.rejects(corpses.toCorpse(tok), err => err === boom);
+  assert.equal(reverts() - before, 1, "the new pile is reverted, not left without corpse flags");
+});
+
+/* ── dropbin-EC-3: a linked NPC's corpse is looted through the loot window, never its sheet ─────── */
+
+// Joe, 2026-10-12: "Just loot, they can't open the char sheet. They're dead, so they can't see their
+// stats or bio." A linked token ignores delta.ownership, so a dead linked NPC became a pile players
+// could not open (Item Piles needs OBSERVER). Players now observe the BASE actor while it is a corpse
+// (its map saved and put back on revival), and no player opens a corpse's actor sheet by any route:
+// Item Piles fires item-piles-preRenderActorSheet from every actor sheet render, the Ctrl bypass and
+// `bypassItemPiles` included. The veto opens nothing itself: the loot window is Item Piles' own
+// double-click, which keeps its `distance: 1` check.
+let lseq = 0;
+/** A linked NPC at 0 HP with `count` tokens on one scene; its base actor's ownership as given. */
+function linkedNpc(ownership = { default: NONE, [GM]: OWNER }, count = 1) {
+  const n = String(++lseq).padStart(4, "0");
+  const actor = makeActor(F, { id: `actorLnk0000${n}`, name: "Captain Vey", type: "npc", ownership,
+    system: { attributes: { hp: { value: 0, max: 30 } } } });
+  const statuses = new Set();
+  Object.assign(actor, {
+    isToken: false,
+    statuses,
+    toggleStatusEffect: async (id, { active } = {}) => { if (active) statuses.add(id); else statuses.delete(id); },
+    updateEmbeddedDocuments: async () => [],
+    deleteEmbeddedDocuments: async () => [],
+  });
+  const ids = Array.from({ length: count }, (_, i) => `tokLnk${i}00000${n}`);
+  const scene = addScene(F, { id: `sceneLnk0000${n}`, name: `Linked ${n}`,
+    tokens: ids.map(id => ({ id, name: "Captain Vey", actorId: actor.id, actorLink: true, disposition: -1,
+      sight: { enabled: true }, delta: {} })) });
+  const toks = ids.map(id => scene.tokens.get(id));
+  // As Foundry 14: an unpersisted clone (a Token Config preview) is a dependent too, unless concreteOnly.
+  actor.ephemeral = [];
+  actor.getDependentTokens = ({ concreteOnly = false } = {}) =>
+    [...toks, ...actor.ephemeral].filter(t => !concreteOnly || t.parent?.tokens.get(t.id) === t);
+  return toks;
+}
+const player = () => F.game.users.get(PLAYER);
+const sheetVeto = (...args) => {
+  F.become({ userId: PLAYER });
+  try { return Hooks.call("item-piles-preRenderActorSheet", ...args); } finally { F.become({ userId: GM }); }
+};
+const lootWindows = () => F.calls.filter(c => c.op === "renderItemPileInterface");
+// As Item Piles 3.3.4's API: a plain function that throws synchronously on a target that is not a pile.
+F.game.itempiles.API.renderItemPileInterface = (target, opts) => {
+  if (!F.game.itempiles.API.isValidItemPile(target)) throw new Error("This target is not a valid item pile");
+  F.calls.push({ op: "renderItemPileInterface", target, opts });
+};
+
+test("dropbin-EC-3: a dead linked NPC gives players OBSERVER on its base actor; a revival puts the saved map back", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  const before = structuredClone(actor.ownership);
+  assert.equal(actor.testUserPermission(player(), "OBSERVER"), false, "alive: players cannot observe it");
+  await corpses.sync(actor);
+  assert.equal(tok.flags[MOD].corpse, true, "the linked token is our corpse");
+  assert.equal(actor.testUserPermission(player(), "OBSERVER"), true, "Item Piles can render the loot window for a player");
+  assert.deepEqual(actor.flags[MOD].ownership, before, "the base actor's map is saved");
+  assert.equal(tok.delta.ownership ?? null, null, "no delta map on a linked token: Foundry ignores it");
+  await corpses.revive(tok);
+  assert.equal(tok.flags[MOD].corpse, undefined);
+  assert.deepEqual(actor.ownership, before, "the saved map comes back exactly");
+  assert.equal(actor.testUserPermission(player(), "OBSERVER"), false);
+  assert.deepEqual(actor.flags[MOD] ?? {}, {}, "no dropbin flag left on the actor");
+});
+
+// dropbin-EC-5 [declared]: sync asked getActiveTokens, which sees only the scene the GM is viewing, so a
+// linked NPC killed while the GM looked at another scene stayed a creature there. It now walks every
+// scene's tokens of the actor (getDependentTokens).
+test("dropbin-EC-5: a dead linked NPC on a scene the GM is not viewing becomes a corpse, and revives there", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  actor.getActiveTokens = () => [];           // the GM's canvas shows another scene
+  await corpses.sync(actor);
+  assert.equal(tok.flags[MOD]?.corpse, true, "converted on the unviewed scene");
+  await corpses.revive(tok);
+  assert.equal(tok.flags[MOD]?.corpse, undefined, "revived on the unviewed scene");
+});
+
+// Verifier repro: getDependentTokens() without concreteOnly also lists an unpersisted clone (a Token
+// Config preview keeps its scene parent but is not in scene.tokens). It went into the same Item Piles
+// batch, whose fromUuidSync of it is null and throws, so the real token never became a corpse.
+test("dropbin-EC-5: an unpersisted clone of a linked NPC's token is skipped; only the real token converts", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  const clone = makeToken({ id: "tokPreview000001", name: "Captain Vey", actorId: actor.id, actorLink: true,
+    disposition: -1, sight: { enabled: true }, delta: {} }, tok.parent);
+  actor.ephemeral.push(clone);
+  assert.equal(tok.parent.tokens.get(clone.id), undefined, "the clone is not on the scene");
+  const from = F.calls.length;
+  await corpses.sync(actor);
+  const piles = F.calls.slice(from).filter(c => c.op === "turnTokensIntoItemPiles");
+  assert.deepEqual(piles.map(c => c.n), [1], "one Item Piles call, for the real token only");
+  assert.equal(tok.flags[MOD]?.corpse, true, "the real token converted");
+  assert.equal(clone.flags[MOD]?.corpse, undefined, "the clone was never touched");
+  await corpses.revive(tok);
+  assert.equal(tok.flags[MOD]?.corpse, undefined);
+});
+
+test("dropbin-EC-3: a second token of the same dead linked NPC keeps the first death's saved map", async () => {
+  const shared = { default: NONE, [GM]: OWNER, [PLAYER]: OBSERVER };
+  const [a, b] = linkedNpc({ ...shared }, 2);
+  await corpses.sync(a.actor);
+  assert.equal(a.flags[MOD].corpse && b.flags[MOD].corpse, true);
+  assert.deepEqual(a.actor.flags[MOD].ownership, shared, "not the corpse's own OBSERVER map");
+  await corpses.revive(a);
+  assert.deepEqual(a.actor.ownership, shared);
+  assert.equal(b.flags[MOD].corpse, undefined);
+});
+
+test("dropbin-EC-3: no player opens a corpse's actor sheet by any route, and the veto opens nothing itself", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  const gob = goblin(null);
+  assert.equal(sheetVeto(actor, true, {}), true, "alive: the sheet opens as usual");
+  await corpses.sync(actor);
+  await corpses.toCorpse(gob);
+  const from = lootWindows().length;
+  assert.equal(sheetVeto(actor, true, { bypassItemPiles: true }), false, "the bypass (Ctrl, the HUD option) is refused");
+  assert.equal(sheetVeto(actor, { force: true }), false, "an ApplicationV2 open is refused");
+  assert.equal(sheetVeto(gob.actor, true, {}), false, "an unlinked corpse's synthetic actor too");
+  assert.equal(sheetVeto(actor, false, {}), false, "a non-forced render is refused");
+  assert.deepEqual(lootWindows().slice(from), [], "no loot window from the veto");
+  assert.equal(Hooks.call("item-piles-preRenderActorSheet", actor, true, { bypassItemPiles: true }), true,
+    "the GM still opens it (HUD: Open character sheet)");
+  await corpses.revive(tok);
+  assert.equal(sheetVeto(actor, true, {}), true, "revived: a creature again");
+});
+
+// Verifier repro: the corpse flag is ours but the pile is off (the GM reverted it in Item Piles), so
+// Item Piles' renderItemPileInterface throws synchronously. The guard called it before `return false`;
+// the throw was swallowed by the hook runner and the full sheet opened on a double-click.
+test("dropbin-EC-3: a corpse whose pile Item Piles reverted is still vetoed (linked and unlinked)", async () => {
+  const [tok] = linkedNpc();
+  const gob = goblin(null);
+  await corpses.sync(tok.actor);
+  await corpses.toCorpse(gob);
+  assert.equal(F.game.itempiles.API.isValidItemPile(tok) || F.game.itempiles.API.isValidItemPile(gob), false, "neither is a pile now");
+  for (const actor of [tok.actor, gob.actor]) {
+    assert.equal(sheetVeto(actor, true, {}), false, `${actor.id}: a plain double-click opens no sheet`);
+    assert.equal(sheetVeto(actor, true, { bypassItemPiles: true }), false, `${actor.id}: nor the Ctrl bypass`);
+  }
+});
+
+// Verifier: the guard rendered the loot window directly on a forced open, skipping Item Piles'
+// distance check (that lives in _itemPileClicked, which the Ctrl route skips), so a player could loot
+// a body across the map.
+test("dropbin-EC-3: a Ctrl-double-click on a far corpse pile opens no loot window", async () => {
+  const gob = goblin(null, { "item-piles": { data: { enabled: true } } });
+  gob.flags[MOD] = { corpse: true, sight: true, ownership: null };
+  assert.equal(F.game.itempiles.API.isValidItemPile(gob), true, "a live corpse pile");
+  const from = lootWindows().length;
+  assert.equal(sheetVeto(gob.actor, true, {}), false);
+  assert.equal(sheetVeto(gob.actor, true, { bypassItemPiles: true }), false);
+  assert.equal(lootWindows().length, from, "no undistanced loot window");
+});
+
+// Verifier: deleting a linked corpse's token (clearing bodies off the map) is not a revival, so the
+// base actor kept OBSERVER, our flags and the sheet veto on a possibly living NPC.
+const flushAll = async () => { for (let i = 0; i < 50; i++) await Promise.resolve(); };
+const deleteToken = tok => { tok.parent.tokens.delete(tok.id); Hooks.callAll("deleteToken", tok, {}, GM); };
+
+test("dropbin-EC-3: deleting the last corpse token of a linked NPC gives back its base actor's map", async () => {
+  const shared = { default: NONE, [GM]: OWNER, [PLAYER]: OBSERVER };
+  const [a, b] = linkedNpc({ ...shared }, 2);
+  const actor = a.actor;
+  await corpses.sync(actor);
+  assert.equal(actor.ownership.default, OBSERVER);
+  deleteToken(a);
+  await flushAll();
+  assert.equal(actor.ownership.default, OBSERVER, "another corpse token is still on the map");
+  assert.equal(actor.flags[MOD].corpse, true);
+  deleteToken(b);
+  await flushAll();
+  assert.deepEqual(actor.ownership, shared, "the saved map is back");
+  assert.deepEqual(actor.flags[MOD] ?? {}, {}, "no dropbin flag left on the actor");
+  assert.equal(sheetVeto(actor, true, {}), true, "no sheet veto on the living NPC");
+});
+
+test("dropbin-EC-3: deleting a linked corpse's scene gives back its base actor's map", async () => {
+  const before = { default: NONE, [GM]: OWNER };
+  const [tok] = linkedNpc({ ...before });
+  const actor = tok.actor, scene = tok.parent;
+  await corpses.sync(actor);
+  F.game.scenes.delete(scene.id);
+  Hooks.callAll("deleteScene", scene, {}, GM);
+  await flushAll();
+  assert.deepEqual(actor.ownership, before);
+  assert.deepEqual(actor.flags[MOD] ?? {}, {});
+});
+
+test("dropbin-EC-3: a player's client never writes on a token delete", async () => {
+  const [tok] = linkedNpc();
+  const actor = tok.actor;
+  await corpses.sync(actor);
+  F.become({ userId: PLAYER });
+  try { deleteToken(tok); await flushAll(); } finally { F.become({ userId: GM }); }
+  assert.equal(actor.flags[MOD].corpse, true, "only the active GM gives the map back");
+});
+
+test("dropbin-EC-3: at ready, a linked corpse actor with no corpse token left gets its map back", async () => {
+  const before = { default: NONE, [GM]: OWNER };
+  const [tok] = linkedNpc({ ...before });
+  const [kept] = linkedNpc();
+  await corpses.sync(tok.actor);
+  await corpses.sync(kept.actor);
+  tok.parent.tokens.delete(tok.id);        // gone while no hook saw it
+  // This file never fires init, so the ledger's ready read warns about its unregistered setting; the
+  // rest of ready logs its usual lines. Kept off the test output; only a corpse warning matters here.
+  const warns = [], { warn, log } = console;
+  Object.assign(console, { warn: (...a) => warns.push(a.map(String).join(" ")), log: () => {} });
+  try { F.fire("ready"); await flushAll(); } finally { Object.assign(console, { warn, log }); }
+  assert.deepEqual(warns.filter(w => w.includes("corpse")), []);
+  assert.deepEqual(tok.actor.ownership, before);
+  assert.equal(kept.actor.flags[MOD].corpse, true, "a corpse still on the map keeps its OBSERVER");
+});
+
+/* ── DB-AC-4: one Item Piles call per sync, Dead toggled once per actor ─────────────────────────── */
+
+// A sync of a linked NPC with several tokens on the map made one turnTokensIntoItemPiles (or revert)
+// call per token and toggled Dead on the shared base actor once per token. It now collects the tokens
+// that need converting, makes one call for all of them, writes each token's flags, then makes Dead the
+// overlay once per distinct actor. A single-token sync is unchanged (one call, n: 1).
+test("DB-AC-4: a three-token linked NPC syncs with one Item Piles call each way and one Dead toggle", async () => {
+  const toks = linkedNpc(undefined, 3);
+  const actor = toks[0].actor;
+  let toggles = 0;
+  const toggle = actor.toggleStatusEffect;
+  actor.toggleStatusEffect = async (...a) => { toggles++; return toggle(...a); };
+  const ops = op => F.calls.filter(c => c.op === op);
+  const piles = ops("turnTokensIntoItemPiles").length;
+  await corpses.sync(actor);
+  assert.deepEqual(ops("turnTokensIntoItemPiles").slice(piles).map(c => c.n), [3], "one call for all three tokens");
+  assert.equal(toggles, 1, "Dead toggled once on the shared actor");
+  assert.ok(toks.every(t => t.flags[MOD].corpse === true), "every token is our corpse");
+  assert.equal(toks.every(t => t.sight.enabled === false), true, "each token's sight is off");
+  const reverts = ops("revertTokensFromItemPiles").length;
+  await corpses.revive(toks[0]);
+  assert.deepEqual(ops("revertTokensFromItemPiles").slice(reverts).map(c => c.n), [3], "one revert for all three tokens");
+  assert.ok(toks.every(t => t.flags[MOD].corpse === undefined && t.sight.enabled === true), "every token is a creature again");
+  assert.deepEqual(actor.flags[MOD] ?? {}, {}, "the base actor's map was put back once");
+});
+
+test("DB-AC-4: a single-token sync still makes one call with that token", async () => {
+  const tok = goblin(null);
+  const ops = op => F.calls.filter(c => c.op === op);
+  const piles = ops("turnTokensIntoItemPiles").length;
+  await corpses.sync(tok.actor);
+  assert.deepEqual(ops("turnTokensIntoItemPiles").slice(piles).map(c => c.n), [1]);
+  assert.equal(tok.flags[MOD].corpse, true);
+});
+
+test("dropbin-M5: isDead is always a boolean (manifest: returns boolean)", () => {
+  const { isDead } = corpses;
+  const hp = (value, max, statuses) => ({ system: { attributes: { hp: { value, max } } }, ...(statuses ? { statuses } : {}) });
+  assert.strictEqual(isDead(null), false, "a missing actor is not dead");
+  assert.strictEqual(isDead(undefined), false);
+  assert.strictEqual(isDead({}), false, "no hp, no statuses");
+  assert.strictEqual(isDead(hp(5, 10)), false, "alive, no statuses set");
+  assert.strictEqual(isDead(hp(3, 7, new Set())), false);
+  assert.strictEqual(isDead(hp(0, 0, new Set())), false, "hp.max 0 is not the corpse rule");
+  assert.strictEqual(isDead(hp(0, 7)), true);
+  assert.strictEqual(isDead(hp(5, 10, new Set(["dead"]))), true, "the dead status");
 });
