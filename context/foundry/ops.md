@@ -183,8 +183,10 @@ The order is not arbitrary. Each step needs the previous one's state:
 because the snapshot is the step that requires "stopped". The snapshot belongs to `foundry-down`
 itself (defect wave 3, 2026-10-13), so **every stop backs up**: `make vtt-down`, `make foundry-down`
 alone, and a restart (`make foundry-down` then `make foundry-up`, or `vtt-down` then `vtt-up`) each take
-exactly one shutdown snapshot — `vtt-down` does not take a second, and the pre-launch backup on the
-way back up digest-skips the world that was just snapshotted.
+exactly one shutdown snapshot — `vtt-down` does not take a second. `foundry-up` takes no backup of its
+own. `vtt-up`'s pre-launch backup (`foundry-backup-safe`) adds none either: while the shutdown upload is
+still running it skips ("that upload holds this world"); once that upload is done it digest-skips the
+unchanged world.
 
 **The upload runs in the background.** `foundry-down` (and so `vtt-down`) builds the tar while Foundry is stopped (that
 part needs "stopped", so it finishes before the command returns — the world tar and a tar of any
