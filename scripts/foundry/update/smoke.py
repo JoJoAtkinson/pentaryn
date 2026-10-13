@@ -28,18 +28,19 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from scripts.foundry.update import admin as admin_mod
+from scripts.foundry import host
+from scripts.foundry.update import admin as admin_mod, children
 from scripts.foundry.update.admin import FoundryAdmin, Timeout
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SMOKE_JS = REPO_ROOT / "automation" / "smoke" / "smoke.mjs"
-NODE = "/opt/homebrew/bin/node"
 CHROME_PROFILE = REPO_ROOT / ".state" / "smoke-chrome-profile"
 BASELINE_PATH = REPO_ROOT / ".state" / "vtt-smoke-baseline.json"
 # Time for a deactivated world's LevelDB to finish closing before the next launch.
@@ -73,42 +74,76 @@ class WorldResult:
         }
 
 
+MISS_PREFIX = "smoke: policy selection "
+
+
+def _wanted(policy: dict):
+    return (policy.get("smoke", {}) or {}).get("worlds", "all")
+
+
+def select_worlds(worlds: list[dict], policy: dict) -> list[dict]:
+    """The worlds ``policy.smoke.worlds`` picks: ``all``, one id, or a list of ids."""
+    wanted = _wanted(policy)
+    return [w for w in worlds
+            if wanted == "all" or w["id"] in (wanted if isinstance(wanted, list) else [wanted])]
+
+
+def selection_miss(worlds: list[dict], policy: dict) -> str | None:
+    """The report line when the selection names no installed world, else ``None``.
+
+    A miss smokes nothing, so the run would read as clean with nothing tested (EC-12).
+    The run still finishes ``done`` — this only marks it for attention.
+    """
+    if not worlds or select_worlds(worlds, policy):
+        return None
+    wanted = _wanted(policy)
+    shown = ", ".join(map(str, wanted)) if isinstance(wanted, list) else str(wanted)
+    return f"{MISS_PREFIX}{shown} matched no world — nothing was smoked"
+
+
 def run_all(fa: FoundryAdmin, worlds: list[dict], *, policy: dict,
             touched: set[str], error_offset: int,
             log_day: str | None = None) -> list[WorldResult]:
     """Smoke every world in turn, leaving the last one launched."""
-    smoke_policy = policy.get("smoke", {}) or {}
-    wanted = smoke_policy.get("worlds", "all")
-    selected = [w for w in worlds
-                if wanted == "all" or w["id"] in (wanted if isinstance(wanted, list) else [wanted])]
-
     results: list[WorldResult] = []
-    for world in selected:
+    for world in select_worlds(worlds, policy):
         # Foundry serves ONE world at a time, and `launchWorld` is a /setup action —
         # which is refused (400 on 14.369, 403 before) while any world is active. So the previous world has to come down
         # before the next can go up, or every world after the first fails to launch.
-        _return_to_setup(fa)
-        results.append(_smoke_one(fa, world, policy=policy, touched=touched,
-                                  error_offset=error_offset, log_day=log_day))
+        problem = _return_to_setup(fa)
+        if problem:
+            # The restart fallback failed, so this world cannot be launched. Record it
+            # as broken rather than raising: a raise here skips apply's recover phase
+            # and leaves the untested packages live (ROB-6).
+            results.append(WorldResult(world=world["id"],
+                                       errors=[f"could not return to setup: {problem}"]))
+        else:
+            results.append(_smoke_one(fa, world, policy=policy, touched=touched,
+                                      error_offset=error_offset, log_day=log_day))
         # Each world's launch appends to the same log; advance the mark so the next
-        # world is not blamed for the previous one's output.
+        # world is not blamed for the previous one's output. The mark moves to today's
+        # file, so a run past midnight does not re-read the new day's file (ROB-9).
+        log_day = time.strftime("%Y-%m-%d")
         error_offset = admin_mod.error_log_offset(log_day)
     return results
 
 
-def _return_to_setup(fa: FoundryAdmin) -> None:
+def _return_to_setup(fa: FoundryAdmin) -> str | None:
     """Deactivate whatever world is running, so the setup API answers again.
 
     Prefers the graceful path (`FoundryAdmin.deactivate_world`: `POST /setup
     {worldShutdown}` on 14.369+, `POST /join {shutdown}` before; both need the admin password)
     and falls back to restarting the app — `options.json` has `world: null`, so a fresh
     start lands on the setup screen.
+
+    Returns ``None`` when setup is reachable, or the error text when the restart
+    fallback itself failed (a wedged app makes ``quit_app``/``start_app`` raise).
     """
     try:
         if not fa.world_active():
-            return
+            return None
     except Exception:  # noqa: BLE001
-        return
+        return None
     if fa.deactivate_world():
         # /api/status flips to inactive as soon as the world is torn down, but the
         # world's LevelDB closes asynchronously after that. Launching the next world
@@ -116,13 +151,17 @@ def _return_to_setup(fa: FoundryAdmin) -> None:
         # in the server log, which the error-log check then reports as breakage caused
         # by the update. Observed; the settle is not superstition.
         time.sleep(SETTLE_SECONDS)
-        return
-    admin_mod.quit_app()
-    admin_mod.start_app()
+        return None
+    try:
+        admin_mod.quit_app()
+        admin_mod.start_app()
+    except (Timeout, Exception) as exc:  # noqa: BLE001
+        return str(exc) or type(exc).__name__
     try:
         fa.reauthenticate()   # the restart invalidated the session
     except Exception:  # noqa: BLE001
         pass
+    return None
 
 
 def _fingerprint(errors: list[dict]) -> list[str]:
@@ -189,6 +228,12 @@ def _smoke_one(fa: FoundryAdmin, world: dict, *, policy: dict, touched: set[str]
                          dwell=int(smoke_policy.get("browser_dwell_seconds", 60)),
                          ignores=smoke_policy.get("ignore_console") or [])
     result.client = client
+    if client.get("skipped"):
+        # The browser check never ran (e.g. smoke.mjs absent): "not run", not "broken" —
+        # scored like `browser: false`, and the baseline is left alone (EC-8).
+        result.notes.append(f"browser check skipped: {client['skipped']}")
+        result.ok = result.server_ok
+        return result
 
     # A world that was ALREADY throwing before we touched anything must not veto an
     # update. `ardenhaven` throws "Cannot add property walls, object is not extensible"
@@ -223,6 +268,12 @@ def _smoke_one(fa: FoundryAdmin, world: dict, *, policy: dict, touched: set[str]
     if not client.get("gameReady"):
         # Whatever the baseline says, a world that never becomes ready is a failure.
         result.client_ok = False
+        # Say WHY first: a fatal (no Node.js, auth failed, smoke.mjs crashed) lives only
+        # in the client payload, which to_json() trims to a summary — copy its text into
+        # the errors the report and the notification show (EXT-2).
+        for err in client.get("errors", []):
+            if err.get("type") == "fatal" and err.get("text"):
+                result.errors.append(f"client: {err['text'][:500]}")
         result.errors.append("client: game.ready never became true")
     if client.get("note"):
         result.notes.append(client["note"])
@@ -250,6 +301,13 @@ def run_browser(fa: FoundryAdmin, world: str, *, dwell: int,
     if not SMOKE_JS.exists():
         return {"ok": True, "skipped": "smoke.mjs not installed", "errors": []}
 
+    node = host.node()  # resolved per call: PATH, then Homebrew (EXT-2)
+    if shutil.which(node) is None:
+        return {"ok": False, "errors": [{"type": "fatal",
+                                         "text": f"Node.js not found ({node!r} is not on PATH "
+                                                 "or executable) — install Node.js to run "
+                                                 "the browser smoke test"}]}
+
     try:
         fa.authenticate()
     except Exception as exc:  # noqa: BLE001
@@ -267,15 +325,15 @@ def run_browser(fa: FoundryAdmin, world: str, *, dwell: int,
         cookie_path = Path(fh.name)
     cookie_path.chmod(0o600)
 
-    cmd = [NODE, str(SMOKE_JS), "--url", fa.base_url, "--world", world,
+    cmd = [node, str(SMOKE_JS), "--url", fa.base_url, "--world", world,
            "--dwell", str(dwell), "--cookies", str(cookie_path),
            "--profile", str(CHROME_PROFILE)]
     for pattern in ignores:
         cmd += ["--ignore", pattern]
 
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True,
-                              timeout=dwell + 600)
+        # Registered, so a SIGTERM'd run terminates it rather than orphaning it (AC-6).
+        proc = children.run(cmd, timeout=dwell + 600)
     except (subprocess.TimeoutExpired, OSError) as exc:
         return {"ok": False, "errors": [{"type": "fatal",
                                          "text": f"browser smoke test failed to run: {exc}"}]}

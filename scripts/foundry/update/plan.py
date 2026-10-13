@@ -67,7 +67,7 @@ def build(*, admin: FoundryAdmin | None = None, notes: bool = True,
         "generated": started,
         "mode": "foundry" if admin else "standalone",
         "core": {"installed": core_version, "channel": policy.get("channel", "stable")},
-        "system": {"id": "dnd5e", "installed": system_version},
+        "system": {"id": inventory.SYSTEM_ID, "installed": system_version},
         "active_world_at_scan": active_world,
         "worlds": inventory.worlds(),
         "counts": {k: sum(1 for p in packages if p.kind == k)
@@ -151,7 +151,8 @@ def core_release_notes(url: str) -> str | None:
 
 def _versions(admin: FoundryAdmin | None,
               packages: list[inventory.Package]) -> tuple[str, str | None, str | None]:
-    system = next((p.version for p in packages if p.type == "system"), None)
+    system = next((p.version for p in packages
+                   if p.type == "system" and p.id == inventory.SYSTEM_ID), None)
     if admin:
         try:
             st = admin.status()

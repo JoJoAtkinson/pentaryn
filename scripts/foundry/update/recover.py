@@ -33,6 +33,7 @@ success because an HTTP call did not error is not a recovery.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tarfile
@@ -43,9 +44,8 @@ from pathlib import Path
 from scripts.foundry import bootstate, cloud
 from scripts.foundry import host as host_mod
 from scripts.foundry.update import admin as admin_mod
-from scripts.foundry.update.admin import FOUNDRY_DATA
 from scripts.foundry.update.admin import APP_PAYLOAD, FoundryAdmin
-from scripts.foundry.update.state import CORE_ROLLBACK_DIR, SYSTEM_ASIDE_DIR
+from scripts.foundry.update.state import CORE_ROLLBACK_DIR, SYSTEM_ASIDE_DIR, _pid_alive
 
 
 @dataclass
@@ -83,7 +83,7 @@ def recover_module(fa: FoundryAdmin, pkg_type: str, pkg_id: str,
     entry = _newest_backup(listing, pkg_type, pkg_id, previous_version)
     if not entry:
         rec.error = (f"no backup of {pkg_id} {previous_version} to restore — "
-                     "the pre-run snapshot did not include it")
+                     "backup_packages did not record one before the run")
         return rec
 
     rec.steps.append(f"restoreBackup {pkg_id} ← {entry.get('id')}")
@@ -117,18 +117,26 @@ def recover_system(fa: FoundryAdmin, system_id: str, previous_version: str,
                    world_snapshot: "cloud.Snapshot | Path | None") -> Recovery:
     """Roll a system back — code *and* every world it just migrated."""
     rec = Recovery(kind="system", target=system_id)
-    admin_mod.quit_app()
-    rec.steps.append("quit Foundry (a live LevelDB cannot be replaced safely)")
-
+    # Every quit/start sits inside a guard: a wedged Electron raises Timeout, and that
+    # must come back as a failed Recovery with the steps so far, not escape it (ROB-7).
     try:
+        admin_mod.quit_app()
+        rec.steps.append("quit Foundry (a live LevelDB cannot be replaced safely)")
         _restore_world_tar(world_snapshot, rec)
         _restore_system_from_aside(system_id, previous_version, rec)
     except Exception as exc:  # noqa: BLE001
         rec.error = str(exc)
-        admin_mod.start_app()
+        try:
+            admin_mod.start_app()
+        except Exception as start_exc:  # noqa: BLE001
+            rec.error += f"; could not relaunch Foundry: {start_exc}"
         return rec
 
-    admin_mod.start_app()
+    try:
+        admin_mod.start_app()
+    except Exception as exc:  # noqa: BLE001
+        rec.error = f"could not relaunch Foundry: {exc}"
+        return rec
     rec.steps.append("relaunched Foundry")
 
     on_disk = admin_mod.installed_version("system", system_id)
@@ -144,16 +152,15 @@ def recover_system(fa: FoundryAdmin, system_id: str, previous_version: str,
 def recover_core(previous_version: str, world_snapshot: "cloud.Snapshot | Path | None",
                  bundle: Path | None = None) -> Recovery:
     """Roll the core back: the whole app payload, plus the world data it migrated."""
-    rec = Recovery(kind="core", target="foundry")
+    rec = Recovery(kind="core", target="core")
     bundle = bundle or newest_core_bundle()
     if not bundle or not bundle.exists():
         rec.error = "no core rollback bundle on disk — cannot restore the app"
         return rec
 
-    admin_mod.quit_app()
-    rec.steps.append("quit Foundry")
-
     try:
+        admin_mod.quit_app()
+        rec.steps.append("quit Foundry")
         # Clear before extracting. A tar extracted over a newer tree leaves every file
         # the new build added, which is a mixed-version install that runs and misbehaves
         # rather than failing loudly.
@@ -168,7 +175,11 @@ def recover_core(previous_version: str, world_snapshot: "cloud.Snapshot | Path |
         rec.error = str(exc)
         return rec
 
-    admin_mod.start_app()
+    try:
+        admin_mod.start_app()
+    except Exception as exc:  # noqa: BLE001
+        rec.error = f"could not relaunch Foundry: {exc}"
+        return rec
     fa = FoundryAdmin()
     for _ in range(30):
         try:
@@ -230,21 +241,33 @@ def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> N
     """
     aside = SYSTEM_ASIDE_DIR / f"{system_id}-{version}.tar.gz"
     if not aside.exists():
-        candidates = sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"))
+        candidates = sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"),
+                            key=_natural_key)
         if not candidates:
             raise RuntimeError(
                 f"no set-aside copy of {system_id} {version}; the snapshot's "
                 "Data/modules restore does not cover Data/systems")
         aside = candidates[-1]
-    target = FOUNDRY_DATA / "Data/systems" / system_id
+    target = admin_mod.SYSTEMS_DIR / system_id
     if target.exists():
         shutil.rmtree(target)
     with tarfile.open(aside, "r:gz") as tar:
-        tar.extractall(FOUNDRY_DATA / "Data/systems", filter="data")
+        tar.extractall(admin_mod.SYSTEMS_DIR, filter="data")
     rec.steps.append(f"restored {system_id} from {aside.name}")
 
 
 # ── Artefacts the recovery paths depend on ──────────────────────────────────
+
+def _natural_key(path: "Path | str") -> list[int | str]:
+    """Natural-sort key on the full filename: digit runs compare as numbers.
+
+    ``6.0.10`` after ``6.0.9``, ``14.100`` after ``14.99``, and ``6.1.0-beta.1`` below
+    ``6.1.0`` (``-`` sorts before ``.``). A plain string sort pruned the copy just
+    written on a digit rollover and restored the older artefact (EC-1).
+    """
+    name = path.name if isinstance(path, Path) else path
+    return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", name)]
+
 
 def newest_world_snapshot(host: str | None = None) -> "cloud.Snapshot | None":
     """This machine's rollback point: the snapshot its world is based on.
@@ -274,8 +297,22 @@ def newest_world_snapshot(host: str | None = None) -> "cloud.Snapshot | None":
 
 
 def newest_core_bundle() -> Path | None:
-    bundles = sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"))
+    bundles = sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"), key=_natural_key)
     return bundles[-1] if bundles else None
+
+
+def _tar_to(out: Path, src: Path, arcname: str) -> None:
+    """Write ``out`` via a ``.partial`` sibling, renamed onto ``out`` only once the tar
+    closes cleanly. An interrupted write leaves nothing at ``out``, so a later run's
+    ``if out.exists(): return out`` only ever finds a complete archive (ROB-8)."""
+    tmp = out.with_name(out.name + ".partial")
+    try:
+        with open(tmp, "wb") as f, tarfile.open(out, "w:gz", fileobj=f) as tar:
+            tar.add(src, arcname=arcname)
+        tmp.replace(out)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def stash_system(system_id: str, version: str) -> Path:
@@ -284,10 +321,10 @@ def stash_system(system_id: str, version: str) -> Path:
     out = SYSTEM_ASIDE_DIR / f"{system_id}-{version}.tar.gz"
     if out.exists():
         return out
-    src = FOUNDRY_DATA / "Data/systems" / system_id
-    with tarfile.open(out, "w:gz") as tar:
-        tar.add(src, arcname=system_id)
-    for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"))[:-3]:
+    src = admin_mod.SYSTEMS_DIR / system_id
+    _tar_to(out, src, system_id)
+    for stale in sorted(SYSTEM_ASIDE_DIR.glob(f"{system_id}-*.tar.gz"),
+                        key=_natural_key)[:-3]:
         stale.unlink()
     return out
 
@@ -305,9 +342,8 @@ def stash_core(version: str, keep: int = 2) -> Path:
     out = CORE_ROLLBACK_DIR / f"app-{version}.tar.gz"
     if out.exists():
         return out
-    with tarfile.open(out, "w:gz") as tar:
-        tar.add(APP_PAYLOAD, arcname=APP_PAYLOAD.name)
-    for stale in sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"))[:-keep]:
+    _tar_to(out, APP_PAYLOAD, APP_PAYLOAD.name)
+    for stale in sorted(CORE_ROLLBACK_DIR.glob("app-*.tar.gz"), key=_natural_key)[:-keep]:
         stale.unlink()
     return out
 
@@ -328,9 +364,4 @@ def tunnel_running(repo_root: Path) -> bool:
         pid = int(pid_file.read_text().strip())
     except (OSError, ValueError):
         return False
-    try:
-        import os
-        os.kill(pid, 0)
-        return True
-    except (ProcessLookupError, PermissionError, ValueError):
-        return False
+    return _pid_alive(pid)
