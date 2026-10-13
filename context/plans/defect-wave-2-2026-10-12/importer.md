@@ -78,3 +78,22 @@ afterwards, 404 confirmed); every "ZZ importer …" actor deleted. Deployed code
 Also seen (outside this wave): on the **update** path an invalid change (blank name) does not
 throw in Foundry 14 — the client toasts a validation error and the update is dropped — so the
 importer counted the actor `updated` and stamped its new `contentHash`; a re-run would skip it.
+
+## Forward fix and live re-check (FIX-3, 2026-10-13)
+
+Branch `fix2/importer-live-2026-10-13`, commit d6f5e9ea, merged 589cdeb0. `importActors` now looks up
+`game.actors.get(idForSlug(slug))` before the `keepId` create and never sends a create over a held
+id: same slug → "created concurrently by another GM tab — re-run"; any other holder →
+`id <id> is already held by Actor "<name>" — not overwritten`. The node stub now replaces on a held
+id, as Foundry 14.369 does. Gate 116 tests, all 20 modules green. Module installed
+(`make foundry-importer-install`), GM tab reloaded, no restart (no module.json change).
+Residual, documented in the README: two creates sent in the same instant, before either broadcast
+arrives, still leave one actor holding the later tab's identical data.
+
+| item | result | evidence |
+|---|---|---|
+| AC-2 (held id, no slug) | pass | pre-created `ZZ race` (bio PRE) at `idForSlug('zz-race')` = `ooNRun34HfNNHVlU`; import `only:['zz-race']` → `created:[]`, `failed:[{slug:'zz-race', error:'id ooNRun34HfNNHVlU is already held by Actor "ZZ race" — not overwritten'}]`; same object, bio PRE, createdTime unchanged, no create/delete hook |
+| AC-2 (other tab mid-run) | pass | import `only:['zz-a','zz-race2']`; a `createActor` hook on `zz-a` created `ZZ other tab` (slug `zz-race2`) at `idForSlug('zz-race2')` → `created:['zz-a']`, `failed:[{slug:'zz-race2', error:'created concurrently by another GM tab — re-run'}]`; the other tab's actor kept (name, bio OTHER), one holder, one `zz-race2` |
+| AC-2 (plain create / re-run) | pass | `zz-a` created at `8cDy8YxfRy7kYarW` === `idForSlug('zz-a')`; a re-run `only:['zz-race2']` → `updated:['zz-race2']` in place, same id |
+
+Staged `zz-importer-actors.json` deleted (404 confirmed); all three ZZ actors deleted.
