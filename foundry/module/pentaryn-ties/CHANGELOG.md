@@ -138,8 +138,9 @@ record with the same data and one macro results. Pinned by `test/review-macro-ra
 Documented (declared, no table-visible change): the attribute registry and the knowledge/belief
 stores queue writes **per tab**, not across the two GM tabs. A Review-panel save in the GM's browser
 racing an `A.update` from the bridge tab rewrites the whole setting and the second write wins; a
-setting cannot be claimed, so no redesign. The comments in `attributes.mjs` and `settings.mjs` and the
-README's "who writes" section no longer say otherwise. Pinned by `test/review-queue-per-tab.test.mjs`.
+setting cannot be claimed, so no redesign. The comments in `attributes.mjs`, `settings.mjs` and
+`review-ui.mjs`, the README's "who writes" section and the Gotchas in
+`context/foundry/attribute-review.md` no longer say otherwise. Pinned by `test/review-queue-per-tab.test.mjs`.
 ties-core-U2.
 
 Fixed (declared): several attribute links or unlinks on one actor made together (a backstory script's

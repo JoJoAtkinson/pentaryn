@@ -44,3 +44,19 @@ test("ties-core-U2: the README's who-writes section says the setting queues are 
   assert.match(section, /per tab/i);
   assert.match(section, /second write wins/i);
 });
+
+test("ties-core-U2: the Review panel's header comment says the queue is per tab and a bridge-tab write races", () => {
+  const src = read("review-ui.mjs");
+  assert.doesNotMatch(src, /can never read-modify-write over each other/);
+  const c = commentBefore(src, "The ticked boxes live in a user flag");
+  assert.match(c, /per tab/i);
+  assert.match(c, /second write wins/i);
+});
+
+test("ties-core-U2: the Claude-facing use-doc says registry writes are queued per tab and cross-tab is last-write-wins", () => {
+  const doc = readFileSync(new URL("../../../../context/foundry/attribute-review.md", import.meta.url), "utf8");
+  assert.doesNotMatch(doc, /run one after the other, each on the latest list/);
+  const gotchas = doc.slice(doc.indexOf("## Gotchas"));
+  assert.match(gotchas, /queued per tab/i);
+  assert.match(gotchas, /second write wins/i);
+});
