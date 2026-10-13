@@ -3,6 +3,7 @@
 import * as core from "../feedback-core.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { manifestOf, pinJSON } from "./kit/harness.mjs";
 
 const ROOT = new URL("..", import.meta.url);
@@ -163,6 +164,23 @@ test("historyMax: clamps to 20..1000; junk is the default 200", () => {
   for (const [input, want] of table) assert.equal(core.historyMax(input), want, String(input));
 });
 
+test("feedback-M7: one actionsDefault — settings row, recorder fallback and historyMax agree", async () => {
+  assert.equal(LIMITS.actionsDefault, 200);
+  // Imported here, not at the top, so the bare-core purity proof above still loads core alone.
+  const { SETTINGS } = await import("../settings.mjs");
+  assert.equal(SETTINGS.find(r => r.key === "historySize").default, LIMITS.actionsDefault);
+  assert.equal(core.historyMax(undefined), LIMITS.actionsDefault);
+  const recorder = readFileSync(new URL("recorder.mjs", ROOT), "utf8");
+  assert.match(recorder, /historySize: \(\) => LIMITS\.actionsDefault/);
+});
+
+test("feedback-M8: the recorder's sessionStorage state is `persisted`, not a second `store` beside the report store()", () => {
+  const recorder = readFileSync(new URL("recorder.mjs", ROOT), "utf8");
+  assert.doesNotMatch(recorder, /\b(?:const|let|var)\s+store\b/);
+  assert.doesNotMatch(recorder, /\bstore\.(?:key|timer|dirty)\b/);
+  assert.match(recorder, /^const persisted = \{ key: null, timer: null, dirty: false \};$/m);
+});
+
 test("ringPush keeps the newest max entries, oldest dropped from the front", () => {
   const ring = [];
   for (let i = 1; i <= 7; i++) core.ringPush(ring, { i }, 3);
@@ -246,6 +264,15 @@ test("buildReport: schema v1 with every key in file order", () => {
   assert.deepEqual(r.history, []);
   assert.deepEqual(r.module, { id: core.MODULE, version: core.VERSION });
   assert.equal(sample({ draft: { category: "wat", text: "t" } }).category, "bug");
+});
+
+test("feedback-M2: buildReport keeps the player's text verbatim (clipped, not redacted)", () => {
+  assert.equal(core.buildReport({ id: ID, t: 1, draft: { text: "password=hunter2" } }).text, "password=hunter2");
+});
+
+test("feedback-M2: a failed section's error is redacted under sectionErrors", () => {
+  const r = sample({ snapshot: { world: { error: "world broke token=abcdefghijklmnop" }, chat: { error: "GET /chat?sid=x failed" } } });
+  assert.deepEqual(r.sectionErrors, { chat: "GET /chat?[redacted] failed", world: "world broke token=[redacted]" });
 });
 
 test("buildReport: every snapshot section in a shape validateReport accepts; failures under sectionErrors", () => {
@@ -487,4 +514,15 @@ test("golden report.json: buildReport → fitReport → normaliseReport, as the 
   const filed = core.normaliseReport(fitted, { user: { id: "player0000000001", name: "Caven's player", role: 1, isGM: false, character: { id: "caven00000000001", name: "Caven" } } });
   assert.deepEqual(core.validateReport(filed), { ok: true });
   pinJSON("report", filed, import.meta.url);
+});
+
+test("ACTION_KINDS covers every `kind: \"…\"` the recorder and core push, and nothing else (feedback-EXT-6)", () => {
+  assert.ok(Array.isArray(core.ACTION_KINDS) && Object.isFrozen(core.ACTION_KINDS), "ACTION_KINDS is a frozen array");
+  const used = new Set();
+  for (const file of ["recorder.mjs", "feedback-core.mjs"]) {
+    for (const [, kind] of readFileSync(new URL(file, ROOT), "utf8").matchAll(/\bkind:\s*"([^"]+)"/g)) used.add(kind);
+  }
+  for (const kind of used) assert.ok(core.ACTION_KINDS.includes(kind), `"${kind}" is pushed but missing from ACTION_KINDS`);
+  for (const kind of core.ACTION_KINDS) assert.ok(used.has(kind), `ACTION_KINDS lists "${kind}" but nothing pushes it`);
+  assert.equal(new Set(core.ACTION_KINDS).size, core.ACTION_KINDS.length, "no duplicates");
 });

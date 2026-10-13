@@ -33,6 +33,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { baseActorOf } from "./ties-adapter.mjs";
 import { readFlag } from "./lib/flags.mjs";
+import { resolveRef } from "./lib/resolve.mjs";
 import {
   REGISTRY_SETTING,
   ATTRIBUTES_FLAG,
@@ -44,12 +45,14 @@ import {
   planEnsure,
   derivedNamespace,
   clampAttribute,
+  planKindIdRepairs,
   readRegistry,
   deriveAttributes,
   attributeIdsFor,
   readLore,
   withAncestors,
   ancestorsOf,
+  indexRegistry,
   wouldCycle,
   KNOWLEDGE_SETTING,
   readKnowledge,
@@ -75,8 +78,12 @@ import { setting, knowledgeStore } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
-/** The derived namespaces' labels (literal keys). */
-const NS_LABEL = Object.freeze({
+/**
+ * The derived namespaces' labels (literal keys). Exported for the guard test
+ * (test/review-derived-ns.test.mjs): every DERIVED_NAMESPACES entry needs a key here, in
+ * lang/en.json, an icon in DERIVED_ICONS and a slot in deriveAttributes (ext-2).
+ */
+export const NS_LABEL = Object.freeze({
   type: "PENTARYN_TIES.attributes.ns.type",
   species: "PENTARYN_TIES.attributes.ns.species",
   background: "PENTARYN_TIES.attributes.ns.background",
@@ -167,13 +174,14 @@ export const iconForCategory = category => {
   return CATEGORY_ICONS[key] ?? CATEGORY_ICONS[CATEGORY_ALIASES[key]] ?? CATEGORY_ICONS.default;
 };
 
-const DERIVED_ICONS = {
+/** Art for a derived row, one per DERIVED_NAMESPACES entry — guarded with NS_LABEL (ext-2). */
+export const DERIVED_ICONS = Object.freeze({
   type: "icons/creatures/abilities/paw-print-pair-purple.webp",
   species: "icons/environment/people/group.webp",
   background: "icons/sundries/books/book-worn-brown.webp",
   size: "icons/tools/scribal/lens-blue.webp",
   kind: "icons/creatures/abilities/paw-print-orange.webp"
-};
+});
 
 /* -------------------------------------------- */
 /*  The registry                                */
@@ -227,13 +235,18 @@ async function saveRegistry(list) {
 }
 
 /**
- * **Every registry write runs one at a time.** Each write reads the whole list, changes it, and
- * writes the whole list back; the local value only updates when the server answers. Two writes in
- * flight together (a field save then a "Reviewed" click, two lore fields in quick succession, a
- * panel save racing Claude's `A.update`) would each read the old list and the second would
- * silently undo the first. The read happens INSIDE the queued function, after the previous write
- * has landed. ⚠ Never call a serialised function from inside another one — it would wait on
- * itself. `fn` is run even if the previous write threw, and its own result/throw is returned.
+ * **Every registry write from this client runs one at a time.** Each write reads the whole list,
+ * changes it, and writes the whole list back; the local value only updates when the server answers.
+ * Two writes in flight together on one client (a field save then a "Reviewed" click, two lore fields
+ * in quick succession) would each read the old list and the second would silently undo the first.
+ * The read happens INSIDE the queued function, after the previous write has landed. ⚠ Never call a
+ * serialised function from inside another one — it would wait on itself. `fn` is run even if the
+ * previous write threw, and its own result/throw is returned.
+ *
+ * ⚠ The queue is an in-memory chain: it protects writes from one client only (ties-core-U2). A
+ * Review-panel save in the GM's browser racing Claude's `A.update` in the bridge tab is still a
+ * read-modify-write of the whole setting with a one-round-trip window and no server-side merge, so
+ * the second write wins. A world setting cannot be claimed or compare-and-set written; no redesign.
  */
 let writeChain = Promise.resolve();
 function serial(fn) {
@@ -260,6 +273,7 @@ function serial(fn) {
  * | `collision` | that name or id is already taken; `existing` is the entry |
  * | `cycle` | the parent would make the entry its own ancestor |
  * | `invalid` | no actor, or a derived id where an entry was required |
+ * | `noLore` | the attribute has no (matching) lore rows |
  * | `writeFailed` | Foundry refused or failed the write |
  *
  * ⚠ `{ ok: false }` is an object, so it is **truthy** — test `.ok`, never the result itself.
@@ -368,15 +382,23 @@ async function createNow(title, opts) {
  *   `{ok:false, reason:"ambiguous", candidates}` | `{ok:false, reason:"collision", existing}` when
  *   the title's id belongs to an entry that has since been **renamed** to something else.
  */
-export async function ensureAttribute(title, opts = {}) {
-  const plan = planEnsure(title, registry());
-  if (plan.action === "existing") return { ok: true, entry: plan.entry, existed: true };
-  if (plan.action === "refuse") {
-    const { action, reason, ...rest } = plan;
-    return fail(reason, rest);
-  }
-  const made = await createAttribute(title, opts);
-  return made.ok ? { ...made, existed: false } : made;
+export function ensureAttribute(title, opts = {}) {
+  /*
+   * EC-2 [declared]: the whole of it runs in the queue — planned from the registry read INSIDE
+   * `serial()`, then the unqueued `createNow` (never `createAttribute`, which would wait on
+   * itself). Planned outside, two ensures for one new title both planned "create" and the second
+   * answered `collision` instead of `existed: true`.
+   */
+  return serial(async () => {
+    const plan = planEnsure(title, registry());
+    if (plan.action === "existing") return { ok: true, entry: plan.entry, existed: true };
+    if (plan.action === "refuse") {
+      const { action, reason, ...rest } = plan;
+      return fail(reason, rest);
+    }
+    const made = await createNow(title, opts);
+    return made.ok ? { ...made, existed: false } : made;
+  });
 }
 
 /**
@@ -420,6 +442,27 @@ async function repairIconsNow() {
   }
   if (fixed) await saveRegistry(list);
   return fixed;
+}
+
+/**
+ * R1 [declared], one-shot: rewrite the dead `kind:` rows stored while `clampAttribute` lowercased
+ * the slug (`planKindIdRepairs` decides which) to the actor id they meant, and any child's `parent`
+ * that named the old id with it. A dead row with no single actor to match is left alone. GM only;
+ * → how many rows were rewritten.
+ */
+export const repairKindIds = () => serial(repairKindIdsNow);
+
+async function repairKindIdsNow() {
+  if (!game.user?.isGM) return 0;
+  const list = registry();
+  const fixes = planKindIdRepairs(list, (game.actors?.contents ?? []).map(a => a.id));
+  if (!fixes.length) return 0;
+  const to = new Map(fixes.map(f => [f.from, f.to]));
+  for (const entry of list) {
+    if (to.has(entry.id)) entry.id = to.get(entry.id);
+    if (to.has(entry.parent)) entry.parent = to.get(entry.parent);
+  }
+  return (await saveRegistry(list)) ? fixes.length : 0;
 }
 
 /**
@@ -891,10 +934,17 @@ async function writeLinks(actor, { authored = null, off = null }) {
  * so a typo cannot spawn a link to nothing. To create-if-missing, `ensureAttribute` first: two
  * explicit calls is the point.
  *
+ * Runs through `serial()` with the flag reads inside it (ties-core-U3): a backstory script's
+ * `Promise.all` of several links on one actor lands every link, where each used to read the flags
+ * before the others' writes came back and the last write won. ⚠ Never call it from inside a
+ * serialised function — it would wait on itself.
+ *
  * → `{ok:true, id, actorId, added:[…], unsuppressed:[…]}` (both empty = already linked, still ok) |
  *   `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function linkAttribute(actor, ref) {
+export const linkAttribute = (actor, ref) => serial(() => linkNow(actor, ref));
+
+async function linkNow(actor, ref) {
   if (!game.user?.isGM) return fail("notGM");
   const subject = subjectOf(actor);
   if (!subject) return fail("invalid");
@@ -927,12 +977,15 @@ export async function linkAttribute(actor, ref) {
  *
  * `ref` is an id, a name, or any id the actor carries — including a **dangling** one whose entry
  * is gone, which is how `A.broken()`'s `dangling` rows are cleaned up. Unlinking something the
- * actor does not carry is `{ok:true, removed:[], suppressed:[]}`, not an error.
+ * actor does not carry is `{ok:true, removed:[], suppressed:[]}`, not an error. Queued through
+ * `serial()` like `linkAttribute`, so links and unlinks made together on one actor all land.
  *
  * → `{ok:true, id, actorId, removed:[…], suppressed:[…]}` |
  *   `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function unlinkAttribute(actor, ref) {
+export const unlinkAttribute = (actor, ref) => serial(() => unlinkNow(actor, ref));
+
+async function unlinkNow(actor, ref) {
   if (!game.user?.isGM) return fail("notGM");
   const subject = subjectOf(actor);
   if (!subject) return fail("invalid");
@@ -1000,13 +1053,14 @@ export function brokenAncestry(actor, kindResolver = null) {
   // the resolver is injected, never imported — `study.mjs` imports THIS file, so reaching back
   // for `kindActorOf` would close a cycle
   const has = new Set(attributeIdsOf(actor, kindResolver));
+  const index = indexRegistry(reg); // one index per call, not one per carried id (ties-core-U5)
   const bad = [];
   for (const id of has) {
     if (!live.has(id) && !derivedNamespace(id)) {
       bad.push({ id, missing: null, dangling: true });
       continue;
     }
-    for (const parent of ancestorsOf(id, reg)) {
+    for (const parent of ancestorsOf(id, index)) {
       if (!has.has(parent)) bad.push({ id, missing: parent });
     }
   }
@@ -1026,12 +1080,13 @@ export function staleCarriers(ref) {
   const reg = registry();
   const id = resolveAttrRef(ref, reg).id;
   if (!id) return [];
-  const wanted = new Set(withAncestors(id, reg));
+  const index = indexRegistry(reg); // one index per sweep, not one per actor link (ties-core-U5)
+  const wanted = new Set(withAncestors(id, index));
   const out = [];
   for (const actor of game.actors?.contents ?? []) {
     const authored = flagList(actor, ATTRIBUTES_FLAG);
     if (!authored.includes(id)) continue;
-    const extra = authored.filter(x => !wanted.has(x) && ancestorsOf(x, reg).length === 0 && x !== id);
+    const extra = authored.filter(x => !wanted.has(x) && ancestorsOf(x, index).length === 0 && x !== id);
     const missing = [...wanted].filter(x => !authored.includes(x));
     if (extra.length || missing.length) out.push({ actor, extra, missing });
   }
@@ -1156,14 +1211,25 @@ export const describeRef = ref => {
  * `attr:<attrId>:<loreId>` and titled `<entry> — <row label>`, exactly as the cascade would file it,
  * because the Known tab and the Look window join on that key and that source.
  *
- * @param {Actor} character
+ * @param {Actor|string} character  an Actor, or an id / uuid / exact name / token resolving to the
+ *   world actor (R3); a missing one, or anything that resolves to nothing, is refused `invalid` (M10),
+ *   never a throw
  * @param {*} attrRef  an attribute id or title
  * @param {"all"|string|string[]} [loreIds]  which rows (default: every row)
- * @returns {Promise<{ ok: true, keys: string[] } | { ok: false, reason }>}
+ * @returns {Promise<{ ok: true, keys: string[] } | { ok: false, reason }>} — reason is
+ *   `notGM` | `invalid` | `notFound` (attribute) | `noLore` | `writeFailed` (the update was refused, R8)
  */
 export async function markLearned(character, attrRef, loreIds = "all", { now = Date.now() } = {}) {
   if (!game.user?.isGM) return fail("notGM");
-  if (!character) return fail("notFound");
+  if (!character) return fail("invalid"); // no actor (M10)
+  if (character.documentName !== "Actor") {
+    try {
+      character = resolveRef(character, "actor", { base: true, required: false });
+    } catch {
+      character = null; // AMBIGUOUS / BAD_ARGS
+    }
+    if (!character) return fail("invalid");
+  }
   const attrId = resolveAttribute(attrRef);
   if (!attrId) return fail("notFound");
   const entry = describeAttribute(attrId);
@@ -1174,7 +1240,12 @@ export async function markLearned(character, attrRef, loreIds = "all", { now = D
   for (const row of rows) {
     granted[attrFactKey(attrId, row.id)] = { text: row.text, when: now, icon: entry.icon, source: `${entry.title} — ${row.label}` };
   }
-  await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+  try {
+    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+  } catch (err) {
+    log.warn(`mark as learned failed`, err); // R8
+    return fail("writeFailed");
+  }
   return { ok: true, keys: rows.map(r => attrFactKey(attrId, r.id)) };
 }
 

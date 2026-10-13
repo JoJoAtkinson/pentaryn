@@ -1,6 +1,11 @@
 /**
- * pentaryn-prompts core — hashes, prompt text, HTML stripping, previews, relation text.
- * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
+ * pentaryn-prompts core — hashes and call ids; prompt text (normalising, enricher and HTML stripping,
+ * previews, the built description, nameplates, dates); loose name equality; relation text and id
+ * order; and three path decisions: the crop decision, a spec file's Data path and an image's fetch URL.
+ * PURE: no Foundry global. Split out of geometry-core.mjs, which re-exports the hash, text and
+ * relation names. The rest are not on that barrel: cropsDecision (gather.mjs) and specFileUrl
+ * (replace.mjs) are imported from here, sameName is imported from here (core/pool.mjs), and
+ * build-core.mjs re-exports all three; assetUrl is imported from here (crops-adapter.mjs).
  */
 
 import { band } from "./grid.mjs";
@@ -137,6 +142,12 @@ export function nameplate(text, sizeKey) {
 export function isoDate(ms) {
   const d = new Date(Number(ms));
   return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : "";
+}
+
+/** Loose name equality for compendium lookups: case, punctuation and word order ignored. */
+export function sameName(a, b) {
+  const words = s => String(s ?? "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean).sort().join(" ");
+  return words(a) === words(b);
 }
 
 /** One relation as the text shows it: `p2 10 SW reach`, `p6 40 S door`. */

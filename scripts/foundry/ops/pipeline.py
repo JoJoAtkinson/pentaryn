@@ -13,7 +13,7 @@ import signal
 import subprocess
 import sys
 
-from . import config as cfg
+from . import config as cfg, modules
 from .modules import install
 from . import service
 from .out import FAIL, OK, say as _say
@@ -66,7 +66,6 @@ def install_importer() -> int:
     stages actors.json too, which sits public in Data/ until `foundry-clean`. A code-only deploy of
     the importer needs neither. An actors.json some earlier `stage` left is not touched.
     """
-    from . import modules
     spec = cfg.MODULES["importer"]
     if (rc := modules.check("importer")) != 0:
         return rc
@@ -95,7 +94,11 @@ def check_world() -> int:
 
 def clean_only() -> int:
     """Delete the staged file and assert it actually went."""
-    cfg.ACTORS_STAGED.unlink(missing_ok=True)
+    try:
+        cfg.ACTORS_STAGED.unlink(missing_ok=True)
+    except OSError as e:
+        _say(f"✗ {cfg.ACTORS_STAGED} still on disk — check permissions ({e.strerror or e})")
+        return FAIL
     if cfg.ACTORS_STAGED.exists():
         _say(f"✗ {cfg.ACTORS_STAGED} still on disk — check permissions")
         return FAIL

@@ -4,7 +4,7 @@
  */
 
 import * as core from "./combat-core.mjs";
-import { MODULE } from "./combat-core.mjs";
+import { ARGON, MODULE } from "./combat-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -129,8 +129,8 @@ export async function resetOffhandMode(activity, attackMode, { enabled = true } 
 /** The active Argon weapon set's primary weapon id, if any. */
 export function setPrimaryId(actor) {
   try {
-    const sets = actor.getFlag("enhancedcombathud", "weaponSets");
-    const active = actor.getFlag("enhancedcombathud", "activeWeaponSet") || "1";
+    const sets = actor.getFlag(ARGON, "weaponSets");
+    const active = actor.getFlag(ARGON, "activeWeaponSet") || "1";
     const uuid = sets?.[active]?.primary;
     return uuid ? uuid.split(".").pop() : null;
   } catch { return null; }
@@ -158,13 +158,18 @@ function rollFormula(actor, formula) {
   }
 }
 
+/** Whether this item is the actor's Multiattack (its name starts with the word "Multiattack"). */
+export function isMultiattackItem(item) {
+  return /^multiattack\b/i.test(item?.name ?? "");
+}
+
 /** The actor's parsed Multiattack plan, override first. null when there is none or it won't parse. */
 export function multiattackOf(actor) {
   if (!actor) return null;
   const items = actor.items?.contents ?? [];
   const override = core.overridePlan(actor.getFlag?.(MODULE, "multiattack"), items.map(i => i.id));
   if (override) return { plan: override, total: override.reduce((s, r) => s + r.count, 0), groups: override.map(r => ({ count: r.count, choices: [r.itemId] })), source: "flag" };
-  const ma = items.find(i => /^multiattack\b/i.test(i.name ?? ""));
+  const ma = items.find(i => isMultiattackItem(i));
   if (!ma) return null;
   const parsed = core.parseMultiattack(ma.system?.description?.value ?? "",
     items.map(i => ({ id: i.id, name: i.name, isAttack: !!attackActivityOf(i) })),
@@ -351,12 +356,17 @@ export function multiattackFor(actor, { enabled = true } = {}) {
   return usesMultiattack(actor) && enabled ? multiattackOf(actor) : null;
 }
 
+/** The actor's Enhanced Dual Wielding flag (dnd5e's Dual Wielder feat) — the one read of it (combat-core-EXT-6). */
+export function enhancedDualWieldingOf(actor) {
+  return !!actor.getFlag?.("dnd5e", "enhancedDualWielding");
+}
+
 /** core.fullAttackPlanFrom with this actor's weapon shapes and Enhanced Dual Wielding flag. */
 export function fullAttackPlanOf(actor, { weaponId = null, turn = null, inCombat = false, multiattack = null, count = 1, pick = null } = {}) {
   if (multiattack) return core.fullAttackPlanFrom({ weaponId, turn, inCombat, multiattack, count, pick });
   const weapons = weaponsOf(actor);
   return core.fullAttackPlanFrom({ weapons, weaponId, turn, inCombat, count, pick,
-    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
+    enhancedDualWielding: enhancedDualWieldingOf(actor) });
 }
 
 /**
@@ -413,7 +423,7 @@ export function followUpsFor(actor, { bonusFree = true } = {}) {
   const pam = features.has("polearm-master") ? featureItem(actor, "polearm-master") : null;
   const list = core.followUps({
     turn, weapons, features,
-    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding"),
+    enhancedDualWielding: enhancedDualWieldingOf(actor),
     bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn,
     poleStrikeId: pam && attackActivityOf(pam) ? pam.id : null
   });
@@ -421,11 +431,6 @@ export function followUpsFor(actor, { bonusFree = true } = {}) {
   for (const f of list) {
     if (f.kind === "offhand") f.via = core.offhandVia({ weapon: weapons.find(w => w.id === f.weaponId) ?? null, turn, offered: list });
   }
-  // Usability (area 3, C3): Flurry with no Focus left stays on the bar, greyed with its reason, instead of
-  // vanishing — a player who sees Martial Arts but no Flurry wonders whether the feature broke.
-  if (ctx.isOwnTurn && unarmed && features.has("monks-focus") && (focus ?? 0) < 1 && bonusFree && !turn.bonusUsed
-    && !turn.followUps.includes("flurry") && !turn.followUps.includes("martial-arts")) {
-    list.unshift({ kind: "flurry", weaponId: unarmed.id, count: features.has("heightened-focus") ? 3 : 2, disabled: "focus" });
-  }
+  // Flurry with no Focus left comes back greyed (`disabled: "focus"`) from core.followUps itself (combat-core-EXT-12).
   return list;
 }

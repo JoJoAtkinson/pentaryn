@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/election.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/election.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Who acts. Every client sees the same hook; usually exactly one must act on it. The predicates
  * below are DIFFERENT truth tables on purpose — a call site keeps the one it uses today:
@@ -11,6 +11,8 @@
  *                         the GM account (the MCP bridge tab plus a GM browser tab) are both
  *                         activeGM.isSelf
  */
+
+import { codedError } from "./errors.mjs";
 
 export function isActiveGM({ g = globalThis } = {}) {
   return g.game?.users?.activeGM?.isSelf === true;
@@ -44,13 +46,17 @@ function getPath(obj, path) {
  * Elect exactly one client to act on a broadcast document event. Last writer wins: each candidate
  * stamps its socket id on the document and, once the writes have settled, only the client whose id
  * is still there proceeds. Every client sees the server's one order of writes, so they all agree.
- * A client arriving after a claim exists stands down at once. No socket id → act.
+ * A client arriving after a claim exists stands down at once. No socket id, or a null or id-less
+ * doc → true (act: there is nothing to elect on; pentaryn-aoe's glue test -30 pins it).
+ * If the claim write fails: a document deleted under us (the reread finds no id) → false, nobody
+ * acts; otherwise it rejects `INTERNAL: claim <key> on <uuid>: <message>` (1.2.0 KIT-R3).
  * (pentaryn-aoe's claimMessage, generalised to any document and flag scope.)
  *
  * @param {object} doc
  * @param {string} key   one claim per job ("resolve", "selfApply")
  * @param {{ scope: string, settleMs?: number, reread?: (doc) => object, g?: object }} opts
  * @returns {Promise<boolean>} true on the one client that should do the work
+ * @throws {PentarynError} INTERNAL when the claim write fails and the document still exists
  */
 export async function claimDocument(doc, key, { scope, settleMs = 750, reread, g = globalThis } = {}) {
   const me = g.game?.socket?.id;
@@ -58,7 +64,14 @@ export async function claimDocument(doc, key, { scope, settleMs = 750, reread, g
   const path = `flags.${scope}.claims.${key}`;
   const held = getPath(doc, path);
   if (held) return held === me;
-  await doc.update({ [path]: me });
+  try {
+    await doc.update({ [path]: me });
+  } catch (err) {
+    // Deleted under us? Only a reread or a collection can say; without either, assume it is there.
+    const now = reread ? reread(doc) : doc.collection?.get ? doc.collection.get(doc.id) : doc;
+    if (!now?.id) return false;
+    throw codedError("INTERNAL", `claim ${key} on ${doc.uuid ?? doc.id}: ${err?.message ?? err}`);
+  }
   await new Promise(resolve => g.setTimeout(resolve, settleMs));
   const fresh = reread ? reread(doc) : doc.collection?.get?.(doc.id) ?? doc;
   return getPath(fresh ?? {}, path) === me;

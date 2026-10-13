@@ -105,6 +105,7 @@
   "parseLedgerKey",
   "pickNotebook",
   "planEnsure",
+  "planKindIdRepairs",
   "planStep",
   "priorOf",
   "readAttrBeliefs",

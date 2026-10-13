@@ -31,7 +31,7 @@ test("the registry recorded golden/hooks.json less the entry's own ready (row 19
 
 test("ctx.uninstall(): no hook, no pointermove listener, the patch undone, the sweep timer dropped", () => {
   F.fire("ready");                                                // the lifecycle ready runs (and is gone)
-  Hooks.callAll("updateToken", {}, {}, {}, "u");                 // a sweep timer is pending
+  Hooks.callAll("updateToken", {}, { actorId: "x" }, {}, "u");     // a sweep timer is pending
   assert.ok(F.D.listeners.some(l => l.type === "pointermove"));
   W.ctx.uninstall();
   assert.deepEqual(F.listeners(), {}, JSON.stringify(F.listeners()));
@@ -63,11 +63,30 @@ test("hot patch after ready: uninstall(), then re-import both entries — every 
   const before = game.modules.get("pentaryn-transform").api;
   await import("../transform.mjs?v=2");
   await import("../hud.mjs?v=2");
-  assert.deepEqual(W.reg.ids().map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 18));
+  // Past ready, sweep.mjs sweeps at once instead of registering row 17's ready (EC-4).
+  assert.deepEqual(W.reg.ids().map(r => ({ kind: r.kind, name: r.name })), golden.filter((_, i) => i !== 17 && i !== 18));
   const api = game.modules.get("pentaryn-transform").api;
   assert.notEqual(api, before, "a new API object");
   assert.equal(game.pentaryn.transform, api);
   assert.equal(typeof api.starry.assume, "function", "hud.mjs republished with Starry's rows");
   assert.equal(F.TokenDocument._preUpdateOperation.pentarynUnwrapped, true, "the patch is back");
   assert.equal(F.D.listeners.filter(l => l.type === "pointermove").length, 1);
+});
+
+test("[declared] R3 ctx.uninstall(): a feature whose uninstall throws logs a warning naming it, and every other feature, hook and the patch are still undone", () => {
+  let probeOff = 0;
+  W.installFeature({ install() {}, uninstall() { probeOff += 1; } }, "probe-older");  // runs after the throw
+  W.installFeature({ install() {}, uninstall() { throw new Error("boom"); } }, "probe");
+  assert.ok(W.reg.ids().length > 0);
+  const warn = mock.method(console, "warn", () => {});
+  try {
+    W.ctx.uninstall();
+    const lines = warn.mock.calls.map(c => [c.arguments[0], c.arguments[1]?.message]);
+    assert.deepEqual(lines, [["pentaryn-transform | probe: uninstall failed", "boom"]]);
+  } finally { warn.mock.restore(); }
+  assert.equal(probeOff, 1, "an older feature still uninstalled");
+  assert.equal(W.ctx.contributions.length, 0);
+  assert.equal(W.reg.ids().length, 0, "every hook removed");
+  assert.equal(F.TokenDocument._preUpdateOperation, coreOp, "the patch undone");
+  assert.equal(F.D.listeners.filter(l => l.type === "pointermove").length, 0, "hud-panels still uninstalled");
 });

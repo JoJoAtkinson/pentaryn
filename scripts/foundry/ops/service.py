@@ -14,6 +14,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -22,10 +23,18 @@ from scripts.foundry import host
 from . import config as cfg
 from .out import say as _say  # kept for compatibility (test_out.py and older importers)
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover — native Windows; BOSS runs Foundry in WSL
+    fcntl = None  # type: ignore[assignment]
+
 OK, FAIL = 0, 1
 
 # cloudflared's own credential, written by `cloudflared tunnel login`.
 CF_CERT = Path.home() / ".cloudflared/cert.pem"
+# `cloudflared tunnel list/create/route` talk to Cloudflare; a stuck one must not hang
+# `make` (py-ops-ac-4). `tunnel login` has none: it waits on a person in a browser.
+CF_TIMEOUT = 20
 
 # Every probe claims to be a browser, and this is load-bearing rather than cosmetic.
 # Cloudflare 403s a bare `Python-urllib/3.x` at the edge before the request ever
@@ -102,17 +111,6 @@ def is_access_login(code: int, location: str) -> bool:
     return host in ("", cfg.TUNNEL_HOST) and parts.path.startswith("/cdn-cgi/access/login")
 
 
-def world_is_launched(timeout: float = 3.0) -> bool | None:
-    """True if a world is active, False if the server is parked at /setup, None if
-    the server did not answer at all."""
-    code, location = _probe(cfg.FOUNDRY_URL, timeout)
-    if code == 0:
-        return None
-    if code == 302 and "/setup" in location:
-        return False
-    return True
-
-
 # ── update-run lock ───────────────────────────────────────────────────────────
 
 def lock_check() -> int:
@@ -151,6 +149,9 @@ def up() -> int:
     _say("▸ starting Foundry...")
     try:
         host.start()  # Mac: open -a · BOSS: PENTARYN_START_CMD (host.py)
+    except host.HostError as exc:
+        _say(f"✗ {exc}")
+        return FAIL
     except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         _say(f"✗ can't launch Foundry ({host.foundry_app_root()}) — is it installed?")
         return FAIL
@@ -199,7 +200,7 @@ def down() -> int:
 # ── the Cloudflare tunnel ─────────────────────────────────────────────────────
 
 def _tunnel_pid() -> int | None:
-    """The pid from the pidfile, if that process is actually alive."""
+    """The pid from the pidfile, if that process is alive AND is cloudflared."""
     try:
         pid = int(cfg.CF_PID.read_text().strip())
     except (OSError, ValueError):
@@ -210,7 +211,53 @@ def _tunnel_pid() -> int | None:
         os.kill(pid, 0)
     except OSError:
         return None
-    return pid
+    return pid if _is_cloudflared(pid) else None
+
+
+def _is_cloudflared(pid: int) -> bool:
+    """A pidfile outlives its process and the OS hands the number to whatever starts
+    next, so `kill -0` alone would call that process the tunnel — and tunnel-down
+    would SIGTERM it (EC-3). `ps` names the executable (a full path on macOS)."""
+    try:
+        res = subprocess.run(["ps", "-p", str(pid), "-o", "comm="],
+                             capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return Path((res.stdout or "").strip()).name in ("cloudflared", "cloudflared.exe")
+
+
+def _drop_stale_pidfile() -> None:
+    """Called once _tunnel_pid() has said no: any pidfile left is stale."""
+    if cfg.CF_PID.exists():
+        cfg.CF_PID.unlink(missing_ok=True)
+        _say("▸ stale pidfile removed")
+
+
+@contextmanager
+def _tunnel_lock():
+    """Exclusive flock on RUN_DIR/cloudflared.lock (py-ops-ac-3).
+
+    tunnel_up's pidfile check and its pidfile write are seconds apart (`cloudflared
+    tunnel list` sits between them), so two overlapping runs both saw "no tunnel" and
+    both started cloudflared. Holding this across that window makes the second run
+    wait, then see the first one's pidfile and say "already up"."""
+    if fcntl is None:
+        yield
+        return
+    with open(cfg.RUN_DIR / "cloudflared.lock", "a") as fh:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+
+
+def _tunnel_exists() -> bool:
+    """Whether `cloudflared tunnel list` names cfg.TUNNEL_NAME (M9: the one copy of this
+    check). Carries CF_TIMEOUT (py-ops-ac-4); a TimeoutExpired is the caller's to report."""
+    listed = subprocess.run(["cloudflared", "tunnel", "list"],
+                            capture_output=True, text=True, timeout=CF_TIMEOUT)
+    return cfg.TUNNEL_NAME in (listed.stdout or "")
 
 
 def tunnel_up() -> int:
@@ -223,27 +270,32 @@ def tunnel_up() -> int:
         _say(f"▸ tunnel NOT started — {exc}")
         return OK
     cfg.RUN_DIR.mkdir(parents=True, exist_ok=True)
-    if (pid := _tunnel_pid()) is not None:
-        _say(f"▸ tunnel already up (pid {pid})")
-        return OK
-    if not CF_CERT.exists():
-        _say("✗ cloudflared not authenticated — run: make tunnel-setup")
-        return FAIL
-    listed = subprocess.run(["cloudflared", "tunnel", "list"],
-                            capture_output=True, text=True)
-    if cfg.TUNNEL_NAME not in (listed.stdout or ""):
-        _say(f"✗ tunnel '{cfg.TUNNEL_NAME}' doesn't exist — run: make tunnel-setup")
-        return FAIL
+    with _tunnel_lock():   # check → start → pidfile is one step to a concurrent run
+        if (pid := _tunnel_pid()) is not None:
+            _say(f"▸ tunnel already up (pid {pid})")
+            return OK
+        _drop_stale_pidfile()
+        if not CF_CERT.exists():
+            _say("✗ cloudflared not authenticated — run: make tunnel-setup")
+            return FAIL
+        try:
+            exists = _tunnel_exists()
+        except subprocess.TimeoutExpired:
+            _say(f"✗ cloudflared did not answer in {CF_TIMEOUT}s — tunnel not started")
+            return FAIL
+        if not exists:
+            _say(f"✗ tunnel '{cfg.TUNNEL_NAME}' doesn't exist — run: make tunnel-setup")
+            return FAIL
 
-    _say("▸ starting tunnel...")
-    with open(cfg.CF_LOG, "ab") as log:
-        proc = subprocess.Popen(
-            ["cloudflared", "tunnel", "--config", str(cfg.CF_CONFIG),
-             "run", cfg.TUNNEL_NAME],
-            stdout=log, stderr=log, stdin=subprocess.DEVNULL,
-            start_new_session=True,   # survives the make process going away
-        )
-    cfg.CF_PID.write_text(str(proc.pid))
+        _say("▸ starting tunnel...")
+        with open(cfg.CF_LOG, "ab") as log:
+            proc = subprocess.Popen(
+                ["cloudflared", "tunnel", "--config", str(cfg.CF_CONFIG),
+                 "run", cfg.TUNNEL_NAME],
+                stdout=log, stderr=log, stdin=subprocess.DEVNULL,
+                start_new_session=True,   # survives the make process going away
+            )
+        cfg.CF_PID.write_text(str(proc.pid))
     time.sleep(3)
     if _tunnel_pid() is not None:
         _say(f"✓ tunnel up → https://{cfg.TUNNEL_HOST}")
@@ -256,7 +308,7 @@ def tunnel_up() -> int:
 def tunnel_down() -> int:
     pid = _tunnel_pid()
     if pid is None:
-        cfg.CF_PID.unlink(missing_ok=True)
+        _drop_stale_pidfile()
         _say("▸ tunnel already down")
         return OK
     try:
@@ -272,8 +324,10 @@ def tunnel_logs(lines: int = 40) -> int:
     if not cfg.CF_LOG.exists():
         _say(f"no log yet ({cfg.CF_LOG})")
         return OK
-    tail = cfg.CF_LOG.read_text(errors="replace").splitlines()[-lines:]
-    print("\n".join(tail))
+    lines_ = cfg.CF_LOG.read_text(errors="replace").splitlines()
+    tail = lines_[-lines:] if lines > 0 else []   # [-0:] is the whole log (rob-9)
+    if tail:
+        print("\n".join(tail))
     return OK
 
 
@@ -285,15 +339,19 @@ def tunnel_setup() -> int:
     if not CF_CERT.exists():
         if subprocess.run(["cloudflared", "tunnel", "login"]).returncode != 0:
             return FAIL
-    listed = subprocess.run(["cloudflared", "tunnel", "list"],
-                            capture_output=True, text=True)
-    if cfg.TUNNEL_NAME not in (listed.stdout or ""):
-        if subprocess.run(["cloudflared", "tunnel", "create", cfg.TUNNEL_NAME]).returncode != 0:
-            return FAIL
-    routed = subprocess.run(
-        ["cloudflared", "tunnel", "route", "dns", cfg.TUNNEL_NAME, cfg.TUNNEL_HOST],
-        capture_output=True, text=True,
-    )
+    try:
+        if not _tunnel_exists():
+            if subprocess.run(["cloudflared", "tunnel", "create", cfg.TUNNEL_NAME],
+                              timeout=CF_TIMEOUT).returncode != 0:
+                return FAIL
+        routed = subprocess.run(
+            ["cloudflared", "tunnel", "route", "dns", cfg.TUNNEL_NAME, cfg.TUNNEL_HOST],
+            capture_output=True, text=True, timeout=CF_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as exc:
+        _say(f"✗ cloudflared did not answer in {CF_TIMEOUT}s ({' '.join(exc.cmd[1:3])}) "
+             "— setup not complete")
+        return FAIL
     if routed.returncode != 0:
         _say("▸ DNS route already exists (fine)")
     _say("✓ setup complete — now: make vtt-up")

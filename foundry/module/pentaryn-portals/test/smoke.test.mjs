@@ -14,7 +14,7 @@ const EXPORTS = {
   "scene-adapter.mjs": ["configureSceneAdapter", "cardFor", "behaviorOf", "teleportBehaviors", "toAbsolute", "destinationsOf", "snapshot",
     "moveRegionDocs", "lookAt", "folderNames", "recordOf", "partyRecords", "landingPlaces", "carryTo", "confirmParty", "teleportParty",
     "linkRegions", "unlinkRegion"],
-  "card-app.mjs": ["PortalCard", "configureCardApp"],
+  "card-app.mjs": ["PortalCard", "configureCardApp", "SWITCHES"],
   "party.mjs": ["install", "uninstall", "cameThroughPortal", "spreadArrival", "bringFollowers"],
   "badges.mjs": ["install", "uninstall", "drawBadges", "badges", "seen", "editing", "setEditing", "refreshBadgeSight", "samplePoints",
     "badgeAt", "showTip", "hideTip", "openMenu", "closeMenu", "bindBoard", "moveRegion"],
@@ -43,4 +43,12 @@ test("nothing imports the entry; no feature imports another feature", () => {
     assert.equal([...tos].includes("portals.mjs"), false, `${from} imports the entry`);
     if (features.has(from)) for (const to of tos) assert.equal(features.has(to), false, `${from} → ${to}`);
   }
+});
+
+test("EXT-8: cards.mjs unwraps the render hook's html with the kit's htmlRoot, no local rootOf copy", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../cards.mjs", import.meta.url), "utf8");
+  assert.match(src, /import \{[^}]*\bhtmlRoot\b[^}]*\} from "\.\/lib\/api\.mjs";/, "imports htmlRoot from the vendored kit");
+  assert.doesNotMatch(src, /\brootOf\b/, "no local rootOf");
+  assert.doesNotMatch(src, /instanceof HTMLElement/, "no hand-rolled element-or-jQuery unwrap");
 });

@@ -2,12 +2,12 @@
  * Pentaryn Feedback — the API: implementations for the manifest rows, inspect(), selftest().
  *
  * GLUE. May import core, adapters, settings and lib — never a feature file. Feature state reaches
- * this file through `ctx.exposed`: the recorder's rings (`actions`, `errors`) and the reporter's
- * doors (`open`, `submit`, `ingest`, `pending`). The GM reads (`list`, `get`) and `resolve` work on
- * the report files through the shared file store.
+ * this file through `ctx.exposed`: the recorder's rings (`actions`, `errors`) and console wraps
+ * (`consolePatches`), and the reporter's doors (`open`, `submit`, `ingest`, `pending`). The GM
+ * reads (`list`, `get`) and `resolve` work on the report files through the shared file store.
  */
 
-import { HOOKS, MODULE, NS, STATUSES, applyStatus, summaryOf, worldDir } from "./feedback-core.mjs";
+import { HOOKS, LIMITS, MODULE, NS, STATUSES, applyStatus, summaryOf, worldDir } from "./feedback-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import { store } from "./files-adapter.mjs";
@@ -51,14 +51,15 @@ function actorOfString(ref) {
 }
 
 /** Summaries of the reports these users filed, oldest first, the last 20; null when unreadable. */
-async function reportsBy(userIds) {
+async function reportsBy(userIds, ctx) {
   try {
-    return (await readAll())
+    return (await readAll(ctx))
       .filter(r => userIds.has(r?.user?.id))
       .sort((a, b) => (a.t ?? 0) - (b.t ?? 0))
       .slice(-20)
       .map(summaryOf);
-  } catch {
+  } catch (err) {
+    ctx.log.warn("inspect: report folder unreadable", err?.message ?? err);
     return null;
   }
 }
@@ -78,7 +79,7 @@ async function inspect(ref, ctx, { as } = {}) {
   const self = users.find(u => u.id === game.user?.id);
   const visible = users.filter(sees);
   const pending = visible.length || !users.length ? visible.flatMap(u => ctx.exposed.pending?.(u) ?? []) : null;
-  const reports = canRead ? (users.length ? await reportsBy(new Set(users.map(u => u.id))) : []) : null;
+  const reports = canRead ? (users.length ? await reportsBy(new Set(users.map(u => u.id)), ctx) : []) : null;
   return toPlain({
     ...(actor ? { actor, users } : { user: users[0] }),
     pending,
@@ -92,12 +93,15 @@ function selftest(ctx) {
   const tools = ui.controls?.controls?.tokens?.tools ?? {};
   const wrapped = patches().filter(p => p.moduleId === MODULE).map(p => p.adjustments);
   const consoleOn = ctx.setting("captureConsole") === true;
+  // every console wrap the recorder owns (its CONSOLE_PATCHES) → is its adjustments row recorded?
+  const consoleWraps = (ctx.exposed.consolePatches?.() ?? []).map(p => [`console.${p.name}`, wrapped.includes(p.adjustments)]);
   const checks = [
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
     { label: "bug button in the token controls", ok: !!tools.feedback, detail: tools.feedback ? null : "open a scene (the toolbar is built at canvas ready)" },
     { label: "recorder installed", ok: typeof ctx.exposed.actions === "function", detail: ctx.exposed.actions?.().length ?? null },
-    { label: "console wrap matches captureConsole", ok: wrapped.includes("feedback-console-error") === consoleOn, detail: consoleOn },
+    { label: "console wraps match captureConsole", ok: consoleWraps.length > 0 && consoleWraps.every(([, on]) => on === consoleOn),
+      detail: { captureConsole: consoleOn, wraps: Object.fromEntries(consoleWraps) } },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
@@ -105,12 +109,30 @@ function selftest(ctx) {
 
 const isGM = () => game.user?.isGM === true;
 
-/** Every report file of this world, parsed (unreadable files skipped). */
-async function readAll() {
+/**
+ * Every report file of this world, parsed, in file order (unreadable or non-object files skipped,
+ * one warn each, also in file order). Up to LIMITS.readsInFlight GETs run at once.
+ */
+async function readAll(ctx) {
+  const paths = await store().list(worldDir(game.world.id));
+  const got = new Array(paths.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < paths.length) {
+      const i = next++;
+      try {
+        got[i] = { r: await store().get(paths[i]) };
+      } catch (err) {
+        got[i] = { err };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(LIMITS.readsInFlight, paths.length) }, worker));
   const out = [];
-  for (const path of await store().list(worldDir(game.world.id))) {
-    const r = await store().get(path);
-    if (r && typeof r === "object") out.push(r);
+  for (const [i, { r, err }] of got.entries()) {
+    if (err) ctx.log.warn("report file unreadable, skipped", paths[i], err?.message ?? err);
+    else if (r && typeof r === "object" && !Array.isArray(r)) out.push(r);
+    else ctx.log.warn("report file is missing or not a JSON object, skipped", paths[i]);
   }
   return out;
 }
@@ -129,10 +151,10 @@ async function find(id) {
   return { path: pick[0], report };
 }
 
-async function list({ status = "open", limit = 50 } = {}) {
+async function list(ctx, { status = "open", limit = 50 } = {}) {
   if (!isGM()) throw codedError("NOT_GM", "only a GM lists reports");
   if (status !== "all" && !STATUSES.includes(status)) throw codedError("BAD_ARGS", `status ${status}`);
-  const rows = (await readAll())
+  const rows = (await readAll(ctx))
     .filter(r => status === "all" || r.status === status)
     .sort((a, b) => (a.t ?? 0) - (b.t ?? 0));
   const n = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 50;
@@ -144,7 +166,8 @@ async function get({ id } = {}) {
   return (await find(id)).report;
 }
 
-async function resolve(ctx, { id, status, note = "", force = false, dryRun = false } = {}) {
+async function resolve(ctx, opts) {
+  const { id, status, note = "", force = false, dryRun = false } = opts ?? {};   // null → fail(), rob-2
   if (!isGM()) return fail("NOT_GM", "only a GM changes a report's status");
   let found;
   try {
@@ -179,9 +202,9 @@ export function buildApiFor(ctx) {
     open: door("open"),
     submit: door("submit"),
     ingest: door("ingest"),
-    list: (opts = {}) => list(opts),
+    list: (opts = {}) => list(ctx, opts),
     get: (opts = {}) => get(opts),
-    resolve: (opts = {}) => resolve(ctx, opts),
+    resolve: opts => resolve(ctx, opts ?? {}),
   }, {
     contributions: ctx.contributions,
     members: {

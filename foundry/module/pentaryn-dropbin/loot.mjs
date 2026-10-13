@@ -15,12 +15,13 @@
  *
  * The character it loots into is, in order: the actor the window says "you're inspecting as"
  * (Item Piles' recipient, which follows its Change button), else the user's assigned character,
- * else the first player character they own. A player with none sees the button greyed out with
+ * else the first character they own (an actor of Item Piles' character type, its ACTOR_CLASS_TYPE;
+ * `character` without Item Piles). A player with none sees the button greyed out with
  * the reason in its tooltip. A GM with none does not see it.
  */
 
 import { MODULE, lootAllState } from "./loot-core.mjs";
-import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, getActorFlagData, transferEverything, storeOf } from "./piles.mjs";
+import { api as itemPilesApi, actorClassType, isValidItemPile, isItemPileEmpty, getActorFlagData, transferEverything, storeOf, SELECTORS } from "./piles.mjs";
 
 const BTN = "pd-loot-all";
 /** lootAllState's reasons → their full lang keys (literal, so the i18n gate proves each). */
@@ -41,13 +42,15 @@ function recipientFor(app) {
   const own = game.user.character;
   if (usable(own)) return own;
   if (game.user.isGM) return null;
-  return game.actors.find(a => a.type === "character" && usable(a)) ?? null;
+  // Item Piles' character type (as the ledger's delete capture); "character" only without Item Piles.
+  const type = actorClassType() ?? "character";
+  return game.actors.find(a => a.type === type && usable(a)) ?? null;
 }
 
 function footerOf(app) {
   const root = app?.element?.[0] ?? app?.element;
   if (!(root instanceof HTMLElement)) return null;
-  const all = root.querySelectorAll("footer.sheet-footer");
+  const all = root.querySelectorAll(SELECTORS.footer);
   return all[all.length - 1] ?? null;
 }
 
@@ -56,7 +59,7 @@ function stateFor(app, footer) {
   if (!pile || !itemPilesApi()) return { show: false };
   const pileData = getActorFlagData(pile) ?? {};
   const recipient = recipientFor(app);
-  const nativeTakeAll = !!footer?.querySelector("button:not(.pd-loot-all) i.fa-fist-raised");
+  const nativeTakeAll = !!footer?.querySelector(`button:not(.${BTN}) ${SELECTORS.nativeTakeAllIcon}`);
   const state = lootAllState({ pileData, empty: isItemPileEmpty(pile), hasRecipient: !!recipient,
     isGM: game.user.isGM, nativeTakeAll });
   return { ...state, recipient };
@@ -85,8 +88,8 @@ function addButton(app) {
       btn.innerHTML = `<i class="fas fa-hand-holding"></i> ${_loc("PENTARYN_DROPBIN.lootAll.label")}`;
       btn.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); lootAll(app, btn); });
       // Next to the Split buttons: before Close Lid (containers) or Leave, whichever comes first.
-      const anchor = [...footer.querySelectorAll(":scope > button")]
-        .find(b => b.querySelector("i.fa-box, i.fa-sign-out-alt"));
+      const anchor = [...footer.querySelectorAll(SELECTORS.footerButton)]
+        .find(b => b.querySelector(SELECTORS.exitIcon));
       footer.insertBefore(btn, anchor ?? null);
       live.add({ app, btn });
     }

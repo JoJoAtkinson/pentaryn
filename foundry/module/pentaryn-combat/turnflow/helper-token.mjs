@@ -7,6 +7,7 @@ import { DELAYS, MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { isAoeHandle } from "../shapes.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -44,8 +45,6 @@ const onTokenDeleted = (doc) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   reg.on("deleteToken", onTokenDeleted, opts("helper token deleted: reselect your own"));

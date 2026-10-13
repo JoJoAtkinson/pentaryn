@@ -10,7 +10,7 @@
 
 const core = await import("../transform-core.mjs");
 const {
-  MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, findWildShapeItem, stripReason, stripForForm,
+  MODULE, EFFECT_ID, activitiesOf, isWildShapeActivity, findWildShapeItem, stripReason, stripForForm,
   isRevertData, returnLabel, durationSeconds, formatDuration, isExpired, usesLeft, useSyncUpdates,
   carriedConditions, pickRunner, withArticle, formatCR, formSummary, planBonusBar, frontRowItems,
   pruneFavorites, endedInForm, attributeSync, withoutOrigin, grantsFly, shiftBlock, planWithout, CONSTELLATIONS, STARRY_LIGHT,
@@ -58,9 +58,9 @@ const TALO = [
     { system: { uses: { max: 5, spent: 1 } } }),
   feat("starMap00000001", "Star Map", "class", act("sm1", "utility", "hour")),
   feat("spellcasting001", "Spellcasting", "class", {}, { system: { identifier: "spellcasting" } }),
-  feat("returnNormal001", "Return to Normal Form", "class", act("rn1", "utility", "bonus"), { flags: { [MODULE_ID]: { revert: true } } }),
+  feat("returnNormal001", "Return to Normal Form", "class", act("rn1", "utility", "bonus"), { flags: { [MODULE]: { revert: true } } }),
   feat("keptOnPurpose01", "Kept On Purpose", "class", act("kp1", "utility", "bonus", [{ type: "spellSlots", target: "1" }]),
-    { flags: { [MODULE_ID]: { keepInForm: true } } })
+    { flags: { [MODULE]: { keepInForm: true } } })
 ];
 
 const bite = { _id: "mmBite0000000000", name: "Bite", type: "weapon", system: { type: { value: "natural" },
@@ -412,7 +412,7 @@ check("134 effect: id, name, enabled, not transferred", [se._id, se.name, se.dis
 check("135 effect: started now, off the world clock (D8-starry: no duration value)", [se.duration, se.start], [{ value: null, units: "seconds", expiry: null }, { time: 30 }]);
 check("136 effect: keeps the Dragon's changes", se.system.changes.length, 1);
 check("137 effect: flag (10 minutes of combat left) + origin, no _stats/sort, dnd5e flags kept + isTemporary (D8-starry)",
-  [se.flags[MODULE_ID], se.origin, "_stats" in se, "sort" in se, se.flags.dnd5e],
+  [se.flags[MODULE], se.origin, "_stats" in se, "sort" in se, se.flags.dnd5e],
   [{ starry: { constellation: "dragon", left: 600 } }, "Actor.a.Item.b", false, false, { riders: {}, isTemporary: true }]);
 ok("138 base not mutated", dragonBase.disabled === true && dragonBase._stats);
 check("139 bare effect", starryEffectData({ constellation: "archer", label: "Archer", now: 0, id: "pentarynStarry00" }).img,
@@ -459,7 +459,7 @@ check("153 Starry Form stripped by identity when its target is not this druid's 
 check("154 Starry Form stripped by name without an identifier",
   stripReason(feat("starryNoIdent01", "Starry Form", "class", act("sn1", "utility", "bonus")), ctx), "starry-form");
 check("155 keepInForm still wins over Starry Form", stripReason(feat("starryKept00001", "Starry Form", "class",
-  act("sk1", "utility", "bonus"), { flags: { [MODULE_ID]: { keepInForm: true } }, system: { identifier: "starry-form" } }), ctx), null);
+  act("sk1", "utility", "bonus"), { flags: { [MODULE]: { keepInForm: true } }, system: { identifier: "starry-form" } }), ctx), null);
 check("156 a beast feature named like it is not stripped (not the host's)",
   stripForForm([starryOddTarget], { wildShapeIds: [WS], hostItemIds: [] }).stripped, []);
 

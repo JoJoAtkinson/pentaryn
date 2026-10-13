@@ -65,3 +65,25 @@ test("analyze() on a Levels scene names js, the backend that ran, even when wasm
   assert.equal(flat.backend, "wasm", "a level-less scene stays on wasm");
   await game.settings.set("pentaryn-walls", "backend", "auto");
 });
+
+test("walls-EXT-1: a weldEps/pinEps override routes to js (the wasm ABI cannot take it), so the card names js and its tolerances are the ones that ran", async () => {
+  const { get } = await import("../core/backends.mjs");
+  const { runWasm } = await import("../backend-wasm.mjs");
+  const wasm = get("wasm");
+  const walls = plainWalls();
+  assert.equal(wasm.accepts(walls, { gridSize: 100 }), true, "plain opts stay on wasm");
+  assert.equal(wasm.accepts(walls, { gridSize: 100, weldEps: 3 }), false, "weldEps");
+  assert.equal(wasm.accepts(walls, { gridSize: 100, pinEps: 2 }), false, "pinEps");
+  for (const override of [{ weldEps: 3 }, { pinEps: 2 }]) {
+    const ref = runEngine(walls, { gridSize: 100, runId: "ov", ...override });
+    for (const backend of ["wasm", "auto"]) {
+      await game.settings.set("pentaryn-walls", "backend", backend);
+      const out = await withConsole(F, () => game.pentaryn.walls.analyze({ sceneId: scene.id, runId: "ov", ...override }));
+      assert.equal(out.backend, "js", `${backend} ${JSON.stringify(override)}`);
+      for (const k of ["creates", "updates", "refusals", "log", "report"]) assert.deepEqual(out[k], ref[k], `${backend} ${k}`);
+    }
+    const direct = runWasm(walls, { gridSize: 100, runId: "ov", ...override });
+    assert.deepEqual(direct, ref, "a direct runWasm caller gets the js answer too");
+  }
+  await game.settings.set("pentaryn-walls", "backend", "auto");
+});

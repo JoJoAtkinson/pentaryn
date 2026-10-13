@@ -56,6 +56,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from scripts.foundry.update import children
+
 CLAUDE_BIN = "claude"
 HEARTBEAT_SECONDS = 60
 
@@ -183,11 +185,13 @@ def call(spec: Spec, stdin: str, *, tier: str, system_prompt: str | None = None,
 
     scratch = Path(tempfile.mkdtemp(prefix="vtt-llm-")) if cwd is None else None
     started = time.monotonic()
+    proc = None
     try:
         try:
-            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE, text=True,
-                                    cwd=str(cwd or scratch))
+            # Registered, so a SIGTERM'd run terminates it rather than orphaning it (AC-6).
+            proc = children.spawn(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, text=True,
+                                  cwd=str(cwd or scratch))
         except OSError as exc:
             record.error = f"claude CLI unavailable: {exc}"
             return Result(record)
@@ -199,7 +203,14 @@ def call(spec: Spec, stdin: str, *, tier: str, system_prompt: str | None = None,
             record.cost_known = False
             return Result(record)
         return _parse(proc.returncode, out, err, record, schema is not None)
+    except BaseException:
+        # A KeyboardInterrupt (or any other escape) mid-call must not orphan claude -p.
+        if proc is not None and proc.poll() is None:
+            proc.kill()
+        raise
     finally:
+        if proc is not None:
+            children.forget(proc)
         if scratch is not None:
             shutil.rmtree(scratch, ignore_errors=True)
 

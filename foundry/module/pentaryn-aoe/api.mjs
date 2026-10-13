@@ -26,6 +26,7 @@ function resolution(messageOrId) {
 
 function latestResolution({ sceneId = null } = {}) {
   const scene = sceneId === "current" ? canvas?.scene?.id ?? null : sceneId;
+  if (sceneId === "current" && !scene) return null;
   for (const m of game.messages.contents.slice(-RECENT_MESSAGES).reverse()) {
     const res = aoeFlags(m).resolution;
     if (!res || res.superseded || (scene && res.scene !== scene)) continue;

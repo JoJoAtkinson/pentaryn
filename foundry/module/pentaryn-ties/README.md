@@ -93,14 +93,20 @@ they own. Renamed in the 2026-10 blueprint migration: `describe` (the card) → 
 | Where | Key | What |
 |---|---|---|
 | Actor | `flags.pentaryn-ties.ties` | `[{ id, name, word, notes, stance, strength }]` — what this actor is to each |
-| Actor (character) | `.known`, `.knownCategories`, `.granted`, `.studied` | the notebook, its categories, the cards handed over, the player-side study hint |
+| Actor (character) | `.known`, `.granted`, `.studied` | the notebook, the cards handed over, the player-side study hint |
 | Actor (subject) | `.beliefs` | the GM-plane ledger: what each character was told, rung, total, delivery, claims |
 | Actor | `.kindOf`, `.studyTiers`, `.studyHold`, `.studyOffset`, `.lore`, `.conceal` | GM authoring: kind pointer, ladder, hold, DC shift, lore rows, concealment |
 | Actor | `.attributes`, `.attributesOff` | authored attribute links; suppressed derived links |
 | Token | `.worn` | `{ by, note }` — the GM's possession mark |
-| Item | `.mark` | `{ icon, tip, color }` — the item mark |
 | User (GM) | `.attrSelected` | the review panel's ticks |
 | World settings | `attributes`, `attributeBeliefs`, `attributeKnowledge` | registry, attribute-lore beliefs, world knowledge |
+
+Read but never written — the GM authors these by hand (`flags.reads` in `describe()`):
+
+| Where | Key | What |
+|---|---|---|
+| Actor (character) | `flags.pentaryn-ties.knownCategories` | `[{ key, label }]` — extra notebook categories, or a rename of a seeded one |
+| Item | `flags.pentaryn-ties.mark` | `{ icon, tip, color }` — the item mark; `tip` shows as plain text (`data-tooltip-text`) |
 
 Writes use `render: false` where a re-render would destroy the injected tab mid-edit.
 
@@ -132,7 +138,10 @@ bridge tab and a browser), and both are the active GM, so the conduit **stakes a
 (`stakeAndConfirm` in `study/claim.mjs`: write a token, wait 250 ms, read it back) and only the winning
 tab rolls. The relay needs no claim: it only fills blanks or removes one row, so a second application changes nothing. The
 stub card and the tempo bubble are posted by the client that made the gesture. World-setting stores
-are GM-written; the registry queues its writes one at a time.
+are GM-written; the registry and the knowledge/belief stores queue their writes one at a time,
+**per tab** only. Attribute links and unlinks (`attributes.link`/`unlink`/`repair`) share the
+registry's queue, so a script's `Promise.all` of several links on one actor lands every one. Two GM tabs writing the same setting at once (a Review-panel save racing a bridge
+`A.update`) each rewrite the whole value, and the second write wins — a setting cannot be claimed.
 
 ## Extending
 
@@ -144,8 +153,12 @@ are GM-written; the registry queues its writes one at a time.
   `GOLDEN_UPDATE=1 node --test test/api-kit.test.mjs` and read the diff.
 - **A pure rule:** `core/<topic>.mjs` with a fixture; new rules go in `core/rules.mjs` (the
   `known-core.mjs` barrel's export list is pinned).
-- **A study namespace:** a branch in `resolveFact` (`study/resolve.mjs`) **plus** the `fact.ns` tests
-  downstream — `study/apply.mjs` (`readBelief`, `putBelief`, `applyPlayerWrites`), `study/claim.mjs`
+- **A study namespace:** a branch in each of the five fact-key helpers, which are if-ladders on the
+  namespace — `factKeyOf` (`core/facts.mjs`, the key a share writes), `parseFactKey` (`core/lore.mjs`,
+  the key read back), `factOrder` (`core/facts.mjs`, what a subject could hand a player), `knowsAbout`
+  (`facts.mjs`, what the Look window draws) and `resolveFact` (`study/resolve.mjs`). Miss one and a
+  share lands under a key nothing reads. **Plus** the `fact.ns` tests downstream of `resolveFact` —
+  `study/apply.mjs` (`readBelief`, `putBelief`, `applyPlayerWrites`), `study/claim.mjs`
   (`claimFact`, `releaseFact`), `study/gate.mjs` (`promptDeliver`, `deliverFact`, `rowMissed`, the
   parsed-key test in `pending`), `study/share.mjs`, and `study/authoring.mjs`'s `beliefs`. The kept
   list is the seam note at `study/resolve.mjs:69`; a new place that tests `fact.ns` goes there too.
@@ -154,7 +167,7 @@ are GM-written; the registry queues its writes one at a time.
 
 - **An unlinked token's actor is not the actor.** Ties data lives on the world actor (`baseActorOf`);
   writing through `token.actor` lands on the token's delta and is lost to every other token.
-- **Never nest the registry's queued writes** — a queued write that awaits another waits on itself.
+- **Never nest the registry's queued writes** (links and unlinks included) — a queued write that awaits another waits on itself.
 - **`Actor#update` merges.** Deleting a ledger row needs core's `_del` value, never the v14-deprecated `-=key`; writing the
   object back without the key does nothing. Drop a beliefs row only through `dropBeliefRow` (study/claim.mjs), which
   removes the whole flag when the last row goes instead of leaving `beliefs: {}` behind; several of one

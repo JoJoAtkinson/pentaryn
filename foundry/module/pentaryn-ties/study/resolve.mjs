@@ -32,7 +32,7 @@ import {
   studySkill,
   tierOf
 } from "../known-core.mjs";
-import { CONCEAL_FLAG, concealFor } from "../core/rules.mjs";
+import { CONCEAL_FLAG, concealFor, kindPassed } from "../core/rules.mjs";
 import { attackItems, composeStudyPayload } from "./compose.mjs";
 import { skillLabelOf } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
@@ -123,7 +123,7 @@ export function resolveFact(spec) {
          * lock is written and the stub posts, and nothing lands in the notebook (2026-10).
          */
         const text = await composeStudyPayload(kind, tier, label);
-        return { text, silent: !text, tier, pass: tier >= 15 };
+        return { text, silent: !text, tier, pass: kindPassed(tier) };
       }
     };
   }

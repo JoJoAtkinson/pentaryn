@@ -10,8 +10,7 @@
  */
 
 import { onRollWindow, onRollWindowClose } from "./strip.mjs";
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
+import { opts } from "./context.mjs";
 
 export function install(reg) {
   reg.on("renderRollConfigurationDialog", (app) => onRollWindow(app, { weapon: true }), opts("dock roll window"));

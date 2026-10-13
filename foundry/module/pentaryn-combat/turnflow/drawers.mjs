@@ -10,6 +10,7 @@ import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { dropDrawerTooltip } from "../argon.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -88,8 +89,6 @@ export function placeOpenDrawers(actionPanel) {
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 // hot: per-panel marker (_pcNear); no world iteration
 export function install(reg) {

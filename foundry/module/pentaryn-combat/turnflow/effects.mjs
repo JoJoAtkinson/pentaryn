@@ -7,6 +7,7 @@ import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { combatContext } from "../shapes.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -52,15 +53,15 @@ async function steadyAim(activity) {
   const item = activity?.item;
   const ident = item?.system?.identifier || core.slugify(item?.name ?? "");
   if (!actor?.isOwner || ident !== "steady-aim" || actor.effects.some(isSteadyAim)) return;
-  await actor.createEmbeddedDocuments("ActiveEffect", [{
+  await actor.createEmbeddedDocuments("ActiveEffect", [core.turnEffectData({
+    module: MODULE,
+    kind: "steady-aim",
     name: _loc("PENTARYN_COMBAT.Turn.SteadyAim"),
     img: item.img || "icons/svg/target.svg",
-    description: `<p>${_loc("PENTARYN_COMBAT.Turn.SteadyAimText")}</p>`,
-    transfer: false,
-    origin: item.uuid,
-    system: { changes: core.steadyAimChanges() },
-    flags: { [MODULE]: { until: "turnEnd", special: "steady-aim" }, dnd5e: { isTemporary: true } }
-  }]);
+    description: _loc("PENTARYN_COMBAT.Turn.SteadyAimText"),
+    changes: core.steadyAimChanges(),
+    origin: item.uuid
+  })]);
   ui.notifications.info(_loc("PENTARYN_COMBAT.Turn.SteadyAimOn"));
 }
 
@@ -82,8 +83,6 @@ const onAttackRolled = (rolls, { subject } = {}) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   reg.on("dnd5e.postUseActivity", onUsed, opts("self effect, Steady Aim"));

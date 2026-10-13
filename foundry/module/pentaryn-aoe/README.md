@@ -18,22 +18,31 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   everyone and gets a small handle token (`_id` = the region's id) it is attached to: drag the
   handle to move the area (it keeps its direction: a handle never auto-rotates), delete it to
   delete the area; deleting the area deletes the handle. An emanation dnd5e attached to its caster
-  gets no handle. Handles are never combatants and never stay
-  targeted. The spell card gets an eraser icon after *Place Template*: **Remove all templates** of
+  gets no handle. A handle is named "<Spell> (<caster's token name>)" — the author's user name
+  when no caster token is found, never an actor name — and gives a faint dim light of half a
+  square, so it and the area's outline show in darkness to anyone who can see that spot. Handles
+  are never combatants and never stay targeted. The spell card gets an eraser icon after *Place Template*: **Remove all templates** of
   that spell on the viewed scene. When concentration ends, that spell's areas go on every scene.
 - **Part B — saves off the area** (`resolve.mjs`, `tray.mjs`). A damage roll from a save activity
   makes the active GM's client list the creatures inside the area (or the roller's targets), roll
   the monsters' saves (`npcSaveRollMode`), post one request card for the players, and show a
   GM-only tray after dnd5e's own damage tray: tick, save, multiplier, the damage that would land,
   Apply. Every save is threaded under the spell's usage card, so dnd5e's outcomes and half-damage
-  pill agree. An older Damage click on the same area (or the same card after its area went) greys
+  pill agree. A save activity with no DC judges no save: each shows its total with a '?', the
+  multiplier stays '?', and the GM sets it by hand. An older Damage click on the same area (or the same card after its area went) greys
   out. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
-- **Careful Spell** (`careful.mjs`). After a sorcerer uses it, the next spell they cast takes it
-  (in combat, on the same turn; no time window), and it ends there: if that spell's area calls for a
-  save, up to their CHA mod of their own side are marked *protected*: an automatic success and ×0 on
-  a half-damage spell, no request card. Bound to that usage card; a placement cancelled before it
-  lands leaves it armed; cleared when its combat is deleted.
+- **Careful Spell** (`careful.mjs`). Metamagic is tracked, not forced onto a spell (Joe's ruling,
+  2026-10-12). Using it opens a picker on the caster's client: the creatures on their scene they
+  can see, by token name, the current targets ticked, up to their CHA mod (min 1). A public card
+  says `<caster token> uses Careful Spell: <token names>`. Using it always declares: a skipped pick
+  (or nobody to pick) posts the card with nobody chosen and still replaces an earlier choice; that
+  tray then protects nobody and the GM shields rows by hand. The caster's next save spell's tray marks
+  exactly those creatures *protected*: an automatic success and ×0 on a half-damage spell, no
+  request card. Then it ends (one use per declaration); a re-roll of that card keeps it. A spell
+  with no save leaves it waiting, there is no time window, and using it again replaces the choice.
+  The GM toggles any open row's protection with its shield in the tray: off, the row gets back its
+  own save, or a monster rolls one and a player row waits.
 - **Part C — damage on a hit** (`attacks.mjs`). The roller's client rolls damage after a hit (or an
   attack whose target AC it can't know). A known miss or a natural 1 rolls nothing.
 - **Part D — effects meant for you** (`effects.mjs`). A usage card's one effect goes on its caster
@@ -44,7 +53,8 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
 - **Part E — Escape** (`escape.mjs`) cancels an area placement on the first press, even with the
   sheet open (core's own Escape closes every window first).
 - **Part F — refund** (`refund.mjs`). A cancelled placement gives back the slot, charge or uses it
-  spent, ends the concentration it began and removes the card.
+  spent, ends the concentration it began and removes the card. A cast that spent nothing but began
+  concentration counts as cancelled too: its concentration ends and its card goes.
 - **Part G — aim** (`aim.mjs`). A Self-range cone or line keeps its point on the caster's token
   edge and turns toward the mouse while placing.
 
@@ -65,7 +75,7 @@ live through `setting()`, so a change applies without a reload).
 | `autoDamageOnHit` | on | C | damage after a hit (pentaryn-combat reads it too) |
 | `autoApplySelf` | on | D | a self-cast card's one effect goes on the caster |
 | `highlightUnapplied` | on | D | outline an Effects tray nobody has applied |
-| `carefulSpell` | on | B | Careful Spell protects the caster's side |
+| `carefulSpell` | on | B | Careful Spell protects the creatures the player picks; the tray's shield toggle |
 | `refundCancelledArea` | on | F | a cancelled placement refunds what it spent |
 | `playerStatus` | on | B | the caster's status line; GM-only monster saves hidden from players |
 | `untargetedSelf` | on | D | a touch spell cast at nobody goes on the caster |
@@ -88,20 +98,20 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `sweep(scene = canvas.scene)` | `Promise<{ orphansDeleted, ownershipFixed, handlesCreated, sizeLocked }>` | GM (zeros otherwise) |
 | `ensureHandleActor()` | `Promise<Actor \| null>` | GM creates (fixed id `pentarynAoeHndl0`); a player gets the existing one or null |
 | `createHandle(region)` | `Promise<TokenDocument \| null>` | null: not a template, handled, attached elsewhere, or another client won |
-| `resolve(messageOrId, { regionId? })` | `Promise<resolution \| null>` | active GM; null: not a damage message from a save activity |
+| `resolve(messageOrId, { regionId? })` | `Promise<resolution \| null>` | active GM; null: not a damage message from a save activity, or its tray is superseded or has an applied row (warning toast; the tray's area picker is disabled then too). On a GM tab that is not the active GM the area picker warns and goes back to the current area |
 | `applyRows(messageId, rowIds?)` | `Promise<resolution \| null>` | GM; null when superseded (warning toast) or no tray; when a row's damage fails, the other rows still land and are marked applied, a warning toast names the failed rows, and the first error rejects (Apply again retries only those) |
-| `rollNpcSaves(messageId, { rowIds?, force? })` | `Promise<resolution \| null>` | GM |
+| `rollNpcSaves(messageId, { rowIds?, force? })` | `Promise<resolution \| null>` | GM; a monster whose save fails to roll is logged (`npcSave`, naming the row) and left unrolled for a re-roll, and the saves that landed are kept |
 | `rollForPlayer(messageId, rowId, { event? })` | `Promise<Roll[] \| null>` | GM |
 | `pingPlayers(messageId)` | `Promise<ChatMessage \| Notification \| null>` | GM; the info toast when nobody waits |
-| `setRow(messageId, rowId, { apply?, multiplier? })` | `Promise<resolution \| null>` | GM |
-| `selfApply(message, { force? })` | `Promise<{ reason, actor, effects } \| null>` | the applier client; `force` skips the setting and the claim |
+| `setRow(messageId, rowId, { apply?, multiplier? })` | `Promise<resolution \| null>` | GM; a multiplier that is not one of the tray's (0, 0.25, 0.5, 1, 2) leaves the row unchanged, logs `setRow multiplier` and returns null |
+| `selfApply(messageOrId, { force? })` | `Promise<{ reason, actor, effects } \| null>` | the applier client; `force` skips the setting and the claim; an unknown id → null |
 | `pendingFor(message, { effects? })` | `Promise<string[]>` | any |
 | `cardEffects(message)` | `Promise<ActiveEffect[]>` | any |
 | `activePlacement()` | `object \| null` | this client |
 | `setting(key)` | value | any; the default when unregistered |
 | `hookIds()` | `{ name, id }[]` | this client |
 | `resolution(messageOrId)` | a copy of the tray state, or null | GM data |
-| `latestResolution({ sceneId? })` | `{ messageId, resolution } \| null` | the newest live tray of the last 60 messages; `"current"` = the viewing client's scene |
+| `latestResolution({ sceneId? })` | `{ messageId, resolution } \| null` | the newest live tray of the last 60 messages; `"current"` = the viewing client's scene, null when it views none (pass no `sceneId` for any scene) |
 | `summary(messageOrId)` | `{ item, ability, dc, onSave, region, superseded, applicable, rows, careful, playerStatus } \| null` | plain data for the bridge |
 | `isHandle(tokenOrDoc)` | boolean | any |
 | `inspect(ref, { sceneId?, as? })` | plain JSON, depth ≤ 4 | a message → `{ message, resolution, npcSave, effectsApplied }`; a token or actor → `{ token?, actor, isHandle, region, handleActor, careful }`. `as` a player: no tray summary (only `playerStatus`), Careful only on an actor they own. Unknown ref → `NOT_FOUND` |
@@ -111,14 +121,16 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | Flag | On | Shape |
 |---|---|---|
 | `flags.pentaryn-aoe.resolution` | the damage message | `{ activity, item, itemName, region, regions, scene, usage, ability, dc, onSave, careful, damages, request, created, superseded, rows[] }` |
-| `flags.pentaryn-aoe.claims.<job>` | the damage / usage message | the socket id of the session doing `resolve` / `selfApply` |
+| `flags.pentaryn-aoe.claims.<job>` | the damage / usage / player save message | the socket id of the session doing `resolve` / `selfApply` / `matchSave` |
 | `flags.pentaryn-aoe.effectsApplied` | the usage card | `{ ids, auto, reason, actor, actorName, names }` |
 | `flags.pentaryn-aoe.npcSave` | a monster save message | `true` |
 | `flags.pentaryn-aoe.damageMessage` | the request card | the damage message id |
-| `flags.pentaryn-aoe.careful` | the caster actor | `{ at, key, usage }` |
+| `flags.pentaryn-aoe.careful` | the caster actor | `{ at, scene, tokens, names }`: the picked token ids and names, until a save tray uses them |
 | `flags.pentaryn-aoe.handle`, `.region` | a handle token | `true`, the region id |
 | `flags.pentaryn-aoe.handle` | a template region | its handle token's id (plus core's `attachment.token`) |
 | `flags.pentaryn-aoe.handleActor` | the "Area handle" actor | `true` |
+| `flags.dnd5e.lockSize` | a handle token and the "Area handle" actor's prototype token | `true` (dnd5e never resizes a handle) |
+| `flags.dnd5e.requestResult` | a save roll message | `{ actorUuid, requestId }`: threads the save under the players' request card |
 
 Flags are read as `doc.flags["pentaryn-aoe"]`, never `getFlag` (it throws while the module is
 inactive, e.g. hot-patched).
@@ -127,7 +139,7 @@ inactive, e.g. hot-patched).
 
 `flags.pentaryn-aoe.handle` (token), `.handleActor` (actor) and `.region` are a cross-module
 contract. Readers: pentaryn-creatures (a handle is a prop, `isProp`), pentaryn-portals (a
-handle is not spread on arrival), pentaryn-senses (no light on a handle, `light.mjs`), pentaryn-combat
+handle is not spread on arrival), pentaryn-senses (a handle is never offered a creature light, `light-ui.mjs`), pentaryn-combat
 (no turn for a helper token, `turnflow/helper-token.mjs` through
 `shapes.isAoeHandle`). `test/fixtures/handle-oracle.json` is the shared row
 set every copy pins against; prefer `apiOf("pentaryn-aoe").isHandle(x)` in new code.
@@ -161,11 +173,21 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
   clients see `createActor` twice; one actor results. The "already exists" catch is a fallback.
 - **`resolve` and `selfApply`** (`createChatMessage`): the kit's `claimMessage(message, job,
   { scope })` — each candidate stamps its socket id, waits 750 ms, and only the last writer acts.
+- **Player save matching** (`matchSave`, on the save message): a save that answers a waiting
+  row is claimed the same way, so one tab fills the row. A save that answers no open tray is not
+  claimed (no flag write on every save).
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
-  ready sweep, the Careful clean-up on `deleteCombat`, the delete backstop); each is idempotent.
+  ready sweep, the `canvasReady` sweep of each newly viewed scene — wired at setup on every
+  client, so a GM who takes over after ready sweeps too — the delete backstop). Two GM tabs both
+  run these. A delete the server refuses as "does not exist" (handle deletes, the concentration
+  cleanup, the sweep's orphans) means the other tab already deleted it: that counts as done,
+  nothing is logged, and the job carries on (the next scene, the rest of the sweep). Any other
+  refusal is still an error.
 - **Apply** (`applyRows`): overlapping calls for one tray in one tab run one after another, so
   the later one skips the rows the earlier one applied; a later call stops waiting on an Apply
-  stuck for 10 s (`APPLY_WAIT_MS`). Two tabs applying the same tray at once are not coordinated.
+  stuck for 10 s (`APPLY_WAIT_MS`). Across tabs, each row is re-read from the live message just
+  before its damage and skipped if another tab already applied it, and each landed row is marked
+  applied at once, so a second tab's Apply lands nothing twice.
 
 ## Extending
 
@@ -216,4 +238,6 @@ node test/run.mjs                                  # from the module folder
 restart. **Hot patch** (to test before a restart): `game.pentaryn.aoe.uninstall()`; fetch each file
 from `/modules/pentaryn-aoe/`, rewrite the relative imports to blob URLs, set
 `globalThis.__pentarynAoeHot = true`, import `aoe.mjs`, then call `install({ sweepOnReady: false })`.
+A publish that throws (a frozen `game.pentaryn`) rejects `install()`; at a normal ready it is logged
+`pentaryn-aoe | publish` and ready carries on (Argon guard, settings migration, startup sweep).
 After a sync: `game.pentaryn.aoe.describe().version` equals `module.json`'s version.

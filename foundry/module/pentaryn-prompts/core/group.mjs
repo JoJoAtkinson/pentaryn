@@ -12,6 +12,9 @@ export const LINK_FT = 30;
 /** Linked this close (ft) with sight, inside an encounter: a formation. */
 export const FORMATION_FT = 15;
 
+/** A prompt id as assignIds hands it out: "p1", "p2", … (built things are t#, encounters E#). */
+export const isPromptId = id => /^p\d+$/.test(String(id ?? ""));
+
 
 /**
  * Single-linkage grouping (plan §4.4, §13).

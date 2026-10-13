@@ -39,6 +39,11 @@ test("the 0.2.0 surface is a subset: refresh, current, keys, keyFor", () => {
   assert.deepEqual(Object.keys(api.keys), Object.keys(KEYS));
 });
 
+test("game.pentaryn.cursors.keyFor(null) returns null, like keyFor() (cursors-rob-1)", () => {
+  assert.equal(game.pentaryn.cursors.keyFor(null), null);
+  assert.equal(game.pentaryn.cursors.keyFor(), null);
+});
+
 test("drift fails at build: a manifest row without an implementation", () => {
   assert.throws(() => buildApi(MANIFEST, {}), /has no implementation/);
 });
@@ -87,9 +92,13 @@ test("status() with the setting off: key null, expected still keyFor's answer", 
   assert.equal(api.current(), "draw");
 });
 
-test("uninstall(): clears the board and drops every registered hook", () => {
+test("uninstall(): clears the board and drops every registered hook; nothing left re-applies a glyph (cursors-rob-3)", async () => {
+  const tool = { name: "target", onChange: () => {} };
+  F.fire("getSceneControlButtons", { tokens: { name: "tokens", onChange: () => {}, tools: { target: tool } } });
   setTool("tokens", "target");
   assert.equal(api.refresh(), "target");
+  // a canvasReady tick still pending at uninstall
+  F.fire("canvasReady");
   assert.deepEqual(el.props(), cursorValues("target", "/modules/pentaryn-cursors", false));
   assert.ok(api.describe().hooks.length > 0);
   api.uninstall();
@@ -100,4 +109,23 @@ test("uninstall(): clears the board and drops every registered hook", () => {
   F.fire("renderSceneControls");
   assert.equal(api.current(), null, "no hook left to refresh");
   assert.deepEqual(Object.fromEntries(VARS.map(v => [v, el.style.getPropertyValue(v) || null])), Object.fromEntries(VARS.map(v => [v, null])));
+
+  // cursors-rob-3: what outlives offAll() — the wrapped onChange, the preview listeners, the board
+  // observer, the setting's onChange and a pending tick — must not drive the board any more.
+  el.style.cursor = "";
+  F.events.currentCursor = "pointer";
+  const setCursors = F.events.setCursorCalls.length;
+  tool.onChange();
+  assert.equal(api.current(), null, "a wrapped tool onChange does not refresh after uninstall");
+  F.preview.emit("childAdded", { id: "x" });
+  F.preview.emit("childRemoved", { id: "x" });
+  assert.equal(api.current(), null, "a preview childAdded does not refresh after uninstall");
+  for (const o of F.observers) o.callback([]);
+  await game.settings.set(MODULE, "enabled", false);
+  await game.settings.set(MODULE, "enabled", true);
+  mock.timers.tick(0);
+  assert.equal(api.current(), null, "neither the setting's onChange nor a pending tick refreshes");
+  assert.deepEqual(el.props(), {});
+  assert.equal(F.events.setCursorCalls.length, setCursors, "no resync after uninstall");
+  el.style.cursor = "var(--cursor-default)";
 });

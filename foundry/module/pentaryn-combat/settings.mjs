@@ -6,13 +6,14 @@
  * `SETTINGS` is the table (blueprint §5.3): one row per world setting, in registration order, with
  * literal label keys. `setting()` falls back to the row's default when a key is unregistered or
  * unreadable, so a hook never throws inside a render because of a missing setting. Argon's own
- * settings are read here too (`argonSetting`), so no other file calls game.settings.
+ * settings are read here too (`argonSetting`), and pentaryn-aoe's auto-damage (`aoeAutoDamage`,
+ * the C23 exception), so no other file calls game.settings.
  */
 
-import { I18N, MODULE } from "./combat-core.mjs";
+import { ARGON, I18N, MODULE } from "./combat-core.mjs";
 import { defineSettings, settingReader } from "./lib/settings.mjs";
 
-const ARGON = "enhancedcombathud";
+export { ARGON };   // Argon's package id, defined once in the core (shapes.mjs, an adapter, imports it there; C16)
 
 export const SETTINGS = Object.freeze([
   { key: "fullAttack", scope: "world", config: true, type: Boolean, default: true,
@@ -147,6 +148,16 @@ export function setArgonSetting(key, value) {
 /** Is one of Argon's settings registered (Argon active and initialised)? */
 export function hasArgonSetting(key) {
   return game.settings.settings.has(`${ARGON}.${key}`);
+}
+
+/**
+ * Is pentaryn-aoe's auto-damage on (active and `autoDamageOnHit` set)? False on any failure. Read
+ * directly (C23 exception): aoe's `settings()` member is published at `ready`, but chat cards
+ * first render before it.
+ */
+export function aoeAutoDamage() {
+  try { return !!game.modules.get("pentaryn-aoe")?.active && !!game.settings.get("pentaryn-aoe", "autoDamageOnHit"); }
+  catch { return false; }
 }
 
 /* ── per-user choices (user flags) ───────────────────────────────────────── */

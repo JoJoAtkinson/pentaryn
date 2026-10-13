@@ -3,6 +3,7 @@
  * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
  */
 
+import { BANDS } from "./grid.mjs";
 import { FORMATION_FT, LINK_FT } from "./group.mjs";
 import { fmtNum, footprintLabel } from "./size.mjs";
 import { builtDescription, idCompare, isoDate, normalisePrompt, preview, relationText, sortRelations } from "./text.mjs";
@@ -13,10 +14,23 @@ export const GATHER_CHARS = 400;
 
 /* ── The gather text (Draft A, plan §5.3) ────────────────────────────────── */
 
+/**
+ * The legend's "Bands: …" line, read off BANDS (M13). Each band runs from 5 ft past the one before
+ * it to its own max ("close 15-30"); the first is just its max, the last is open ("distant 155+").
+ */
+function bandsLine() {
+  const parts = BANDS.map(([max, name], i) => {
+    const lo = i ? BANDS[i - 1][0] + 5 : max;
+    if (max === Infinity) return `${name} ${lo}+`;
+    return lo === max ? `${name} ${max}` : `${name} ${lo}-${max}`;
+  });
+  return `Bands: ${parts.join(" | ")}.`;
+}
+
 export const LEGEND = [
   "p# = prompt marker to build and replace. t# = already built: context only, never replace, never move.",
   "ft = 5e grid distance between nearest occupied squares (adjacent = 5), scene diagonal rule.",
-  "Bands: touching 5 | reach 10 | close 15-30 | near 35-60 | far 65-150 | distant 155+.",
+  bandsLine(),
   "LOS = clear sight line through walls with unlimited darkvision (light ignored).",
   "door = blocked only by a closed door (secret doors say \"secret door\"). wall = no sight line.",
   "Bearing = compass on the map, north is up. at = feet from the map's top-left corner.",
@@ -55,7 +69,8 @@ function ftPair(p) {
  *                   stats: {cr, ac, hp, hpMax} | null, classes: [{name, levels, subclass}] | null, species,
  *                   items: [..] | null, disposition, xp, light: string | null, ownTextUuid? } },
  *   todo: [pids], next: sceneId | null, unseenWithinFt,
- *   party: parseParty input ({level, size} | "4x5" | [levels]) | null, partySource: "setting" | "call" | null, cropsNote: string | null
+ *   party: parseParty input ({level, size} | "4x5" | [levels]) | null, partySource: "setting" | "call" | null,
+ *   partyUnreadable: boolean (the call gave a party that could not be read), cropsNote: string | null
  * }
  */
 export function renderGather(view, { chars = GATHER_CHARS } = {}) {
@@ -73,53 +88,7 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
     L.push("");
     const sq = `${sc.squares[0]}x${sc.squares[1]} squares of ${fmtNum(sc.gridFt)} ft`;
     L.push(`<scene id="${sc.id}" name="${attr(sc.name)}" nav="${attr(sc.nav)}" map="${fmtNum(sc.mapFt[0])}x${fmtNum(sc.mapFt[1])} ft (${sq})" regions="${attr(sc.regions.length ? sc.regions.join(", ") : "none")}" levels="${sc.levels}">`);
-    L.push("<overview>");
-    for (const w of sc.warn ?? []) L.push(`WARN ${w}`);
-    const budget = view.party ? xpBudget(view.party) : null;
-    if (budget) {
-      L.push(`Budget per encounter (party ${budget.size} x level ${budget.level}, 2024 DMG): low ${budget.low} | moderate ${budget.moderate} | high ${budget.high} XP.`);
-    }
-    for (const e of sc.encounters) {
-      let line = `${e.id}: ${e.prompts.join(" ")}`;
-      if (e.built.length) line += ` + built ${e.built.map(t => (view.built?.[t]?.name ? `${t} "${view.built[t].name}"` : t)).join(", ")}`;
-      line += ".";
-      if (e.formations.length) line += " " + e.formations.map(f => `Formation ${f.join(" ")}`).join("; ") + ".";
-      if (e.shared.length) {
-        const homes = t => sc.encounters.filter(x => x !== e && x.built.includes(t)).map(x => x.id);
-        const also = [...new Set(e.shared.flatMap(homes))].sort(idCompare);
-        line += ` Shared with ${also.join(", ")}: ${e.shared.join(" ")} (built things never merge encounters; decide whether this is one fight).`;
-      }
-      if (e.builtXp) line += ` Built XP already in it: ${e.builtXp}${e.shared.some(t => view.built?.[t]?.xp) ? " (shared XP counted in each)" : ""}.`;
-      L.push(line);
-    }
-    for (const r of sc.relations ?? []) {
-      const block = r.los ? "with LOS between them" : `no LOS between them (${BLOCK_WORDS[r.block] ?? "wall"})`;
-      L.push(`${r.from} is ${fmtNum(r.ft)} ft ${r.bearing || "from"} of ${r.to}, ${block}.`);
-    }
-    const lonely = sc.alone.map(pid => {
-      const n = sc.aloneNotes?.[pid];
-      if (!n) return pid;
-      const bits = [];
-      if (n.built) bits.push(`${fmtNum(n.built.ft)} ft ${n.built.bearing || "from"} of ${n.built.of} ${n.built.name}, in sight`);
-      if (n.of) bits.push(`${fmtNum(n.ft)} ft ${n.bearing || "from"} of ${n.of}, ${HOW[n.los] ?? "no sight line"}`);
-      return bits.length ? `${pid} (${bits.join("; ")})` : pid;
-    });
-    L.push(`Alone: ${lonely.length ? lonely.join(", ") : "none"}.`);
-    for (const d of sc.doorLines ?? []) L.push(d);
-    const seen = new Set();
-    const builtParts = [];
-    for (const e of sc.encounters) {
-      for (const t of e.built) {
-        if (seen.has(t)) continue;
-        seen.add(t);
-        const homes = sc.encounters.filter(x => x.built.includes(t)).map(x => x.id);
-        builtParts.push(`${t} (in ${homes.join(", ")})`);
-      }
-    }
-    for (const t of sc.contextOnly) builtParts.push(`${t} (context only)`);
-    L.push(`Built: ${builtParts.length ? builtParts.join(", ") : "none"}.`);
-    if (sc.notes) L.push(`Scene notes: ${preview(sc.notes, 300)}`);
-    L.push("</overview>");
+    L.push(...renderOverview(view, sc));
 
     const printed = new Set();
     for (const e of sc.encounters) {
@@ -130,8 +99,7 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
       for (const tid of e.built) {
         if (printed.has(tid)) { L.push(`<built id="${tid}" see="above"/>`); continue; }
         printed.add(tid);
-        L.push(...renderBuilt(view.built[tid], chars, e.shared.includes(tid)
-          ? sc.encounters.filter(x => x.built.includes(tid)).map(x => x.id) : null, described));
+        L.push(...renderBuilt(view.built[tid], chars, e.shared.includes(tid) ? homesOf(sc, tid) : null, described));
       }
       L.push("</encounter>");
     }
@@ -156,6 +124,65 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
   return L.join("\n");
 }
 
+/** The ids of the encounters on scene `sc` whose `built` lists built id `t`, in encounter order. */
+function homesOf(sc, t) {
+  return sc.encounters.filter(x => x.built.includes(t)).map(x => x.id);
+}
+
+/**
+ * A scene's `<overview>` block: warnings, the XP budget, one line per encounter, the encounter
+ * relations, the lone prompts, the door lines, the built index and the scene notes.
+ */
+function renderOverview(view, sc) {
+  const L = [];
+  L.push("<overview>");
+  for (const w of sc.warn ?? []) L.push(`WARN ${w}`);
+  const budget = view.party ? xpBudget(view.party) : null;
+  if (budget) {
+    L.push(`Budget per encounter (party ${budget.size} x level ${budget.level}, 2024 DMG): low ${budget.low} | moderate ${budget.moderate} | high ${budget.high} XP.`);
+  }
+  for (const e of sc.encounters) {
+    let line = `${e.id}: ${e.prompts.join(" ")}`;
+    if (e.built.length) line += ` + built ${e.built.map(t => (view.built?.[t]?.name ? `${t} "${view.built[t].name}"` : t)).join(", ")}`;
+    line += ".";
+    if (e.formations.length) line += " " + e.formations.map(f => `Formation ${f.join(" ")}`).join("; ") + ".";
+    if (e.shared.length) {
+      const also = [...new Set(e.shared.flatMap(t => homesOf(sc, t).filter(id => id !== e.id)))].sort(idCompare);
+      line += ` Shared with ${also.join(", ")}: ${e.shared.join(" ")} (built things never merge encounters; decide whether this is one fight).`;
+    }
+    if (e.builtXp) line += ` Built XP already in it: ${e.builtXp}${e.shared.some(t => view.built?.[t]?.xp) ? " (shared XP counted in each)" : ""}.`;
+    L.push(line);
+  }
+  for (const r of sc.relations ?? []) {
+    const block = r.los ? "with LOS between them" : `no LOS between them (${BLOCK_WORDS[r.block] ?? "wall"})`;
+    L.push(`${r.from} is ${fmtNum(r.ft)} ft ${r.bearing || "from"} of ${r.to}, ${block}.`);
+  }
+  const lonely = sc.alone.map(pid => {
+    const n = sc.aloneNotes?.[pid];
+    if (!n) return pid;
+    const bits = [];
+    if (n.built) bits.push(`${fmtNum(n.built.ft)} ft ${n.built.bearing || "from"} of ${n.built.of} ${n.built.name}, in sight`);
+    if (n.of) bits.push(`${fmtNum(n.ft)} ft ${n.bearing || "from"} of ${n.of}, ${HOW[n.los] ?? "no sight line"}`);
+    return bits.length ? `${pid} (${bits.join("; ")})` : pid;
+  });
+  L.push(`Alone: ${lonely.length ? lonely.join(", ") : "none"}.`);
+  for (const d of sc.doorLines ?? []) L.push(d);
+  const seen = new Set();
+  const builtParts = [];
+  for (const e of sc.encounters) {
+    for (const t of e.built) {
+      if (seen.has(t)) continue;
+      seen.add(t);
+      builtParts.push(`${t} (in ${homesOf(sc, t).join(", ")})`);
+    }
+  }
+  for (const t of sc.contextOnly) builtParts.push(`${t} (context only)`);
+  L.push(`Built: ${builtParts.length ? builtParts.join(", ") : "none"}.`);
+  if (sc.notes) L.push(`Scene notes: ${preview(sc.notes, 300)}`);
+  L.push("</overview>");
+  return L;
+}
+
 /**
  * `<party>` — which party the budgets use and where it came from, or that there is none: the world
  * setting is often blank, and a builder that guesses "4x5" from an example sizes every fight wrong.
@@ -163,7 +190,10 @@ export function renderGather(view, { chars = GATHER_CHARS } = {}) {
 export function partyLine(view) {
   const levels = view.party ? parseParty(view.party) : null;
   if (!levels?.length) {
-    return "<party>none set (the world setting \"Party for encounter budgets\" is blank and the call gave none): no XP budgets. " +
+    const why = view.partyUnreadable
+      ? "the call's party could not be read and the world setting \"Party for encounter budgets\" is blank or unreadable"
+      : "the world setting \"Party for encounter budgets\" is blank and the call gave none";
+    return `<party>none set (${why}): no XP budgets. ` +
       "Pass party: \"4x5\" (PCs x level) or [5,5,4,5] if you know the party; otherwise ask Joe — never guess one.</party>";
   }
   const same = levels.every(l => l === levels[0]);

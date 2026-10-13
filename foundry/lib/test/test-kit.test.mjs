@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { installFoundry, makeScene, makeToken } from "../test-kit/foundry-stub.mjs";
+import { installFoundry, makeScene, makeToken, makeUser } from "../test-kit/foundry-stub.mjs";
 import { characterise, checkJSON, importGraph, normaliseDescribe, pinJSON, reachable, sourceScan } from "../test-kit/harness.mjs";
 
 const F = await installFoundry({
@@ -73,6 +73,26 @@ test("documents, users, uuids, i18n", () => {
   assert.equal(game.i18n.has("PENTARYN_X.hello"), true);
   const s = makeScene({ name: "Two", tokens: [makeToken({ name: "Bare" })] });
   assert.equal(s.tokens.contents[0].parent, s);
+});
+
+test("kit-edge-3: users.activeGM is the highest-role active GM, then the lowest id (Foundry's getDesignatedUser)", () => {
+  const assistant = makeUser({ id: "aaaaAssistantGM1", name: "Assistant", isGM: true, role: 3 });
+  const gm2 = makeUser({ id: "zzzzGamemaster01", name: "Second GM", isGM: true, role: 4 });
+  const me = game.users.get("gmUser0000000001");
+  game.users.set(assistant.id, assistant).set(gm2.id, gm2);
+  try {
+    assert.equal(game.users.activeGM.id, "gmUser0000000001", "two Gamemasters: the lower id; the Assistant's lower id does not win");
+    me.active = false;
+    assert.equal(game.users.activeGM.id, "zzzzGamemaster01", "a Gamemaster outranks an Assistant GM with a lower id");
+    gm2.active = false;
+    assert.equal(game.users.activeGM.id, "aaaaAssistantGM1");
+    assistant.active = false;
+    assert.equal(game.users.activeGM, null);
+  } finally {
+    me.active = true;
+    game.users.delete(assistant.id);
+    game.users.delete(gm2.id);
+  }
 });
 
 test("harness: pinJSON fails on a missing golden, writes under GOLDEN_UPDATE, compares after", () => {
@@ -182,4 +202,25 @@ test("logger (J6): Foundry's console alias records on F.logged, so logCompatibil
   assert.match(String(added[0].args[0]?.message ?? added[0].args[0]), /^pentaryn-x \| old name/);
   globalThis.logger.info("plain", 1);
   assert.deepEqual(F.logged.at(-1), { level: "info", args: ["plain", 1] });
+});
+
+test("kit-edge-2: doc.delete() fires the vetoable preDelete<Doc> hook first; a veto leaves the doc and logs no delete", async () => {
+  const s = makeScene({ name: "Three", tokens: [makeToken({ id: "tokVeto000000001", name: "Kept" })] });
+  const tok = s.tokens.get("tokVeto000000001");
+  const seen = [];
+  const id = Hooks.on("preDeleteToken", (doc, options, userId) => {
+    seen.push([doc.id, options.why, userId]);
+    return false;
+  });
+  let from = F.calls.length;
+  assert.equal(await tok.delete({ why: "test" }), undefined, "a vetoed delete resolves undefined, as Foundry's does");
+  assert.deepEqual(seen, [["tokVeto000000001", "test", game.user.id]]);
+  assert.equal(s.tokens.get("tokVeto000000001"), tok, "still in its collection");
+  assert.deepEqual(F.calls.slice(from).map(c => c.op + (c.name ? ` ${c.name}` : "")), ["Hooks.call preDeleteToken"]);
+  Hooks.off("preDeleteToken", id);
+  from = F.calls.length;
+  assert.equal(await tok.delete(), tok);
+  assert.equal(s.tokens.get("tokVeto000000001"), undefined);
+  assert.deepEqual(F.calls.slice(from).map(c => c.op + (c.name ? ` ${c.name}` : "")),
+    ["Hooks.call preDeleteToken", "delete", "Hooks.callAll deleteToken"]);
 });

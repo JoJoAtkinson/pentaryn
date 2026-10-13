@@ -171,9 +171,19 @@ def test_render_history_lines():
     assert "(no actions recorded)" in out
 
 
+def _action_kinds() -> list[str]:
+    """ACTION_KINDS as exported by feedback-core.mjs (read by regex — no node needed)."""
+    import re
+    m = re.search(r"export const ACTION_KINDS = Object\.freeze\(\[(.*?)\]\)", CORE.read_text(), re.S)
+    assert m, "feedback-core.mjs exports ACTION_KINDS"
+    return re.findall(r'"([^"]+)"', m.group(1))
+
+
 def test_action_line_covers_every_recorder_kind():
+    """feedback-EXT-6: the case table is checked against the module's own ACTION_KINDS."""
     cases = {
         "scene": ({"kind": "scene", "name": "Gate"}, 'scene "Gate"'),
+        "tool": ({"kind": "tool", "control": "tokens", "tool": "select"}, "tool tokens/select"),
         "tab": ({"kind": "tab", "tab": "chat"}, "tab chat"),
         "control": ({"kind": "control", "token": "Caven", "actor": "Caven", "on": False}, "release token Caven"),
         "target": ({"kind": "target", "token": "Goblin", "on": False}, "untarget Goblin"),
@@ -181,9 +191,16 @@ def test_action_line_covers_every_recorder_kind():
         "click": ({"kind": "click", "action": "roll", "text": "", "cls": "", "id": "w1"}, "click roll in w1"),
         "doc": ({"kind": "doc", "op": "create", "type": "Item", "name": "Rope"}, "doc create Item Rope"),
         "chat": ({"kind": "chat", "id": "m", "flavor": "", "total": None, "whisper": True}, "chat m [whisper]"),
+        "use": ({"kind": "use", "item": "Longsword", "activity": "Attack", "actor": "Caven"}, "use Longsword — Attack (Caven)"),
+        "combat": ({"kind": "combat", "round": 3, "turn": 2, "combatant": "Goblin"}, "combat round 3, turn 2 — Goblin"),
         "reload": ({"kind": "reload", "t": 5}, "page reloaded (the history before this line came from the previous page)"),
+        "notify": ({"kind": "notify", "level": "error", "text": "Nothing to loot"}, "notify error: Nothing to loot"),
         "unknown": ({"kind": "future", "x": 1}, 'future {"x": 1}'),
     }
+    kinds = _action_kinds()
+    assert kinds, "ACTION_KINDS is not empty"
+    missing = [k for k in kinds if k not in cases]
+    assert not missing, f"action_line has no test case for recorder kinds {missing}"
     for kind, (entry, want) in cases.items():
         assert fr.action_line(entry) == want, kind
 

@@ -12,9 +12,9 @@ import * as hudPanels from "./hud-panels.mjs";
 export { cancelTargetPicker } from "./argon.mjs";
 
 /** Features this entry installs, in load order. */
-const FEATURES = [starry, hudPanels];
+const FEATURES = { starry, hudPanels };
 
-for (const feature of FEATURES) installFeature(feature);
+for (const [name, feature] of Object.entries(FEATURES)) installFeature(feature, name);
 
 // A hot re-import after ready: republish so the API carries Starry's rows again.
 if (globalThis.game?.ready) ctx.exposed.publish?.();

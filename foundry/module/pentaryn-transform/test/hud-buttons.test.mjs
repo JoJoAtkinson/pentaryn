@@ -226,6 +226,27 @@ test("ReturnButton on an unlinked token's form whose base actor is gone: the for
   assert.equal(ws.label, "PENTARYN_TRANSFORM.Hud.ChangeForm");
 });
 
+test("[declared] EC-5 ReturnButton on an unlinked token's form: the token's own pre-shift name and image, not the shared base actor's", async () => {
+  const { talo } = fresh();
+  const wsItem = talo.items.get(IDS.ws).toObject();
+  // The base actor ("Talo") is shared by every unlinked copy; this token was renamed on the scene.
+  const token = F.W.makeToken({ id: "zzBramble0000001", name: "ZZ Bramble (Wolf)", actorId: talo.id, actorLink: false,
+    flags: { dnd5e: { previousTokenData: { name: "ZZ Bramble", texture: { src: "zz-bramble.webp" } } } } });
+  const tokenForm = F.W.makeActor({ name: "ZZ Bramble (Wolf)", img: "wolf.webp", isPolymorphed: true, isToken: true,
+    flags: { dnd5e: { originalActor: talo.id, transformOptions: { preset: "wildshape" } } },
+    items: [{ ...wsItem, id: wsItem._id, activities: Object.values(wsItem.system.activities) }] });
+  tokenForm.token = token;
+  const { ret } = await bonus(tokenForm);
+  assert.deepEqual([ret.label, ret.icon], ["Return to ZZ Bramble", "zz-bramble.webp"], "EC-5: the token's name, not the base actor's");
+  // No snapshot on the token (or no texture in it): the base actor, as before.
+  token.flags = { dnd5e: { previousTokenData: { name: "ZZ Bramble" } } };
+  const { ret: ret2 } = await bonus(tokenForm);
+  assert.deepEqual([ret2.label, ret2.icon], ["Return to ZZ Bramble", "talo.webp"]);
+  token.flags = {};
+  const { ret: ret3 } = await bonus(tokenForm);
+  assert.deepEqual([ret3.label, ret3.icon], ["Return to Talo", "talo.webp"]);
+});
+
 /* ── Starry Form ──────────────────────────────────────────────────────────── */
 
 test("StarryFormButton (off): label, icon, badge, tooltip (golden/tooltip-starry-off.json); click opens the constellations", async () => {

@@ -5,7 +5,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
 import { manifestOf, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
-import { MODULE } from "../importer-core.mjs";
+import { GATE_KEYS, MODULE } from "../importer-core.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { buildApi, surfaceOf } from "../lib/api.mjs";
 
@@ -90,9 +90,53 @@ test("selftest fails when module.json lost its gate flags", () => {
   try {
     const out = api.selftest();
     assert.equal(out.ok, false);
-    assert.deepEqual(out.checks.filter(c => !c.ok).map(c => c.label), ["module.json flags.pentaryn.contract is the contract this code speaks"]);
+    assert.deepEqual(out.checks.filter(c => !c.ok).map(c => c.label), [
+      "module.json flags.pentaryn.contract present",
+      "module.json flags.pentaryn.targetSystem present",
+      "module.json flags.pentaryn.targetSystemVersion present",
+      "module.json flags.pentaryn.generation present",
+    ]);
   } finally {
     game.modules.get(MODULE).flags = flags;
+  }
+});
+
+// importer-M3: a module.json that keeps `contract` but lost a version-gate key used to pass selftest
+// while every import was refused. One check per GATE_KEYS key, detail = the value.
+test("importer-M3: selftest fails for each version-gate key module.json lost, not only contract", () => {
+  const mod = game.modules.get(MODULE);
+  const flags = mod.flags;
+  for (const key of ["targetSystem", "targetSystemVersion", "generation"]) {
+    const pentaryn = { ...flags.pentaryn };
+    delete pentaryn[key];
+    mod.flags = { ...flags, pentaryn };
+    try {
+      const out = api.selftest();
+      assert.equal(out.ok, false, key);
+      assert.deepEqual(out.checks.filter(c => !c.ok).map(c => c.label), [`module.json flags.pentaryn.${key} present`]);
+    } finally {
+      mod.flags = flags;
+    }
+  }
+  const healthy = api.selftest().checks.filter(c => c.label.startsWith("module.json flags.pentaryn."));
+  assert.deepEqual(healthy.map(c => [c.label, c.detail]), [
+    ["module.json flags.pentaryn.contract present", "pentaryn/actors.json@1"],
+    ["module.json flags.pentaryn.targetSystem present", flags.pentaryn.targetSystem],
+    ["module.json flags.pentaryn.targetSystemVersion present", flags.pentaryn.targetSystemVersion],
+    ["module.json flags.pentaryn.generation present", flags.pentaryn.generation],
+  ]);
+});
+
+test("importer-M3: the contract check keeps its identity comparison", () => {
+  const mod = game.modules.get(MODULE);
+  const flags = mod.flags;
+  mod.flags = { ...flags, pentaryn: { ...flags.pentaryn, contract: "pentaryn/actors.json@2" } };
+  try {
+    const out = api.selftest();
+    assert.deepEqual(out.checks.filter(c => !c.ok).map(c => [c.label, c.detail]),
+      [["module.json flags.pentaryn.contract present", "pentaryn/actors.json@2"]]);
+  } finally {
+    mod.flags = flags;
   }
 });
 
@@ -100,7 +144,8 @@ test("selftest fails when module.json lost its gate flags", () => {
 // keys stay beside them (the glue stub above reads the real flags, so a replaced object fails there too).
 test("module.json flags.pentaryn carries the gate keys and the blueprint keys together", () => {
   const f = manifest.flags.pentaryn;
-  for (const k of ["contract", "targetSystem", "targetSystemVersion", "generation"]) assert.ok(k in f, k);
+  assert.deepEqual([...GATE_KEYS], ["contract", "targetSystem", "targetSystemVersion", "generation"]);
+  for (const k of GATE_KEYS) assert.ok(k in f, k);
   assert.deepEqual([f.tier, f.namespace, f.flagScope, f.cssPrefix], ["full", "importer", "pentaryn-importer", "pim-"]);
   assert.equal(manifest.compatibility.minimum, "14");
 });

@@ -23,7 +23,9 @@ Two rules that hold for both implementations:
 
 An upload whose size check fails deletes what it wrote — except in a
 ``CONTENT_ADDRESSED`` folder (``bundles/``), where the file there may be the other
-host's same-name upload: it raises :class:`Superseded` and deletes nothing.
+host's same-name upload: it raises :class:`Superseded` and deletes nothing. Both hosts
+write the same ``<rel>.partial`` there, so a rename that fails because the other host's
+rename came first is :class:`Superseded` too, when the name is there afterwards.
 """
 
 from __future__ import annotations
@@ -182,7 +184,8 @@ class FolderStorage:
 
     def read_text(self, rel: str) -> str | None:
         try:
-            return self._p(rel).read_text(encoding="utf-8")
+            # 'replace': a corrupt file reads as "bad", never a UnicodeDecodeError (R3).
+            return self._p(rel).read_bytes().decode("utf-8", "replace")
         except FileNotFoundError:
             return None
         except OSError as exc:
@@ -225,8 +228,15 @@ class FolderStorage:
         try:
             p.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, part)
+        except OSError as exc:
+            raise StorageError(f"upload of {rel} failed: {exc}", verb="copyto") from exc
+        try:
             os.replace(part, p)
         except OSError as exc:
+            if _split(rel)[0] in CONTENT_ADDRESSED and p.is_file():
+                # both hosts share the `.partial`: the other's same-name rename came first
+                raise _superseded(rel, p.stat().st_size,
+                                  Path(src).stat().st_size) from exc
             raise StorageError(f"upload of {rel} failed: {exc}", verb="copyto") from exc
         want = Path(src).stat().st_size
         try:
@@ -469,12 +479,16 @@ class RcloneStorage:
     # -- small files --------------------------------------------------------
 
     def read_text(self, rel: str) -> str | None:
-        proc = self._run("cat", self._r(_check_rel(rel)), timeout=self.timeouts["cat"], what=rel)
+        # Binary, decoded here with 'replace': non-UTF-8 text reads as "bad", never a
+        # UnicodeDecodeError out of subprocess (R3).
+        proc = self._run("cat", self._r(_check_rel(rel)), timeout=self.timeouts["cat"], what=rel,
+                         text=False)
         if proc.returncode != 0:
             if self._not_found(proc):
                 return None
             raise self._fail("cat", rel, proc)
-        return proc.stdout
+        out = proc.stdout or b""
+        return out.decode("utf-8", "replace") if isinstance(out, bytes) else out
 
     def read_head(self, rel: str, n: int) -> bytes | None:
         """The first `n` bytes of a cloud file (``rclone cat --count``), or None when it is
@@ -524,7 +538,9 @@ class RcloneStorage:
         a size mismatch is not retried — it deletes and raises. In a CONTENT_ADDRESSED
         folder it never deletes: rclone has already verified the transfer and the move
         is a server-side rename, so a different size there is the other host's
-        same-name upload landing after ours — `Superseded`, the file left in place."""
+        same-name upload landing after ours — `Superseded`, the file left in place. Both
+        hosts share `<rel>.partial`, so a moveto that fails there because the other host's
+        moveto took the partial first is `Superseded` too when the name is listed."""
         src = Path(src)
         part = _check_rel(rel) + PARTIAL
         try:
@@ -534,9 +550,17 @@ class RcloneStorage:
         proc = self._run("moveto", self._r(part), self._r(rel),
                          timeout=self.timeouts["moveto"], what=rel)
         self._invalidate(rel)
-        if proc.returncode != 0:
-            raise self._fail("moveto", rel, proc)
         head, name = _split(rel)
+        if proc.returncode != 0:
+            if head in CONTENT_ADDRESSED:
+                # both hosts share the `.partial`: the other's same-name moveto came first
+                try:
+                    got = next((e for e in self._lsjson(head) if e.name == name), None)
+                except StorageError:
+                    got = None                          # cannot tell: report the moveto
+                if got is not None:
+                    raise _superseded(rel, got.size, src.stat().st_size)
+            raise self._fail("moveto", rel, proc)
         got = next((e for e in self._lsjson(head) if e.name == name), None)
         want = src.stat().st_size
         if got is not None and got.size != want and head in CONTENT_ADDRESSED:

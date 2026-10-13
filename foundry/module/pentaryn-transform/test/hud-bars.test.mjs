@@ -93,7 +93,33 @@ test("Bonus bar, shifted with a revert item: the item's own button, highlighted;
   await flush();
   pinJSON("bonus-shifted-revert-item", bar(p), file);
   assert.equal(p.isActionUsed, true);
-  assert.equal(p.actionUse, 1);
+  assert.equal(p.actionUse, 2, "settled twice (EC-4)");
+});
+
+test("EC-4: with pentaryn-combat absent, a Bonus Action spent this turn paints the used pip after one compose", async () => {
+  const { talo } = fresh({ revertItem: true });
+  const wolf = await T.shift(talo, "p1");
+  const tokenId = talo._tokens[0].id;
+  game.combats.set("c1", { id: "c1", started: true, round: 1, turn: 0, combatant: { tokenId } });
+  wolf._tokens = talo._tokens;
+  T.markBonusUsed(wolf);
+  ui.ARGON._token = { id: tokenId };
+  assert.equal(game.modules.get("pentaryn-combat")?.active, false, "combat's pip-settle wrap is not installed");
+  const p = A.panel("DND5E.BonusAction", [slot(), new A.SplitButton(btn(wolf.items.get(IDS.revert)), btn(wolf.items.get(IDS.cure)))]);
+  // Argon's updateActionUse: when the pip count changed since the last call it only re-counts;
+  // the used pip is painted on a call that finds the count unchanged.
+  p.pips = 1;
+  p.lastPips = 0;
+  p.usedPip = false;
+  p.updateActionUse = function () {
+    this.actionUse += 1;
+    if (this.pips !== this.lastPips) { this.lastPips = this.pips; return; }
+    this.usedPip = this.isActionUsed;
+  };
+  fire(p, wolf);
+  await flush();
+  assert.equal(p.isActionUsed, true);
+  assert.equal(p.usedPip, true, "the used pip is painted without combat's wrap");
 });
 
 test("Bonus bar: an actor with neither Wild Shape nor a revert item is left alone; the panel's own actor is the fallback", async () => {
@@ -315,6 +341,18 @@ test("portrait: updateWorldTime repaints the HUD's portrait; failures warn ('por
   assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | portrait HP failed"], ["warn", "pentaryn-transform | portrait line failed"]]);
 });
 
+test("portrait (R5): a portrait paint that throws on an updateWorldTime tick warns 'portrait line failed', not an error", async () => {
+  const { talo } = fresh();
+  const wolf = await T.shift(talo, "p1");
+  ui.ARGON._actor = wolf;
+  ui.ARGON.components.portrait = { element: { querySelectorAll: () => [], querySelector() { throw new Error("dom"); } } };
+  F.console.length = 0;
+  game.time.worldTime = 60;
+  Hooks.callAll("updateWorldTime", 60, 60);
+  assert.deepEqual(F.console.map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | portrait line failed"]]);
+  ui.ARGON.components.portrait = null;
+});
+
 /* ── the effect on the portrait ───────────────────────────────────────────── */
 
 test("renderEffect: the Wild Shape and Starry effects get the big class and a live time-left tooltip; others untouched", async () => {
@@ -384,6 +422,41 @@ test("a Starry effect created/changed/deleted on the HUD's actor rebuilds the Bo
   mock.timers.tick(50);
 });
 
+test("transform-ui/lens-rerun [declared]: the Starry rebuild never overlaps a render of the Bonus bar, and a failed one warns", async () => {
+  const { talo } = fresh();
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  ui.ARGON.components.main = [p];
+  ui.ARGON._actor = talo;
+  await S.assumeStarry(talo, "archer");
+  assert.equal(p.renders, 0, "transform-ui/lens-rerun: a panel still in its first render composes the form itself; a second render would overlap it");
+  fire(p, talo);
+  await flush();
+  const plain = p.render;
+  let release;
+  p.render = async function () { this.renders += 1; await new Promise(r => { release = r; }); };
+  const effect = talo.effects.get(S.STARRY_EFFECT_ID);
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "dragon" });
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "chalice" });
+  assert.equal(p.renders, 1, "transform-ui/lens-rerun: a change during the rebuild must wait for it, not render the bar a second time at once");
+  release();
+  await flush();
+  assert.equal(p.renders, 2, "the queued change rebuilds once, after the first");
+  release();
+  await flush();
+  assert.equal(p.renders, 2);
+  F.console.length = 0;
+  p.render = async function () { this.renders += 1; throw new Error("argon"); };
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "archer" });
+  await flush();
+  assert.equal(p.renders, 3);
+  assert.deepEqual(F.console.filter(c => c[1].startsWith(MODULE)).map(c => c.slice(0, 2)), [["warn", "pentaryn-transform | Bonus bar rebuild failed"]]);
+  p.render = plain;
+  await S.endStarry(talo, { quiet: true });
+  assert.equal(p.renders, 4, "the bar rebuilds again once the failed one settled");
+  ui.ARGON.components.main = [];
+  mock.timers.tick(50);
+});
+
 test("D8-starry: a combat tick (only the time-left flag changes) does not rebuild the Bonus bar; a constellation change still does", async () => {
   const { talo } = fresh();
   const p = A.panel("DND5E.BonusAction", [slot()]);
@@ -409,7 +482,7 @@ test("D8-starry: a combat tick (only the time-left flag changes) does not rebuil
 
 /* ── Chalice ──────────────────────────────────────────────────────────────── */
 
-test("Chalice: a leveled heal with a slot lights the Chalice button for a minute; using it, ending the form, or time puts it out", async () => {
+test("Chalice: a leveled heal with a slot lights the Chalice button; using it, ending the form, or game time moving on puts it out", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "chalice");
   ui.ARGON._actor = talo;
@@ -437,14 +510,60 @@ test("Chalice: a leveled heal with a slot lights the Chalice button for a minute
   assert.equal(lit(), true, "a temp-HP part on a leveled spell");
   Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.starry).system.activities.get("sfChalice"), {}, {});
   Hooks.callAll("dnd5e.postUseActivity", cure, {}, {});
-  mock.timers.tick(59_999);
-  assert.equal(lit(), true);
-  mock.timers.tick(1);
-  assert.equal(lit(), false, "a minute passed");
+  game.time.worldTime += 6;
+  Hooks.callAll("updateWorldTime", game.time.worldTime, 6, {}, IDS.gm);
+  assert.equal(lit(), false, "game time moved on");
   Hooks.callAll("dnd5e.postUseActivity", cure, {}, {});
   assert.equal(lit(), true);
   await S.endStarry(talo, { quiet: true });
   assert.equal(lit(), false, "Starry Form ended");
+});
+
+test("transform-ui/lens-rerun [declared]: the Chalice offer has no wall-clock minute — it outlasts real time and ends when the world clock moves", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "chalice");
+  ui.ARGON._actor = talo;
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, talo);
+  await flush();
+  const lit = () => p._buttons.some(b => b.element.classList.contains("ptf-chalice-ready"));
+  Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.cure).system.activities.get("cw1"), {}, {});
+  mock.timers.tick(10 * 60_000);
+  assert.equal(lit(), true, "transform-ui/lens-rerun: a slow table's ten real minutes must not put out the offer");
+  const q = A.panel("DND5E.BonusAction", [slot()]);
+  fire(q, talo);
+  await flush();
+  assert.ok(q._buttons.some(b => b.element.classList.contains("ptf-chalice-ready")), "a rebuilt bar still starts lit");
+  game.time.worldTime += 6;
+  Hooks.callAll("updateWorldTime", game.time.worldTime, 6, {}, IDS.gm);
+  assert.equal(lit(), false, "a round of combat (the world clock) ends the offer");
+  const r = A.panel("DND5E.BonusAction", [slot()]);
+  fire(r, talo);
+  await flush();
+  assert.ok(!r._buttons.some(b => b.element.classList.contains("ptf-chalice-ready")), "a rebuilt bar after the clock moved is dark");
+  await S.endStarry(talo, { quiet: true });
+});
+
+test("EC-2: a Chalice offer ends when the constellation changes — swap to the Archer and back within a minute: no pulse", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "chalice");
+  ui.ARGON._actor = talo;
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, talo);
+  await flush();
+  const lit = () => p._buttons.some(b => b.element.classList.contains("ptf-chalice-ready"));
+  Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.cure).system.activities.get("cw1"), {}, {});
+  assert.equal(lit(), true);
+  const effect = talo.effects.get(S.STARRY_EFFECT_ID);
+  await effect.update({ "flags.pentaryn-transform.starry.left": 300 });
+  assert.equal(lit(), true, "a time-left write keeps the offer");
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "chalice" });
+  assert.equal(lit(), true, "rewriting the same constellation keeps the offer");
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "archer" });
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "chalice" });
+  fire(p, talo);
+  await flush();
+  assert.equal(lit(), false, "EC-2: the offer must not survive a change of constellation");
 });
 
 test("Chalice: not in the Chalice constellation → nothing; another actor's offer is not painted on this HUD; a failure warns", async () => {

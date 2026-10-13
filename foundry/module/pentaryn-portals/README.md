@@ -17,7 +17,10 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
   "Teleport X to <region> in <scene>?" reads "Teleport X to <card title>?". The dialog opens with
   **Teleport** focused (Enter goes; Esc and the X still decline).
 - **Secrecy.** A behavior with `revealed: false` shows players no card (core shows them no name
-  either); its badge shows "?" and the hover says "A way onward".
+  either); its badge shows "?" and the hover says "A way onward". A passage counts as revealed when
+  every enabled teleport behavior that leads somewhere real is revealed — one rule for the card's
+  hint and Revealed switch, the badge and `inspect()`; a behavior whose destinations are all gone
+  does not count.
 - **Travel badges.** Every region with an enabled Teleport Token behavior gets a violet ring badge
   on `canvas.interface`, just above its square, with the first destination's image inside and a
   count when there are several. It draws above lighting, so it shows at darkness 1 (a Tile does
@@ -29,27 +32,32 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
 - **Teleport party (GM).** A confirm lists who moves, each follower "lands beside <PC>". The party
   is every linked character token plus every token a player owns or a PC summoned — never item
   piles, Markers, crowd, or pentaryn-aoe area handles. They land spread out from the region's
-  centre, skipping squares a wall cuts off or someone stands on, each follower beside its PC; on
-  another scene the active players are pulled there and the GM's view follows.
+  centre, skipping squares a wall cuts off or someone stands on — a Large or bigger token's whole
+  footprint must be clear, of standers and of the rest of the party — each follower beside its PC; on
+  another scene the active players are pulled there and the GM's view follows. A token deleted
+  while the confirm is open is left behind, not recreated; if none are left it warns and moves nobody.
 - **Summons follow their PC.** When a player walks their PC through a link to **another scene**,
   the active GM's client carries the PC's summons and the tokens only that player owns, and lands
   them around the PC (a co-owned steed comes when all its owners go together). Only a real portal
   hop counts: a GM cut-and-paste drags nothing. Needs a GM logged in.
-- **Arrivals step off an occupied square.** A PC who comes through onto someone's square is moved
-  by the GM's client to the nearest free one before its company follows.
+- **Arrivals step off an occupied square.** A PC who comes through overlapping anyone (even off the
+  grid, or a Large token) is moved by the GM's client to the nearest square its whole footprint fits
+  before its company follows.
 - **Authoring (GM).** Region config → Appearance → *Portal card*: title, image, description, a live
   preview, and a camera button that crops the scene background around the region (8 × 5 squares,
   arrival square circled). The **Portal card window** (badge menu → Edit card) edits every
   destination's card in place, opens/seals the passage, reveals it, toggles "ask before moving",
   adds a destination (two-way by default) or removes one, and — with its edit toggle on — lets you
   drag the badge to move the travel spot (it snaps by its bounds; its travel tiles move with it).
+  A drag that is interrupted — the badge redraws, the scene changes, the browser cancels the
+  pointer — snaps the badge back and moves nothing.
 
 ## Settings
 
 | Key | Scope | Default | What it does |
 |---|---|---|---|
 | `teleportDefault` | world | on | The teleport question opens with Teleport focused. Off: core's default, Don't Teleport. |
-| `spreadArrivals` | world | on | A PC arriving through a portal onto an occupied square steps to the nearest free one (GM's client). |
+| `spreadArrivals` | world | on | A PC arriving through a portal onto an occupied square steps to the nearest free one (GM's client; with two GM tabs open, one claims the token and moves it). |
 | `confirmPartyTeleport` | world | on | Teleport party lists who moves and asks first. Off: it moves at once. |
 
 Every read is live; no reload. Labels and hints are `PENTARYN_PORTALS.Setting.<key>.Name/Hint` in `lang/en.json`.
@@ -63,18 +71,18 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 
 | Call | Who | Returns |
 |---|---|---|
-| `cardFor(region)` | anyone | `{ uuid, title, img, description }`; `null` for no region |
+| `cardFor(region)` | anyone | `{ uuid, title, img, description }`; `null` for no region. `region`: `RegionDocument\|uuid` (a uuid naming no region → `null`, logged) |
 | `destinations(ref, { sceneId })` | anyone | `[{ uuid, scene, name, card, revealed, choice, behavior }]` |
 | `inspect(ref, { sceneId, as })` | anyone | `{ region, hidden, card, revealed, destinations }`; a player (`as`) gets `destinations: null` for a sealed or unrevealed passage and no passage name; an Actor or Token **document** (what the root `game.pentaryn.inspect` passes) → `null`; an Actor/Token uuid or name is not a region ref → `BAD_ARGS` / `NOT_FOUND` |
 | `badges()` | anyone | the badges drawn on **this** client: `[{ region, revealed, visible, cards }]` |
 | `redraw()` | anyone | redraws this client's badges |
-| `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background) |
-| `lookAt(region)` | GM | pans **your** view; nobody moves |
-| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. Moves the party on **`canvas.scene`** (the calling client's view). It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click |
-| `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination |
+| `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background, or the upload failed — warns, card image unchanged) |
+| `lookAt(region)` | GM | pans **your** view; nobody moves. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
+| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged). Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change |
+| `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination. A `to` with any behavior other than Teleport Token is not a landing spot (the card does not list it): `fail("BAD_ARGS", "not a landing spot: …")`, dryRun too |
 | `unlink(ref, { to, dryRun })` | GM | `ok({ from, to, removed })` / `fail(…)` |
-| `open(region, { edit })` | GM | the Portal card window |
-| `spreadArrival(tokenDoc)` | GM | the token, moved off an occupied square if it was on one |
+| `open(region, { edit })` | GM | the Portal card window. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
+| `spreadArrival(tokenDoc)` | GM | the token, moved off an occupied square if it was on one. `tokenDoc`: `TokenDocument\|uuid` (a uuid naming no token → `undefined`, logged) |
 
 Writes (`link`, `unlink`) never throw for a bad ref or a player: they return `fail("NOT_FOUND" |
 "AMBIGUOUS" | "BAD_ARGS" | "NOT_GM", reason)`. The seven old members keep their signatures.

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeLog } from "../log.mjs";
+import { logOrConsole, makeLog } from "../log.mjs";
 
 function sink() {
   const lines = [];
@@ -57,7 +57,7 @@ test("swallow returns the fallback for a throw and for a rejection", async () =>
   assert.equal(await log.swallow("x", async () => 4, 8), 4);
 });
 
-test("notify: one toast with console:false plus one console line; no-op without ui", () => {
+test("notify: one toast with console:false plus one console line; no toast without ui", () => {
   const { c, lines } = sink();
   const toasts = [];
   const g = { ui: { notifications: { warn: (m, o) => toasts.push([m, o]) } } };
@@ -66,4 +66,32 @@ test("notify: one toast with console:false plus one console line; no-op without 
   assert.deepEqual(toasts, [["Careful", { console: false, permanent: true }]]);
   assert.deepEqual(lines, [["warn", "m | Careful"]]);
   assert.equal(makeLog("m", { console: c, g: {} }).notify("warn", "x"), undefined);
+});
+
+// kit-edge-8 (defect wave 2, Joe 2026-10-12): the console line is written first, unconditionally.
+test("kit-edge-8: notify without ui.notifications still writes its console line and returns undefined", () => {
+  const { c, lines } = sink();
+  assert.equal(makeLog("m", { console: c, g: {} }).notify("warn", "No ui"), undefined);
+  assert.equal(makeLog("m", { console: c, g: { ui: {} } }).notify("error", "No toasts"), undefined);
+  const g = { ui: { notifications: { warn: () => "toast" } } };
+  assert.equal(makeLog("m", { console: c, g }).notify("info", "No info method"), undefined);
+  assert.equal(makeLog("m", { console: c, g }).notify("warn", "Shown"), "toast");
+  assert.deepEqual(lines, [
+    ["warn", "m | No ui"], ["error", "m | No toasts"], ["info", "m | No info method"], ["warn", "m | Shown"],
+  ]);
+});
+
+// kit-ext-2 (defect wave 2, Joe 2026-10-12): the one "log or console" fallback the kit shares.
+test("kit-ext-2: logOrConsole returns the log as given, else a console stand-in that warns once per key", () => {
+  const log = makeLog("m", { console: sink().c, g: {} });
+  assert.equal(logOrConsole("m", log), log);
+  const { c, lines } = sink();
+  const out = logOrConsole("pentaryn-x", null, { g: { console: c } });
+  const err = new Error("e");
+  out.error("boom", err);
+  out.warn("careful");
+  out.warnOnce("k", "once");
+  out.warnOnce("k", "once again");
+  assert.deepEqual(lines, [["error", "pentaryn-x | boom", err], ["warn", "pentaryn-x | careful"], ["warn", "pentaryn-x | once"]]);
+  assert.doesNotThrow(() => logOrConsole("m", null, { g: {} }).warnOnce("k", "no console"));
 });

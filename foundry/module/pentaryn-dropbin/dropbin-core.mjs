@@ -12,15 +12,16 @@
 
 import { MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement } from "./loot-core.mjs";
 import {
-  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, makeEntry, normaliseDeltas, listLast, findEntry,
-  briefOf, searchLog, shouldCaptureDelete, restoreTarget,
+  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry,
+  briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene,
 } from "./ledger-core.mjs";
+import { pinnedEntryIds } from "./lib/pins.mjs";
 
 // Imported, then exported by name (not `export … from`), so the import-graph tools see both files.
 export {
   MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement,
-  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, makeEntry, normaliseDeltas, listLast, findEntry,
-  briefOf, searchLog, shouldCaptureDelete, restoreTarget,
+  DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, ledgerKB, dedupeKey, duplicateOfTail, appendEntry, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry,
+  briefOf, searchLog, shouldCaptureDelete, restoreTarget, pileScene,
 };
 
 export const SHORT = "dropbin";
@@ -49,12 +50,26 @@ export function lockedContainer(data) {
   return data?.enabled && data.type === "container" && data.locked ? data : null;
 }
 
-/** Every journal id pinned to a Note on any scene. Built once per directory render. */
-export function pinnedEntryIds(scenes) {
-  const s = new Set();
-  for (const sc of scenes) for (const n of sc.notes) if (n.entryId) s.add(n.entryId);
-  return s;
+/**
+ * The token a locked container's 'Locked' float goes on (dropbin-R9): the hook's own token when it
+ * passed a TokenDocument, else a synthetic actor's own token, else the first placeable holding this
+ * very actor object — identity, not id, because every unlinked chest of one base actor shares the
+ * id. null means no float (the toast is enough).
+ */
+export function lockFloatToken(target, actor, placeables) {
+  if (target?.documentName === "Token") return target.object ?? null;
+  if (actor?.token) return actor.token.object ?? null;
+  if (!actor) return null;
+  for (const t of placeables ?? []) if (t.actor === actor) return t;
+  return null;
 }
+
+/**
+ * Every journal id pinned to a Note on any scene: the kit's null-safe rule (lib/pins.mjs, journal-EXT-9),
+ * shared with journal. Re-exported for core.test's tables; itempiles.mjs imports the kit directly. The
+ * core → lib edge is a test/graph-allow.json debt.
+ */
+export { pinnedEntryIds };
 
 /** One of our corpses: a token this module turned into a pile (never revert one we didn't make). */
 export const isOurCorpse = doc => !!doc.flags?.[MODULE]?.corpse;

@@ -1,16 +1,26 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/perf.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/perf.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Three helpers core does not have. For debounce and throttle use core's
  * `foundry.utils.debounce` / `foundry.utils.throttle`.
  *
  *   memo      cache a pure-ish read per key (a hot hook reading per-token state)
- *   coalesce  callers during one in-flight run share its promise (a rebuild several hooks ask for)
+ *   coalesce  callers during one in-flight run share its promise (an idempotent read: a fetch or
+ *             index load every caller can use)
  *   perFrame  run at most once per animation frame with the latest args (refreshToken, pointermove)
+ *
+ * coalesce is leading-edge: a change that lands during a run is not seen by it and no second run
+ * follows. A rebuild several hooks trigger uses `foundry.utils.debounce` (trailing) or another
+ * trailing variant, so the last change is not lost. (1.2.0 kit-perf-3)
  */
 
 /**
+ * Key by a string: pass a keyFn that returns a uuid or id, never a placeable — the cache is a
+ * plain Map, so an object key is held strongly and outlives a canvas redraw. Eviction is FIFO
+ * (oldest first insertion; a hit does not refresh it) once more than `max` keys are held,
+ * default max 500. (1.2.0 kit-perf-2)
+ *
  * @param {Function} fn
- * @param {(...args) => *} [keyFn]  default: the first argument
+ * @param {(...args) => *} [keyFn]  default: the first argument — pass one returning a string
  * @param {{ ttlMs?: number, max?: number, now?: () => number }} [opts]
  */
 export function memo(fn, keyFn = (...args) => args[0], { ttlMs = Infinity, max = 500, now = () => Date.now() } = {}) {
@@ -32,16 +42,26 @@ export function memo(fn, keyFn = (...args) => args[0], { ttlMs = Infinity, max =
 
 /**
  * One run at a time: a call while a run is in flight gets that run's promise (its own args are
- * ignored). The next call after it settles starts a fresh run.
+ * ignored), including a call from inside fn's own synchronous prefix. The next call after it
+ * settles starts a fresh run. For idempotent reads only — never a rebuild (see the header).
  */
 export function coalesce(fn) {
   let inflight = null;
   return function (...args) {
     if (inflight) return inflight;
-    inflight = (async () => fn.apply(this, args))().finally(() => {
-      inflight = null;
-    });
-    return inflight;
+    let resolve, reject;
+    const run = new Promise((res, rej) => { resolve = res; reject = rej; });
+    inflight = run;
+    (async () => {
+      try {
+        resolve(await fn.apply(this, args));
+      } catch (err) {
+        reject(err);
+      } finally {
+        if (inflight === run) inflight = null;
+      }
+    })();
+    return run;
   };
 }
 

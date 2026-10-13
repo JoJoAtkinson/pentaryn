@@ -150,7 +150,7 @@ severs the tools of every other running session, which is exactly what happened 
 diagnosing this. The orphan signal is a dead parent; a live backend under an orphaned
 server is the shape that actually held the ports.
 
-`make vtt-up` warns (never kills) when the port holder is an orphan, because a restart
+`make vtt-up` warns (never kills) when any bridge port is held by an orphan, because a restart
 is precisely when the browser reconnects and picks the wrong broker.
 
 **After cleaning, a Foundry tab that is already open must be reloaded** to reconnect,

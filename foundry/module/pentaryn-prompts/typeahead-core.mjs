@@ -89,6 +89,7 @@ export function createTypeahead({ setTimer, clearTimer, timeoutMs = 3500, onOrph
       if ((ev.metaKey || ev.ctrlKey) && ev.key !== "Enter") return false;   // browser/OS shortcuts (⌘R, ⌘C …)
       swallowedUps.add(ev.code);
       if (ev.isComposing) return true;
+      if (typeof ev.key !== "string") return true;                         // keyless event (prompts-core-R4): swallowed, never thrown
       const k = ev.key;
       if (k === "Escape") buf.close = ev.shiftKey ? "discard" : "save";
       else if (k === "Enter") { if (ev.metaKey || ev.ctrlKey) buf.close = "save"; else buf.text += "\n"; }

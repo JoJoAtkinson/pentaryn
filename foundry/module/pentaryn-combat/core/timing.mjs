@@ -31,7 +31,7 @@ export const DELAYS = Object.freeze({
   cardRerender: 50,
   /** turnflow/boundaries.mjs: combat start — look again once Argon's own start bind is done. */
   hudFollowRecheck: Object.freeze([300, 1200]),
-  /** turnflow/boundaries.mjs: the orphan-flag sweep a moment after any combat is deleted. */
+  /** turnflow/boundaries.mjs: the orphan-flag sweep after the last of a burst of combat deletes (debounced). */
   orphanSweep: 1500,
   /** turnflow/boundaries.mjs: bind the HUD to the one token left selected (debounced). */
   followLeft: 150,

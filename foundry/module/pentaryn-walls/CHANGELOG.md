@@ -6,6 +6,97 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] An aligned wall too far to bridge is reported once, whatever its id** (`walls-EXT-8`):
+  `diagnose` dropped E1's "an aligned wall (id) lies along this line" when F1 had already said
+  "aligned with id" by regex-parsing `(\S+?)` out of the English text, so an id with a space or a
+  parenthesis was reported twice. `castRay` now returns the wall's id with its refusal and
+  `diagnose` compares ids. Refusal wording is unchanged; the refusal hash pins still match.
+- **[declared] The entry's file map puts the busy lock in `actions.mjs`** (`walls-M12`): the
+  comment said `walls-core.mjs` held it; walls-core exports `exclusive()`, and the lock object is
+  declared in `actions.mjs`. Comment only. `ctx.contributions` stays: the blueprint's ctx shape names it.
+- **[declared] The ready line lists `analyze()` and follows the keybindings** (`walls-EXT-11`):
+  `readyLine` hard-coded "Alt+W run, Alt+Z undo, Alt+Shift+W preview" and an API list without
+  `analyze()`. It now takes the API paths and the keybinding rows as arguments; the entry passes the
+  manifest's GM rows and `KEYBINDINGS`, so the console line ends `… / .makeMacro() / .analyze()` and
+  a changed default binding shows up there.
+- **[declared] The manifest's flag scope comes from `FLAG_SCOPE`** (`walls-EXT-6`): `api-manifest.mjs`
+  hard-coded `"wall-autocomplete"` in `flagScope`, `flags.writes` and `run`'s side effects (and both
+  read scopes in `undo`'s), so a future scope migration would have left `describe()` naming the old
+  scope. They are now built from `FLAG_SCOPE` and `READ_SCOPES`; `describe()` output is unchanged.
+- **[declared] An empty scene reports 0 passes on wasm too** (`walls-edge-6`): with no walls the
+  compiled engine counted one pass where js counts none, so the card said "1 pass" and `compare()`
+  reported a difference. `runWasm` now hands a wall-less scene to the js engine, whose result is
+  otherwise identical. `lib.rs` is unchanged.
+- **[declared] Undo ranks run ids by time, not string** (`walls-edge-5`): `planUndo` picked the
+  latest run by string sort, so a non-ISO run id (a short id from a test or the bridge) sorted after
+  every timestamp and stayed "latest" forever. ISO-stamped ids now rank by their time and always
+  outrank a non-ISO id; non-ISO ids rank below them by string order. `all` restores each wall to its
+  earliest run's prior under the same order. No run id is rejected.
+- **[declared] A missing `.wasm` in the browser names the HTTP status** (`walls-rob-10`): the
+  browser load never checked `response.ok`, so a 404 page went to `WebAssembly.instantiate` and the
+  ready line said "expected magic word …". It now throws `fetch <url> → HTTP <status>` first, and
+  the ready line's "(wasm unavailable: …)" shows that cause. Walls still falls back to the JS engine.
+- **[declared] `makeMacro` never reuses a same-named chat macro** (`walls-rob-9`): after the fixed-id
+  lookup, the fallback matched any macro named `Walls: <action>`, so a chat macro of that name was
+  reused, its command overwritten with the script and put on the hotbar. The name fallback now also
+  requires `type: "script"`; otherwise the fixed-id script macro is created and the chat macro is left alone.
+- **[declared] A failed GM report card is logged through the kit log** (`walls-rob-8`): a
+  `ChatMessage.create` failure went to a raw `console.error("pentaryn-walls |", err)`, invisible to
+  `api.trace()`. It now logs `pentaryn-walls | chat card failed` with the error via `log.error`, and
+  with debug on traces `{error}` under `chat card failed`. The card stays non-fatal.
+- **[declared] An unknown `sceneId` says so** (`walls-rob-7`): `preview`/`run`/`analyze`/`undo`
+  given a `sceneId` that matched no scene threw "no scene — open one, or pass a sceneId.", advice
+  the caller had already followed. They now throw `pentaryn-walls: no scene with id "<sceneId>".`;
+  the old message stays for no `sceneId` and no viewed scene.
+- **[declared] `preview`/`run`/`analyze`/`undo(null)` mean the defaults** (`walls-rob-5`): a `null`
+  argument hit the parameter destructuring and rejected with a `TypeError`. Each action now reads
+  `arg ?? {}`, so `null` is the same as calling with no argument (the viewed scene, the settings).
+- **[declared] The GM report card escapes the scene name** (`walls-edge-7`): `reportHtml` put
+  `scene.name` into the card raw, so a name with `<`, `&` or quotes rendered as markup. It now goes
+  through a small pure escape in `walls-core` (same table as `foundry.utils.escapeHTML`, which node
+  lacks). Plain names render byte-identical; the glue golden is unchanged.
+
+- **[declared] `run()`'s ABI doc in `wasm/src/lib.rs` matches the marshaller** (`walls-M2`): it named
+  8 input fields and a 4-int header; it now names all 11 (`…keepOpen,light,sound,move`), the 5-int header
+  with `components`, the 8-wide create rows and the component rows, still in three lines, so
+  `wall-engine.wasm` rebuilds byte-identical (sha `df378076`). Comments only; no behaviour change.
+- **[declared] One hotbar macro per action, however many calls race** (`walls-async-2`): two
+  overlapping `makeMacro` calls (the same tab or two GM tabs) each created a `Walls: <action>` macro.
+  The macro now has a fixed id per action (`pwmacro<action>`, padded to 16) created with `keepId`;
+  the call that loses the id re-reads the winner's macro. A macro made earlier is still found by name.
+- **[declared] The API manifest names every flag a run writes** (`walls-M11`): `describe()` listed
+  `run`'s writes as `generated`/`run`/`rule`/`moves`, missing the `kind` and `sources` stamped on created
+  walls; it now lists `generated`, `run`, `rule`, `kind`, `sources` and `moves.<run>` (`priorC` is
+  read-only since `walls-edge-2`). `undo`'s side effects now list the update batch before the delete
+  batch, the order it commits them. Manifest and `describe.json` only; no behaviour change.
+- **[declared] `compare()` survives js throwing** (`walls-rob-2`): when the js reference threw and
+  another backend did not, the field diff read js's missing result and threw a TypeError. It now
+  reports `identical: false`, `diff: "js threw: <message>"`; a backend's own throw is reported as before.
+- **[declared] The engine no longer carries a wall `threshold`** (`walls-EXT-3`): it was dead
+  code — the wall reader never passed one, and the only preset that sets one (window) infers
+  solid. Dropped from the segment shape, the grown-wall profile and the create payload; goldens
+  are unchanged.
+- **[declared] The compiled engine honours the iteration cap** (`walls-rob-1`): a run that hit the
+  cap on wasm committed its partial result where js throws. It now throws js's exact
+  `hit the <iterCap>-iteration cap; nothing was committed.` and writes nothing.
+- **[declared] A `weldEps`/`pinEps` override runs on the JavaScript engine** (`walls-EXT-1`): the
+  compiled engine hard-codes both, so it ignored the override while the card echoed it. The wasm
+  row's `accepts(walls, opts)` now refuses such opts, and the card names js, the backend that ran.
+- **[declared] Undo keeps each run's history** (`walls-edge-2`): a later run that trimmed or moved a
+  generated wall overwrote its `run`/`priorC` stamp, so undoing run 2 deleted run 1's wall. A created
+  wall now keeps its creating `run`; every trim/weld/move writes `moves.<run>` = the prior coordinates
+  (first per run, never overwritten), on both backends. Undo restores each wall with a
+  `moves.<latest>` entry and deletes only walls the latest run created; legacy flat stamps still undo.
+  Run ids are stamped with `,` for the `.` so `moves.<run>` is one flag key.
+- **[declared] Refusal pings only on the viewed scene** (`walls-rob-3`): `preview`/`run` with another
+  scene's `sceneId` pinged that scene's coordinates on the canvas the GM was looking at. Markers are
+  now drawn only when `canvas.scene` is the reported scene; the chat card and console table still
+  list every refusal.
+- **[declared] Refusal pings stay on the GM's screen** (`walls-edge-1`): each refused endpoint is
+  drawn locally with `canvas.controls.drawPing(…, {style: PULSE})` instead of `canvas.ping`, which
+  broadcast to every player and, with Alt+Shift held from the preview key, became a pull that
+  panned their views. Players now see nothing, as the README says; pentaryn-pings no longer
+  records them.
 - **[declared] Labels and toasts from `lang/en.json`** (`senses-walls-cursors-36`, W2-WALLS-1): the
   setting, its choices and the three keybindings register `PENTARYN_WALLS.*` keys; the backend hint
   says "the same fixture corpus" instead of "the same 44 fixtures" (-8).

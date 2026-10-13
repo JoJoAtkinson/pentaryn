@@ -370,7 +370,8 @@ test("every console text in the module's files (golden/console-texts.json; step 
   assert.deepEqual(rows.filter(r => r[1] === "?"), [], "every kit log call names its text inline");
   pinJSON("console-texts", rows, import.meta.url);
   // [declared] T-D3 (-15, guide step 9): no silent catch is left — each logs at debug (or warn-once).
-  const silent = sourceScan(ROOT, /catch\s*(\(\w*\))?\s*\{\s*(return null;\s*)?\}/);
+  // M6: a catch whose body only assigns (`catch { doc = null; }`) is just as silent.
+  const silent = sourceScan(ROOT, /catch\s*(\(\w*\))?\s*\{\s*(return null;|[\w$.]+\s*=\s*[^;{}]*;)?\s*\}/);
   assert.deepEqual(silent.map(h => [h.file, h.text.replace(/\s+/g, " ")]), []);
   const swallowed = sourceScan(ROOT, /\.catch\(\(\) =>/);
   assert.deepEqual(swallowed.map(h => h.file), []);

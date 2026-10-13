@@ -5,27 +5,32 @@
  * creature). A chosen creature automatically succeeds on its saving throw against the spell, and
  * it takes no damage if it would normally take half damage on a successful save."
  *
- *  - On the caster's client, using Careful Spell (`dnd5e.postUseActivity`) writes
- *    flags.pentaryn-aoe.careful = { at, key, usage } on the caster (key = the combat turn, or null
- *    out of combat) and toasts how many it protects.
- *  - Metamagic ends after use (metamagic-disarm): the caster's next spell cast takes it, binding it
- *    to that spell's usage card, in or out of combat, with no time window. A placement cancelled
- *    before it lands (refunded) is not a cast and leaves it armed.
- *  - The next save spell's resolution (resolve.mjs, through ctx.exposed.carefulFor) marks up to CHA
- *    mod of the caster's side as protected (core.carefulTargets / protectRows) and binds the use
- *    to that usage card, so a re-roll of the card keeps it and another spell does not get it.
- *  - The active GM clears a use bound to a turn of a combat that has been deleted.
+ * Joe's metamagic ruling (2026-10-12, aoe-careful-select): metamagic is a tracking thing. The player
+ * declares it and chooses; nothing is inferred and nothing is forced onto a spell's mechanics.
+ *  - On the caster's client, using Careful Spell (`dnd5e.postUseActivity`) opens a picker of the
+ *    creatures on the caster's scene the user can see (token names, the current targets ticked, up
+ *    to CHA mod, min 1), posts a public card "<caster's token> uses Careful Spell: <tokens>" and
+ *    stores the choice on the caster: flags.pentaryn-aoe.careful = { at, scene, tokens, names }.
+ *    Using it always declares (MM-1): skipping the pick, or nobody to pick, stores an empty choice
+ *    and the card says nobody was chosen. Using it again replaces the earlier declaration.
+ *  - The caster's next SAVE tray (resolve.mjs, through ctx.exposed.carefulFor) marks exactly those
+ *    rows protected (core.protectRows) and clears the flag: one use per declaration. A spell with no
+ *    save never reaches it, so it stays armed; there is no time window. A re-roll of a card that
+ *    already used one keeps its own choice and does not spend a newer declaration.
+ *  - The GM can protect or unprotect any row on the tray by hand (tray.mjs → resolve.setRow).
  *
- * Its two hooks register right after Part A's and before resolve's, as they did inside
- * resolve.mjs: the Careful arm must run before refund's synchronous `false` on the same hook.
+ * Its hook registers right after Part A's and before resolve's, as it did inside resolve.mjs: the
+ * Careful listener must run before refund's synchronous `false` on the same hook.
  * Setting carefulSpell (world, default on).
  */
 
-import { MODULE, aoeFlags, carefulTargets, protectRows, carefulApplies, carefulStale } from "./core.mjs";
+import { MODULE, RECENT_MESSAGES, aoeFlags, isHandle, isCreature, protectRows } from "./core.mjs";
 import { setting } from "./settings.mjs";
+import { isPile } from "./scene-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 let log = makeLog(MODULE);   // the entry's ctx.log once installed
+const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /** -8: a silent stop, traced (ring + debug line) only while CONFIG.debug["pentaryn-aoe"] is on. */
 function why(job, id, outcome, extra = {}) {
@@ -33,84 +38,128 @@ function why(job, id, outcome, extra = {}) {
   log.debug(`${job}: ${outcome}`, id ?? "");
 }
 
-/** The combat turn an actor's Careful Spell belongs to ("combatId:round:combatantId"), or null out of combat. */
-export function carefulKey(actor) {
-  const combat = game.combats?.find?.(c => c.started && c.combatants.some(cb => cb.actor === actor || cb.actorId === actor?.id));
-  return combat ? `${combat.id}:${combat.round}:${combat.combatant?.id ?? combat.turn}` : null;
-}
-
 /** How many creatures Careful Spell protects for this caster: the CHA modifier, at least 1. */
 const carefulMax = actor => Math.max(1, Number(actor.system?.abilities?.cha?.mod) || 1);
 
-/**
- * The caster used Careful Spell for this cast: mark their side's rows (up to the CHA mod) as an
- * automatic success with no damage on a half-on-save spell, and bind the use to this usage card.
- * @returns {Promise<{names: string[], max: number}|null>}
- */
-async function carefulFor(caster, described, { casterActorId, usage, scene, onSave, rows }) {
-  if (!caster || !setting("carefulSpell")) { why("careful", usage, caster ? "off" : "no caster"); return null; }
-  const flag = aoeFlags(caster).careful;
-  const combatKey = carefulKey(caster);
-  if (!flag) { why("careful", usage, "no flag"); return null; }
-  if (!carefulApplies(flag, { combatKey, usage })) { why("careful", usage, "not applicable", { combatKey, flag }); return null; }
-  const own = caster.token ?? caster.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene) ?? null;
-  const max = carefulMax(caster);
-  const ids = carefulTargets(described, { casterActorId, casterDisposition: own?.disposition ?? CONST.TOKEN_DISPOSITIONS.FRIENDLY, max });
-  protectRows(rows, ids, onSave);
-  // -9: if binding fails, a later different spell could still take the protection — say so.
-  if (usage && !flag.usage) await caster.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(err => log.warn("careful bind usage", err));
-  return { names: rows.filter(r => r.protected).map(r => r.name), max };
+/** The caster's token: its own (an unlinked token's actor), else one on the viewed scene, else any. */
+function ownToken(actor) {
+  const tokens = actor.getActiveTokens?.(false, true) ?? [];
+  return actor.token ?? tokens.find(tk => tk.parent === canvas?.scene) ?? tokens[0] ?? null;
 }
 
 /**
- * metamagic-disarm: the caster cast a spell, so an armed Careful Spell is spent on it (bound to its
- * usage card); if that spell has no save area, it protects nobody and the next one gets nothing.
+ * The creatures on `scene` this user may choose (core.isCreature). A player sees no hidden token and,
+ * where the token is drawn on their canvas, none out of their sight (MM-1: the picker names no one
+ * the player cannot see); a GM sees them all.
  */
-async function takeCareful(actor, usageConfig, results) {
-  const usage = results?.message?.id ?? null;
-  const flag = aoeFlags(actor).careful;
-  if (!actor?.isOwner || !flag || flag.usage || !usage) return;
-  // A placement cancelled before it landed is refunded (refund.mjs): that spell was never cast.
-  if (usageConfig?.create?.measuredTemplate && !(results?.templates?.length)) return why("careful", usage, "placement cancelled, still armed");
-  await actor.update({ [`flags.${MODULE}.careful.usage`]: usage }).catch(err => log.warn("careful spend on cast", err));
+function choicesOn(scene) {
+  return (scene?.tokens?.contents ?? [...(scene?.tokens ?? [])]).filter(tk => {
+    const actor = tk.actor;
+    if (!actor) return false;
+    if (!game.user.isGM && (tk.hidden || (tk.object && !tk.object.visible))) return false;
+    return isCreature({
+      actorType: actor.type, hpMax: actor.system?.attributes?.hp?.max ?? 0,
+      handle: isHandle(tk), isHandleActor: !!aoeFlags(actor).handleActor, isPile: isPile(tk),
+    });
+  });
 }
 
-/** On the caster's client: Careful Spell was used, the next spell (if it is a save spell, its area) protects their side. */
-async function onCarefulUsed(activity, usageConfig, results) {
+/**
+ * The picker: one box per creature (token name), the user's current targets ticked (up to max).
+ * @returns {Promise<string[]>}  the chosen token ids (at most max); none when skipped or closed
+ */
+async function pick(tokens, max) {
+  const targeted = new Set([...(game.user?.targets ?? [])].map(t => t?.document?.id ?? t?.id));
+  let ticked = 0;
+  const boxes = tokens.map(tk => {
+    const on = targeted.has(tk.id) && ticked < max;
+    if (on) ticked++;
+    return `<label class="pa-careful-pick"><input type="checkbox" name="careful" value="${esc(tk.id)}"${on ? " checked" : ""}> ${esc(tk.name)}</label>`;
+  }).join("");
+  const read = form => [...form.querySelectorAll('input[name="careful"]:checked')].map(i => i.value).slice(0, max);
+  const out = await foundry.applications.api.DialogV2.wait({
+    window: { title: _loc("PENTARYN_AOE.Careful.PickTitle"), icon: "fa-solid fa-shield-halved" },
+    content: `<p>${esc(_loc("PENTARYN_AOE.Careful.PickHint", { n: max }))}</p><div class="pa-careful-picks">${boxes}</div>`,
+    buttons: [
+      { action: "ok", label: _loc("PENTARYN_AOE.Careful.PickOk"), icon: "fa-solid fa-shield-halved", default: true,
+        callback: (event, button) => read(button.form) },
+      { action: "skip", label: _loc("PENTARYN_AOE.Careful.PickSkip"), icon: "fa-solid fa-forward" },
+    ],
+    // No more than max boxes can be ticked: the others grey out at the limit.
+    render: (event, dialog) => {
+      const boxesIn = [...(dialog?.element?.querySelectorAll?.('input[name="careful"]') ?? [])];
+      const limit = () => {
+        const n = boxesIn.filter(b => b.checked).length;
+        for (const b of boxesIn) b.disabled = !b.checked && n >= max;
+      };
+      for (const b of boxesIn) b.addEventListener("change", limit);
+      limit();
+    },
+    rejectClose: false,
+  });
+  return Array.isArray(out) ? out : [];
+}
+
+/**
+ * On the caster's client: Careful Spell was used — the player picks who it protects, a public card
+ * says so. Always a declaration (MM-1): a skipped pick stores nobody, replaces any earlier choice, and
+ * the next save tray uses it up; the GM protects rows by hand.
+ */
+async function onCarefulUsed(activity) {
   if (!setting("carefulSpell")) return;
-  const item = activity?.item;
-  if (item?.type === "spell") return takeCareful(activity.actor, usageConfig, results);
-  if ((item?.system?.identifier || "") !== "careful-spell") return;
+  if ((activity?.item?.system?.identifier || "") !== "careful-spell") return;
   const actor = activity.actor;
   if (!actor?.isOwner) return why("careful", null, "used, but this client does not own the caster");
-  await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: carefulKey(actor), usage: null } });
-  const max = carefulMax(actor);
-  ui.notifications?.info?.(_loc("PENTARYN_AOE.Careful.Armed", { n: max }));
+  const own = ownToken(actor);
+  const scene = own?.parent ?? canvas?.scene ?? null;
+  const tokens = choicesOn(scene);
+  const ids = tokens.length ? await pick(tokens, carefulMax(actor)) : [];
+  if (!ids.length) why("careful", null, tokens.length ? "pick skipped, nobody chosen" : "no creature on the scene to choose");
+  const chosen = tokens.filter(tk => ids.includes(tk.id));
+  const names = chosen.map(tk => tk.name);
+  await actor.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), scene: scene?.id ?? null, tokens: chosen.map(tk => tk.id), names } });
+  // Public, token names only (never the actor's name).
+  const caster = own?.name ?? actor.prototypeToken?.name ?? "";
+  const text = names.length ? _loc("PENTARYN_AOE.Careful.Card", { caster, names: names.join(", ") })
+    : _loc("PENTARYN_AOE.Careful.CardNobody", { caster });
+  await ChatMessage.implementation.create({
+    speaker: ChatMessage.getSpeaker({ actor, scene, token: own }),
+    content: `<p class="pa-careful-card"><i class="fa-solid fa-shield-halved" inert></i> ${esc(text)}</p>`,
+  });
+}
+
+/** The Careful Spell an earlier tray from this usage card used (a re-roll keeps it), or null. */
+function usedBy(usage) {
+  if (!usage) return null;
+  for (const m of game.messages.contents.slice(-RECENT_MESSAGES).reverse()) {
+    const res = aoeFlags(m).resolution;
+    if (res?.usage === usage && Array.isArray(res.careful?.ids)) return res.careful;   // an empty pick counts
+  }
+  return null;
+}
+
+/**
+ * The active GM resolves a save spell of this caster: protect exactly the creatures the player
+ * chose and clear the declaration (one use). A re-roll of a card that already used one keeps it.
+ * @returns {Promise<{names: string[], ids: string[]}|null>}
+ */
+async function carefulFor(caster, { usage = null, onSave = "half", rows = [] } = {}) {
+  if (!caster || !setting("carefulSpell")) { why("careful", usage, caster ? "off" : "no caster"); return null; }
+  const prior = usedBy(usage);
+  const flag = prior ? null : aoeFlags(caster).careful;
+  const ids = prior?.ids ?? (Array.isArray(flag?.tokens) ? flag.tokens : null);
+  if (!ids) { why("careful", usage, "no declaration"); return null; }
+  protectRows(rows, ids, onSave);
+  // -9: if clearing fails, the next save spell would take this choice again — say so.
+  if (flag) await caster.update({ [`flags.${MODULE}.careful`]: _del }).catch(err => log.warn("careful clear", err));
+  return { names: rows.filter(r => r.protected).map(r => r.name), ids: [...ids] };
 }
 
 export function install(reg, ctx) {
   log = ctx.log;
   // resolve.mjs (another feature) calls this through ctx.exposed, never by importing this file.
   ctx.expose({ carefulFor });
-
-  reg.on("dnd5e.postUseActivity", reg.guardSwallowAsync("postUseActivity(careful)", (activity, usageConfig, results) => onCarefulUsed(activity, usageConfig, results)), { guard: false, label: "postUseActivity(careful)" });
-
-  // A Careful Spell armed for a turn of a combat that is now gone can never apply: clear it.
-  reg.on("deleteCombat", reg.guardSwallowAsync("deleteCombat(careful)", async (combat) => {
-    if (!game.users.activeGM?.isSelf) return;
-    const done = new Set();
-    const stale = [];
-    for (const c of combat.combatants ?? []) {
-      const actor = c.actor;
-      if (!actor || done.has(actor.uuid)) continue;
-      done.add(actor.uuid);
-      if (carefulStale(aoeFlags(actor).careful, combat.id)) stale.push(actor);
-    }
-    // One write for the world actors (§5.9.1, C59); an unlinked token's synthetic actor writes its own delta.
-    const world = stale.filter(a => !a.isToken);
-    if (world.length) await Actor.implementation.updateDocuments(world.map(a => ({ _id: a.id, [`flags.${MODULE}.careful`]: _del })));
-    await Promise.all(stale.filter(a => a.isToken).map(a => a.unsetFlag(MODULE, "careful")));
-  }), { guard: false, label: "deleteCombat(careful)" });
+  reg.on("dnd5e.postUseActivity", reg.guardSwallowAsync("postUseActivity(careful)", activity => onCarefulUsed(activity)), { guard: false, label: "postUseActivity(careful)" });
 }
 
 export function uninstall() {}

@@ -31,11 +31,11 @@
   },
   "gateModuleJson": {
     "name": "PentarynAbort",
-    "message": "VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and pentaryn-importer.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
+    "message": "VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and importer-core.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
     "toasts": [
       [
         "error",
-        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and pentaryn-importer.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
+        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • module.json declares contract \"pentaryn/actors.json@0\" but this code implements \"pentaryn/actors.json@1\" — module.json and importer-core.mjs are out of step.\n  • targetSystem is \"dnd5e\" but module.json expects \"pf2e\".\n  • generation is 14 but module.json expects 13.",
         {
           "permanent": true,
           "console": false
@@ -81,12 +81,42 @@
     "fetched": 1
   },
   "nullEntry": {
-    "name": "TypeError",
-    "message": "Cannot read properties of null (reading 'expected')",
+    "name": "PentarynAbort",
+    "message": "An actor entry is not an object (got null). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
     "toasts": [
       [
         "error",
-        "[pentaryn-importer] Cannot read properties of null (reading 'expected')",
+        "[pentaryn-importer] An actor entry is not an object (got null). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "stringEntry": {
+    "name": "PentarynAbort",
+    "message": "An actor entry is not an object (got \"a string entry\"). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] An actor entry is not an object (got \"a string entry\"). Each element of actors is one Actor; refusing the run rather than guessing what it meant.",
+        {
+          "permanent": true,
+          "console": false
+        }
+      ]
+    ],
+    "fetched": 1
+  },
+  "duplicateAction": {
+    "name": "PentarynAbort",
+    "message": "Actor \"b\" has two items with flags.pentaryn.action \"bite\". The action is the upsert key for its Items; refusing the run rather than letting one row shadow the other.",
+    "toasts": [
+      [
+        "error",
+        "[pentaryn-importer] Actor \"b\" has two items with flags.pentaryn.action \"bite\". The action is the upsert key for its Items; refusing the run rather than letting one row shadow the other.",
         {
           "permanent": true,
           "console": false
@@ -113,6 +143,48 @@
   "unmanagedItems": {
     "name": "PentarynAbort",
     "message": "unmanagedItems must be \"keep\" or \"delete\", got \"purge\"",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badOnlyString": {
+    "name": "PentarynAbort",
+    "message": "only must be null or an array of slug strings, got \"x\"",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badOnlyItems": {
+    "name": "PentarynAbort",
+    "message": "only must be null or an array of slug strings, got [\"b\",7]",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badTimeoutNull": {
+    "name": "PentarynAbort",
+    "message": "timeout must be a positive number of milliseconds, got null",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badTimeoutZero": {
+    "name": "PentarynAbort",
+    "message": "timeout must be a positive number of milliseconds, got 0",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badTimeoutNaN": {
+    "name": "PentarynAbort",
+    "message": "timeout must be a positive number of milliseconds, got NaN",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badPathEmpty": {
+    "name": "PentarynAbort",
+    "message": "path must be a non-empty string, got \"\"",
+    "toasts": [],
+    "fetched": 0
+  },
+  "badPathNull": {
+    "name": "PentarynAbort",
+    "message": "path must be a non-empty string, got null",
     "toasts": [],
     "fetched": 0
   },
@@ -143,6 +215,12 @@
   "timeoutCustom": {
     "name": "PentarynAbort",
     "message": "Timed out after 50 ms fetching /worlds/w/actors.json",
+    "toasts": [],
+    "fetched": 1
+  },
+  "fetchBodyError": {
+    "name": "PentarynAbort",
+    "message": "Network error reading /worlds/w/actors.json: network error",
     "toasts": [],
     "fetched": 1
   }

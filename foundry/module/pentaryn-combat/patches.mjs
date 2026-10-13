@@ -20,6 +20,7 @@ import { makeLog } from "./lib/log.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 import { setting } from "./settings.mjs";
 import { protoDescriptor } from "./argon.mjs";
+import { opts } from "./context.mjs";
 
 const log = makeLog(MODULE);
 const handles = [];
@@ -55,14 +56,18 @@ function guardScrollingText() {
     // burst, at PIXI's `set y` ← CanvasAnimation#updateAttribute. A floating text that started while
     // the tab was visible was still waiting (the tab went to the background) when a scene change
     // destroyed it; each waiting animation then set y on the destroyed text (its transform is null)
-    // and core logged the error. Setting x/y on a destroyed PreciseText is now a no-op.
+    // and core logged the error. Setting x/y on a destroyed PreciseText is now a no-op (reading it gives
+// 0). With the setting Off both the getter and the setter are core's own (combat-core-EC-7).
     if (P && !Object.hasOwn(P.prototype, "y")) {
       for (const axis of ["x", "y"]) {
         const d = protoDescriptor(P.prototype, axis);
         if (!d?.set || !d?.get) continue;
         handles.push(defineAccessor(MODULE, P.prototype, axis, {
           configurable: true, enumerable: d.enumerable,
-          get() { return this.transform ? d.get.call(this) : 0; },
+          get() {
+            if (!this.transform && setting("scrollingTextGuard")) return 0;
+            return d.get.call(this);
+          },
           set(v) {
             if (!this.transform && setting("scrollingTextGuard")) return;
             d.set.call(this, v);
@@ -130,8 +135,6 @@ function settlePipsPatch() {
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 /** The two init patches (turnflow.mjs registered them after the portrait's ready hook). */
 export function install(reg) {

@@ -22,7 +22,8 @@ import { featuresOf, featureItem, weaponShape, combatContext, turnOf, updateTurn
 
 // The pure rider reads live in shapes.mjs (guide S8); re-exported for callers of this file.
 export { isReckless, riderActivity, riderDiceFor };
-import { setting, riderMode } from "./settings.mjs";
+import { setting, riderMode, aoeAutoDamage } from "./settings.mjs";
+import { opts } from "./context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -182,7 +183,7 @@ function renderOffer(message, html) {
     });
     b.innerHTML = `<i class="fa-solid fa-plus"></i> ${_loc(core.keyFor("Rider.Name", o.rider.key))} ${esc(o.dice)}`;
     if (o.auto) b.classList.add("pentaryn-combat-eligible");
-    b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); rollRider(message, o.rider.key); });
+    b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); rollRider(message, o.rider.key).catch(err => log.warn("rider roll", err)); });
     row.append(b);
   }
   const content = html.querySelector(".message-content") ?? html;
@@ -352,22 +353,24 @@ function renderAutoNote(message, html) {
     if (!a || !actor) return;
     ev.preventDefault();
     ev.stopPropagation();
-    const key = a.dataset.undo;
-    const entry = auto.find(x => x.key === key);
-    // Only this card's own auto rider, this turn: an Undo link left on an earlier turn's card must
-    // not give back the rider spent on the current turn.
-    if (!entry || turnOf(actor).riders?.[key] !== `auto:${entry.attack}`) {
-      ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Stale"));
-      return;
-    }
-    autoApplied.delete(riderOnce(actor, key));
-    await updateTurn(actor, t => (t.riders?.[key] === `auto:${entry.attack}` ? core.setRider(t, key, null) : t));
-    // Mark the card (its author or the GM can write it): the note re-renders struck through.
-    if (message.isOwner) {
-      const was = message.getFlag(MODULE, "undone") ?? [];
-      if (!was.includes(key)) await message.setFlag(MODULE, "undone", [...was, key]).catch(err => log.warn("undo mark", err));
-    }
-    ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Undone", { name: _loc(core.keyFor("Rider.Name", a.dataset.undo)) }));
+    try {
+      const key = a.dataset.undo;
+      const entry = auto.find(x => x.key === key);
+      // Only this card's own auto rider, this turn: an Undo link left on an earlier turn's card must
+      // not give back the rider spent on the current turn.
+      if (!entry || turnOf(actor).riders?.[key] !== `auto:${entry.attack}`) {
+        ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Stale"));
+        return;
+      }
+      autoApplied.delete(riderOnce(actor, key));
+      await updateTurn(actor, t => (t.riders?.[key] === `auto:${entry.attack}` ? core.setRider(t, key, null) : t));
+      // Mark the card (its author or the GM can write it): the note re-renders struck through.
+      if (message.isOwner) {
+        const was = message.getFlag(MODULE, "undone") ?? [];
+        if (!was.includes(key)) await message.setFlag(MODULE, "undone", [...was, key]).catch(err => log.warn("undo mark", err));
+      }
+      ui.notifications.info(_loc("PENTARYN_COMBAT.Rider.Undone", { name: _loc(core.keyFor("Rider.Name", a.dataset.undo)) }));
+    } catch (err) { log.warn("rider undo", err); }
   });
   const content = html.querySelector(".message-content") ?? html;
   const row = content.querySelector(":scope > section.icon-row");
@@ -378,11 +381,6 @@ function renderAutoNote(message, html) {
 // A Full Attack posts one usage card for several swings; its Damage button can't know which swing
 // it is for. Without aoe's auto-damage, each swing's attack card gets its own Damage button, with
 // that swing's crit, attack mode and ammunition.
-
-function aoeAutoDamage() {
-  try { return !!game.modules.get("pentaryn-aoe")?.active && !!game.settings.get("pentaryn-aoe", "autoDamageOnHit"); }
-  catch { return false; }
-}
 
 function renderSwingDamage(message, html) {
   if (message?.type !== "attack" || !message.getFlag?.(MODULE, "swing") || aoeAutoDamage() || !html?.querySelector) return;
@@ -397,15 +395,17 @@ function renderSwingDamage(message, html) {
   b.addEventListener("click", async ev => {
     ev.preventDefault();
     ev.stopPropagation();
-    const roll = message.rolls?.[0];
-    const ammoId = message.system?.ammunition;
-    const origin = message._source?.system?.origin ?? null;
-    await activity.rollDamage({
-      event: ev,
-      isCritical: !!roll?.isCritical,
-      attackMode: message.system?.mode ?? roll?.options?.attackMode,
-      ammunition: ammoId ? activity.actor.items.get(ammoId) : undefined
-    }, {}, origin ? { data: { system: { origin } } } : {});
+    try {
+      const roll = message.rolls?.[0];
+      const ammoId = message.system?.ammunition;
+      const origin = message._source?.system?.origin ?? null;
+      await activity.rollDamage({
+        event: ev,
+        isCritical: !!roll?.isCritical,
+        attackMode: message.system?.mode ?? roll?.options?.attackMode,
+        ammunition: ammoId ? activity.actor.items.get(ammoId) : undefined
+      }, {}, origin ? { data: { system: { origin } } } : {});
+    } catch (err) { log.warn("swing damage", err); }
   });
   row.append(b);
   (html.querySelector(".message-content") ?? html).append(row);
@@ -477,8 +477,6 @@ export function report(actorOrName) {
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
-
 export function install(reg, ctx) {
   if (ctx?.log) trace = (op, data) => ctx.log.trace(op, data);
   registerHooks(reg);
@@ -504,6 +502,10 @@ function registerHooks(reg) {
   }, opts("rider card"));
   reg.on("combatTurnChange", () => rerenderShowing(), opts("rider cards: turn changed"));
   reg.on("deleteCombat", () => rerenderShowing(), opts("rider cards: combat over"));
+  // combat-riders-29 (M8): the stale auto-rider guards go at each turn change.
+  reg.on("updateCombat", (combat, changes) => {
+    if ("turn" in (changes ?? {}) || "round" in (changes ?? {})) pruneSession();
+  }, opts("rider session: turn moved"));
   reg.on("updateActor", (actor, changes) => {
     if (foundry.utils.hasProperty(changes, `flags.${MODULE}.turn`) || foundry.utils.hasProperty(changes, `flags.${MODULE}.-=turn`)) rerenderCards(actor);
   }, opts("rider cards: turn flag"));

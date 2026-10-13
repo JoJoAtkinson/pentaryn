@@ -709,8 +709,8 @@ adjustments:
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/careful.mjs, foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/tray.mjs]
-    markers: ["carefulFor", "protectRows", "carefulTargets"]
-    what: after Careful Spell, the caster's next save spell's tray marks up to CHA mod of their side (same disposition, PCs first, not the caster) as protected — automatic success, 0 damage on a half-on-save spell, no request card; bound to that usage card so a re-roll keeps it (setting carefulSpell)
+    markers: ["carefulFor", "protectRows", "unprotectRow"]
+    what: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures on the caster's scene, current targets ticked) and posts a public card; the caster's next save spell's tray marks exactly those creatures protected — automatic success, 0 damage on a half-on-save spell, no request card — then the declaration ends (a re-roll of that card keeps it); the GM can toggle any row's protection on the tray (setting carefulSpell; Joe's metamagic ruling 2026-10-12)
     why: dnd5e 6.0.6's Careful Spell is a bare utility that spends a point; the ally still got a request card, held the area open and took half damage unless the GM edited the row (Area 5 S4)
     native_when: dnd5e implements Careful Spell on the save workflow
     retire_class: guarded

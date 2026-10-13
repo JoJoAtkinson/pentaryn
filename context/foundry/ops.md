@@ -44,7 +44,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | See what's in the cloud store | `make foundry-cloud` |
 | See which modules are in the cloud, and their fingerprints | `make foundry-bundles` · `make foundry-bundles-gc` lists what the sweep would delete (`YES=1` deletes) |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
-| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer through `make foundry-importer-install` (its code alone: module-check + install, nothing staged) or `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after); there is no `foundry-importer-sync`. The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving. Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
+| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer through `make foundry-importer-install` (its code alone: module-check + install, nothing staged) or `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after); there is no `foundry-importer-sync`. The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving; two syncs of one module take turns on `.pentaryn-sync/<id>.lock` (the second waits, then installs on top). Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
@@ -77,7 +77,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 | App | `Foundry Virtual Tabletop` in `/Applications` — launched via `open -a` (through `host.py`; BOSS uses `PENTARYN_START_CMD`) |
 | Local URL | <http://localhost:30000> |
 | Public URL | <https://vtt.atjoseph.com> |
-| Tunnel | `cloudflared`, named tunnel `ardenhaven`, pidfile `.run/cloudflared.pid`, log `.run/cloudflared.log` (both gitignored) |
+| Tunnel | `cloudflared`, named tunnel `ardenhaven`, pidfile `.run/cloudflared.pid`, log `.run/cloudflared.log`, start lock `.run/cloudflared.lock` (all gitignored; `tunnel-up` holds the lock from the pidfile check to the pidfile write, so overlapping runs start one cloudflared) |
 | Data root | `~/Library/Application Support/FoundryVTT` (`host.FOUNDRY_DATA`; `Data/` beneath it is `ops/config.py`'s `FOUNDRY_DATA_DIR`) |
 | Core | **v14.365** |
 | System | **dnd5e 5.3.3** |
@@ -204,12 +204,12 @@ there, and each upload adds `cloud-upload` lines (queued, uploading, done/failed
 
 | Target | Does |
 | ------ | ---- |
-| `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS |
+| `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS (hooks get 30s: a hung stop hook is forced, a hung start hook fails naming the hook) |
 | `make foundry-boot` | The boot choice alone — `FROM=` to decide it |
-| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s |
+| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s. The pidfile is trusted only while its pid is alive **and** `ps` names it cloudflared; otherwise both commands delete it (`▸ stale pidfile removed`) and never signal that process |
 | `make tunnel-logs` | Last 40 lines of the cloudflared log |
 | `make tunnel-setup` | **One-time**: `cloudflared tunnel login`, create the tunnel, route DNS. Idempotent |
-| `make vtt` | Three independent probes: local HTTP · pidfile `kill -0` · public HTTP 200/302 |
+| `make vtt` | Three independent probes: local HTTP · pidfile `kill -0` + `ps` says cloudflared · public HTTP 200/302 |
 
 ### Where the logic lives
 
@@ -350,7 +350,7 @@ the bundle each module and system was at. Snapshots from before bundles (untagge
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
 | `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar, and stages a tar of every module/system bundle the cloud lacks (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing). The upload sends those bundles **first**, then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), checking before the sidecar and again after the tar that every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle its snapshot names that was deleted by hand — after a restore of a full snapshot, nothing). A backup that uploaded ends with the bundle sweep. With `BACKGROUND=1` (what `vtt-down` passes) the upload runs in a detached process |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
-| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → finish any queued upload, download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore`. A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
+| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → finish any queued upload, download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore` (without a terminal it refuses unless `--yes` is passed). A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
 | `make foundry-cloud` | — | Status: this host's background upload (in progress / pending / last result; a dropped one names the tar kept in `.pentaryn-tmp/incomplete/`), storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count, bundles (in the cloud, unreferenced, local ones not yet uploaded) |
 | `make foundry-bundles` | — | Every local module and system with its version, fingerprint, size and whether its bundle is in the cloud; then the cloud bundles no snapshot references |
 | `make foundry-bundles-gc` | manual | The sweep every uploading backup runs, by hand: lists the bundles no retained snapshot references that are older than 7 days. A dry run; `YES=1` deletes them |
@@ -402,7 +402,10 @@ world is *based on*:
   To use it: make foundry-up FROM=latest   (or: make foundry-restore SNAP=…)`. The snapshot is
   remembered as **pending** in the state file, so the backup that follows (which makes the local
   world the newest) cannot bury it: every later boot repeats the notice, and the next boot at a
-  terminal asks, until it is answered or restored.
+  terminal asks, until it is answered or restored. Once that backup has made it no longer the
+  newest, the prompt says so (`an earlier boot without a terminal noticed it; it is not the newest
+  cloud snapshot`) and never calls it latest: `boot from the offered snapshot or keep [local]?
+  (Enter = local, l/take, k/local, or a number)`.
 - **Cloud unreachable** (no rclone, no network, a 60 s listing timeout): boots local with a warning
   and exits 0, and so do the pre-launch backup and the asset step after it — `make vtt-up` never
   blocks on the cloud. Only a bad `FROM=<name>` or a failed chosen restore stops the start.
@@ -452,7 +455,8 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
   changed since (so it cannot be rebuilt), that upload can never be complete: the uploader
   removes whatever of it already landed, keeps its world tar as
   `.pentaryn-tmp/incomplete/<name>` (named by `make foundry-cloud`), and goes on with the next
-  queued one — which still uploads linked. A foreground backup (`make foundry-backup`,
+  queued one — which still uploads linked, even one a `vtt-down` was building at that
+  moment (the drop is recorded in `.pentaryn-tmp/dropped-parents.json`). A foreground backup (`make foundry-backup`,
   `vtt-down WAIT=1`, the pre-launch and pre-restore snapshots) fails loudly instead, so a
   restore stops before touching anything.
 - **A bundle is deleted only by the mark-and-sweep**, never by name, never younger than 7 days —
@@ -474,7 +478,11 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
 - **Packs are append-only.** Never edit a published zip; add `<kind>-<nn+1>.zip`. A zip whose hash
   changed after extraction is **refused with a message**, not silently re-applied.
 - **One folder per pack**, so cross-pack collisions are structurally impossible.
-- **Filenames kebab-case at extraction only** — never rename inside an extracted pack.
+- **Filenames kebab-case at extraction only** — never rename inside an extracted pack. A folder
+  whose name kebabs to nothing (e.g. `地图/`) is dropped from the path; a *file* whose name kebabs
+  to nothing, or two members that kebab to the same path, refuse the whole pack with a message.
+- **A zip that will not open** (corrupt or truncated upload) is named and skipped; the packs
+  unpacked in the same run are still recorded, and the run exits 1. Replace it with a good zip (it was never recorded, so the same name is fine).
 - **Backup and restore hard-refuse while Foundry is running.** (The background *upload* of an
   already-built tar does not care: it reads only the tar.)
 - **Art never goes in git.** OneDrive holds the bytes; `foundry/assets-manifest.json` holds the

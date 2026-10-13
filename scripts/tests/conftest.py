@@ -178,11 +178,8 @@ def _isolate_foundry_data(monkeypatch, fake_data):
     package_dir = {"module": data / "modules", "system": data / "systems", "world": data / "worlds"}
     monkeypatch.setattr(admin, "PACKAGE_DIR", package_dir)
     # the updater modules that copied admin's constants by name at import
-    from scripts.foundry.update import inventory, recover
-    monkeypatch.setattr(inventory, "MODULES_DIR", data / "modules")
-    monkeypatch.setattr(inventory, "SYSTEMS_DIR", data / "systems")
+    from scripts.foundry.update import inventory
     monkeypatch.setattr(inventory, "PACKAGE_DIR", package_dir)
-    monkeypatch.setattr(recover, "FOUNDRY_DATA", fake_data)
 
     monkeypatch.setattr(feedback_reports, "FOUNDRY_DATA_DIR", data)
     monkeypatch.setattr(feedback_reports, "_DEFAULT_DIR", data / "pentaryn-feedback")

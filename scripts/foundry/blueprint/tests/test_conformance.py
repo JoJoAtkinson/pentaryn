@@ -130,6 +130,38 @@ def test_c11_lookbehind(tmp_path, code, clean):
     assert (status(report, "C11") == "pass") is clean, report["results"][10]
 
 
+C12_ALIAS_CASES = [
+    ('export { MODULE };', None),
+    ('export { MODULE, MODULE as MODULE_ID, EFFECT_ID };', "MODULE as MODULE_ID"),
+    ('export { MODULE as MOD };', "MODULE as MOD"),
+    ('export {\n  MODULE as SCOPE,\n};', "MODULE as SCOPE"),
+    ('export { MODULE as MODULE_NAME };', None),
+]
+
+
+@pytest.mark.parametrize("code,finding", C12_ALIAS_CASES)
+def test_c12_fails_on_an_alias_of_module(tmp_path, code, finding):
+    """EXT-8-c12: `MODULE as MOD|MODULE_ID|SCOPE` in an export or import list is the banned name
+    by another route; C12 used to see only `const|let|var` definitions."""
+    d = _tiny(tmp_path, "pentaryn-alias", {
+        "one.mjs": 'import { MODULE } from "./one-core.mjs";\nexport const b = MODULE;\n',
+        "one-core.mjs": 'const MODULE = "pentaryn-alias";\n' + code + "\n"})
+    r = next(r for r in conformance.score_dir(d)["results"] if r["id"] == "C12")
+    if finding is None:
+        assert r["status"] == "pass", r
+    else:
+        assert r["status"] == "fail" and any(f.startswith("one-core.mjs:") and f.endswith(finding)
+                                             for f in r["detail"]), r
+
+
+def test_c12_fails_on_an_import_alias_of_module(tmp_path):
+    d = _tiny(tmp_path, "pentaryn-alias", {
+        "one.mjs": 'import { MODULE as MOD } from "./one-core.mjs";\nexport const b = MOD;\n',
+        "one-core.mjs": 'export const MODULE = "pentaryn-alias";\n'})
+    r = next(r for r in conformance.score_dir(d)["results"] if r["id"] == "C12")
+    assert r["status"] == "fail" and r["detail"] == ["one.mjs:1 MODULE as MOD"], r
+
+
 def test_markdown_report_has_a_row_per_module(tmp_path):
     d = tmp_path / "pentaryn-one"
     write(d, {"module.json": json.dumps({"id": "pentaryn-one", "esmodules": ["one.mjs"]}), "one.mjs": "export {};\n"})
@@ -228,6 +260,72 @@ def test_wait_modules_are_reported(tmp_path, monkeypatch, capsys):
     assert isinstance(conformance.WAIT, dict)
 
 
+def test_package_hits_scans_once_per_module_py_blueprint_perf_2(tmp_path, monkeypatch):
+    """C09 and C47 share one package scan; the alias table is built once, not once per file."""
+    d = _tiny(tmp_path, files={"one.mjs": "export const piles = globalThis.itempiles;\n",
+                               "two.mjs": "export {};\n", "three.mjs": "export {};\n"})
+    calls = {"aliases": 0, "strip": 0}
+    real_aliases, real_strip = conformance.package_aliases, conformance.adj.strip_comments
+
+    def aliases(*a, **k):
+        calls["aliases"] += 1
+        return real_aliases(*a, **k)
+
+    def strip(*a, **k):
+        calls["strip"] += 1
+        return real_strip(*a, **k)
+
+    monkeypatch.setattr(conformance, "package_aliases", aliases)
+    monkeypatch.setattr(conformance.adj, "strip_comments", strip)
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    first = conformance.package_hits(m)
+    assert conformance.package_hits(m) is first
+    assert "item-piles" in first
+    assert calls == {"aliases": 1, "strip": 3}, calls
+    # include_lib=False is its own scan, still cached
+    conformance.package_hits(m, include_lib=False)
+    conformance.package_hits(m, include_lib=False)
+    assert calls == {"aliases": 2, "strip": 6}, calls
+
+
+def test_module_scans_are_memoised_per_module_py_blueprint_perf_3(tmp_path, monkeypatch):
+    """imports, reexports, feature_files, listeners and tier are computed once per Module, not
+    once per rule that asks (a Module does not change after load_module)."""
+    d = _tiny(tmp_path, files={
+        "one.mjs": 'import * as two from "./two.mjs";\nexport * from "./three.mjs";\n'
+                   'Hooks.on("ready", () => two.install());\n',
+        "two.mjs": "export function install() {}\nexport function uninstall() {}\n",
+        "three.mjs": "export const x = 1;\n"})
+    calls = {"imports_of": 0, "read_lock": 0}
+    real = {"imports_of": conformance.jsscan.imports_of, "read_lock": conformance.vendor.read_lock}
+
+    def counted(name):
+        def f(*a, **k):
+            calls[name] += 1
+            return real[name](*a, **k)
+        return f
+
+    monkeypatch.setattr(conformance.jsscan, "imports_of", counted("imports_of"))
+    monkeypatch.setattr(conformance.vendor, "read_lock", counted("read_lock"))
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    imps = m.imports("one.mjs")
+    assert [t for t, _ in imps] == ["two.mjs"]
+    assert m.imports("one.mjs") is imps
+    rex = m.reexports("one.mjs")
+    assert rex == ["three.mjs"] and m.reexports("one.mjs") is rex
+    feats = conformance.feature_files(m)
+    assert feats == {"two.mjs"} and conformance.feature_files(m) is feats
+    ls = conformance.listeners(m)
+    assert [x.name for x in ls] == ["ready"] and conformance.listeners(m) is ls
+    assert m.tier == "full" and m.tier == "full"
+    assert calls == {"imports_of": 1, "read_lock": 1}, calls
+    conformance.score(m)                       # every rule asks again: nothing is rescanned
+    locks = calls["read_lock"]                 # C14's vendor.check reads the lock itself
+    assert m.tier == "full" and calls["read_lock"] == locks, calls
+    assert calls["imports_of"] <= len(m.files), calls    # once per file at most, however many rules ask
+    assert conformance.feature_files(m) is feats and conformance.listeners(m) is ls
+
+
 # ── gap-fill: lock tier fallback and scorer fixes R2–R9 ──────────────────────
 
 def test_tier_falls_back_to_the_lock_before_wave_7(tmp_path):
@@ -244,6 +342,14 @@ def test_tier_falls_back_to_the_lock_before_wave_7(tmp_path):
     m = json.loads((d / "module.json").read_text())
     m["flags"] = {"pentaryn": {"tier": "full"}}                       # module.json wins once it says
     (d / "module.json").write_text(json.dumps(m))
+    assert conformance.score_dir(d)["tier"] == "full"
+
+
+def test_a_corrupt_lock_scores_as_full_not_a_traceback(tmp_path):
+    """py-blueprint-ROB-4: read_lock raises VendorError on a lock that is not JSON; the tier falls back."""
+    d = tmp_path / "pentaryn-tiny"
+    write(d, {"module.json": json.dumps({"id": "pentaryn-tiny", "esmodules": ["tiny.mjs"]}),
+              "tiny.mjs": "export const x = 1;\n", "lib/kit.lock.json": "{not json\n"})
     assert conformance.score_dir(d)["tier"] == "full"
 
 
@@ -477,6 +583,26 @@ def test_c55_every_query_passes_a_timeout(tmp_path, code, want):
     assert res(one(tmp_path, code), "C55")["status"] == want
 
 
+# py-blueprint-AC-2: when the last argument is an object literal, the timeout must be in it and
+# it must be the options argument (not the data). Arguments split on depth-0 `,` only: the lexer
+# injects `;` after every `${…}`, so a two-interpolation template must not shift the arguments.
+C55_AC2_CASES = [
+    ('await gm.query("x.y", { timeout: 5 });', "fail"),                          # data arg only
+    ('await User.queryMany([gm], "x.y", { timeout: 5 });', "fail"),              # data arg only
+    ('await gm.query("x.y", { timeout: 5 }, {});', "fail"),                      # options lack it
+    ('await gm.query(`${A}.${B}`, {}, { timeout: 8000 });', "pass"),             # 12557b01 broke this
+    ('await gm.query(`${A}.${B}`, { a: `${C}${D}` }, { timeout: 8000 });', "pass"),
+    ('await User.queryMany(us, `${A}.${B}`, {}, { ...o, timeout: 1 });', "pass"),
+    ('await gm.query("x.y", {}, opts);', "fail"),                                # whole-call search
+    ('await gm.query("x.y", {}, { ...o, timeout });', "pass"),
+]
+
+
+@pytest.mark.parametrize("code,want", C55_AC2_CASES)
+def test_c55_timeout_in_the_options_argument_py_blueprint_ac_2(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C55")["status"] == want
+
+
 C56_CASES = [
     ('CONFIG.queries["m.x"] = guarded(f);', "fail"),
     ('CONFIG.queries[`${MODULE}.x`] = f;', "fail"),
@@ -509,6 +635,39 @@ def test_c57_module_socket_channel_is_the_module_id(tmp_path, code, want):
     assert res(one(tmp_path, code, socket=True), "C57")["status"] == want
 
 
+C57_IMPORTED = 'export const CHANNEL = "module.pentaryn-other";\n'
+C57_IMPORT_CASES = [
+    # py-blueprint-EXT-1: a channel constant imported from another module file resolves through the import
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',
+     {"c.mjs": C57_IMPORTED}, "fail"),
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',
+     {"c.mjs": 'export const CHANNEL = `module.${MODULE}`;\n'}, "pass"),
+    ('import { CHANNEL as CH } from "./c.mjs";\ngame.socket.on(CH, f);',                 # alias-aware
+     {"c.mjs": C57_IMPORTED}, "fail"),
+    ('import { CH as CHANNEL } from "./c.mjs";\ngame.socket.on(CHANNEL, f);',
+     {"c.mjs": 'export const CH = "module.pentaryn-async";\n', "b.mjs": C57_IMPORTED}, "pass"),
+    ('import { CHANNEL as X } from "./c.mjs";\ngame.socket.on(CHANNEL, f);',              # not a local name
+     {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',                # never a bare-name search
+     {"b.mjs": C57_IMPORTED, "c.mjs": 'export const CHANNEL = "module.pentaryn-async";\n'}, "pass"),
+    ('game.socket.emit(CHANNEL, {});', {"b.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\nfunction send(CHANNEL) { game.socket.emit(CHANNEL, {}); }',
+     {"c.mjs": C57_IMPORTED}, "n/a"),                                                   # shadowing parameter
+    ('import { CHANNEL } from "./c.mjs";\nconst send = (x, CHANNEL) => game.socket.emit(CHANNEL, x);',
+     {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\nconst send = CHANNEL => game.socket.emit(CHANNEL, {});',
+     {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('const { CHANNEL } = cfg;\ngame.socket.emit(CHANNEL, {});', {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',                # not module scope
+     {"c.mjs": 'function f() { const CHANNEL = "module.pentaryn-other"; }\n'}, "n/a"),
+]
+
+
+@pytest.mark.parametrize("code,extra,want", C57_IMPORT_CASES)
+def test_c57_resolves_an_imported_channel_constant_py_blueprint_ext_1(tmp_path, code, extra, want):
+    assert res(one(tmp_path, code, socket=True, extra=extra), "C57")["status"] == want
+
+
 C58_CASES = [
     ('const a = serialStore(MODULE, "ledger");', "pass"),
     ('const a = serialStore(MODULE, ["a", "b"]);\nconst b = serialStore(MODULE, "c");', "pass"),
@@ -524,6 +683,26 @@ C58_CASES = [
 @pytest.mark.parametrize("code,want", C58_CASES)
 def test_c58_one_serial_store_per_key(tmp_path, code, want):
     assert res(one(tmp_path, code), "C58")["status"] == want
+
+
+C58_SCOPE_CASES = [                                                              # py-blueprint-AC-8
+    ('export function store() { return serialStore(MODULE, "ledger"); }', "fail"),
+    ('function f() { const s = serialStore(MODULE, "ledger"); }', "fail"),
+    ('let s;\nexport function store() { s ??= serialStore(MODULE, "ledger"); return s; }', "pass"),
+    ('const stores = {};\nexport function store() { return (stores.ledger ??= serialStore(MODULE, "ledger")); }',
+     "pass"),
+    ('export const store = () => (stores.k ??= serialStore(MODULE, "k"));', "pass"),
+    ('const a = serialStore(MODULE, "ledger");', "pass"),
+]
+
+
+@pytest.mark.parametrize("code,want", C58_SCOPE_CASES)
+def test_c58_serial_store_at_module_scope_py_blueprint_ac_8(tmp_path, code, want):
+    r = res(one(tmp_path, code), "C58")
+    assert r["status"] == want
+    if want == "fail":
+        assert any("serialStore not at module scope (use `x ??= serialStore(` or hoist)" in d
+                   for d in r["detail"]), r["detail"]
 
 
 def test_c58_counts_keys_across_files(tmp_path):
@@ -544,12 +723,37 @@ C59_CASES = [
     ("for (const t of tokens) { await sleep(1); }", "pass"),
     ("for (const scene of game.scenes) { await scene.updateEmbeddedDocuments('Token', u); }", "pass"),
     ("for (const s of scenes) { await s.deleteEmbeddedDocuments('Wall', ids); }", "pass"),
+    # ac-5/C59: one level of same-file indirection — the loop awaits a local helper that awaits a write
+    ("async function dropFlags(actor, keys) { await actor.unsetFlag(M, keys[0]); }\n"
+     "for (const a of actors) { await dropFlags(a, keys); }", "warn"),
+    ("const dropFlags = async (actor, keys) => { await actor.update({ [`flags.-=${M}`]: null }); };\n"
+     "for (const a of actors) await dropFlags(a, keys);", "warn"),
+    ("async function dropFlags(actor, keys) { u.push({ _id: actor.id }); }\n"
+     "for (const a of actors) { await dropFlags(a, keys); }", "pass"),           # helper writes nothing
+    ("async function dropFlags(actor, keys) { await actor.unsetFlag(M, keys[0]); }\n"
+     "for (const a of actors) { await other.dropFlags(a, keys); }", "pass"),     # a method, not the local
 ]
 
 
 @pytest.mark.parametrize("code,want", C59_CASES)
 def test_c59_per_document_await_in_a_loop(tmp_path, code, want):
     assert res(one(tmp_path, code), "C59")["status"] == ("warn" if want == "warn" else "pass")
+
+
+C59_LOOP_FORMS_CASES = [                                                         # py-blueprint-AC-5
+    ("for await (const t of stream) { await t.update({ hidden: true }); }", "warn"),
+    ("for await (const t of stream) await t.delete();", "warn"),
+    ("do { await q.pop().delete(); } while (q.length);", "warn"),
+    ("do\n{\n  await a.setFlag(M, 'k', 1);\n} while (next());", "warn"),
+    ("for await (const t of stream) { u.push({ _id: t.id }); }", "pass"),
+    ("do { u.push(q.pop()); } while (q.length);\nawait scene.updateEmbeddedDocuments('Token', u);", "pass"),
+    ("const todo = 1; await t.update({});", "pass"),                             # `do` inside a name
+]
+
+
+@pytest.mark.parametrize("code,want", C59_LOOP_FORMS_CASES)
+def test_c59_sees_for_await_and_do_while_py_blueprint_ac_5(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C59")["status"] == want
 
 
 C60_CASES = [
@@ -565,6 +769,36 @@ C60_CASES = [
 @pytest.mark.parametrize("code,want", C60_CASES)
 def test_c60_no_async_job_per_hot_hook_call(tmp_path, code, want):
     assert res(one(tmp_path, code), "C60")["status"] == want
+
+
+C60_CALLS_ASYNC_CASES = [                                                        # py-blueprint-AC-7
+    ('reg.on("refreshToken", (t) => { void paint(t); });\nasync function paint(t) { await t.x(); }',
+     "warn"),
+    ('reg.on("refreshToken", (t) => paint(t));\nasync function paint(t) {}', "warn"),
+    ('reg.on("refreshToken", onRefresh);\nfunction onRefresh(t) { paint(t); }\nasync function paint(t) {}',
+     "warn"),
+    ('reg.on("refreshToken", (t) => { perFrame(() => void paint(t)); });\nasync function paint(t) {}',
+     "pass"),
+    ('reg.on("refreshToken", (t) => { paint(t); });\nfunction paint(t) {}', "pass"),     # sync helper
+    ('reg.on("refreshToken", (t) => { obj.paint(t); });\nasync function paint(t) {}', "pass"),  # a method
+]
+
+
+@pytest.mark.parametrize("code,want", C60_CALLS_ASYNC_CASES)
+def test_c60_sync_handler_starting_an_async_function_py_blueprint_ac_7(tmp_path, code, want):
+    r = res(one(tmp_path, code), "C60")
+    assert r["status"] == want
+    if want == "warn":
+        assert any(d.startswith("a.mjs:1 refreshToken") and d.endswith("starts async paint() per call")
+                   for d in r["detail"]), r["detail"]
+
+
+def test_c60_async_function_in_an_imported_file_py_blueprint_ac_7(tmp_path):
+    report = one(tmp_path, 'import { paint } from "./b.mjs";\nreg.on("refreshToken", (t) => { void paint(t); });',
+                 extra={"b.mjs": "export async function paint(t) { await t.x(); }\n"})
+    r = res(report, "C60")
+    assert r["status"] == "warn"
+    assert r["detail"] == ["a.mjs:2 refreshToken — starts async paint() per call"]
 
 
 C61_CASES = [
@@ -593,6 +827,23 @@ def test_c61_world_wide_document_reaction_runs_on_one_client(tmp_path, code, wan
     assert res(one(tmp_path, code), "C61")["status"] == want
 
 
+C61_INITIATOR_FORMS_CASES = [                                                    # py-blueprint-AC-6
+    ('reg.on("updateActor", (a, c, o, userId) => { if (userId === game.user.id) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.user.id == userId) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (userId !== game.user?.id) return; a.update({}); });',
+     "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.user?.id === userId) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.userId === userId) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (userId === other) a.update({}); });', "warn"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.user?.isGM) a.update({}); });', "warn"),
+]
+
+
+@pytest.mark.parametrize("code,want", C61_INITIATOR_FORMS_CASES)
+def test_c61_positive_and_optional_chained_initiator_gate_py_blueprint_ac_6(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C61")["status"] == want
+
+
 def test_c61_any_gm_gate_names_why(tmp_path):
     r = res(one(tmp_path, 'reg.on("updateCombat", (c) => { if (!game.user.isGM) return; c.update({}); });'), "C61")
     assert "any-GM gate only" in r["detail"][0]
@@ -607,6 +858,27 @@ def test_c61_gate_and_write_in_an_imported_module_file(tmp_path):
               'reg.on("updateActor", (a) => { void react(a); });')
     b = 'export async function react(a) { await a.update({ x: 1 }); }\n'
     assert res(one(tmp_path / "w", write_, extra={"b.mjs": b}), "C61")["status"] == "warn"
+
+
+def test_c61_scores_a_handler_imported_from_another_module_file_py_blueprint_ac_4(tmp_path):
+    """A named handler imported from a sibling file is resolved there and scored, not skipped."""
+    code = 'import { onUpdate } from "./b.mjs";\nreg.on("updateActor", onUpdate);'
+    b = "export function onUpdate(a) { a.update({ x: 1 }); }\n"
+    r = res(one(tmp_path / "w", code, extra={"b.mjs": b}), "C61")
+    assert r["status"] == "warn"
+    assert r["detail"] == ["a.mjs:2 updateActor — no gate"]
+    b = "export const onUpdate = (a) => { if (!isActiveGM()) return; a.update({ x: 1 }); };\n"
+    assert res(one(tmp_path / "g", code, extra={"b.mjs": b}), "C61")["status"] == "pass"
+    b = "export function onUpdate(a) { seen.set(a.id, 1); }\n"                       # writes nothing
+    assert res(one(tmp_path / "n", code, extra={"b.mjs": b}), "C61")["status"] == "pass"
+
+
+def test_c61_reports_an_unresolved_named_handler_py_blueprint_ac_4(tmp_path):
+    """A handler named from outside the module's own files is listed for review, like C53 does."""
+    code = 'import { onUpdate } from "../elsewhere/x.mjs";\nreg.on("updateActor", onUpdate);'
+    r = res(one(tmp_path, code), "C61")
+    assert r["status"] == "warn"
+    assert r["detail"] == ["a.mjs:2 updateActor → onUpdate (not resolved — review by hand)"]
 
 
 def test_c05_follows_a_barrel_re_export(tmp_path):
@@ -654,6 +926,36 @@ def test_c50_follows_a_named_publisher_called_from_another_files_ready_body(tmp_
     assert status(conformance.score_dir(d), "C50") == "fail"
 
 
+@pytest.mark.parametrize("code,close,want", [
+    ("f(a) {x}", 3, (5, "{x}")),
+    ("f(a)\n  { y; }", 3, (7, "{ y; }")),
+    ("f(a) => 1", 3, (5, None)),
+    ("for (x) y();", 6, (8, None)),
+])
+def test_py_blueprint_maint_4_block_after(code, close, want):
+    """py-blueprint-MAINT-4: one helper finds the `{…}` after a parameter list or loop header."""
+    assert conformance._block_after(code, close) == want
+
+
+def test_py_blueprint_maint_4_ready_handler_with_parens_in_its_parameters(tmp_path):
+    """py-blueprint-MAINT-4: a named ready handler (and a named publisher) whose parameter list
+    holds a call — `function onReady(o = defaults()) {…}` — is found by the shared _block_after,
+    not missed by the old `\\([^)]*\\)` regex."""
+    d = tmp_path / "pentaryn-reg"
+    body = ('import { publishNamespace } from "./lib/publish.mjs";\nconst api = {};\n'
+            'function defaults() { return {}; }\n'
+            'function onReady(o = defaults()) {\n  publishNamespace("reg", api, { moduleId: "pentaryn-reg" });\n}\n'
+            'export function install(reg) { reg.once("ready", onReady); }\n')
+    write(d, {"module.json": json.dumps({"id": "pentaryn-reg", "esmodules": ["reg.mjs"]}), "reg.mjs": body})
+    assert status(conformance.score_dir(d), "C50") == "pass"
+    named = ('import { publishNamespace } from "./lib/publish.mjs";\nconst api = {};\n'
+             'function defaults() { return {}; }\n'
+             'export function publish(o = defaults()) {\n  publishNamespace("reg", api, { moduleId: "pentaryn-reg" });\n}\n'
+             'export function install(reg, ctx) { ctx.onReady(() => { publish(); }); }\n')
+    (d / "reg.mjs").write_text(named)
+    assert status(conformance.score_dir(d), "C50") == "pass"
+
+
 # ── C62: a Document param the kit does not resolve names its string forms (FX item 5) ────────
 # The bridge (pentaryn-call.ts needsDoc) refuses a call that fills such a param with BAD_ARGS
 # "eval-js only" unless its `type` names uuid / id / name / string; senses.inspect's ref
@@ -695,6 +997,18 @@ def test_c62_document_params_name_their_string_forms(tmp_path, param, want):
 def test_c62_a_non_first_ref_is_never_resolved(tmp_path):
     r = c62(tmp_path, {"name": "opts", "type": "{}"}, {"name": "ref", "kind": "actor", "type": "Actor"})
     assert r["status"] == "fail" and "f(ref)" in r["detail"][0]
+
+
+@pytest.mark.parametrize("params,why", [
+    (({"name": "owner", "kind": "actor", "type": "Actor"},), "a Document kind the kit does not resolve"),
+    (({"name": "owner", "kind": "actor", "type": "Actor", "resolve": False},), "resolve:false"),
+    (({"name": "opts", "type": "{}"}, {"name": "ref", "kind": "actor", "type": "Actor"}), "a non-first ref"),
+])
+def test_c62_says_why_the_param_is_unresolved(tmp_path, params, why):
+    # py-blueprint-MAINT-9: a Document-kind param not named `ref` is not "not the first ref"
+    r = c62(tmp_path, *params)
+    assert r["status"] == "fail" and f", {why}, " in r["detail"][0], r
+    assert "not the first ref" not in r["detail"][0]
 
 
 def test_c62_the_row_doc_can_mark_the_whole_row_eval_js_only(tmp_path):
@@ -795,3 +1109,252 @@ def test_reserved_api_mirrors_the_kit():
     text = (conformance.REPO_ROOT / "foundry/lib/errors.mjs").read_text(encoding="utf-8")
     body = re.search(r"export const RESERVED\s*=\s*Object\.freeze\(\[(.*?)\]", text, re.S).group(1)
     assert set(re.findall(r'"([^"]+)"', body)) == set(conformance.RESERVED_API)
+
+
+def test_py_blueprint_rob_2_a_broken_or_missing_registry_fails_c47_and_c32(tmp_path, capsys):
+    """py-blueprint-ROB-2: an adjustments registry that cannot be loaded must FAIL the strict gate
+    (C47 fails with the loader's text, C32 appends it), never pass it as "n/a: no registry"."""
+    d = _tiny(tmp_path / "mods")
+    broken = tmp_path / "reg" / "adjustments.yml"
+    write(broken.parent, {"adjustments.yml": "adjustments:\n  - id: Not A Valid Id\n"})
+    for reg in (broken, tmp_path / "missing" / "adjustments.yml"):
+        report = conformance.score_dir(d, registry_path=reg)
+        r47 = next(r for r in report["results"] if r["id"] == "C47")
+        r32 = next(r for r in report["results"] if r["id"] == "C32")
+        assert r47["status"] == "fail", r47
+        assert any("adjustments registry cannot be loaded" in x for x in r47["detail"]), r47["detail"]
+        assert r32["status"] == "fail", r32
+        assert any("adjustments registry cannot be loaded" in x for x in r32["detail"]), r32["detail"]
+        assert "C47" in report["blocking"]
+
+    # --snapshot with no adjustments.yml fails the same way; main says so once on stderr
+    snap = tmp_path / "snap"
+    shutil.copytree(_tiny(tmp_path / "src", name="pentaryn-two"), snap / "module" / "pentaryn-two")
+    shutil.copytree(_tiny(tmp_path / "src", name="pentaryn-three"), snap / "module" / "pentaryn-three")
+    capsys.readouterr()
+    assert conformance.main(["--snapshot", str(snap), "--json"]) == 1
+    out = capsys.readouterr()
+    for rep in json.loads(out.out):
+        assert next(r for r in rep["results"] if r["id"] == "C47")["status"] == "fail"
+    assert out.err.count("adjustments registry cannot be loaded") == 1, out.err
+
+
+def test_py_blueprint_perf_1_a_full_run_loads_the_registry_and_manifests_once(tmp_path, monkeypatch, capsys):
+    """py-blueprint-perf-1: main() parses adjustments.yml once and each module.json twice at most
+    (its own load plus one sibling scan), not N registry parses and N² manifest reads; and the
+    reports are byte-identical to scoring each module alone with score_dir's defaults."""
+    root = tmp_path / "mods"
+    for n in ("one", "two", "three", "four"):
+        _tiny(root, name=f"pentaryn-{n}")
+    capsys.readouterr()
+    conformance.main(["--root", str(root), "--json"])
+    before = capsys.readouterr().out
+    alone = json.dumps([conformance.score_dir(p, root=root) for p in sorted(root.iterdir())], indent=2)
+    assert before == alone + "\n"
+
+    loads, reads = [], []
+    real_load, real_read = conformance.adj.load, Path.read_text
+    monkeypatch.setattr(conformance.adj, "load", lambda *a, **k: (loads.append(a), real_load(*a, **k))[1])
+    monkeypatch.setattr(Path, "read_text", lambda self, *a, **k: (reads.append(self.name), real_read(self, *a, **k))[1])
+    conformance.main(["--root", str(root), "--json"])
+    after = capsys.readouterr().out
+    monkeypatch.undo()
+    assert after == before
+    assert len(loads) == 1, loads
+    assert reads.count("module.json") <= 2 * 4, reads.count("module.json")
+
+
+def test_pyb_e6_strict_gate_matches_the_full_detail_list_and_display_caps_it(tmp_path, monkeypatch):
+    # PYB-E6: a rule returns every finding; the gate's `match` runs on all of them, so a synthetic
+    # "… N more" line can neither block a row whose real findings all match nor hide findings past
+    # a cap. Truncation is display-only (to_markdown, through _capped); --json carries the full list.
+    core = "".join(f"export const v{i} = game.x{i};\n" for i in range(20))
+    d = _tiny(tmp_path, files={"one-core.mjs": core})
+    row = {"reason": "why", "decision": "who", "until": "when", "match": [r"^one-core\.mjs:\d+ game\.x"]}
+    monkeypatch.setattr(conformance, "EXCEPTIONS", {"pentaryn-one": {"C11": row}})
+    report = conformance.score_dir(d)
+    c11 = next(r for r in report["results"] if r["id"] == "C11")
+    assert c11["status"] == "fail" and len(c11["detail"]) == 20, c11["detail"]
+    assert not any("more" in x for x in c11["detail"])
+    assert "C11" not in report["blocking"] and report["accepted"] == {"C11": "why"} and not report["unmatched"]
+    c11["detail"] = [f"f{i}" for i in range(20)]     # short findings: the 400-char line cap stays out of it
+    md = conformance.to_markdown([report], title="t")
+    line = next(ln for ln in md.splitlines() if ln.startswith("- **C11**"))
+    assert "… 8 more" in line
+    assert conformance._capped(["a", "b", "c"], 2) == ["a", "b", "… 1 more"]
+    assert conformance._capped(["a", "b"], 2) == ["a", "b"]
+
+
+def test_py_blueprint_ext_6_rules_return_full_lists_and_hook_names_share_hook_reg(tmp_path, monkeypatch):
+    """py-blueprint-EXT-6: no rule truncates its own finding (C18's hook names, C34's keys, C36's
+    literals, C42's fixtures) — the one "… N more" cap is _capped, in to_markdown; and
+    registered_hook_names reads the same HOOK_REG as listeners(), not a second copy of it."""
+    hooks = "".join(f'Hooks.on("hook{i}", () => {i});\n' for i in range(9))
+    ui = "".join(f'el.textContent = "Hello there friend {i}";\n' for i in range(11))
+    fx = {f"test/fixtures/f{i}.json": "{}" for i in range(10)}
+    lang = {"lang/en.json": json.dumps({f"K{i}": {} for i in range(6)})}
+    d = _tiny(tmp_path, files={"one.mjs": hooks, "one-ui.mjs": ui, **fx, **lang})
+    res = {r["id"]: r for r in conformance.score_dir(d)["results"]}
+    assert all(f"hook{i}" in res["C18"]["detail"][0] for i in range(9)), res["C18"]
+    assert all(f"K{i}" in res["C34"]["detail"][0] for i in range(6)), res["C34"]
+    assert res["C36"]["detail"][0].count("one-ui.mjs:") == 11, res["C36"]
+    assert all(f"f{i}.json" in res["C42"]["detail"][0] for i in range(10)), res["C42"]
+    for rid in ("C18", "C34", "C36", "C42"):
+        assert "…" not in " ".join(res[rid]["detail"]), res[rid]
+
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    assert {n for _, n in conformance.registered_hook_names(m)} == {f"hook{i}" for i in range(9)}
+    monkeypatch.setattr(conformance, "HOOK_REG", re.compile(r"(?!)"))
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    assert conformance.registered_hook_names(m) == []
+
+
+def test_py_blueprint_rob_5_a_malformed_sibling_manifest_is_skipped_and_the_broken_module_fails_fast(tmp_path, capsys):
+    """py-blueprint-ROB-5: one sibling module.json that is not JSON must not crash scoring every
+    other module — C38 passes and names the folder it could not compare; scoring the broken module
+    itself stops with one ✗ line and exit 2, not a traceback."""
+    root = tmp_path / "mods"
+    one = _tiny(root, files={"module.json": json.dumps({"id": "pentaryn-one", "esmodules": ["one.mjs"],
+                                                        "flags": {"pentaryn": {"cssPrefix": "pone-"}}})})
+    write(root / "pentaryn-broken", {"module.json": "{not json"})
+    write(root / "pentaryn-list", {"module.json": "[]"})
+    report = conformance.score_dir(one)
+    c38 = next(r for r in report["results"] if r["id"] == "C38")
+    assert c38["status"] == "pass", c38
+    assert "pentaryn-broken: module.json unreadable — not compared" in c38["detail"], c38["detail"]
+    assert "pentaryn-list: module.json unreadable — not compared" in c38["detail"], c38["detail"]
+
+    capsys.readouterr()
+    assert conformance.main(["--module", str(one), "--json"]) == 1      # scored; tiny fails other rules
+    assert json.loads(capsys.readouterr().out)[0]["module"] == "pentaryn-one"
+    for argv in (["--root", str(root)], ["--module", "broken", "--root", str(root)]):
+        assert conformance.main(argv) == 2
+        err = capsys.readouterr().err
+        assert "✗ pentaryn-broken: module.json is not valid JSON: " in err, err
+
+
+def test_py_blueprint_ac_9_hot_hooks_match_by_prefix_from_packages_json(tmp_path):
+    """py-blueprint-AC-9: `refresh*`, `draw*` and `hover*` fire per object per frame, so C49 and C60
+    treat every hook with those prefixes as hot (refreshTile, drawTokenLayer, hoverNote…), not only
+    the exact names; the prefixes live in packages.json, never in the .py."""
+    assert conformance.PACKAGES["hotHookPrefixes"] == ["refresh", "draw", "hover"]
+    for name in ("refreshTile", "drawTokenLayer", "hoverNote", "refreshToken", "sightRefresh",
+                 "canvasPan", "pointermove"):
+        assert conformance.is_hot_hook(name), name
+    for name in ("updateActor", "renderChatMessage", "createToken", "preRefresh"):
+        assert not conformance.is_hot_hook(name), name
+
+    for hook in ("refreshTile", "drawTokenLayer", "hoverNote"):
+        d = _tiny(tmp_path / hook, files={"one.mjs": f'Hooks.on("{hook}", () => {{ for (const a of game.actors) a; }});\n'})
+        assert status(conformance.score_dir(d), "C49") == "warn", hook
+        report = one(tmp_path / f"{hook}-async", f'reg.on("{hook}", async (t) => {{ await paint(t); }});')
+        assert res(report, "C60")["status"] == "warn", hook
+
+
+def test_py_blueprint_maint_10_c10_api_cap_follows_the_api_role(tmp_path):
+    """py-blueprint-MAINT-10: C10 keys the 300-line api cap on the api ROLE (role_of), so a
+    `<short>-api.mjs` gets the same cap as `api.mjs` instead of the 500-line default."""
+    body = "export const x = 1;\n" * 349                                      # 350 lines
+    for name in ("api.mjs", "wid-api.mjs"):
+        report = one(tmp_path / name, 'import "./' + name + '";\n', extra={name: body})
+        r = res(report, "C10")
+        assert r["status"] == "warn", (name, r)
+        assert f"{name} 350/300" in r["detail"], r["detail"]
+    report = one(tmp_path / "glue", 'import "./wid.mjs";\n', extra={"wid.mjs": body})
+    assert res(report, "C10")["status"] == "pass"                            # other files keep 500
+
+
+def test_pyb_e4_c38_skips_the_module_itself_when_its_folder_name_differs_from_its_id(tmp_path):
+    """PYB-E4: sibling manifests are keyed by folder name. A module whose folder is not named after
+    its id must not clash with itself; a real clash is named by the sibling's manifest id."""
+    root = tmp_path / "mods"
+    man = {"id": "pentaryn-one", "esmodules": ["one.mjs"], "flags": {"pentaryn": {"cssPrefix": "pone-"}}}
+    one = _tiny(root, name="one-checkout", files={"module.json": json.dumps(man)})
+    report = conformance.score_dir(one)
+    c38 = next(r for r in report["results"] if r["id"] == "C38")
+    assert c38["status"] == "pass", c38
+
+    write(root / "two-checkout", {"module.json": json.dumps({**man, "id": "pentaryn-two"})})
+    c38 = next(r for r in conformance.score_dir(one)["results"] if r["id"] == "C38")
+    assert c38["status"] == "fail" and c38["detail"] == ["pone- also declared by pentaryn-two"], c38
+
+
+@pytest.mark.parametrize("code,line", [
+    ('Hooks.once("refreshToken", () => { for (const a of game.actors) a; });', 1),
+    ('ctx.reg.on("refreshToken", (t) => { for (const a of game.actors) a; });', 1),
+    ('reg.on("refreshToken", reg.guard("paint", (t) => { for (const a of game.actors) a; }));', 1),
+    ('const paint = (t) => { for (const a of game.actors) a; };\nreg.on("refreshToken", paint);', 2),
+    ('reg.on("refreshToken", paint);\nfunction paint(t) { for (const a of game.actors) a; }', 1),
+])
+def test_py_blueprint_ext_3_c49_sees_every_listener_shape(tmp_path, code, line):
+    """py-blueprint-EXT-3: C49 reads the shared listeners() (HOOK_REG + handler_at), so `.once`,
+    `ctx.reg`, the kit's guard wrappers and const-arrow named handlers are seen, as C60 sees them."""
+    r = res(one(tmp_path, code), "C49")
+    assert r["status"] == "warn" and r["detail"] == [f"a.mjs:{line} refreshToken ×1 (no // hot: comment)"], r
+
+
+def test_py_blueprint_ext_3_c49_keeps_the_hot_comment_and_count(tmp_path):
+    """py-blueprint-EXT-3: the `// hot:` comment silences the note, ×N counts every world walk,
+    and a non-hot hook is never flagged."""
+    code = ('// hot: per-frame walk is bounded\n'
+            'reg.on("refreshTile", (t) => { game.actors; game.scenes; canvas.tokens.placeables; });\n'
+            'reg.on("updateActor", (a) => { for (const x of game.actors) x; });\n')
+    r = res(one(tmp_path, code), "C49")
+    assert r["status"] == "warn" and r["detail"] == ["a.mjs:2 refreshTile ×3"], r
+
+
+def test_py_blueprint_maint_5_score_comment_names_every_warn_manual_rule():
+    """py-blueprint-MAINT-5: the comment over score()'s `manual` list names every rule registered
+    as warn+manual, not a stale subset."""
+    src = Path(conformance.__file__).read_text(encoding="utf-8")
+    m = re.search(r"# warn\+manual rules \(([^)]*)\)", src)
+    assert m, "score() lost its warn+manual comment"
+    named = re.findall(r"C\d+", m.group(1))
+    registered = [rid for rid, cls, _full, _title in conformance.RULES if cls == "warn+manual"]
+    assert named == registered, (named, registered)
+
+
+def test_py_blueprint_maint_6_an_unknown_module_prints_one_line_and_exits_2(tmp_path, capsys):
+    # pinned before the change: the line and the exit code survive the move to vendor.resolve_module
+    capsys.readouterr()
+    assert conformance.main(["--module", "nope", "--root", str(tmp_path)]) == 2
+    assert capsys.readouterr().err == f"  ✗ no module 'nope' under {tmp_path}\n"
+
+
+def test_py_blueprint_maint_6_targets_come_from_vendor(tmp_path, monkeypatch, capsys):
+    from scripts.foundry.blueprint import vendor
+    one = _tiny(tmp_path)
+    seen = []
+    real_resolve, real_all = vendor.resolve_module, vendor.all_modules
+    monkeypatch.setattr(vendor, "resolve_module", lambda a, r: seen.append(("resolve", a)) or real_resolve(a, r))
+    monkeypatch.setattr(vendor, "all_modules", lambda r: seen.append(("all", r)) or real_all(r))
+    conformance.main(["--module", "one", "--root", str(tmp_path), "--json"])
+    conformance.main(["--root", str(tmp_path), "--json"])
+    assert seen == [("resolve", "one"), ("all", tmp_path)]
+    assert vendor.resolve_module("one", tmp_path) == one.resolve()
+    # a root that is not a directory scores nothing instead of raising (the guard new_module had)
+    assert vendor.all_modules(tmp_path / "missing") == []
+    assert conformance.main(["--root", str(tmp_path / "missing"), "--json"]) == 0
+    assert new_module.namespace_owner("one", [tmp_path / "missing"]) is None
+    assert not hasattr(new_module, "_modules")                  # one listing, vendor.all_modules
+    capsys.readouterr()
+
+
+def test_pyb_e4_c38_names_a_sibling_with_a_non_string_or_shared_id(tmp_path):
+    """PYB-E4 repair: a sibling whose manifest id is not a string is named by its folder (no
+    TypeError in the clash message); two folders sharing one id are each named once, with the folder."""
+    root = tmp_path / "mods"
+    man = {"id": "pentaryn-one", "esmodules": ["one.mjs"], "flags": {"pentaryn": {"cssPrefix": "pone-"}}}
+    one = _tiny(root, name="pentaryn-one", files={"module.json": json.dumps(man)})
+    for bad_id in (5, ["a"], True, {}):
+        write(root / "weird", {"module.json": json.dumps({**man, "id": bad_id})})
+        c38 = next(r for r in conformance.score_dir(one)["results"] if r["id"] == "C38")
+        assert c38["status"] == "fail" and c38["detail"] == ["pone- also declared by weird"], (bad_id, c38)
+    (root / "weird" / "module.json").unlink()
+    (root / "weird").rmdir()
+
+    write(root / "two-a", {"module.json": json.dumps({**man, "id": "pentaryn-two"})})
+    write(root / "two-b", {"module.json": json.dumps({**man, "id": "pentaryn-two"})})
+    c38 = next(r for r in conformance.score_dir(one)["results"] if r["id"] == "C38")
+    assert c38["status"] == "fail", c38
+    assert c38["detail"] == ["pone- also declared by pentaryn-two (two-a/), pentaryn-two (two-b/)"], c38

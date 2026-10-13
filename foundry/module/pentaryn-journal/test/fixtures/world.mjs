@@ -69,7 +69,7 @@ export async function journalWorld() {
     },
   };
   globalThis.HTMLElement ??= class HTMLElement {};
-  F.game.time = { worldTime: 86_400 };
+  F.game.time = { worldTime: 86_400, get serverTime() { return Date.now(); } };
   F.foundry.applications.sheets = { journal: { JournalEntrySheet: class JournalEntrySheet { static VIEW_MODES = { SINGLE: 1, MULTIPLE: 2 }; } } };
   F.foundry.applications.apps = { ImagePopout: class ImagePopout {} };
   F.foundry.applications.instances = new Map();

@@ -74,7 +74,7 @@ import {
   planStep, identificationLadder, indexRegistry, identifiedKey, holdResolved, combineAdvantage,
   ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
-import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
+import { CONCEAL_FLAG, concealFor, firstName, kindPassed } from "./core/rules.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -418,11 +418,11 @@ export class InspectPreview extends ApplicationV2 {
       if (k.spent) html += `<p class="pv-note">${_loc("PENTARYN_TIES.preview.spent")}</p>`;
       html += `<div class="pv-row"><div class="pv-head"><img src="${esc(k.actor.img)}"><b>${esc(k.actor.name)}</b> <span class="pv-skill">${esc(skillLabel(k.skill))}</span>
         <span class="pv-dice">${k.die} ${k.mod >= 0 ? "+" : "−"} ${Math.abs(k.mod)} = <b>${k.total}</b></span>
-        <span class="${k.tier >= 15 ? "pv-pass" : "pv-fail"}">${_loc("PENTARYN_TIES.preview.tier", { tier: k.tier })}${
+        <span class="${kindPassed(k.tier) ? "pv-pass" : "pv-fail"}">${_loc("PENTARYN_TIES.preview.tier", { tier: k.tier })}${
           // below 15 is a failure: nothing at all, unless the GM authored rung 0 (the one lie)
-          k.tier < 15 && k.text?.trim() ? ` · ${_loc("PENTARYN_TIES.preview.rung0Lie")}` : ""}</span>
+          !kindPassed(k.tier) && k.text?.trim() ? ` · ${_loc("PENTARYN_TIES.preview.rung0Lie")}` : ""}</span>
         <span class="pv-odds">${k.odds.map(o => `${o.t}${k.shift ? `(DC ${o.t + k.shift})` : ""}: ${pct(o.p)}`).join(" · ")}</span></div>
-        <details ${k.tier >= 15 ? "" : "open"}><summary>${_loc("PENTARYN_TIES.preview.whatTold")}</summary>${said(k.text, k.tier >= 15)}</details></div>`;
+        <details ${kindPassed(k.tier) ? "" : "open"}><summary>${_loc("PENTARYN_TIES.preview.whatTold")}</summary>${said(k.text, kindPassed(k.tier))}</details></div>`;
     }
     if (this.missingSkills?.size)
       html = `<p class="pv-silent">${_loc("PENTARYN_TIES.preview.missingSkills", { skills: [...this.missingSkills].map(x => esc(skillLabel(x))).join(", ") })}</p>` + html;

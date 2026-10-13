@@ -50,3 +50,29 @@ test("two quick updateTurn calls apply in order; afterwards no chain is left and
   assert.equal(settled, true);
   assert.equal(a.flags[MODULE].turn.attackAction.swings, 2);
 });
+
+test("M8 (final review): the runner and the riders own their pruning and aborts under their own labels; bars imports none of it", async () => {
+  const { sourceScan } = await import("./kit/harness.mjs");
+  const rows = [];
+  const fake = { on: (name, fn, o) => rows.push({ name, fn, label: o?.label }), once: () => {}, off: () => {} };
+  const runnerRows = () => rows.filter(r => r.owner === "sequence");
+  seq.install(fake, null);
+  for (const r of rows) r.owner = "sequence";
+  riders.install(fake, null);
+  for (const r of rows) r.owner ??= "riders";
+  assert.deepEqual(runnerRows().map(r => `${r.name} | ${r.label}`), ["updateCombat | sequence: turn moved", "updateToken | sequence: shape change"]);
+  const ridersTurn = rows.filter(r => r.owner === "riders" && r.name === "updateCombat");
+  assert.deepEqual(ridersTurn.map(r => r.label), ["rider session: turn moved"]);
+  // The turn moving prunes the runner's announced rolls through its own listener; other updates leave them.
+  seq.expectRoll("act-m8", "reaction");
+  mock.timers.tick(120000);
+  const seqTurn = runnerRows().find(r => r.name === "updateCombat").fn;
+  seqTurn({}, { active: true });
+  seqTurn({}, { turn: 1 });
+  assert.equal(seq.pruneSession(), 0, "the turn change already pruned it");
+  ridersTurn[0].fn({}, { round: 2 });
+  // bars no longer reaches into the runner's or the riders' session state.
+  assert.deepEqual(sourceScan(new URL("..", import.meta.url), /pruneSession|abortFor/).filter(h => h.file.startsWith("hud/")).map(h => `${h.file}:${h.line}`), []);
+  seq.uninstall();
+  riders.uninstall();
+});

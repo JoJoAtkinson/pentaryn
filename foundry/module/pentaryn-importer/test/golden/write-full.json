@@ -157,15 +157,17 @@
               "MM"
             ]
           }
-        }
+        },
+        "_id": "84ZeKzvetiP0iuXA"
       },
       "options": {
+        "keepId": true,
         "renderSheet": false
       }
     },
     {
       "op": "createEmbeddedDocuments",
-      "uuid": "Actor.actor00000000007",
+      "uuid": "Actor.84ZeKzvetiP0iuXA",
       "type": "Item",
       "names": [
         "Bite"
@@ -177,11 +179,11 @@
     },
     {
       "op": "reset",
-      "uuid": "Actor.actor00000000007"
+      "uuid": "Actor.84ZeKzvetiP0iuXA"
     },
     {
       "op": "update.options",
-      "uuid": "Actor.actor00000000007",
+      "uuid": "Actor.84ZeKzvetiP0iuXA",
       "options": {
         "render": false
       }
@@ -189,7 +191,7 @@
     {
       "op": "update",
       "documentName": "Actor",
-      "uuid": "Actor.actor00000000007",
+      "uuid": "Actor.84ZeKzvetiP0iuXA",
       "changes": {
         "flags": {
           "pentaryn": {
@@ -223,9 +225,11 @@
               "MM"
             ]
           }
-        }
+        },
+        "_id": "eJuUSff21RK6JB57"
       },
       "options": {
+        "keepId": true,
         "renderSheet": false
       }
     },
@@ -251,19 +255,21 @@
           "pentaryn": {
             "slug": "dup"
           }
-        }
+        },
+        "_id": "5WMp4iFcQnCDOPFp"
       },
       "options": {
+        "keepId": true,
         "renderSheet": false
       }
     },
     {
       "op": "reset",
-      "uuid": "Actor.actor00000000009"
+      "uuid": "Actor.5WMp4iFcQnCDOPFp"
     },
     {
       "op": "update.options",
-      "uuid": "Actor.actor00000000009",
+      "uuid": "Actor.5WMp4iFcQnCDOPFp",
       "options": {
         "render": false
       }
@@ -271,7 +277,7 @@
     {
       "op": "update",
       "documentName": "Actor",
-      "uuid": "Actor.actor00000000009",
+      "uuid": "Actor.5WMp4iFcQnCDOPFp",
       "changes": {
         "flags": {
           "pentaryn": {
@@ -282,7 +288,7 @@
     },
     {
       "op": "prototypeToken.update",
-      "uuid": "Actor.actor00000000009",
+      "uuid": "Actor.5WMp4iFcQnCDOPFp",
       "changes": {
         "name": "DUP",
         "width": 1
@@ -290,7 +296,7 @@
     },
     {
       "op": "update.options",
-      "uuid": "Actor.actor00000000009",
+      "uuid": "Actor.5WMp4iFcQnCDOPFp",
       "options": {
         "render": false
       }
@@ -298,7 +304,7 @@
     {
       "op": "update",
       "documentName": "Actor",
-      "uuid": "Actor.actor00000000009",
+      "uuid": "Actor.5WMp4iFcQnCDOPFp",
       "changes": {
         "name": "DUP",
         "type": "npc",
@@ -319,11 +325,11 @@
     },
     {
       "op": "reset",
-      "uuid": "Actor.actor00000000009"
+      "uuid": "Actor.5WMp4iFcQnCDOPFp"
     },
     {
       "op": "update.options",
-      "uuid": "Actor.actor00000000009",
+      "uuid": "Actor.5WMp4iFcQnCDOPFp",
       "options": {
         "render": false
       }
@@ -331,7 +337,7 @@
     {
       "op": "update",
       "documentName": "Actor",
-      "uuid": "Actor.actor00000000009",
+      "uuid": "Actor.5WMp4iFcQnCDOPFp",
       "changes": {
         "flags": {
           "pentaryn": {

@@ -26,6 +26,17 @@ export const FLAG_SCOPE = MODULE;
 export const HOOKS = Object.freeze({});
 /** Where Snapshot saves its crops (Data). */
 export const SNAP_DIR = "assets/tokens/custom/portals";
+/** The core RegionBehavior type every link rides on (Teleport Token). */
+export const TELEPORT_TYPE = "teleportToken";
+/**
+ * EXT-2 [declared]: what a new link creates when the region has no teleport behavior yet — ask
+ * first, revealed, fade 1500 ms, centre, snap. linkRegions adds `system.destinations` (first).
+ */
+export const NEW_TELEPORT_BEHAVIOR = Object.freeze({
+  name: "Teleport", type: TELEPORT_TYPE,
+  system: Object.freeze({ placement: "center", snap: true, choice: true, revealed: true,
+    dialog: Object.freeze({ revealed: null, unrevealed: null }), transition: Object.freeze({ type: "fade", duration: 1500 }) })
+});
 /** The fallback card image. */
 export const DOOR_ICON = "icons/svg/door-exit.svg";
 
@@ -117,9 +128,12 @@ export function leaderOf(follower, pcs) {
  * nearest its leader's. Every party member gets one of `spots`; there must be as many spots.
  * @param {{x:number,y:number}[]} spots   centre-first
  * @param {object[]} party                partySelection output (PCs first)
+ * @param {{fits?: (spot:{x:number,y:number}, i:number, out:({x:number,y:number}|undefined)[]) => boolean}} [opts]
+ *   fits: party member i's whole footprint is clear at that spot, given the spots handed out so far
+ *   (portals-edge-2: a Large steed covered its rider). A spot that does not fit is a last resort.
  * @returns {{x:number,y:number}[]}       a spot per party member, in party order
  */
-export function assignSpots(spots, party) {
+export function assignSpots(spots, party, { fits = () => true } = {}) {
   const free = spots.map((s, i) => ({ ...s, i }));
   const take = idx => free.splice(idx, 1)[0];
   const pcs = party.filter(isPC);
@@ -143,7 +157,7 @@ export function assignSpots(spots, party) {
     let idx = 0, best = Infinity;
     free.forEach((s, k) => {
       const near = anchor ? Math.max(Math.abs(s.x - anchor.x), Math.abs(s.y - anchor.y)) * 1e6 + Math.hypot(s.x - anchor.x, s.y - anchor.y) : k;
-      const d = (used.has(key(s)) ? 1e15 : 0) + near;
+      const d = (used.has(key(s)) ? 1e15 : 0) + (fits(s, i, out) ? 0 : 1e12) + near;
       if (d < best) { best = d; idx = k; }
     });
     const { x, y } = take(idx);
@@ -185,25 +199,52 @@ export function followersOf(leaders, records) {
   });
 }
 
+/** Grid cells outward from (cx, cy): the centre, then each ring around it, skipping cells a wall cuts off. */
+function* ringCells(cx, cy, g, maxRing, blocked) {
+  for (let ring = 0; ring < maxRing; ring++) {
+    for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+      const x = cx + dx * g, y = cy + dy * g;
+      if (ring && blocked([cx, cy], [x, y])) continue;
+      yield { x, y };
+    }
+  }
+}
+
 /**
  * Landing squares, filling outward from (cx, cy): centre, then each ring around it.
  * @param {number} cx  @param {number} cy  centre in canvas px
  * @param {number} g   grid size in px
  * @param {number} n   how many spots
- * @param {{blocked?: (from:number[], to:number[]) => boolean, occupied?: (x:number, y:number) => boolean, maxRing?: number}} [opts]
+ * @param {{blocked?: (from:number[], to:number[]) => boolean, occupied?: (x:number, y:number, w?:number, h?:number) => boolean,
+ *   maxRing?: number, footprint?: (x:number, y:number, i:number) => {x:number,y:number,w:number,h:number}}} [opts]
  *   blocked: a wall cuts the line from the centre to the spot. occupied: a token already stands there.
+ *   footprint: the i-th token's box when it lands on (x, y) (portals-edge-2). With it, `occupied`
+ *   gets that box, and a spot is skipped when the box overlaps one an earlier token took; each spot
+ *   scans the ring from the centre, so a small token still fills a square a big one could not.
  * @returns {{x:number, y:number}[]} exactly n spots (stacks on the centre if boxed in)
  */
-export function ringSpots(cx, cy, g, n, { blocked = () => false, occupied = () => false, maxRing = 8 } = {}) {
-  const spots = [];
-  for (let ring = 0; spots.length < n && ring < maxRing; ring++) {
-    for (let dy = -ring; dy <= ring && spots.length < n; dy++) for (let dx = -ring; dx <= ring && spots.length < n; dx++) {
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
-      const x = cx + dx * g, y = cy + dy * g;
-      if (ring && blocked([cx, cy], [x, y])) continue;
-      if (occupied(x, y)) continue;
-      spots.push({ x, y });
+export function ringSpots(cx, cy, g, n, { blocked = () => false, occupied = () => false, maxRing = 8, footprint = null } = {}) {
+  const cells = ringCells(cx, cy, g, maxRing, blocked);
+  const seen = [], spots = [], taken = [];
+  const free = (c, i) => {
+    if (c.used) return false;
+    if (!footprint) return !(c.used = occupied(c.x, c.y)); // a stander's square stays taken
+    const b = footprint(c.x, c.y, i);
+    return !occupied(b.x, b.y, b.w, b.h) && !crowded(b, taken);
+  };
+  for (let i = 0; i < n; i++) {
+    let hit = seen.find(c => free(c, i));
+    while (!hit) {
+      const next = cells.next();
+      if (next.done) break;
+      seen.push(next.value);
+      if (free(next.value, i)) hit = next.value;
     }
+    if (!hit) break;
+    hit.used = true;
+    spots.push({ x: hit.x, y: hit.y });
+    if (footprint) taken.push(footprint(hit.x, hit.y, i));
   }
   while (spots.length < n) spots.push({ x: cx, y: cy });
   return spots;
@@ -240,6 +281,15 @@ export function hasDestination(stored, uuid, toAbsolute) {
 /** `stored` without whichever entry (relative or absolute) leads to `uuid`. */
 export function withoutDestination(stored, uuid, toAbsolute) {
   return [...(stored ?? [])].filter(u => (toAbsolute(u) ?? u) !== uuid);
+}
+
+/**
+ * Can this region be a landing spot (a link's target)? Only when it has no behaviors other than
+ * Teleport Token — one rule for the Portal card's Add-a-destination list and api.link() (EXT-9).
+ * `region.behaviors` is any iterable of `{ type }` (a Foundry collection or a plain array).
+ */
+export function landingCandidate(region) {
+  return ![...(region?.behaviors?.values?.() ?? region?.behaviors ?? [])].some(b => b.type !== TELEPORT_TYPE);
 }
 
 /**
@@ -296,9 +346,6 @@ export function dialogIdParts(id = "") {
   return { behaviorUuid: id.slice("dialog-".length, cut), tokenId: id.slice(cut + 1) };
 }
 
-/** The behaviour uuid of a core teleport dialog id, or null. */
-export const behaviorUuidFromDialogId = id => dialogIdParts(id)?.behaviorUuid ?? null;
-
 /**
  * Every shape moved by (sx, sy): polygon points pairwise, x/y where present and not null. Takes
  * plain shape objects and never mutates them.
@@ -341,16 +388,26 @@ export const blockingWallCoords = walls => walls.filter(w => w.move > 0 && !(w.d
 /** A token's box in pixels on a grid of `g`. */
 export const tokenBox = (t, g) => ({ x: t.x, y: t.y, w: t.width * g, h: t.height * g });
 
-/** `(x, y) => boolean`: does a point fall inside one of these boxes? */
+/** The centre of a `{x, y, width, height}` box in pixels (a region's bounds). */
+export const boxCentre = b => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+
+/** A token's centre in pixels on a grid of `g` (its width and height are in squares). */
+export const tokenCentre = (t, g) => ({ x: t.x + t.width * g / 2, y: t.y + t.height * g / 2 });
+
+/**
+ * `(x, y, w?, h?) => boolean`: does a point fall inside one of these boxes, or, given a size, does
+ * the box at (x, y) overlap one (portals-edge-2: a Large token is tested by its footprint)?
+ */
 export function occupiedBy(standing) {
-  return (x, y) => standing.some(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h);
+  return (x, y, w = 0, h = 0) => (w > 0 && h > 0 ? crowded({ x, y, w, h }, standing)
+    : standing.some(s => x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h));
 }
 
 /** Sample points of a region's square(s): the centre, plus a point a quarter-square in from each corner. */
 export function samplePoints(b, gridSize) {
   const q = Math.min(gridSize / 4, b.width / 4, b.height / 4);
   return [
-    { x: b.x + b.width / 2, y: b.y + b.height / 2 },
+    boxCentre(b),
     { x: b.x + q, y: b.y + q }, { x: b.x + b.width - q, y: b.y + q },
     { x: b.x + q, y: b.y + b.height - q }, { x: b.x + b.width - q, y: b.y + b.height - q }
   ];

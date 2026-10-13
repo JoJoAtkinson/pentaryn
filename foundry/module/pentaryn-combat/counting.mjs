@@ -14,8 +14,9 @@ import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
 import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
-import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode, isWeaponAttack } from "./shapes.mjs";
+import { weaponShape, featuresOf, combatContext, turnOf, updateTurn, resetOffhandMode, isWeaponAttack, isMultiattackItem } from "./shapes.mjs";
 import { taggedKind, forgetRoll } from "./sequence.mjs";
+import { opts } from "./context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -115,7 +116,7 @@ async function onPostUseActivity(activity) {
     const ctx = combatContext(actor);
     if (core.pipFor({ activation: "reaction", inCombat: ctx.inCombat, isOwnTurn: ctx.isOwnTurn }) !== "reaction") return;
     why("Reaction");
-    await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.debug("Reaction flag", err); return null; });
+    await actor.setFlag(MODULE, "reaction", { combatId: ctx.combat?.id ?? null }).catch(err => { log.warn("Reaction flag", err); return null; });
     emit("reaction", actor, activity);
     return;
   }
@@ -145,7 +146,7 @@ async function onPostUseActivity(activity) {
   }
   if (activity.activation?.type !== "action") return;
   if (activity.type === "attack" && isWeaponAttack(activity)) return why("weapon attack: counted on the roll");
-  if (/^multiattack\b/i.test(item?.name ?? "")) return why("Multiattack: the Attack action itself");
+  if (isMultiattackItem(item)) return why("Multiattack: the Attack action itself");
   const ctx = combatContext(actor);
   if (!ctx.inCombat || !ctx.isOwnTurn) return;
   // Unarmed Strike's Grapple / Shove (a save activity) replaces one attack of the Attack action
@@ -192,8 +193,6 @@ function onPreRollDamage(config) {
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg, ctx) {
   if (ctx?.emit) emit = ctx.emit;

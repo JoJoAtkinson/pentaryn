@@ -7,6 +7,7 @@ import re
 
 import pytest
 
+from scripts.foundry.blueprint import conformance
 from scripts.foundry.ops import config as cfg, index
 
 
@@ -116,3 +117,44 @@ def test_an_alias_published_in_code_survives_a_describe_golden(tmp_path):
                 code='publishNamespace(NS, api);\npublishNamespace("chain", api.chain, { alias: true });\n',
                 describe={"namespace": "senses", "methods": [{"path": "syncLight"}]})
     assert index.module_row(d)["namespaces"] == ["chain", "senses"]
+
+
+def test_reserved_names_mirror_the_kit():
+    # EXT-3: the index reads conformance.RESERVED_API rather than keeping its own copy; the
+    # one remaining Python copy must equal the kit's errors.RESERVED, so a kit bump that adds or
+    # drops a name fails here.
+    text = (cfg.REPO_ROOT / "foundry/lib/errors.mjs").read_text(encoding="utf-8")
+    body = re.search(r"export const RESERVED\s*=\s*Object\.freeze\(\[(.*?)\]", text, re.S).group(1)
+    assert set(re.findall(r'"([^"]+)"', body)) == set(conformance.RESERVED_API)
+
+
+def test_index_filters_by_conformance_reserved_not_its_own_copy(tmp_path, monkeypatch):
+    """EXT-3: index.py hand-copied the kit's RESERVED list; it must use conformance.RESERVED_API."""
+    assert not hasattr(index, "_RESERVED")
+    monkeypatch.setattr(conformance, "RESERVED_API", (*conformance.RESERVED_API, "kitOnlyName"))
+    d = _module(tmp_path / "modules", "pentaryn-ext3",
+                describe={"namespace": "ext3",
+                          "methods": [{"path": "describe"}, {"path": "kitOnlyName"}, {"path": "real"}]})
+    assert index.module_row(d)["api"] == ["real"]
+
+
+def test_index_reads_json_through_config_not_its_own_copy(tmp_path, monkeypatch):
+    """M7: index._json duplicated config._read_json; the index must read every JSON file
+    (manifest, describe golden, kit lock) through cfg.read_json, and its docstring must not
+    claim the tier and suite come "via the ModuleSpec" when they are read from the directory."""
+    assert not hasattr(index, "_json")
+    assert "via the ModuleSpec" not in (index.__doc__ or "")
+    seen = []
+    real = cfg.read_json
+
+    def spy(path):
+        seen.append(path.name)
+        return real(path)
+
+    monkeypatch.setattr(cfg, "read_json", spy)
+    d = _module(tmp_path / "modules", "pentaryn-m7", flags={"namespace": "m7"},
+                describe={"namespace": "m7", "methods": [{"path": "real"}]},
+                lock={"version": "1.0.1", "tier": "small", "files": []})
+    row = index.module_row(d)
+    assert set(seen) == {"module.json", "describe.json", "kit.lock.json"}
+    assert row["tier"] == "small" and row["api"] == ["real"]

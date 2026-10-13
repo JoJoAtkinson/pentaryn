@@ -22,11 +22,6 @@ export function markerActor(sizeKey) {
   return game.actors?.find(a => markerSizeOfActor(a) === sizeKey) ?? null;
 }
 
-/** Every prompt-marker actor id, for "is this one of ours" checks. */
-export function markerActorIds() {
-  return new Set(game.actors?.filter(a => !!markerSizeOfActor(a)).map(a => a.id) ?? []);
-}
-
 /** The fields ensureMarkers owns, as update paths → wanted value. */
 function wanted(s, folderId) {
   const D = CONST.TOKEN_DISPOSITIONS ?? { SECRET: -2 };

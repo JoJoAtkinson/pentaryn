@@ -5,6 +5,10 @@ the old README's version-tagged sections.
 
 ## Unreleased — blueprint migration (2026-10, wave 3)
 
+- [declared] names-ext-3 (kit 1.2.0, final review 2026-10-12): `inspect` reads a token's synthetic
+  actor through the kit's `resolveRef(..., { base: true })` (the token's `actorId`) instead of ties'
+  own `isToken` patch (the synthetic actor's id). Same dossier at the table.
+
 Structure (no table-visible change): the pure core split into `core/` behind `known-core.mjs`, the
 study conduit into `study/` behind `study.mjs`, the entry into features, settings into
 `settings.mjs`, the API built from `api-manifest.mjs` by the kit, the ties data layer into
@@ -41,6 +45,66 @@ sender must own their character and have removed their own side). ties-ui-E3.
 
 Fixed (declared): the Known tab's **notes** keep the last words typed before you click away or close
 the sheet — leaving the box now saves a pending autosave at once instead of dropping it. ties-ui-M1.
+
+Fixed (declared): **Write an entry for this** on a kind row stores the kind actor's own id. The
+`kind:` id was lowercased, so the entry never matched its actor and a second click said
+"collision" on a row that still read unauthored. The id now keeps its case (still only letters and
+digits, at most 64). At load the GM's client rewrites each entry stored the old way to the one actor
+it matches ignoring case (and any child pointing at it). If no actor matches, two actors match, or
+the actor already has an entry, the entry is left alone. R1.
+
+Fixed (declared): a lore row or attribute with **no DC** (missing, or its DC box cleared) rolls
+against the default DC 15. It used to read as 0 and clamp up to DC 1. A typed DC still counts, and
+a real 0 is still raised to the floor of 1. The same check now reads every number in the Known and
+study records, so a study rung saved without a `min` is ignored rather than taken as the base rung (R7, now pinned by its own test). M1.
+
+Fixed (declared): a **refused save** of a tie, a Known entry or a Mark as learned no longer throws.
+The write logs a console warning and reports failure (`write`/`writeKnown` answer false,
+`markLearned` answers `writeFailed`); a tie whose other side is refused still reports the side that
+saved. At load, one actor whose legacy ties can't be moved is warned about and left for the next
+load, and the rest still move. R8.
+
+Fixed (declared): **`setNotes`** answers false when its save is refused — a player editing notes on an
+actor they don't own, or an update the server rejects — instead of reporting true with nothing
+saved. M11.
+
+Fixed (declared): **`attributes.markLearned`** takes its character as an id, a uuid, an exact name
+or a token as well as an Actor, and marks the world actor it names. Something that names no actor is
+refused `invalid`; it used to throw `character.getFlag is not a function`. R3.
+
+Fixed (declared): **`attributes.markLearned`** keeps the write contract — no character at all is
+refused `invalid` (it answered `notFound`, which means an unknown attribute), and `noLore` (the
+attribute has no matching lore rows) is now a documented reason in the closed table. A refused save
+answers `writeFailed` (R8). M10.
+
+Fixed (declared): two **`attributes.ensure`** calls for the same new title, made together, now both
+succeed — the first creates it and the second answers `existed: true`. The second used to answer
+`collision`, because both looked at the list before either had written. Same answers otherwise. EC-2.
+
+Fixed (declared): a **key** (4–9) whose action fails partway is logged to the console as
+`pentaryn-ties | key <key> failed` with the error, instead of a bare "Uncaught (in promise)". The key
+is still swallowed and nothing on screen changes. R10.
+
+Guarded (declared, no table-visible change): `attributes.mjs` exports `NS_LABEL` and `DERIVED_ICONS`
+(module exports, not API paths), and `test/review-derived-ns.test.mjs` fails if a derived namespace
+lacks a label in `lang/en.json`, an icon, or a `deriveAttributes` slot. ext-2.
+
+Docs (declared, no table-visible change): README Extending's study-namespace bullet names all five
+fact-key helpers a new namespace must touch — `factKeyOf`, `parseFactKey`, `factOrder`, `knowsAbout`
+and `resolveFact` — pinned by `test/review-extending-ns.test.mjs`. ext-3.
+
+API description (declared, no table-visible change): the subject argument of `study.state`,
+`study.lore` and `study.knowsAbout` is marked `resolve: false` in `describe()`, as their first argument
+already was — api.mjs resolves a token, id, uuid or exact name there itself. `test/api-kit.test.mjs`
+now fails if a read param that takes an id is unmarked, or if any `resolve: false` position answers
+differently for the actor's id than for the Actor. ext-5.
+
+API description (declared, no table-visible change): five `returns` strings in `describe()` now say
+what the call answers — `attributes.search` → `{ matches, wouldBe, canCreate, collidesWith }`,
+`attributes.stale` → `[{ actor, extra, missing }]`, `attributes.tell` → `{ ok, ids } | { ok: false,
+reason }`, `attributes.unreviewed` → `[{ id, title, reviewState, touched, modifiedAt, createdAt }]`,
+`known.categories` → `[{ key, label, seeded }]`. Pinned by `test/review-manifest-returns.test.mjs`
+against the live calls; `noLore` joined the reason table with M10. ext-8.
 
 Fixed (declared): the chat cards — the "… studies …" stub, the tempo line and the GM's share
 whisper — name every creature by its **token** name, never its actor name, so a GM-only world actor
@@ -144,6 +208,48 @@ Fixed (declared): a GM **Share** of a kind to several characters composes the ti
 and gives every recipient the same words (an inline roll in it resolves once, not per recipient);
 it used to compose the page again for each recipient. `grantKind` takes the composed page as a
 `text` option and composes its own only when none is given. perf-4.
+
+Fixed (declared, no table-visible change): the kind study's pass rung (15) is one rule,
+`kindPassed(tier)` in `core/rules.mjs`, read off `STUDY_RUNGS` (now kept in `core/shared.mjs`, still
+exported by `core/study.mjs`), instead of a hand-written `>= 15` at nine sites. ext-7.
+
+API description (declared, no table-visible change): `describe()` lists `flags.pentaryn-ties.knownCategories`
+and `flags.pentaryn-ties.mark` under `flags.reads`, not `flags.writes` — the GM authors them by hand and the
+module only reads them. Pinned by `test/review-flag-reads.test.mjs`. ext-9.
+
+Fixed (declared): a PC whose name merely contains "marker", "crowd" or "hotspot" (a "Crowder") keeps its
+**Share switch** in the GM's inspect window and its Simulate roller row. `tablePCs` now leaves out only
+names with one of those as a whole word — "Marker · 1", "Drow Commoner (crowd) 1", "Hotspot · Look".
+Pinned by `test/review-roster-whole-words.test.mjs`. ext-11.
+
+Fixed (declared): two GM tabs at a world's first ready (the bridge and a GM browser) no longer make
+two **Ties Web** hotbar macros. The macro is created with the fixed id `pentarynTiesWeb0` and
+`keepId`; v14 does not refuse a world document whose id exists, so the later tab's create replaces the
+record with the same data and one macro results. Pinned by `test/review-macro-race.test.mjs`. ties-core-U1.
+
+Documented (declared, no table-visible change): the attribute registry and the knowledge/belief
+stores queue writes **per tab**, not across the two GM tabs. A Review-panel save in the GM's browser
+racing an `A.update` from the bridge tab rewrites the whole setting and the second write wins; a
+setting cannot be claimed, so no redesign. The comments in `attributes.mjs`, `settings.mjs` and
+`review-ui.mjs`, the README's "who writes" section and the Gotchas in
+`context/foundry/attribute-review.md` no longer say otherwise. Pinned by `test/review-queue-per-tab.test.mjs`.
+ties-core-U2.
+
+Fixed (declared): several attribute links or unlinks on one actor made together (a backstory script's
+`Promise.all`) all land. Each used to read the actor's link flags before the others' writes came
+back, so only the last link survived. `linkAttribute`/`unlinkAttribute` (and `repair`, a link) now run
+through the registry's `serial()` queue with their flag reads inside it. Pinned by
+`test/review-link-race.test.mjs`. ties-core-U3.
+
+Fixed (declared): an **item mark's** hover text is shown as plain text. The tip (`mark.tip`, which a
+player can write like any item flag) went to `data-tooltip`, which Foundry renders as HTML, so markup in
+it ran in every viewer's sheet; it now goes to `data-tooltip-text`. Icon and colour are unchanged.
+Pinned by `test/review-mark-tip-text.test.mjs`; the `canvas-item-marks` and `declared-b6-unescaped`
+goldens' dataset key is now `tooltipText`. ties-core-U4.
+
+Fixed (declared, no table-visible change): the broken-ancestry check (`brokenAncestry`) and the
+re-parenting sweep (`staleCarriers`) index the registry once per call instead of once per id they
+check; same rows. Pinned by `test/review-ancestry-index.test.mjs`. ties-core-U5.
 
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 

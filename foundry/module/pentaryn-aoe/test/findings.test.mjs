@@ -99,14 +99,14 @@ test("-8 with CONFIG.debug on: resolve, apply and careful stops are traced (the 
   F.become({ userId: "gmUser0000000001" });
   assert.equal(await R.resolve("missingMessage01"), null);
   assert.equal(await R.applyRows("missingMessage01"), null);
-  assert.equal(await R.carefulFor(ctx.wizard, [], { casterActorId: ctx.wizard.id, usage: IDS.usage, scene: ctx.s, onSave: "half", rows: [] }), null);
+  assert.equal(await R.carefulFor(ctx.wizard, { usage: IDS.usage, onSave: "half", rows: [] }), null);
   const traces = game.pentaryn.aoe.trace().map(t => [t.op, t.data.id, t.data.outcome]);
   assert.deepEqual(traces, [
     ["resolve", "x", "not the active GM"],
     ["apply", "x", "not a GM"],
     ["resolve", "missingMessage01", "not a damage message"],
     ["apply", "missingMessage01", "no resolution"],
-    ["careful", IDS.usage, "no flag"],
+    ["careful", IDS.usage, "no declaration"],
   ]);
   assert.ok(out.every(o => o.level === "debug" && o.text.startsWith(`${MODULE} | `)));
   assert.equal(out.length, 5);
@@ -163,15 +163,19 @@ test("-9 a rejected Remove all templates is logged 'pentaryn-aoe | remove all te
   F.canvas.scene = ctx.s;
 });
 
-test("-9 a failed Careful Spell usage bind warns 'pentaryn-aoe | careful bind usage'; the protection still applies", async () => {
-  await ctx.wizard.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), key: null, usage: null } });
+// aoe-careful-select: the GM clears the declaration once a save tray used it (was: bound it to the card).
+test("-9 a failed Careful Spell clear warns 'pentaryn-aoe | careful clear'; the protection still applies", async () => {
+  await ctx.wizard.update({ [`flags.${MODULE}.careful`]: { at: Date.now(), scene: ctx.s.id, tokens: [IDS.cv], names: ["Caven"] } });
   const update = Object.getOwnPropertyDescriptor(ctx.wizard, "update");
   Object.defineProperty(ctx.wizard, "update", { value: async () => { throw new Error("no write"); }, configurable: true, writable: true });
   out.length = 0;
-  const out1 = await R.carefulFor(ctx.wizard, [], { casterActorId: ctx.wizard.id, usage: IDS.usage, scene: ctx.s, onSave: "half", rows: [] });
+  const rows = [{ id: IDS.cv, name: "Caven", kind: "manual", save: null, multiplier: null }];
+  const out1 = await R.carefulFor(ctx.wizard, { usage: IDS.usage, onSave: "half", rows });
   if (update) Object.defineProperty(ctx.wizard, "update", update); else delete ctx.wizard.update;
-  assert.deepEqual(out1, { names: [], max: 3 });
-  assert.deepEqual(lines(), [`warn: ${MODULE} | careful bind usage`]);
+  assert.deepEqual(out1, { names: ["Caven"], ids: [IDS.cv] });
+  assert.equal(rows[0].protected, true);
+  assert.deepEqual(lines(), [`warn: ${MODULE} | careful clear`]);
+  delete ctx.wizard.flags[MODULE].careful;
 });
 
 /* ── 8.5 performance: the sweep shares template regions in one batched write ──────────────── */
@@ -190,23 +194,9 @@ test("8.5 sweep: every unshared template region in ONE Region update (was one wr
   assert.equal(s.regions.get("regionBatchPort1").ownership.default, 0, "a portal region is never touched");
 });
 
-test("8.5 deleteCombat: stale Careful Spell flags of world actors go in ONE Actor update; a synthetic actor writes its own", async () => {
-  const key = "combat0000000085:1:x";
-  const a = W.actor({ id: "actCareful850001", name: "Sorc A", type: "character", flags: { [MODULE]: { careful: { at: 1, key } } } });
-  const b = W.actor({ id: "actCareful850002", name: "Sorc B", type: "character", flags: { [MODULE]: { careful: { at: 1, key } } } });
-  const synth = W.actor({ id: "actCareful850003", name: "Unlinked", type: "npc", flags: { [MODULE]: { careful: { at: 1, key } } } });
-  Object.defineProperty(synth, "isToken", { value: true });
-  F.calls.length = 0;
-  F.fire("deleteCombat", { id: "combat0000000085", combatants: [{ actor: a }, { actor: b }, { actor: synth }, { actor: a }] });
-  await flush();
-  const batch = F.calls.filter(c => c.op === "updateDocuments");
-  assert.deepEqual(batch.map(c => c.updates.map(u => u._id)), [["actCareful850001", "actCareful850002"]]);
-  for (const x of [a, b, synth]) assert.equal(x.flags[MODULE].careful, undefined, x.name);
-});
-
 /* ── review: the -8 traces that answer "why no tray / why no protection", and -9's quiet cases ── */
 
-test("-8 traced (debug on): the createChatMessage gate with resolveSaves off, Careful Spell off, and a Careful use bound to another card", async () => {
+test("-8 traced (debug on): the createChatMessage gate with resolveSaves off, Careful Spell off, and no Careful declaration", async () => {
   F.CONFIG.debug = { [MODULE]: true };
   const before = game.pentaryn.aoe.trace().length;
   await game.settings.set(MODULE, "resolveSaves", false);
@@ -214,21 +204,17 @@ test("-8 traced (debug on): the createChatMessage gate with resolveSaves off, Ca
   await flush();
   await game.settings.set(MODULE, "resolveSaves", true);
   assert.equal(game.messages.get(msg.id).flags?.[MODULE]?.resolution, undefined, "nothing resolved");
-  const opts = { casterActorId: ctx.wizard.id, usage: IDS.usage, scene: ctx.s, onSave: "half", rows: [] };
+  const opts = { usage: IDS.usage, onSave: "half", rows: [] };
   await game.settings.set(MODULE, "carefulSpell", false);
-  assert.equal(await R.carefulFor(ctx.wizard, [], opts), null);
+  assert.equal(await R.carefulFor(ctx.wizard, opts), null);
   await game.settings.set(MODULE, "carefulSpell", true);
-  const flag = { at: Date.now(), key: null, usage: "usageOtherCard01" };
-  await ctx.wizard.update({ [`flags.${MODULE}.careful`]: flag });
-  assert.equal(await R.carefulFor(ctx.wizard, [], opts), null);
+  assert.equal(await R.carefulFor(ctx.wizard, opts), null);
   const traces = game.pentaryn.aoe.trace().slice(before);
   assert.deepEqual(traces.map(t => [t.op, t.data.id, t.data.outcome]), [
     ["resolve", msg.id, "resolveSaves is off"],
     ["careful", IDS.usage, "off"],
-    ["careful", IDS.usage, "not applicable"],
+    ["careful", IDS.usage, "no declaration"],
   ]);
-  assert.deepEqual(traces[2].data.flag, flag, "the trace carries the flag that did not apply");
-  assert.equal(traces[2].data.combatKey, null);
   F.CONFIG.debug = {};
 });
 

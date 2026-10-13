@@ -66,7 +66,7 @@
           },
           {
             "kind": "Sprite",
-            "texture": "cards/pit.webp",
+            "texture": "cards/pit.webp?v=abc",
             "scale": 0.72,
             "anchor": 0.5,
             "masked": true
@@ -154,7 +154,7 @@
           },
           {
             "kind": "Sprite",
-            "texture": "cards/pit.webp",
+            "texture": "cards/pit.webp?v=abc",
             "scale": 0.72,
             "anchor": 0.5,
             "masked": true

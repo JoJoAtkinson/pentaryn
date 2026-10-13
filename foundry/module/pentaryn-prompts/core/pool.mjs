@@ -2,7 +2,7 @@
  * pentaryn-prompts core — matching a caller's word against an advancement's item pool. PURE.
  */
 
-import { sameName } from "../build-core.mjs";
+import { sameName } from "./text.mjs";
 
 /** "Divine Order: Protector" → "Protector": the part after the last colon. */
 export const poolTail = n => String(n).split(/:\s*/).pop();

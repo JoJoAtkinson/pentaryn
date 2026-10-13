@@ -321,8 +321,22 @@ def write(record: dict, *, use_llm: bool = True,
 
 # ── Git ──────────────────────────────────────────────────────────────────────
 
+class _GitTimeout(Exception):
+    """A git call ran past its timeout; carries the verb for the run's message."""
+
+    def __init__(self, verb: str):
+        super().__init__(verb)
+        self.verb = verb
+
+
 def _git(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, text=True)
+    # A hung git (a credential prompt, a dead remote) must not hang the run (AC-5).
+    timeout = 300 if args[0] == "push" else 120
+    try:
+        return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True,
+                              text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise _GitTimeout(args[0]) from None
 
 
 def commit_and_push(paths: list[Path], *, push: bool = True) -> list[str]:
@@ -331,13 +345,21 @@ def commit_and_push(paths: list[Path], *, push: bool = True) -> list[str]:
     The worktree here is routinely dirty with in-progress campaign work, so this uses
     an explicit pathspec on both `add` and `commit` and never `-A`, never a checkout,
     and never a branch change. If the repo is mid-rebase or on a detached HEAD it
-    declines rather than improvising.
+    declines rather than improvising. A git call that times out ends it with a message.
     """
     messages: list[str] = []
+    try:
+        _commit_and_push(paths, push, messages)
+    except _GitTimeout as exc:
+        messages.append(f"git {exc.verb} timed out — report written but not pushed")
+    return messages
 
+
+def _commit_and_push(paths: list[Path], push: bool, messages: list[str]) -> None:
     head = _git("symbolic-ref", "--quiet", "--short", "HEAD")
     if head.returncode != 0:
-        return ["HEAD is detached — report written but not committed"]
+        messages.append("HEAD is detached — report written but not committed")
+        return
     branch = head.stdout.strip()
 
     git_dir = Path(_git("rev-parse", "--git-dir").stdout.strip() or ".git")
@@ -345,28 +367,31 @@ def commit_and_push(paths: list[Path], *, push: bool = True) -> list[str]:
         git_dir = REPO_ROOT / git_dir
     for marker in ("rebase-merge", "rebase-apply", "MERGE_HEAD", "CHERRY_PICK_HEAD"):
         if (git_dir / marker).exists():
-            return [f"a {marker} is in progress — report written but not committed"]
+            messages.append(f"a {marker} is in progress — report written but not committed")
+            return
 
     rel = [str(p.relative_to(REPO_ROOT)) for p in paths]
     if _git("add", "--", *rel).returncode != 0:
-        return ["git add failed — report written but not committed"]
+        messages.append("git add failed — report written but not committed")
+        return
 
     day = paths[0].stem[:10] if paths else "run"
     commit = _git("commit", "-m", f"chore(foundry): auto-update report {day}",
                   "--", *rel)
     if commit.returncode != 0:
         if "nothing to commit" in (commit.stdout + commit.stderr):
-            return ["report unchanged — nothing to commit"]
-        return [f"git commit failed: {(commit.stderr or commit.stdout).strip()[:200]}"]
+            messages.append("report unchanged — nothing to commit")
+            return
+        messages.append(f"git commit failed: {(commit.stderr or commit.stdout).strip()[:200]}")
+        return
     messages.append(f"committed the report to {branch}")
 
     if not push:
-        return messages
+        return
     upstream = _git("rev-parse", "--abbrev-ref", f"{branch}@{{upstream}}")
     if upstream.returncode != 0:
         messages.append(f"{branch} has no upstream — committed but not pushed")
-        return messages
+        return
     pushed = _git("push", "origin", branch)
     messages.append(f"pushed to origin/{branch}" if pushed.returncode == 0
                     else f"push failed: {(pushed.stderr or '').strip()[:200]}")
-    return messages

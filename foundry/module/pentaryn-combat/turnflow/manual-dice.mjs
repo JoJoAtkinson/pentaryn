@@ -8,6 +8,7 @@ import { MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { setting } from "../settings.mjs";
 import { openRollResolvers } from "../dialog-adapter.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -54,8 +55,6 @@ const onDigitKey = (ev) => {
 };
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   reg.on("renderRollResolver", onResolverRendered, opts("focus the Roll Resolution box"));

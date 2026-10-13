@@ -75,7 +75,9 @@ export function formSummary(f) {
  */
 export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifted = false, revertId = null, hasWildShape = false, starryId = null, ownReturn = true } = {}) {
   const reverts = new Set(revertIds);
-  const ours = id => id === wildShapeId || reverts.has(id) || (!!starryId && id === starryId);
+  // A null/undefined id never matches: an item-less Argon button is not Wild Shape (EC-3).
+  const isWs = id => wildShapeId != null && id === wildShapeId;
+  const ours = id => isWs(id) || reverts.has(id) || (!!starryId && id === starryId);
   const out = [];
   let placedWildShape = false;
   let placedStarry = false;
@@ -90,7 +92,7 @@ export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifte
   };
   slots.forEach((s, index) => {
     if (s.kind === "item") {
-      if (s.id === wildShapeId) return placeWildShape();
+      if (isWs(s.id)) return placeWildShape();
       if (starryId && s.id === starryId) return placeStarry();
       if (reverts.has(s.id)) return;
       return out.push({ keep: index });
@@ -98,7 +100,7 @@ export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifte
     if (s.kind === "split") {
       const ids = s.ids ?? [];
       if (!ids.some(ours)) return out.push({ keep: index });
-      if (ids.includes(wildShapeId)) placeWildShape();
+      if (ids.some(isWs)) placeWildShape();
       if (starryId && ids.includes(starryId)) placeStarry();
       for (const id of ids) if (!ours(id)) out.push({ item: id });
       return;
@@ -256,12 +258,13 @@ export function recoveryLines(recovery, periods, allLabel) {
 
 /**
  * The portrait line's data while a form or Starry Form is up: `{ what, left }` (left a duration
- * text, or null when the end time is unknown), or null for no line. The glue localizes it.
+ * text, or null when the end time is unknown: a missing or non-finite endsAt / starryLeft), or null
+ * for no line. The glue localizes it.
  * @param {{ ws: { name }|null, endsAt?: number|null, starry: { name }|null, starryLeft?: number|null, worldTime: number }} o
  */
-export function portraitText({ ws = null, endsAt = null, starry = null, starryLeft, worldTime = 0 } = {}) {
+export function portraitText({ ws = null, endsAt = null, starry = null, starryLeft = null, worldTime = 0 } = {}) {
   if (ws) return { what: ws.name, left: Number.isFinite(endsAt) ? formatDuration(endsAt - worldTime) : null };
-  if (starry) return { what: starry.name, left: starryLeft !== null ? formatDuration(starryLeft) : null };
+  if (starry) return { what: starry.name, left: Number.isFinite(starryLeft) ? formatDuration(starryLeft) : null };
   return null;
 }
 

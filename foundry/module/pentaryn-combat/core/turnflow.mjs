@@ -1,15 +1,18 @@
 /**
- * Pentaryn Combat core — turn flow: Argon's special actions, expiry at turn boundaries, portrait conditions, orphan usage cards, HUD follow, a cancelled area.
+ * Pentaryn Combat core — turn flow: Argon's special actions, the until-turn-end effect, expiry at turn boundaries, portrait conditions, orphan usage cards, HUD follow, a cancelled area.
  * PURE: plain data in, plain data out; re-exported by ../combat-core.mjs (guide S12, contents moved
  * unchanged).
  */
 
 import { normalizeName } from "./identity.mjs";
 import { DELAYS } from "./timing.mjs";
-import { otherActionsOf, recordOtherAction, recordSwing } from "./turn.mjs";
+import { recordOtherAction, recordSwing } from "./turn.mjs";
 
 /** Argon dnd5e's six built-in action buttons, by key. */
 export const SPECIAL_ACTIONS = Object.freeze(["dash", "disengage", "dodge", "hide", "ready", "shove"]);
+
+/** The five speeds in system.attributes.movement (Dash adds to each; Steady Aim sets each to 0). */
+export const MOVEMENT_KEYS = Object.freeze(["walk", "fly", "swim", "climb", "burrow"]);
 
 /**
  * Which special action a button is, from its label and the localized names ({dash: "Dash", …}).
@@ -20,16 +23,6 @@ export function specialActionOf(label, names = {}) {
   if (!l) return null;
   for (const key of SPECIAL_ACTIONS) if (normalizeName(names?.[key] ?? key) === l) return key;
   return null;
-}
-
-/**
- * Actions still free this turn: 1 + Action Surges, minus other Actions taken, minus Attack actions
- * begun (a Fighter 5 who swung once has begun one Attack action: `count` = 2 swings per action).
- */
-export function actionsLeft(turn, count = 1) {
-  const swings = Number(turn?.attackAction?.swings) || 0;
-  const per = Math.max(1, Number(count) || 1);
-  return Math.max(0, 1 + (Number(turn?.surges) || 0) - otherActionsOf(turn) - Math.ceil(swings / per));
 }
 
 /** The turn after a special action: Shove (2024: an Unarmed Strike option) is one swing, the rest an Action. */
@@ -45,11 +38,31 @@ export function recordSpecialAction(turn, kind) {
  */
 export function dashChanges(movement = {}) {
   const out = [];
-  for (const k of ["walk", "fly", "swim", "climb", "burrow"]) {
+  for (const k of MOVEMENT_KEYS) {
     const v = Number(movement?.[k]);
     if (Number.isFinite(v) && v > 0) out.push({ key: `system.attributes.movement.${k}`, type: "add", value: v });
   }
   return out;
+}
+
+/**
+ * The ActiveEffect our "until the end of this turn" effects are created from: Dash, Disengage
+ * (turnflow/action-buttons.mjs) and Steady Aim (turnflow/effects.mjs). `until: "turnEnd"` is what
+ * expiringAt sweeps; `special` names the kind; dnd5e shows it as temporary.
+ * @param {{module: string, kind: string, name: string, img: string, description: string, changes?: object[], origin: string}} p
+ *   module is combat-core's MODULE (the flag scope; core imports only its siblings); description is
+ *   the plain, already localized text, wrapped in one paragraph
+ */
+export function turnEffectData({ module, kind, name, img, description, changes = [], origin } = {}) {
+  return {
+    name,
+    img,
+    description: `<p>${description}</p>`,
+    transfer: false,
+    origin,
+    system: { changes },
+    flags: { [module]: { until: "turnEnd", special: kind }, dnd5e: { isTemporary: true } }
+  };
 }
 
 /**

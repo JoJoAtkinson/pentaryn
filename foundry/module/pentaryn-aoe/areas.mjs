@@ -26,6 +26,8 @@ import { FEATURE_ROWS } from "./api-manifest.mjs";
 
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
+/** The handle actor's and its prototype token's name (aoe-mnt-10: written once). */
+const HANDLE_NAME = "Area handle";
 /** The handle actor's fixed id (16 alphanumerics): two sessions creating it at once make one actor. */
 const HANDLE_ACTOR_ID = "pentarynAoeHndl0";
 
@@ -41,7 +43,7 @@ const attachedElsewhere = region => attachedToOther(region, id => region?.parent
 
 function handlePrototype() {
   return {
-    name: "Area handle",
+    name: HANDLE_NAME,
     width: 0.5, height: 0.5,
     texture: { src: HANDLE_ICON },
     displayName: CONST.TOKEN_DISPLAY_MODES.HOVER,
@@ -62,8 +64,10 @@ function handlePrototype() {
  * creature tokens (Token5e._onOverrideSize). The handle is 0.5: "tiny" makes the sync a no-op and
  * flags.dnd5e.lockSize opts out of it outright. hover exempts the handle from movementAutomation's
  * Falling when its region sits at an elevation. Adjustment row dnd5e-token-size-lock.
+ * The one source for these: handleActorData builds the new actor's system from it and
+ * handleActorRepairs checks an existing actor against it (aoe-mnt-10).
  */
-const HANDLE_SYSTEM = { "system.traits.size": "tiny", "system.attributes.movement.hover": true };
+const HANDLE_SYSTEM = Object.freeze({ "system.traits.size": "tiny", "system.attributes.movement.hover": true });
 
 function handleActorRepairs(actor) {
   const update = {};
@@ -100,12 +104,13 @@ export async function ensureHandleActor() {
 
 function handleActorData(folder) {
   return {
-    name: "Area handle",
+    name: HANDLE_NAME,
     type: "npc",
     img: HANDLE_ICON,
     folder: folder?.id ?? null,
     ownership: { default: OWNER },
-    system: { attributes: { hp: { value: 0, max: 0 }, movement: { hover: true } }, traits: { size: "tiny" } },
+    // hp first keeps the key order attributes{hp, movement}, traits — whatever HANDLE_SYSTEM's order
+    system: foundry.utils.expandObject({ "system.attributes.hp.value": 0, "system.attributes.hp.max": 0, ...HANDLE_SYSTEM }).system,
     prototypeToken: handlePrototype(),
     flags: { [MODULE]: { handleActor: true } }
   };
@@ -116,7 +121,7 @@ function handleActorData(folder) {
 /* -------------------------------------------- */
 
 const pending = new Set();   // region ids whose handle is being created on this client
-/** The registry install() was given: readyAreas registers its canvasReady sweep through it too. */
+/** The registry install() was given: listenerGuard wraps the handle-repair listeners with it. */
 let hooks = null;
 let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
@@ -135,66 +140,153 @@ function spellName(region) {
   return region.name;
 }
 
+/**
+ * The caster's TOKEN name for the handle label (AO-3-handle-dark: dnd5e's chip shows the handle's
+ * name, which is public — never an actor name). dnd5e 6: flags.dnd5e.origin is the caster's token;
+ * 5.3.3: the activity, whose actor's token on the region's scene is the caster (a synthetic actor
+ * is its own token). Null when no token is found.
+ */
+function casterTokenName(region) {
+  const f = region.flags?.dnd5e ?? {};
+  const origin = f.origin ? fromUuidSync(f.origin, { strict: false }) : null;
+  if (origin?.documentName === "Token") return origin.name ?? null;
+  const item = origin?.item ?? (f.item ? fromUuidSync(f.item, { strict: false }) : null);
+  const actor = item?.actor ?? item?.parent ?? null;
+  if (!actor) return null;
+  const token = actor.token ?? region.parent?.tokens?.find(t => t.actorId === actor.id && !isHandle(t));
+  return token?.name ?? null;
+}
+
+/** A template region that has no handle yet and may get one (not an emanation, not in flight here). */
+const wantsHandle = region => isTemplateRegion(region) && !attachedElsewhere(region) && !pending.has(region.id) && !handleFor(region);
+
+/**
+ * A region's handle token data and the level it was placed on (null: none given). The handle's id
+ * IS the region's id (tokens and regions are separate collections). Two clients logged in as the
+ * same user — the GM bridge tab plus a GM browser tab — both create it; the server serialises
+ * creates and refuses a second token with an existing _id, so exactly one wins.
+ */
+function handleData(region, actor) {
+  const scene = region.parent;
+  const shape = region.shapes?.[0];
+  const { x, y } = centreOf(shape, { gridSize: scene.grid.size });
+  const half = (scene.grid.size * 0.5) / 2;
+  const authorId = Object.entries(region.ownership ?? {}).find(([k, v]) => k !== "default" && v === OWNER)?.[0];
+  const who = casterTokenName(region) ?? game.users.get(authorId)?.name ?? game.user.name;
+  const proto = actor.prototypeToken.toObject();
+  // Never the prepared region.elevation.bottom: a dnd5e 6 region has none, which prepares as
+  // -Infinity and fails Token validation (core.handleVertical).
+  const { level, elevation } = handleVertical({
+    regionLevels: region._source?.levels ?? region.levels ?? [],
+    sceneHasLevel: id => !!scene.levels?.has?.(id),
+    sourceBottom: region._source?.elevation?.bottom ?? null,
+    levelBase: id => scene.levels?.get?.(id)?.elevation?.base
+  });
+  const data = {
+    ...proto,
+    _id: region.id,
+    actorId: actor.id,
+    x: Math.round(x - half),
+    y: Math.round(y - half),
+    elevation,
+    ...(level ? { level } : {}),
+    hidden: !!region.hidden,
+    // AO-3-handle-dark: a faint dim light of half a square, so the handle and the area's outline
+    // show in darkness to everyone who can see that spot (the handle has no sight of its own).
+    light: { ...(proto.light ?? {}), dim: scene.grid.distance / 2, bright: 0 },
+    name: `${spellName(region)} (${who})`,
+    flags: { ...(proto.flags ?? {}), dnd5e: { ...(proto.flags?.dnd5e ?? {}), lockSize: true }, [MODULE]: { handle: true, region: region.id } }
+  };
+  return { data, level };
+}
+
+/** The region change that attaches it to its handle token. */
+function attachUpdate(token, level) {
+  const update = { attachment: { token: token.id }, [`flags.${MODULE}.handle`]: token.id };
+  // A region with no level (placed under 5.3.3) joins the handle's; a dnd5e 6 region keeps the
+  // level it was placed on, which the handle was created on above.
+  if (token.level && !level) update.levels = [token.level];
+  return update;
+}
+
 /** Create the handle token for a template region and attach the region to it. */
 export async function createHandle(region) {
-  if (!isTemplateRegion(region) || attachedElsewhere(region) || pending.has(region.id) || handleFor(region)) return null;
+  if (!wantsHandle(region)) return null;
   const actor = handleActor();
   if (!actor) return null;
-  const scene = region.parent;
   pending.add(region.id);
   try {
-    const shape = region.shapes?.[0];
-    const { x, y } = centreOf(shape, { gridSize: scene.grid.size });
-    const half = (scene.grid.size * 0.5) / 2;
-    const authorId = Object.entries(region.ownership ?? {}).find(([k, v]) => k !== "default" && v === OWNER)?.[0];
-    const who = game.users.get(authorId)?.name ?? game.user.name;
-    const proto = actor.prototypeToken.toObject();
-    // Never the prepared region.elevation.bottom: a dnd5e 6 region has none, which prepares as
-    // -Infinity and fails Token validation (core.handleVertical).
-    const { level, elevation } = handleVertical({
-      regionLevels: region._source?.levels ?? region.levels ?? [],
-      sceneHasLevel: id => !!scene.levels?.has?.(id),
-      sourceBottom: region._source?.elevation?.bottom ?? null,
-      levelBase: id => scene.levels?.get?.(id)?.elevation?.base
-    });
-    // The handle's id IS the region's id (tokens and regions are separate collections). Two
-    // clients logged in as the same user — the GM bridge tab plus a GM browser tab — both pass
-    // `userId === game.user.id` and both used to create a handle, leaving an orphan twin. The
-    // server serialises creates and rejects a second token with an existing _id, so exactly
-    // one wins; the loser's error is swallowed below.
+    const { data, level } = handleData(region, actor);
     let token;
     try {
-      [token] = await scene.createEmbeddedDocuments("Token", [{
-        ...proto,
-        _id: region.id,
-        actorId: actor.id,
-        x: Math.round(x - half),
-        y: Math.round(y - half),
-        elevation,
-        ...(level ? { level } : {}),
-        hidden: !!region.hidden,
-        name: `${spellName(region)} (${who})`,
-        flags: { ...(proto.flags ?? {}), dnd5e: { ...(proto.flags?.dnd5e ?? {}), lockSize: true }, [MODULE]: { handle: true, region: region.id } }
-      }], { keepId: true });
+      [token] = await region.parent.createEmbeddedDocuments("Token", [data], { keepId: true });
     } catch (err) {
       if (alreadyExists(err)) return null;   // the other client won
       throw err;
     }
     if (!token) return null;
-    const update = { attachment: { token: token.id }, [`flags.${MODULE}.handle`]: token.id };
-    // A region with no level (placed under 5.3.3) joins the handle's; a dnd5e 6 region keeps the
-    // level it was placed on, which the handle was created on above.
-    if (token.level && !level) update.levels = [token.level];
-    await region.update(update);
+    await region.update(attachUpdate(token, level));
     return token;
   } finally {
     pending.delete(region.id);
   }
 }
 
+/**
+ * The sweep's handles ([declared] AC-7): every missing handle in ONE Token create (keepId), then
+ * every attachment in ONE Region update. A second GM session that made one of them first gets the
+ * whole create refused ("already exists"): the rest are then created one by one, that refusal
+ * swallowed per id, and every handle that exists is attached (the same values the other session
+ * writes). Returns the handle tokens this client created.
+ */
+async function createHandles(scene, regions) {
+  const actor = handleActor();
+  const todo = actor ? regions.filter(wantsHandle) : [];
+  if (!todo.length) return [];
+  for (const r of todo) pending.add(r.id);
+  try {
+    const rows = todo.map(region => ({ region, ...handleData(region, actor) }));
+    let made;
+    try {
+      made = await scene.createEmbeddedDocuments("Token", rows.map(r => r.data), { keepId: true });
+    } catch (err) {
+      if (!alreadyExists(err)) throw err;
+      made = [];
+      for (const { data } of rows) {
+        try {
+          made.push(...await scene.createEmbeddedDocuments("Token", [data], { keepId: true }));
+        } catch (e) {
+          if (!alreadyExists(e)) throw e;   // the other session made this one
+        }
+      }
+    }
+    const updates = rows.flatMap(({ region, level }) => {
+      const token = scene.tokens.get(region.id);
+      return token ? [{ _id: region.id, ...attachUpdate(token, level) }] : [];
+    });
+    if (updates.length) await scene.updateEmbeddedDocuments("Region", updates);
+    return made.filter(Boolean);
+  } finally {
+    for (const r of todo) pending.delete(r.id);
+  }
+}
+
 /* -------------------------------------------- */
 /*  Removing handles, repairing a scene         */
 /* -------------------------------------------- */
+
+/**
+ * Delete embedded documents; a "does not exist" refusal is success — with two GM sessions the
+ * other one already deleted them ([declared] aoe-edge-4). Returns the deleted docs, or null then.
+ */
+async function deleteGone(parent, name, ids) {
+  try {
+    return await parent.deleteEmbeddedDocuments(name, ids);
+  } catch (err) {
+    if (doesNotExist(err)) return null;
+    throw err;
+  }
+}
 
 async function deleteHandlesOf(region) {
   const scene = region.parent;
@@ -210,21 +302,19 @@ async function deleteHandlesOf(region) {
     await new Promise(r => setTimeout(r, 100));
   }
   const ids = handles().map(tk => tk.id);
-  if (ids.length) await scene.deleteEmbeddedDocuments("Token", ids);
+  if (ids.length) await deleteGone(scene, "Token", ids);
 }
 
 /**
  * Repair one scene (active GM): delete handles whose region is gone, give template regions the
- * shared ownership and a handle if they have none. Returns what it did.
+ * shared ownership and a handle if they have none (all in one create + one attach, AC-7). Returns
+ * what it did (orphans another GM session deleted first, and handles it made first, are not counted).
  */
 export async function sweep(scene = canvas.scene) {
   const out = { orphansDeleted: 0, ownershipFixed: 0, handlesCreated: 0, sizeLocked: 0 };
   if (!scene || !game.user.isGM) return out;
   const orphans = scene.tokens.filter(tk => isHandle(tk) && !scene.regions.has(aoeFlags(tk).region)).map(tk => tk.id);
-  if (orphans.length) {
-    await scene.deleteEmbeddedDocuments("Token", orphans);
-    out.orphansDeleted = orphans.length;
-  }
+  if (orphans.length && await deleteGone(scene, "Token", orphans)) out.orphansDeleted = orphans.length;
   // Handles placed before dnd5e-token-size-lock: opt them out of tokenSizeSync (idempotent).
   const unlocked = scene.tokens.filter(tk => isHandle(tk) && tk._source.flags?.dnd5e?.lockSize !== true)
     .map(tk => ({ _id: tk.id, "flags.dnd5e.lockSize": true }));
@@ -239,10 +329,9 @@ export async function sweep(scene = canvas.scene) {
     await scene.updateEmbeddedDocuments("Region", unshared);
     out.ownershipFixed = unshared.length;
   }
-  for (const r of scene.regions.filter(isTemplateRegion)) {
-    if (setting("handleTokens") && !attachedElsewhere(r) && !handleFor(r) && r.shapes.length === 1) {
-      if (await createHandle(r)) out.handlesCreated++;
-    }
+  if (setting("handleTokens")) {
+    const bare = scene.regions.filter(r => isTemplateRegion(r) && r.shapes.length === 1);
+    out.handlesCreated = (await createHandles(scene, bare)).length;
   }
   return out;
 }
@@ -350,8 +439,9 @@ export function install(reg, ctx) {
     if (!isTemplateRegion(region)) return;
     if (userId === game.user.id) await deleteHandlesOf(region);
     else if (game.users.activeGM?.isSelf) {
-      // -9: the handle is often gone already (the deleting client got there): only another error is news.
-      setTimeout(() => deleteHandlesOf(region).catch(err => (doesNotExist(err) ? null : log.warn("backstop handle delete", err))), 1500);
+      // -9: the handle is often gone already (the deleting client got there); deleteHandlesOf
+      // takes that as success, so only another error is news.
+      setTimeout(() => deleteHandlesOf(region).catch(err => log.warn("backstop handle delete", err)), 1500);
     }
   }), { guard: false, label: "deleteRegion" });
 
@@ -382,9 +472,13 @@ export function install(reg, ctx) {
     if (!itemUuid) return;
     for (const s of game.scenes) {
       const ids = spellAreas({ itemUuid }, s).map(r => r.id);
-      if (ids.length) await s.deleteEmbeddedDocuments("Region", ids);
+      if (ids.length) await deleteGone(s, "Region", ids);
     }
   }), { guard: false, label: "deleteActiveEffect" });
+
+  // A new scene is swept by whoever is the active GM then ([declared] aoe-edge-3): wired here on
+  // every client, not after readyAreas' awaits, so a failed startup or a GM handover keeps it.
+  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)), { guard: false, label: "canvasReady" });
 
   return { rows: FEATURE_ROWS.areas, impl: { sweep, ensureHandleActor, createHandle } };
 }
@@ -404,14 +498,11 @@ function concentrationItemUuid(effect) {
   return null;
 }
 
-/** Startup work for the active GM: the actor, then a sweep of the viewed scene. */
+/** Startup work for the active GM: the actor, then a sweep of the viewed scene (install() wires later scenes). */
 export async function readyAreas({ sweepOnReady = true } = {}) {
   if (!game.users.activeGM?.isSelf) return;
   await ensureHandleActor();
-  if (sweepOnReady) {
-    await sweep(canvas.scene);
-    hooks?.on("canvasReady", hooks.guardSwallowAsync("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)), { guard: false, label: "canvasReady" });
-  }
+  if (sweepOnReady) await sweep(canvas.scene);
 }
 
 /** Nothing of its own to undo: every hook went through the registry the entry unwinds. */
@@ -419,4 +510,4 @@ export function uninstall() {}
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { handlePrototype, handleActorRepairs, spellName, deleteHandlesOf, decorateCard, actionRow, concentrationItemUuid, attachedElsewhere, pending };
+export const _internals = { HANDLE_NAME, HANDLE_SYSTEM, handlePrototype, handleActorData, handleActorRepairs, spellName, deleteHandlesOf, decorateCard, actionRow, concentrationItemUuid, attachedElsewhere, pending };

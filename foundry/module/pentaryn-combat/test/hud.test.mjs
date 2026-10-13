@@ -201,6 +201,124 @@ test("the swing pips: 2+ swings read the turn flag (Action Surge widens); 1 swin
   F.calls.length = 0;
 });
 
+test("perf-1: one burst (a flag write, a settled sequence, a turn change) works out fullAttackState once per actor", async () => {
+  onTurn(fig);
+  reset(fig);
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  const h = buildHud(fig, { mainSlot: "longsword0000001", offSlot: "dagger0000000001" });
+  renderAll(h, fig);
+  await drain();
+  mock.timers.tick(60);
+  // Each fullAttackState works the actor's Multiattack out from the setting: its reads count the computations.
+  const get = F.game.settings.get;
+  let reads = 0;
+  F.game.settings.get = function (ns, key) { if (ns === MODULE && key === "multiattack") reads += 1; return get.call(this, ns, key); };
+  const count = async (fn) => { reads = 0; await fn(); return reads; };
+  try {
+    const one = await count(() => fullAttackState(fig));
+    const rows = {
+      "one call": one,
+      "a flag write": await count(() => fig.update({ [`flags.${MODULE}.turn`]: { key: "c1:1:cb1", attackAction: { swings: 1 } } })),
+      "a settled sequence": await count(async () => { F.Hooks.callAll("pentarynCombat.sequenceEnd", fig); await drain(); }),
+      "a turn change": await count(() => F.Hooks.callAll("updateCombat", combat, { round: 1 })),
+      "outside a burst, each read works it out again": await count(() => { h.action.maxActions; h.action.currentActions; }),
+    };
+    assert.deepEqual(rows, {
+      "one call": one,
+      "a flag write": one,
+      "a settled sequence": one,
+      "a turn change": one,
+      "outside a burst, each read works it out again": 2 * one,
+    });
+  } finally {
+    F.game.settings.get = get;
+  }
+  mock.timers.tick(60);
+  await drain();
+  reset(fig);
+  F.calls.length = 0;
+});
+
+test("perf-2: one burst works the follow-ups out once (the Bonus and Special signatures and the off-hand slot share it); a throw still logs at each caller", async () => {
+  onTurn(fig);
+  reset(fig);
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  const { followUpsFor } = await import("../shapes.mjs");
+  const h = buildHud(fig, { mainSlot: "longsword0000001", offSlot: "dagger0000000001" });
+  renderAll(h, fig);
+  await drain();
+  mock.timers.tick(60);
+  // Each follow-ups computation (and each fullAttackState with a weapon) reads Enhanced Dual Wielding once.
+  const own = Object.hasOwn(fig, "getFlag");
+  const getFlag = fig.getFlag;
+  let reads = 0;
+  fig.getFlag = function (scope, key) { if (scope === "dnd5e" && key === "enhancedDualWielding") reads += 1; return getFlag.call(this, scope, key); };
+  const count = async (fn) => { reads = 0; await fn(); return reads; };
+  try {
+    const state = await count(() => fullAttackState(fig));
+    const fu = await count(() => followUpsFor(fig));
+    assert.ok(fu > 0, "the counter sees a follow-ups computation");
+    const rows = {
+      "a flag write": await count(() => fig.update({ [`flags.${MODULE}.turn`]: { key: "c1:1:cb1", attackAction: { swings: 1 } } })),
+      "a settled sequence": await count(async () => { F.Hooks.callAll("pentarynCombat.sequenceEnd", fig); await drain(); }),
+      "a turn change": await count(() => F.Hooks.callAll("updateCombat", combat, { round: 1 })),
+    };
+    assert.deepEqual(rows, {
+      "a flag write": state + fu,
+      "a settled sequence": state + fu,
+      "a turn change": state + fu,
+    });
+  } finally {
+    if (own) fig.getFlag = getFlag; else delete fig.getFlag;
+  }
+  // A throw is kept with the burst: each caller still logs its own debug line, the follow-ups are tried once.
+  const desc = Object.getOwnPropertyDescriptor(h.bonus, "currentActions");
+  let tries = 0;
+  Object.defineProperty(h.bonus, "currentActions", { configurable: true, get() { tries += 1; throw new Error("perf-2 probe"); } });
+  const debugs = [];
+  const debug = console.debug;
+  console.debug = (...args) => debugs.push([args[0], args[1]?.message ?? null]);
+  globalThis.CONFIG.debug = { ...(globalThis.CONFIG.debug ?? {}), [MODULE]: true };
+  try {
+    await fig.update({ [`flags.${MODULE}.turn`]: { key: "c1:1:cb1", attackAction: { swings: 2 } } });
+  } finally {
+    console.debug = debug;
+    delete globalThis.CONFIG.debug[MODULE];
+    if (desc) Object.defineProperty(h.bonus, "currentActions", desc); else delete h.bonus.currentActions;
+  }
+  assert.equal(tries, 1, "the follow-ups are tried once per burst");
+  assert.deepEqual(debugs.filter(d => d[1] === "perf-2 probe"), [
+    [`${MODULE} | bar signature (next render recomposes)`, "perf-2 probe"],
+    [`${MODULE} | bar signature (next render recomposes)`, "perf-2 probe"],
+    [`${MODULE} | off-hand slot re-check (the next render re-checks)`, "perf-2 probe"],
+  ]);
+  mock.timers.tick(60);
+  await drain();
+  row.textContent = "";
+  reset(fig);
+  F.calls.length = 0;
+});
+
+test("perf-3: a Multiattack actor never scans its weapons, so a malformed attack item leaves its pips on the Multiattack total", async () => {
+  onTurn(wlf);
+  reset(wlf);
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  const h = buildHud(wlf);
+  fire(h.action, wlf);
+  const sys = wlf.items.get("bite").system;
+  const props = sys.properties;
+  sys.properties = { lgt: true };   // not iterable: a weapon shape of the Bite throws
+  try {
+    const st = fullAttackState(wlf);
+    assert.deepEqual([st.ma?.total, st.pipCount, st.worth], [2, 2, true]);
+    assert.deepEqual([h.action.maxActions, h.action._pentarynPips()], [2, true], "the Multiattack's pips, not Argon's single one");
+  } finally {
+    sys.properties = props;
+  }
+  reset(wlf);
+  F.calls.length = 0;
+});
+
 test("Full Attack clicks: runs the plan; asks for a weapon once when nothing is remembered; warns with no swings left", async () => {
   onTurn(fig);
   reset(fig);
@@ -269,12 +387,28 @@ test("Full Attack's targets/ranges: Argon's picker opens only when nothing is ta
   reset(fig);
 });
 
-test("PickerProbe.ranges: range, reach, then 5", async () => {
+test("PickerProbe.ranges: range, reach, then the grid distance, else 5", async () => {
   const { argonClasses } = await import("../hud/buttons-ui.mjs");
   const { PickerProbe } = argonClasses();
   assert.deepEqual(new PickerProbe({ activity: { range: { value: 80, long: 320 } } }).ranges, { normal: 80, long: 320 });
   assert.deepEqual(new PickerProbe({ activity: { item: { system: { range: { reach: 10 } } } } }).ranges, { normal: 10, long: null });
   assert.deepEqual(new PickerProbe({ activity: {} }).ranges, { normal: 5, long: null });
+});
+
+test("ext-7: Full Attack, follow-ups and the picker probe share one fallback, the scene's grid distance", async () => {
+  const { argonClasses } = await import("../hud/buttons-ui.mjs");
+  const { PickerProbe, FollowUpButton } = argonClasses();
+  const had = Object.hasOwn(F.canvas.scene, "grid"), was = F.canvas.scene.grid;
+  F.canvas.scene.grid = { distance: 10 };
+  try {
+    assert.deepEqual(new PickerProbe({ activity: {} }).ranges, { normal: 10, long: null });
+    const fu = new FollowUpButton({ hudActor: fig, followUp: { kind: "offhand", weaponId: "nosuchweapon0001" } });
+    assert.deepEqual(fu.ranges, { normal: 10, long: null });
+    // reach still wins over the fallback
+    assert.deepEqual(new PickerProbe({ activity: { item: { system: { range: { reach: 5 } } } } }).ranges, { normal: 5, long: null });
+  } finally {
+    if (had) F.canvas.scene.grid = was; else delete F.canvas.scene.grid;
+  }
 });
 
 test("follow-up and command clicks (golden/argon-clicks.json)", async () => {
@@ -528,6 +662,44 @@ test("other triggers: sequenceEnd, a new turn/round (aborting a stale sequence),
   F.calls.length = 0;
 });
 
+test("ac-3: a refresh that throws after a settled sequence or a deleted combat is logged at debug, never an unhandled rejection or a timer throw", async () => {
+  onTurn(fig);
+  reset(fig);
+  const h = buildHud(fig, { mainSlot: "longsword0000001", offSlot: "dagger0000000001" });
+  renderAll(h, fig);
+  await drain();
+  const fa = h.action._buttons[0];
+  fa.refresh = () => { throw new Error("reading 'items' of null"); };
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err?.message ?? String(err));
+  process.on("unhandledRejection", onUnhandled);
+  const debugs = [];
+  const debug = console.debug;
+  console.debug = (...args) => debugs.push([args[0], args[1]?.message ?? null]);
+  globalThis.CONFIG.debug = { ...(globalThis.CONFIG.debug ?? {}), [MODULE]: true };
+  const timerThrows = [];
+  try {
+    F.Hooks.callAll("pentarynCombat.sequenceEnd", fig);
+    await drain();
+    await new Promise(r => setImmediate(r));
+    F.Hooks.callAll("deleteCombat", combat);
+    try { mock.timers.tick(0); mock.timers.tick(60); } catch (err) { timerThrows.push(err.message); }
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    console.debug = debug;
+    delete globalThis.CONFIG.debug[MODULE];
+    row.textContent = "";
+  }
+  assert.deepEqual(unhandled, [], "sequenceEnd: no unhandled rejection");
+  assert.deepEqual(timerThrows, [], "deleteCombat: the timer body never throws");
+  assert.deepEqual(debugs.filter(d => d[1] === "reading 'items' of null"), [
+    [`${MODULE} | bars: sequence ended`, "reading 'items' of null"],
+    [`${MODULE} | bars: combat over (HUD closed)`, "reading 'items' of null"],
+  ]);
+  reset(fig);
+  F.calls.length = 0;
+});
+
 test("Pole Strike gate: greyed with its reason; a left mouseup is stopped with a note; the tooltip says why", async () => {
   onTurn(sly);
   reset(sly);
@@ -698,6 +870,28 @@ test("the picker tutorial and its cue: setting on/off through createSetting / up
   F.game.settings.set = set;
   rows.push({ label: "set throws", console: lines.splice(0) });
   pinJSON("argon-picker-guide", rows, import.meta.url);
+  F.calls.length = 0;
+});
+
+test("ac-1: marking Argon's picker tutorial seen rejects (async settings.set): warned once, never an unhandled rejection", async () => {
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err?.message ?? String(err));
+  process.on("unhandledRejection", onUnhandled);
+  const set = F.game.settings.set;
+  lines.splice(0);
+  try {
+    await set.call(F.game.settings, "enhancedcombathud", "targetPickerGuideShown", false);
+    F.game.settings.set = async () => { throw new Error("client setting locked"); };
+    F.Hooks.callAll("updateSetting", { key: `${MODULE}.skipPickerGuide` });
+    await drain();
+    await new Promise(r => setImmediate(r));
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    F.game.settings.set = set;
+  }
+  assert.deepEqual(unhandled, [], "no unhandled rejection");
+  const warned = lines.splice(0).filter(l => JSON.stringify(l).includes("marking Argon's picker tutorial seen failed"));
+  assert.equal(warned.length, 1, "warned once");
   F.calls.length = 0;
 });
 

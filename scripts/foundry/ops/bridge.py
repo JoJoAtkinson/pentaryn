@@ -33,6 +33,8 @@ from .out import FAIL, OK, say as _say
 
 BRIDGE_PORTS = (31414, 31415, 31416)
 MATCH = "foundry-vtt-mcp"
+# ps/lsof answer in milliseconds; a wedged one must not hang `make` (py-ops-ac-4).
+PS_TIMEOUT = 10
 
 
 @dataclass
@@ -62,10 +64,20 @@ def _alive(pid: int) -> bool:
     return True
 
 
+def _run(argv: list[str]) -> subprocess.CompletedProcess:
+    """ps/lsof with PS_TIMEOUT; raises subprocess.TimeoutExpired if it does not answer."""
+    return subprocess.run(argv, capture_output=True, text=True, timeout=PS_TIMEOUT)
+
+
+def _did_not_answer(exc: subprocess.TimeoutExpired) -> str:
+    cmd = exc.cmd[0] if isinstance(exc.cmd, (list, tuple)) else exc.cmd
+    return f"{cmd} did not answer in {PS_TIMEOUT}s — bridge state unknown"
+
+
 def _comms() -> dict[int, str]:
     """pid -> executable basename, for every process, from one `ps` (python-tooling-37:
     was one `ps -p` per bridge process)."""
-    out = subprocess.run(["ps", "-eo", "pid=,comm="], capture_output=True, text=True)
+    out = _run(["ps", "-eo", "pid=,comm="])
     names: dict[int, str] = {}
     for line in out.stdout.splitlines():
         parts = line.strip().split(maxsplit=1)
@@ -82,8 +94,7 @@ def _port_owners() -> dict[int, list[int]]:
     """pid -> the bridge ports it is listening on."""
     owners: dict[int, list[int]] = {}
     for port in BRIDGE_PORTS:
-        out = subprocess.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN"],
-                             capture_output=True, text=True)
+        out = _run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN"])
         for line in out.stdout.splitlines()[1:]:
             parts = line.split()
             if len(parts) < 2:
@@ -97,8 +108,7 @@ def _port_owners() -> dict[int, list[int]]:
 
 def scan() -> list[Proc]:
     """Every bridge process, classified and judged."""
-    out = subprocess.run(
-        ["ps", "-eo", "pid=,ppid=,lstart=,command="], capture_output=True, text=True)
+    out = _run(["ps", "-eo", "pid=,ppid=,lstart=,command="])
     owners = _port_owners()
     comms: dict[int, str] | None = None
 
@@ -175,11 +185,17 @@ def judge(procs: list[Proc]) -> list[Proc]:
     return procs
 
 
+def _port_holders(procs: list[Proc]) -> list[Proc]:
+    """Every process listening on a bridge port (M8). EC-12: each one is judged — an
+    orphan on any port is the stale broker, not only the first holder found."""
+    return [p for p in procs if p.ports]
+
+
 def status_report(procs: list[Proc] | None = None) -> dict:
     """Bridge processes as data (python-tooling-41): `ok` is False only when an orphan
-    holds the ports — the state in which every bridge tool times out silently."""
+    holds a bridge port — the state in which every bridge tool times out silently."""
     procs = scan() if procs is None else procs
-    holder = next((p for p in procs if p.ports), None)
+    holders = _port_holders(procs)
 
     def row(p: Proc) -> dict:
         return {"pid": p.pid, "ppid": p.ppid, "kind": p.kind, "started": p.started,
@@ -187,17 +203,25 @@ def status_report(procs: list[Proc] | None = None) -> dict:
                 "parent_alive": p.parent_alive, "parent_comm": p.parent_comm}
 
     return {
-        "ok": not (holder is not None and holder.orphan),
+        "ok": not any(p.orphan for p in holders),
         "servers": sum(p.kind == "server" for p in procs),
         "backends": sum(p.kind == "backend" for p in procs),
-        "holder": None if holder is None else {"pid": holder.pid, "orphan": holder.orphan},
+        "holders": [{"pid": p.pid, "ports": list(p.ports), "orphan": p.orphan}
+                    for p in holders],
         "orphans": [p.pid for p in procs if p.orphan],
         "procs": [row(p) for p in sorted(procs, key=lambda x: (x.kind, x.pid))],
     }
 
 
 def status(as_json: bool = False) -> int:
-    procs = scan()
+    try:
+        procs = scan()
+    except subprocess.TimeoutExpired as exc:
+        if as_json:
+            print(json.dumps({"ok": False, "error": _did_not_answer(exc)}, indent=2))
+        else:
+            _say(f"✗ {_did_not_answer(exc)}")
+        return FAIL
     if as_json:
         r = status_report(procs)
         print(json.dumps(r, indent=2))
@@ -217,20 +241,23 @@ def status(as_json: bool = False) -> int:
         print(f"          {p.reason}")
     print()
 
-    holder = next((p for p in procs if p.ports), None)
-    if holder is None:
+    holders = _port_holders(procs)
+    if not holders:
         _say("▸ nothing is holding the bridge ports — the next server to start will bind")
-    elif holder.orphan:
-        _say(f"✗ the bridge ports are held by an ORPHAN (pid {holder.pid}, started {holder.started}).")
+    for h in holders:
+        ports = ",".join(map(str, h.ports))
+        if h.orphan:
+            _say(f"✗ bridge port(s) {ports} held by an ORPHAN (pid {h.pid}, started {h.started}).")
+        else:
+            _say(f"✓ bridge port(s) {ports} held by a live broker (pid {h.pid})")
+    if any(h.orphan for h in holders):
         _say("  Foundry's browser client will talk to that stale broker and every bridge")
         _say("  tool will time out with no error logged anywhere. Clear it with:")
         _say("    make foundry-bridge-clean")
         return FAIL
-    else:
-        _say(f"✓ bridge ports held by a live broker (pid {holder.pid})")
 
     stale = [p for p in procs if p.orphan]
-    if stale and (holder is None or not holder.orphan):
+    if stale:
         _say(f"▸ {len(stale)} orphaned process(es) are idling — `make foundry-bridge-clean` tidies them")
     return OK
 
@@ -238,6 +265,14 @@ def status(as_json: bool = False) -> int:
 def clean(dry_run: bool = False) -> int:
     """Kill orphans only. A process whose parent is a live Claude session is never
     touched — severing a working session's tools is worse than leaving a stray."""
+    try:
+        return _clean(dry_run)
+    except subprocess.TimeoutExpired as exc:
+        _say(f"✗ {_did_not_answer(exc)}")
+        return FAIL
+
+
+def _clean(dry_run: bool) -> int:
     procs = scan()
     stale = [p for p in procs if p.orphan]
     live = [p for p in procs if not p.orphan and p.kind == "server"]
@@ -248,6 +283,7 @@ def clean(dry_run: bool = False) -> int:
 
     # Backends first: killing a parent server first would orphan its child mid-scan.
     stale.sort(key=lambda p: 0 if p.kind == "backend" else 1)
+    refused: set[int] = set()
     for p in stale:
         if dry_run:
             _say(f"▸ would kill {p.kind} pid={p.pid} ({p.started}) — {p.reason}")
@@ -258,6 +294,7 @@ def clean(dry_run: bool = False) -> int:
         except ProcessLookupError:
             _say(f"▸ {p.pid} already gone")
         except PermissionError:
+            refused.add(p.pid)
             _say(f"✗ not permitted to kill {p.pid}")
 
     if dry_run:
@@ -270,9 +307,15 @@ def clean(dry_run: bool = False) -> int:
         try:
             os.kill(p.pid, signal.SIGKILL)
             _say(f"✓ KILL {p.kind} pid={p.pid} (did not answer TERM)")
+        except PermissionError:
+            refused.add(p.pid)
         except OSError:
             pass
 
+    # rob-11: OK only when every orphan is actually gone.
+    if survivors:
+        time.sleep(0.5)
+    left = [p for p in survivors if _alive(p.pid)]
     _say(f"▸ kept {len(live)} live session server(s)")
     owners = _port_owners()
     if owners:
@@ -280,6 +323,12 @@ def clean(dry_run: bool = False) -> int:
     else:
         _say("▸ bridge ports free — the next MCP server to start will bind them")
         _say("  A Foundry client already open must reload to reconnect.")
+    if left:
+        _say(f"✗ {len(left)} orphan(s) still running:")
+        for p in left:
+            why = "not permitted to kill" if p.pid in refused else "survived SIGKILL"
+            _say(f"    {p.kind} pid={p.pid} ({p.started}) — {why}")
+        return FAIL
     return OK
 
 
@@ -293,9 +342,11 @@ def warn_if_stale() -> None:
         procs = scan()
     except Exception:
         return
-    holder = next((p for p in procs if p.ports), None)
-    if holder is not None and holder.orphan:
+    stale = [h for h in _port_holders(procs) if h.orphan]
+    if stale:
         _say("")
-        _say(f"⚠ the MCP bridge ports are held by an orphaned process (pid {holder.pid},")
-        _say(f"  started {holder.started}). Bridge tools will time out silently.")
+        for h in stale:
+            _say(f"⚠ MCP bridge port(s) {','.join(map(str, h.ports))} held by an orphaned "
+                 f"process (pid {h.pid}, started {h.started}).")
+        _say("  Bridge tools will time out silently.")
         _say("  Fix: make foundry-bridge-clean   (then reload the Foundry browser tab)")

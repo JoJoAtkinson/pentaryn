@@ -22,8 +22,14 @@ const T = createTypeahead({
   setTimer: (fn, ms) => setTimeout(fn, ms),
   clearTimer: id => clearTimeout(id),
   timeoutMs: TIMEOUT_MS,
-  // the no-sink fallback: the entry's sink shows the localised toast (PENTARYN_PROMPTS.typeahead.orphan)
-  onOrphan: text => ui.notifications?.warn(`Typed before a prompt box opened and not used: "${text.trim().slice(0, 120)}"`),
+  // the no-sink fallback: the same localised toast the entry's sink shows (M12); English only where
+  // `_loc` is not defined (node)
+  onOrphan: text => {
+    const shown = text.trim().slice(0, 120);
+    ui.notifications?.warn(typeof _loc === "function"
+      ? _loc("PENTARYN_PROMPTS.typeahead.orphan", { text: shown })
+      : `Typed before a prompt box opened and not used: "${shown}"`);
+  },
   onCapture: on => {
     if (on) window.addEventListener("keydown", onKeyDown, true);
     else window.removeEventListener("keydown", onKeyDown, true);

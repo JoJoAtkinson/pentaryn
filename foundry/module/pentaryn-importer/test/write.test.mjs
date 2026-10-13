@@ -6,7 +6,9 @@
 // must survive the move to failAssertion/refuse unchanged.
 //
 // Pins and the steps that may touch them: golden/write-console.json — step 4b ([declared] console prefix,
-// D-I2) only. golden/write-*.json otherwise — no step may change them.
+// D-I2), importer-R1 ([declared] malformedLater key) and importer-R8 ([declared] a `failed <slug>: <error>`
+// warn per failure in "full") only. golden/write-full.json — importer-AC-2
+// ([declared] a create carries `_id: idForSlug(slug)` and `keepId`) only. golden/write-*.json otherwise — no step may change them.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
@@ -146,6 +148,14 @@ test("a full import: create, update in place, skip unchanged, a per-actor failur
   pinJSON("write-full", { result: o.result, writes: o.writes, toasts: o.toasts }, import.meta.url);
 });
 
+test("importer-R8: each failed slug is its own log.warn line, before the console.table", () => {
+  const lines = consoleGolden.full;
+  const warn = lines.findIndex(l => l[0] === "warn" && l[1] === "pentaryn-importer | failed echo: Actor validation errors: echo");
+  assert.notEqual(warn, -1, "a `failed <slug>: <error>` warn line through the kit logger");
+  assert.ok(warn < lines.findIndex(l => l[0] === "table"), "the per-slug warn comes before the table");
+  assert.ok(lines.some(l => l[0] === "table"), "the table stays for the console reader");
+});
+
 test("unmanagedItems:'delete' removes hand-added Items too; force rewrites an unchanged actor", async () => {
   const o = await run("deleteForce", [npc("alpha", { items: [bite] }), npc("charlie")], { unmanagedItems: "delete", force: true });
   assert.equal(o.error, null);
@@ -156,6 +166,15 @@ test("unmanagedItems:'delete' removes hand-added Items too; force rewrites an un
     ["warn", "[pentaryn-importer] Import done. Delete Data/worlds/w/actors.json — it is served publicly.", { permanent: true }],
   ]);
   pinJSON("write-delete-force", { result: o.result, writes: o.writes }, import.meta.url);
+});
+
+test("importer-R1: a malformed entry after a good one refuses the whole run before anything is written", async () => {
+  const o = await run("malformedLater", [npc("a"), { name: "Nameless" }]);
+  assert.equal(o.error?.name, "PentarynAbort");
+  assert.match(o.error.message, /has no flags\.pentaryn\.slug/);
+  assert.deepEqual(o.writes, [], "no Actor created, updated or hash-stamped (README: nothing was written)");
+  assert.equal(game.actors.find(a => a.flags.pentaryn?.slug === "a"), undefined);
+  assert.deepEqual(o.toasts, [["error", `[pentaryn-importer] ${o.error.message}`, { permanent: true, console: false }]]);
 });
 
 /* ── the seven assertion sites (items-journal-3) ──────────────────────────────────────────────── */
@@ -196,4 +215,41 @@ test("assertion sites: messages and write sequences (golden/write-sites.json)", 
 
 test("console lines of every write-path run (golden/write-console.json)", () => {
   pinJSON("write-console", consoleGolden, import.meta.url);
+});
+
+// Last in the file: it runs after the goldens are pinned, so the stub's id sequence and
+// golden/write-console.json are untouched.
+test("importer-R5: activities on an Item type without system.activities fail the named U7 assertion, not a TypeError", async () => {
+  const sack = { name: "Sack", type: "loot", flags: { pentaryn: { action: "sack" } } };
+  const cases = [
+    // the payload carries activities a loot Item cannot hold → the U7 readback (assertActivityIdsSurvived)
+    ["r5Payload", npc("r5-payload", { items: [{ ...sack, system: { activities: { sackUse00000001: { _id: "sackUse00000001", type: "utility" } } } }] }),
+      /path: {5}system\.activities[\s\S]*CONTRACT\.md U7\)/],
+    // an `expected` activity on a loot Item → the expected-activity site
+    ["r5Expected", npc("r5-expected", { items: [sack], expected: { items: [{ action: "sack", activities: [{ id: "sackUse00000001" }] }] } }),
+      /Activity id not present on the saved Item — see CONTRACT\.md U7\./],
+  ];
+  for (const [key, entry, hint] of cases) {
+    const o = await run(key, [entry]);
+    assert.equal(o.result, null, `${key}: the run is refused, not reported in failed[]`);
+    assert.equal(o.error?.name, "PentarynAssertionError", `${key}: ${o.error?.name}: ${o.error?.message}`);
+    assert.match(o.error.message, /^READBACK ASSERTION FAILED — aborting the whole run\./);
+    assert.match(o.error.message, hint);
+    assert.doesNotMatch(o.error.message, /TypeError|Cannot read properties/);
+  }
+});
+
+test("importer-R8: with debug on, trace() carries each failed slug", async () => {
+  CONFIG.debug ??= {};
+  CONFIG.debug["pentaryn-importer"] = true;
+  W.K.failCreate.add("r8-fail");
+  try {
+    await run("r8Trace", [npc("r8-fail")]);
+  } finally {
+    delete CONFIG.debug["pentaryn-importer"];
+    W.K.failCreate.delete("r8-fail");
+    delete consoleGolden.r8Trace;
+  }
+  const rows = game.pentaryn.importer.trace().filter(t => t.op === "import.failed").map(t => t.data);
+  assert.deepEqual(rows, [{ slug: "r8-fail", error: "Actor validation errors: r8-fail" }]);
 });

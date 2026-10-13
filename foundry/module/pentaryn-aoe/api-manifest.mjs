@@ -51,7 +51,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "latestResolution", params: [p("opts", "{ sceneId? }", { optional: true, doc: "sceneId: a scene id, or \"current\" for the viewing client's scene" })],
       returns: "{ messageId, resolution }|null", gm: false, writes: false, since: "0.4.0",
-      nullWhen: "none of the last 60 messages carries a live (not superseded) resolution on that scene",
+      nullWhen: "none of the last 60 messages carries a live (not superseded) resolution on that scene, or sceneId is \"current\" and this client views no scene (pass no sceneId for any scene)",
       doc: "The newest live tray among the last 60 chat messages, optionally on one scene.",
     },
     {
@@ -76,8 +76,9 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.pentaryn-aoe.region",
       "flags.pentaryn-aoe.resolution", "flags.pentaryn-aoe.claims", "flags.pentaryn-aoe.effectsApplied",
       "flags.pentaryn-aoe.damageMessage", "flags.pentaryn-aoe.careful", "flags.pentaryn-aoe.npcSave",
+      "flags.dnd5e.lockSize", "flags.dnd5e.requestResult",
     ],
-    reads: ["flags.dnd5e.*", "flags.item-piles.data.enabled"],
+    reads: ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled"],
   },
   unlisted: [],
 });
@@ -98,7 +99,7 @@ export const FEATURE_ROWS = Object.freeze({
   resolve: [
     legacy("resolve", [MESSAGE, p("opts", "{ regionId? }", { optional: true, doc: "regionId: another candidate area; null = the roller's targets" })], "Promise<object|null>",
       "Active GM: build (or rebuild) the tray on a damage message from a save activity, roll the NPC saves and post the players' request card. Returns the resolution.",
-      { gm: true, writes: true, nullWhen: "not the active GM, not a damage message, or its activity has no save", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (NPC saves, request card)"] }),
+      { gm: true, writes: true, nullWhen: "not the active GM, not a damage message, its activity has no save, or its tray is superseded or has an applied row (warning toast)", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (NPC saves, request card)"] }),
     legacy("applyRows", [MESSAGE_ID, p("rowIds", "string[]|null", { optional: true, doc: "default: every applicable row" })], "Promise<object|null>",
       "GM: apply damage to the ticked, resolved, unapplied rows (safe to repeat). Returns the updated resolution.",
       { gm: true, writes: true, nullWhen: "not a GM, no resolution, or superseded (a warning toast)", sideEffects: [...WRITES_RESOLUTION, "Actor hp (applyDamage)", "Region (instantaneous area, deleted)"] }),
@@ -111,9 +112,9 @@ export const FEATURE_ROWS = Object.freeze({
     legacy("pingPlayers", [MESSAGE_ID], "Promise<ChatMessage|Notification|null>",
       "Whisper the owners of rows still waiting for a save; an info toast (returned) when nobody is.",
       { gm: true, writes: true, nullWhen: "no resolution", sideEffects: ["ChatMessage (whisper)"] }),
-    legacy("setRow", [MESSAGE_ID, p("rowId", "string"), p("changes", "{ apply?, multiplier? }")], "Promise<object|null>",
-      "GM edit of one unapplied row (tick, multiplier). Returns the updated resolution.",
-      { gm: true, writes: true, nullWhen: "no resolution", sideEffects: WRITES_RESOLUTION }),
+    legacy("setRow", [MESSAGE_ID, p("rowId", "string"), p("changes", "{ apply?, multiplier?, protected? }")], "Promise<object|null>",
+      "GM edit of one unapplied row (tick, multiplier, Careful Spell protection; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution.",
+      { gm: true, writes: true, nullWhen: "no resolution, or a multiplier not in 0/0.25/0.5/1/2 (row unchanged, logged)", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (save roll, unprotected monster row)"] }),
   ],
   effects: [
     legacy("selfApply", [MESSAGE, p("opts", "{ force? }", { optional: true, doc: "force: ignore the autoApplySelf setting and the claim" })], "Promise<{ reason, actor, effects }|null>",
