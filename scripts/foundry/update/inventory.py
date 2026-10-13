@@ -25,6 +25,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from scripts.foundry.ops import config as ops_cfg
 from scripts.foundry.ops.digest import tree_digest
 from scripts.foundry.update.admin import MANIFEST_NAME, PACKAGE_DIR
 
@@ -40,11 +41,20 @@ LOCAL_PREFIX = "pentaryn-"
 SYSTEM_ID = "dnd5e"
 
 
+def retired(pkg_id: str) -> str:
+    """The ops registry's `retired` ("<date> — <why>") for a repo module, "" when it is live
+    or not one of ours (wave 3 walls-retire)."""
+    return next((s.retired for s in ops_cfg.MODULES.values() if s.name == pkg_id), "")
+
+
 def sync_hint(pkg_id: str) -> str:
     """The make target that puts a repo module into Data/ (python-tooling-9).
 
     `make foundry-<short>-sync` for every module except the importer, which ships with the actor
-    pipeline (`make foundry-sync`, which also stages actors.json — so it names the world)."""
+    pipeline (`make foundry-sync`, which also stages actors.json — so it names the world), and a
+    retired module, which nothing syncs."""
+    if why := retired(pkg_id):
+        return f"no sync — retired {why}"
     if pkg_id == "pentaryn-importer":
         return "make foundry-sync WORLD=<world> (then make foundry-clean)"
     short = pkg_id.removeprefix(LOCAL_PREFIX)
@@ -146,11 +156,12 @@ def local_drift(packages: list[Package]) -> list[dict]:
     diverge. A stale module in ``Data/`` looks exactly like a working one until something
     silently uses the old code, so it is worth a line in the report. A different version is
     one entry; the SAME version with different files is one too, marked ``content_drift``
-    (the digest is module-sync's own, which ignores its sync stamp).
+    (the digest is module-sync's own, which ignores its sync stamp). A retired module is never
+    drift: telling anyone to re-sync it would reinstall what Joe retired.
     """
     drift = []
     for pkg in packages:
-        if not pkg.is_local:
+        if not pkg.is_local or retired(pkg.id):
             continue
         src = REPO_MODULE_SRC / pkg.id / MANIFEST_NAME[pkg.type]
         if not src.exists():

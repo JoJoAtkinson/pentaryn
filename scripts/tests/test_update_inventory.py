@@ -76,7 +76,7 @@ def test_the_note_names_the_module_s_own_sync_target(dirs):
 
 @pytest.mark.parametrize("pkg_id, hint", [
     ("pentaryn-ties", "make foundry-ties-sync"),
-    ("pentaryn-walls", "make foundry-walls-sync"),
+    ("pentaryn-walls", "no sync — retired 2026-10-13 — Joe uses prefabs"),
     ("pentaryn-importer", "make foundry-sync WORLD=<world> (then make foundry-clean)"),
 ])
 def test_sync_hint(pkg_id, hint):
@@ -106,8 +106,35 @@ def test_risk_names_the_module_s_own_sync_target():
     from scripts.foundry.update import risk
     from scripts.foundry.update.upstream import Upstream
 
+    pkg = inventory.Package(type="module", id="pentaryn-ties", title="t", version="0.19.4", path=Path("/x"))
+    up = Upstream(id="pentaryn-ties", type="module", installed="0.19.4", latest=None)
+    d = risk.classify_package(pkg, up, policy={}, core_version="14.369", system_version="6.0.6",
+                              installed_ids=set(), seen={})
+    assert d.reasons == ["built in this repo — updated by make foundry-ties-sync, not upstream"]
+
+
+# ── a retired module (wave 3 walls-retire): the updater never says to re-sync it ──────────────
+
+def test_a_retired_module_is_never_drift_walls_retire(dirs):
+    repo, data = dirs
+    _module(repo, "pentaryn-walls", "0.2.0", {"w.mjs": "new"})
+    _module(data, "pentaryn-walls", "0.1.0", {"w.mjs": "old"})
+    assert inventory.local_drift([_installed(data, "pentaryn-walls")]) == []
+
+
+def test_retired_reads_the_ops_registry_walls_retire():
+    assert inventory.retired("pentaryn-walls") == "2026-10-13 — Joe uses prefabs"
+    assert inventory.retired("pentaryn-ties") == ""
+    assert inventory.retired("dice-so-nice") == ""
+
+
+def test_risk_says_a_retired_module_is_never_synced_walls_retire():
+    from scripts.foundry.update import risk
+    from scripts.foundry.update.upstream import Upstream
+
     pkg = inventory.Package(type="module", id="pentaryn-walls", title="w", version="0.2.0", path=Path("/x"))
     up = Upstream(id="pentaryn-walls", type="module", installed="0.2.0", latest=None)
     d = risk.classify_package(pkg, up, policy={}, core_version="14.369", system_version="6.0.6",
                               installed_ids=set(), seen={})
-    assert d.reasons == ["built in this repo — updated by make foundry-walls-sync, not upstream"]
+    assert d.bucket == risk.SKIP
+    assert d.reasons == ["built in this repo, retired 2026-10-13 — Joe uses prefabs — never synced, not upstream"]

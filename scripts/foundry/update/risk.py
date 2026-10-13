@@ -29,7 +29,7 @@ from pathlib import Path
 
 import yaml
 
-from scripts.foundry.update.inventory import Package, sync_hint
+from scripts.foundry.update.inventory import Package, retired, sync_hint
 from scripts.foundry.update.upstream import Upstream, bump_kind, is_newer
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -220,7 +220,9 @@ def classify_package(pkg: Package, up: Upstream, *, policy: dict, core_version: 
     pkg_policy = policy.get("packages", {}) or {}
 
     if pkg.kind == "local":
-        d.reasons = [f"built in this repo — updated by {sync_hint(pkg.id)}, not upstream"]
+        d.reasons = ([f"built in this repo, retired {why} — never synced, not upstream"]
+                     if (why := retired(pkg.id)) else
+                     [f"built in this repo — updated by {sync_hint(pkg.id)}, not upstream"])
         return d
     if pkg.kind == "forked":
         d.bucket = SKIP
