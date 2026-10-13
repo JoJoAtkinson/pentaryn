@@ -1,0 +1,31 @@
+"""Defect wave 3 (docs): the wave-2 records' live-check steps say what the code really does.
+
+The wave-2 live run (context/plans/defect-wave-2-2026-10-12/README.md, "Record wording to
+correct") found steps whose expected result did not match the declared behaviour. Each test
+pins the corrected wording so a later edit cannot quietly put the wrong expectation back.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+WAVE2 = ROOT / "context/plans/defect-wave-2-2026-10-12"
+
+
+def _read(name: str) -> str:
+    return (WAVE2 / name).read_text(encoding="utf-8")
+
+
+def _step(text: str, start: str, end: str) -> str:
+    """The text from the first `start` to the next `end` after it."""
+    i = text.index(start)
+    j = text.index(end, i + len(start))
+    return text[i:j]
+
+
+def test_kit_names_ext_3_expects_three_toasted_labels():
+    """sync counts the prototype token plus each placed token: 1 + 2 = 3."""
+    step = " ".join(_step(_read("kit.md"), "- **names-ext-3**", "- Every other item").split())
+    assert "the toast count is 3" in step
+    assert "toast count is 2" not in step
