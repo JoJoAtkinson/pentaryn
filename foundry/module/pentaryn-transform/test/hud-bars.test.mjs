@@ -459,6 +459,29 @@ test("Chalice: a leveled heal with a slot lights the Chalice button for a minute
   assert.equal(lit(), false, "Starry Form ended");
 });
 
+test("EC-2: a Chalice offer ends when the constellation changes — swap to the Archer and back within a minute: no pulse", async () => {
+  const { talo } = fresh();
+  await S.assumeStarry(talo, "chalice");
+  ui.ARGON._actor = talo;
+  const p = A.panel("DND5E.BonusAction", [slot()]);
+  fire(p, talo);
+  await flush();
+  const lit = () => p._buttons.some(b => b.element.classList.contains("ptf-chalice-ready"));
+  Hooks.callAll("dnd5e.postUseActivity", talo.items.get(IDS.cure).system.activities.get("cw1"), {}, {});
+  assert.equal(lit(), true);
+  const effect = talo.effects.get(S.STARRY_EFFECT_ID);
+  await effect.update({ "flags.pentaryn-transform.starry.left": 300 });
+  assert.equal(lit(), true, "a time-left write keeps the offer");
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "chalice" });
+  assert.equal(lit(), true, "rewriting the same constellation keeps the offer");
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "archer" });
+  await effect.update({ "flags.pentaryn-transform.starry.constellation": "chalice" });
+  fire(p, talo);
+  await flush();
+  assert.equal(lit(), false, "EC-2: the offer must not survive a change of constellation");
+  mock.timers.tick(60_000);
+});
+
 test("Chalice: not in the Chalice constellation → nothing; another actor's offer is not painted on this HUD; a failure warns", async () => {
   const { talo } = fresh();
   await S.assumeStarry(talo, "archer");

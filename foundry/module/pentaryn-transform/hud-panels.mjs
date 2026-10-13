@@ -319,6 +319,7 @@ function onStarryUpdate(effect, changes) {
   const paths = Object.keys(foundry.utils.flattenObject(changes ?? {})).filter(k => k !== "_id" && !k.startsWith("_stats"));
   if (paths.length && paths.every(k => k === STARRY_LEFT)) return;
   onStarryChange(effect);
+  onStarryRecast(effect, changes);
 }
 
 /* ── Chalice: offered when it is earned (Area 4, D6) ─────────────────────── */
@@ -357,9 +358,15 @@ function onChaliceUse(activity, usageConfig) {
   } catch (err) { log.warn("Chalice offer skipped", err); }
 }
 
-// Starry Form ended or changed constellation: no Chalice to take.
+// Starry Form ended or changed constellation: no Chalice to take (EC-2: an update clears the offer
+// only when it moves the form off the Chalice, so a swap away and back within the minute is dark).
+const STARRY_CONSTELLATION = `flags.${MODULE}.starry.constellation`;
 function onStarryEnd(effect) {
   if (effect?.getFlag?.(MODULE, "starry") && effect.parent instanceof Actor) setChalice(effect.parent, false);
+}
+function onStarryRecast(effect, changes) {
+  const c = foundry.utils.flattenObject(changes ?? {})[STARRY_CONSTELLATION];
+  if (c !== undefined && c !== "chalice") onStarryEnd(effect);
 }
 
 const POINTER = { passive: true, capture: true };

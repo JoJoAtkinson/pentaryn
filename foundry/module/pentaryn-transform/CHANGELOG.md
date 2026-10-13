@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **A Chalice offer ends when the constellation changes (EC-2, defect wave 2).** hud-panels.mjs
+  cleared the pulsing Chalice button only on `deleteActiveEffect`, so swapping to the Archer and
+  back within the minute brought the pulse back. `onStarryUpdate` now forwards a non-tick change to
+  `onStarryRecast`, which clears the offer when the update moves the constellation off the Chalice
+  ([declared]; test "EC-2" in hud-bars.test.mjs; no new strings or hooks).
 - **A portrait repaint that fails on a world-time tick warns instead of erroring (R5, defect wave
   2).** hud-panels.mjs `onWorldTime` called `paintPortrait` without the "portrait line failed"
   guard that `onPortraitRender` has, so a throw surfaced as the hook's error. Both now go through
