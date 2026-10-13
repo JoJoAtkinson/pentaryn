@@ -375,8 +375,9 @@ export function fullAttackPlanOf(actor, { weaponId = null, turn = null, inCombat
  */
 export function planFor(actor, weaponId = null, { multiattackOn = true } = {}) {
   const ctx = combatContext(actor);
-  weaponId ??= chosenWeapon(actor);
   const ma = multiattackFor(actor, { enabled: multiattackOn });
+  // A Multiattack plan never reads weaponId: check it first, so its actor's weapons are not scanned (wave 3, combat-2).
+  if (!ma) weaponId ??= chosenWeapon(actor);
   const pick = ma ? { "*": rememberedWeapon(actor) } : null;
   return fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId, { multiattackOn }), pick });
 }
