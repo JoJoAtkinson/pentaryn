@@ -912,6 +912,28 @@ def test_login_asks_foundry_for_its_status_once(monkeypatch, fake_admin):
     assert len(calls) == 1
 
 
+def test_login_accepts_a_user_record_with_only_an_id_key(monkeypatch, fake_admin):
+    """rob-6: ``who["_id"] or who.get("id")`` raised KeyError on a join-data user that
+    carries only ``id``, so the ``id`` fallback never ran and login traced back."""
+    fa = fake_admin(True, "ardenhaven")
+    fa.authenticate = lambda: None
+    fa.join_data = lambda: {"users": [{"id": "gm1", "name": "Gamemaster", "role": 4}]}
+    logged = []
+
+    def login_as(uid):
+        logged.append(uid)
+        raise RuntimeError("stop here")
+
+    fa.login_as = login_as
+    monkeypatch.setattr(login, "worlds_on_disk", lambda: [{"id": "ardenhaven"}])
+    monkeypatch.setattr(login.service, "up", lambda: login.OK)
+    monkeypatch.setattr(login, "foundry_admin_password", lambda: "pw")
+    monkeypatch.setattr(login, "FoundryAdmin", lambda **kw: fa)
+    monkeypatch.setattr(login, "_say", lambda *a, **k: None)
+    assert login.login(world="ardenhaven", user="Gamemaster", prompt=False) == login.FAIL
+    assert logged == ["gm1"]
+
+
 def test_handoff_is_single_use_and_nonce_guarded():
     """One request, at the nonce path only, and the port is closed afterwards."""
     import urllib.error

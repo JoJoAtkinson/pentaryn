@@ -433,7 +433,7 @@ def login(user: str | None = None, world: str | None = None,
         data = fa.join_data()
         who = _pick_user(data.get("users", []), user, prompt)
         _say(f"▸ '{target}' — logging in as {who.get('name')}")
-        fa.login_as(who["_id"] or who.get("id"))
+        fa.login_as(who.get("_id") or who.get("id"))
     except KeyboardInterrupt:
         _say("✗ cancelled")
         return FAIL
