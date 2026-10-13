@@ -32,6 +32,9 @@ OK, FAIL = 0, 1
 
 # cloudflared's own credential, written by `cloudflared tunnel login`.
 CF_CERT = Path.home() / ".cloudflared/cert.pem"
+# `cloudflared tunnel list/create/route` talk to Cloudflare; a stuck one must not hang
+# `make` (py-ops-ac-4). `tunnel login` has none: it waits on a person in a browser.
+CF_TIMEOUT = 20
 
 # Every probe claims to be a browser, and this is load-bearing rather than cosmetic.
 # Cloudflare 403s a bare `Python-urllib/3.x` at the edge before the request ever
@@ -275,8 +278,12 @@ def tunnel_up() -> int:
         if not CF_CERT.exists():
             _say("✗ cloudflared not authenticated — run: make tunnel-setup")
             return FAIL
-        listed = subprocess.run(["cloudflared", "tunnel", "list"],
-                                capture_output=True, text=True)
+        try:
+            listed = subprocess.run(["cloudflared", "tunnel", "list"],
+                                    capture_output=True, text=True, timeout=CF_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            _say(f"✗ cloudflared did not answer in {CF_TIMEOUT}s — tunnel not started")
+            return FAIL
         if cfg.TUNNEL_NAME not in (listed.stdout or ""):
             _say(f"✗ tunnel '{cfg.TUNNEL_NAME}' doesn't exist — run: make tunnel-setup")
             return FAIL
@@ -331,15 +338,21 @@ def tunnel_setup() -> int:
     if not CF_CERT.exists():
         if subprocess.run(["cloudflared", "tunnel", "login"]).returncode != 0:
             return FAIL
-    listed = subprocess.run(["cloudflared", "tunnel", "list"],
-                            capture_output=True, text=True)
-    if cfg.TUNNEL_NAME not in (listed.stdout or ""):
-        if subprocess.run(["cloudflared", "tunnel", "create", cfg.TUNNEL_NAME]).returncode != 0:
-            return FAIL
-    routed = subprocess.run(
-        ["cloudflared", "tunnel", "route", "dns", cfg.TUNNEL_NAME, cfg.TUNNEL_HOST],
-        capture_output=True, text=True,
-    )
+    try:
+        listed = subprocess.run(["cloudflared", "tunnel", "list"],
+                                capture_output=True, text=True, timeout=CF_TIMEOUT)
+        if cfg.TUNNEL_NAME not in (listed.stdout or ""):
+            if subprocess.run(["cloudflared", "tunnel", "create", cfg.TUNNEL_NAME],
+                              timeout=CF_TIMEOUT).returncode != 0:
+                return FAIL
+        routed = subprocess.run(
+            ["cloudflared", "tunnel", "route", "dns", cfg.TUNNEL_NAME, cfg.TUNNEL_HOST],
+            capture_output=True, text=True, timeout=CF_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as exc:
+        _say(f"✗ cloudflared did not answer in {CF_TIMEOUT}s ({' '.join(exc.cmd[1:3])}) "
+             "— setup not complete")
+        return FAIL
     if routed.returncode != 0:
         _say("▸ DNS route already exists (fine)")
     _say("✓ setup complete — now: make vtt-up")

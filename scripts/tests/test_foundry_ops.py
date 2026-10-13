@@ -1340,3 +1340,96 @@ def test_overlapping_tunnel_up_runs_start_one_cloudflared(monkeypatch, tmp_path,
     assert len(started) == 1, f"py-ops-ac-3: {len(started)} cloudflared processes started"
     out = capsys.readouterr().out
     assert out.count("starting tunnel") == 1 and "tunnel already up" in out
+
+
+# ── py-ops-ac-4: ps, lsof and `cloudflared tunnel list` carry a timeout ───────
+# bridge.py's ps/lsof and service.py's `cloudflared tunnel list` ran with no timeout,
+# so a wedged ps or a cloudflared stuck on the network hung `make` forever. Each call
+# now carries one (10 s for ps/lsof, 20 s for cloudflared) and a timeout is a ✗ line
+# and FAIL, not a hang.
+
+def _hung_run(calls):
+    """A subprocess.run that records its kwargs and behaves as a hung command would
+    once its timeout fires. With no timeout it fails the test instead of hanging."""
+    import subprocess
+
+    def run(argv, **kw):
+        calls.append((list(argv), kw.get("timeout")))
+        if kw.get("timeout") is None:
+            raise AssertionError(f"py-ops-ac-4: {argv[0]} run with no timeout")
+        raise subprocess.TimeoutExpired(argv, kw["timeout"])
+    return run
+
+
+@pytest.mark.parametrize("call", ["status", "status_json", "clean", "clean_dry"])
+def test_bridge_commands_fail_on_a_hung_ps_instead_of_hanging(call, monkeypatch, capsys):
+    """py-ops-ac-4: a hung ps/lsof → bridge status/clean print ✗ and return FAIL."""
+    import json
+    from scripts.foundry.ops import bridge
+    calls = []
+    monkeypatch.setattr(bridge.subprocess, "run", _hung_run(calls))
+    monkeypatch.setattr(bridge.time, "sleep", lambda s: None)
+    rc = {"status": lambda: bridge.status(),
+          "status_json": lambda: bridge.status(as_json=True),
+          "clean": lambda: bridge.clean(),
+          "clean_dry": lambda: bridge.clean(dry_run=True)}[call]()
+    assert rc == 1
+    assert calls and all(t == 10 for _, t in calls), calls
+    out = capsys.readouterr().out
+    if call == "status_json":
+        assert json.loads(out)["ok"] is False
+    else:
+        assert "✗" in out and "did not answer" in out
+
+
+def test_bridge_ps_and_lsof_carry_a_timeout(monkeypatch):
+    """py-ops-ac-4: every ps/lsof call in a scan passes timeout=10."""
+    import subprocess
+    from scripts.foundry.ops import bridge
+    seen = []
+
+    def run(argv, **kw):
+        seen.append((argv[0], kw.get("timeout")))
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+    monkeypatch.setattr(bridge.subprocess, "run", run)
+    bridge.scan()
+    bridge._comms()
+    assert {a for a, _ in seen} == {"ps", "lsof"}
+    assert all(t == 10 for _, t in seen), seen
+
+
+def _tunnel_ready(monkeypatch, tmp_path):
+    monkeypatch.setattr(cfg, "RUN_DIR", tmp_path)
+    monkeypatch.setattr(cfg, "CF_PID", tmp_path / "cloudflared.pid")
+    cert = tmp_path / "cert.pem"
+    cert.write_text("x")
+    monkeypatch.setattr(service, "CF_CERT", cert)
+    monkeypatch.setattr(service.host, "require_primary", lambda *a, **kw: None)
+
+
+def test_tunnel_up_fails_when_cloudflared_does_not_answer(monkeypatch, tmp_path, capsys):
+    """py-ops-ac-4: a hung `cloudflared tunnel list` → ✗ 'cloudflared did not answer', FAIL."""
+    _tunnel_ready(monkeypatch, tmp_path)
+    calls = []
+    monkeypatch.setattr(service.subprocess, "run", _hung_run(calls))
+    monkeypatch.setattr(service.subprocess, "Popen",
+                        lambda *a, **kw: pytest.fail("started cloudflared after a timeout"))
+    assert service.tunnel_up() == 1
+    assert ["cloudflared", "tunnel", "list"] in [a for a, _ in calls]
+    assert all(t == 20 for a, t in calls if a[0] == "cloudflared"), calls
+    out = capsys.readouterr().out
+    assert "✗" in out and "cloudflared did not answer" in out
+    assert not cfg.CF_PID.exists()
+
+
+def test_tunnel_setup_fails_when_cloudflared_does_not_answer(monkeypatch, tmp_path, capsys):
+    """py-ops-ac-4: tunnel-setup's list/create/route calls time out into a ✗ line."""
+    _tunnel_ready(monkeypatch, tmp_path)
+    monkeypatch.setattr(service.shutil, "which", lambda name: "/usr/local/bin/cloudflared")
+    calls = []
+    monkeypatch.setattr(service.subprocess, "run", _hung_run(calls))
+    assert service.tunnel_setup() == 1
+    assert calls and all(t == 20 for _, t in calls), calls
+    out = capsys.readouterr().out
+    assert "✗" in out and "cloudflared did not answer" in out
+    assert "setup complete" not in out

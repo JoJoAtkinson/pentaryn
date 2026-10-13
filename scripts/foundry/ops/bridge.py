@@ -33,6 +33,8 @@ from .out import FAIL, OK, say as _say
 
 BRIDGE_PORTS = (31414, 31415, 31416)
 MATCH = "foundry-vtt-mcp"
+# ps/lsof answer in milliseconds; a wedged one must not hang `make` (py-ops-ac-4).
+PS_TIMEOUT = 10
 
 
 @dataclass
@@ -62,10 +64,20 @@ def _alive(pid: int) -> bool:
     return True
 
 
+def _run(argv: list[str]) -> subprocess.CompletedProcess:
+    """ps/lsof with PS_TIMEOUT; raises subprocess.TimeoutExpired if it does not answer."""
+    return subprocess.run(argv, capture_output=True, text=True, timeout=PS_TIMEOUT)
+
+
+def _did_not_answer(exc: subprocess.TimeoutExpired) -> str:
+    cmd = exc.cmd[0] if isinstance(exc.cmd, (list, tuple)) else exc.cmd
+    return f"{cmd} did not answer in {PS_TIMEOUT}s — bridge state unknown"
+
+
 def _comms() -> dict[int, str]:
     """pid -> executable basename, for every process, from one `ps` (python-tooling-37:
     was one `ps -p` per bridge process)."""
-    out = subprocess.run(["ps", "-eo", "pid=,comm="], capture_output=True, text=True)
+    out = _run(["ps", "-eo", "pid=,comm="])
     names: dict[int, str] = {}
     for line in out.stdout.splitlines():
         parts = line.strip().split(maxsplit=1)
@@ -82,8 +94,7 @@ def _port_owners() -> dict[int, list[int]]:
     """pid -> the bridge ports it is listening on."""
     owners: dict[int, list[int]] = {}
     for port in BRIDGE_PORTS:
-        out = subprocess.run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN"],
-                             capture_output=True, text=True)
+        out = _run(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN"])
         for line in out.stdout.splitlines()[1:]:
             parts = line.split()
             if len(parts) < 2:
@@ -97,8 +108,7 @@ def _port_owners() -> dict[int, list[int]]:
 
 def scan() -> list[Proc]:
     """Every bridge process, classified and judged."""
-    out = subprocess.run(
-        ["ps", "-eo", "pid=,ppid=,lstart=,command="], capture_output=True, text=True)
+    out = _run(["ps", "-eo", "pid=,ppid=,lstart=,command="])
     owners = _port_owners()
     comms: dict[int, str] | None = None
 
@@ -204,7 +214,14 @@ def status_report(procs: list[Proc] | None = None) -> dict:
 
 
 def status(as_json: bool = False) -> int:
-    procs = scan()
+    try:
+        procs = scan()
+    except subprocess.TimeoutExpired as exc:
+        if as_json:
+            print(json.dumps({"ok": False, "error": _did_not_answer(exc)}, indent=2))
+        else:
+            _say(f"✗ {_did_not_answer(exc)}")
+        return FAIL
     if as_json:
         r = status_report(procs)
         print(json.dumps(r, indent=2))
@@ -248,6 +265,14 @@ def status(as_json: bool = False) -> int:
 def clean(dry_run: bool = False) -> int:
     """Kill orphans only. A process whose parent is a live Claude session is never
     touched — severing a working session's tools is worse than leaving a stray."""
+    try:
+        return _clean(dry_run)
+    except subprocess.TimeoutExpired as exc:
+        _say(f"✗ {_did_not_answer(exc)}")
+        return FAIL
+
+
+def _clean(dry_run: bool) -> int:
     procs = scan()
     stale = [p for p in procs if p.orphan]
     live = [p for p in procs if not p.orphan and p.kind == "server"]
