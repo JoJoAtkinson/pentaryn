@@ -20,7 +20,7 @@
 
 import {
   MODULE, RECENT_MESSAGES, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, isHandle, isTemplateRegion, hydrateDamages
+  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -41,22 +41,26 @@ let log = makeLog(MODULE);   // the entry's ctx.log once installed
 let context = null;
 
 const queues = new Map();
+/** Chain task() on one message's write queue. task must never reject; returns the new tail. */
+function enqueue(messageId, task) {
+  const next = (queues.get(messageId) ?? Promise.resolve()).then(task);
+  queues.set(messageId, next);
+  // -6: drop the tail once it settles (unless a later call queued behind it), so a session does
+  // not keep every resolution it ever wrote alive.
+  next.finally(() => { if (queues.get(messageId) === next) queues.delete(messageId); });
+  return next;
+}
+
 /** Run fn(resolution) → resolution for one message, one at a time, then write it back. */
 export function mutate(messageId, fn) {
-  const prev = queues.get(messageId) ?? Promise.resolve();
-  const next = prev.then(async () => {
+  return enqueue(messageId, () => (async () => {
     const message = game.messages.get(messageId);
     const res = message && foundry.utils.deepClone(aoeFlags(message).resolution);
     if (!res) return null;
     const out = (await fn(res, message)) ?? res;
     await message.update({ [`flags.${MODULE}.resolution`]: out });
     return out;
-  }).catch(err => { log.error("mutate", err); return null; });
-  queues.set(messageId, next);
-  // -6: drop the tail once it settles (unless a later call queued behind it), so a session does
-  // not keep every resolution it ever wrote alive. `next` never rejects (the catch above).
-  next.finally(() => { if (queues.get(messageId) === next) queues.delete(messageId); });
-  return next;
+  })().catch(err => { log.error("mutate", err); return null; }));
 }
 
 /** Messages with a write still queued on this client (debugging and tests). */
@@ -162,6 +166,12 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   if (!game.users.activeGM?.isSelf) { why("resolve", ref, "not the active GM"); return null; }
   const message = typeof messageOrId === "string" ? game.messages.get(messageOrId) : messageOrId;
   if (!message || message.type !== "damage") { why("resolve", ref, "not a damage message"); return null; }
+  if (areaLocked(aoeFlags(message).resolution)) {
+    // aoe-edge-2: rebuilding would revive a superseded tray or reset applied rows.
+    why("resolve", ref, "tray superseded or already applied");
+    ui.notifications.warn(_loc("PENTARYN_AOE.Tray.AreaLocked"));
+    return null;
+  }
   const activity = activityOf(message);
   if (!activity?.save) { why("resolve", ref, "its activity has no save"); return null; }
 
@@ -184,7 +194,7 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const rows = buildRows(described, { casterActorId });
   const usage = usageIdOf(message);
   // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
-  const careful = (await context?.exposed.carefulFor?.(activity.actor, described, { casterActorId, usage, scene, onSave, rows })) ?? null;
+  const careful = (await context?.exposed.carefulFor?.(activity.actor, { usage, onSave, rows })) ?? null;
 
   const res = {
     activity: activity.uuid,
@@ -204,7 +214,10 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   };
 
   // Write the bare state first so the tray appears and later results have somewhere to land.
-  await message.update({ [`flags.${MODULE}.resolution`]: res });
+  // AC-6: queued like every other write, so a mutate already running on the old resolution
+  // cannot land after this one and bring the old area's rows back. A failed write still throws.
+  const failed = await enqueue(message.id, () => message.update({ [`flags.${MODULE}.resolution`]: res }).then(() => null, err => err));
+  if (failed) throw failed;
   await supersedeOlder(message, res);
 
   await rollNpcSaves(message.id);
@@ -232,6 +245,15 @@ async function supersedeOlder(message, res) {
 /*  Monster saves                               */
 /* -------------------------------------------- */
 
+/**
+ * R5: did this save pass? Only against a real DC. With none (null, '', an unset formula) the answer
+ * is null, never a guessed pass or fail: the row's multiplier stays '?' and the GM sets it by hand.
+ */
+function saveSuccess(roll, dc) {
+  if (!Number.isFinite(dc)) return null;
+  return roll.isSuccess ?? (roll.total >= dc);
+}
+
 async function rollOne(row, res, scene) {
   const actor = fromUuidSync(row.actor);
   if (!actor) return null;
@@ -243,7 +265,7 @@ async function rollOne(row, res, scene) {
   });
   const roll = rolls?.[0];
   if (!roll) return null;
-  return { total: roll.total, success: roll.isSuccess ?? (roll.total >= res.dc), messageId: roll.parent?.id ?? null };
+  return { total: roll.total, success: saveSuccess(roll, res.dc), messageId: roll.parent?.id ?? null };
 }
 
 /** Roll (or re-roll) the auto rows. rowIds limits it; force re-rolls rows that already have a save. */
@@ -257,7 +279,8 @@ export async function rollNpcSaves(messageId, { rowIds = null, force = false } =
     if (row.kind !== "auto" || row.applied || row.protected) continue;
     if (rowIds && !rowIds.includes(row.id)) continue;
     if (row.save && !force) continue;
-    results[row.id] = await rollOne(row, res, scene);
+    // R4: one rejecting save must not discard the others; the failed row stays '—' for a re-roll.
+    results[row.id] = await rollOne(row, res, scene).catch(err => { log.warn("npcSave", row.name, err); return null; });
   }
   return mutate(messageId, r => {
     for (const row of r.rows) if (results[row.id]) fillSave(row, results[row.id], r.onSave);
@@ -306,7 +329,10 @@ async function postRequest(message, activity, res) {
   return request;
 }
 
-/** GM: a save message arrived — does it answer a waiting player row? */
+/**
+ * GM: a save message arrived — does it answer a waiting player row? AC-1: two GM tabs both get
+ * here, so a save that answers a row is claimed (`matchSave`) and only the winning tab fills it.
+ */
 async function onSaveMessage(message) {
   const roll = message.rolls?.[0];
   if (!roll) return;
@@ -326,7 +352,8 @@ async function onSaveMessage(message) {
     const idx = matchSave(res, info, { createdAfter: m.timestamp ?? 0 });
     if (idx < 0) continue;
     const rowId = res.rows[idx].id;
-    const success = roll.isSuccess ?? (Number.isFinite(res.dc) ? roll.total >= res.dc : null);
+    const success = saveSuccess(roll, res.dc);
+    if (!(await claimMessage(message, "matchSave", { scope: MODULE }))) return why("matchSave", message.id, "another session claimed it");
     await mutate(m.id, r => {
       const row = r.rows.find(x => x.id === rowId);
       if (row && !row.save) fillSave(row, { total: roll.total, success, messageId: message.id }, r.onSave);
@@ -390,6 +417,8 @@ function settledOrAfter(promise, ms) {
  * aoe-edge-1: overlapping calls for one message in this tab run one after another, so the later
  * one sees the earlier one's rows as applied. A rejection still reaches its own caller; an earlier
  * Apply stuck for APPLY_WAIT_MS stops holding the later ones back.
+ * AC-1: across GM tabs, each row is re-read from the live message right before its damage and
+ * skipped if another tab applied it, and each landed row is marked applied at once.
  */
 export function applyRows(messageId, rowIds = null) {
   const prev = applying.get(messageId);
@@ -408,23 +437,29 @@ async function applyRowsNow(messageId, rowIds) {
   if (res.superseded) { why("apply", messageId, "superseded"); ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
   const todo = applicableRows(res.rows, rowIds);
   const damages = hydrateDamages(res.damages);
-  const done = {};
+  const liveRow = id => aoeFlags(game.messages.get(messageId)).resolution?.rows.find(r => r.id === id);
   const failed = [];
+  let out = null;
   for (const row of todo) {
+    const live = liveRow(row.id);
+    if (!live || live.applied) { why("apply", messageId, "row applied meanwhile", { row: row.id }); continue; }
     const actor = fromUuidSync(row.actor);
     if (!actor) continue;
     const before = actor.system.attributes.hp.value;
     try {
       await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
-      done[row.id] = { before, after: actor.system.attributes.hp.value };
     } catch (err) {
-      failed.push({ row, err });   // R1: the rows that landed are still marked below, so a retry skips them
+      failed.push({ row, err });   // R1: the rows that landed are already marked, so a retry skips them
+      continue;
     }
+    const hp = { before, after: actor.system.attributes.hp.value };
+    out = await mutate(messageId, r => {
+      const x = r.rows.find(y => y.id === row.id);
+      if (x) { x.applied = true; x.hp = hp; }
+      return r;
+    }) ?? out;
   }
-  const out = await mutate(messageId, r => {
-    for (const row of r.rows) if (done[row.id]) { row.applied = true; row.hp = done[row.id]; }
-    return r;
-  });
+  out ??= foundry.utils.deepClone(aoeFlags(game.messages.get(messageId)).resolution ?? null);
   if (failed.length) {
     for (const { row, err } of failed.slice(1)) log.error("apply", row.name, err);   // the first is rethrown for the caller to log
     ui.notifications.warn(_loc("PENTARYN_AOE.Tray.ApplyFailed", { names: failed.map(f => f.row.name).join(", ") }));
@@ -444,15 +479,34 @@ async function cleanupInstant(res) {
   if (region && isTemplateRegion(region)) await removeArea([region], scene);
 }
 
-/** GM edits from the tray. */
-export function setRow(messageId, rowId, changes) {
-  return mutate(messageId, r => {
+/**
+ * GM edits from the tray: tick, multiplier, and Careful Spell's protection (aoe-careful-select).
+ * Unprotected, a row gets back the save it had; a monster row that had none is rolled now, a
+ * player row waits again.
+ */
+export async function setRow(messageId, rowId, changes) {
+  if ("multiplier" in changes) {   // aoe-edge-7: null/'' used to land as ×0, 'abc' as NaN
+    const v = changes.multiplier;
+    const m = (typeof v === "number" || (typeof v === "string" && v.trim() !== "")) ? Number(v) : NaN;
+    if (!MULTIPLIERS.includes(m)) { log.warn("setRow multiplier", { messageId, rowId, multiplier: v }); return null; }
+    changes = { ...changes, multiplier: m };
+  }
+  const out = await mutate(messageId, r => {
     const row = r.rows.find(x => x.id === rowId);
     if (!row || row.applied) return r;
     if ("apply" in changes) row.apply = !!changes.apply;
-    if ("multiplier" in changes) { row.multiplier = Number(changes.multiplier); row.overridden = true; }
+    if ("multiplier" in changes) { row.multiplier = changes.multiplier; row.overridden = true; }
+    if ("protected" in changes && !r.superseded) {
+      if (changes.protected) protectRows([row], [row.id], r.onSave);
+      else unprotectRow(row);
+    }
     return r;
   });
+  const row = out?.rows.find(x => x.id === rowId);
+  if ("protected" in changes && !changes.protected && row?.kind === "auto" && !row.save && !row.applied) {
+    return rollNpcSaves(messageId, { rowIds: [rowId] });
+  }
+  return out;
 }
 
 /* -------------------------------------------- */

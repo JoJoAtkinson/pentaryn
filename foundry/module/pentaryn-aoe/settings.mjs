@@ -12,7 +12,10 @@
  */
 
 import { I18N, MODULE } from "./core.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
+
+const log = makeLog(MODULE);
 
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = Object.freeze([
@@ -48,7 +51,7 @@ export const SETTINGS = Object.freeze([
     doc: "Part D: an Effects tray nobody has applied yet is outlined (cards under an hour old)." },
   { key: "carefulSpell", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.carefulSpell.Name", hint: "PENTARYN_AOE.Setting.carefulSpell.Hint",
-    doc: "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the area of the next spell they cast, if it calls for a save; then it ends." },
+    doc: "Part B: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures the user can see on the caster's scene) and always posts a public card (a skipped pick declares nobody); the caster's next save tray protects exactly those rows, then it ends. The GM can toggle any row's protection on the tray." },
   { key: "refundCancelledArea", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.refundCancelledArea.Name", hint: "PENTARYN_AOE.Setting.refundCancelledArea.Hint",
     doc: "Part F: a cancelled area placement refunds what the cast spent and removes its card." },
@@ -99,7 +102,7 @@ export async function migrateSettings() {
   if (!LEGACY_ROLL_MODES.includes(stored)) return null;
   const next = foundry.dice.Roll._mapLegacyRollMode(stored);
   await game.settings.set(MODULE, "npcSaveRollMode", next);
-  console.info(`${MODULE} | npcSaveRollMode ${stored} → ${next}`);
+  log.info(`npcSaveRollMode ${stored} → ${next}`);
   return next;
 }
 

@@ -176,7 +176,7 @@
       "writes": false,
       "query": false,
       "sideEffects": [],
-      "nullWhen": "none of the last 60 messages carries a live (not superseded) resolution on that scene",
+      "nullWhen": "none of the last 60 messages carries a live (not superseded) resolution on that scene, or sceneId is \"current\" and this client views no scene (pass no sceneId for any scene)",
       "since": "0.4.0",
       "doc": "The newest live tray among the last 60 chat messages, optionally on one scene."
     },
@@ -327,7 +327,7 @@
         "flags.pentaryn-aoe.resolution",
         "ChatMessage (NPC saves, request card)"
       ],
-      "nullWhen": "not the active GM, not a damage message, or its activity has no save",
+      "nullWhen": "not the active GM, not a damage message, its activity has no save, or its tray is superseded or has an applied row (warning toast)",
       "legacy": true,
       "doc": "Active GM: build (or rebuild) the tray on a damage message from a save activity, roll the NPC saves and post the players' request card. Returns the resolution."
     },
@@ -458,7 +458,7 @@
         },
         {
           "name": "changes",
-          "type": "{ apply?, multiplier? }",
+          "type": "{ apply?, multiplier?, protected? }",
           "resolve": false
         }
       ],
@@ -467,11 +467,12 @@
       "writes": true,
       "query": false,
       "sideEffects": [
-        "flags.pentaryn-aoe.resolution"
+        "flags.pentaryn-aoe.resolution",
+        "ChatMessage (save roll, unprotected monster row)"
       ],
-      "nullWhen": "no resolution",
+      "nullWhen": "no resolution, or a multiplier not in 0/0.25/0.5/1/2 (row unchanged, logged)",
       "legacy": true,
-      "doc": "GM edit of one unapplied row (tick, multiplier). Returns the updated resolution."
+      "doc": "GM edit of one unapplied row (tick, multiplier, Careful Spell protection; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution."
     },
     {
       "path": "selfApply",
@@ -614,7 +615,7 @@
       "scope": "world",
       "type": "Boolean",
       "default": true,
-      "doc": "Part B: Careful Spell marks up to CHA mod of the caster's side as protected in the area of the next spell they cast, if it calls for a save; then it ends."
+      "doc": "Part B: using Careful Spell opens a picker (up to CHA mod, min 1, of the creatures the user can see on the caster's scene) and always posts a public card (a skipped pick declares nobody); the caster's next save tray protects exactly those rows, then it ends. The GM can toggle any row's protection on the tray."
     },
     {
       "key": "refundCancelledArea",
@@ -694,12 +695,12 @@
       "label": "deleteActiveEffect"
     },
     {
-      "name": "dnd5e.postUseActivity",
-      "label": "postUseActivity(careful)"
+      "name": "canvasReady",
+      "label": "canvasReady"
     },
     {
-      "name": "deleteCombat",
-      "label": "deleteCombat(careful)"
+      "name": "dnd5e.postUseActivity",
+      "label": "postUseActivity(careful)"
     },
     {
       "name": "createChatMessage",
@@ -739,10 +740,6 @@
     },
     {
       "name": "canvasReady",
-      "label": "canvasReady"
-    },
-    {
-      "name": "canvasReady",
       "label": "canvasReady(argon)"
     }
   ],
@@ -762,10 +759,13 @@
       "flags.pentaryn-aoe.effectsApplied",
       "flags.pentaryn-aoe.damageMessage",
       "flags.pentaryn-aoe.careful",
-      "flags.pentaryn-aoe.npcSave"
+      "flags.pentaryn-aoe.npcSave",
+      "flags.dnd5e.lockSize",
+      "flags.dnd5e.requestResult"
     ],
     "reads": [
       "flags.dnd5e.*",
+      "flags.core.MeasuredTemplate",
       "flags.item-piles.data.enabled"
     ]
   },

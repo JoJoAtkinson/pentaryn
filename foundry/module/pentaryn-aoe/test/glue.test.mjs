@@ -20,7 +20,7 @@ const { F, W } = await boot({
       return reg(ns, key, opts);
     };
     // the viewed scene at ready: one orphan handle, one handle with no lockSize, one template region with no handle
-    const s = W.scene({ id: "SceneReady000001", name: "Ready" });
+    const s = W.scene({ id: "SceneReady000001", name: "Ready", grid: { size: 100, distance: 5 } });
     W.token(s, { id: "orphan0000000001", name: "Orphan", flags: { [MODULE]: { handle: true, region: "gone000000000001" }, dnd5e: { lockSize: true } } });
     W.region(s, { id: "regionKeep000001", name: "Kept", flags: { dnd5e: { activity: "Item.x.Activity.y" } }, ownership: { default: 3 } });
     W.token(s, { id: "regionKeep000001", name: "Kept handle", flags: { [MODULE]: { handle: true, region: "regionKeep000001" } } });
@@ -141,7 +141,7 @@ test("ready (active GM): legacy roll mode migrated, handle actor created, viewed
   assert.deepEqual(create.options, { keepId: true });
 });
 
-test("ready: a canvasReady sweep is registered through on() (it is in hookIds)", () => {
+test("[declared] aoe-edge-3 a canvasReady sweep is registered through on() at setup (it is in hookIds)", () => {
   assert.ok(S.hooks.hookIds().some(h => h.name === "canvasReady"));
 });
 
@@ -279,7 +279,7 @@ test("[declared] W2-K1 hot patch: install({ sweepOnReady: false }) re-wires and 
   assert.equal(F.calls.filter(c => c.op === "keybindings.register").length, kb, "no second keybinding");
   assert.deepEqual(after.filter(c => ["createEmbedded", "deleteEmbedded", "updateEmbedded"].includes(c.op)), [], "no sweep");
   assert.ok(S.hooks.hookIds().length > 0);
-  assert.equal(S.hooks.hookIds().some(h => h.name === "canvasReady"), false, "no canvasReady sweep without sweepOnReady");
+  assert.equal(S.hooks.hookIds().some(h => h.name === "canvasReady"), true, "[declared] aoe-edge-3: the canvasReady sweep is wired by install, sweepOnReady only skips the startup sweep");
   assert.equal(typeof globalThis[Symbol.for(`${MODULE}.cancelTemplate`)], "function", "the Escape slot is this copy's again");
   assert.deepEqual(out, []);
 });

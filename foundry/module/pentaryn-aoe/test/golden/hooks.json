@@ -45,11 +45,11 @@
   },
   {
     "kind": "on",
-    "name": "dnd5e.postUseActivity"
+    "name": "canvasReady"
   },
   {
     "kind": "on",
-    "name": "deleteCombat"
+    "name": "dnd5e.postUseActivity"
   },
   {
     "kind": "on",
@@ -86,9 +86,5 @@
   {
     "kind": "on",
     "name": "dnd5e.preCreateMeasuredTemplate"
-  },
-  {
-    "kind": "on",
-    "name": "canvasReady"
   }
 ]

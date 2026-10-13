@@ -7,7 +7,7 @@
  *   S4: areas  = areas.mjs + scene-adapter.mjs (finders, removeArea) + argon.mjs + core isHandle/isTemplateRegion
  *       resolve = resolve.mjs + messages-adapter.mjs (activityOf, usageIdOf) + scene-adapter isPile + core multiplierFor
  *       effects = effects.mjs + messages-adapter.mjs (cardEffects, spellOf)
- *   8.6 split: resolve also = careful.mjs (carefulKey, carefulFor, onCarefulUsed), Careful Spell's own feature
+ *   8.6 split: resolve also = careful.mjs (carefulFor, onCarefulUsed), Careful Spell's own feature
  *
  *   S5: hooks.mjs is gone. `hooks` = the kit registry the features are installed with: the entry's
  *       when the entry has published (its legacy hookIds API row), else this shim's own registry,

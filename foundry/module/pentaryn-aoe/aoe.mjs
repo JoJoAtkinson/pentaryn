@@ -3,7 +3,7 @@
  *
  * Features, in load order (FEATURES; the file map is in README.md "Files"):
  *   areas.mjs    Part A  ownership, handle tokens, delete cascade, Remove all templates, cleanup, sweep
- *   careful.mjs  Part B  Careful Spell: the caster's side in the next save spell's area is protected
+ *   careful.mjs  Part B  Careful Spell: the player picks who; the next save spell's tray protects them
  *   resolve.mjs  Part B  who is inside, NPC saves, the players' request card, Apply
  *   tray.mjs     Part B  the GM-only tray on the damage message (resolve's actions via ctx.exposed)
  *   attacks.mjs  Part C  auto damage on hit
@@ -110,7 +110,12 @@ function onReady({ hot = false } = {}) {
     ctx.api = null;
     log.error("API manifest drift — not published", err);
   }
-  if (ctx.api) publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  if (ctx.api) {
+    // [declared] R7: on the normal path a publish throw is logged and ready carries on (the Argon
+    // guard, migration and startup work below); the hot path still throws to install()'s caller.
+    if (hot) publishNamespace(NS, ctx.api, { moduleId: MODULE });
+    else try { publishNamespace(NS, ctx.api, { moduleId: MODULE }); } catch (err) { log.error("publish", err); }
+  }
   api = ctx.api;
   if (hot) return;
   // D-A4: the late-Argon fallback goes through the registry too, so uninstall() removes it.
