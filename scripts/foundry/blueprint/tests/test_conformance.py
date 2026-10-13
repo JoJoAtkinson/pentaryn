@@ -729,6 +729,23 @@ def test_c61_world_wide_document_reaction_runs_on_one_client(tmp_path, code, wan
     assert res(one(tmp_path, code), "C61")["status"] == want
 
 
+C61_INITIATOR_FORMS_CASES = [                                                    # py-blueprint-AC-6
+    ('reg.on("updateActor", (a, c, o, userId) => { if (userId === game.user.id) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.user.id == userId) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (userId !== game.user?.id) return; a.update({}); });',
+     "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.user?.id === userId) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.userId === userId) a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (userId === other) a.update({}); });', "warn"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (game.user?.isGM) a.update({}); });', "warn"),
+]
+
+
+@pytest.mark.parametrize("code,want", C61_INITIATOR_FORMS_CASES)
+def test_c61_positive_and_optional_chained_initiator_gate_py_blueprint_ac_6(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C61")["status"] == want
+
+
 def test_c61_any_gm_gate_names_why(tmp_path):
     r = res(one(tmp_path, 'reg.on("updateCombat", (c) => { if (!game.user.isGM) return; c.update({}); });'), "C61")
     assert "any-GM gate only" in r["detail"][0]
