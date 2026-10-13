@@ -177,7 +177,7 @@ export function showTip(badge, ev) {
   tip.style.top = `${ev.clientY + 18}px`;
   tip.style.display = "block";
 }
-export function hideTip() { if (tip) { tip.style.display = "none"; tip.dataset.key = ""; } }
+export function hideTip() { if (tip && tip.style.display !== "none") { tip.style.display = "none"; tip.dataset.key = ""; } }
 
 /* GM right-click menu */
 export function closeMenu() { menu?.remove(); menu = null; }
@@ -215,6 +215,7 @@ export function bindBoard() {
   // Touch it only while over an edit-mode badge, and put back exactly what was there on leaving;
   // writing "" on every move erased Foundry's hands and pentaryn-cursors' tool cursors.
   let priorCursor = null;
+  // hot: badges (badgeAt reads the drawn badge records; hideTip is a no-op once hidden)
   board.addEventListener("pointermove", ev => {
     if (drag) return;
     const b = badgeAt(ev.clientX, ev.clientY);

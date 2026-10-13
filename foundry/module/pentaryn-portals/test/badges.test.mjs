@@ -263,6 +263,32 @@ test("hover card: cards when revealed, 'A way onward' when not; follows the poin
   F.become({ userId: GM });
 });
 
+test("perf-2: hideTip on an already-hidden tip writes nothing; the hover pointermove listener carries a // hot: comment", async () => {
+  onCanvas();
+  await S.drawBadges();
+  S.showTip(S.badges[0], { clientX: 0, clientY: 0 });
+  S.hideTip();
+  const tip = S.state().tip;
+  const writes = [];
+  const style = tip.style;
+  tip.style = new Proxy(style, { set(o, k, v) { writes.push(`style.${String(k)}`); o[k] = v; return true; } });
+  const dataset = tip.dataset;
+  tip.dataset = new Proxy(dataset, { set(o, k, v) { writes.push(`dataset.${String(k)}`); o[k] = v; return true; } });
+  S.hideTip();
+  S.hideTip();
+  assert.deepEqual(writes, [], "already hidden: no style or dataset writes");
+  S.showTip(S.badges[0], { clientX: 0, clientY: 0 });
+  writes.length = 0;
+  S.hideTip();
+  assert.deepEqual(writes.sort(), ["dataset.key", "style.display"], "shown: one hide writes");
+  assert.deepEqual([tip.style.display, tip.dataset.key], ["none", ""]);
+  tip.style = style;
+  tip.dataset = dataset;
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../badges.mjs", import.meta.url), "utf8");
+  assert.match(src, /\/\/ hot: [^\n]+\n\s*board\.addEventListener\("pointermove"/, "the pointermove listener is marked hot");
+});
+
 test("GM menu: look / teleport per card, preview, edit, region settings (golden/menu.json); a click runs one and closes", async () => {
   const P = onCanvas();
   await S.drawBadges();
