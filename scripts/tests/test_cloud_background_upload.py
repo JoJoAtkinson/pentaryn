@@ -978,3 +978,37 @@ def test_upload_log_is_not_rotated_under_a_running_uploader_py_cloud_ac_3(
         _spawn_with_fake_popen(monkeypatch)
         assert not logfile.read_bytes().startswith(b"old progress\n")  # rotated now
         assert logfile.stat().st_size < 1000
+
+
+def test_one_queue_loop_one_failure_test_one_wait_message_ext_8(monkeypatch):
+    """Review EXT-8 (+ M11): _drain and upload_pending walk the queue through one
+    _queue_once generator (oldest first, re-read after each job, a job that stays queued
+    is refused), test a failure with one _is_failure helper, and _exclusive and
+    _backup_background share one module-level _waiting_build. Messages unchanged."""
+    from types import SimpleNamespace
+    stuck = SimpleNamespace(name="world-a.tar.gz")
+    queue = [[SimpleNamespace(name="world-0.tar.gz"), stuck], [stuck], [stuck]]
+    monkeypatch.setattr(uploadq, "pending", lambda: queue.pop(0) if queue else [])
+    walk = cloud._queue_once()
+    assert next(walk).name == "world-0.tar.gz"
+    assert next(walk) is stuck
+    with pytest.raises(cloud._StaysQueued, match="world-a.tar.gz stays queued after its "
+                                                 "upload — check "):
+        next(walk)
+    monkeypatch.setattr(uploadq, "pending", lambda: [])
+    assert list(cloud._queue_once()) == []
+
+    assert cloud._is_failure(storage.StorageError("x"))
+    assert cloud._is_failure(SystemExit(1))
+    assert not cloud._is_failure(SystemExit(0))
+    assert not cloud._is_failure(SystemExit(None))
+    assert not cloud._is_failure(RuntimeError("x"))
+
+    said = []
+    monkeypatch.setattr(cloud, "log", said.append)
+    cloud._waiting_build()
+    assert said == ["waiting for another snapshot build or restore on this machine to finish..."]
+    src = open(cloud.__file__, encoding="utf-8").read()
+    assert src.count("stays queued after its upload") == 1
+    assert src.count("waiting for another snapshot build") == 1
+    assert "code in (0, None)" not in src and src.count("code not in (0, None)") == 1

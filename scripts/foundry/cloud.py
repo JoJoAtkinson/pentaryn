@@ -594,6 +594,14 @@ def _same_listing(prior: dict, e: Entry) -> bool:
             and abs(float(prior["mtime"]) - e.mtime) < 2.0)
 
 
+def _is_failure(exc: BaseException) -> bool:
+    """A StorageError, or a die() (SystemExit with a non-zero code): a failure to record
+    or warn about. A SystemExit(0/None) is a clean exit and is re-raised untouched."""
+    if isinstance(exc, SystemExit):
+        return exc.code not in (0, None)
+    return isinstance(exc, StorageError)
+
+
 def _lifecycle_warning(what: str, exc: BaseException | str, after: str) -> None:
     detail = f": {exc}" if str(exc) and not isinstance(exc, SystemExit) else ""
     print(f"  ⚠ {what}{detail} — {after}", file=sys.stderr)
@@ -611,7 +619,7 @@ def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
         st = ensure_cloud()
         zips = [e for e in st.ls(ASSETS_IN) if e.name.endswith(".zip")]
     except (StorageError, SystemExit) as exc:
-        if not if_reachable or (isinstance(exc, SystemExit) and exc.code in (0, None)):
+        if not if_reachable or not _is_failure(exc):
             if isinstance(exc, StorageError):
                 die(f"cannot list {ASSETS_IN}/: {exc}")
             raise
@@ -873,7 +881,7 @@ def backup(reason: str = "manual", if_stopped: bool = False, background: bool = 
                 return _backup_background(ensure_cloud(), reason)
             _backup(ensure_cloud(), reason)
     except (StorageError, SystemExit) as exc:
-        if isinstance(exc, SystemExit) and exc.code in (0, None):
+        if not _is_failure(exc):
             raise
         _lifecycle_warning(f"the {reason} snapshot was not taken", exc,
                            "starting anyway; the shutdown backup (make vtt-down) tries again")
@@ -905,18 +913,20 @@ def _find_in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> Snapshot
 
 # ── The two halves: build a tar (stopped world), upload it (any time later) ───
 
+def _waiting_build() -> None:
+    """BUILD_LOCK's on_wait (_exclusive, _backup_background)."""
+    log("waiting for another snapshot build or restore on this machine to finish...")
+
+
 @contextmanager
 def _exclusive(wait: bool = True):
     """Both queue locks, build then upload (uploadq.py). Yields whether they were got;
     with `wait`, says what it is waiting for and blocks until they are."""
-    def waiting_build():
-        log("waiting for another snapshot build or restore on this machine to finish...")
-
     def waiting_upload():
         name = uploadq.read_status().get("name") or "a snapshot"
         log(f"waiting for the background upload of {name} to finish "
             "(make foundry-cloud shows it)...")
-    with uploadq.lock(uploadq.BUILD_LOCK, wait=wait, on_wait=waiting_build) as built:
+    with uploadq.lock(uploadq.BUILD_LOCK, wait=wait, on_wait=_waiting_build) as built:
         if not built:
             yield False
             return
@@ -1753,7 +1763,7 @@ def _run_job(st: Storage, job: uploadq.Job, protect: str | None = None) -> Snaps
     except _Incomplete as exc:
         raise _drop_job(job, str(exc), t0) from exc
     except (StorageError, SystemExit) as exc:
-        if isinstance(exc, SystemExit) and exc.code in (0, None):
+        if not _is_failure(exc):
             raise
         err = str(exc) if isinstance(exc, StorageError) else f"see {tmp_dir() / uploadq.LOG_FILE}"
         uploadq.write_status(state="failed", name=job.name, reason=job.reason,
@@ -1803,26 +1813,41 @@ def _drop_job(job: uploadq.Job, why: str, t0: float) -> JobDropped:
     return JobDropped(err)
 
 
+class _StaysQueued(Exception):
+    """A job still first in the queue after _run_job returned for it (_queue_once)."""
+
+
+def _queue_once():
+    """Each queued job, oldest first, the queue re-read after each so a job queued
+    meanwhile is yielded too. The caller holds UPLOAD_LOCK and runs (or drops) each one;
+    a job still queued when it comes round again raises _StaysQueued — never a loop."""
+    seen: set[str] = set()
+    while (jobs := uploadq.pending()):
+        job = jobs[0]
+        if job.name in seen:
+            raise _StaysQueued(f"{job.name} stays queued after its upload — check {tmp_dir()}")
+        seen.add(job.name)
+        yield job
+
+
 def _drain(st: Storage, protect: str | None = None) -> None:
     """Upload everything queued, oldest first, blocking. The caller holds UPLOAD_LOCK.
     A failure dies: what is queued is a world state the cloud does not have yet. A job
     dropped as never completable is named and the next one goes on (the caller's own
     backup, after this, snapshots the tree as it is now).
     `protect`: a snapshot about to be restored, kept from coalescing and pruning."""
-    seen: set[str] = set()
-    while (jobs := uploadq.pending()):
-        job = jobs[0]
-        if job.name in seen:
-            die(f"{job.name} stays queued after its upload — check {tmp_dir()}")
-        seen.add(job.name)
-        log(f"an earlier snapshot is still queued — uploading {job.name} first")
-        try:
-            _run_job(st, job, protect)
-        except JobDropped as exc:
-            print(f"  ✗ {exc}", file=sys.stderr)
-        except StorageError as exc:
-            die(f"the queued upload of {job.name} failed again: {exc}\n"
-                f"    it is still on disk: {job.tar} — the next backup retries it")
+    try:
+        for job in _queue_once():
+            log(f"an earlier snapshot is still queued — uploading {job.name} first")
+            try:
+                _run_job(st, job, protect)
+            except JobDropped as exc:
+                print(f"  ✗ {exc}", file=sys.stderr)
+            except StorageError as exc:
+                die(f"the queued upload of {job.name} failed again: {exc}\n"
+                    f"    it is still on disk: {job.tar} — the next backup retries it")
+    except _StaysQueued as exc:
+        die(str(exc))
 
 
 def finish_uploads() -> None:
@@ -1844,9 +1869,7 @@ def _backup_background(st: Storage, reason: str) -> int:
     """Build the tar now (Foundry is stopped), queue it, and start the detached
     uploader. Waits only for another build; never for a running upload — a new tar
     queues behind it, extending it."""
-    def waiting_build():
-        log("waiting for another snapshot build or restore on this machine to finish...")
-    with uploadq.lock(uploadq.BUILD_LOCK, on_wait=waiting_build):
+    with uploadq.lock(uploadq.BUILD_LOCK, on_wait=_waiting_build):
         job = _build(st, reason)
     queued = uploadq.pending()
     if not queued:
@@ -1931,7 +1954,7 @@ def upload_pending() -> int:
         try:
             st = ensure_cloud()
         except SystemExit as exc:
-            if exc.code in (0, None):
+            if not _is_failure(exc):
                 raise
             job = uploadq.pending()[0]
             uploadq.write_status(state="failed", name=job.name, reason=job.reason,
@@ -1939,27 +1962,24 @@ def upload_pending() -> int:
                                  error="the cloud is unreachable")
             _ops_event("failed", job, error="the cloud is unreachable")
             return 1
-        seen: set[str] = set()
-        while (jobs := uploadq.pending()):
-            job = jobs[0]
-            if job.name in seen:
-                print(f"  ✗ {job.name} stays queued after its upload — check {tmp_dir()}",
-                      file=sys.stderr)
-                return 1
-            seen.add(job.name)
-            try:
-                _run_job(st, job)
-            except JobDropped as exc:
-                print(f"  ✗ {exc}", file=sys.stderr)
-                continue
-            except (StorageError, SystemExit) as exc:
-                if isinstance(exc, SystemExit) and exc.code in (0, None):
-                    raise
-                if isinstance(exc, StorageError):
-                    print(f"  ✗ upload of {job.name} failed: {exc}", file=sys.stderr)
-                print(f"    it is still on disk: {job.tar} — the next backup (or "
-                      "make vtt-down) retries it", file=sys.stderr)
-                return 1
+        try:
+            for job in _queue_once():
+                try:
+                    _run_job(st, job)
+                except JobDropped as exc:
+                    print(f"  ✗ {exc}", file=sys.stderr)
+                    continue
+                except (StorageError, SystemExit) as exc:
+                    if not _is_failure(exc):
+                        raise
+                    if isinstance(exc, StorageError):
+                        print(f"  ✗ upload of {job.name} failed: {exc}", file=sys.stderr)
+                    print(f"    it is still on disk: {job.tar} — the next backup (or "
+                          "make vtt-down) retries it", file=sys.stderr)
+                    return 1
+        except _StaysQueued as exc:
+            print(f"  ✗ {exc}", file=sys.stderr)
+            return 1
     return 0
 
 
