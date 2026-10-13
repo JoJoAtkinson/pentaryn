@@ -99,6 +99,7 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-combat.until", "flags.pentaryn-combat.special", "flags.pentaryn-combat.reckless",
       "flags.pentaryn-combat.swing", "flags.pentaryn-combat.turnKey", "flags.pentaryn-combat.auto",
       "flags.pentaryn-combat.rider", "flags.pentaryn-combat.attack", "flags.pentaryn-combat.undone",
+      "flags.pentaryn-combat.claims",
       "flags.enhancedcombathud.weaponSets", "flags.dnd5e.last",
     ],
     reads: [

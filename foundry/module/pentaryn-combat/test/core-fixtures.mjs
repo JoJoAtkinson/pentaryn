@@ -733,6 +733,17 @@ check("367 a stopped sequence's card with nothing rolled and nothing consumed is
     /"pentaryn-tt"/.test(tt) && /"pentaryn-combat-tt"/.test(tt));
 }
 
+{
+  // ext-8: Dash / Disengage (turnflow/action-buttons.mjs) and Steady Aim (turnflow/effects.mjs) built
+  // the same "until turn end" ActiveEffect payload by hand. One pure builder now owns its shape.
+  const build = typeof core.turnEffectData === "function" ? core.turnEffectData : () => null;
+  const ch = [{ key: "system.attributes.movement.walk", type: "add", value: 30 }];
+  check("384 ext-8 turnEffectData: the until-turn-end payload (key order as written to the actor)",
+    build({ module: core.MODULE, kind: "dash", name: "Dash", img: "dash.webp", description: "Extra movement.", changes: ch, origin: "Actor.a" }),
+    { name: "Dash", img: "dash.webp", description: "<p>Extra movement.</p>", transfer: false, origin: "Actor.a",
+      system: { changes: ch }, flags: { [core.MODULE]: { until: "turnEnd", special: "dash" }, dnd5e: { isTemporary: true } } });
+}
+
 /* ── report ───────────────────────────────────────────────────────────────── */
 
 if (failures.length) {

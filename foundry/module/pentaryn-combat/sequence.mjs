@@ -16,25 +16,19 @@ import * as core from "./combat-core.mjs";
 import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
 import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor, enhancedDualWieldingOf } from "./shapes.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor, enhancedDualWieldingOf, combatContext } from "./shapes.mjs";
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
 import { cancelWaits, choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
+import { opts, tempHooks } from "./context.mjs";
 
 const log = makeLog(MODULE);
 
 /** The module's events (core HOOKS rows, legacy name too): ctx.emit once installed. */
 let emit = emitter(MODULE, HOOKS, { log, version: VERSION });
 
-/**
- * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
- * installed with, so uninstall() unwinds a stray one; before install they fall back to Hooks.
- */
-let hooks = null;
-const temp = {
-  on: (name, fn, label) => (hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn)),
-  off: (name, id) => (hooks ? hooks.off(id) : Hooks.off(name, id)),
-};
+let hooks = null;                       // the registry install() was given; temporary hooks go through it
+const temp = tempHooks(() => hooks);
 
 
 let current = null;            // the running sequence on this client (one at a time)
@@ -475,15 +469,35 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
 /* ── install ─────────────────────────────────────────────────────────────── */
 
 /**
- * The runner registers no hook of its own: it keeps the registry for its temporary hooks, exposes
- * `running` (ctx.exposed) and contributes the fullAttack, followUp, running and abort rows' impls.
+ * The runner keeps the registry for its temporary hooks, exposes `running` (ctx.exposed) and
+ * contributes the fullAttack, followUp, running and abort rows' impls. Its own two listeners (M8):
+ * the turn moving on (its announced rolls pruned, a sequence of the creature whose turn ended
+ * stopped) and the creature's token becoming another body.
  */
 export function install(reg, ctx) {
   hooks = reg;
   if (ctx?.emit) emit = ctx.emit;
   ctx?.expose?.({ running });
+  reg.on("updateCombat", onCombatUpdated, opts("sequence: turn moved"));
+  reg.on("updateToken", onTokenUpdated, opts("sequence: shape change"));
   return { impl: { fullAttack, followUp: runFollowUp, running, abort: abortFor } };
 }
+
+const onCombatUpdated = (combat, changes) => {
+  if (!("turn" in changes) && !("round" in changes)) return;
+  // combat-riders-29: the stale announced rolls go at each turn change.
+  pruneSession();
+  // The turn moved on under a running or paused sequence: its remaining swings belong to that turn.
+  const r = current;
+  if (r?.actor) { const c = combatContext(r.actor); if (c.inCombat && !c.isOwnTurn) abortFor(r.actor); }
+};
+
+// A shift or revert (a new body) of the running creature's own token ends its sequence (edge-2).
+const onTokenUpdated = (doc, changes) => {
+  const r = current;
+  if (!r || !("actorId" in (changes ?? {})) || !r.tokenIds?.has(doc?.id)) return;
+  abortFor(r.actor);
+};
 
 /** api.fullAttack: run the plan api.plan would answer. */
 async function fullAttack(actor, weaponId, opts = {}) {

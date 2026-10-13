@@ -29,7 +29,9 @@ const ADDED_37 = ["DELAYS"];
 const ADDED_EXT11 = ["ATTACK_ACTION_KINDS", "MOVEMENT_KEYS"];
 // combat-core-EXT-13's Argon package id, written once (settings.mjs re-exports it).
 const ADDED_EXT13 = ["ARGON"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13];
+// Wave 2 ext-8: the one builder for our until-turn-end effects (Dash, Disengage, Steady Aim).
+const ADDED_EXT8 = ["turnEffectData"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13, ...ADDED_EXT8];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();

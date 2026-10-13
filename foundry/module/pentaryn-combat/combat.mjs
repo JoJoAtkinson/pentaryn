@@ -41,7 +41,7 @@ import * as sequence from "./sequence.mjs";
 
 /** Installed while this file evaluates: the roll-window hooks keep their place ahead of everyone. */
 const AT_LOAD = { rollDock };
-/** Installed at setup, in registration order (the runner registers no hook; it contributes API rows). */
+/** Installed at setup, in registration order (the runner adds its turn-moved and shape-change listeners and API rows). */
 const AT_SETUP = { counting, turnRiders, offhand, sequence };
 
 for (const [name, feature] of Object.entries(AT_LOAD)) installFeature(feature, name);

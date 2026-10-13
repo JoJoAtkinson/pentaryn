@@ -71,7 +71,7 @@ live, so a change applies at the next HUD render. Off = the HUD as it was for th
 | `reactionSlot` | the Reaction bar's weapon reads **Opportunity Attack: Longsword**, spends the Reaction pip and records it in combat (`flags.pentaryn-combat.reaction`, so a re-bound HUD keeps it grey until your turn starts), gives back the Action pip Argon took on your own turn, and is never counted as an Attack-action swing | Argon's plain weapon slot | U-1-5 |
 | `escRollDialog` | Esc closes a dnd5e roll window at once (its autofocused button used to swallow Esc) | click the window first | U-1-6 |
 | `tidyCancelledAttacks` | closing an attack's roll window unrolled deletes its own usage card (only yours, under 5 min old, nothing consumed, nothing rolled under it, no Full Attack running); a Full Attack that ends (Stop) does the same for the cards it posted (0.2.3) | the card stays | U-1-6, U-10-11 |
-| `deathSaveDamage` | a character taking damage at 0 HP gets a Death Saving Throw failure, two from a crit (a chat line says so); massive damage is whispered to the GM, never applied | the GM edits the tally | U-1-7 |
+| `deathSaveDamage` | a character taking damage at 0 HP gets a Death Saving Throw failure, two from a crit (a chat line in the token's name says so once the damage lands); massive damage is whispered to the GM, never applied | the GM edits the tally | U-1-7 |
 | `portraitConditions` | status conditions (Prone, Poisoned, Grappled, Dodging, Hiding …) on the Argon portrait, hover = the PHB condition page; right-click removes as usual | Argon shows only effects with a duration (v14) | U-1-8 |
 | `hudFollows` | the HUD switches to your creature when its turn starts (players, Argon on), and to the one token left selected after you click one of a selected group. At combat start it checks again once Argon's own start-of-combat bind is done; a token that can't be selected right now (another layer or tool active) is bound to the HUD directly instead of leaving nothing selected (0.2.2). The combat-start check runs also when Argon is still off at that moment (after a deleted combat), at 300 ms and 1.2 s (0.2.3) | toggle Argon to switch | U-1-9, U-10-2, U-10-10 |
 | `clearTargetsAfterTurn` | a player's targets are released when their turn ends (the U-R-1 stale-target cost) | targets stay | U-1-10 |
@@ -135,7 +135,8 @@ CONFIG.debug["pentaryn-combat"] = true; game.pentaryn.combat.trace();   // why a
 |---|---|---|
 | actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges, quickened}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn. Removed by the active GM when its combat is deleted (0.2.1; the out-of-combat `nocombat` turn stays) |
 | actor | `flags.pentaryn-combat.reaction` | `{combatId}` when a Reaction is taken in combat; set to null at the actor's turn start, removed when that combat is deleted (0.2.1) |
-| actor | (sweep) | the active GM removes every world actor's `turn` / `reaction` flag whose combat no longer exists, on load and 1.5 s after any combat is deleted (0.2.2; a combat deleted with no GM online, or before 0.2.1, left them for good) |
+| actor | (sweep) | the active GM removes every world actor's `turn` / `reaction` flag whose combat no longer exists, on load and once 1.5 s after the last of a burst of combat deletes, never two sweeps at a time (perf-4; 0.2.2; a combat deleted with no GM online, or before 0.2.1, left them for good) |
+| combat | `flags.pentaryn-combat.claims.t<round>_<turn>` | the claiming GM tab's socket id at each turn change (ac-4: one GM tab sweeps); gone with the combat |
 | actor | `flags.pentaryn-combat.last.weapon` | after a Full Attack / weapon pick |
 | actor (character) | `flags.enhancedcombathud.weaponSets` | once, only if never written (`seedWeaponSets`) |
 | item | `flags.dnd5e.last.<activity>.attackMode` | reset to main-hand after an off-hand roll |
@@ -185,16 +186,16 @@ and foreign flag has a row in `foundry/adjustments.yml` (`combat-*` patch rows; 
 
 The turn flag is written by the actor's owner (`updateTurn`, serialised per actor on one client).
 The active GM alone sweeps effects at a turn boundary, gives the Reaction back, clears a deleted
-combat's flags (one write per actor), sweeps orphans at load and seeds weapon sets. Two GM tabs both
-run those sweeps; each write is idempotent (a delete of a key already gone does nothing).
+combat's flags (one write per actor), sweeps orphans at load (every actor in one `Actor.updateDocuments` batch, ac-5) and seeds weapon sets. Of two GM tabs, one claims each turn on the Combat (`claimDocument`) and sweeps; the other stands down (ac-4).
+A deleted combat's cleanup runs in both, idempotently: an effect already gone is skipped or its "does not exist" is success (debug); a gone flag key is a no-op.
 
 ## Extending
 
 - **A setting:** a `SETTINGS` row (key, literal Name/Hint, doc), the two lang keys, `setting(key)` where it applies.
 - **A turn rider:** a `TURN_RIDERS` row in `core/turn-riders.mjs`, its `Rider.Name/Rule` keys in `I18N_KEYS` and lang.
   describe()'s rider `key` param (riderMode, setRiderMode, rollRider) comes from the manifest automatically: `api-manifest.mjs` builds its type from `TURN_RIDERS`.
-- **A follow-up kind:** `core/followups.mjs` `followUps`, a `SINGLE_SWING` row in `sequence.mjs` (or, for a multi-step one like Flurry, its own `runFollowUp` branch), its `FollowUp*` keys.
-- **A special action:** `SPECIAL_ACTIONS` / `recordSpecialAction` in `core/turnflow.mjs`, its after-click in `turnflow/action-buttons.mjs`.
+- **A follow-up kind:** `core/followups.mjs` `followUps`, a `SINGLE_SWING` row in `sequence.mjs` (or, for a multi-step one like Flurry, its own `runFollowUp` branch), its `FollowUp*` keys; a `via`-specific tooltip text needs its branch in `FollowUpButton.getTooltipData` (`hud/buttons-ui.mjs`, like `offhand-dual-wielder`), and a kind that duplicates an Argon weapon-set slot needs `hideDuplicateSlots` (`hud/bars.mjs`, today `offhand` only).
+- **A special action:** `SPECIAL_ACTIONS` / `recordSpecialAction` in `core/turnflow.mjs`, its `AFTER` row in `turnflow/action-buttons.mjs` (`swing` / `onTurn` / `always`; a test checks every kind has one).
 
 **Which riders module?** Once-per-turn attack-card riders (Sneak Attack, Frenzy, Colossus Slayer, Divine
 Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy-ups are pentaryn-riders.
@@ -235,9 +236,9 @@ Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy
 Load order: `combat.mjs` (esmodules[0]) installs `roll-dock.mjs` as it evaluates; at setup `counting.mjs`,
 `turn-riders.mjs`, `offhand.mjs`, `sequence.mjs`; at ready `api.mjs` builds the API. `hud.mjs`
 (esmodules[1]) installs `turnflow/*` and `patches.mjs`, then `hud/tooltips.mjs`, `hud/picker.mjs`,
-`hud/bars.mjs`. `context.mjs` is their shared ctx. Pure: `combat-core.mjs` + `core/*.mjs`. Settings:
-`settings.mjs`. API: `api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`,
-`dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`, `hud/pips-bar.mjs`. Vendored kit: `lib/` (never edited here).
+`hud/bars.mjs`. `context.mjs` is their shared ctx, plus the features' one `opts(label)` and one
+`tempHooks(getReg)`. Pure: `combat-core.mjs` + `core/*.mjs`. Settings: `settings.mjs`. API:
+`api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`, `dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`, `hud/pips-bar.mjs`. Vendored kit: `lib/` (never edited here).
 
 ## Tests
 

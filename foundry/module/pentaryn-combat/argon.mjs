@@ -91,11 +91,12 @@ export function dropStrayTooltip(target = null) {
 
 /**
  * Re-render the HUD after a setting changed. Only a bound HUD: with no actor Argon's panels throw
- * "reading 'system' of null". A throwing render (the HUD closed meanwhile) is swallowed at debug.
+ * "reading 'system' of null". A render that throws or rejects (the HUD closed meanwhile) is
+ * swallowed at debug, never an unhandled rejection.
  */
 export function renderHud() {
   try {
-    if (ui.ARGON?._actor) ui.ARGON.render();
+    if (ui.ARGON?._actor) Promise.resolve(ui.ARGON.render()).catch(err => log.debug("HUD re-render (HUD closed)", err));
   } catch (err) {
     log.debug("HUD re-render (HUD closed)", err);
   }

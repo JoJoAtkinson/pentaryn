@@ -3,8 +3,9 @@
  * one log, one hook registry, one ctx. A feature gets `(reg, ctx)` in `install`; `ctx.uninstall()`
  * (the API's `uninstall()`) runs every installed feature's `uninstall` in reverse and then removes
  * every hook the registry recorded. One feature's throwing `uninstall` is a warning naming it, never
- * an abort: the rest still uninstall and the hooks still come off (combat-core-ROB-4). Glue: only the
- * two entries import this file.
+ * an abort: the rest still uninstall and the hooks still come off (combat-core-ROB-4). Glue: the two
+ * entries import ctx and reg; a feature file imports only the two helpers below (tempHooks, opts —
+ * final review M7; each edge in test/graph-allow.json).
  *
  * ctx: log, reg, setting, emit (core HOOKS rows), api, contributions, exposed, expose(), uninstall.
  */
@@ -18,6 +19,21 @@ export const log = makeLog(MODULE);
 export const reg = hookRegistry(MODULE, log);
 
 const installed = [];
+
+/** A hook's guard options: a throw is logged with the label; return values pass through (S11, D-c1). */
+export const opts = label => ({ label });
+
+/**
+ * Temporary hooks (one roll, one pick, one dialog) go through the registry the feature was
+ * installed with — `getReg()`, null before install and after uninstall — so uninstall() unwinds a
+ * stray one; without a registry they fall back to Foundry's Hooks.
+ */
+export function tempHooks(getReg) {
+  return {
+    on: (name, fn, label) => { const hooks = getReg(); return hooks ? hooks.on(name, fn, { label }) : Hooks.on(name, fn); },
+    off: (name, id) => { const hooks = getReg(); return hooks ? hooks.off(id) : Hooks.off(name, id); },
+  };
+}
 
 export const ctx = {
   log,

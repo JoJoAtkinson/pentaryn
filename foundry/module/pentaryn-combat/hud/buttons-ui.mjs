@@ -37,8 +37,31 @@ function multiattack(actor) {
   return multiattackFor(actor, { enabled: setting("multiattack") });
 }
 
+// perf-1: one flag write fans out to the pip getters, the bar signatures and every live button's
+// refresh, each of which worked the state out again (6–18 times). Inside a burst (`stateBurst`) the
+// first read per actor is kept and reused; outside one every read works it out fresh. Not a
+// microtask memo: a caller may change the world between two synchronous reads (hud.test's pips).
+let burst = null;
+
+/**
+ * Run `fn` with fullAttackState memoised per actor for its synchronous duration (nested bursts share
+ * the outer one). The entry points that fan out (a flag write, a settled sequence, a turn change) open it.
+ */
+export function stateBurst(fn) {
+  if (burst) return fn();
+  burst = new Map();
+  try { return fn(); } finally { burst = null; }
+}
+
 /** Everything the Full Attack button and the pips read, in one place. */
 export function fullAttackState(actor) {
+  if (burst?.has(actor)) return burst.get(actor);
+  const st = computeState(actor);
+  burst?.set(actor, st);
+  return st;
+}
+
+function computeState(actor) {
   const ctx = combatContext(actor);
   const turn = turnOf(actor);
   const ma = multiattack(actor);
@@ -47,9 +70,13 @@ export function fullAttackState(actor) {
   const on = { multiattackOn: setting("multiattack") };
   const count = ma ? ma.total : countFor(actor, weaponId, on);
   const plan = fullAttackPlanOf(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
-  const weapons = weaponsOf(actor);
-  const nick = !ma && weaponId ? core.extraSwings({ main: weapons.find(w => w.id === weaponId), weapons, turn,
-    enhancedDualWielding: enhancedDualWieldingOf(actor) }).length : 0;
+  // perf-3: only a weapon-chosen (non-Multiattack) actor scans its weapons for a Nick swing.
+  let nick = 0;
+  if (!ma && weaponId) {
+    const weapons = weaponsOf(actor);
+    nick = core.extraSwings({ main: weapons.find(w => w.id === weaponId), weapons, turn,
+      enhancedDualWielding: enhancedDualWieldingOf(actor) }).length;
+  }
   // The pips count the Attack action's swings with any weapon: a Loading crossbow alone gives 1, but
   // a Fighter 5 holding one still has a second swing to make with something else.
   const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null, on));
@@ -85,9 +112,10 @@ async function chooseWeapon(actor) {
 
 /* ── components ──────────────────────────────────────────────────────────── */
 
-/** Argon's `ranges` for an attack activity: its range, else the item's reach, else `fallback()`. */
-function rangesOf(a, fallback = () => 5) {
-  return { normal: a?.range?.value ?? a?.item?.system?.range?.reach ?? fallback(), long: a?.range?.long ?? null };
+/** Argon's `ranges` for an attack activity: its range, else the item's reach, else the scene's grid
+ *  distance (the unit Argon's own ranges getter uses for touch), else 5. One fallback for every button (ext-7). */
+function rangesOf(a) {
+  return { normal: a?.range?.value ?? a?.item?.system?.range?.reach ?? canvas?.scene?.grid?.distance ?? 5, long: a?.range?.long ?? null };
 }
 
 export function argonClasses() {
@@ -115,7 +143,7 @@ export function argonClasses() {
     // Argon opens its target picker before _onLeftClick only when this is > 0: once, and never
     // when something is already targeted (its picker would clear the target first).
     get targets() { return game.user.targets.size || running() ? 0 : 1; }
-    get ranges() { return rangesOf(this.activity, () => canvas?.scene?.grid?.distance ?? 5); }
+    get ranges() { return rangesOf(this.activity); }
     get hasTooltip() { return true; }
 
     async getTooltipData() {

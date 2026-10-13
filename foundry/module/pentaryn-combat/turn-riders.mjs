@@ -23,6 +23,7 @@ import { featuresOf, featureItem, weaponShape, combatContext, turnOf, updateTurn
 // The pure rider reads live in shapes.mjs (guide S8); re-exported for callers of this file.
 export { isReckless, riderActivity, riderDiceFor };
 import { setting, riderMode, aoeAutoDamage } from "./settings.mjs";
+import { opts } from "./context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -476,8 +477,6 @@ export function report(actorOrName) {
 
 /* ── install ─────────────────────────────────────────────────────────────── */
 
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
-
 export function install(reg, ctx) {
   if (ctx?.log) trace = (op, data) => ctx.log.trace(op, data);
   registerHooks(reg);
@@ -503,6 +502,10 @@ function registerHooks(reg) {
   }, opts("rider card"));
   reg.on("combatTurnChange", () => rerenderShowing(), opts("rider cards: turn changed"));
   reg.on("deleteCombat", () => rerenderShowing(), opts("rider cards: combat over"));
+  // combat-riders-29 (M8): the stale auto-rider guards go at each turn change.
+  reg.on("updateCombat", (combat, changes) => {
+    if ("turn" in (changes ?? {}) || "round" in (changes ?? {})) pruneSession();
+  }, opts("rider session: turn moved"));
   reg.on("updateActor", (actor, changes) => {
     if (foundry.utils.hasProperty(changes, `flags.${MODULE}.turn`) || foundry.utils.hasProperty(changes, `flags.${MODULE}.-=turn`)) rerenderCards(actor);
   }, opts("rider cards: turn flag"));

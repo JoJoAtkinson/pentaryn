@@ -34,7 +34,7 @@ const rows = F.hooks.filter(h => !(h.kind === "once" && LIFECYCLE.has(h.name)));
 
 test("hook registration manifest (golden/hooks.json): module evaluation, then setup's registrations", () => {
   pinJSON("hooks", rows, import.meta.url);
-  assert.equal(rows.length, 62);
+  assert.equal(rows.length, 65);   // M8: +2 (the runner's updateCombat/updateToken and the riders' updateCombat; bars' updateToken gone)
 });
 
 test("combat.mjs graph registers strip's four roll-window hooks first, then its own three lifecycle hooks", () => {
@@ -55,13 +55,15 @@ test("the lifecycle once-rows, in order (their effects are glue.test's)", () => 
   ]);
 });
 
-test("setup registers the counting, weapon-bonus, rider and off-hand hooks, in that order", () => {
+test("setup registers the counting, weapon-bonus, rider, off-hand and runner hooks, in that order", () => {
   const setupRows = F.hooks.slice(afterImport.hooks.length).map(h => `${h.kind}:${h.name}`);
   assert.deepEqual(setupRows, [
     "on:dnd5e.preRollAttackV2", "on:dnd5e.postRollAttack", "on:dnd5e.postUseActivity", "on:dnd5e.preRollDamageV2", "on:updateActor",
     "on:dnd5e.preRollAttackV2", "on:dnd5e.preRollDamageV2", "on:dnd5e.renderChatMessage", "on:combatTurnChange", "on:deleteCombat",
+    "on:updateCombat",
     "on:updateActor", "on:createActiveEffect", "on:deleteActiveEffect", "on:updateActiveEffect",
     "on:createActor",
+    "on:updateCombat", "on:updateToken",   // M8: the runner's turn-moved and shape-change listeners
   ]);
 });
 
@@ -137,4 +139,25 @@ test("Hooks.on/once call sites per file at indent ≤ 2, and hook loops (C17 tod
   const scan = sourceScan(ROOT, /^Hooks\.(on|once)\(|^\s{0,2}Hooks\.(on|once)\(|^for \(const hook of/).map(h => h.file);
   const byFile = scan.reduce((m, f) => ({ ...m, [f]: (m[f] ?? 0) + 1 }), {});
   pinJSON("module-scope-hooks", byFile, import.meta.url);
+});
+
+test("M7 (final review): one tempHooks(getReg) factory and one opts(label) helper, exported from context.mjs; no feature file keeps a copy", async () => {
+  const copies = sourceScan(ROOT, /const opts = label =>|hooks \? hooks\.on\(/).map(h => `${h.file}:${h.line}`);
+  assert.deepEqual(copies.filter(c => !c.startsWith("context.mjs:")), []);
+  const { tempHooks, opts } = await import("../context.mjs");
+  assert.deepEqual(opts("x: y"), { label: "x: y" });
+  // A registry when the getter has one (the label passed as { label }), else Foundry's Hooks.
+  let current = null;
+  const calls = [];
+  const fake = { on: (name, fn, o) => (calls.push(["on", name, o]), 7), off: (id) => calls.push(["off", id]) };
+  const temp = tempHooks(() => current);
+  current = fake;
+  assert.equal(temp.on("someHook", () => {}, "lbl"), 7);
+  temp.off("someHook", 7);
+  assert.deepEqual(calls, [["on", "someHook", { label: "lbl" }], ["off", 7]]);
+  current = null;
+  const before = F.hooks.length;
+  const id = temp.on("someHook", () => {}, "lbl");
+  assert.equal(F.hooks.length, before + 1, "falls back to Hooks.on before install");
+  temp.off("someHook", id);
 });

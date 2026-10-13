@@ -198,6 +198,7 @@
   "core.swingsLeft": "swingsLeft",
   "core.tidyDiceCount": "tidyDiceCount",
   "core.turnBoundary": "turnBoundary",
+  "core.turnEffectData": "turnEffectData",
   "core.turnKey": "turnKey",
   "core.weaponSetSeed": "weaponSetSeed",
   "count": "count",

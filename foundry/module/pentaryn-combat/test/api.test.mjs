@@ -171,7 +171,7 @@ test("core: the module namespace, every export reachable through the API", async
   assert.deepEqual(Object.keys(api.core).sort(), Object.keys(core).sort());
   for (const k of Object.keys(core)) if (typeof core[k] === "function") assert.equal(api.core[k], core[k], k);
   assert.equal(api.core.MOD, "pentaryn-combat");
-  assert.equal(Object.keys(api.core).length, 81 + 17, "S1's 81 plus S2's eight blueprint constants, S4's I18N_KEYS, keyFor, S8's fullAttackPlanFrom, areaPlacementSkipped, -29's pruneOlder, -37's DELAYS, combat-core-EXT-11's ATTACK_ACTION_KINDS, MOVEMENT_KEYS and combat-core-EXT-13's ARGON");
+  assert.equal(Object.keys(api.core).length, 81 + 18, "S1's 81 plus S2's eight blueprint constants, S4's I18N_KEYS, keyFor, S8's fullAttackPlanFrom, areaPlacementSkipped, -29's pruneOlder, -37's DELAYS, combat-core-EXT-11's ATTACK_ACTION_KINDS, MOVEMENT_KEYS combat-core-EXT-13's ARGON and ext-8's turnEffectData");
 });
 
 test("EC-6: Multiattack Off sizes Full Attack from class features, not the Multiattack (wolf 1, Extra Attack 2)", async () => {

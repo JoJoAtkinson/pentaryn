@@ -5,6 +5,7 @@
 
 import { DELAYS, MODULE } from "../combat-core.mjs";
 import { makeLog } from "../lib/log.mjs";
+import { opts } from "../context.mjs";
 
 const log = makeLog(MODULE);
 
@@ -30,8 +31,6 @@ function queueMovement(actor) {
 }
 
 /* ── install ─────────────────────────────────────────────────────────────── */
-
-const opts = label => ({ label });   // guarded (S11, D-c1): a throw is logged with the label; return values pass through
 
 export function install(reg) {
   for (const hook of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) {

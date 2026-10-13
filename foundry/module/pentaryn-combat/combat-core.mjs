@@ -19,7 +19,7 @@
  *                         hintCodes, riderRolled
  *   core/damage.mjs       damageBonuses (TWF / GWM fallback), Steady Aim, damageAtZero
  *   core/multiattack.mjs  parseMultiattack, multiattackPlan, overridePlan
- *   core/turnflow.mjs     Argon's special actions, expiringAt, portraitExtras, orphanUsage, turnBoundary,
+ *   core/turnflow.mjs     Argon's special actions, turnEffectData, expiringAt, portraitExtras, orphanUsage, turnBoundary,
  *                         hudFollowPlan, deltasConsumed, areaPlacementSkipped
  *   core/layout.mjs       dockRect, swingTag, drawerLeft, clampToView
  *   core/timing.mjs       DELAYS: every timer delay, named (combat-riders-37)
@@ -181,7 +181,7 @@ import {
 } from "./core/multiattack.mjs";
 import {
   MOVEMENT_KEYS, SPECIAL_ACTIONS, areaPlacementSkipped, dashChanges, deltasConsumed, expiringAt,
-  hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction, specialActionOf, turnBoundary
+  hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction, specialActionOf, turnBoundary, turnEffectData
 } from "./core/turnflow.mjs";
 import {
   clampToView, dockRect, drawerLeft, swingTag
@@ -203,6 +203,6 @@ export {
   damageAtZero, damageBonuses, steadyAimAfterAttack, steadyAimChanges, multiattackPlan,
   overridePlan, parseMultiattack, SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges,
   deltasConsumed, expiringAt, hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction,
-  specialActionOf, turnBoundary, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS,
+  specialActionOf, turnBoundary, turnEffectData, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS,
   ATTACK_ACTION_KINDS, MOVEMENT_KEYS
 };

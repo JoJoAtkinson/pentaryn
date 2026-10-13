@@ -1,5 +1,5 @@
 /**
- * Pentaryn Combat core — turn flow: Argon's special actions, expiry at turn boundaries, portrait conditions, orphan usage cards, HUD follow, a cancelled area.
+ * Pentaryn Combat core — turn flow: Argon's special actions, the until-turn-end effect, expiry at turn boundaries, portrait conditions, orphan usage cards, HUD follow, a cancelled area.
  * PURE: plain data in, plain data out; re-exported by ../combat-core.mjs (guide S12, contents moved
  * unchanged).
  */
@@ -43,6 +43,26 @@ export function dashChanges(movement = {}) {
     if (Number.isFinite(v) && v > 0) out.push({ key: `system.attributes.movement.${k}`, type: "add", value: v });
   }
   return out;
+}
+
+/**
+ * The ActiveEffect our "until the end of this turn" effects are created from: Dash, Disengage
+ * (turnflow/action-buttons.mjs) and Steady Aim (turnflow/effects.mjs). `until: "turnEnd"` is what
+ * expiringAt sweeps; `special` names the kind; dnd5e shows it as temporary.
+ * @param {{module: string, kind: string, name: string, img: string, description: string, changes?: object[], origin: string}} p
+ *   module is combat-core's MODULE (the flag scope; core imports only its siblings); description is
+ *   the plain, already localized text, wrapped in one paragraph
+ */
+export function turnEffectData({ module, kind, name, img, description, changes = [], origin } = {}) {
+  return {
+    name,
+    img,
+    description: `<p>${description}</p>`,
+    transfer: false,
+    origin,
+    system: { changes },
+    flags: { [module]: { until: "turnEnd", special: kind }, dnd5e: { isTemporary: true } }
+  };
 }
 
 /**
