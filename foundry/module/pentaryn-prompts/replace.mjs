@@ -21,6 +21,7 @@ import {
   MODULE, DND_SIZE_WIDTH, placementFor, needsLockSize, footprintSquares, codedError, errorCode, textHash,
   xpBudget, difficulty, crXp, lightText as lightWords
 } from "./geometry-core.mjs";
+import { isPromptId } from "./core/group.mjs";
 import { markerSizeOfToken, promptText } from "./markers-adapter.mjs";
 import { manifestFor } from "./settings.mjs";
 import { promptTokens, actorXp, provenanceOf } from "./scene-adapter.mjs";
@@ -575,11 +576,11 @@ function encounterLines(entries, args, xpOf) {
   const budget = xpBudget(args.party ?? m.opts?.party);
   const out = [];
   for (const [eid, enc] of Object.entries(m.encounters)) {
-    const pids = enc.members.filter(id => /^p\d+$/.test(id));
+    const pids = enc.members.filter(isPromptId);
     if (!pids.some(p => xpOf(p) !== null)) continue;
     let xp = 0, creatures = 0, open = 0;
     for (const id of enc.members) {
-      if (/^p\d+$/.test(id)) {
+      if (isPromptId(id)) {
         const x = xpOf(id);
         if (x === null) { open++; continue; }
         if (x) { xp += x; creatures++; }

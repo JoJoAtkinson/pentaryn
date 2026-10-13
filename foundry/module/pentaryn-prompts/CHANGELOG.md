@@ -121,6 +121,9 @@ cssPrefix `pp-`, afterSync). Each **[declared]** change goes to the live check.
   into `core/text.mjs`; `core/pool.mjs` imports it from there and `build-core.mjs` re-exports the
   same function, so its pinned surface is unchanged. Core reaches up only to `prompts-core.mjs`'s
   identity constants. Same name matching, no behaviour change.
+- **[declared] The prompt-id test is written once** (prompts-core-EXT-5): `core/group.mjs`, which
+  hands out the p# ids, exports `isPromptId`; `core/doors.mjs` and `replace.mjs`'s encounter lines
+  use it instead of restating `/^p\d+$/`. Same matching, no behaviour change.
 - `ensureMarkers` repairs every drifted actor in one batch update. A hot re-import after
   `uninstall()` re-wires and republishes at once.
 - Console only (DP9): a core token API that throws warns once; swallowed failures log at debug
