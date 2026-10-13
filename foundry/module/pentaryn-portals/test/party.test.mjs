@@ -356,8 +356,19 @@ test("spreadArrival: on an occupied square → one teleport update to the first 
   assert.deepEqual(options.at(-1), { animate: false, movement: { [arrived.id]: { waypoints: [{ x: 500, y: 900, action: "displace" }] } } });
   assert.deepEqual(W.deprecationsSince(l), [], "no v14 compatibility warning");
   // [declared] portals-async-1: the tab claims the token first; the claim leaves with the move
-  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ "flags.pentaryn-portals.claims.spread": "socket-gm-1" }, { x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }]);
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes), [{ "flags.pentaryn-portals.claims.spread": "socket-gm-1" }, { x: 500, y: 900, "flags.pentaryn-portals.claims": "<_del>" }]);
   assert.deepEqual([arrived.x, arrived.y], [500, 900]);
+  // [declared] portals-w3-2: the claim was the only one, so `claims` itself goes — no empty {} left on the token
+  assert.ok(!("claims" in (arrived.flags[MODULE] ?? {})), "no empty claims {} on the arrived token");
+});
+
+test("spreadArrival: another claim on the token stays; only spread leaves (claims is removed only when it empties) [declared] (portals-w3-2)", async () => {
+  const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
+  await arrived.update({ [`flags.${MODULE}.claims.other`]: "socket-x" });
+  const n = F.calls.length;
+  await settle(S.spreadArrival(arrived));
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes).at(-1), { x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" });
+  assert.deepEqual(arrived.flags[MODULE].claims, { other: "socket-x" });
 });
 
 test("spreadArrival: alone, beside someone (edges touch), a hidden or token-flagged handle occupant, or the setting off → no move", async () => {
@@ -530,7 +541,7 @@ test("gaps: spreadArrival steps off an off-grid overlap too; its own square is t
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD", x: 550, y: 950 });
   const n = F.calls.length;
   await settle(S.spreadArrival(arrived));
-  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes).filter(c => "x" in c), [{ x: 700, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }]);
+  assert.deepEqual(W.callsSince(n, ["update"]).map(c => c.changes).filter(c => "x" in c), [{ x: 700, y: 900, "flags.pentaryn-portals.claims": "<_del>" }]);
 });
 
 test("gaps: a follower with no PC to stand by reads 'follower'; a destination with no nav name uses its name", async () => {
@@ -591,9 +602,10 @@ test("portals-async-1 [declared]: two GM tabs see one arrival on an occupied squ
   }
   await settle(Promise.all([a, b]));
   const moves = W.callsSince(n, ["update"]).filter(c => "x" in c.changes);
-  assert.deepEqual(moves.map(c => c.changes), [{ x: 500, y: 900, "flags.pentaryn-portals.claims.spread": "<_del>" }], "moved once");
+  assert.deepEqual(moves.map(c => c.changes), [{ x: 500, y: 900, "flags.pentaryn-portals.claims": "<_del>" }], "moved once");
   assert.deepEqual([arrived.x, arrived.y], [500, 900]);
   assert.equal(arrived.flags[MODULE]?.claims?.spread, undefined, "no stale claim rides the next hop's toObject()");
+  assert.ok(!("claims" in (arrived.flags[MODULE] ?? {})), "no empty claims {} either [declared] (portals-w3-2)");
 });
 
 test("portals-async-3 [declared]: bringFollowers' keepId-refusal election is commented as right for embedded Tokens, so nobody swaps it for a flag claim", async () => {
