@@ -62,8 +62,10 @@ The GM tab running a golden is often hidden or the screen locked: the browser st
 `requestAnimationFrame` and clamps `setTimeout`/`setInterval` to a second or more, so a wait on
 either decides nothing and timings stretch. Await the document operation or hook itself; when a
 golden must wait out wall time (a module's own debounce or claim window), use the `tick()` /
-`sleep()` / `settle()` helpers the goldens already carry (a `MessageChannel` macrotask plus
-`performance.now()`, not throttled in a hidden tab). The same holds for one-off probes run by
+`sleep()` / `settle()` helpers the goldens already carry (a macrotask through one shared
+`MessageChannel`, whose messages wake waiting ticks oldest first, plus `performance.now()`; not
+throttled in a hidden tab, and no new channel per tick; the port is ref'd in Node only while a
+tick waits, so the offline tests can exit). The same holds for one-off probes run by
 `eval-js`. Copy the helper preamble from an existing golden; only `DROP` and `settle` may differ
 (`scripts/tests/test_live_goldens_preamble.py` checks this). `settle()` comes in two forms: most
 goldens return as soon as `pred()` holds; `creatures` and `senses` then sleep a further 1.2 s for a

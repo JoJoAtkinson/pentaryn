@@ -5,6 +5,8 @@ the copies together: a helper is word-for-word the same in every golden that def
 predicate holds) may differ, and only within the forms below; so may the toast spy, in one of two
 forms (EXT-7)."""
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -141,3 +143,56 @@ def test_readme_says_new_goldens_copy_transforms_spy():
     readme = (GOLDENS / "README.md").read_text(encoding="utf-8")
     assert "toast spy" in readme and "transform" in readme.split("toast spy", 1)[1][:400], \
         "EXT-7: README does not say new goldens copy transform's toast spy"
+
+
+# perf-1: tick() used to build a fresh MessageChannel for every macrotask, so a settle()/sleep() loop
+# allocated thousands of channels per golden. Every golden that defines tick now shares one channel
+# and hands each message to the oldest waiting resolver (a FIFO), word for word as below. The port is
+# ref'd only while a tick waits: in Node (the offline tests) a listening port otherwise holds the event
+# loop open and the process never exits. ref/unref do not exist in a browser, hence the ?.().
+TICK_PREAMBLE = """/** One macrotask through a shared MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). One channel per golden; each message wakes the oldest waiting tick (perf-1). ref/unref exist only in Node (the offline tests), where an idle listening port would hold the process open. */
+const tickQ = [];
+const tickChan = new MessageChannel();
+tickChan.port1.onmessage = () => { tickQ.shift()?.(); if (!tickQ.length) tickChan.port1.unref?.(); };
+tickChan.port1.unref?.();
+const tick = () => new Promise(r => { tickQ.push(r); tickChan.port1.ref?.(); tickChan.port2.postMessage(0); });
+"""
+
+
+def test_tick_shares_one_channel():
+    """perf-1: every golden with tick() carries the shared-channel preamble and builds one channel."""
+    with_tick = sorted(stem for stem, text in TEXTS.items() if re.search(r"^const tick = ", text, re.M))
+    assert len(with_tick) == 17, f"perf-1: expected 17 goldens with tick(), found {with_tick}"
+    for stem in with_tick:
+        text = TEXTS[stem]
+        assert text.count(TICK_PREAMBLE) == 1, f"perf-1: {stem}: tick() is not the shared-channel preamble"
+        assert text.count("new MessageChannel(") == 1, f"perf-1: {stem}: builds more than one MessageChannel"
+
+
+def test_shared_tick_lets_node_exit():
+    """perf-1: the shared channel wakes ticks in order, serves concurrent waiters, and leaves Node free
+    to exit once no tick waits (a listening port left ref'd hung every offline golden run)."""
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not installed")
+    text = TEXTS["senses"]
+    start = text.index("const tickQ = ")
+    script = text[start:text.index("\n", text.index("const tick = ", start)) + 1] + """
+const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
+const order = [];
+await Promise.all([1, 2, 3].map(i => tick().then(() => order.push(i))));
+await sleep(50);
+console.log(JSON.stringify(order));
+"""
+    proc = subprocess.run([node, "--input-type=module", "-e", script], capture_output=True, text=True, timeout=20)
+    assert proc.returncode == 0, f"perf-1: node exited {proc.returncode}: {proc.stderr[-400:]}"
+    assert proc.stdout.strip() == "[1,2,3]", f"perf-1: ticks did not wake oldest first: {proc.stdout!r}"
+    idle = subprocess.run([node, "--input-type=module", "-e", script.split("const sleep = ")[0]],
+                          capture_output=True, text=True, timeout=20)
+    assert idle.returncode == 0, f"perf-1: a golden that never ticks held node open: {idle.stderr[-400:]}"
+
+
+def test_readme_names_the_shared_tick_channel():
+    """perf-1: the README's helper sentence describes one shared channel, not one per tick."""
+    readme = (GOLDENS / "README.md").read_text(encoding="utf-8")
+    assert "one shared `MessageChannel`" in " ".join(readme.split()), "perf-1: README does not describe the shared tick channel"
