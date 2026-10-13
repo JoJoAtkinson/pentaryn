@@ -733,6 +733,8 @@ const rayOf = new WeakMap();
 /**
  * Cast the outward ray from a dangling endpoint and find the nearest obstacle contact.
  * Returns {H, seg} on success, {refusal} when it hits nothing in range or lands mid-door.
+ * A refusal that names a wall in parentheses also carries that wall's id as `wall`, so
+ * diagnose can match it without parsing the text back.
  */
 function castRay(v, segs, cfg) {
   const d = outward(v);
@@ -774,7 +776,7 @@ function castRay(v, segs, cfg) {
     const startT = Math.max(Math.min(t0, t1), 0);
     if (best && startT >= best.t - EPS_T) continue;          // begins at or past the hit
     const away = Math.sqrt(startT * startT * dLen2);
-    return {refusal: `an aligned wall (${s.id}) lies along this line ${(away / cfg.gridSize).toFixed(1)} squares out — close that gap by hand, or nudge the two onto one line`};
+    return {wall: s.id, refusal: `an aligned wall (${s.id}) lies along this line ${(away / cfg.gridSize).toFixed(1)} squares out — close that gap by hand, or nudge the two onto one line`};
   }
   if (!best) return {refusal: "nothing along this line to grow to"};
   const sVec = sub(segB(best.seg), segA(best.seg));
@@ -791,7 +793,7 @@ function castRay(v, segs, cfg) {
   // Stopping mid-door leaves a wall dead-ending into an opening that vanishes when the door
   // opens. Windows are fine — they block movement and stay put (design trace D2).
   if (best.seg.door !== 0 && best.u > EPS_T && best.u < 1 - EPS_T) {
-    return {refusal: `would land mid-door (${best.seg.id}) — move the stub or the door`};
+    return {wall: best.seg.id, refusal: `would land mid-door (${best.seg.id}) — move the stub or the door`};
   }
   return {H, seg: best.seg};
 }
@@ -887,6 +889,7 @@ function diagnose(v, segs, dang, cfg, ambiguous) {
     return `${rule} ambiguous — two equally close candidates at ${where}; finish this one by hand`;
   }
   const reasons = [];
+  const alignedIds = new Set();   // walls F1 already reported as aligned or nearly collinear
   const coll2 = cfg.collEps * cfg.collEps;
   const A = v.ends[0].seg;
   for (const w of dang) {
@@ -897,13 +900,17 @@ function diagnose(v, segs, dang, cfg, ambiguous) {
     const d = Math.sqrt(dist2(v.p, w.p));
     if (onA && isOutward(v, w.p) && d > cfg.gapMaxPx) {
       reasons.push(`aligned with ${B.id} but ${(d / cfg.gridSize).toFixed(1)} squares apart (max ${cfg.gapMax})`);
+      alignedIds.add(B.id);
       continue;
     }
     // Near-collinear-but-not: the band where "fill the gap" and "build a corner" both look
     // plausible. Refusing is the whole point — a rule that guesses here surprises you.
     if (!onA && isOutward(v, w.p) && d <= cfg.gapMaxPx) {
       const off = Math.sqrt(Math.max(distToLine2(segA(B), segA(A), segB(A)), distToLine2(segB(B), segA(A), segB(A))));
-      if (off <= cfg.collEps * 8) reasons.push(`nearly collinear with ${B.id} (off by ${off.toFixed(1)}px, max ${cfg.collEps}) — nudge onto the line`);
+      if (off <= cfg.collEps * 8) {
+        reasons.push(`nearly collinear with ${B.id} (off by ${off.toFixed(1)}px, max ${cfg.collEps}) — nudge onto the line`);
+        alignedIds.add(B.id);
+      }
     }
     const da = outward(v), db = outward(w);
     if (cross(da, db) !== 0) {
@@ -923,11 +930,8 @@ function diagnose(v, segs, dang, cfg, ambiguous) {
   }
   const ray = rayOf.get(v) ?? castRay(v, segs, cfg);
   // F1's "aligned but too far" and E1's "an aligned wall lies along this line" are the same
-  // finding seen from two rules. Say it once.
-  if (ray?.refusal && !reasons.some(r => {
-    const m = ray.refusal.match(/\((\S+?)\)/);
-    return m && (r.includes(`aligned with ${m[1]} `) || r.includes(`nearly collinear with ${m[1]} `));
-  })) reasons.push(ray.refusal);
+  // finding seen from two rules. Say it once — matched by wall id, never by parsing the text.
+  if (ray?.refusal && !(ray.wall !== undefined && alignedIds.has(ray.wall))) reasons.push(ray.refusal);
   return reasons.length ? reasons.join("; ") : "no rule applies";
 }
 

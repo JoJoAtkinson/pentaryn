@@ -6,6 +6,11 @@
 (`flagScope` stays `wall-autocomplete`), `languages`, `minimum: "14"`, `verified: "14.369"` and the
 description fix; the flag-scope migration is **parked** while walls stays off (Joe).
 
+- **[declared] An aligned wall too far to bridge is reported once, whatever its id** (`walls-EXT-8`):
+  `diagnose` dropped E1's "an aligned wall (id) lies along this line" when F1 had already said
+  "aligned with id" by regex-parsing `(\S+?)` out of the English text, so an id with a space or a
+  parenthesis was reported twice. `castRay` now returns the wall's id with its refusal and
+  `diagnose` compares ids. Refusal wording is unchanged; the refusal hash pins still match.
 - **[declared] The entry's file map puts the busy lock in `actions.mjs`** (`walls-M12`): the
   comment said `walls-core.mjs` held it; walls-core exports `exclusive()`, and the lock object is
   declared in `actions.mjs`. Comment only. `ctx.contributions` stays: the blueprint's ctx shape names it.
