@@ -750,6 +750,24 @@ def test_backup_and_restore_through_rclone(two_hosts, monkeypatch):
     assert "copyto" in fake.verbs() and "moveto" in fake.verbs()
 
 
+def test_restore_without_yes_and_without_a_terminal_refuses_cleanly(two_hosts, monkeypatch,
+                                                                   capsys):
+    """R8: no tty and no --yes must die with a message, not an EOFError traceback from
+    input() — and the world must be left alone."""
+    (two_hosts.data["mac"] / "Data/worlds/w/journal.txt").write_text("mac world")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [snap] = _names(two_hosts.cloud)
+    boss_journal = two_hosts.data["boss"] / "Data/worlds/w/journal.txt"
+    boss_journal.write_text("boss world")
+    monkeypatch.setattr(cloud.sys.stdin, "isatty", lambda: False, raising=False)
+    monkeypatch.setattr("builtins.input", lambda *_: (_ for _ in ()).throw(EOFError()))
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(snap)
+    assert "pass --yes" in capsys.readouterr().err
+    assert boss_journal.read_text() == "boss world"
+
+
 # ── stale partials, untagged ───────────────────────────────────────────────
 
 def test_ensure_cloud_sweeps_stale_partials_only(two_hosts):

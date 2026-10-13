@@ -2662,6 +2662,8 @@ def restore(which: str | None, yes: bool = False, reason: str = "manual") -> int
     if chosen is None:
         die(f"no such snapshot: {which}")
     if not yes:
+        if not sys.stdin.isatty():
+            die("refusing without a terminal — this replaces the world; pass --yes")
         print(f"  about to restore {chosen.name} ({chosen.host_label}) over {data_root()}")
         print("  the current state is archived first, so this is undoable")
         if input("  type 'restore' to continue: ").strip() != "restore":
