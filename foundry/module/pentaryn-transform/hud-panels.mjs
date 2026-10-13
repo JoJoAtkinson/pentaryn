@@ -328,6 +328,9 @@ function onStarryUpdate(effect, changes) {
 // Chalice button sat beside Starry Form with nothing saying the second heal was there to take, so it
 // was missed. After such a spell, the Chalice button pulses until it is used or a minute passes.
 // The player still clicks it and rolls (own dice stay possible); nothing is rolled for them.
+// No relay (EC-3): dnd5e.postUseActivity fires on the caster's client, and the druid's HUD is on
+// that client, so the pulse is a reminder on the casting player's own HUD only; other clients (the
+// GM's included) do not see it.
 
 const chaliceReady = new Map();   // actor uuid → timer
 

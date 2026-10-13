@@ -47,7 +47,8 @@ ordinary ability. Requires dnd5e 6 (verified 6.0.6) on Foundry v14.
   combat time (out of combat it stays on and world time does not count, D8), when Incapacitated, at a
   Long Rest, or on a beast shift. While the Chalice glimmers, a slot-spending
   heal makes the Chalice button pulse for a minute, until it is used, the form ends or another
-  constellation takes over. From the sheet, Consume Wild Shape opens a
+  constellation takes over. The pulse is a reminder on the casting player's own HUD (the client that
+  cast the heal); it is not relayed to the GM or other players. From the sheet, Consume Wild Shape opens a
   three-button dialog; closing it refunds the use. A use spent from the HUD comes back if the form
   then fails to go up.
 - **Escape** cancels Argon's target picker ("0/1 Targets"), else closes an open Wild Shape / Starry

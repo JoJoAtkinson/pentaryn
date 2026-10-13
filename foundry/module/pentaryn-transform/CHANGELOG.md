@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+- **The Chalice pulse is documented as local to the caster (EC-3, defect wave 2).** The offer is
+  painted from `dnd5e.postUseActivity`, which fires only on the casting client — the same client
+  that shows the druid's HUD — so there is no relay. The README and the hud-panels.mjs comment now
+  say the pulse is a reminder on the casting player's own HUD ([declared]; test "EC-3" in
+  findings.test.mjs; no code, string or hook change).
 - **A Chalice offer ends when the constellation changes (EC-2, defect wave 2).** hud-panels.mjs
   cleared the pulsing Chalice button only on `deleteActiveEffect`, so swapping to the Archer and
   back within the minute brought the pulse back. `onStarryUpdate` now forwards a non-tick change to

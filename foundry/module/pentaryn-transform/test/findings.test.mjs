@@ -397,3 +397,17 @@ test("M1 [declared] patches.mjs's GLUE comment names both importers: the entry (
     assert.match(readFileSync(new URL(`../${f}`, import.meta.url), "utf8"), new RegExp(`import \\{ ${name} \\} from "\\./patches\\.mjs"`), `M1: ${f} imports ${name}`);
   }
 });
+
+/* ── EC-3 the Chalice offer is a reminder on the casting player's own HUD ── */
+
+test("EC-3 [declared] the Chalice pulse is local to the casting client, and the README and the code comment say so", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../hud-panels.mjs", import.meta.url), "utf8");
+  const head = src.match(/\/\* ── Chalice: offered when it is earned[\s\S]*?const chaliceReady/)?.[0] ?? "";
+  assert.match(head, /postUseActivity[\s\S]*caster's client/, "EC-3: the comment says the hook fires on the caster's client");
+  assert.match(head, /no relay/i, "EC-3: the comment says the offer is not relayed");
+  assert.doesNotMatch(src, /socket|executeAsGM|executeForEveryone/, "EC-3: no relay was added");
+  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+  const starry = readme.match(/\*\*Starry Form:\*\*[\s\S]*?\n- \*\*/)?.[0] ?? "";
+  assert.match(starry, /reminder on the casting player's own HUD/, "EC-3: the README says the pulse is local");
+});
