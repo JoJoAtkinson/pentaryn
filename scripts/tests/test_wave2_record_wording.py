@@ -46,3 +46,11 @@ def test_riders_async_5_sets_the_type_before_retiring():
     """retireManual leaves a typeless Affinity alone, so setType has to run first."""
     step = _step(_read("riders.md"), "- **riders-async-5**", "- **riders-maint-02")
     assert step.index("setType(") < step.index("retireManual(")
+
+
+def test_attunement_ext_8_detail_lists_only_missing_hooks():
+    """The hooks check's detail is the list of MISSING hooks, so a healthy selftest shows none."""
+    step = " ".join(_step(_read("attunement.md"), "- **EXT-8:**", "- **perf-1:**").split())
+    assert "names all four hooks" not in step
+    assert "detail is `null`" in step
+    assert "only the missing hooks" in step

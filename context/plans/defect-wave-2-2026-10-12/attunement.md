@@ -57,8 +57,8 @@ and a ZZ chest; delete them afterwards. One GM tab.
 - **EXT-6:** `game.pentaryn.attunement.describe().flags.writes` lists both claims paths.
 - **ATT-AC-3:** with two attuned ZZ items, fire two `stash()` calls via eval-js without awaiting
   the first: both away entries present, both slots greyed, the chest holds both copies.
-- **EXT-8:** `game.pentaryn.attunement.selftest()` is ok and the hooks check's detail names all
-  four hooks.
+- **EXT-8:** `game.pentaryn.attunement.selftest()` is ok and the hooks check's detail is `null`.
+  The detail lists only the missing hooks by name, so it is empty when all four are registered.
 - **perf-1:** at 2/3 with slot 1 empty and slot 3 filled, drop an unattuned ZZ item on slot 3:
   one redraw, newcomer in slot 3, no flash into slot 1.
 - **EC-6:** `game.pentaryn.attunement.report("ZZ nobody")` logs a console warning naming
