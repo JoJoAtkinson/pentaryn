@@ -7,7 +7,7 @@
  * `install()` exposes the actions on `ctx.exposed`; api.mjs and the keybindings call them there.
  */
 
-import {MODULE, READ_SCOPES, get as getBackend, planUndo, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
+import {MODULE, get as getBackend, planUndo, undoDrops, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
 import {setting} from "./settings.mjs";
 
 /**
@@ -19,7 +19,12 @@ function toast(level, key, data, opts) {
 }
 
 function targetScene(sceneId) {
-  const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
+  if (sceneId) {
+    const scene = game.scenes.get(sceneId);
+    if (!scene) throw new Error(`pentaryn-walls: no scene with id "${sceneId}".`);
+    return scene;
+  }
+  const scene = canvas?.scene;
   if (!scene) throw new Error("pentaryn-walls: no scene — open one, or pass a sceneId.");
   return scene;
 }
@@ -53,15 +58,13 @@ function pickBackend(requested) {
 function evaluate(scene, opts = {}) {
   const walls = readWalls(scene);
   let backend = pickBackend(opts.backend);
-  // A backend that cannot take these walls (wasm on a Levels scene) would hand them to the js
-  // engine itself; pick js here so the card and analyze() name the backend that ran.
-  if (backend.accepts && !backend.accepts(walls)) backend = getBackend("js");
+  const runOpts = {gridSize: scene.grid.size, runId: new Date().toISOString(), ...opts};
+  // A backend that cannot take these walls or opts (wasm on a Levels scene, or with a weldEps/pinEps
+  // override) would hand them to the js engine itself; pick js here so the card and analyze() name
+  // the backend that ran.
+  if (backend.accepts && !backend.accepts(walls, runOpts)) backend = getBackend("js");
   const t0 = performance.now();
-  const result = backend.run(walls, {
-    gridSize: scene.grid.size,
-    runId: new Date().toISOString(),
-    ...opts
-  });
+  const result = backend.run(walls, runOpts);
   return {walls, result, backend: backend.name, ms: performance.now() - t0};
 }
 
@@ -69,9 +72,15 @@ function evaluate(scene, opts = {}) {
 /*  Reporting                                   */
 /* -------------------------------------------- */
 
-/** Post a GM-whispered card. Awaited by the caller; a failure is logged, never thrown. */
+/**
+ * Post a GM-whispered card. Awaited by the caller; a failure is logged through the kit log (and
+ * traced, so api.trace() shows it with debug on), never thrown (walls-rob-8).
+ */
 function postCard(content) {
-  const failed = err => console.error(`${MODULE} |`, err);
+  const failed = err => {
+    log.error("chat card failed", err);
+    log.trace("chat card failed", {error: String(err?.message ?? err)});
+  };
   try {
     return Promise.resolve(ChatMessage.create({content, whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)}))
       .catch(failed);
@@ -91,9 +100,14 @@ async function report(scene, result, {committed, backend, ms}) {
   console.groupEnd();
 
   // Transient markers only — a Drawing or Note would persist and turn a report into state.
-  for (const x of refusals) {
-    // canvas.ping is async in Foundry 14: a rejection reaches the same debug line as a throw. Not awaited.
-    try { Promise.resolve(canvas.ping({x: x.at[0], y: x.at[1]})).catch(err => log?.debug("ping", err)); }
+  // Drawn on this client alone: canvas.ping broadcasts to every player, and the held Alt+Shift of
+  // the preview key would turn it into a view-panning pull (walls-edge-1). Only on the viewed
+  // scene: another scene's coordinates mean nothing here; its card and table still list them (walls-rob-3).
+  const style = CONFIG.Canvas?.pings?.types?.PULSE ?? "pulse";
+  const viewed = canvas?.scene?.id === scene.id;
+  for (const x of viewed ? refusals : []) {
+    // drawPing is async in Foundry 14: a rejection reaches the same debug line as a throw. Not awaited.
+    try { Promise.resolve(canvas.controls.drawPing({x: x.at[0], y: x.at[1]}, {style})).catch(err => log?.debug("ping", err)); }
     catch (err) { log?.debug("ping", err); }   // a nicety
   }
   await posted;
@@ -103,14 +117,16 @@ async function report(scene, result, {committed, backend, ms}) {
 /*  API                                         */
 /* -------------------------------------------- */
 
-async function preview({sceneId, ...opts} = {}) {
+async function preview(arg) {
+  const {sceneId, ...opts} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
   const {result, backend, ms} = evaluate(scene, opts);
   await report(scene, result, {committed: false, backend, ms});
   return result;
 }
 
-async function run({sceneId, ...opts} = {}) {
+async function run(arg) {
+  const {sceneId, ...opts} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
   const {result, backend, ms} = evaluate(scene, opts);
 
@@ -127,7 +143,8 @@ async function run({sceneId, ...opts} = {}) {
  * The engine's answer for a scene with no side effect at all: no chat card, no pings, no console
  * output, no writes (senses-walls-cursors-33). For the console and the MCP bridge.
  */
-async function analyze({sceneId, ...opts} = {}) {
+async function analyze(arg) {
+  const {sceneId, ...opts} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
   const {result, backend, ms} = evaluate(scene, opts);
   return {sceneId: scene.id, sceneName: scene.name, backend, ms, ...result};
@@ -141,7 +158,8 @@ async function analyze({sceneId, ...opts} = {}) {
  *
  * This is what makes "just run it and look" a safe workflow: the run is the unit of undo.
  */
-async function undo({sceneId, all = false} = {}) {
+async function undo(arg) {
+  const {sceneId, all = false} = arg ?? {};   // null means the defaults (walls-rob-5)
   const scene = targetScene(sceneId);
 
   // Plain data, never getFlag: "wall-autocomplete" is no package id, so Foundry 14's getFlag
@@ -153,11 +171,12 @@ async function undo({sceneId, all = false} = {}) {
     return {deleted: 0, restored: 0, run: null};
   }
   const {generated, latest, remaining} = plan;
-  // A restore deletes the stamp under every scope the wall carries one in.
+  // A restore deletes the undone run's entry, or the whole stamp under every scope the wall
+  // carries one in once no run is left on it (walls-edge-2).
   const byId = new Map(walls.map(w => [w._id, w]));
   const restores = plan.restores.map(r => ({
     ...r,
-    ...Object.fromEntries(READ_SCOPES.filter(s => byId.get(r._id)?.flags?.[s]).map(s => [`flags.${s}`, _del]))
+    ...Object.fromEntries(undoDrops(byId.get(r._id), latest, {all}).map(k => [k, _del]))
   }));
   if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
   if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
@@ -168,18 +187,37 @@ async function undo({sceneId, all = false} = {}) {
 }
 
 /**
+ * The macro's fixed id for an action: 16 characters of Foundry's id alphabet, the same in every
+ * tab and world ("pwmacroundo00000"). The id is the election (walls-async-2): two overlapping
+ * makeMacro calls, or two GM tabs, both create it with `keepId` and only one record results.
+ */
+const macroId = action => `pwmacro${action}`.padEnd(16, "0").slice(0, 16);
+
+/**
  * Create a hotbar macro for one of the three actions, so it can also be clicked or bound
- * from the macro bar. Returns the Macro document.
+ * from the macro bar. Returns the Macro document. Looks it up by its fixed id, then by name among
+ * script macros (one made before the id was fixed); creates it with that id otherwise.
  */
 async function makeMacro(action = "preview", slot) {
   if (!["preview", "run", "undo"].includes(action)) throw new Error(`unknown action "${action}"`);
   const name = `Walls: ${action}`;
   const command = `await game.pentaryn.walls.${action}();`;
-  const existing = game.macros.find(m => m.name === name);
-  const macro = existing ?? await Macro.create({
-    name, type: "script", scope: "global", command,
-    img: "icons/environment/settlement/wall-tower.webp"
-  });
+  const _id = macroId(action);
+  // The name fallback (a macro made before the fixed id) must be a script macro: a same-named
+  // chat macro is someone else's, and reusing it would overwrite its command (walls-rob-9).
+  let macro = game.macros.get(_id) ?? game.macros.find(m => m.name === name && m.type === "script");
+  if (!macro) {
+    try {
+      macro = await Macro.create({
+        _id, name, type: "script", scope: "global", command,
+        img: "icons/environment/settlement/wall-tower.webp"
+      }, {keepId: true});
+    } catch (err) {
+      // The other call (or GM tab) won the id: use its macro.
+      if (!/already exists/i.test(err?.message ?? "") || !game.macros.get(_id)) throw err;
+      macro = game.macros.get(_id);
+    }
+  }
   if (macro.command !== command) await macro.update({command});
   await game.user.assignHotbarMacro(macro, slot);
   toast("info", "PENTARYN_WALLS.notify.macroReady", {name});

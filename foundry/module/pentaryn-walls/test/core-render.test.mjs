@@ -5,6 +5,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as core from "../walls-core.mjs";
+import { MANIFEST } from "../api-manifest.mjs";
+import { KEYBINDINGS } from "../settings.mjs";
 import { manifestOf, readJSON } from "./kit/harness.mjs";
 import { get, wasmReady } from "./fixtures/engine.mjs";
 import { houseWalls } from "./fixtures/world.mjs";
@@ -25,10 +27,17 @@ test("VERSION === module.json version", () => {
   assert.equal(manifestOf(ROOT).id, core.MODULE);
 });
 
-test("readyLine: today's console text (glue case (b))", () => {
-  assert.equal(core.readyLine(["js", "wasm"]),
+// [declared] walls-EXT-11: the keys and the API list were hard-coded (analyze() was missing). They
+// now come from KEYBINDINGS and the manifest's GM rows, so the line tracks a rebinding or a new row.
+test("readyLine lists the GM API rows and KEYBINDINGS (walls-EXT-11; glue case (b))", () => {
+  const paths = MANIFEST.rows.filter(r => r.gm).map(r => r.path);
+  assert.equal(core.readyLine(["js", "wasm"], paths, KEYBINDINGS),
     "ready — backends: js, wasm. Alt+W run, Alt+Z undo, Alt+Shift+W preview. " +
-    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()");
+    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro() / .analyze()");
+  const rebound = [{ action: "run", editable: [{ key: "KeyR", modifiers: ["Control", "Shift"] }] },
+    { action: "undo", editable: [{ key: "Digit1", modifiers: [] }] }];
+  assert.equal(core.readyLine(["js"], ["run"], rebound, "no bytes"),
+    "ready — backends: js. Control+Shift+R run, 1 undo. API: game.pentaryn.walls.run() (wasm unavailable: no bytes)");
 });
 
 test("reportHtml: the preview card equals golden/glue.json", async () => {
@@ -52,6 +61,19 @@ test("reportHtml: committed wording, singulars, and a lint list", () => {
     "<p>1 component: 1 closed (inert), 0 still open.</p>" +
     "<p><strong>Lint</strong></p><ul><li><code>L1</code> overlap</li></ul>" +
     "<p style=\"opacity:.7;font-size:.9em\">grid 50px &middot; weld 2px &middot; collinear 1px &middot; pin 1px &middot; gap/corner/reach 6/6/20 squares</p>");
+});
+
+test("reportHtml escapes the scene name (walls-edge-7)", () => {
+  const result = {
+    report: { created: 0, moved: 0, iterations: 1, components: [],
+      config: { gridSize: 50, weldEps: 2, collEps: 1, pinEps: 1, gapMax: 6, cornerMax: 6, extMax: 20 } },
+    refusals: [], lints: [],
+  };
+  const html = core.reportHtml(`Tom's <b>"Hall"</b> & <img src=x onerror=alert(1)>`, result,
+    { committed: false, backend: "js", ms: 1 });
+  assert.ok(html.startsWith("<p><strong>Wall autocomplete — " +
+    "Tom&#x27;s &lt;b&gt;&quot;Hall&quot;&lt;/b&gt; &amp; &lt;img src=x onerror=alert(1)&gt;</strong></p>"), html);
+  assert.doesNotMatch(html, /<img|<b>/);
 });
 
 test("undoHtml: today's template (one run, several runs, everything)", () => {
