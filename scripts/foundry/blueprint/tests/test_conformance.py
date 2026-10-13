@@ -537,6 +537,39 @@ def test_c57_module_socket_channel_is_the_module_id(tmp_path, code, want):
     assert res(one(tmp_path, code, socket=True), "C57")["status"] == want
 
 
+C57_IMPORTED = 'export const CHANNEL = "module.pentaryn-other";\n'
+C57_IMPORT_CASES = [
+    # py-blueprint-EXT-1: a channel constant imported from another module file resolves through the import
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',
+     {"c.mjs": C57_IMPORTED}, "fail"),
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',
+     {"c.mjs": 'export const CHANNEL = `module.${MODULE}`;\n'}, "pass"),
+    ('import { CHANNEL as CH } from "./c.mjs";\ngame.socket.on(CH, f);',                 # alias-aware
+     {"c.mjs": C57_IMPORTED}, "fail"),
+    ('import { CH as CHANNEL } from "./c.mjs";\ngame.socket.on(CHANNEL, f);',
+     {"c.mjs": 'export const CH = "module.pentaryn-async";\n', "b.mjs": C57_IMPORTED}, "pass"),
+    ('import { CHANNEL as X } from "./c.mjs";\ngame.socket.on(CHANNEL, f);',              # not a local name
+     {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',                # never a bare-name search
+     {"b.mjs": C57_IMPORTED, "c.mjs": 'export const CHANNEL = "module.pentaryn-async";\n'}, "pass"),
+    ('game.socket.emit(CHANNEL, {});', {"b.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\nfunction send(CHANNEL) { game.socket.emit(CHANNEL, {}); }',
+     {"c.mjs": C57_IMPORTED}, "n/a"),                                                   # shadowing parameter
+    ('import { CHANNEL } from "./c.mjs";\nconst send = (x, CHANNEL) => game.socket.emit(CHANNEL, x);',
+     {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\nconst send = CHANNEL => game.socket.emit(CHANNEL, {});',
+     {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('const { CHANNEL } = cfg;\ngame.socket.emit(CHANNEL, {});', {"c.mjs": C57_IMPORTED}, "n/a"),
+    ('import { CHANNEL } from "./c.mjs";\ngame.socket.emit(CHANNEL, {});',                # not module scope
+     {"c.mjs": 'function f() { const CHANNEL = "module.pentaryn-other"; }\n'}, "n/a"),
+]
+
+
+@pytest.mark.parametrize("code,extra,want", C57_IMPORT_CASES)
+def test_c57_resolves_an_imported_channel_constant_py_blueprint_ext_1(tmp_path, code, extra, want):
+    assert res(one(tmp_path, code, socket=True, extra=extra), "C57")["status"] == want
+
+
 C58_CASES = [
     ('const a = serialStore(MODULE, "ledger");', "pass"),
     ('const a = serialStore(MODULE, ["a", "b"]);\nconst b = serialStore(MODULE, "c");', "pass"),

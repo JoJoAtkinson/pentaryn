@@ -937,7 +937,7 @@ both Warnings and Manual.
 | C54 | warn+manual | a `pre(Create\|Update\|Delete)<Doc>` listener gated on the active GM (runs on the initiator only) |
 | C55 | fail | every `User#query` / `User.queryMany` passes `timeout` in its options argument (an object-literal last argument must be the options and name it; otherwise any `timeout` in the call counts; `queryGM` exempt; unknown receivers → manual) |
 | C56 | fail | no hand-written `CONFIG.queries` assignment (`[…] =`, `.x =`, `??=`, `Object.assign`); reads pass |
-| C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`) |
+| C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`); a channel constant is read from the same file or, failing that, through the file's own named import of it (alias-aware) as a module-scope `const` in the imported file — never by bare name, and a name a local declaration or enclosing parameter shadows stays n/a |
 | C58 | fail | one `serialStore` per key across the module, at module scope or memoised (`x ??= serialStore(`) |
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body, or an `await f(…)` there where `f` is a same-file function that awaits one (batch it) |
 | C60 | warn | no `async` listener, `await`, or call to a same-file/imported `async function` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |

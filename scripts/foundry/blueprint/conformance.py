@@ -1712,6 +1712,55 @@ def c56(m):
     return ok() if not detail else bad(detail)
 
 
+_NOT_A_FUNCTION = {"if", "for", "while", "switch", "with", "return", "typeof", "await", "new", "in", "of"}
+
+
+def _binds_locally(code: str, name: str, pos: int) -> bool:
+    """`name` is declared in this file (const/let/var, destructuring, function, class) or is a
+    parameter of a function or arrow whose body holds `pos` — so an import of it is not what `pos`
+    sees. Over-approximates: a name that might be shadowed counts as shadowed."""
+    n = re.escape(name)
+    word = rf"(?<![\w$.]){n}(?![\w$])"
+    if re.search(rf"(?<![\w$.])(?:const|let|var)\s*(?:\s{n}(?![\w$])|[{{\[][^=;]*{word})"
+                 rf"|(?<![\w$.])(?:function\s*\*?|class)\s*{n}(?![\w$])", code):
+        return True
+    for am in re.finditer(rf"{word}\s*=>\s*", code):           # `name => …`
+        if am.end() <= pos < am.end() + len(_arrow_body(code, am.end())):
+            return True
+    for pm in re.finditer(r"\(", code):
+        close = match_paren(code, pm.start())
+        if not re.search(word, code[pm.start():close]):
+            continue
+        before = re.search(r"([A-Za-z_$][\w$]*)?\s*$", code[max(0, pm.start() - 64):pm.start()]).group(1)
+        after = re.match(r"\s*(=>\s*|\{)", code[close + 1:])
+        if not after or before in _NOT_A_FUNCTION:
+            continue
+        q = close + 1 + after.end() - (1 if after.group(1) == "{" else 0)
+        if q <= pos < q + len(_arrow_body(code, q)):
+            return True
+    return False
+
+
+def _imported_channel(m: Module, rel: str, name: str) -> jsscan.Str | None:
+    """The module-scope `const <exported> = "module.…"` of the module file that `rel` statically
+    imports `name` from (`{ exported }` or `{ exported as name }`); None when there is none."""
+    for target, imp in m.imports(rel):
+        braces = re.search(r"\{([^}]*)\}", imp.raw)
+        if imp.dynamic or target not in m.files or target == rel or not braces:
+            continue
+        for part in braces.group(1).split(","):
+            pm = re.fullmatch(r"\s*([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?\s*", part)
+            if not pm or (pm.group(2) or pm.group(1)) != name:
+                continue
+            tsrc = m.files[target]
+            for dm in re.finditer(rf"(?<![\w$.])const\s+{re.escape(pm.group(1))}\s*=\s*", tsrc.code):
+                lit = lit_after(tsrc, dm.end())
+                if depth_at(tsrc.code, dm.start()) == 0 and lit and lit.value.startswith("module."):
+                    return lit
+            return None
+    return None
+
+
 @rule("C57", "fail", "a game.socket module.* channel is exactly module.<module.json id>")
 def c57(m):
     want = f"module.{m.id}"
@@ -1728,6 +1777,8 @@ def c57(m):
             if lit is None:
                 ident = re.match(r"[A-Za-z_$][\w$]*", code[mm.end():])
                 lit = consts.get(ident.group(0)) if ident else None
+                if lit is None and ident and not _binds_locally(code, ident.group(0), mm.start()):
+                    lit = _imported_channel(m, rel, ident.group(0))
             if lit is None or not lit.value.startswith("module."):
                 continue                     # a core event (§5.6, C47) or unresolved
             used = True
