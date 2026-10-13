@@ -195,8 +195,8 @@ can only move things out of `review`, never out of `hold`.
 | Bucket | Rule |
 |---|---|
 | **auto** | Patch/minor bump of anything — `dnd5e` included — with compatible core and system, no declared conflicts with what is installed, no missing dependency. Core **build** bumps inside generation 14 with a clean compatibility preview. |
-| **review** | Any **major** bump · a package never seen by a previous run · anything Foundry's own `previewCompatibility` flags. Claude reads the release notes and decides. |
-| **hold** | Core **generation** change (14 → 15) — Foundry's own `willDisableModules` · anything needing a core upgrade we are not doing · anything whose upstream will not resolve. |
+| **review** | Any **major** bump · a package never seen by a previous run. Claude reads the release notes and decides. |
+| **hold** | Core **generation** change (14 → 15) — compared in `risk.classify_core`, since Foundry disables every module not re-verified for the new generation · a core build bump whose compatibility preview (`previewCompatibility`) flags a blocking package, or whose preview could not be obtained (`risk.classify_core`) · anything needing a core upgrade we are not doing · anything whose upstream will not resolve. |
 
 `dnd5e` is treated like any other module, by choice: a system update runs an
 irreversible world migration, and the rolling OneDrive snapshots are the answer to that.

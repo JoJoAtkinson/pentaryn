@@ -247,7 +247,7 @@ every package action 400 while `authenticate()` reported success.
 | A package **never seen before** goes to `review` | A module installed on Thursday shouldn't auto-update Saturday before anyone has looked once. Held packages are **excluded** from the seen file so they keep getting reviewed. |
 | Dry runs never write `vtt-update.seen.json` | Otherwise a dry run silently disarms the guard above. |
 | `dnd5e` treated like any other module | Joe's call: the rolling snapshots are the safety net for its irreversible migration. |
-| Core **generation** change always holds | Foundry's own `willDisableModules`. That is a hands-on migration. |
+| Core **generation** change always holds | Foundry disables every module not re-verified for the new generation. `risk.classify_core` compares the generations itself (see "Other measured facts" above). That is a hands-on migration. |
 | Adjudicator and report run with **no tools and no MCP** | Release notes are attacker-controlled text and this repo's MCP config has `eval-js` and Infisical one call away. `--strict-mcp-config --mcp-config '{"mcpServers":{}}' --disallowed-tools …`. |
 | Per-package `createBackup`, not a full snapshot | A full snapshot copies 2.7 GB of unchanged premium art weekly. Per-package is 3 s and is exactly what `recover_module` restores from. `retention.full_snapshot: true` re-enables the full one. |
 | Both worlds smoked, sequentially | `ardenhaven` and `space-journey` migrate independently, each on its own launch. Smoking one leaves the other to migrate unobserved. |
