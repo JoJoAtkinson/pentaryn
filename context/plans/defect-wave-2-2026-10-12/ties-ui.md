@@ -56,6 +56,26 @@ Every item is a DECLARED behaviour change with a line under the CHANGELOG `Unrel
 | ties-ui-perf-10 | Every token step requested a badge frame, and a hot re-import lost the badges until canvasReady | Recommendation | A frame is requested only for marked tokens. After a ready-world re-import, `worn.install` refills the marked set and repaints at once. A normal load is unchanged. | `1bfd3d5c`, `48573164` | `test/review-ties-ui-worn-marked.test.mjs`, `test/review-ties-ui-worn-hot.test.mjs` |
 | ties-ui-perf-11 | Opening or closing a Review row re-read every actor | Recommendation | The carrier walk is cached until an actor is created, changed or deleted. | `94b105ef` | `test/review-ties-ui-carriers-cache.test.mjs` |
 
+## Integration with ties-core (FIX-3, 2026-10-13)
+
+Run FIX-2 parked this branch: ties-core was already merged and deployed on main, and merging the
+two broke two tests. FIX-3 merged `origin/main` (`d26ef1db`) into this branch as `7ca6e0a9`.
+**ties-core's contract wins**, because it is live. Gate: `make foundry-ties-check` green on the merge
+and on the follow-up.
+
+| id | defect | ruling | what changed (plain words) | commits | test |
+|---|---|---|---|---|---|
+| rob-7 x R8 | ties-core R8 made `markLearned` answer `writeFailed` instead of throwing. The rob-7 guard only caught throws, so a refused Mark as learned showed nothing | ties-core's contract wins. The player sees the same thing a throw showed | `guardClick` treats a `{ ok: false, reason: "writeFailed" }` answer as a failure: it logs `pentaryn-ties \| <action>` and shows "That didn't go through — see the console.", and the button comes back on. Mark as learned, Tell them and Fix it return their write's answer to it. A refused Mark as learned shows no "learned" toast. | `7ca6e0a9`, `23878ece` (CHANGELOG) | `test/review-ties-ui-guard-click.test.mjs` |
+| EC-2 x ACC-3/ACC-6 | ties-core's concurrent-ensure test failed after the merge | Both hold | `ensure` behaves correctly. The test helper was reading ties-ui-ACC-6's `{ stamp }` element as an entry, so it now skips it, as every reader does. | `7ca6e0a9` | `test/review-ensure-race.test.mjs` |
+| ACC-4 x U3 | Fix it (`repairAllAncestry`) read the link flags outside ties-core's registry queue, so a Fix it racing a script's link could lose one of them | Use ties-core's queue | Fix it now runs in the registry queue, like link, unlink and repair. The registry queue and each actor's ties/Known queue are separate chains that never wait on each other, so neither can reorder or deadlock the other. | `23878ece` | `test/review-queues-together.test.mjs` (both queues at once on one actor, plus a registry write nested in an actor's queue, behind a deadlock timeout) |
+| ext-7 x EXT-13 | Both branches replaced the preview's literal pass line, ties-core with `kindPassed` and ties-ui with `STUDY_BASE_DC` | ties-core's rule wins | The preview uses `kindPassed(k.tier)`. The EXT-13 test now checks for that. The numbers are the same. | `7ca6e0a9` | `test/review-ties-ui-study-ladder.test.mjs` |
+| M11 x ACC-3 | ties-core's `setNotes` returns false on a refused write, while ties-ui routed it through the queued `editTie` | Both hold | `editTie` returns `null` when `write()` returns false, so `setNotes` stays false and the editor skips its repaint. | `7ca6e0a9` | `test/review-write-refused.test.mjs`, `test/write-queue.test.mjs` |
+| ext-8 x EXT-16 | Both branches edited the `describe()` return strings | Each keeps its own row | `attributes.stale` uses ties-core's shape. `attributes.openReview` uses `AttributeReview\|null` from EXT-16, because it returns the window directly. | `7ca6e0a9` | `describe` golden (unchanged by the merge) |
+| U2 x ACC-6 | ties-core documents cross-tab registry writes as last-write-wins. ties-ui added a stamp that re-applies the overwritten write | Both are true | The `writeChain` comment and the attribute-review Gotchas say the second write wins at the setting, and that the stamp then re-applies the overwritten tab's change once. | `7ca6e0a9` | `test/review-queue-per-tab.test.mjs` |
+
+No golden changed in the integration. No new player-visible string: the failure toast is the existing
+`PENTARYN_TIES.notify.clickFailed`.
+
 ## Goldens changed
 
 All changes are under `foundry/module/pentaryn-ties/test/golden/`.
@@ -77,7 +97,7 @@ The `player-look-open` and `app-preview-controls` goldens are byte-identical (EX
 
 ## Deploy
 
-Shipped files changed only in `foundry/module/pentaryn-ties/`, and they include `styles/ties.css` and `lang/en.json`. Per blueprint §10 this needs a **restart**, not a reload. No `scripts/**` or fork changes.
+Shipped files changed only in `foundry/module/pentaryn-ties/`: `.mjs` files, `styles/ties.css` and `lang/en.json`. Compared with main, `module.json` and `lib/` are unchanged. Per blueprint §10, `.mjs`, `.css` and `lang/*.json` need a **reload**, not a restart (corrected in FIX-3; this section used to say restart). No `scripts/**` or fork changes.
 
 ## Live check after deploy
 
@@ -136,3 +156,10 @@ Use only ZZ-prefixed scratch documents: `ZZ Tie PC`, `ZZ Tie NPC`, `ZZ Tie Ghost
 1. On ZZ Name Leak, mark one ZZ token worn and move another. Expect: the badge stays put.
 2. Move the marked token. Expect: the badge follows.
 3. Drop a new worn-flagged ZZ token. Expect: its badge appears.
+
+**FIX-3 integration (rob-7 x R8, ACC-4 x U3)**
+1. Create `ZZ Tie PC`, `ZZ Tie NPC` and three registry entries: `ZZ City`, `ZZ Ward` (parent ZZ City, with one lore row) and `ZZ Other`. Link `ZZ Ward` to ZZ Tie NPC and assign ZZ Tie PC to the GM user.
+2. Mark as learned, refused: in eval, make ZZ Tie PC's writes fail on that one instance: `const pc = game.actors.getName("ZZ Tie PC"); pc.update = () => Promise.reject(new Error("zz refused"));`. A `preUpdateActor` hook returning `false` will not do, because Foundry then skips the update without an error. On ZZ Tie NPC's Attributes tab, click Mark as learned on ZZ Ward's row. Expect: the button comes back on, an error toast "That didn't go through — see the console.", no "learned" toast, and in the console the warning `pentaryn-ties | mark as learned failed` followed by the error `pentaryn-ties | attr-learned`. Run `delete pc.update`, click again, and expect the normal "learned" toast that names ZZ Tie PC.
+3. Fix it: open ZZ Tie NPC's sheet on the Attributes tab. In eval, set `flags.pentaryn-ties.attributes` to `["zzward"]` (the ward without its parent) so the broken-ancestry banner shows. Then, in one eval, click the sheet's `[data-action="attr-repair"]` button and call `game.modules.get("pentaryn-ties").api.attributes.link(npc, "ZZ Other")` in the same tick. Expect: both writes land, the flag carries `zzward`, every ancestor of it and the linked entry, and the banner is gone.
+4. Concurrent ensure: in eval, run `Promise.all([A.ensure("ZZ Tide"), A.ensure("ZZ Tide")])`. Expect one `existed: false`, one `existed: true` and a single ZZ Tide entry. While it runs, change a tie's word and then its strength on ZZ Tie PC's Ties tab, and expect both to stick.
+5. Delete ZZ Tide, ZZ Other, ZZ Ward, ZZ City and the ZZ actors, and unassign ZZ Tie PC.
