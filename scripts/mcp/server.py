@@ -856,9 +856,10 @@ def _serve_loop(
 
         try:
             if method == "initialize":
-                req_version = params.get("protocolVersion")
+                # One supported version: per the MCP spec, answer our own version for
+                # any other request rather than echoing it (py-mcp-EC-7).
                 result = {
-                    "protocolVersion": str(req_version) if req_version else PROTOCOL_VERSION,
+                    "protocolVersion": PROTOCOL_VERSION,
                     "capabilities": {"tools": {"listChanged": False}},
                     "serverInfo": {"name": SERVER_NAME, "version": "0.1.0"},
                 }

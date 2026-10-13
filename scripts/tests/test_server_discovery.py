@@ -484,8 +484,9 @@ def _serve(monkeypatch, messages, runners=(), slots=2):
 
 
 def test_serve_loop_inline_payloads_pinned(monkeypatch):
-    """Characterisation: initialize echoes any requested version (EC-7), and the
-    inline error envelopes for an unknown method and an unknown tool."""
+    """Characterisation: initialize answers PROTOCOL_VERSION for an unsupported
+    requested version (py-mcp-EC-7), and the inline error envelopes for an unknown
+    method and an unknown tool."""
     sent = _serve(monkeypatch, [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
          "params": {"protocolVersion": "1999-01-01"}},
@@ -496,7 +497,7 @@ def test_serve_loop_inline_payloads_pinned(monkeypatch):
     ], runners=(_runner(lambda **k: "ok"),))
     assert sent == [
         {"jsonrpc": "2.0", "id": 1, "result": {
-            "protocolVersion": "1999-01-01",
+            "protocolVersion": server.PROTOCOL_VERSION,
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {"name": "dnd-scripts", "version": "0.1.0"}}},
         {"jsonrpc": "2.0", "id": 2, "result": {"tools": [
@@ -506,6 +507,22 @@ def test_serve_loop_inline_payloads_pinned(monkeypatch):
         {"jsonrpc": "2.0", "id": 4,
          "error": {"code": -32000, "message": "Unknown tool: x"}},
     ]
+
+
+@pytest.mark.parametrize("params, expected", [
+    ({"protocolVersion": "2025-06-18"}, "2025-06-18"),
+    ({"protocolVersion": "1999-01-01"}, "2025-06-18"),
+    ({"protocolVersion": "2099-12-31"}, "2025-06-18"),
+    ({"protocolVersion": 20250618}, "2025-06-18"),
+    ({}, "2025-06-18"),
+])
+def test_initialize_never_echoes_unsupported_version(monkeypatch, params, expected):
+    """py-mcp-EC-7: the server speaks one MCP version. Per the spec it echoes the
+    requested version only when it supports it; otherwise it answers its own."""
+    assert server.PROTOCOL_VERSION == "2025-06-18"
+    sent = _serve(monkeypatch, [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": params}])
+    assert sent[0]["result"]["protocolVersion"] == expected
 
 
 def test_serve_loop_busy_reply_when_slots_exhausted(monkeypatch):
