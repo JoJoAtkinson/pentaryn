@@ -127,6 +127,18 @@ function announceLocked(target, actor, { playSound }) {
 }
 
 /**
+ * The veto behind both lock hooks (one body, dropbin-M6): a player is refused a locked container with
+ * the sound, the toast and the float; the GM, and anything not locked, falls through.
+ */
+function refuseIfLocked(target) {
+  if (game.user.isGM) return;
+  const hit = lockedContainerData(target);
+  if (!hit) return;
+  announceLocked(target, hit.actor, { playSound: true });
+  return false;                         // cancels the render — this is the actual lock
+}
+
+/**
  * The ready backfills run on the active GM user (the core's isActiveGMSelf, shared with
  * corpses.mjs): every tab on that account runs them (`isSelf` is per user, not per tab), a second
  * GM user does not. The writes are idempotent; a one-tab gate would be a separate [declared]
@@ -219,13 +231,7 @@ function pinnedJournalTest() {
 
 /** ready: the three lock hooks, a repaint of the player's sidebar, then the GM backfills. */
 async function armLocks(reg) {
-  reg.on("item-piles-preRenderInterface", (target) => {
-    if (game.user.isGM) return;
-    const hit = lockedContainerData(target);
-    if (!hit) return;
-    announceLocked(target, hit.actor, { playSound: true });
-    return false;                       // cancels the render — this is the actual lock
-  }, { label: "lock: interface" });
+  reg.on("item-piles-preRenderInterface", refuseIfLocked, { label: "lock: interface" });
 
   // Item Piles has a "force open default sheet" keybind — Left Ctrl out of the
   // box — and holding it makes the module stand aside entirely, so a Ctrl-click
@@ -234,13 +240,7 @@ async function armLocks(reg) {
   // interface is being rendered. Refuse the sheet itself: returning false from
   // item-piles' own preRenderActorSheet hook suppresses the render, and it fires
   // for ApplicationV2 sheets and for the bypass alike.
-  reg.on("item-piles-preRenderActorSheet", (doc) => {
-    if (game.user.isGM) return;
-    const hit = lockedContainerData(doc);
-    if (!hit) return;
-    announceLocked(doc, hit.actor, { playSound: true });
-    return false;
-  }, { label: "lock: actor sheet" });
+  reg.on("item-piles-preRenderActorSheet", refuseIfLocked, { label: "lock: actor sheet" });
 
   // The canvas double-click already refuses and plays lockedSound itself; all
   // this adds is the words. PRE_RATTLE is local to the clicking client, unlike

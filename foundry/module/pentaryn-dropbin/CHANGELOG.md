@@ -74,6 +74,9 @@ Declared changes:
   synthetic actor's token, else the first token holding that same actor object. It matched by actor
   id, so with two unlinked chests of one base actor it could float over the other chest; no match is
   no float (the toast still shows).
+- dropbin-M6: the two lock vetoes (`item-piles-preRenderInterface`, `item-piles-preRenderActorSheet`)
+  are one `refuseIfLocked(target)`, registered twice with the same labels in the same order; a player
+  is refused a locked container exactly as before.
 - dropbin-R6: `corpses.toCorpse`/`fromCorpse`/`sync` return early with one console warning
   (`pentaryn-dropbin | corpses.<fn>: …; nothing done`) when Item Piles is not active or the argument
   is not a TokenDocument (`sync`: an Actor); they threw raw TypeErrors. A failed corpse-flag write in
