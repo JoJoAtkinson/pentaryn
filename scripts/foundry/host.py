@@ -39,6 +39,8 @@ DEFAULT_PORT = 30000
 DEFAULT_KEEP_SNAPSHOTS = 10
 MAC_APP_NAME = "Foundry Virtual Tabletop"
 MAC_APP_BUNDLE = Path("/Applications/Foundry Virtual Tabletop.app")
+# launchd's PATH has no /opt/homebrew/bin, so the Saturday updater cannot rely on `which`.
+HOMEBREW_NODE = Path("/opt/homebrew/bin/node")
 
 # Every key the env file may set, with what it means. host.env.example is checked
 # against this list by a test, so the two cannot drift.
@@ -166,6 +168,9 @@ def host_is_default() -> bool:
 def host_name() -> str:
     """PENTARYN_HOST, else `mac` on macOS, else the sanitised short hostname.
 
+    A non-macOS hostname that sanitises to `mac` (or to a reserved word) is prefixed
+    `h-` — only macOS is tagged `mac`, and so the primary, by default.
+
     The macOS default is `mac` — the default PENTARYN_PRIMARY_HOST — so the Mac with no
     env file is the primary exactly as before (tunnel and updater unchanged), and its
     snapshots are tagged `-mac`.
@@ -185,6 +190,8 @@ def host_name() -> str:
     if is_mac():
         return DEFAULT_PRIMARY
     fallback = sanitize(socket.gethostname().split(".")[0]) or "host"
+    if fallback == DEFAULT_PRIMARY:  # only macOS is ever `mac` by default (EC-7)
+        return validate_host(f"h-{fallback}")
     try:
         return validate_host(fallback)
     except HostError:
@@ -286,16 +293,18 @@ def core_version() -> str:
     """The installed Foundry version from the app's package.json — no server needed.
 
     `release.generation`.`release.build` (14.369), as the snapshot names have always
-    carried it; "unknown" when the app cannot be read."""
+    carried it; "unknown" when the app cannot be read or the version is not all digits
+    and dots — the snapshot-name parser reads `fvtt15.0-beta-mac` as host `beta-mac`."""
     try:
         pkg = json.loads(app_package_json().read_text(encoding="utf-8"))
         rel = pkg.get("release") or {}
         if rel.get("generation") is not None and rel.get("build") is not None:
-            return f"{rel['generation']}.{rel['build']}"
-        ver = pkg.get("version")
-        return str(ver) if ver else "unknown"
+            ver = f"{rel['generation']}.{rel['build']}"
+        else:
+            ver = str(pkg.get("version") or "")
     except (OSError, ValueError, AttributeError):
         return "unknown"
+    return ver if re.fullmatch(r"[0-9.]+", ver) else "unknown"
 
 
 # ── process control ──────────────────────────────────────────────────────────
@@ -324,7 +333,9 @@ def _mac_bundle() -> Path | None:
 
 
 def _linux_pattern() -> str:
-    return f"main.js --dataPath={foundry_data()}"
+    """`pgrep -f` ERE for this data root's `node main.js`. The path is escaped and must end
+    at a space or the end of the line, so /d/foundry never matches /d/foundry-test (EC-4)."""
+    return rf"main\.js --dataPath={re.escape(str(foundry_data()))}( |$)"
 
 
 def pid() -> int | None:
@@ -338,6 +349,9 @@ def pid() -> int | None:
         return None
 
 
+HOOK_TIMEOUT = 30  # seconds a PENTARYN_START_CMD / PENTARYN_STOP_CMD hook may take
+
+
 def _hook(name: str) -> str | None:
     return get(name)
 
@@ -349,7 +363,11 @@ def start() -> None:
     (BOSS's supervisor — the whole story), else a detached `node main.js`."""
     cmd = _hook("PENTARYN_START_CMD")
     if cmd:
-        subprocess.run(["bash", "-c", cmd], check=True)
+        try:
+            subprocess.run(["bash", "-c", cmd], check=True, timeout=HOOK_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            raise HostError(f"PENTARYN_START_CMD did not return within {HOOK_TIMEOUT}s "
+                            "(it must start Foundry and return promptly)") from None
         return
     if is_mac():
         bundle = _mac_bundle()
@@ -375,10 +393,16 @@ def request_stop() -> bool:
     """Ask politely (a graceful quit closes LevelDB cleanly). True if the ask was delivered."""
     cmd = _hook("PENTARYN_STOP_CMD")
     if cmd:
-        return subprocess.run(["bash", "-c", cmd]).returncode == 0
+        try:
+            return subprocess.run(["bash", "-c", cmd], timeout=HOOK_TIMEOUT).returncode == 0
+        except subprocess.TimeoutExpired:
+            return False  # a hung hook is not delivered — stop() forces instead
     if is_mac():
-        return subprocess.run(["osascript", "-e", f'quit app "{MAC_APP_NAME}"'],
-                              capture_output=True, text=True, timeout=30).returncode == 0
+        try:
+            return subprocess.run(["osascript", "-e", f'quit app "{MAC_APP_NAME}"'],
+                                  capture_output=True, text=True, timeout=30).returncode == 0
+        except subprocess.TimeoutExpired:
+            return False  # a hung quit is not delivered — stop() forces instead
     p = pid()
     if p is None:
         return True
@@ -412,6 +436,19 @@ def stop(timeout: float = 30) -> None:
             return
         time.sleep(1.0)
     force_stop()
+
+
+# ── tools ────────────────────────────────────────────────────────────────────
+
+def node() -> str:
+    """The Node.js to run: PATH first, then Homebrew's (launchd jobs lack it on PATH),
+    else plain ``node`` so the caller's spawn fails with a nameable error."""
+    found = shutil.which("node")
+    if found:
+        return found
+    if HOMEBREW_NODE.exists():
+        return str(HOMEBREW_NODE)
+    return "node"
 
 
 # ── clipboard ────────────────────────────────────────────────────────────────

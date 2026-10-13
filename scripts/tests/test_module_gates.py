@@ -67,6 +67,26 @@ def test_gate_tables_agree():
     assert set(cfg.ModuleSpec.CHECKS) == set(modules._CHECKS) == set(modules._GATES)
 
 
+def test_spec_rejects_the_none_check_M14():
+    """M14: 'none' is no gate — nothing dispatches it, so a spec naming it would sync
+    unproved. It is an unknown check like any other."""
+    with pytest.raises(ValueError, match="none"):
+        cfg.ModuleSpec("zz-mod", check="none")
+    with pytest.raises(ValueError, match="none"):
+        cfg.ModuleSpec("zz-mod", check=("parse", "none"))
+
+
+def test_run_gate_is_the_public_prose_runner(tmp_path, capsys):
+    """py-blueprint-MAINT-12: callers outside ops (new_module.run_checks) use `run_gate`, not
+    the private `_CHECKS` table. Same rc and output as the table's runner; an unknown gate
+    is a ValueError naming it, never a bare KeyError."""
+    spec = TmpSpec(_module(tmp_path, BROKEN), check=("imports",))
+    assert modules.run_gate(spec, "imports") == 1
+    assert "alpha" in capsys.readouterr().out
+    with pytest.raises(ValueError, match="no-such-gate"):
+        modules.run_gate(spec, "no-such-gate")
+
+
 def test_prose_and_data_agree(tmp_path, capsys):
     spec = TmpSpec(_module(tmp_path, BROKEN), check=("imports",))
     rc = modules._check_imports(spec)
@@ -237,3 +257,114 @@ def test_node_test_runs_from_the_module_folder(tmp_path):
                                               'process.exit(existsSync("module.json") ? 0 : 5);\n'})
     res = modules._gate_node_test(TmpSpec(root, check=("node-test",)), capture=True)
     assert res.ok, res.problems
+
+
+# ── malformed JSON (final-review py-ops M3) ───────────────────────────────────
+
+def _malformed_manifest(tmp_path):
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n"})
+    (root / "module.json").write_text('{"id": "pentaryn-demo", ', encoding="utf-8")
+    return root
+
+
+def test_parse_gate_checks_json_even_without_node_M3(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    res = modules._gate_parse(TmpSpec(_malformed_manifest(tmp_path), check=("parse",)))
+    assert res.ok is False and not res.skipped
+    assert "malformed JSON in module.json" in res.summary
+
+
+def test_parse_gate_checks_a_lang_file_without_node_M3(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n", "lang/en.json": "{,}"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False and "malformed JSON in lang/en.json" in res.summary
+
+
+def test_parse_gate_still_skips_syntax_without_node_M3(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is True and res.skipped
+
+
+# ── every language file (final-review py-ops EXT-4) ───────────────────────────
+
+def test_parse_gate_checks_a_declared_language_path_EXT_4(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n", "i18n/fr.json": "{,}"},
+                   manifest={"id": "pentaryn-demo", "esmodules": ["main.mjs"],
+                             "languages": [{"lang": "fr", "path": "i18n/fr.json"}]})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False and "malformed JSON in i18n/fr.json" in res.summary
+
+
+def test_parse_gate_checks_every_lang_file_on_disk_EXT_4(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n",
+                              "lang/en.json": "{}", "lang/fr.json": "{,}"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False and "malformed JSON in lang/fr.json" in res.summary
+
+
+def test_parse_gate_leaves_a_missing_declared_language_to_imports_EXT_4(tmp_path, monkeypatch):
+    monkeypatch.setattr(modules, "_node_available", lambda: False)
+    root = _module(tmp_path, {"main.mjs": "export const a = 1;\n", "lang/en.json": "{}"},
+                   manifest={"id": "pentaryn-demo", "esmodules": ["main.mjs"],
+                             "languages": [{"lang": "en", "path": "lang/en.json"},
+                                           {"lang": "de", "path": "lang/de.json"}]})
+    assert modules._gate_parse(TmpSpec(root, check=("parse",))).ok is True
+    res = modules._gate_imports(TmpSpec(root, check=("imports",)))
+    assert any("module.json declares lang/de.json" in p for p in res.problems)
+
+
+def test_imports_gate_reports_a_malformed_manifest_M3(tmp_path):
+    res = modules._gate_imports(TmpSpec(_malformed_manifest(tmp_path), check=("imports",)))
+    assert res.ok is False
+    assert any("module.json is malformed JSON" in p for p in res.problems)
+
+
+# ── parallel parse gate (final-review py-ops perf-1) ──────────────────────────
+
+def _fake_node(monkeypatch, failing: dict[str, str], barrier=None):
+    """Stand in for `node --check`: fail the named files, optionally rendezvous first."""
+    import subprocess
+    import threading
+
+    monkeypatch.setattr(modules, "_node_available", lambda: True)
+    monkeypatch.setattr(modules.os, "cpu_count", lambda: 4)
+    met = []
+
+    def fake(f):
+        if barrier is not None:
+            try:
+                barrier.wait()
+                met.append(threading.get_ident())
+            except threading.BrokenBarrierError:
+                pass
+        err = failing.get(f.name)
+        return subprocess.CompletedProcess(["node", "--check", str(f)],
+                                           1 if err else 0, "", err or "")
+
+    monkeypatch.setattr(modules, "_node_check", fake)
+    return met
+
+
+def test_parse_gate_runs_node_check_concurrently_perf_1(tmp_path, monkeypatch):
+    import threading
+
+    root = _module(tmp_path, {"a.mjs": "", "b.mjs": ""})
+    barrier = threading.Barrier(2, timeout=2)
+    met = _fake_node(monkeypatch, {}, barrier)
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is True and res.counts == {"files": 2}
+    assert len(met) == 2, "node --check ran one file at a time"
+
+
+def test_parse_gate_reports_the_first_failure_in_sorted_order_perf_1(tmp_path, monkeypatch):
+    root = _module(tmp_path, {"a.mjs": "", "b.mjs": "", "c.mjs": ""})
+    _fake_node(monkeypatch, {"b.mjs": "b broke\n", "c.mjs": "c broke\n"})
+    res = modules._gate_parse(TmpSpec(root, check=("parse",)))
+    assert res.ok is False
+    assert res.summary == f"syntax error in {root / 'b.mjs'}"
+    assert res.problems == ["b broke"]

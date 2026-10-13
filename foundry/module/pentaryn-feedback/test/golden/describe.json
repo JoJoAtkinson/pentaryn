@@ -97,7 +97,7 @@
         "flags.pentaryn-feedback.queue",
         "Data/pentaryn-feedback/<worldId>/<id>.json"
       ],
-      "doc": "Active GM only (any sender may ask): write every report waiting on that user's queue to its file and delete it from the flag. Idempotent — a report already on disk is never overwritten."
+      "doc": "Active GM only (that user or a GM may ask; another player gets REFUSED): write every report waiting on that user's queue to its file and delete it from the flag. Idempotent — a report already on disk is never overwritten."
     },
     {
       "path": "list",

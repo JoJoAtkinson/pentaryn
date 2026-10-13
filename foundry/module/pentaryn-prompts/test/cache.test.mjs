@@ -33,7 +33,7 @@ test("INVALIDATING_HOOKS, pinned", () => {
   assert.deepEqual(INVALIDATING_HOOKS, ["createToken", "updateToken", "deleteToken", "createWall", "updateWall", "deleteWall",
     "createNote", "updateNote", "deleteNote", "createAmbientLight", "updateAmbientLight", "deleteAmbientLight",
     "createTile", "updateTile", "deleteTile", "createRegion", "updateRegion", "deleteRegion", "updateScene", "deleteScene",
-    "updateActor", "createItem", "updateItem", "deleteItem", "updateFolder", "updateJournalEntry", "updateJournalEntryPage",
+    "updateActor", "deleteActor", "createItem", "updateItem", "deleteItem", "updateFolder", "updateJournalEntry", "updateJournalEntryPage",
     "updateSetting"]);
 });
 

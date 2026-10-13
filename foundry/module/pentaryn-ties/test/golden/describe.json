@@ -272,7 +272,7 @@
         "flags.pentaryn-ties.ties"
       ],
       "legacy": true,
-      "doc": "Set just the notes on an existing edge; false when the edge is not there."
+      "doc": "Set just the notes on an existing edge; false when the edge is not there or the write is refused."
     },
     {
       "path": "remove",
@@ -566,7 +566,7 @@
           "type": "Actor"
         }
       ],
-      "returns": "[{ key, label? }]",
+      "returns": "[{ key, label, seeded }]",
       "gm": false,
       "writes": false,
       "query": false,
@@ -657,7 +657,8 @@
         {
           "name": "subject",
           "type": "Actor|Token|id|uuid|exact name",
-          "doc": "the creature or person studied"
+          "doc": "the creature or person studied",
+          "resolve": false
         }
       ],
       "returns": "{ kind, available, spent, content, … }",
@@ -1004,7 +1005,8 @@
         {
           "name": "subject",
           "type": "Actor|Token|id|uuid|exact name",
-          "doc": "the creature or person studied"
+          "doc": "the creature or person studied",
+          "resolve": false
         }
       ],
       "returns": "[{ id, label, skill, dc, available, … }]",
@@ -1709,7 +1711,7 @@
           "optional": true
         }
       ],
-      "returns": "[record]",
+      "returns": "{ matches, wouldBe, canCreate, collidesWith }",
       "gm": false,
       "writes": false,
       "query": false,
@@ -1771,7 +1773,7 @@
           "optional": true
         }
       ],
-      "returns": "Promise<{ ok, reason? }>",
+      "returns": "{ ok, ids } | { ok: false, reason }",
       "gm": true,
       "writes": true,
       "query": false,
@@ -1837,7 +1839,7 @@
           "doc": "an attribute id or title (id wins; a miss is refused, never created)"
         }
       ],
-      "returns": "[Actor]",
+      "returns": "[{ actor, extra, missing }]",
       "gm": false,
       "writes": false,
       "query": false,
@@ -1962,7 +1964,7 @@
     {
       "path": "attributes.unreviewed",
       "params": [],
-      "returns": "[entry]",
+      "returns": "[{ id, title, reviewState, touched, modifiedAt, createdAt }]",
       "gm": false,
       "writes": false,
       "query": false,
@@ -2160,7 +2162,8 @@
         {
           "name": "subject",
           "type": "Actor|Token|id|uuid|exact name",
-          "doc": "the creature or person studied"
+          "doc": "the creature or person studied",
+          "resolve": false
         }
       ],
       "returns": "[{ group, key, ns, attrId, icon, source, text }]",
@@ -2252,8 +2255,8 @@
       "params": [
         {
           "name": "character",
-          "type": "Actor",
-          "doc": "a player character"
+          "type": "Actor|Token|id|uuid|exact name",
+          "doc": "a player character; a token marks its world actor, a miss is refused invalid (R3)"
         },
         {
           "name": "attr",
@@ -2496,7 +2499,6 @@
     "writes": [
       "flags.pentaryn-ties.ties",
       "flags.pentaryn-ties.known",
-      "flags.pentaryn-ties.knownCategories",
       "flags.pentaryn-ties.granted",
       "flags.pentaryn-ties.studied",
       "flags.pentaryn-ties.beliefs",
@@ -2509,10 +2511,11 @@
       "flags.pentaryn-ties.attributesOff",
       "flags.pentaryn-ties.conceal",
       "flags.pentaryn-ties.worn",
-      "flags.pentaryn-ties.mark",
       "flags.pentaryn-ties.attrSelected"
     ],
     "reads": [
+      "flags.pentaryn-ties.knownCategories",
+      "flags.pentaryn-ties.mark",
       "flags.item-piles.data",
       "flags.dnd5e.isPolymorphed"
     ]

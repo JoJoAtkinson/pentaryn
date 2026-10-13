@@ -47,3 +47,69 @@ test("debug lines only with CONFIG.debug on: show()'s failed ping", async t => {
     F.canvas.ping = ping;
   }
 });
+
+test("R5 (DP9): an @Embed that fails to resolve prints a debug line only with debug on", async () => {
+  const prev = globalThis.fromUuid;
+  globalThis.fromUuid = async uuid => {
+    if (uuid.startsWith("Compendium.x.y.JournalEntry.zz")) throw new Error("gone");
+    return prev(uuid);
+  };
+  try {
+    let html;
+    const off = await debugLines(async () => { html = await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntry.zz1]"); });
+    assert.deepEqual(off, []);
+    assert.equal(html, "");
+    F.CONFIG.debug[MODULE] = true;
+    const on = await debugLines(async () => { html = await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntry.zz2]"); });
+    assert.deepEqual(on, ["pentaryn-prompts | @Embed Compendium.x.y.JournalEntry.zz2 not resolved (shown blank) Error(gone)"]);
+    assert.equal(html, "");
+  } finally {
+    delete F.CONFIG.debug[MODULE];
+    globalThis.fromUuid = prev;
+  }
+});
+
+test("R5-note: a failed @Embed is not cached as blank — the next render tries again; a genuine empty stays cached", async () => {
+  const prev = globalThis.fromUuid;
+  const calls = { flaky: 0, empty: 0 };
+  globalThis.fromUuid = async uuid => {
+    if (uuid === "Compendium.x.y.JournalEntryPage.flaky") {
+      calls.flaky++;
+      if (calls.flaky === 1) throw new Error("pack not loaded");
+      return { text: { content: "<p>loaded now</p>" } };
+    }
+    if (uuid === "Compendium.x.y.JournalEntryPage.blank") { calls.empty++; return { text: { content: "" } }; }
+    return prev(uuid);
+  };
+  try {
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.flaky]"), "");
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.flaky]"), "<p>loaded now</p>");
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.flaky]"), "<p>loaded now</p>");
+    assert.equal(calls.flaky, 2);
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.blank]"), "");
+    assert.equal(await M.resolveEmbeds("@Embed[Compendium.x.y.JournalEntryPage.blank]"), "");
+    assert.equal(calls.empty, 1);
+  } finally {
+    globalThis.fromUuid = prev;
+  }
+});
+
+test("R5 (DP9): a hex grid whose getOffset throws keeps the item's squares and prints a debug line only with debug on", async () => {
+  const grid = { distance: 5, size: 100, isHexagonal: true, isGridless: false,
+    getOffset() { throw new Error("no offset"); }, offsetToCube: o => ({ q: o.i, r: o.j }) };
+  const s = addScene(F, { id: "sHexDbg", name: "HexDbg", grid, notes: [{ id: "n1", x: 150, y: 150, text: "a note" }] });
+  try {
+    let items;
+    const off = await debugLines(() => { items = M.sceneItems(s); });
+    assert.deepEqual(off, []);
+    const before = items.map(it => it.squares);
+    F.CONFIG.debug[MODULE] = true;
+    const on = await debugLines(() => { items = M.sceneItems(s); });
+    assert.ok(on.length >= 1);
+    assert.ok(on.every(l => l === "pentaryn-prompts | hex offset of an item centre (using its squares) Error(no offset)"), on.join("\n"));
+    assert.deepEqual(items.map(it => it.squares), before);
+  } finally {
+    delete F.CONFIG.debug[MODULE];
+    F.game.scenes.delete("sHexDbg");
+  }
+});

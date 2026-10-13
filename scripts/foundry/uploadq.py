@@ -28,6 +28,10 @@ Everything lives in the data volume's ``.pentaryn-tmp/`` (outside every snapshot
   blocking backup/restore draining the queue first). Locks are ``flock`` locks, so a
   process that dies releases them: "locked" always means "someone is uploading now".
   Order is always build → upload, never the reverse, so they cannot deadlock.
+* ``dropped-parents.json`` — {dropped job: the parent it extended}, written under
+  ``snapshot-upload.lock`` when a job is dropped. A build that read the queue before the
+  drop saves its job with ``parent`` = the dropped name; the uploader resolves it through
+  this map (following chains) so that job still uploads linked.
 * ``upload-status.json`` — the last upload's state for ``make foundry-cloud``;
   ``upload.log`` — the background process's own output (rclone's progress).
 """
@@ -57,6 +61,8 @@ BUILD_LOCK = "snapshot-build.lock"
 UPLOAD_LOCK = "snapshot-upload.lock"
 STATUS_FILE = "upload-status.json"
 LOG_FILE = "upload.log"
+DROPPED_PARENTS = "dropped-parents.json"
+DROPPED_KEEP = 64           # the newest entries kept: drops are rare, the map stays small
 # A dropped job's world tar is moved here (the newest only): with no later job queued it
 # may be the only copy of that world state once Foundry runs again.
 INCOMPLETE = "incomplete"
@@ -222,7 +228,15 @@ def pending() -> list[Job]:
             jobs.append(Job(**known))
         except (OSError, ValueError, TypeError):
             continue
-    return sorted(jobs, key=lambda j: (j.created or 0.0, j.name))
+    return sorted(jobs, key=lambda j: (_created_key(j.created), j.name))
+
+
+def _created_key(created) -> float:
+    """A job's `created` as a sort key: a real number as is, anything else (null, a
+    string from a hand-edited or foreign job file) as 0.0 — sorted first, never dropped."""
+    if isinstance(created, (int, float)) and not isinstance(created, bool):
+        return float(created)
+    return 0.0
 
 
 def _default(f):
@@ -275,6 +289,41 @@ def keep_incomplete(job: Job) -> Path | None:
     dest = d / job.name
     os.replace(job.tar, dest)
     return dest
+
+
+def _dropped_parents() -> dict[str, str | None]:
+    try:
+        data = json.loads((_dir() / DROPPED_PARENTS).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {k: v for k, v in data.items()
+            if isinstance(k, str) and (v is None or isinstance(v, str))}
+
+
+def record_dropped(name: str, parent: str | None) -> None:
+    """Remember that `name` left the queue without landing and extended `parent`. Call
+    under UPLOAD_LOCK (the only writer)."""
+    data = _dropped_parents()
+    data.pop(name, None)
+    data[name] = parent
+    data = dict(list(data.items())[-DROPPED_KEEP:])
+    p = tmp_dir() / DROPPED_PARENTS
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, p)
+
+
+def resolve_parent(parent: str | None) -> str | None:
+    """`parent` with every dropped job in the way skipped: a job built to extend a job
+    that was dropped really extends what that one extended (and so on down a chain)."""
+    data = _dropped_parents()
+    seen = set()
+    while parent in data and parent not in seen:
+        seen.add(parent)
+        parent = data[parent]
+    return parent
 
 
 def incomplete() -> list[Path]:

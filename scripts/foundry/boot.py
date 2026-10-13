@@ -246,7 +246,7 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
                         newest=is_newest)
 
     # 10.
-    return _prompt(offer, rolling, state, warning, relation, st=st)
+    return _prompt(offer, rolling, state, warning, relation, st=st, is_newest=is_newest)
 
 
 def _bundle_cost(st, snap: Snapshot):
@@ -291,12 +291,14 @@ def _bundle_lines(cost) -> list[str]:
     return lines
 
 
-def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootState,
-            warning: str | None, relation: str = "newer", *, st=None) -> Decision:
-    """Ask about `newest` — the snapshot on offer (normally the newest in the cloud)."""
+def _prompt(offer: Snapshot, rolling: list[Snapshot], state: bootstate.BootState,
+            warning: str | None, relation: str = "newer", *, st=None,
+            is_newest: bool = True) -> Decision:
+    """Ask about `offer` — the snapshot on offer: the newest in the cloud, or (is_newest
+    False) the pending one an earlier no-terminal boot noticed, which is not (review EC-6)."""
     others = [s for s in sorted(rolling, key=lambda s: (s.mtime, s.name), reverse=True)
-              if s.name != newest.name][:MAX_OTHERS]
-    cost = _bundle_cost(st, newest)
+              if s.name != offer.name][:MAX_OTHERS]
+    cost = _bundle_cost(st, offer)
     # A restore that would refuse (a bundle it needs is not in the cloud) is never the
     # Enter default (review R5); `l` still tries it, and it refuses with nothing touched.
     refuses = bool(_missing(cost))
@@ -314,11 +316,14 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
             "aside this world's work (archived first); keeping local is the default:")
     else:
         say("▸ cloud has a newer world snapshot than this machine's world:")
-    if state.pending_newer == newest.name:
+    if not is_newest:
+        say("  (an earlier boot without a terminal noticed it; it is not the newest cloud "
+            "snapshot)")
+    elif state.pending_newer == offer.name:
         say("  (a boot without a terminal noticed it earlier)")
     print()
-    say(f"    cloud    {newest.name}   {newest.host_label}   {_utc(newest.mtime)}   "
-        f"{newest.core or '?'}   {_gb(newest.size)}")
+    say(f"    cloud    {offer.name}   {offer.host_label}   {_utc(offer.mtime)}   "
+        f"{offer.core or '?'}   {_gb(offer.size)}")
     for line in _bundle_lines(cost):
         say(f"    {line}")
     if state.based_on:
@@ -327,8 +332,8 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
     else:
         say("    local    (no record of which snapshot this world is based on)")
     mine = host.core_version()
-    if newest.core and newest.core != "unknown" and mine != "unknown" and newest.core != mine:
-        say(f"  ! snapshot is from Foundry {newest.core}, this machine runs {mine} — Foundry "
+    if offer.core and offer.core != "unknown" and mine != "unknown" and offer.core != mine:
+        say(f"  ! snapshot is from Foundry {offer.core}, this machine runs {mine} — Foundry "
             "will migrate on first launch; a major-generation jump may not be reversible")
     if others:
         print()
@@ -337,10 +342,16 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
             say(f"    {i}  {s.name}   {s.host_label}   {_utc(s.mtime)}")
     say("  (untagged and major-release snapshots: make foundry-restore)")
     print()
-    question = ("  boot from latest or keep [local]?  (Enter = local, l/latest, k/local, "
-                "or a number)  > " if local_default else
-                "  boot from [latest] or keep local?  (Enter = latest, l/latest, k/local, "
-                "or a number)  > ")
+    if not is_newest:
+        question = ("  boot from the offered snapshot or keep [local]?  (Enter = local, "
+                    "l/take, k/local, or a number)  > " if local_default else
+                    "  boot from [the offered snapshot] or keep local?  (Enter = take, "
+                    "l/take, k/local, or a number)  > ")
+    else:
+        question = ("  boot from latest or keep [local]?  (Enter = local, l/latest, k/local, "
+                    "or a number)  > " if local_default else
+                    "  boot from [latest] or keep local?  (Enter = latest, l/latest, k/local, "
+                    "or a number)  > ")
     for _ in range(3):
         try:
             ans = input(question).strip().lower()
@@ -354,16 +365,16 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
                             "lacks — asked again at the next boot", warning=warning)
         if ans == "":
             ans = "k" if local_default else "l"
-        if ans in ("l", "latest"):
-            return Decision("restore", newest, "you chose the offered snapshot", warning=warning)
+        if ans in ("l", "latest", "take"):
+            return Decision("restore", offer, "you chose the offered snapshot", warning=warning)
         if ans in ("k", "local", "keep"):
             return Decision("local", None, "you chose to keep the local world",
-                            warning=warning, remember_keep_local=newest.name,
-                            remember_keep_local_mtime=newest.mtime)
+                            warning=warning, remember_keep_local=offer.name,
+                            remember_keep_local_mtime=offer.mtime)
         if ans.isdigit():
             n = int(ans)
             if n == 1:
-                return Decision("restore", newest, "you chose the offered snapshot",
+                return Decision("restore", offer, "you chose the offered snapshot",
                                 warning=warning)
             if 2 <= n < 2 + len(others):
                 return Decision("restore", others[n - 2], f"you chose #{n}", warning=warning)

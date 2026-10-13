@@ -37,7 +37,7 @@
   50% { box-shadow: 0 0 0 3px #fff3c4, 0 0 22px #f2d27aee; }
 }
 .extended-combat-hud .pentaryn-combat-followup.pentaryn-combat-new {
-  animation: pentaryn-combat-pulse 0.8s ease-in-out infinite;   /* until the pointer reaches the bar, or 12 s (hud.mjs pulseNew) */
+  animation: pentaryn-combat-pulse 0.8s ease-in-out infinite;   /* until the pointer reaches the bar, or 12 s (hud/bars.mjs pulseNew) */
 }
 
 /* A toggle that is on (Reckless Attack). */

@@ -376,14 +376,44 @@ export function planEnsure(title, registry) {
   return { action: "create", id };
 }
 
+/** A `kind:` slug: an actor id, so case is kept — `[A-Za-z0-9]` only, cut at 64 like `attrIdOf`. */
+const kindSlugOf = raw => String(raw ?? "").replace(/[^A-Za-z0-9]/g, "").slice(0, 64);
+
+/**
+ * R1 [declared]: the dead `kind:` rows written while `clampAttribute` lowercased the slug —
+ * `kind:abc…` for the actor `AbC…` — as `[{ from, to }]`. A row is mapped only when its slug is
+ * not a live actor id but equals exactly ONE of `actorIds` ignoring case, and no entry already has
+ * the real id (that one is the authored row; the dead one is left for the GM). Anything else — no
+ * match, two actors differing only in case — is left alone. Pure; `repairKindIds` writes it.
+ */
+export function planKindIdRepairs(registry, actorIds) {
+  const list = readRegistry(registry);
+  const live = new Set((Array.isArray(actorIds) ? actorIds : []).filter(id => typeof id === "string"));
+  const byLower = new Map();
+  for (const id of live) byLower.set(id.toLowerCase(), [...(byLower.get(id.toLowerCase()) ?? []), id]);
+  const taken = new Set(list.map(e => e.id));
+  const out = [];
+  for (const e of list) {
+    if (derivedNamespace(e.id) !== "kind") continue;
+    const slug = e.id.slice("kind:".length);
+    if (live.has(slug)) continue;
+    const hits = byLower.get(slug.toLowerCase()) ?? [];
+    if (hits.length !== 1 || taken.has(`kind:${hits[0]}`)) continue;
+    taken.add(`kind:${hits[0]}`);
+    out.push({ from: e.id, to: `kind:${hits[0]}` });
+  }
+  return out;
+}
+
 /** One registry entry, sanitised. Never throws; an entry with no usable id is dropped. */
 export function clampAttribute(entry) {
   if (!entry || typeof entry !== "object") return null;
   const rawId = typeof entry.id === "string" ? entry.id.trim() : "";
   // a derived id keeps its namespace verbatim; an authored one is re-normalised, so a
-  // hand-edited setting cannot smuggle in an id the autocomplete could never have produced
+  // hand-edited setting cannot smuggle in an id the autocomplete could never have produced.
+  // R1 [declared]: a `kind:` slug is an ACTOR id, so it keeps its case — only sanitised and capped
   const ns = derivedNamespace(rawId);
-  const id = ns ? `${ns}:${attrIdOf(rawId.slice(ns.length + 1))}` : attrIdOf(rawId);
+  const id = ns ? `${ns}:${(ns === "kind" ? kindSlugOf : attrIdOf)(rawId.slice(ns.length + 1))}` : attrIdOf(rawId);
   if (!id || (ns && id === `${ns}:`)) return null;
   const title = str(entry.title, ATTR_TITLE_MAX).trim();
   const degenerate = !!ns && NEVER_ADVANTAGE.has(ns);

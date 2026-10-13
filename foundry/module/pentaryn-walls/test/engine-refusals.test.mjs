@@ -42,3 +42,16 @@ test("refusal sweep with iterCap 0 still diagnoses every end (no enumerate ran)"
   const capped = runEngine(g, { gridSize: 100, runId: "r", iterCap: 0 }).refusals;
   assert.deepEqual(capped, runEngine(g, { gridSize: 100, runId: "r" }).refusals);
 });
+
+// walls-EXT-8: F1's "aligned but too far" and E1's "an aligned wall lies along this line" are one
+// finding, reported once. diagnose matched them by regex-parsing `(id)` out of E1's English text,
+// so an id with a space or a parenthesis slipped past and the finding was reported twice. castRay
+// now hands back the wall id with its refusal and diagnose compares ids.
+for (const id of ["far", "east wall", "w(2)"]) {
+  test(`walls-EXT-8: aligned-but-too-far is reported once for wall id ${JSON.stringify(id)}`, () => {
+    const g = [w("stub", [0, 0, 100, 0]), w(id, [900, 0, 1000, 0])];
+    const why = analyze(g, { gridSize: 100 }).refusals.find(r => r.wall === "stub" && r.at[0] === 100).why;
+    assert.equal(why, `aligned with ${id} but 8.0 squares apart (max 6); aligned with ${id} but 9.0 squares apart (max 6)`);
+    assert.equal(runEngine(g, { gridSize: 100, runId: "r" }).refusals.find(r => r.wall === "stub" && r.at[0] === 100).why, why);
+  });
+}

@@ -10,7 +10,7 @@
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
-import { aoeFlags, MULTIPLIERS, playerStatus, applicableRows, hydrateDamages } from "./core.mjs";
+import { aoeFlags, MULTIPLIERS, MULTIPLIER_LABELS, playerStatus, applicableRows, hydrateDamages, areaLocked } from "./core.mjs";
 import { setting } from "./settings.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -18,7 +18,6 @@ const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 let context = null;
 /** -9: the listeners go through the kit's pass-through guard, so a rejected roll or Apply is logged with the module prefix. */
 const listenerGuard = (label, fn) => (context?.reg ? context.reg.guard(label, fn) : fn);
-const MULT_LABEL = { 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" };
 
 function preview(row, res, message = null) {
   if (row.multiplier === null || row.multiplier === undefined) return "—";
@@ -40,25 +39,32 @@ function saveCell(row) {
       ? `<span class="pa-wait" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.WaitingTip"))}"><i class="fa-solid fa-hourglass-half" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.Waiting"))}</span>`
       : `<span class="pa-wait">—</span>`;
   }
+  // R5: no DC, so neither pass nor fail — the GM reads the total and picks the multiplier.
+  if (row.save.success === null || row.save.success === undefined) {
+    return `<span class="pa-wait" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.NoDcTip"))}"><i class="fa-solid fa-question" inert></i> ${esc(row.save.total)}</span>`;
+  }
   const cls = row.save.success ? "pa-pass" : "pa-fail";
   const icon = row.save.success ? "fa-check" : "fa-xmark";
   return `<span class="${cls}"><i class="fa-solid ${icon}" inert></i> ${esc(row.save.total)}</span>`;
 }
 
 function rowHTML(row, res, message = null) {
-  const opts = MULTIPLIERS.map(m => `<option value="${m}" ${row.multiplier === m ? "selected" : ""}>${MULT_LABEL[m]}</option>`).join("");
+  const opts = MULTIPLIERS.map(m => `<option value="${m}" ${row.multiplier === m ? "selected" : ""}>${MULTIPLIER_LABELS[m]}</option>`).join("");
   const blank = row.multiplier === null || row.multiplier === undefined ? `<option value="" selected>?</option>` : "";
   const locked = row.applied || res.superseded ? "disabled" : "";
   const extra = row.kind === "auto"
     ? `<a data-pa="reroll" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.Reroll"))}"><i class="fa-solid fa-dice-d20" inert></i></a>`
     : `<a data-pa="rollfor" data-row="${esc(row.id)}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.RollFor"))}"><i class="fa-solid fa-user-shield" inert></i></a>`;
+  // aoe-careful-select: the GM protects or unprotects any open row by hand.
+  const shield = row.applied || res.superseded || !setting("carefulSpell") ? ""
+    : `<a data-pa="protect" data-row="${esc(row.id)}" class="pa-protect${row.protected ? " on" : ""}" data-tooltip="${esc(_loc(row.protected ? "PENTARYN_AOE.Careful.Unprotect" : "PENTARYN_AOE.Careful.Protect"))}"><i class="fa-solid fa-shield-halved" inert></i></a>`;
   const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(_loc("PENTARYN_AOE.Tray.Applied"))}</span>` : preview(row, res, message);
   return `<li class="pa-row ${row.applied ? "applied" : ""}" data-row="${esc(row.id)}">
     <input type="checkbox" data-pa="tick" ${row.apply ? "checked" : ""} ${locked}>
     <img src="${esc(row.img ?? "icons/svg/mystery-man.svg")}" alt="">
     <span class="pa-name" data-tooltip="${esc(row.kind === "manual" ? _loc("PENTARYN_AOE.Tray.Manual") : _loc("PENTARYN_AOE.Tray.Auto"))}">${esc(row.name)}${row.caster ? ` <em>(${esc(_loc("PENTARYN_AOE.Tray.Caster"))})</em>` : ""}</span>
     <span class="pa-save">${saveCell(row)}</span>
-    ${row.applied ? "" : extra}
+    ${row.applied ? "" : extra}${shield}
     <select data-pa="mult" ${locked}>${blank}${opts}</select>
     <span class="pa-amount">${status}</span>
   </li>`;
@@ -67,8 +73,11 @@ function rowHTML(row, res, message = null) {
 export function trayHTML(res, message = null) {
   const ability = CONFIG.DND5E.abilities[res.ability]?.label ?? res.ability;
   const n = applicableRows(res.rows).length;
+  const guarded = res.rows.filter(r => r.protected).map(r => r.name);   // as the rows stand (the GM may toggle)
+  // aoe-edge-2: once superseded or partly applied, the area is fixed (resolve() refuses too).
+  const pickLock = areaLocked(res) ? ` disabled data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.AreaLocked"))}"` : "";
   const picker = (res.regions?.length ?? 0) > 1
-    ? `<select data-pa="region">${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
+    ? `<select data-pa="region"${pickLock}>${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
     : "";
   const body = res.rows.length
     ? `<ol class="pa-rows">${res.rows.map(r => rowHTML(r, res, message)).join("")}</ol>`
@@ -78,7 +87,7 @@ export function trayHTML(res, message = null) {
       <span class="pa-src">${esc(res.region ? _loc("PENTARYN_AOE.Tray.FromArea") : _loc("PENTARYN_AOE.Tray.FromTargets"))}</span>${picker}
     </div>
     ${res.superseded ? `<p class="pa-superseded">${esc(_loc("PENTARYN_AOE.Tray.Superseded"))}</p>` : ""}
-    ${res.careful?.names?.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Head", { names: res.careful.names.join(", ") }))}</p>` : ""}
+    ${guarded.length ? `<p class="pa-careful"><i class="fa-solid fa-shield-halved" inert></i> ${esc(_loc("PENTARYN_AOE.Careful.Head", { names: guarded.join(", ") }))}</p>` : ""}
     ${body}
     <div class="pa-buttons">
       <button type="button" data-pa="reroll-all" ${res.superseded ? "disabled" : ""}><i class="fa-solid fa-dice-d20" inert></i> ${esc(_loc("PENTARYN_AOE.Tray.RerollAll"))}</button>
@@ -129,7 +138,15 @@ function decorate(message, html) {
     const rowId = el.closest("[data-row]")?.dataset.row;
     if (el.dataset.pa === "tick") return context.exposed.setRow(message.id, rowId, { apply: el.checked });
     if (el.dataset.pa === "mult" && el.value !== "") return context.exposed.setRow(message.id, rowId, { multiplier: el.value });
-    if (el.dataset.pa === "region") return context.exposed.resolve(message.id, { regionId: el.value });
+    if (el.dataset.pa === "region") {
+      // aoe-edge-8: resolve() only runs on the active GM; elsewhere say so and show the area still in use.
+      if (!game.users.activeGM?.isSelf) {
+        ui.notifications.warn(_loc("PENTARYN_AOE.Tray.NotActiveGm"));
+        el.value = aoeFlags(message).resolution?.region ?? res.region ?? "";
+        return;
+      }
+      return context.exposed.resolve(message.id, { regionId: el.value });
+    }
   }));
   tray.addEventListener("click", listenerGuard("tray click", async ev => {
     const el = ev.target.closest("[data-pa]");
@@ -143,6 +160,7 @@ function decorate(message, html) {
       case "reroll": return context.exposed.rollNpcSaves(message.id, { rowIds: [rowId], force: true });
       case "rollfor": return context.exposed.rollForPlayer(message.id, rowId, { event: ev });
       case "ping": return context.exposed.pingPlayers(message.id);
+      case "protect": return context.exposed.setRow(message.id, rowId, { protected: !el.classList.contains("on") });
     }
   }));
 }

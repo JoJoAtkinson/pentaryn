@@ -37,12 +37,14 @@ published synchronously at `ready` (`pentaryn-cursors.ready` fires with it). Ask
 `game.pentaryn.cursors.describe()` (offline: `test/golden/describe.json`).
 
 - `current()` — the key on `#board` now, or `null`. `refresh()` — recompute and apply; returns the key.
-- `keys` — the frozen `KEYS` table. `keyFor({control, tool, templatesActive})` — pure, ignores the setting.
+- `keys` — the frozen `KEYS` table. `keyFor({control, tool, templatesActive})` — pure, ignores the setting; no state (or `null`) gives `null`.
 - `status()` — one read-only diagnosis of a wrong cursor:
   `{ enabled, key, control, tool, placementActive, boardCursor, dataset, imageSet, expected }`.
   `expected` is `keyFor`'s answer; `key` is what should be on the board (`null` while the setting is off).
   It writes nothing.
 - Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`, `uninstall()`.
+  `uninstall()` clears the board and keeps it clear: the wrapped `onChange`s, the preview listeners,
+  the `#board` observer and any pending tick do nothing until a hot re-import installs again.
 
 `document.getElementById("board").dataset.pentarynCursor` shows the key too.
 
@@ -97,7 +99,8 @@ To add a key (e.g. a GM wall cursor): add it to `KEYS` and a line to `keyFor()` 
 `CREDITS.md`), run the build (Files), and add the row to
 the `keyFor` table in `test/core.test.mjs`. The build fails unless the measured hotspot equals
 `KEYS[key].hotspot`, so a new glyph can't ship with a stale one — update `KEYS` to the printed
-value if the new one is right.
+value if the new one is right. A failed build writes no file at all, so `assets/cursors/` is never
+left half rebuilt.
 
 The key list is pinned exactly in several more places; miss one and the suite goes red with no
 hint why. A new key also has to change:
@@ -140,7 +143,7 @@ hint why. A new key also has to change:
 | `lib/` | vendored kit (`lib/kit.lock.json`) |
 | `assets/cursors/` | built `<key>.png`, `@2x`, `-pointer`, `-pointer@2x`, and the outlined `.svg` they came from. **Committed; do not hand-edit.** |
 | `scripts/foundry/cursors/src/` (repo, not shipped) | unmodified icon sources and credited alternates (`CREDITS.md`) |
-| `scripts/foundry/cursors/build.mjs` (repo, not shipped) | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. `--check-sources` (no resvg) proves every `KEYS` source exists; `scripts/tests/test_cursors_build.py` runs it. |
+| `scripts/foundry/cursors/build.mjs` (repo, not shipped) | rebuild after changing a glyph or colour in `KEYS`: `cd "$(mktemp -d)" && npm i @resvg/resvg-js@2.6.2 && node <repo>/scripts/foundry/cursors/build.mjs`. Fits each glyph to 26×26, adds the 2 px dark outline and 1 px white halo, measures the hotspot. `--check-sources` (no resvg) proves every `KEYS` source exists, every `extreme` is one of `EXTREMES` and every hotspot is two integers in 0..31 (the full build runs the same `checkKeys` first); `scripts/tests/test_cursors_build.py` runs it and `test/build-check.test.mjs` pins `checkKeys`. |
 | `test/` | node:test suites, goldens, fixtures, vendored test kit |
 
 ## Tests

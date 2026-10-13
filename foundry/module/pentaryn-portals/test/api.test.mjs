@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { boot } from "./fixtures/world.mjs";
-import { MODULE, VERSION, CONTRACT } from "../portals-core.mjs";
+import { MODULE, VERSION, CONTRACT, SNAP_DIR, NEW_TELEPORT_BEHAVIOR } from "../portals-core.mjs";
 import { MANIFEST, BADGE_ROWS, PARTY_ROWS } from "../api-manifest.mjs";
 import { buildApi, maxDepth, surfaceOf } from "../lib/api.mjs";
 import { makeLog } from "../lib/log.mjs";
@@ -80,4 +80,15 @@ test("describe() lists the hook registrations by label, and is plain JSON", () =
 
 test("trace() is the kit ring (empty with debug off)", () => {
   assert.deepEqual(published().trace(), []);
+});
+
+test("EXT-11: the snapshot and link rows quote SNAP_DIR and the new behavior's fade from portals-core, never a hand copy", async () => {
+  const row = path => MANIFEST.rows.find(r => r.path === path);
+  assert.ok(row("snapshot").sideEffects.some(s => s.includes(`${SNAP_DIR}/`)), "snapshot sideEffects names SNAP_DIR");
+  assert.ok(row("link").doc.includes(`fade ${NEW_TELEPORT_BEHAVIOR.system.transition.duration} ms`), "link doc names the fade duration");
+  // a constant change must move the docs too: the manifest derives both, it does not repeat the values
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../api-manifest.mjs", import.meta.url), "utf8");
+  assert.ok(!src.includes(SNAP_DIR), "api-manifest.mjs hand-copies SNAP_DIR");
+  assert.ok(!src.includes(String(NEW_TELEPORT_BEHAVIOR.system.transition.duration)), "api-manifest.mjs hand-copies the fade duration");
 });

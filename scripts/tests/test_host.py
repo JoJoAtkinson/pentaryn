@@ -71,6 +71,16 @@ def test_default_host_off_the_mac_is_the_sanitised_short_hostname(monkeypatch):
     assert host.host_is_default()
 
 
+@pytest.mark.parametrize("hostname", ["mac", "MAC.local", "Mac.tailnet.ts.net", "-mac-"])
+def test_a_non_mac_hostname_sanitising_to_mac_is_not_the_primary_ec7(monkeypatch, hostname):
+    """EC-7: only macOS is tagged `mac` by default; a Linux box named `mac` gets `h-mac`."""
+    monkeypatch.delenv("PENTARYN_HOST")
+    monkeypatch.delenv("PENTARYN_PRIMARY_HOST")
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host.socket, "gethostname", lambda: hostname)
+    assert (host.host_name(), host.role()) == ("h-mac", "alt")
+
+
 def test_the_mac_with_no_configuration_is_still_the_primary(monkeypatch):
     """Existing Mac behaviour is unchanged by default: tunnel and updater still run."""
     monkeypatch.delenv("PENTARYN_HOST")
@@ -237,6 +247,21 @@ def test_core_version_from_package_json(monkeypatch, tmp_path):
     assert host.core_version() == "unknown"
 
 
+@pytest.mark.parametrize("pkg", [
+    {"version": "15.0-beta"},
+    {"version": "v15"},
+    {"version": "15.400", "release": {"generation": "15-beta", "build": 1}},
+])
+def test_a_non_numeric_core_version_reads_as_unknown_ext_3(monkeypatch, tmp_path, pkg):
+    """EXT-3: `fvtt15.0-beta-mac` parses as core 15.0, host `beta-mac`. Only a version
+    the snapshot-name parser reads back whole is stamped; anything else is "unknown"."""
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / "package.json").write_text(json.dumps(pkg))
+    monkeypatch.setenv("FOUNDRY_APP_ROOT", str(app))
+    assert host.core_version() == "unknown"
+
+
 # ── process control ──────────────────────────────────────────────────────────
 
 @pytest.fixture
@@ -265,6 +290,42 @@ def test_stop_cmd_hook_runs_via_bash(monkeypatch, runs):
     assert runs == [["bash", "-c", "systemctl --user stop foundry"]]
 
 
+def _hung_hook(monkeypatch):
+    """subprocess.run that hangs (TimeoutExpired) on the bash hook — but only when a timeout
+    was asked for; without one the real run would block forever, which the test calls out."""
+    seen = []
+
+    def fake_run(argv, *a, **kw):
+        seen.append(kw.get("timeout"))
+        if argv[0] == "bash":
+            assert kw.get("timeout") == host.HOOK_TIMEOUT, "hook ran with no timeout"
+            raise subprocess.TimeoutExpired(argv, kw["timeout"])
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host.subprocess, "run", fake_run)
+    return seen
+
+
+def test_hung_stop_cmd_hook_is_not_delivered(monkeypatch):
+    """py-cloud-ac-4: a hung PENTARYN_STOP_CMD times out at 30s; request_stop says False so
+    stop() forces instead of waiting forever."""
+    assert getattr(host, "HOOK_TIMEOUT", None) == 30
+    _hung_hook(monkeypatch)
+    monkeypatch.setenv("PENTARYN_STOP_CMD", "systemctl --user stop foundry")
+    assert host.request_stop() is False
+
+
+def test_hung_start_cmd_hook_is_a_host_error(monkeypatch):
+    """py-cloud-ac-4: a hung PENTARYN_START_CMD raises HostError naming the hook and the
+    timeout, not a bare TimeoutExpired (or a hang)."""
+    assert getattr(host, "HOOK_TIMEOUT", None) == 30
+    _hung_hook(monkeypatch)
+    monkeypatch.setenv("PENTARYN_START_CMD", "systemctl --user start foundry")
+    with pytest.raises(host.HostError, match=r"PENTARYN_START_CMD.*30s"):
+        host.start()
+
+
 def test_mac_start_is_open_a(monkeypatch, runs):
     monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
     monkeypatch.delenv("FOUNDRY_APP_ROOT", raising=False)
@@ -276,6 +337,59 @@ def test_mac_request_stop_is_osascript_quit(monkeypatch, runs):
     monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
     host.request_stop()
     assert runs == [["osascript", "-e", 'quit app "Foundry Virtual Tabletop"']]
+
+
+def test_mac_stop_forces_when_osascript_quit_times_out(monkeypatch):
+    """EC-3: a hung `osascript` quit must not escape as TimeoutExpired — request_stop says
+    False and stop() falls through to force_stop (pkill)."""
+    monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
+    monkeypatch.delenv("PENTARYN_STOP_CMD", raising=False)
+    calls = []
+
+    def fake_run(argv, *a, **kw):
+        calls.append(list(argv))
+        if argv[0] == "osascript":
+            raise subprocess.TimeoutExpired(argv, kw.get("timeout", 30))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(host.subprocess, "run", fake_run)
+    assert host.request_stop() is False
+    calls.clear()
+    host.stop(timeout=0)
+    assert calls[0][0] == "osascript"
+    assert calls[1] == ["pkill", "-f", "MacOS/Foundry Virtual Tabletop"]
+
+
+_REAL_PID = host.pid      # conftest stubs host.pid for every test; keep the real one
+
+
+def _ere_matches(pattern: str, line: str) -> bool:
+    """Ask a real POSIX ERE engine (`grep -E`, the dialect `pgrep -f` speaks)."""
+    return subprocess.run(["grep", "-Eq", "--", pattern], input=line, text=True).returncode == 0
+
+
+@pytest.mark.parametrize("data, cmdline, hit", [
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry --port=30000", True),
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry", True),
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry-test --port=30001", False),
+    ("/d/foundry", "node /opt/fvtt/main.js --dataPath=/d/foundry/x", False),
+    ("/d/foundry", "node /opt/fvtt/mainXjs --dataPath=/d/foundry", False),
+    ("/d/f.v(1)", "node main.js --dataPath=/d/fXv(1) --port=1", False),       # metachars literal
+    ("/d/f.v(1)", "node main.js --dataPath=/d/f.v(1) --port=1", True),
+])
+def test_linux_pid_pattern_is_escaped_and_anchored_ec4(monkeypatch, data, cmdline, hit):
+    """EC-4: the pgrep pattern must not match a sibling Foundry whose data path merely
+    starts with ours (/d/foundry vs /d/foundry-test) — stopping the wrong server."""
+    monkeypatch.setenv("FOUNDRY_DATA", data)
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    assert _ere_matches(host._linux_pattern(), cmdline) is hit
+
+
+def test_linux_pid_hands_pgrep_the_anchored_pattern(monkeypatch, runs):
+    monkeypatch.setenv("FOUNDRY_DATA", "/d/foundry")
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    _REAL_PID()
+    assert runs == [["pgrep", "-f", host._linux_pattern()]]
 
 
 def test_is_running_probes_the_configured_port(monkeypatch):

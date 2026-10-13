@@ -105,7 +105,7 @@ test("hud: a refresh whose tooltip data rejects; a Multiattack weapon choice; re
   F.game.user.targets.clear();
 });
 
-test("a Reaction whose flag write fails still emits pentarynCombat.reaction", async () => {
+test("a Reaction whose flag write fails still emits pentarynCombat.reaction, and warns (combat-core-ROB-5)", async () => {
   onTurn(fig);
   const shield = { actor: fig, item: { type: "spell", name: "Shield", system: { identifier: "shield" } }, type: "utility", activation: { type: "reaction" }, uuid: "x" };
   const setFlag = fig.setFlag;
@@ -115,10 +115,10 @@ test("a Reaction whose flag write fails still emits pentarynCombat.reaction", as
   await drain();
   fig.setFlag = setFlag;
   assert.deepEqual(F.calls.filter(c => c.op === "Hooks.callAll" && c.name.startsWith("pentarynCombat")).map(c => c.name), ["pentarynCombat.reaction"]);
-  assert.deepEqual(lines.splice(0), []);
+  assert.deepEqual(lines.splice(0), [{ level: "warn", text: "pentaryn-combat | Reaction flag", err: "locked" }], "combat-core-ROB-5: the failed write is warned");
 });
 
-test("the sequence's own swallowed failures: a window that will not close, the last-weapon write, a target restore", async () => {
+test("the sequence's own failures: a window that will not close (swallowed), the last-weapon write (warned, combat-core-ROB-5), a target restore", async () => {
   onTurn(fig);
   const a = act(fig, "longsword0000001");
   a.script.attack.length = 0;
@@ -140,7 +140,7 @@ test("the sequence's own swallowed failures: a window that will not close, the l
   F.foundry.applications.instances.clear();
   mock.timers.tick(400);
   assert.deepEqual(out, { rolled: 0, status: "stopped" });
-  assert.deepEqual(lines.splice(0), [], "both swallowed");
+  assert.deepEqual(lines.splice(0), [{ level: "warn", text: "pentaryn-combat | remember weapon", err: "last refused" }], "combat-core-ROB-5: the window close swallowed, the last-weapon write warned");
   // restoreTargets without canvas.tokens.setTargets: setTarget per token; a throw is warned
   F.game.user.targets.clear();
   F.game.user.targets.add(toks[gob.id]);
@@ -310,4 +310,31 @@ test("shapes: a Multiattack formula whose Roll throws counts as unparsed; turnfl
   assert.equal(slot.label, "Opportunity Attack: Claw");
   slot.item = { name: "" };
   assert.equal(slot.label, "", "no name: the base label (the item's name)");
+});
+
+test("ac-2: renderHud swallows a render that rejects after the HUD closed, at debug, never as an unhandled rejection", async () => {
+  const { renderHud } = await import("../argon.mjs");
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err?.message ?? String(err));
+  process.on("unhandledRejection", onUnhandled);
+  const debugs = [];
+  const debug = console.debug;
+  console.debug = (...args) => debugs.push([args[0], args[1]?.message ?? null]);
+  const render = A.ARGON.render;
+  const actor = A.ARGON._actor;
+  globalThis.CONFIG.debug = { ...(globalThis.CONFIG.debug ?? {}), [MODULE]: true };
+  try {
+    A.ARGON._actor = fig;
+    A.ARGON.render = async () => { throw new Error("reading 'system' of null"); };
+    renderHud();
+    await drain();
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    console.debug = debug;
+    A.ARGON.render = render;
+    A.ARGON._actor = actor;
+    delete globalThis.CONFIG.debug[MODULE];
+  }
+  assert.deepEqual(unhandled, [], "no unhandled rejection");
+  assert.deepEqual(debugs, [[`${MODULE} | HUD re-render (HUD closed)`, "reading 'system' of null"]]);
 });

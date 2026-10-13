@@ -415,6 +415,45 @@ def test_inventory_signs_each_folder_once(modules_root, fake_data, monkeypatch):
     assert cache.read_bytes() == before
 
 
+# ── PERF-1: one folder's entry without hashing every other folder ────────────
+
+def test_perf1_local_one_hashes_only_its_own_folder(modules_root, fake_data, counting):
+    make_module(modules_root, "alpha", version="1.2")
+    make_module(modules_root, "beta")
+    whole = bundles.local_inventory(cache=False, warn=lambda m: None)
+    counting.clear()
+    one = bundles.local_one("module", "alpha")
+    assert one == whole["module/alpha"]
+    assert counting == [modules_root / "alpha"]
+    assert not (fake_data / bundles.CACHE_FILENAME).exists()     # cache=False: no write
+
+
+def test_perf1_local_one_reads_but_never_writes_the_cache(modules_root, fake_data, counting):
+    make_module(modules_root, "alpha")
+    first = _inv()
+    cache = fake_data / bundles.CACHE_FILENAME
+    before = cache.read_bytes()
+    counting.clear()
+    assert bundles.local_one("module", "alpha", cache=True) == first["module/alpha"]
+    assert counting == []                       # the stat signature matched: nothing hashed
+    assert bundles.local_one("module", "alpha") == first["module/alpha"]
+    assert counting == [modules_root / "alpha"]                  # cache=False re-hashes
+    assert cache.read_bytes() == before
+
+
+def test_perf1_local_one_is_none_for_what_the_inventory_skips(modules_root, tmp_path):
+    target = make_module(tmp_path / "elsewhere", "linked")
+    (modules_root / "linked").symlink_to(target, target_is_directory=True)
+    make_module(modules_root, ".hidden")
+    (modules_root / "leftover").mkdir()
+    (modules_root / "loose.txt").write_text("x")
+    for id in ("linked", ".hidden", "leftover", "loose.txt", "missing", "..", ".", "a/b",
+               "a@b", ""):
+        assert bundles.local_one("module", id) is None, id
+    assert bundles.local_one("system", "m") is None             # no Data/systems at all
+    assert bundles.local_one("nonsense", "m") is None
+
+
 def test_cache_drops_removed_modules(modules_root, fake_data):
     make_module(modules_root, "gone")
     _inv()
@@ -564,6 +603,59 @@ def test_extract_failure_mid_way_restores_nothing_and_cleans(fake_data, tmp_path
     with pytest.raises(OSError):
         bundles.extract(tar, "module", "alpha", fake_data)
     assert (existing / "module.json").exists()
+    ex = fake_data / bundles.TMP_DIRNAME / bundles.EXTRACT
+    assert not ex.exists() or not any(ex.iterdir())
+
+
+# ── PERF-2: a restore reads each bundle twice (verify, extract), not three times ──
+
+def test_perf2_verify_then_extract_reads_the_bundle_twice_not_three_times(
+        mod, fake_data, tmp_path, monkeypatch):
+    """PERF-2: verify read the tar end to end, then extract read it again for its member
+    list (getmembers) and a third time to extract (r:gz seeks back to the start). Now
+    verify returns the names it read and extract takes them, streaming once."""
+    (mod / "maps/noise.bin").write_bytes(os.urandom(512 * 1024))   # incompressible
+    tar = bundles.build(_local(mod), tmp_path / "staging")
+    size = tar.stat().st_size
+    from bundle_fakes import count_tar_reads
+    reads = count_tar_reads(monkeypatch)
+    names = bundles.verify(tar, "module", "alpha")
+    assert names and names[0] == "alpha"
+    bundles.extract(tar, "module", "alpha", fake_data, members=names)
+    passes = reads[tar.name] / size
+    assert passes < 2.5, f"the bundle was read {passes:.2f} times end to end"
+    dest = fake_data / "Data/modules/alpha"
+    assert bundles.fingerprint(dest) == bundles.fingerprint(mod)
+    assert (dest / "maps/noise.bin").read_bytes() == (mod / "maps/noise.bin").read_bytes()
+
+
+def test_perf2_extract_refuses_a_member_missing_from_the_names_it_was_given(
+        fake_data, tmp_path):
+    """PERF-2: with `members`, extract checks those names and skips its own pass — so a
+    tar that holds a member the list does not name (it changed after verify) is refused
+    while streaming, and nothing in place is touched."""
+    existing = make_module(fake_data / "Data/modules", "alpha")
+    tar = _evil_tar(tmp_path / f"module@alpha@1@{FP}.tar.gz", ["alpha/ok.txt", "alpha/new"])
+    with pytest.raises(ValueError, match="alpha/new"):
+        bundles.extract(tar, "module", "alpha", fake_data, members=["alpha/ok.txt"])
+    assert (existing / "module.json").exists()
+    assert not (fake_data / "Data/modules/alpha/ok.txt").exists()
+    ex = fake_data / bundles.TMP_DIRNAME / bundles.EXTRACT
+    assert not ex.exists() or not any(ex.iterdir())
+
+
+def test_perf2_extract_refuses_a_stream_that_ends_before_the_names_it_was_given(
+        fake_data, tmp_path):
+    """PERF-2: a tar cut short after verify exactly on a member boundary streams out
+    quietly; extract compares what it saw with the checked names and refuses it before
+    the swap, so the folder in place stays whole."""
+    existing = make_module(fake_data / "Data/modules", "alpha")
+    tar = _evil_tar(tmp_path / f"module@alpha@1@{FP}.tar.gz", ["alpha/ok.txt"])
+    with pytest.raises(ValueError, match="alpha/gone"):
+        bundles.extract(tar, "module", "alpha", fake_data,
+                        members=["alpha/ok.txt", "alpha/gone"])
+    assert (existing / "module.json").exists()
+    assert not (fake_data / "Data/modules/alpha/ok.txt").exists()
     ex = fake_data / bundles.TMP_DIRNAME / bundles.EXTRACT
     assert not ex.exists() or not any(ex.iterdir())
 

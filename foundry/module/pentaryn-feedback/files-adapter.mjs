@@ -34,7 +34,11 @@ export function fileStore({ g = globalThis, fp = null, fetch: fetchFn = null, ro
   const doFetch = (...a) => (fetchFn ?? g.fetch)(...a);
   const url = path => (route ?? g.foundry?.utils?.getRoute ?? (p => `/${p}`))(path);
 
-  /** Create every missing folder of `dir`. "Already exists" is the normal case after the first. */
+  /**
+   * Create every missing folder of `dir`. "Already exists" is the normal case after the first.
+   * A folder is remembered only when it was made or already exists; any other failure leaves it
+   * unmarked, so the next put() asks again instead of failing every upload until reload.
+   */
   async function ensureDir(dir) {
     for (const d of dirChain(dir)) {
       if (made.has(d)) continue;
@@ -43,6 +47,7 @@ export function fileStore({ g = globalThis, fp = null, fetch: fetchFn = null, ro
       } catch (err) {
         // EEXIST is expected; anything else surfaces at the upload that follows
         log?.debug?.(`createDirectory ${d}`, err?.message ?? err);
+        if (!/EEXIST|already exists/i.test(String(err?.message ?? err))) continue;
       }
       made.add(d);
     }
@@ -89,9 +94,17 @@ export function fileStore({ g = globalThis, fp = null, fetch: fetchFn = null, ro
 
 let active = null;
 
-/** The store the reporter and the API share (created on first use). */
+/**
+ * The store the reporter and the API share. The entry wires one with the module log at setup;
+ * anything that asks before then gets a log-less default.
+ */
 export function store() {
   return (active ??= fileStore());
+}
+
+/** True once a store is active (the entry's own, or one a test swapped in). */
+export function hasStore() {
+  return active !== null;
 }
 
 /** Swap the shared store — tests pass an in-memory one; `null` goes back to the default. */

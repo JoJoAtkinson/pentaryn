@@ -27,6 +27,8 @@ const ACTOR = "Actor";
 const READ_REF = { name: "ref", kind: "actor", type: "Actor|Token|id|uuid|exact name", resolve: false, doc: "a token reads its world actor" };
 const CHAR = p("character", ACTOR, "a player character");
 const SUBJ = p("subject", ACTOR, "the creature or person studied");
+/** A legacy read's second argument that api.mjs resolves the same way as READ_REF (resolving(fn, 2), ext-5). */
+const SUBJ_REF = { ...SUBJ, type: READ_REF.type, resolve: false };
 const ATTR = p("attr", "string", "an attribute id or title (id wins; a miss is refused, never created)");
 const SPEC = p("spec", "{ ns, subjectId, factId?, attrId? }", "one fact: ns kind | lore | attr");
 const row = (path, params, returns, doc, { gm = false, writes = false, ...rest } = {}) =>
@@ -43,12 +45,15 @@ export const MANIFEST = Object.freeze({
   unlisted: ["STANCES"],
   flags: {
     writes: [
-      `${F}.ties`, `${F}.known`, `${F}.knownCategories`, `${F}.granted`, `${F}.studied`, `${F}.beliefs`,
+      `${F}.ties`, `${F}.known`, `${F}.granted`, `${F}.studied`, `${F}.beliefs`,
       `${F}.kindOf`, `${F}.studyTiers`, `${F}.studyHold`, `${F}.studyOffset`, `${F}.lore`, `${F}.attributes`,
-      `${F}.attributesOff`, `${F}.conceal`, `${F}.worn`, `${F}.mark`,
+      `${F}.attributesOff`, `${F}.conceal`, `${F}.worn`,
       `${F}.attrSelected`, // on the GM's User, not an actor: the review panel's ticks
     ],
-    reads: ["flags.item-piles.data", "flags.dnd5e.isPolymorphed"],
+    reads: [
+      `${F}.knownCategories`, `${F}.mark`, // GM-authored by hand; the module never writes them (ext-9)
+      "flags.item-piles.data", "flags.dnd5e.isPolymorphed",
+    ],
   },
   rows: [
     /* ── the kit's two optional members ── */
@@ -97,7 +102,7 @@ export const MANIFEST = Object.freeze({
     row("setTie", [p("actor", ACTOR), p("target", ACTOR), opt("tie", "{ word, notes?, stance, strength }"), opt("opts", "object")],
       "Promise<boolean>", "Same as set.", { writes: true, sideEffects: [`${F}.ties`] }),
     row("setNotes", [p("actor", ACTOR), p("targetId", "string"), opt("notes", "string")], "Promise<boolean>",
-      "Set just the notes on an existing edge; false when the edge is not there.", { writes: true, sideEffects: [`${F}.ties`] }),
+      "Set just the notes on an existing edge; false when the edge is not there or the write is refused.", { writes: true, sideEffects: [`${F}.ties`] }),
     row("remove", [p("actor", ACTOR), p("targetId", "string"), opt("opts", "{ bothWays = true }")], "Promise<boolean>",
       "Remove an edge and (by default) its mirror.", { writes: true, sideEffects: [`${F}.ties`] }),
     row("migrate", [], "Promise<{ moved }>", "GM: move pre-module flags.world.ties onto the module scope (runs at ready).",
@@ -128,14 +133,14 @@ export const MANIFEST = Object.freeze({
       "Destroy a Known row (nothing in the UI does this).", { writes: true, sideEffects: [`${F}.known`] }),
     row("known.remove", [p("actor", ACTOR), p("id", "string")], "Promise<boolean>", "Same as known.purge.",
       { writes: true, sideEffects: [`${F}.known`] }),
-    row("known.categories", [p("actor", ACTOR)], "[{ key, label? }]", "The categories this actor files into."),
+    row("known.categories", [p("actor", ACTOR)], "[{ key, label, seeded }]", "The categories this actor files into."),
     row("known.picker", [p("actor", ACTOR), opt("onAdded", "Function")], "Promise<*>", "Open the Known tab's Add… picker."),
     row("known.file", [opt("token", "Token", "default: hovered")], "Promise<*>", "Key 5: file whoever is hovered and open their page."),
     row("known.open", [p("actor", ACTOR), p("id", "string")], "Promise<*>", "Open one Known entry's page."),
     row("known.notebook", [], "Actor|null", "The notebook this client writes into (selected, assigned or owned character)."),
 
     /* ── the study conduit ── */
-    row("study.state", [READ_REF, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }], "{ kind, available, spent, content, … }", "The kind study's state as the sheet draws it."),
+    row("study.state", [READ_REF, SUBJ_REF], "{ kind, available, spent, content, … }", "The kind study's state as the sheet draws it."),
     row("study.request", [CHAR, SUBJ], "Promise<boolean>", "Player gesture: ask to study what this is (opens the study dialog)."),
     row("study.as", [CHAR, SUBJ, opt("opts", "{ mode, situational, loreId, attrId }")], "Promise<boolean>",
       "GM: throw a study check by hand (same handler, same writes as a player's request).",
@@ -160,7 +165,7 @@ export const MANIFEST = Object.freeze({
       "GM: un-spend a study — the honest do-over.", { gm: true, writes: true, sideEffects: [`${F}.beliefs`, `${F}.studied`] }),
     row("study.studied", [p("actor", ACTOR)], "{ kind, lore }", "The player-side `studied` hints (a UI hint, not the lock)."),
     row("study.fact", [SPEC], "object|null", "The conduit's resolve seam: one fact's skill, DC, ledger and text."),
-    row("study.lore", [READ_REF, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }], "[{ id, label, skill, dc, available, … }]", "That actor's lore rows as the character's sheet sees them."),
+    row("study.lore", [READ_REF, SUBJ_REF], "[{ id, label, skill, dc, available, … }]", "That actor's lore rows as the character's sheet sees them."),
     row("study.askLore", [CHAR, SUBJ, p("loreId", "string")], "Promise<boolean>", "Player gesture: roll one lore row."),
     row("study.askAttr", [CHAR, SUBJ, p("attrId", "string"), p("loreId", "string")], "Promise<boolean>", "Player gesture: roll one attribute-lore row."),
     row("study.attrOffers", [CHAR, SUBJ], "[{ attrId, rows }]", "The attribute lore this subject offers the character."),
@@ -211,15 +216,15 @@ export const MANIFEST = Object.freeze({
       "GM: link an actor to an entry (materialises its ancestors).", { gm: true, writes: true, sideEffects: [`${F}.attributes`, `${F}.attributesOff`] }),
     row("attributes.unlink", [p("actor", ACTOR), ATTR], "Promise<{ ok, reason? }>",
       "GM: unlink (takes descendants; suppresses a derived link).", { gm: true, writes: true, sideEffects: [`${F}.attributes`, `${F}.attributesOff`] }),
-    row("attributes.search", [p("query", "string"), opt("kindResolver", "Function")], "[record]", "Search entries by title."),
+    row("attributes.search", [p("query", "string"), opt("kindResolver", "Function")], "{ matches, wouldBe, canCreate, collidesWith }", "Search entries by title."),
     row("attributes.knows", [], "{ [characterId]: { [attrId]: row } }", "The world-knowledge ledger."),
     row("attributes.known", [READ_REF, opt("opts", "{ forGM, kindResolver }")], "[record]", "What a character has worked out of the world."),
-    row("attributes.tell", [CHAR, ATTR, opt("opts", "{ withParents }")], "Promise<{ ok, reason? }>",
+    row("attributes.tell", [CHAR, ATTR, opt("opts", "{ withParents }")], "{ ok, ids } | { ok: false, reason }",
       "GM: disclosure, the only non-roll route into world knowledge.", { gm: true, writes: true, sideEffects: ["setting pentaryn-ties.attributeKnowledge"] }),
     row("attributes.broken", [READ_REF, opt("kindResolver", "Function")], "[{ id, missing }]", "Carried entries whose ancestry is broken."),
     row("attributes.repair", [p("actor", ACTOR), ATTR], "Promise<{ ok, reason? }>", "GM: re-link to repair ancestry (= link).",
       { gm: true, writes: true, sideEffects: [`${F}.attributes`] }),
-    row("attributes.stale", [ATTR], "[Actor]", "Actors carrying an entry by a stale link."),
+    row("attributes.stale", [ATTR], "[{ actor, extra, missing }]", "Actors carrying an entry by a stale link."),
     row("attributes.openReview", [], "Promise<AttributeReview>", "GM: the Attribute Review panel.", { gm: true }),
     row("attributes.selected", [], "[{ id, title, category, parent, reviewState }]", "What the GM ticked in the review panel."),
     row("attributes.select", [p("refs", "string[]"), opt("opts", "{ replace }")], "Promise<{ ok, ids?, missed?, reason? }>",
@@ -232,7 +237,7 @@ export const MANIFEST = Object.freeze({
       { gm: true, writes: true, sideEffects: ["setting pentaryn-ties.attributes"] }),
     row("attributes.unreview", [ATTR], "Promise<{ ok, reason? }>", "GM: put an entry back in review.",
       { gm: true, writes: true, sideEffects: ["setting pentaryn-ties.attributes"] }),
-    row("attributes.unreviewed", [], "[entry]", "Entries awaiting the GM's sign-off."),
+    row("attributes.unreviewed", [], "[{ id, title, reviewState, touched, modifiedAt, createdAt }]", "Entries awaiting the GM's sign-off."),
 
     /* ── additive (0.20.0): the kind pointer included (ties-5), and the internals LLMs reached by import (ties-6) ── */
     { path: "attributes.effective", params: [p("actor", ACTOR)], returns: "string[]", gm: false, writes: false, since: "0.20.0",
@@ -251,7 +256,7 @@ export const MANIFEST = Object.freeze({
       writes: true, sideEffects: [`${F}.beliefs`, `${F}.granted`], since: "0.20.0", doc: "Same as study.share (its own name, ties-6)." },
     { path: "study.forgetFact", params: [SPEC, CHAR], returns: "Promise<*>", gm: true, writes: true,
       sideEffects: [`${F}.beliefs`, `${F}.granted`], since: "0.20.0", doc: "Same as study.forget (its own name, ties-6)." },
-    { path: "study.knowsAbout", params: [{ ...READ_REF, name: "ref", doc: "the character" }, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }],
+    { path: "study.knowsAbout", params: [{ ...READ_REF, name: "ref", doc: "the character" }, SUBJ_REF],
       returns: "[{ group, key, ns, attrId, icon, source, text }]", gm: false, writes: false, since: "0.20.0",
       doc: "What this character has learned about this subject: the granted cards that pass the secrecy gate, in the Look window's order (ties-8)." },
     { path: "study.loreRows", params: [p("actor", ACTOR)], returns: "[{ id, label, dc, skill, text, miss, hold }]", gm: true, writes: false,
@@ -264,7 +269,7 @@ export const MANIFEST = Object.freeze({
     { path: "study.setConceal", params: [p("actor", ACTOR), p("value", "number | { default, [attrId]: number } | null")],
       returns: "{ ok, conceal } | { ok: false, reason }", gm: true, writes: true, sideEffects: [`${F}.conceal`], since: "0.20.0",
       doc: "GM: set or (null) clear the actor's concealment (ties-9)." },
-    { path: "attributes.markLearned", params: [CHAR, ATTR, opt("loreIds", "\"all\" | string | string[]")],
+    { path: "attributes.markLearned", params: [p("character", "Actor|Token|id|uuid|exact name", "a player character; a token marks its world actor, a miss is refused invalid (R3)"), ATTR, opt("loreIds", "\"all\" | string | string[]")],
       returns: "{ ok, keys } | { ok: false, reason }", gm: true, writes: true, sideEffects: [`${F}.granted`], since: "0.20.0",
       doc: "GM: hand a character an attribute's lore rows as granted cards, no roll — the Attributes tab's Mark as learned (ties-9)." },
     { path: "study.identified", params: [SUBJ, CHAR, p("attrId", "string")], returns: "{ settled, carries, held, record? }", gm: false,

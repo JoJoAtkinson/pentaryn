@@ -23,27 +23,39 @@
  *   - Natural weapons, feats and spells never show (the world's `item-piles.itemFilters`).
  *   - Token sight is switched off while it is a corpse (and restored on revival): players observe
  *     it, and an observed token with sight would let them see what the body "sees".
- *   - Players get OBSERVER on the token's own actor delta, never on the base actor, so no stat
- *     block in the sidebar is exposed. Item Piles cannot render a pile for a user without it.
- *     The delta's own map is remembered and put back on revival (null: the base actor's again).
+ *   - Players get OBSERVER on the token's own actor delta (an unlinked token), so no other token of
+ *     the base actor is exposed. Item Piles cannot render a pile for a user without it. The delta's
+ *     own map is remembered and put back on revival (null: the base actor's again).
+ *   - A linked token ignores its delta's ownership, so a linked NPC's corpse grants OBSERVER on the
+ *     base actor itself, its map saved on the actor and put back on revival (dropbin-EC-3), or when
+ *     its last corpse token (or that token's scene) is deleted: see releaseBases.
+ *   - No player opens a corpse's actor sheet, by any route (Joe: "Just loot, they can't open the
+ *     char sheet"): see sheetGuard. The loot window is only Item Piles' own, distance-checked.
  */
 
 import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot } from "./dropbin-core.mjs";
 import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
-const EYE = "assets/tokens/custom/props/icon-eye.webp";
+const EYE = "modules/pentaryn-dropbin/assets/icon-eye.webp";     // the module's own asset, never one world's (dropbin-EXT-8)
 
 const isGMRunner = () => isActiveGMSelf(game.users);
 
+/**
+ * The actor's token documents on every scene (dropbin-EC-5): getActiveTokens saw only the GM's viewed
+ * scene, so a linked NPC killed while the GM looked elsewhere never became a corpse there.
+ * `concreteOnly`: only tokens their scene really holds, as getActiveTokens and dnd5e. Without it an
+ * unpersisted clone (a Token Config preview) is a dependent too, and Item Piles throws on its uuid,
+ * failing the whole batch with it.
+ */
 function tokensOf(actor) {
   if (actor.isToken) return [actor.token].filter(Boolean);
-  return actor.getActiveTokens(false, true);
+  return actor.getDependentTokens({ concreteOnly: true });
 }
 
 function isDead(actor) {
   const hp = actor?.system?.attributes?.hp;
-  return (hp && Number.isFinite(hp.value) && hp.max > 0 && hp.value <= 0) || actor?.statuses?.has("dead");
+  return !!((hp && Number.isFinite(hp.value) && hp.max > 0 && hp.value <= 0) || actor?.statuses?.has("dead"));   // always a boolean (dropbin-M5)
 }
 
 function eligible(tokenDoc) {
@@ -55,26 +67,173 @@ function eligible(tokenDoc) {
 
 const isPile = isValidItemPile;
 
+/**
+ * The public writers' guard (dropbin-R6): Item Piles active and the right document (`Token` or
+ * `Actor`), else one prefixed console warning and the caller returns. They threw raw TypeErrors.
+ */
+function refused(fn, doc, want) {
+  const label = want === "Token" ? "a TokenDocument" : "an Actor";
+  const why = !itemPilesApi() ? "Item Piles is not active"
+    : doc?.documentName !== want ? `expected ${label}, got ${doc?.documentName ?? (doc === null ? "null" : typeof doc)}` : null;
+  if (why) console.warn(`${MODULE} | corpses.${fn}: ${why}; nothing done`);
+  return !!why;
+}
+
+const PILE_SETTINGS = { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
+  displayOne: false, showItemName: false, overrideSingleItemScale: false };
+
+/** Each distinct actor of `docs` once (a linked NPC's tokens share one), by uuid. */
+const actorsOf = docs => [...new Map(docs.map(t => t.actor).filter(Boolean).map(a => [a.uuid ?? a.id, a])).values()];
+
+/** The current document for a token after an Item Piles write replaced it. */
+const freshOf = tokenDoc => tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
+
 async function toCorpse(tokenDoc) {
-  if (isPile(tokenDoc)) return;
+  if (refused("toCorpse", tokenDoc, "Token")) return;
+  const [failure] = await toCorpses([tokenDoc]);
+  if (failure) throw failure.err;
+}
+
+/**
+ * Turn tokens into corpses (DB-AC-4): one Item Piles call for all of them, then each token's flags,
+ * then Dead as the overlay once per distinct actor. Returns the `{ name, err }` of each part that
+ * failed; a failed flag write reverts that token's new pile (dropbin-R6) and the rest go on.
+ */
+async function toCorpses(tokenDocs) {
+  const failed = await repairCorpses(tokenDocs.filter(t => isPile(t) && ourCorpse(t)));
+  const docs = tokenDocs.filter(t => !isPile(t));
+  if (!docs.length) return failed;
   // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
   // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
   // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
-  const ownership = ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
-    : foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
-  await turnTokensIntoItemPiles([tokenDoc], {
-    pileSettings: { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
-      displayOne: false, showItemName: false, overrideSingleItemScale: false },
-    tokenSettings: {}
-  });
-  const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
-  // Players observe the body, and an observed token with sight is a vision source for a player
-  // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
-  await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
-    [`flags.${MODULE}.ownership`]: ownership, "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
+  // A linked token has no delta map of its own: its base actor's is saved instead (observeBase).
+  const saved = docs.map(t => t.actorLink ? null : ourCorpse(t) ? (t.flags[MODULE].ownership ?? null)
+    : foundry.utils.deepClone(t.delta?.ownership ?? null));
+  await turnTokensIntoItemPiles(docs, { pileSettings: PILE_SETTINGS, tokenSettings: {} });
+  const made = [];
+  for (const [i, tokenDoc] of docs.entries()) {
+    const linked = !!tokenDoc.actorLink, ownership = saved[i];
+    const fresh = freshOf(tokenDoc);
+    // Players observe the body, and an observed token with sight is a vision source for a player
+    // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
+    try {
+      await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
+        "sight.enabled": false, ...(linked ? {} : { [`flags.${MODULE}.ownership`]: ownership, "delta.ownership": { default: OBSERVER } }) });
+      if (linked) await observeBase(fresh.actor);
+      made.push(fresh);
+    } catch (err) {
+      // dropbin-R6: a pile without our corpse flag is never reverted by a revival; undo it, then report.
+      try { await revertTokensFromItemPiles([fresh]); }
+      catch (e) { console.warn(`${MODULE} | corpses.toCorpse: could not revert the pile on ${fresh.name}`, e); }
+      failed.push({ name: fresh.name, err });
+    }
+  }
   // Dead as core's full-body overlay. The "lootable" eye is not a document: every client draws
   // it on top of the token (paintEye below) while the body still holds something.
-  await deadAsOverlay(fresh.actor);
+  for (const actor of actorsOf(made)) {
+    try { await deadAsOverlay(actor); } catch (err) { failed.push({ name: actor.name, err }); }
+  }
+  return failed;
+}
+
+/**
+ * dropbin-EC-6: a pile that is already our corpse but lost its OBSERVER write (an unlinked token's
+ * delta default is not OBSERVER) or still has sight gets just those two fields written again; its
+ * saved flags and everything else stay as they are. Returns the `{ name, err }` of each failure.
+ */
+async function repairCorpses(tokenDocs) {
+  const failed = [];
+  for (const tokenDoc of tokenDocs) {
+    const lostObserver = !tokenDoc.actorLink && tokenDoc.delta?.ownership?.default !== OBSERVER;
+    if (!lostObserver && !tokenDoc.sight?.enabled) continue;
+    try {
+      await tokenDoc.update({ "sight.enabled": false, ...(lostObserver ? { "delta.ownership": { default: OBSERVER } } : {}) });
+    } catch (err) {
+      failed.push({ name: tokenDoc.name, err });
+    }
+  }
+  return failed;
+}
+
+/**
+ * dropbin-EC-3: a linked corpse's players observe its base actor (Item Piles needs OBSERVER to render
+ * the loot window). The base actor's map is saved in its own `corpse`/`ownership` flags at the first
+ * death only: a second token of the same actor, or a re-pile, finds it already ours and keeps it.
+ */
+async function observeBase(actor) {
+  if (!actor || ourCorpse(actor)) return;
+  await actor.update({ [`flags.${MODULE}.corpse`]: true,
+    [`flags.${MODULE}.ownership`]: foundry.utils.deepClone(actor.ownership ?? null), "ownership.default": OBSERVER });
+}
+
+/** Revival: the base actor's saved map written back whole (missing: players back to NONE), our flags gone. */
+async function unobserveBase(actor) {
+  if (!actor || !ourCorpse(actor)) return;
+  const del = () => new foundry.data.operators.ForcedDeletion();
+  const saved = revivedOwnership(actor.flags[MODULE].ownership) ?? { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
+  await actor.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.ownership`]: del(), ownership: saved });
+}
+
+/** A corpse's actor: a linked corpse's base actor, or an unlinked corpse's synthetic actor. */
+const isCorpseActor = actor => !!actor && (ourCorpse(actor) || (!!actor.isToken && !!actor.token && ourCorpse(actor.token)));
+
+/**
+ * dropbin-EC-3 (Joe, 2026-10-12: "Just loot, they can't open the char sheet. They're dead, so they
+ * can't see their stats or bio"). Item Piles fires `item-piles-preRenderActorSheet` from every actor
+ * sheet's render: the canvas double-click, its Ctrl "open the sheet" bypass, the Actors sidebar, a
+ * link, the combat tracker, any `bypassItemPiles` render. A player's render of a corpse's sheet is
+ * vetoed there, always, and nothing else is done: opening the loot window from here skipped Item
+ * Piles' `distance: 1` check (a Ctrl-double-click across the map looted the body), and its API throws
+ * synchronously on a corpse whose pile is off (Item Piles reverted it), which lost the veto. A plain
+ * double-click on a corpse pile never renders a sheet: Item Piles opens its own loot window, with the
+ * distance check. The GM is exempt (HUD: Open sheet).
+ */
+function sheetGuard(actor) {
+  if (game.user.isGM || !isCorpseActor(actor)) return;
+  return false;
+}
+
+/** A token still on a scene of the world: neither it nor its scene was deleted. */
+const onLiveScene = t => !!t?.parent && !!game.scenes?.has(t.parent.id) && !!t.parent.tokens?.has(t.id);
+
+/**
+ * dropbin-EC-3: a linked corpse's base actor stays observed while any token of it is still our corpse.
+ * Deleting that token (or its scene) is not a revival, so nothing put the saved map back: players kept
+ * OBSERVER, and the sheet veto, on an NPC whose next token is a living creature. The active GM writes
+ * the map back once no corpse token of the actor is left (deleteToken, deleteScene, and every ready).
+ */
+async function releaseBases(actors) {
+  for (const actor of actors) {
+    try {
+      if (!ourCorpse(actor)) continue;
+      if ((actor.getDependentTokens?.({ concreteOnly: true }) ?? []).some(t => ourCorpse(t) && onLiveScene(t))) continue;
+      await unobserveBase(actor);
+    } catch (err) {
+      console.warn(`${MODULE} | corpse: could not give back ${actor?.name}'s ownership`, err);
+    }
+  }
+}
+
+/** The world actors behind these deleted tokens that were linked corpses of ours. */
+const corpseBasesOf = tokenDocs => [...new Set(tokenDocs.filter(t => t?.actorLink && ourCorpse(t)).map(t => t.actorId))]
+  .map(id => game.actors?.get(id)).filter(Boolean);
+
+function onTokenDeleted(tokenDoc) {
+  if (!isGMRunner()) return;
+  const actors = corpseBasesOf([tokenDoc]);
+  if (actors.length) releaseBases(actors);   // not awaited (the hook stays synchronous); failures warn
+}
+
+function onSceneDeleted(scene) {
+  if (!isGMRunner()) return;
+  const actors = corpseBasesOf(Array.from(scene?.tokens ?? []));
+  if (actors.length) releaseBases(actors);
+}
+
+/** ready: a linked corpse's actor whose corpse tokens all went while no GM hook saw it. */
+async function releaseOrphanBases() {
+  if (!isGMRunner()) return;
+  await releaseBases(Array.from(game.actors ?? []).filter(a => ourCorpse(a)));
 }
 
 /** Make sure the actor carries Dead as the big overlay (adding it, or promoting a corner icon). */
@@ -97,20 +256,42 @@ async function removeLegacyEye(actor) {
 }
 
 async function fromCorpse(tokenDoc) {
-  if (!ourCorpse(tokenDoc)) return; // never revert a pile we didn't make
-  await revertTokensFromItemPiles([tokenDoc]);
-  const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
-  await removeLegacyEye(fresh.actor);
-  const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
-  const saved = revivedOwnership(fresh.flags?.[MODULE]?.ownership);
+  if (refused("fromCorpse", tokenDoc, "Token")) return;
+  const [failure] = await fromCorpses([tokenDoc]);
+  if (failure) throw failure.err;
+}
+
+/**
+ * Revive corpses (DB-AC-4): each linked base actor's map back once, one Item Piles revert for all
+ * the tokens, then each token's flags. Returns the `{ name, err }` of each token that failed.
+ */
+async function fromCorpses(tokenDocs) {
+  const docs = tokenDocs.filter(t => ourCorpse(t)); // never revert a pile we didn't make
+  if (!docs.length) return [];
+  // first, so a failure below leaves a corpse the next sync reverts again, never an observed creature
+  for (const actor of actorsOf(docs.filter(t => t.actorLink))) await unobserveBase(actor);
+  await revertTokensFromItemPiles(docs);
+  const failed = [], cleaned = new Set();
   const del = () => new foundry.data.operators.ForcedDeletion();
-  // The corpse map always goes by a ForcedDeletion, never a plain null: Foundry 14 can lose a delta
-  // write on the server after broadcasting it, so the server may already hold null while every client
-  // shows {default: OBSERVER}; a plain null is then no change, nothing goes out, players keep the sheet.
-  await fresh.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.sight`]: del(),
-    [`flags.${MODULE}.ownership`]: del(), "sight.enabled": sight, "delta.ownership": del() });
-  // A saved map goes on top of the now-empty one, so it differs from whatever the server held.
-  if (saved) await fresh.update({ "delta.ownership": saved });
+  for (const tokenDoc of docs) {
+    const fresh = freshOf(tokenDoc);
+    try {
+      const key = fresh.actor?.uuid ?? fresh.actor?.id;
+      if (!cleaned.has(key)) { cleaned.add(key); await removeLegacyEye(fresh.actor); }
+      const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
+      const saved = revivedOwnership(fresh.flags?.[MODULE]?.ownership);
+      // The corpse map always goes by a ForcedDeletion, never a plain null: Foundry 14 can lose a delta
+      // write on the server after broadcasting it, so the server may already hold null while every client
+      // shows {default: OBSERVER}; a plain null is then no change, nothing goes out, players keep the sheet.
+      await fresh.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.sight`]: del(),
+        [`flags.${MODULE}.ownership`]: del(), "sight.enabled": sight, "delta.ownership": del() });
+      // A saved map goes on top of the now-empty one, so it differs from whatever the server held.
+      if (saved) await fresh.update({ "delta.ownership": saved });
+    } catch (err) {
+      failed.push({ name: fresh.name, err });
+    }
+  }
+  return failed;
 }
 
 /**
@@ -124,27 +305,58 @@ function revivedOwnership(saved) {
   return { ...saved, default: saved.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
 }
 
-async function sync(actor) {
-  if (!isGMRunner() || !itemPilesApi()) return;
-  for (const t of tokensOf(actor)) {
-    if (!eligible(t)) continue;
-    try {
-      if (isDead(t.actor)) await toCorpse(t);
-      else if (ourCorpse(t)) await fromCorpse(t);
-    } catch (err) {
-      console.warn(`${MODULE} | corpse sync failed for ${t.name}`, err);
-    }
+// One conversion per token at a time (dropbin-EC-4): HUD Revive's own sync and the debounced one could
+// both see "our corpse" and revert it twice, the second ForcedDeletion erasing the restored map.
+const converting = new Map();
+const keyOf = t => t.uuid ?? t.id;
+
+/** One batch's conversions (DB-AC-4); each failure is one warning naming the token (or actor). */
+async function convertAll(dead, revived) {
+  for (const [docs, run] of [[dead, toCorpses], [revived, fromCorpses]]) {
+    if (!docs.length) continue;
+    let failed;
+    try { failed = await run(docs); } catch (err) { failed = docs.map(t => ({ name: t.name, err })); }
+    for (const { name, err } of failed) console.warn(`${MODULE} | corpse sync failed for ${name}`, err);
   }
+}
+
+/**
+ * Convert the actor's eligible tokens in one batch (DB-AC-4): after any conversion of them already in
+ * flight, re-checking dead/alive then, the dead ones become corpses and the living corpses revive.
+ */
+async function sync(actor) {
+  if (!isGMRunner() || refused("sync", actor, "Actor")) return;
+  let toks = tokensOf(actor).filter(eligible);
+  for (let busy; (busy = toks.filter(t => converting.has(keyOf(t)))).length;) {
+    await Promise.all(busy.map(t => converting.get(keyOf(t)).catch(() => {})));
+    toks = toks.map(freshOf);
+  }
+  toks = toks.filter(eligible);
+  const dead = toks.filter(t => isDead(t.actor));
+  const revived = toks.filter(t => !isDead(t.actor) && ourCorpse(t));
+  const keys = [...dead, ...revived].map(keyOf);
+  if (!keys.length) return;
+  const run = convertAll(dead, revived);
+  for (const k of keys) converting.set(k, run);
+  try { await run; } finally { for (const k of keys) if (converting.get(k) === run) converting.delete(k); }
 }
 
 // Debounce per actor: a damage roll can fire several updates in a row.
 const pending = new Map();
 function queue(actor) {
-  // sync() runs on the active GM only; no other client needs the timer (items-journal-30)
-  if (!actor || !isGMRunner()) return;
+  // sync() runs on the active GM only; no other client needs the timer (items-journal-30). Without
+  // Item Piles there is nothing to convert, and sync would warn on every hp change (dropbin-R6).
+  if (!actor || !isGMRunner() || !itemPilesApi()) return;
   const key = actor.uuid;
   clearTimeout(pending.get(key));
   pending.set(key, setTimeout(() => { pending.delete(key); sync(actor); }, 150));
+}
+
+/** Drop the actor's queued sync: the caller is about to sync it itself. */
+function unqueue(actor) {
+  const key = actor?.uuid;
+  clearTimeout(pending.get(key));
+  pending.delete(key);
 }
 
 function onActorHp(actor, changes) {
@@ -184,20 +396,28 @@ function onEffect(effect) {
  * (vision, fog, GM-hidden) and goes away when the token is destroyed.
  */
 const EYE_KEY = "pdLootEye";
-const eyeState = { tex: null, loading: null };
+// `failed` remembers a load that came back empty or rejected: no reload (and no warning) per paint
+// until canvasReady clears it (dropbin-R8).
+const eyeState = { tex: null, loading: null, failed: false };
 
 function eyeTexture() {
   const tx = eyeState.tex;
   if (tx && !tx.destroyed && tx.baseTexture && !tx.baseTexture.destroyed) return tx;
   eyeState.tex = null;
-  if (!eyeState.loading) {
+  if (!eyeState.loading && !eyeState.failed) {
     const load = foundry.canvas?.loadTexture ?? globalThis.loadTexture;
     eyeState.loading = Promise.resolve(load?.(EYE))
       .then(tex => { eyeState.tex = tex ?? null; if (!tex) console.warn(`${MODULE} | eye texture missing: ${EYE}`); })
       .catch(err => console.warn(`${MODULE} | eye texture`, err))
-      .finally(() => { eyeState.loading = null; if (eyeState.tex) paintAllEyes(); });
+      .finally(() => { eyeState.loading = null; eyeState.failed = !eyeState.tex; if (eyeState.tex) paintAllEyes(); });
   }
   return null;
+}
+
+/** canvasReady: forget a failed eye-texture load, then repaint (which tries the load once more). */
+function onCanvasReady() {
+  eyeState.failed = false;
+  paintAllEyes();
 }
 
 function wantsEye(doc) {
@@ -212,13 +432,20 @@ function wantsEye(doc) {
   }
 }
 
-function paintEye(token) {
+/**
+ * Paint (or hide) the eye. The document-change paths (drawToken, updateToken, the actor/item hooks,
+ * canvasReady, the public API) re-ask wantsEye and cache the answer on the Token as `_pdWantsEye`;
+ * refreshToken passes `cached` and reuses it, so a frame of animation makes no Item Piles query
+ * (dropbin-perf-1). A token refreshed before any recompute asks once.
+ */
+function paintEye(token, { cached = false } = {}) {
   try {
     const doc = token?.document;
     if (!doc || token.destroyed) return;
     let eye = token[EYE_KEY];
     if (eye && (eye.destroyed || eye.parent !== token)) eye = token[EYE_KEY] = null;
-    if (!wantsEye(doc)) { if (eye) eye.visible = false; return; }
+    if (!cached || typeof token._pdWantsEye !== "boolean") token._pdWantsEye = wantsEye(doc);
+    if (!token._pdWantsEye) { if (eye) eye.visible = false; return; }
     const tex = eyeTexture();
     if (!tex) return; // paints when it loads
     if (!eye) {
@@ -298,7 +525,8 @@ async function revive(tokenDoc) {
   if (!a) return;
   if (a.statuses.has("dead")) await a.toggleStatusEffect("dead", { active: false });
   if ((a.system.attributes.hp.value ?? 0) <= 0) await a.update({ "system.attributes.hp.value": 1 });
-  // the hp/effect hooks revert the pile; run it now too so the HUD closes on a creature
+  // the hp/effect hooks queued a sync; run it now instead, so the HUD closes on a creature
+  unqueue(a);
   await sync(a);
 }
 
@@ -318,7 +546,11 @@ function addHudButtons(app, element) {
     b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); fn(); });
     col.prepend(b);
   };
-  mk("pd-corpse-revive", "fa-heart-pulse", _loc("PENTARYN_DROPBIN.corpse.revive"), async () => { await revive(tokenDoc); app.close(); });
+  // dropbin-R7: a failed Revive warns (prefixed) and toasts once; the HUD stays open
+  mk("pd-corpse-revive", "fa-heart-pulse", _loc("PENTARYN_DROPBIN.corpse.revive"), () => revive(tokenDoc).then(() => app.close(), err => {
+    console.warn(`${MODULE} | revive failed for ${tokenDoc.name}`, err);
+    ui.notifications.warn(_loc("PENTARYN_DROPBIN.corpse.reviveFailed", { name: tokenDoc.name }));
+  }));
   mk("pd-corpse-sheet", "fa-user", _loc("PENTARYN_DROPBIN.corpse.sheet"), () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
 }
 
@@ -326,15 +558,15 @@ function addHudButtons(app, element) {
 /*  Lifecycle                                   */
 /* -------------------------------------------- */
 
-/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD. */
+/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD, the sheet guard, base release. */
 export function install(reg, ctx) {
   ctx.expose({ corpses });
   const on = (name, fn, label) => reg.on(name, fn, { label });
   on("updateActor", onActorHp, "corpse: hp");
   for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) on(h, onEffect, `corpse: ${h}`);
-  on("drawToken", paintEye, "eye: draw");
-  on("refreshToken", paintEye, "eye: refresh");               // hot: paints only our corpses, no world walk
-  on("canvasReady", paintAllEyes, "eye: canvas");
+  on("drawToken", token => paintEye(token), "eye: draw");
+  on("refreshToken", token => paintEye(token, { cached: true }), "eye: refresh"); // hot: reuses the cached answer, no Item Piles query
+  on("canvasReady", onCanvasReady, "eye: canvas");
   on("updateToken", doc => { if (doc.parent === canvas?.scene) paintEye(doc.object); }, "eye: token");
   // Taking items out of a corpse changes its synthetic actor's items/currency, not the token.
   on("updateActor", paintEyesOf, "eye: actor");
@@ -343,6 +575,10 @@ export function install(reg, ctx) {
   }
   ctx.onReady(() => migrateLegacyEyes(), "corpse eye migration");
   on("renderTokenHUD", addHudButtons, "corpse HUD");
+  on("item-piles-preRenderActorSheet", sheetGuard, "corpse: no sheet");
+  on("deleteToken", onTokenDeleted, "corpse: token deleted");
+  on("deleteScene", onSceneDeleted, "corpse: scene deleted");
+  ctx.onReady(() => releaseOrphanBases(), "corpse base release");
 }
 
 /** Cancel the pending debounced syncs. */

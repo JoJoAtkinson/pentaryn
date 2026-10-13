@@ -20,8 +20,8 @@ prefer it.
 and for premium content the package's own site, since licence-gated releases have no
 public notes to read.
 
-Everything is cached under ``.state/vtt-update-cache/`` for the day, so re-running a dry
-scan while iterating costs nothing.
+Successful fetches are cached under ``.state/vtt-update-cache/`` for six hours (a failed one is
+retried next call, never cached), so re-running a dry scan while iterating costs nothing.
 """
 
 from __future__ import annotations
@@ -102,6 +102,17 @@ def _parts(version: str) -> list[int]:
     return [int(n) for n in _NUM.findall(version or "")]
 
 
+def _key(version: str) -> list[int]:
+    """Numeric parts with trailing zeros dropped, so ``1.2`` and ``1.2.0`` compare equal."""
+    parts = _parts(version)
+    while parts and parts[-1] == 0:
+        parts.pop()
+    return parts
+
+
+_PRERELEASE = re.compile(r"(alpha|beta|rc|pre|dev)", re.I)
+
+
 def is_newer(candidate: str | None, current: str | None) -> bool:
     if not candidate:
         return False
@@ -135,13 +146,19 @@ def _cache_path(key: str) -> Path:
 
 
 def _cached(key: str, produce, ttl: int = CACHE_TTL):
+    """``None`` means the fetch failed, so it is never cached and a ``null`` already on
+    disk is a miss — an unreachable upstream is retried next call, not pinned for the TTL."""
     path = _cache_path(key)
     if path.exists() and (time.time() - path.stat().st_mtime) < ttl:
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            hit = json.loads(path.read_text(encoding="utf-8"))
+            if hit is not None:
+                return hit
         except json.JSONDecodeError:
             pass
     value = produce()
+    if value is None:
+        return None
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value), encoding="utf-8")
     return value
@@ -168,11 +185,15 @@ def fetch_json(url: str, timeout: float = 25.0, retries: int = 3) -> dict | None
 
 def gh_api(path: str, *, paginate: bool = False) -> list | dict | None:
     """GitHub through the authenticated ``gh`` CLI — 5000 req/hr instead of 60, and no
-    token handling of our own."""
+    token handling of our own. Returns ``None`` rather than raising: a stalled gh
+    (timeout) or a missing one (OSError) degrades to "unresolved", exactly as a 404."""
     cmd = ["gh", "api", path]
     if paginate:
         cmd.append("--paginate")
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except (subprocess.TimeoutExpired, OSError):
+        return None
     if r.returncode != 0:
         return None
     try:
@@ -206,7 +227,14 @@ def gitlab_project(pkg: Package) -> str | None:
 # ── Resolution ───────────────────────────────────────────────────────────────
 
 def _from_manifest(url: str) -> dict | None:
-    return _cached(f"manifest_{url}", lambda: fetch_json(url))
+    data = _cached(f"manifest_{url}", lambda: fetch_json(url))
+    return data if isinstance(data, dict) else None
+
+
+def _mapping(value, fallback: dict) -> dict:
+    """A third-party manifest's sub-object, or ``fallback`` when it is not a mapping
+    (ROB-11) — a string ``compatibility`` must not crash the risk check later."""
+    return value if isinstance(value, dict) and value else fallback
 
 
 def _github_latest(repo: str) -> dict | None:
@@ -248,8 +276,8 @@ def resolve(pkg: Package, *, notes: bool = True) -> Upstream:
     data = _from_manifest(pkg.manifest) if pkg.manifest else None
     if data:
         up.latest = str(data.get("version", "")) or None
-        up.compatibility = data.get("compatibility") or {}
-        up.relationships = data.get("relationships") or {}
+        up.compatibility = _mapping(data.get("compatibility"), {})
+        up.relationships = _mapping(data.get("relationships"), {})
         up.source = "manifest"
 
     # 2. A pinned manifest URL never advances — ask the forge what "latest" is.
@@ -263,8 +291,8 @@ def resolve(pkg: Package, *, notes: bool = True) -> Upstream:
             fresh = _from_manifest(asset) if asset else None
             if fresh and is_newer(str(fresh.get("version", "")), up.latest or pkg.version):
                 up.latest = str(fresh.get("version", "")) or up.latest
-                up.compatibility = fresh.get("compatibility") or up.compatibility
-                up.relationships = fresh.get("relationships") or up.relationships
+                up.compatibility = _mapping(fresh.get("compatibility"), up.compatibility)
+                up.relationships = _mapping(fresh.get("relationships"), up.relationships)
                 up.manifest_url = asset
                 up.source = "github"
 
@@ -272,16 +300,17 @@ def resolve(pkg: Package, *, notes: bool = True) -> Upstream:
     #    download is licence-gated. Forge's bazaar is a third opinion when r2 is silent.
     if not up.latest and pkg.type == "module":
         r2 = _cached(f"r2_{pkg.id}", lambda: fetch_json(R2_MANIFEST.format(id=pkg.id)))
-        if r2:
+        if isinstance(r2, dict) and r2:
             up.latest = str(r2.get("version", "")) or None
-            up.compatibility = r2.get("compatibility") or up.compatibility
-            up.relationships = r2.get("relationships") or up.relationships
+            up.compatibility = _mapping(r2.get("compatibility"), up.compatibility)
+            up.relationships = _mapping(r2.get("relationships"), up.relationships)
             up.manifest_url = up.manifest_url or R2_MANIFEST.format(id=pkg.id)
             up.source = "r2"
     if not up.latest and pkg.type == "module":
         forge = _cached(f"forge_{pkg.id}",
                         lambda: fetch_json(FORGE_BAZAAR.format(id=pkg.id)))
-        version = ((forge or {}).get("package") or {}).get("version")
+        package = forge.get("package") if isinstance(forge, dict) else None
+        version = package.get("version") if isinstance(package, dict) else None
         if version:
             up.latest, up.source = str(version), "forge"
 
@@ -299,13 +328,24 @@ def _attach_notes(pkg: Package, up: Upstream, repo: str | None) -> None:
     Reading only the newest release would miss the breaking change three releases back
     that we are also about to skip over — which is precisely what the adjudicator is
     for. Bodies are truncated because they are fed to an LLM.
+
+    Only installed < tag <= target counts: betas and anything past the target are not
+    what we are installing. Past eight, the target's own note is kept plus the seven
+    nearest the installed version — the ones a newest-first cut used to drop (EC-6).
     """
+    low, high = _key(up.installed), _key(up.latest or "")
+
+    def wanted(rel: dict, tag: str) -> bool:
+        if rel.get("prerelease") or rel.get("upcoming_release") or _PRERELEASE.search(tag):
+            return False
+        return low < _key(tag) <= high
+
     releases: list[dict] = []
     if repo:
         up.notes_url = f"https://github.com/{repo}/releases"
         for rel in _github_releases(repo):
             tag = (rel.get("tag_name") or "").lstrip("v")
-            if is_newer(tag, up.installed):
+            if wanted(rel, tag):
                 releases.append({
                     "version": tag,
                     "name": rel.get("name") or tag,
@@ -317,7 +357,7 @@ def _attach_notes(pkg: Package, up: Upstream, repo: str | None) -> None:
         up.notes_url = f"https://gitlab.com/{project}/-/releases"
         for rel in _gitlab_releases(project):
             tag = (rel.get("tag_name") or "").lstrip("v")
-            if is_newer(tag, up.installed):
+            if wanted(rel, tag):
                 releases.append({
                     "version": tag,
                     "name": rel.get("name") or tag,
@@ -329,7 +369,11 @@ def _attach_notes(pkg: Package, up: Upstream, repo: str | None) -> None:
         # Premium content: no public release feed. Point a human at the vendor page.
         up.notes_url = pkg.changelog or pkg.url
 
-    up.notes = releases[:8]
+    releases.sort(key=lambda r: _key(r["version"]))   # oldest first
+    if len(releases) > 8:
+        target = [r for r in releases if _key(r["version"]) == high][-1:]
+        releases = [r for r in releases if r not in target][:8 - len(target)] + target
+    up.notes = releases[::-1]
 
 
 def resolve_all(packages: list[Package], *, notes: bool = True) -> dict[str, Upstream]:

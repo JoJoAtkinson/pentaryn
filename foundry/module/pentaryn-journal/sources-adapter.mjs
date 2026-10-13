@@ -20,9 +20,10 @@ import * as core from "./journal-core.mjs";
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /**
- * sanitize() per page, remembered (items-journal-33): every bar refresh re-describes every open
- * readable, and sanitizing is the cost. Keyed by the page, its last modification and the embed label
- * (a language switch); a page without a modification time is never cached. Bounded at 64 pages.
+ * sanitize() per page and per item, remembered (items-journal-33, journal-perf-3): every bar refresh
+ * re-describes every open readable, and sanitizing is the cost. Keyed by the document's uuid, its last
+ * modification and the embed label (a language switch), plus the identified flag for an item; a
+ * document without a modification time is never cached. Bounded at 64 entries.
  */
 export const sanitizeMemo = core.makeMemo(core.sanitize, 64);
 
@@ -100,11 +101,15 @@ export function pageDescriptor(page, entry) {
 export function itemDescriptor(src) {
   const it = src.item;
   // Always the player's view: the unidentified text while unidentified, even for the GM.
-  const desc = it.system?.identified === false
+  const unidentified = it.system?.identified === false;
+  const desc = unidentified
     ? (it.system?.unidentified?.description ?? "")
     : (it.system?.description?.value ?? "");
+  const label = embeddedLabel();
+  const modified = it._stats?.modifiedTime;
+  const key = modified === undefined || modified === null ? null : `${it.uuid}|${modified}|${unidentified}|${label}`;
   const body = `<img class="pj-item-img" src="${esc(it.img)}" alt="">`
-    + core.sanitize(desc, { resolve: resolverFor(it), embeddedLabel: embeddedLabel() });
+    + sanitizeMemo(key, desc, { resolve: resolverFor(it), embeddedLabel: label });
   return { kind: "item", key: it.uuid, type: "text", name: it.name, body, entryId: null,
     entryName: src.pileName, pageName: it.name };
 }

@@ -5,6 +5,7 @@
 // the turn boundary are in turnflow-player.test.mjs.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { pinJSON } from "./kit/harness.mjs";
 import { MODULE, captureConsole, drain, makeCombat, makeEffect, makeMessage, makeToken, setupWorld, setTurn } from "./fixtures/world.mjs";
 import { barbarian, fighter, rogue, wolf } from "./fixtures/actors.mjs";
@@ -82,6 +83,23 @@ test("special actions: each spends the Action (or a swing for Shove) and does it
       statuses: [...fig.statuses], calls: F.calls.filter(c => ["argon.special", "createEmbedded", "toggleStatusEffect", "rollSkill", "notify"].includes(c.op)),
     });
   }
+  // Off his turn (ext-3 pins these before AFTER became a table): Dodge and Hide still do their rule; no pip, nothing recorded.
+  onTurn(gob);
+  for (const name of ["Dodge", "Hide"]) {
+    reset(fig);
+    const bar = actionBar(fig);
+    if (name === "Hide") fig.skillScript.push([{ total: 17 }]);
+    F.calls.length = 0;
+    await bar.by(name)._onLeftClick({});
+    await drain();
+    rows.push({
+      name: `${name} (off turn)`, special: bar.by(name)._pcSpecial, actionUsed: bar.panel.isActionUsed, paints: bar.panel.updates,
+      turn: fig.flags[MODULE]?.turn ?? null, effects: fig.effects.contents.map(e => ({ name: e.name, flags: e.flags, changes: e.system?.changes ?? null })),
+      statuses: [...fig.statuses], calls: F.calls.filter(c => ["argon.special", "createEmbedded", "toggleStatusEffect", "rollSkill", "notify"].includes(c.op)),
+    });
+  }
+  onTurn(fig);
+  F.calls.length = 0;
   pinJSON("turnflow-specials", rows, import.meta.url);
   assert.equal(rows[0].special, "dash");
   reset(fig);
@@ -159,6 +177,17 @@ test("special actions: second Dash adds the same again; Hide fails / cancelled; 
   assert.equal(bar.panel._buttons.at(-1)._pcSpecial, undefined, "no createChatMessage: never looked at");
   reset(fig);
   F.calls.length = 0;
+});
+
+test("ext-3: afterSpecial reads one frozen AFTER table, a row per special action; the Shove rule (a swing, not the Action) is written once", async () => {
+  const { AFTER } = await import("../turnflow/action-buttons.mjs");
+  const core = await import("../combat-core.mjs");
+  assert.equal(typeof AFTER, "object", "AFTER is exported");
+  assert.deepEqual(Object.keys(AFTER).sort(), [...core.SPECIAL_ACTIONS].sort(), "one row per SPECIAL_ACTIONS kind");
+  assert.ok(Object.isFrozen(AFTER) && Object.values(AFTER).every(Object.isFrozen), "frozen table, rows included");
+  assert.deepEqual(Object.entries(AFTER).filter(([, r]) => r.swing).map(([k]) => k), ["shove"], "only Shove spends a swing instead of the Action");
+  const src = readFileSync(new URL("../turnflow/action-buttons.mjs", import.meta.url), "utf8");
+  assert.deepEqual(src.match(/kind\s*[!=]==\s*"\w+"/g) ?? [], [], "no per-kind if-ladder left in the feature");
 });
 
 test("the Reaction bar's weapon: 'Opportunity Attack: X', spends the Reaction (not the Action), tags its roll", async () => {
@@ -260,6 +289,8 @@ test("turn boundaries on the GM: sweeps at turn end / start, the Reaction back, 
   F.calls.length = 0;
   F.Hooks.callAll("combatTurnChange", combat, { round: 1, turn: 0, combatantId: "cb1" }, { round: 1, turn: 1, combatantId: "cb2" });
   await drain();
+  mock.timers.tick(750);   // ac-4: the turn's claim on the Combat settles first
+  await drain();
   const calls = F.calls.splice(0).filter(c => !["Hooks.call", "Hooks.callAll"].includes(c.op) || c.name.startsWith("pentaryn"));
   const state = {
     fig: { effects: fig.effects.contents.map(e => e.name) },
@@ -321,10 +352,10 @@ test("a deleted combat: its combatants' effects swept and their combat flags cle
   F.calls.length = 0;
   F.Hooks.callAll("deleteCombat", c9);
   await drain();
-  const now = F.calls.splice(0).filter(c => ["deleteEmbedded", "update"].includes(c.op));
+  const now = F.calls.splice(0).filter(c => ["deleteEmbedded", "update", "Actor.updateDocuments"].includes(c.op));
   mock.timers.tick(1500);
   await drain();
-  const later = F.calls.splice(0).filter(c => ["deleteEmbedded", "update"].includes(c.op));
+  const later = F.calls.splice(0).filter(c => ["deleteEmbedded", "update", "Actor.updateDocuments"].includes(c.op));
   pinJSON("turnflow-delete-combat", { now, later, flags: { fig: fig.flags[MODULE], rog: rog.flags[MODULE], brb: brb.flags[MODULE] } }, import.meta.url);
   assert.deepEqual(fig.flags[MODULE], {});
   assert.deepEqual(rog.flags[MODULE], { turn: { key: "nocombat" } }, "the other combat's reaction is an orphan too (no such combat)");
@@ -340,6 +371,78 @@ test("a deleted combat: its combatants' effects swept and their combat flags cle
   fig.unsetFlag = unset;
   pinJSON("turnflow-delete-combat-console", lines.splice(0), import.meta.url);
   reset(fig, rog, brb);
+  F.calls.length = 0;
+});
+
+test("ac-4: two GM tabs at one turn change: one claims the turn on the Combat and sweeps, the other stands down", async () => {
+  reset(fig, rog);
+  const c5 = makeCombat({ id: "c5", viewed: false, entries: [fig, rog].map((a, i) => ({ id: `cb${i + 1}`, actor: a, token: toks[a.id] })) });
+  const arm = async () => {
+    reset(fig, rog);
+    await fig.createEmbeddedDocuments("ActiveEffect", [{ name: "Dash", flags: { [MODULE]: { until: "turnEnd" } } }]);
+    await rog.createEmbeddedDocuments("ActiveEffect", [{ name: "Dodging", statuses: ["dodging"] }]);
+    rog.flags[MODULE] = { reaction: { combatId: "c5" } };
+    F.calls.length = 0;
+  };
+  const writes = () => F.calls.filter(c => c.op === "deleteEmbedded" || (c.op === "update" && c.documentName === "Actor"));
+  // the other tab (same GM user, another socket) claimed this turn first: this tab does nothing
+  await arm();
+  c5.flags[MODULE] = { claims: { t2_1: "socket-gm-2" } };
+  F.Hooks.callAll("combatTurnChange", c5, { round: 2, turn: 0, combatantId: "cb1" }, { round: 2, turn: 1, combatantId: "cb2" });
+  await drain();
+  mock.timers.tick(750);
+  await drain();
+  assert.deepEqual(writes(), [], "claimed by the other tab: no sweep, no Reaction reset here");
+  assert.deepEqual([fig.effects.size, rog.effects.size], [1, 1]);
+  // both tabs race: this one stamps its claim, the other's stamp lands after (last writer wins)
+  await arm();
+  F.Hooks.callAll("combatTurnChange", c5, { round: 3, turn: 0, combatantId: "cb1" }, { round: 3, turn: 1, combatantId: "cb2" });
+  await drain();
+  assert.equal(c5.flags[MODULE].claims.t3_1, "socket-gm-1", "this tab stamped its socket id on the Combat");
+  c5.flags[MODULE].claims.t3_1 = "socket-gm-2";
+  mock.timers.tick(750);
+  await drain();
+  assert.deepEqual(writes(), [], "the other tab's later stamp wins: this tab stands down silently");
+  // this tab's claim stands: it sweeps and gives the Reaction back
+  await arm();
+  F.Hooks.callAll("combatTurnChange", c5, { round: 4, turn: 0, combatantId: "cb1" }, { round: 4, turn: 1, combatantId: "cb2" });
+  await drain();
+  assert.deepEqual(writes(), [], "nothing before the claim settles");
+  mock.timers.tick(750);
+  await drain();
+  assert.deepEqual([fig.effects.size, rog.effects.size, rog.flags[MODULE].reaction], [0, 0, null], "the winning tab sweeps and resets the Reaction");
+  F.game.combats.delete(c5.id);
+  reset(fig, rog);
+  F.calls.length = 0;
+});
+
+test("ac-4: a deleted combat cleaned up by two GM tabs: an effect the other tab already deleted is success, flags still cleared", async () => {
+  reset(fig);
+  fig.flags[MODULE] = { turn: { key: "c8:1:cb1" }, reaction: { combatId: "c8" } };
+  await fig.createEmbeddedDocuments("ActiveEffect", [{ name: "Dash", flags: { [MODULE]: { until: "turnEnd" } } }]);
+  const gone = fig.effects.contents[0].id;
+  const del = fig.deleteEmbeddedDocuments;
+  // the other tab's delete landed between this tab's read and its request: the server refuses ours
+  fig.deleteEmbeddedDocuments = async () => { fig.effects.delete(gone); throw new Error(`ActiveEffect "${gone}" does not exist!`); };
+  lines.length = 0;
+  F.Hooks.callAll("deleteCombat", { id: "c8", combatants: [{ actor: fig }] });
+  await drain();
+  fig.deleteEmbeddedDocuments = del;
+  assert.deepEqual(lines.filter(l => l.level === "warn"), [], "no end-of-combat cleanup warn");
+  assert.deepEqual(fig.flags[MODULE], {}, "the combat's turn and Reaction flags still cleared");
+  // an effect already gone from this tab's copy is not asked for at all
+  await fig.createEmbeddedDocuments("ActiveEffect", [{ name: "Dash", flags: { [MODULE]: { until: "turnEnd" } } }]);
+  const stale = fig.effects.contents[0];
+  const map = fig.effects.map.bind(fig.effects);
+  fig.effects.map = fn => { const out = map(fn); fig.effects.delete(stale.id); return out; };
+  F.calls.length = 0;
+  F.Hooks.callAll("deleteCombat", { id: "c8", combatants: [{ actor: fig }] });
+  await drain();
+  delete fig.effects.map;
+  assert.deepEqual(F.calls.filter(c => c.op === "deleteEmbedded"), [], "nothing to delete: no request");
+  mock.timers.tick(1500);
+  await drain();
+  reset(fig);
   F.calls.length = 0;
 });
 
@@ -373,6 +476,24 @@ test("controlToken: the one token left selected is bound to the HUD 150 ms later
   A.ARGON.enabled = true;
   F.canvas.tokens.controlled = [];
   pinJSON("turnflow-control-token", rows, import.meta.url);
+  F.calls.length = 0;
+});
+
+test("rob-5: a HUD bind that throws in the 150 ms look (token gone) is warned, never thrown from the timer", () => {
+  const bind = A.ARGON.bind;
+  A.ARGON.bind = () => { throw new Error("token destroyed"); };
+  A.ARGON.enabled = true;
+  A.ARGON._token = null;
+  F.canvas.tokens.controlled = [toks[rog.id]];
+  lines.length = 0;
+  try {
+    F.Hooks.callAll("controlToken", toks[fig.id], false);
+    assert.doesNotThrow(() => mock.timers.tick(150));
+  } finally {
+    A.ARGON.bind = bind;
+    F.canvas.tokens.controlled = [];
+  }
+  assert.deepEqual(lines.splice(0), [{ level: "warn", text: "pentaryn-combat | HUD follow", err: "token destroyed" }]);
   F.calls.length = 0;
 });
 
@@ -575,7 +696,9 @@ test("damage at 0 HP: a Death Saving Throw failure (two on a crit), a chat line;
     actor.system.attributes.death = { failure: failures };
     const updates = {};
     F.calls.length = 0;
-    F.Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, { originatingMessage: crit ? { rolls: [{ isCritical: true }] } : null });
+    const options = { originatingMessage: crit ? { rolls: [{ isCritical: true }] } : null };
+    F.Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, options);   // dnd5e: same options to both hooks
+    F.Hooks.callAll("dnd5e.applyDamage", actor, amount, options);
     rows.push({ label, updates, chats: F.calls.filter(c => c.op === "ChatMessage.create").map(c => c.data) });
   };
   hit("at 0 HP, 5 damage", fig, 5);
@@ -589,6 +712,41 @@ test("damage at 0 HP: a Death Saving Throw failure (two on a crit), a chat line;
   hit("an NPC", gob, 5);
   rows.push({ label: "setting off" });
   pinJSON("turnflow-death", rows, import.meta.url);
+});
+
+test("damage at 0 HP (ac-6): the cards post after the damage lands, so a vetoed preApplyDamage leaves no card; the speaker is the token", () => {
+  const created = [];
+  const create = ChatMessage.create;
+  ChatMessage.create = async data => { created.push(data); };   // recorded, not made: later goldens keep their message ids
+  const chats = () => created;
+  fig.system.attributes.hp = { value: 0, max: 20, temp: 0, effectiveMax: 20 };
+  fig.system.attributes.death = { failure: 0 };
+  F.calls.length = 0;
+  // a later listener vetoes: dnd5e never fires applyDamage, so no card (the failure is only in the dropped updates)
+  const vetoed = {};
+  const updates = {};
+  F.Hooks.call("dnd5e.preApplyDamage", fig, 25, updates, vetoed);
+  assert.deepEqual(updates, { "system.attributes.death.failure": 1 });
+  assert.deepEqual(chats(), []);
+  // a fresh application lands: both cards, the public one spoken by the token
+  const options = {};
+  F.Hooks.call("dnd5e.preApplyDamage", fig, 25, {}, options);
+  assert.deepEqual(chats(), []);
+  toks[fig.id].name = "Masked Knight";   // the public card names the token, never the actor
+  F.Hooks.callAll("dnd5e.applyDamage", fig, 25, options);
+  toks[fig.id].name = fig.name;
+  const posted = chats();
+  assert.equal(posted.length, 2);
+  assert.deepEqual([posted[0].speaker.token, posted[0].speaker.alias], [toks[fig.id].id, "Masked Knight"]);
+  assert.equal(posted[0].content, "<p>Masked Knight takes damage at 0 Hit Points: a Death Saving Throw failure (1 of 3).</p>");
+  assert.deepEqual(posted[1].whisper, ["gmUser0000000001"]);
+  // applyDamage again on the same options (or for another actor) posts nothing more: the stash is spent
+  F.Hooks.callAll("dnd5e.applyDamage", fig, 25, options);
+  F.Hooks.callAll("dnd5e.applyDamage", rog, 25, vetoed);
+  assert.equal(chats().length, 2);
+  ChatMessage.create = create;
+  fig.system.attributes.hp = { value: 20, max: 20, temp: 0 };
+  F.calls.length = 0;
 });
 
 test("damage at 0 HP: setting off, no death data, a throw", async () => {
@@ -657,7 +815,7 @@ test("scrolling-text guard: a destroyed PreciseText ignores destroy and x/y; a h
   u.destroy();
   assert.equal(u.destroyCalls, 2, "setting off: core's destroy runs");
   assert.throws(() => { u.y = 5; }, /null|undefined/, "setting off: the original setter runs (and throws on a null transform)");
-  assert.equal(u.y, 0, "the getter returns 0 whenever transform is null, whatever the setting");
+  assert.throws(() => u.y, /null|undefined/, "setting off: the original getter runs too (combat-core-EC-7)");
   await F.game.settings.set(MODULE, "scrollingTextGuard", true);
   const G = W.InterfaceCanvasGroup;
   assert.equal(G.prototype.createScrollingText._pentaryn, true);
@@ -679,6 +837,29 @@ test("scrolling-text guard: a destroyed PreciseText ignores destroy and x/y; a h
   doc.hidden = false;
   pinJSON("turnflow-guards", F.calls.filter(c => ["createScrollingText", "ChatLog.notify"].includes(c.op)), import.meta.url);
   F.calls.length = 0;
+});
+
+test("combat-core-EC-7 [declared]: with scrollingTextGuard Off a destroyed PreciseText's x/y getter is core's own", async () => {
+  const P = W.PreciseText;
+  const t = new P();
+  t.x = 7;
+  t.y = 8;
+  t.destroy();
+  assert.deepEqual([t.x, t.y], [0, 0], "On: a destroyed text reads 0");
+  await F.game.settings.set(MODULE, "scrollingTextGuard", false);
+  try {
+    const u = new P();
+    u.x = 1;
+    u.y = 2;
+    assert.deepEqual([u.x, u.y], [1, 2], "Off: a live text reads through the native getter");
+    u.destroy();
+    for (const axis of ["x", "y"]) {
+      assert.throws(() => u[axis], /null|undefined/, `Off: the native ${axis} getter runs on a destroyed text (it throws on a null transform)`);
+      assert.throws(() => { u[axis] = 5; }, /null|undefined/, `Off: the native ${axis} setter runs too`);
+    }
+  } finally {
+    await F.game.settings.set(MODULE, "scrollingTextGuard", true);
+  }
 });
 
 test("Argon's pip settle: updateActionUse runs twice only when the pip count changed (combat-riders-3)", () => {

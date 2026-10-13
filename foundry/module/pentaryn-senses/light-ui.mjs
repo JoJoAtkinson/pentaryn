@@ -5,17 +5,16 @@
  * bindActions() (a UI file never imports a feature).
  */
 
-import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc, setTip, rootOf, hudColumn, hudButton } from "./senses-core.mjs";
+import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc } from "./senses-core.mjs";
 import { realItem, itemFrom } from "./light-adapter.mjs";
 import { collapseArgonPanels } from "./argon.mjs";
-import { isActiveGM } from "./lib/election.mjs";
-import { makeLog } from "./lib/log.mjs";
+import { isAnyGM } from "./lib/election.mjs";
 
 const PICK_TIMEOUT_MS = 60_000;
 
 const local = { picking: null };
 
-/** light.mjs's actions: { end, onMe, pickAndCast, toggle, hood, run }. */
+/** light.mjs's actions: { cast, end, onMe, pickAndCast, toggle, hood, run }. */
 let actions = null;
 
 /** Called by light.mjs's install(). */
@@ -23,20 +22,7 @@ export function bindActions(a) {
   actions = a;
 }
 
-const log = makeLog(MODULE);   // the kit log (senses-R6)
-const warn = (label, err) => log.warn(`light ${label}`, err);
-
-/**
- * The Light actions, once, for both the prompt's buttons (`dialog`) and the spell card's action row
- * (`card`): same labels, same icons, same order. `handler` names light.mjs's action (null: Not now).
- */
-export const LIGHT_ACTIONS = Object.freeze([
-  Object.freeze({ action: "me", icon: "fa-solid fa-user", label: "PENTARYN_SENSES.Light.OnMe", handler: "onMe", dialog: true, card: true }),
-  Object.freeze({ action: "pick", icon: "fa-solid fa-crosshairs", label: "PENTARYN_SENSES.Light.Pick", handler: "pickAndCast", dialog: true, card: true }),
-  Object.freeze({ action: "end", icon: "fa-solid fa-lightbulb-slash", label: "PENTARYN_SENSES.Light.End", handler: "end", card: true }),
-  Object.freeze({ action: "cancel", icon: "fa-solid fa-xmark", label: "PENTARYN_SENSES.Light.NotNow", handler: null, dialog: true })
-]);
-const lightAction = act => LIGHT_ACTIONS.find(a => a.action === act);
+const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 
 /** The "Where does the light go?" prompt, right after the cast. */
 export async function prompt(item) {
@@ -46,13 +32,15 @@ export async function prompt(item) {
   const choice = await DialogV2.wait({
     window: { title: _loc("PENTARYN_SENSES.Light.Title"), icon: "fa-solid fa-lightbulb" },
     content: `<p>${esc(_loc("PENTARYN_SENSES.Light.Where"))}</p>`,
-    buttons: LIGHT_ACTIONS.filter(a => a.dialog).map((a, i) => ({
-      action: a.action, label: _loc(a.label), icon: a.icon, ...(i === 0 ? { default: true } : {})
-    })),
+    buttons: [
+      { action: "me", label: _loc("PENTARYN_SENSES.Light.OnMe"), icon: "fa-solid fa-user", default: true },
+      { action: "pick", label: _loc("PENTARYN_SENSES.Light.Pick"), icon: "fa-solid fa-crosshairs" },
+      { action: "cancel", label: _loc("PENTARYN_SENSES.Light.NotNow"), icon: "fa-solid fa-xmark" }
+    ],
     rejectClose: false
   });
-  const handler = lightAction(choice)?.handler;
-  if (handler) return actions[handler](item);
+  if (choice === "me") return actions.onMe(item);
+  if (choice === "pick") return actions.pickAndCast(item);
 }
 
 /* -------------------------------------------- */
@@ -155,7 +143,8 @@ function cardButton(icon, label, act) {
   b.type = "button";
   b.className = "icon";
   b.dataset.psLight = act;
-  setTip(b, label);
+  b.dataset.tooltip = label;
+  b.setAttribute("aria-label", label);
   b.innerHTML = `<i class="${icon}" inert></i>`;
   li.append(b);
   return li;
@@ -175,7 +164,7 @@ export function decorateCard(message, html) {
   if (!uuid) return;
   const item = itemFrom(uuid);
   if (!isLightSpellData(item)) return;
-  const root = rootOf(html);
+  const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root) return;
   // The PHB Light's summon button (not groupable, so it keeps data-action): drop it with its <li>.
   root.querySelectorAll('[data-action="placeSummons"]').forEach(b => (b.closest("li") ?? b).remove());
@@ -199,7 +188,11 @@ export function decorateCard(message, html) {
     content.append(section);
   }
   if (list.querySelector("[data-ps-light]")) return;
-  const row = LIGHT_ACTIONS.filter(a => a.card).map(a => cardButton(a.icon, _loc(a.label), a.action));
+  const row = [
+    cardButton("fa-solid fa-user", _loc("PENTARYN_SENSES.Light.OnMe"), "me"),
+    cardButton("fa-solid fa-crosshairs", _loc("PENTARYN_SENSES.Light.Pick"), "pick"),
+    cardButton("fa-solid fa-lightbulb-slash", _loc("PENTARYN_SENSES.Light.End"), "end")
+  ];
   for (const li of row) {
     const b = li.firstElementChild;
     b.addEventListener("click", ev => {
@@ -208,7 +201,7 @@ export function decorateCard(message, html) {
       const live = itemFrom(uuid);
       if (!live) return;
       const act = b.dataset.psLight;
-      const p = actions[lightAction(act).handler](live);
+      const p = act === "me" ? actions.onMe(live) : act === "pick" ? actions.pickAndCast(live) : actions.end(live);
       Promise.resolve(p).catch(e => warn(`card ${act}`, e));
     });
     list.append(li);
@@ -223,7 +216,8 @@ function rowButton(cls, icon, tip, disabled, onClick) {
   const b = document.createElement("button");
   b.type = "button";
   b.className = `unbutton config-button item-control ${cls}`;
-  setTip(b, tip);
+  b.dataset.tooltip = tip;
+  b.setAttribute("aria-label", tip);
   b.innerHTML = `<i class="${icon}" inert></i>`;
   if (disabled) b.setAttribute("aria-disabled", "true");
   b.addEventListener("click", ev => {
@@ -237,7 +231,7 @@ function rowButton(cls, icon, tip, disabled, onClick) {
 
 export function decorateSheet(app, element) {
   const actor = app?.actor ?? app?.document;
-  const root = rootOf(element);
+  const root = element instanceof HTMLElement ? element : element?.[0];
   if (!actor?.items || !root) return;
   // With two lights lit only the strongest shows on the token; the other flame is drawn dimmer and
   // says so (usability Area 8, L5: torch + hooded lantern, the hood seemed to do nothing).
@@ -253,7 +247,7 @@ export function decorateSheet(app, element) {
     const cell = document.createElement("div");
     cell.className = "ps-light-controls";
     const winner = lit && lighting && lighting !== item.id ? actor.items.get(lighting) : null;
-    const tip = winner ? _loc("PENTARYN_SENSES.Light.Outshone", { item: winner.name })
+    const tip = winner ? _loc("PENTARYN_SENSES.Light.Outshone", { item: esc(winner.name) })
       : _loc(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt");
     cell.append(rowButton(`ps-light-toggle${lit ? " lit" : ""}${winner ? " outshone" : ""}`, "fa-solid fa-fire",
       tip, locked, () => actions.toggle(item)));
@@ -275,20 +269,27 @@ export function injectHUD(app, element) {
   const sl = readSpellLight(doc);
   if (!sl) return;
   const item = itemFrom(sl.source);
-  // [declared senses-ac-2] only a viewer who can act sees it: the item's owner, or the active GM
-  // (only its reconcile puts an orphan out; another GM's click would do nothing)
-  if (!item?.isOwner && !isActiveGM()) return;
-  const col = hudColumn(element, "ps-light-end");
-  if (!col) return;
-  hudButton(col, {
-    cls: "ps-light-end", icon: "fa-solid fa-lightbulb-slash", tip: _loc("PENTARYN_SENSES.Light.End"),
-    onClick: async () => {
+  if (!isAnyGM() && !item?.isOwner) return;
+  const root = element instanceof HTMLElement ? element : element?.[0];
+  const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
+  if (!col || col.querySelector(".ps-light-end")) return;
+  const tip = _loc("PENTARYN_SENSES.Light.End");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "control-icon ps-light-end";
+  btn.dataset.tooltip = tip;
+  btn.setAttribute("aria-label", tip);
+  btn.innerHTML = `<i class="fa-solid fa-lightbulb-slash"></i>`;
+  btn.addEventListener("click", ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    (async () => {
       if (item?.isOwner) await actions.end(item);
-      else if (isActiveGM()) actions.run(sl.source); // the item is gone: put the orphan out
+      else if (isAnyGM()) actions.run(sl.source); // the item is gone: put the orphan out
       app.render?.();
-    },
-    onError: e => warn("hud click", e),
+    })().catch(e => warn("hud click", e));
   });
+  col.appendChild(btn);
 }
 
 /** Cancel a pick in progress (canvas teardown, uninstall). */

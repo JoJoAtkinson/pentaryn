@@ -202,9 +202,18 @@ def load(path: Path = REGISTRY_PATH) -> Registry:
     if not isinstance(raw, dict):
         raise RegistryError(f"{path}: expected a mapping with `adjustments:`")
 
+    entries = raw.get("adjustments") or []
+    if not isinstance(entries, list):
+        raise RegistryError(f"{path}: `adjustments` must be a list, "
+                            f"got {type(entries).__name__}")
+    alias_map = raw.get("aliases") or {}
+    if not isinstance(alias_map, dict):
+        raise RegistryError(f"{path}: `aliases` must be a mapping, "
+                            f"got {type(alias_map).__name__}")
+
     rows: list[Adjustment] = []
     seen: set[str] = set()
-    for entry in raw.get("adjustments") or []:
+    for entry in entries:
         if not isinstance(entry, dict):
             raise RegistryError("every adjustment must be a mapping")
         row_id = str(entry.get("id") or "")
@@ -239,7 +248,7 @@ def load(path: Path = REGISTRY_PATH) -> Registry:
             retire_class=retire, check=str(entry.get("check") or "").strip()))
 
     aliases: dict[str, tuple[str, ...]] = {}
-    for pkg, terms in (raw.get("aliases") or {}).items():
+    for pkg, terms in alias_map.items():
         aliases[str(pkg)] = _as_tuple(terms, field_name="aliases", row_id=str(pkg))
     return Registry(rows=rows, aliases=aliases, path=path)
 

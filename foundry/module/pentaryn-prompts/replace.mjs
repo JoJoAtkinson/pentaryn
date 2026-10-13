@@ -21,6 +21,7 @@ import {
   MODULE, DND_SIZE_WIDTH, placementFor, needsLockSize, footprintSquares, codedError, errorCode, textHash,
   xpBudget, difficulty, crXp, lightText as lightWords
 } from "./geometry-core.mjs";
+import { isPromptId } from "./core/group.mjs";
 import { markerSizeOfToken, promptText } from "./markers-adapter.mjs";
 import { manifestFor } from "./settings.mjs";
 import { promptTokens, actorXp, provenanceOf } from "./scene-adapter.mjs";
@@ -35,6 +36,7 @@ import { KINDS, SPEC_DIR } from "./prompts-core.mjs";
 import { SIZE_WORDS, parseCr } from "./core/size.mjs";
 import { replaceLogLine } from "./core/log-lines.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { claimDocument } from "./lib/election.mjs";
 
 const log = makeLog(MODULE);
 
@@ -43,7 +45,14 @@ export const EYE = "assets/tokens/custom/props/icon-eye.webp";
 export const HOTSPOT_TEMPLATE = "Hotspot · Look (template)";
 export const CREATURE_FOLDER = "Foundry MCP Creatures";
 const DRY_RUN_OVER = 5;
-const TYPES = ["Token", "Note", "AmbientLight", "Tile"];
+/** The placed document types (type → the scene's collection), in create order: TYPES and whyGone read it. */
+const PLACED = Object.freeze([
+  ["Token", s => s.tokens],
+  ["Note", s => s.notes],
+  ["AmbientLight", s => s.lights],
+  ["Tile", s => s.tiles]
+]);
+const TYPES = PLACED.map(([type]) => type);
 
 /** Marker sets that have been dry-run this session (signature → ms). */
 const dryRuns = new Map();
@@ -91,12 +100,17 @@ function resolveOne(spec, index, { call, force }) {
   return e;
 }
 
+/** A placed document's label, the same in MARKER_GONE and the readback: name, text, journal entry, "Light". */
+function nameOf(doc) {
+  return doc.name || doc.text || doc.entry?.name || (doc.documentName === "AmbientLight" ? "Light" : "");
+}
+
 /** A gone marker: the document built from it (provenance), or the marker a size chip swapped it for. */
 function whyGone(scene, markerId) {
   try {
-    for (const coll of [scene.tokens, scene.notes, scene.lights, scene.tiles]) {
-      const doc = coll?.find(d => provenanceOf(d)?.markerId === markerId && provenanceOf(d)?.sceneId === scene.id);
-      if (doc) return { replacedBy: createdText({ type: doc.documentName, id: doc.id, name: doc.name || doc.text || doc.entry?.name || (doc.documentName === "AmbientLight" ? "Light" : "") }) };
+    for (const [, collectionOf] of PLACED) {
+      const doc = collectionOf(scene)?.find(d => provenanceOf(d)?.markerId === markerId && provenanceOf(d)?.sceneId === scene.id);
+      if (doc) return { replacedBy: createdText({ type: doc.documentName, id: doc.id, name: nameOf(doc) }) };
     }
     let id = markerId, next = null;
     for (let hop = 0; hop < 8; hop++) {   // resized more than once: follow the chain
@@ -521,7 +535,7 @@ function readDoc(scene, type, id) {
   const doc = scene.getEmbeddedDocument(type, id);
   if (!doc) return { type, id, missing: true };
   const g = scene.dimensions.size;
-  const base = { type, id, name: doc.name ?? doc.text ?? (type === "AmbientLight" ? "Light" : ""), x: doc.x, y: doc.y };
+  const base = { type, id, name: nameOf(doc), x: doc.x, y: doc.y };
   if (type === "Token") return { ...base, w: doc.width, h: doc.height, hidden: doc.hidden, lockSize: !!doc.flags?.dnd5e?.lockSize };
   if (type === "Tile") return { ...base, w: doc.width / g, h: doc.height / g };
   return base;
@@ -529,7 +543,8 @@ function readDoc(scene, type, id) {
 
 /**
  * Each encounter this run built into: its creatures' XP now (new actors plus built members) against
- * the party budget from the gather (or `party` on the replace call). Hostile-or-neutral npcs only.
+ * the party budget from the gather (or `party` on the replace call). Each built creature's XP comes
+ * from actorXp(actor, token), which decides who counts.
  */
 function encounterXp(entries, results, args) {
   const byPid = new Map(results.filter(r => r.ok && r.id).map(r => [r.id, r]));
@@ -561,11 +576,11 @@ function encounterLines(entries, args, xpOf) {
   const budget = xpBudget(args.party ?? m.opts?.party);
   const out = [];
   for (const [eid, enc] of Object.entries(m.encounters)) {
-    const pids = enc.members.filter(id => /^p\d+$/.test(id));
+    const pids = enc.members.filter(isPromptId);
     if (!pids.some(p => xpOf(p) !== null)) continue;
     let xp = 0, creatures = 0, open = 0;
     for (const id of enc.members) {
-      if (/^p\d+$/.test(id)) {
+      if (isPromptId(id)) {
         const x = xpOf(id);
         if (x === null) { open++; continue; }
         if (x) { xp += x; creatures++; }
@@ -607,7 +622,98 @@ export async function replaceMany(input, opts = {}) {
   if (!Array.isArray(replacements) || !replacements.length) throw codedError("BAD_SPEC", "replacements must be a non-empty array");
   for (const r of replacements) if (r?.ring) ringData(r.ring, null);   // BAD_SPEC on a bad tier, before anything runs
 
-  const entries = replacements.map((spec, i) => resolveOne(spec, i, { call, force }));
+  const resolveAll = () => replacements.map((spec, i) => resolveOne(spec, i, { call, force }));
+  if (dryRun) return replaceResolved(args, resolveAll(), t0);
+  // a real run waits for this tab's earlier runs on its scenes, then resolves again (prompts-core-AC-1)
+  const sceneIds = resolveAll().map(e => e.scene?.id).filter(Boolean);
+  return inSceneQueue(sceneIds, () => replaceResolved(args, resolveAll(), t0));
+}
+
+/** This tab's replace runs, per scene: sceneId → the tail of its queue (prompts-core-AC-1). */
+const sceneQueue = new Map();
+
+/** Run `fn` once every earlier run queued on any of `sceneIds` has settled. */
+function inSceneQueue(sceneIds, fn) {
+  const ids = [...new Set(sceneIds)];
+  const ahead = ids.map(id => sceneQueue.get(id)).filter(Boolean);
+  const done = Promise.all(ahead).then(fn);
+  const tail = done.then(() => {}, () => {});
+  for (const id of ids) sceneQueue.set(id, tail);
+  void tail.then(() => { for (const id of ids) if (sceneQueue.get(id) === tail) sceneQueue.delete(id); });
+  return done;
+}
+
+const CLAIM = "replace";
+
+/**
+ * Claim each marker this run will replace, across tabs (prompts-core-AC-1): the bridge tab and a
+ * GM browser tab are both the active GM. A marker another tab holds fails its row as MARKER_GONE;
+ * the other rows go on. `force` takes over a claim left by a tab that went away mid-run.
+ */
+async function claimMarkers(entries, force) {
+  const me = game.socket?.id;
+  await Promise.all(entries.filter(e => e.ok).map(async e => {
+    const { scene, marker } = e;
+    let won = false, failed = null;
+    try {
+      const held = marker.flags?.[MODULE]?.claims?.[CLAIM];
+      if (force && held && held !== me) await marker.update({ [`flags.${MODULE}.claims.${CLAIM}`]: null });
+      won = await claimDocument(marker, CLAIM, { scope: MODULE, reread: m => scene.tokens.get(m.id) ?? {} });
+    } catch (err) { failed = err; log.debug(`claim on ${marker.id} failed`, err); }
+    if (won) return;
+    const who = e.pid ?? marker.id;
+    e.ok = false; e.code = "MARKER_GONE";
+    e.error = !scene.tokens.get(marker.id) ? goneMessage({ pid: e.pid, markerId: marker.id, sceneName: scene.name, ...whyGone(scene, marker.id) })
+      : failed ? `${who} on ${scene.name}: could not claim the marker (${failed?.message ?? failed}); this row was skipped`
+        : `${who} on ${scene.name} is being replaced by another GM tab; this row was skipped (gather again when it is done, or force to take it over)`;
+  }));
+}
+
+/** Take this tab's claim off markers it claimed but did not replace (a failed row). */
+async function releaseClaims(entries) {
+  const me = game.socket?.id;
+  if (!me) return;
+  for (const e of entries) {
+    const m = e.marker && e.scene?.tokens.get(e.marker.id);
+    if (m?.flags?.[MODULE]?.claims?.[CLAIM] !== me) continue;
+    try { await m.unsetFlag(MODULE, "claims"); } catch (err) { log.debug(`claim release on ${m.id} failed`, err); }
+  }
+}
+
+/** Add a WARN line to a replacement's row. */
+function warnRow(e, line) {
+  e.report = { ...(e.report ?? {}), warnings: [...(e.report?.warnings ?? []), line] };
+}
+
+/**
+ * Delete the replaced markers on one scene (prompts-core-AC-2): skip-and-report, no rollback. A
+ * marker already gone (another GM deleted it mid-run) is left out and its row says so; if the
+ * batch still throws, each marker is deleted on its own, so one refusal fails only its own row.
+ */
+async function deleteMarkers(scene, done) {
+  const live = [];
+  for (const e of done) {
+    if (scene.tokens.get(e.marker.id)) live.push(e);
+    else warnRow(e, `marker ${e.marker.id} was already gone before the delete (the replacement was kept)`);
+  }
+  if (!live.length) return;
+  try {
+    await scene.deleteEmbeddedDocuments("Token", live.map(e => e.marker.id));
+    return;
+  } catch (err) {
+    log.warn(`marker delete failed on ${scene.name}`, err);   // then one at a time, below
+  }
+  for (const e of live) {
+    if (!scene.tokens.get(e.marker.id)) continue;
+    try { await scene.deleteEmbeddedDocuments("Token", [e.marker.id]); } catch (err) {
+      warnRow(e, `marker ${e.marker.id} not deleted: ${err?.message ?? err}`);
+    }
+  }
+}
+
+/** replaceMany past argument checks: `entries` resolved (and, for a real run, queued on its scenes). */
+async function replaceResolved(args, entries, t0) {
+  const { call = null, dryRun = false, force = false } = args;
   const seen = new Set();
   for (const e of entries) {
     if (!e.ok) continue;
@@ -639,7 +745,30 @@ export async function replaceMany(input, opts = {}) {
     throw codedError("DRY_RUN_REQUIRED", `${requested} replacements (over ${DRY_RUN_OVER}): run the same set with dryRun: true first, read the plan, then repeat it without dryRun`);
   }
 
+  // 0. Claim the markers across tabs; a row another tab holds fails alone.
+  await claimMarkers(entries, force);
   // 1. Actors and journals first, per replacement; then the placed document data.
+  const rows = await buildDocuments(entries);
+  // 2. Per scene: one create per document type, then one delete of the markers that were replaced.
+  await placeOnScenes(scenes, entries, rows);
+  // 3. A replacement that failed after step 1 created its actor/journal: take those back out.
+  await discardFailed(entries);
+  // 4. Readback from the scenes: flat rows (no object below a row), and the text the tool prints.
+  const results = readBack(entries);
+  const encounters = encounterXp(entries, results, args);
+  for (const r of results) { delete r._actorId; delete r._tokenId; }
+  const remaining = remainingFor(scenes);
+  const callOut = call ?? entries.find(e => e.call)?.call ?? null;
+  logSummary({ call: callOut, dryRun: false, rows: results, remaining, t0 });
+  return { dryRun: false, call: callOut, text: renderReplace({ dryRun: false, call: callOut, rows: results, remaining, encounters }),
+    results, remaining, encounters };
+}
+
+/**
+ * Step 1: each claimed replacement runs its plan (actors and journals made here, owned docs noted
+ * on `e.owned`). → the placed-document rows `{entry, type, data, also?}`; a throw fails that row.
+ */
+async function buildDocuments(entries) {
   const rows = [];
   for (const e of entries) {
     if (!e.ok || !e.plan.exec) continue;
@@ -656,8 +785,11 @@ export async function replaceMany(input, opts = {}) {
       e.error = e.code === "CREATE_FAILED" ? `CREATE_FAILED: ${err.message ?? err}` : String(err.message ?? err);
     }
   }
+  return rows;
+}
 
-  // 2. Per scene: one create per document type, then one delete of the markers that were replaced.
+/** Step 2: per scene, one create per document type (TYPES order), then one delete of the replaced markers. */
+async function placeOnScenes(scenes, entries, rows) {
   for (const scene of scenes) {
     for (const type of TYPES) {
       const batch = rows.filter(r => r.entry.scene === scene && r.type === type && r.entry.ok);
@@ -665,28 +797,28 @@ export async function replaceMany(input, opts = {}) {
       for (const res of await createBatch(scene, type, batch)) {
         const also = batch.find(r => r.entry === res.entry)?.also;
         if (res.doc) (res.entry.created ??= []).push({ type, id: res.doc.id, also: !!also });
-        else if (also) {
-          res.entry.report = { ...(res.entry.report ?? {}), warnings: [...(res.entry.report?.warnings ?? []), `${type} not placed: ${res.error}`] };
-        } else { res.entry.ok = false; res.entry.code = "CREATE_FAILED"; res.entry.error = `CREATE_FAILED: ${res.error}`; }
+        else if (also) warnRow(res.entry, `${type} not placed: ${res.error}`);
+        else { res.entry.ok = false; res.entry.code = "CREATE_FAILED"; res.entry.error = `CREATE_FAILED: ${res.error}`; }
       }
     }
-    const dead = entries.filter(e => e.ok && e.scene === scene && (e.created?.some(c => !c.also) || e.spec.with.kind === "none")).map(e => e.marker.id);
-    if (dead.length) {
-      try {
-        await scene.deleteEmbeddedDocuments("Token", dead);
-      } catch (err) {
-        log.warn(`marker delete failed on ${scene.name}`, err);
-      }
-    }
+    await deleteMarkers(scene, entries.filter(e => e.ok && e.scene === scene && (e.created?.some(c => !c.also) || e.spec.with.kind === "none")));
   }
+}
 
-  // 3. A replacement that failed after step 1 created its actor/journal: take those back out.
+/** Step 3: a row that failed after step 1 made its actor/journal takes them back out; claims come off. */
+async function discardFailed(entries) {
   for (const e of entries) {
     if (!e.ok && e.owned?.length) e.discarded = await discard(e.owned);
   }
+  await releaseClaims(entries);
+}
 
-  // 4. Readback from the scenes: flat rows (no object below a row), and the text the tool prints.
-  const results = entries.map(e => {
+/**
+ * Step 4: the flat result rows read back from the scenes (no object below a row). A built row
+ * carries `_actorId` / `_tokenId` for the XP count; the caller drops them before returning.
+ */
+function readBack(entries) {
+  return entries.map(e => {
     const f = { index: e.index, id: e.pid, label: labelOf(e), sceneId: e.scene?.id ?? null, markerId: e.marker?.id ?? null,
       kind: e.spec?.with ? provenanceKind(e.spec.with) : null, ok: !!e.ok, report: e.report, discarded: e.discarded };
     if (!e.ok) {
@@ -698,18 +830,10 @@ export async function replaceMany(input, opts = {}) {
     const none = e.spec.with.kind === "none";
     const r = resultRow({ ...f, created, markerDeleted: !e.scene.tokens.get(e.marker.id),
       ...(none ? { reason: e.spec.with.reason ?? "", prompt: e.text } : {}) });
-    // internal, for the XP count below (dropped before returning)
     r._actorId = created.find(c => c.type === "Actor")?.id ?? null;
     r._tokenId = (e.created ?? []).find(c => c.type === "Token")?.id ?? null;
     return r;
   });
-  const encounters = encounterXp(entries, results, args);
-  for (const r of results) { delete r._actorId; delete r._tokenId; }
-  const remaining = remainingFor(scenes);
-  const callOut = call ?? entries.find(e => e.call)?.call ?? null;
-  logSummary({ call: callOut, dryRun: false, rows: results, remaining, t0 });
-  return { dryRun: false, call: callOut, text: renderReplace({ dryRun: false, call: callOut, rows: results, remaining, encounters }),
-    results, remaining, encounters };
 }
 
 /**

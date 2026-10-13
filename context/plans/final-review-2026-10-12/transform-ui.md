@@ -88,8 +88,9 @@ None.
 - EC-5 `form-picker.mjs:123`: for an unlinked token form, the Return button shows the base actor's name and portrait. Decide whether it should use the token's name and image from before the shift.
 - EC-6 `sweep-adapter.mjs:26`: the age guard mixes the GM client's clock with the server's clock. If the GM clock runs more than 10 s fast, the sweep could delete a form that is still mid-swap. Unlikely in practice.
 - EXT-8 `wildshape-adapter.mjs:499`: the file is at 498 lines after this review, under the C10 cap. Split out the revert block (:157-282) or the bonus bookkeeping before adding anything.
-- AC-2, AC-5, AC-6 (transform-ui async lens): recorded by triage, but their file:line and claims were cut from the hand-off to sign-off. Re-read them from the triage journal of this run.
-- Two of the 41 findings were never triaged because the list was cut off after perf-2. Re-run the lens pass if they matter.
+- AC-2, AC-5, AC-6 (transform-ui async lens): recorded by triage, but their file:line and claims were cut from the hand-off to sign-off. No triage journal survived.
+- Two of the 41 findings were never triaged because the list was cut off after perf-2.
+- **Closed in defect wave 2 (transform-ui/lens-rerun, branch `fix2/transform-2026-10-12`).** The async lens was re-run over form-picker.mjs, hud-panels.mjs, starry-adapter.mjs, wildshape-adapter.mjs and sweep-adapter.mjs in place of the lost AC-2/5/6 and the two untriaged findings. Fixed: the Chalice offer's 60 s wall-clock timer (now ends when game time moves on), the Starry Bonus-bar rebuild overlapping a render of the same panel (and its unhandled rejection), and a Starry tick lost when two clock advances land before the first write returns. The rest is recorded in the wave-2 transform record.
 - Deferred by the cap, pure refactors that can be picked up later: M7 `form-picker.mjs:33` (drop the export of paintBadge), M2 `form-picker.mjs:104` (shared click, render and contextmenu helpers for the five Argon classes), EXT-9 `hud-panels.mjs:279` (a wsEndsAt accessor), EXT-5 `hud-panels.mjs:187` (BAR, COMPOSE and OWN tables), EXT-7 `starry-adapter.mjs:154` (derive the BLOCKS keys from BLOCK_MESSAGES), EXT-10 `form-picker.mjs:123` (a comment on why this is not original(); settle EC-5 first).
 
 ## Verification

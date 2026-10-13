@@ -34,12 +34,13 @@ export const KEYS = Object.freeze({
 
 /**
  * The cursor key for a control/tool state, or null for the system arrow.
- * @param {{control?: string, tool?: string, templatesActive?: boolean}} state  templatesActive: a spell-area
+ * @param {{control?: string, tool?: string, templatesActive?: boolean}|null} [state]  templatesActive: a spell-area
  *   placement is following the mouse (see placementActive). The name predates dnd5e 6, kept because
- *   game.pentaryn.cursors.keyFor is public.
+ *   game.pentaryn.cursors.keyFor is public. Optional: null and undefined both give null.
  * @returns {string|null}
  */
-export function keyFor({ control, tool, templatesActive } = {}) {
+export function keyFor(state) {
+  const { control, tool, templatesActive } = state ?? {};
   if (templatesActive) return "aoe";
   if (control === "tokens") {
     if (tool === "target") return "target";

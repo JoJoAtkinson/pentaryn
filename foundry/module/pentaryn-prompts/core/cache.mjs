@@ -1,7 +1,7 @@
 /**
  * pentaryn-prompts core — the per-scene model cache behind the hover tip (prompts-lookup-8). PURE:
  * what a model is and when it goes stale are the callers' (scene-adapter builds and stores; the
- * cache feature bumps generations from INVALIDATING_HOOKS).
+ * cache feature bumps generations from INVALIDATION).
  *
  * Off until the cache feature turns it on — with nothing watching for changes, nothing is cached.
  * The side panel always builds fresh and stores what it built, so the next hover reuses it; gather
@@ -9,22 +9,27 @@
  */
 
 /**
- * After any of these a scene's cached model is stale. Placed documents bump their own scene; a
- * scene update bumps itself; actors, items, folders, journals and core's grid-diagonal rule feed
- * every scene's panel, so they drop the whole cache.
+ * After any of these a scene's cached model is stale, and how much of the cache it drops:
+ * "scene" — a placed document bumps its own scene (`doc.parent`); "self" — a scene bumps itself;
+ * "world" — actors, items, folders and journals feed every scene's panel, so the whole cache drops;
+ * "setting" — only core's grid-diagonal rule, which drops the whole cache.
  */
-export const INVALIDATING_HOOKS = Object.freeze([
-  "createToken", "updateToken", "deleteToken",
-  "createWall", "updateWall", "deleteWall",
-  "createNote", "updateNote", "deleteNote",
-  "createAmbientLight", "updateAmbientLight", "deleteAmbientLight",
-  "createTile", "updateTile", "deleteTile",
-  "createRegion", "updateRegion", "deleteRegion",
-  "updateScene", "deleteScene",
-  "updateActor", "createItem", "updateItem", "deleteItem",
-  "updateFolder", "updateJournalEntry", "updateJournalEntryPage",
-  "updateSetting",
-]);
+export const INVALIDATION = Object.freeze({
+  createToken: "scene", updateToken: "scene", deleteToken: "scene",
+  createWall: "scene", updateWall: "scene", deleteWall: "scene",
+  createNote: "scene", updateNote: "scene", deleteNote: "scene",
+  createAmbientLight: "scene", updateAmbientLight: "scene", deleteAmbientLight: "scene",
+  createTile: "scene", updateTile: "scene", deleteTile: "scene",
+  createRegion: "scene", updateRegion: "scene", deleteRegion: "scene",
+  updateScene: "self", deleteScene: "self",
+  updateActor: "world", deleteActor: "world",
+  createItem: "world", updateItem: "world", deleteItem: "world",
+  updateFolder: "world", updateJournalEntry: "world", updateJournalEntryPage: "world",
+  updateSetting: "setting",
+});
+
+/** The hooks the cache feature registers: INVALIDATION's keys, in its order. */
+export const INVALIDATING_HOOKS = Object.freeze(Object.keys(INVALIDATION));
 
 const keyOf = (sceneId, opts) => `${sceneId}\u0000${JSON.stringify(opts ?? {})}`;
 

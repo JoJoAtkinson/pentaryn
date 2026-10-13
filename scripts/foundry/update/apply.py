@@ -98,17 +98,20 @@ def gate(fa: FoundryAdmin, policy: dict, *, force: bool = False) -> state.EntryS
 
     # A leftover entry file means the previous run died partway. Its recorded state is
     # the truth about what service should look like; the current (possibly broken)
-    # state is not. Repair first, then adopt it as this run's restore target.
+    # state is not. Repair first, then adopt it as this run's restore target — but only
+    # after the connected-users check, which a repaired table is just as subject to (EC-7).
     stale = state.EntryState.read()
     if stale:
         _repair_from(stale)
-        return stale
 
     status = fa.status() if admin_mod.port_open() else None
     users = (status.users or 0) if status and status.active else 0
     if users > 0 and not force:
         raise Aborted(f"{users} user(s) connected to {status.world!r} — "
                       "not touching a live table")
+
+    if stale:
+        return stale
 
     entry = state.EntryState(
         foundry_up=admin_mod.port_open(),
@@ -216,7 +219,11 @@ def _admin_client() -> FoundryAdmin:
 
 
 def _repair_from(entry: state.EntryState) -> None:
-    """Put service back the way a crashed previous run found it."""
+    """Put service back the way a crashed previous run found it.
+
+    A repair that fails is not fatal — the run goes on — but it is said: the note is
+    parked in _WINDOW_NOTES and lands in the run's messages and report (ROB-10).
+    """
     if entry.foundry_up and not admin_mod.port_open():
         admin_mod.start_app()
     if entry.active_world and admin_mod.port_open():
@@ -225,10 +232,14 @@ def _repair_from(entry: state.EntryState) -> None:
             if not fa.world_active():
                 fa.launch_world(entry.active_world)
                 fa.wait_for_world(entry.active_world, timeout=240)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            _WINDOW_NOTES.append(
+                f"repair after the previous crashed run: could not relaunch "
+                f"{entry.active_world}: {exc}")
     if entry.tunnel_up and not recover.tunnel_running(REPO_ROOT):
-        recover.tunnel_up(REPO_ROOT)
+        if not recover.tunnel_up(REPO_ROOT):
+            _WINDOW_NOTES.append(
+                "repair after the previous crashed run: could not bring the tunnel back up")
 
 
 # ── Phase 1: backups ─────────────────────────────────────────────────────────
@@ -483,7 +494,10 @@ def restore_service(entry: state.EntryState, messages: list[str]) -> None:
             except Exception as exc:  # noqa: BLE001
                 messages.append(f"could not relaunch {entry.active_world}: {exc}")
     else:
-        admin_mod.quit_app()
+        try:
+            admin_mod.quit_app()
+        except Exception as exc:  # noqa: BLE001
+            messages.append(f"could not stop Foundry: {exc}")
 
     if entry.tunnel_up and not recover.tunnel_running(REPO_ROOT):
         if not recover.tunnel_up(REPO_ROOT):
@@ -544,11 +558,12 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             recover.tunnel_down(REPO_ROOT)
 
         packages = inventory.scan()
-        system = next((p for p in packages if p.type == "system"), None)
+        system = next((p for p in packages
+                       if p.type == "system" and p.id == inventory.SYSTEM_ID), None)
 
         if not dry:
             status.set_phase("backup")
-            snapshot, _ = back_up(system.id if system else "dnd5e",
+            snapshot, _ = back_up(system.id if system else inventory.SYSTEM_ID,
                                   system.version if system else "")
             result.snapshot = snapshot.name
         else:
@@ -641,6 +656,9 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
                                 touched=touched, error_offset=error_offset,
                                 log_day=log_day)
         result.smoke = [r.to_json() for r in results]
+        miss = smoke.selection_miss(result.plan["worlds"], policy)
+        if miss:
+            result.messages.append(miss)
 
         broken = [r for r in results if not r.ok]
         if broken or result.failed:
@@ -655,6 +673,8 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
 
     except Aborted as exc:
         result.outcome = "skipped"
+        # A gate that repaired, then refused, still owes the repair's notes (ROB-10).
+        result.messages.extend(drain_window_notes())
         result.messages.append(str(exc))
         status.finish("skipped", str(exc))
         # A gate abort must not clear an entry file it did not write.
@@ -761,10 +781,17 @@ def notify_result(result: RunResult) -> None:
         # v2: the fixer's branch was parked and its package rolled back.
         lines.append(f"fix parked on {fix['branch']} — {fix.get('package', 'package')} "
                      "rolled back")
+    # A smoke selection that matched no world tested nothing: still done, but flagged (EC-12).
+    miss = next((m for m in result.messages if m.startswith(smoke.MISS_PREFIX)), None)
+    if miss:
+        lines += ["", miss]
     if held:
         notify.notify("attention", f"{len(applied)} applied, {len(held)} need you",
                       "\n".join(lines + [""] +
                                 [f"HELD · {d['id']}: {(d['reasons'] or [''])[-1]}"
                                  for d in held[:4]]))
+    elif miss:
+        notify.notify("attention", f"{len(applied)} package(s) updated, nothing smoked",
+                      "\n".join(lines))
     else:
         notify.notify("done", f"{len(applied)} package(s) updated", "\n".join(lines))

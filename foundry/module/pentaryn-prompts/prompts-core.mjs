@@ -1,8 +1,10 @@
 /**
  * pentaryn-prompts — the module's identity and its shared constants. PURE: no Foundry global.
  *
- * Every other file takes MODULE, VERSION and the directory/kind tables from here (geometry-core,
- * replace and gather re-export the ones their callers already import from them).
+ * Identity: MODULE, SHORT, NS, VERSION, CONTRACT, I18N, CSS, HOOKS. Data directories: SPEC_DIR,
+ * CROP_DIR. Replace's tables: KINDS, PATCH_KEYS. Files import these from here or through a
+ * re-export: geometry-core.mjs re-exports MODULE and VERSION; replace.mjs re-exports KINDS and
+ * SPEC_DIR; gather.mjs re-exports CROP_DIR.
  */
 
 export const MODULE = "pentaryn-prompts";

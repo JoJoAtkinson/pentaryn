@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import { canonical, runEngine, wasmReady } from "./fixtures/engine.mjs";
 import { GM, houseWalls, makeScene, wallsWorld, withConsole } from "./fixtures/world.mjs";
+import { makeDoc } from "./kit/foundry-stub.mjs";
 
 const MOD = "pentaryn-walls";
 const F = await wallsWorld();
@@ -78,20 +79,24 @@ test("(b)+(d) ready as GM on an extensible root {x:1}: the same root gains walls
   assert.deepEqual(api.backends().map(b => b.name), ["js", "wasm"]);
   assert.deepEqual(since(from, "console.log").map(c => c.args), [[
     "pentaryn-walls | ready — backends: js, wasm. Alt+W run, Alt+Z undo, Alt+Shift+W preview. " +
-    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()",
+    "API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro() / .analyze()",  // walls-EXT-11
   ]]);
 });
 
-test("(e) preview(): one whispered chat card (golden/glue.json), a ping per refusal, console tables, no writes", async () => {
+test("(e) preview(): one whispered chat card (golden/glue.json), a local PULSE ping per refusal (walls-edge-1), console tables, no writes", async () => {
   const from = mark();
   const result = await withConsole(F, () => game.pentaryn.walls.preview({ runId: "golden" }));
   const chats = since(from, "ChatMessage.create");
   assert.equal(chats.length, 1);
   assert.deepEqual(chats[0].data.whisper, [GM]);
-  const pings = since(from, "canvas.ping");
+  // walls-edge-1: each refusal is drawn locally as a PULSE (canvas.controls.drawPing), never
+  // broadcast with canvas.ping, so no player sees it and held modifiers cannot make it a pull.
+  assert.deepEqual(since(from, "canvas.ping"), []);
+  const pings = since(from, "canvas.controls.drawPing");
   assert.equal(pings.length, result.refusals.length);
   assert.ok(result.refusals.length > 0, "the fixture scene has refusals");
   assert.deepEqual(pings.map(p => p.at), result.refusals.map(r => ({ x: r.at[0], y: r.at[1] })));
+  assert.deepEqual(new Set(pings.map(p => p.opts?.style)), new Set(["pulse"]));
   assert.deepEqual(since(from, "console.*").map(c => c.op), ["console.group", "console.table", "console.table", "console.groupEnd"]);
   assert.deepEqual(since(from).filter(c => /EmbeddedDocuments$/.test(c.op)), []);
   const ref = runEngine(house.walls.map(w => {
@@ -213,11 +218,55 @@ test("(i) makeMacro: unknown action throws; 'run' creates once, reuses, assigns 
   const m2 = await game.pentaryn.walls.makeMacro("run", 7);
   assert.equal(m1, m2);
   assert.deepEqual(since(from, "Macro.create").map(c => c.data), [{
-    name: "Walls: run", type: "script", scope: "global", command: "await game.pentaryn.walls.run();",
+    _id: "pwmacrorun000000", name: "Walls: run", type: "script", scope: "global", command: "await game.pentaryn.walls.run();",
     img: "icons/environment/settlement/wall-tower.webp",
   }]);
   assert.deepEqual(since(from, "assignHotbarMacro").map(c => [c.name, c.slot]), [["Walls: run", null], ["Walls: run", 7]]);
   assert.deepEqual(since(from, "notify").map(c => c.message), ['Macro "Walls: run" ready on the hotbar.', 'Macro "Walls: run" ready on the hotbar.']);
   const pre = await game.pentaryn.walls.makeMacro();
   assert.equal(pre.name, "Walls: preview");
+});
+
+test("walls-async-2: two overlapping makeMacro calls (or two GM tabs) make one 'Walls: undo' macro", async () => {
+  let release;
+  F.hold["Macro.create"] = new Promise(r => { release = r; });
+  const from = mark();
+  let both;
+  try {
+    both = Promise.all([game.pentaryn.walls.makeMacro("undo"), game.pentaryn.walls.makeMacro("undo", 3)]);
+    await flush();
+  } finally {
+    release();
+    delete F.hold["Macro.create"];
+  }
+  const [a, b] = await both;
+  assert.equal(game.macros.contents.filter(m => m.name === "Walls: undo").length, 1, "one macro, not two");
+  assert.equal(a, b, "the loser re-reads the winner's macro");
+  assert.equal(a.id, "pwmacroundo00000", "the id is fixed per action");
+  assert.deepEqual(since(from, "Macro.create").map(c => [c.data._id, c.options]),
+    [["pwmacroundo00000", { keepId: true }], ["pwmacroundo00000", { keepId: true }]]);
+  assert.deepEqual(since(from, "assignHotbarMacro").map(c => [c.name, c.slot]), [["Walls: undo", null], ["Walls: undo", 3]]);
+  // Afterwards the id lookup finds it: no third create.
+  const again = mark();
+  assert.equal(await game.pentaryn.walls.makeMacro("undo"), a);
+  assert.equal(since(again, "Macro.create").length, 0);
+});
+
+test("walls-rob-9: makeMacro's name fallback reuses only a script macro, never a same-named chat macro", async () => {
+  game.macros.clear();
+  // A player's chat macro that happens to share the name, and a script macro made before the
+  // fixed id (walls-async-2) — neither has the id.
+  const chat = makeDoc("Macro", { name: "Walls: preview", type: "chat", command: "Look at the walls!" });
+  const legacy = makeDoc("Macro", { name: "Walls: run", type: "script", command: "await game.pentaryn.walls.run();" });
+  game.macros.set(chat.id, chat);
+  game.macros.set(legacy.id, legacy);
+  const from = mark();
+  const pre = await game.pentaryn.walls.makeMacro("preview");
+  assert.notEqual(pre, chat, "the chat macro is not reused");
+  assert.equal(pre.id, "pwmacropreview00");
+  assert.equal(pre.type, "script");
+  assert.equal(chat.command, "Look at the walls!", "the chat macro is left alone");
+  assert.equal(await game.pentaryn.walls.makeMacro("run"), legacy, "a pre-id script macro is still found by name");
+  assert.deepEqual(since(from, "Macro.create").map(c => c.data._id), ["pwmacropreview00"]);
+  assert.deepEqual(since(from, "update").filter(c => c.documentName === "Macro"), []);
 });

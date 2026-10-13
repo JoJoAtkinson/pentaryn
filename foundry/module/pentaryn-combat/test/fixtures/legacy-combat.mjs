@@ -94,10 +94,8 @@ export function followUpsNow(actor, bonusPanel) {
   for (const f of list) {
     if (f.kind === "offhand") f.via = core.offhandVia({ weapon: weapons.find(w => w.id === f.weaponId) ?? null, turn, offered: list });
   }
-  if (ctx.isOwnTurn && unarmed && features.has("monks-focus") && (focus ?? 0) < 1 && bonusFree && !turn.bonusUsed
-    && !turn.followUps.includes("flurry") && !turn.followUps.includes("martial-arts")) {
-    list.unshift({ kind: "flurry", weaponId: unarmed.id, count: features.has("heightened-focus") ? 3 : 2, disabled: "focus" });
-  }
+  // combat-core-EXT-12: the greyed no-Focus Flurry this oracle unshifted here now comes from the live
+  // core.followUps it calls above, so the unshift is dropped (keeping it would offer Flurry twice).
   return list;
 }
 

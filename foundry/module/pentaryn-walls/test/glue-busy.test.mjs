@@ -46,7 +46,8 @@ test("two un-awaited API calls: the second is null, the first resolves to the en
 });
 
 test("a throwing action releases the lock for the next caller", async () => {
-  await assert.rejects(api.preview({ sceneId: "noSuchScene0000" }), /no scene/);
+  await assert.rejects(api.preview({ sceneId: "noSuchScene0000" }),
+    { message: 'pentaryn-walls: no scene with id "noSuchScene0000".' });
   const next = api.preview();
   assert.notEqual(next, null);
   await withConsole(F, () => next);   // settle it here, so the lock is free for the next test
@@ -69,10 +70,16 @@ test("the chat card is awaited: preview resolves after ChatMessage.create settle
   }
 });
 
-test("a failing chat card is logged with the module prefix and never rejects the action", async () => {
+// [declared] walls-rob-8 (2026-10-12), flipped from a raw console.error(`pentaryn-walls |`, err):
+// the failure goes through the kit log as "chat card failed", and with debug on it lands in
+// api.trace() too. The card stays non-fatal.
+test("walls-rob-8: a failing chat card is logged through the kit log, traced, and never rejects the action", async () => {
   const create = ChatMessage.create;
   ChatMessage.create = async () => { throw new Error("chat down"); };
   const from = F.calls.length;
+  CONFIG.debug ??= {};
+  const debug = CONFIG.debug["pentaryn-walls"];
+  CONFIG.debug["pentaryn-walls"] = true;
   try {
     const r = await withConsole(F, () => api.preview({ runId: "e" }));
     assert.ok(r.creates);
@@ -80,7 +87,11 @@ test("a failing chat card is logged with the module prefix and never rejects the
     await withConsole(F, () => api.preview({ runId: "f" }));
   } finally {
     ChatMessage.create = create;
+    CONFIG.debug["pentaryn-walls"] = debug;
   }
   assert.deepEqual(since(from, "console.error").map(c => c.args),
-    [["pentaryn-walls |", "Error: chat down"], ["pentaryn-walls |", "Error: sync chat down"]]);
+    [["pentaryn-walls | chat card failed", "Error: chat down"],
+     ["pentaryn-walls | chat card failed", "Error: sync chat down"]]);
+  assert.deepEqual(api.trace().filter(t => t.op === "chat card failed").map(t => t.data),
+    [{ error: "chat down" }, { error: "sync chat down" }]);
 });

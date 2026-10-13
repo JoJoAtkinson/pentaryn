@@ -23,11 +23,14 @@
         "flags.pentaryn-dropbin.sight",
         "flags.pentaryn-dropbin.ownership",
         "delta.ownership",
+        "actor ownership (linked)",
         "sight.enabled",
-        "ActiveEffect (Dead)"
+        "ActiveEffect (Dead)",
+        "flags.core.overlay",
+        "ActiveEffect (Lootable, removed)"
       ],
       "legacy": true,
-      "doc": "Active GM: turn each eligible token of the actor into a corpse pile (dead) or back (alive). No-op elsewhere or without Item Piles."
+      "doc": "Active GM: turn each eligible token of the actor, on every scene, into a corpse pile (dead) or back (alive). No-op elsewhere; without Item Piles or given a non-Actor, one console warning and nothing done."
     },
     {
       "path": "corpses.toCorpse",
@@ -48,11 +51,13 @@
         "flags.pentaryn-dropbin.sight",
         "flags.pentaryn-dropbin.ownership",
         "delta.ownership",
+        "actor ownership (linked)",
         "sight.enabled",
-        "ActiveEffect (Dead)"
+        "ActiveEffect (Dead)",
+        "flags.core.overlay"
       ],
       "legacy": true,
-      "doc": "Make this token a lootable corpse pile now (players get OBSERVER on its delta; sight off; Dead as the overlay)."
+      "doc": "Make this token a lootable corpse pile now (players get OBSERVER on its delta, a linked token's on its base actor; sight off; Dead as the overlay). Already our corpse pile: only a lost OBSERVER map or sight-off is written again. A failed corpse-flag write reverts the new pile and rejects; without Item Piles or given a non-TokenDocument, one console warning and nothing done."
     },
     {
       "path": "corpses.fromCorpse",
@@ -69,12 +74,16 @@
       "query": false,
       "sideEffects": [
         "Item Piles pile flags",
-        "flags.pentaryn-dropbin.*",
+        "flags.pentaryn-dropbin.corpse",
+        "flags.pentaryn-dropbin.sight",
+        "flags.pentaryn-dropbin.ownership",
         "delta.ownership",
-        "sight.enabled"
+        "actor ownership (linked)",
+        "sight.enabled",
+        "ActiveEffect (Lootable, removed)"
       ],
       "legacy": true,
-      "doc": "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership."
+      "doc": "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership (a linked token: its base actor's). Without Item Piles or given a non-TokenDocument, one console warning and nothing done."
     },
     {
       "path": "corpses.isDead",
@@ -108,7 +117,15 @@
       "query": false,
       "sideEffects": [
         "ActiveEffect (Dead)",
-        "system.attributes.hp.value"
+        "system.attributes.hp.value",
+        "Item Piles pile flags",
+        "flags.pentaryn-dropbin.corpse",
+        "flags.pentaryn-dropbin.sight",
+        "flags.pentaryn-dropbin.ownership",
+        "delta.ownership",
+        "actor ownership (linked)",
+        "sight.enabled",
+        "ActiveEffect (Lootable, removed)"
       ],
       "legacy": true,
       "doc": "The HUD's Revive: clear Dead, raise hp to 1, then sync (the pile reverts)."
@@ -282,10 +299,10 @@
         },
         {
           "name": "target",
-          "type": "Actor|id|exact name",
+          "type": "Actor|TokenDocument|uuid|id|exact name",
           "optional": true,
           "resolve": false,
-          "doc": "default: the actor it left"
+          "doc": "default: the actor it left; a target that does not resolve is no-actor"
         }
       ],
       "returns": "Promise<Item | Notification>",
@@ -335,10 +352,10 @@
         },
         {
           "name": "target",
-          "type": "Actor|id|exact name",
+          "type": "Actor|TokenDocument|uuid|id|exact name",
           "optional": true,
           "resolve": false,
-          "doc": "default: the actor it left"
+          "doc": "default: the actor it left; a target that does not resolve is no-actor"
         }
       ],
       "returns": "{ ok: true, item, actor } | { ok: false, reason: \"not-gm\" | \"no-entry\" | \"no-actor\" | \"not-created\" }",
@@ -359,7 +376,13 @@
           "kind": "token",
           "type": "Token|TokenDocument|Actor|uuid|id|exact name",
           "resolve": false,
-          "doc": "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId)"
+          "doc": "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId). By name, a token wins; several tokens of that name throw AMBIGUOUS, pass the token uuid/id or the actor"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId? }",
+          "optional": true,
+          "doc": "sceneId: the one scene to look in (\"current\" = this client's canvas); default every scene"
         }
       ],
       "returns": "{ token, actor, dead, corpse, noLoot, pile, saved } | { actor, dead, noLoot, pile, corpses: [...] }",
@@ -463,6 +486,22 @@
     {
       "name": "renderTokenHUD",
       "label": "corpse HUD"
+    },
+    {
+      "name": "item-piles-preRenderActorSheet",
+      "label": "corpse: no sheet"
+    },
+    {
+      "name": "deleteToken",
+      "label": "corpse: token deleted"
+    },
+    {
+      "name": "deleteScene",
+      "label": "corpse: scene deleted"
+    },
+    {
+      "name": "ready",
+      "label": "corpse base release"
     },
     {
       "name": "renderItemPileInventoryApp",

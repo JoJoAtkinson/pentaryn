@@ -34,10 +34,8 @@ function subjectOf(ref, { sceneId, base } = {}) {
  * Read-only, plain JSON, depth ≤ 4 (finding -25): the token's light and who owns it, the carried
  * light, the chain, the Light cantrips. `opts.as` (a user ref): a player without OBSERVER on the
  * actor gets `actor: null` and no `lightSpells` (the inventory is the owner's business).
- * `opts` null is treated as omitted (declared, senses-R4).
  */
 export function inspect(ref, opts = {}) {
-  opts = opts && typeof opts === "object" ? opts : {};
   const { token, actor } = subjectOf(ref, opts);
   const user = opts.as ? resolveRef(opts.as, "user") : game.user;
   const sees = !!actor && (user?.isGM === true || actor.testUserPermission?.(user, "OBSERVER") === true);

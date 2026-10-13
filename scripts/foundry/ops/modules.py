@@ -28,16 +28,23 @@ from __future__ import annotations
 
 import json
 import os
+import posixpath
 import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import config as cfg, jsscan
 from .digest import SYNC_STAMP, tree_digest  # noqa: F401 — re-exported for callers and tests
 from .out import FAIL, OK, append_jsonl, event, now_iso, say as _say
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover — native Windows; BOSS runs Foundry in WSL
+    fcntl = None  # type: ignore[assignment]
 
 # Build output and vendored code are not ours to check.
 _SKIP_DIRS = {"node_modules", "target", ".git"}
@@ -91,28 +98,57 @@ def _emit(res: GateResult) -> int:
     return OK if res.ok else FAIL
 
 
+def _node_check(path: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(["node", "--check", str(path)], capture_output=True, text=True)
+
+
 def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
-    """`node --check` every .mjs, and JSON.parse every .json the module declares."""
+    """JSON.parse every .json the module declares, and `node --check` every .mjs.
+
+    The JSON half needs no node, so it runs first and always: a malformed module.json
+    must fail here, not crash a later gate (final-review py-ops M3).
+
+    The language files are every `languages[].path` the manifest declares plus every
+    lang/*.json on disk, once each (final-review py-ops EXT-4). A declared path that does
+    not exist is skipped here — the imports gate reports it."""
+    def load(rel: str):
+        """Parse one file; None if it is absent, a GateResult if it is malformed."""
+        path = spec.src / rel
+        if not path.is_file():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            return GateResult("parse", False, f"malformed JSON in {rel}: {exc}")
+
+    manifest = load("module.json")
+    if isinstance(manifest, GateResult):
+        return manifest
+    langs = manifest.get("languages") if isinstance(manifest, dict) else None
+    declared = [l.get("path") for l in langs if isinstance(l, dict)] \
+        if isinstance(langs, list) else []
+    on_disk = sorted(p.relative_to(spec.src).as_posix()
+                     for p in (spec.src / "lang").glob("*.json"))
+    for rel in dict.fromkeys(posixpath.normpath(p) for p in (*declared, *on_disk)
+                             if isinstance(p, str) and p):
+        res = load(rel)
+        if isinstance(res, GateResult):
+            return res
+
     if not _node_available():
         return GateResult("parse", True, "node not installed — skipping the syntax check",
                           skipped=True)
 
+    # One node process per file, run side by side (final-review py-ops perf-1): serially
+    # this was ~25 s for --all. `map` yields in sorted file order, so the file reported is
+    # still the first failure by name, never whichever process happened to finish first.
     files = _sources(spec)
-    for f in files:
-        proc = subprocess.run(["node", "--check", str(f)],
-                              capture_output=True, text=True)
-        if proc.returncode != 0:
-            return GateResult("parse", False, f"syntax error in {f}",
-                              problems=[proc.stderr.rstrip("\n")])
-
-    for rel in ("module.json", "lang/en.json"):
-        path = spec.src / rel
-        if not path.exists():
-            continue
-        try:
-            json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            return GateResult("parse", False, f"malformed JSON in {rel}: {exc}")
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as pool:
+        for f, proc in zip(files, pool.map(_node_check, files)):
+            if proc.returncode != 0:
+                pool.shutdown(cancel_futures=True)
+                return GateResult("parse", False, f"syntax error in {f}",
+                                  problems=[proc.stderr.rstrip("\n")])
 
     return GateResult("parse", True, f"{spec.name} sources parse", counts={"files": len(files)})
 
@@ -145,13 +181,15 @@ def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
     for path, src in scanned.items():
         exports[path], stars[path] = jsscan.exports_of(src)
 
+    src_root = spec.src.resolve()    # once, not per import edge (final-review py-ops perf-3)
+
     def resolve(origin: Path, spec_str: str) -> Path | None:
         # A query or fragment names the same file to the resolver — tests import
         # `../x.mjs?second` to defeat the module cache — so drop it before the lookup.
         spec_str = spec_str.split("?", 1)[0].split("#", 1)[0]
         target = (origin.parent / spec_str).resolve()
         try:
-            target.relative_to(spec.src.resolve())
+            target.relative_to(src_root)
         except ValueError:
             return None          # reaches outside the module — not ours to resolve
         return target
@@ -207,8 +245,12 @@ def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
     # An entry point named in module.json that does not exist fails exactly the same
     # way — silently, at load — so it belongs in the same gate.
     manifest = spec.src / "module.json"
-    if manifest.exists():
-        data = json.loads(manifest.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else None
+    except json.JSONDecodeError as exc:
+        data = None
+        problems.append(f"module.json is malformed JSON: {exc}")
+    if data is not None:
         declared = [*data.get("esmodules", []), *data.get("styles", []),
                     *(l.get("path", "") for l in data.get("languages", []))]
         for rel in filter(None, declared):
@@ -449,6 +491,16 @@ _GATES = {
 }
 
 
+def run_gate(spec: cfg.ModuleSpec, gate: str) -> int:
+    """Run one named gate against `spec`, printing as `check` does; its exit code.
+
+    The public way in for callers outside ops (the blueprint generator's `run_checks`).
+    An unknown gate name is a ValueError naming it and the known gates."""
+    if (checker := _CHECKS.get(gate)) is None:
+        raise ValueError(f"unknown gate {gate!r} (known: {', '.join(sorted(_CHECKS))})")
+    return checker(spec)
+
+
 def check(name: str) -> int:
     """Run every gate the spec names. Cheapest and most diagnostic first.
 
@@ -568,33 +620,60 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
     The stamp (`SYNC_STAMP`: module, version, digest, git, dirty, synced_at) is written into the copy
     before the swap; after it, one line goes to `foundry/logs/ops-YYYY-MM.jsonl` with `cmd`
     (`module-sync`, `stage` or `importer-install`). Returns the stamp.
+
+    The whole run holds an exclusive `flock` on `<Data>/../.pentaryn-sync/<id>.lock` (py-ops-ac-1),
+    so two syncs of one module never share `<id>.new`/`<id>.old`: the second waits, then installs
+    on top. The lock file is permanent; the lock goes with the process, so a killed run frees it.
     """
     staging = staging_dir(dst)
     staging.mkdir(parents=True, exist_ok=True)
+    if fcntl is None:  # pragma: no cover
+        return _install_locked(src, dst, staging, cmd)
+    with open(staging / f"{dst.name}.lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)  # a second sync of this module waits here (py-ops-ac-1)
+        try:
+            return _install_locked(src, dst, staging, cmd)
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def _remove(path: Path) -> None:
+    """Delete a staging leftover: a symlink is unlinked (never followed), a folder rmtree'd (EC-8)."""
+    if path.is_symlink():
+        path.unlink(missing_ok=True)
+    else:
+        shutil.rmtree(path, ignore_errors=True)
+
+
+def _install_locked(src: Path, dst: Path, staging: Path, cmd: str) -> dict:
+    """`install`'s body, run while it holds `staging/<id>.lock`.
+
+    `dst` is tested with `os.path.lexists`, so a symlink there — dangling or not — is set aside
+    and unlinked like a folder rather than crashing the swap; its target is never touched (EC-8)."""
     new, old = staging / f"{dst.name}.new", staging / f"{dst.name}.old"
-    if not dst.exists() and old.is_dir():
+    if not os.path.lexists(dst) and old.is_dir():
         dst.parent.mkdir(parents=True, exist_ok=True)
         os.rename(old, dst)  # a run died mid-swap: the previous good install was set aside
     for leftover in (new, old):
-        shutil.rmtree(leftover, ignore_errors=True)
+        _remove(leftover)
     try:
         shutil.copytree(src, new)
         record = _stamp(src, new)
         (new / SYNC_STAMP).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     except BaseException:
-        shutil.rmtree(new, ignore_errors=True)
+        _remove(new)
         raise
     dst.parent.mkdir(parents=True, exist_ok=True)
     try:
-        if dst.exists():
+        if os.path.lexists(dst):
             os.rename(dst, old)
         os.rename(new, dst)
     except BaseException:
         # `old` was cleared above, so it exists only if this run set `dst` aside
-        if not dst.exists() and old.is_dir():
+        if not os.path.lexists(dst) and os.path.lexists(old):
             os.rename(old, dst)
         raise
-    shutil.rmtree(old, ignore_errors=True)
+    _remove(old)
     _ops_log(cmd, record, dst)
     return record
 
@@ -602,6 +681,11 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
 def sync(name: str) -> int:
     """Prove the sources, then copy the module into Foundry's Data/modules."""
     spec = cfg.MODULES[name]
+    if not spec.syncable:
+        # the CLI never offers it; this guards a direct call (EXT-6)
+        _say(f"✗ {name} is not synced by module-sync — the actor pipeline installs it; "
+             "use `importer-install`")
+        return FAIL
     if (rc := check(name)) != 0:
         return rc
     if not spec.src.is_dir():

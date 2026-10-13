@@ -42,6 +42,14 @@ test("drift fails at build: a row without an implementation; legacy rows publish
   assert.ok(Object.isFrozen(api) && Object.isFrozen(api.starry));
 });
 
+test("M6 starry.assume's doc names every false path assumeStarry has", () => {
+  const doc = STARRY_ROWS.find(r => r.path === "starry.assume").doc;
+  for (const phrase of ["shifted", "incapacitated", "out of uses", "no Starry Form feature or consume activity",
+    "unknown constellation", "no actor", "already in progress", "refused"]) {
+    assert.ok(doc.includes(phrase), `doc mentions "${phrase}"`);
+  }
+});
+
 test("describe() equals golden/describe.json (version, kit, published and patch routes excluded)", () => {
   pinJSON("describe", normaliseDescribe(api.describe()), import.meta.url);
 });
@@ -153,4 +161,12 @@ test("describe() enums match the implementation tables (revert reasons, constell
   const endReasons = quoted(row(STARRY_ROWS, "starry.end").params[1].type);
   assert.equal(new Set(endReasons.map(starryEndKey)).size, endReasons.length);
   assert.equal(endReasons.length, 3);
+});
+
+test("manifest flag lists: revert and keepInForm are read, never written (EXT-1)", () => {
+  const ns = `flags.${MODULE}`;
+  assert.ok(!MANIFEST.flags.writes.includes(`${ns}.revert`), "nothing writes the revert flag; a GM sets it by hand");
+  assert.deepEqual(MANIFEST.flags.writes,
+    [`${ns}.wildshape`, `${ns}.starry`, "flags.pentaryn-senses.light", "flags.dnd5e.previousTokenData.light", `${ns}.claims`]);
+  for (const key of ["revert", "keepInForm"]) assert.ok(MANIFEST.flags.reads.includes(`${ns}.${key}`), `reads lacks ${key}`);
 });

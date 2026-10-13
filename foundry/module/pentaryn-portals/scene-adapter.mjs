@@ -7,9 +7,10 @@
  * before any hook can fire).
  */
 
-import { MODULE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox,
-  occupiedBy, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
-  partyPreview, hasDestination, withoutDestination } from "./portals-core.mjs";
+import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox, boxCentre,
+  occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
+  partyPreview, hasDestination, withoutDestination, TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
+import { flagPath } from "./lib/flags.mjs";
 
 const deps = { setting: () => undefined, log: null };
 
@@ -24,7 +25,22 @@ export function configureSceneAdapter({ setting, log } = {}) {
 /* -------------------------------------------- */
 
 /** Card data for one destination region, with fallbacks (core cardData); null for no region. */
-export function cardFor(region) {
+/**
+ * ROB-6 [declared]: the legacy rows take a document or its uuid string, as snapshot does. A string
+ * resolves through fromUuidSync; one that names no `documentName` → null, with a log warning.
+ * Anything that is not a string passes through untouched.
+ */
+export function docOf(docOrUuid, documentName, row) {
+  if (typeof docOrUuid !== "string") return docOrUuid;
+  let doc = null;
+  try { doc = fromUuidSync(docOrUuid); } catch (err) { deps.log?.debug(`${row}: fromUuidSync`, err); }
+  if (doc?.documentName === documentName) return doc;
+  deps.log?.warn(`${row}: no ${documentName} at ${docOrUuid}`);
+  return null;
+}
+
+export function cardFor(regionOrUuid) {
+  const region = docOf(regionOrUuid, "Region", "cardFor");
   if (!region) return null;
   const scene = region.parent;
   return cardData({
@@ -40,11 +56,11 @@ export function behaviorOf(app) {
   const parts = dialogIdParts(app?.id ?? "");
   if (!parts) return null;
   const behavior = fromUuidSync(parts.behaviorUuid);
-  return behavior?.type === "teleportToken" ? behavior : null;
+  return behavior?.type === TELEPORT_TYPE ? behavior : null;
 }
 
 export function teleportBehaviors(region) {
-  return region.behaviors.filter(b => b.type === "teleportToken" && !b.disabled);
+  return region.behaviors.filter(b => b.type === TELEPORT_TYPE && !b.disabled);
 }
 
 /** Core 14.368+ stores a same-scene destination relative to its behavior; resolve against it. */
@@ -58,6 +74,15 @@ export function destinationsOf(region) {
   const out = [];
   for (const b of teleportBehaviors(region)) for (const d of behaviorDestinations(b)) out.push({ region: d, behavior: b });
   return out;
+}
+
+/**
+ * The one "revealed" rule (EXT-1): every enabled teleport behavior with at least one resolvable
+ * destination — what a player can actually travel through — is revealed. A stub with nowhere to go
+ * does not count. The card's hint and switch, the badge and inspect() all read this.
+ */
+export function passageRevealed(region) {
+  return destinationsOf(region).every(d => d.behavior.system.revealed);
 }
 
 /* -------------------------------------------- */
@@ -81,8 +106,7 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
 
   const b = region.bounds ?? region.object?.bounds;
   const shape = region.shapes?.[0];
-  const cx = b ? b.x + b.width / 2 : (shape?.x ?? 0) + (shape?.width ?? 0) / 2;
-  const cy = b ? b.y + b.height / 2 : (shape?.y ?? 0) + (shape?.height ?? 0) / 2;
+  const { x: cx, y: cy } = boxCentre(b ?? { x: shape?.x ?? 0, y: shape?.y ?? 0, width: shape?.width ?? 0, height: shape?.height ?? 0 });
 
   const img = await new Promise((resolve, reject) => {
     const i = new Image();
@@ -102,6 +126,13 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
   ctx.beginPath(); ctx.arc(mx, my, markR, 0, Math.PI * 2); ctx.stroke();
 
   const blob = await new Promise(r => c.toBlob(r, "image/webp", 0.88));
+  // ROB-1: no blob, or an upload that answers without a path, is a failure — warn, write nothing.
+  const failed = () => {
+    deps.log?.warn("snapshot upload failed");
+    ui.notifications.warn(_loc("PENTARYN_PORTALS.Notify.SnapshotFailed"));
+    return null;
+  };
+  if (!blob) return failed();
   const name = `${scene.id}-${region.id}.webp`;
   const FP = foundry.applications.apps.FilePicker.implementation;
   // An existing folder is the normal case; anything else (a permission failure) is worth a line.
@@ -109,9 +140,10 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
     if (!/EEXIST|exists/i.test(err?.message ?? "")) deps.log?.warn("create dir", err);
   });
   const res = await FP.upload("data", SNAP_DIR, new File([blob], name, { type: "image/webp" }), {}, { notify: false });
-  const path = res?.path ?? `${SNAP_DIR}/${name}`;
+  const path = res?.path;
+  if (!path) return failed();
   // Cache-bust so a re-snapshot shows immediately.
-  await region.update({ [`flags.${MODULE}.img`]: `${path}?v=${Date.now().toString(36)}` });
+  await region.update({ [flagPath(FLAG_SCOPE, "img")]: `${path}?v=${Date.now().toString(36)}` });
   return path;
 }
 
@@ -150,10 +182,11 @@ export async function moveRegionDocs(region, dx, dy) {
  * GM only: go and look at a destination without moving anyone. Your view only; players stay put.
  * The destination's own badge (if it links back) is the way home, or the scene nav.
  */
-export async function lookAt(destRegion) {
-  if (!game.user.isGM || !destRegion) return;
-  const b = destRegion.bounds;
-  const x = b.x + b.width / 2, y = b.y + b.height / 2;
+export async function lookAt(regionOrUuid) {
+  if (!game.user.isGM) return;
+  const destRegion = docOf(regionOrUuid, "Region", "lookAt");
+  if (!destRegion) return;
+  const { x, y } = boxCentre(destRegion.bounds);
   if (canvas.scene?.id !== destRegion.parent.id) {
     await destRegion.parent.view(); // resolves once the new canvas is drawn
   }
@@ -216,6 +249,8 @@ export function partyRecords(scene) {
 /**
  * Snapped top-left positions for `toks`, filled outward from (cx, cy) on `dest`. With `party`
  * (the partySelection records for `toks`, same order) each follower lands beside its PC.
+ * Every token is tested by its whole footprint (portals-edge-2): a Large token never lands over a
+ * stander or another arrival.
  */
 export function landingPlaces(dest, toks, cx, cy, party = null) {
   const g = dest.grid.size;
@@ -225,15 +260,30 @@ export function landingPlaces(dest, toks, cx, cy, party = null) {
   // Don't land on someone already standing there (the PC who just arrived, a guard).
   const moving = new Set(toks.map(t => t.id));
   const occupied = occupiedBy(dest.tokens.filter(t => !moving.has(t.id)).map(t => tokenBox(t, g)));
-  const grouped = party?.length === toks.length;
-  // A few spare squares let a follower pick one touching its PC rather than the next in the ring.
-  const ring = ringSpots(cx, cy, g, toks.length + (grouped ? 8 : 0), { blocked: wallBlocker(walls), occupied });
-  const spots = grouped ? assignSpots(ring, party) : ring;
-  return toks.map((t, i) => {
-    const w = t.width * g, h = t.height * g;
-    const s = dest.grid.getSnappedPoint({ x: spots[i].x - w / 2, y: spots[i].y - h / 2 }, { mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX });
-    return { x: s.x, y: s.y };
-  });
+  // toks[i]'s box centred on a ring spot, top-left snapped to the grid: what is tested is what lands.
+  const boxes = new Map();
+  const boxAt = ({ x, y }, i) => {
+    const k = `${i}|${x},${y}`;
+    if (!boxes.has(k)) {
+      const w = toks[i].width * g, h = toks[i].height * g;
+      const s = dest.grid.getSnappedPoint({ x: x - w / 2, y: y - h / 2 }, { mode: CONST.GRID_SNAPPING_MODES.TOP_LEFT_VERTEX });
+      boxes.set(k, { x: s.x, y: s.y, w, h });
+    }
+    return boxes.get(k);
+  };
+  const clear = b => !occupied(b.x, b.y, b.w, b.h);
+  const blocked = wallBlocker(walls);
+  let spots;
+  if (party?.length === toks.length) {
+    // Spare squares let a follower pick one touching its PC, and cover the extra squares a big token fills.
+    const n = toks.reduce((sum, t) => sum + Math.max(1, Math.ceil(t.width) * Math.ceil(t.height)), 0) + 8;
+    const ring = ringSpots(cx, cy, g, n, { blocked, occupied });
+    const fits = (s, i, out) => clear(boxAt(s, i)) && !crowded(boxAt(s, i), out.flatMap((o, j) => (o ? [boxAt(o, j)] : [])));
+    spots = assignSpots(ring, party, { fits });
+  } else {
+    spots = ringSpots(cx, cy, g, toks.length, { blocked, occupied, footprint: (x, y, i) => boxAt({ x, y }, i) });
+  }
+  return toks.map((t, i) => { const b = boxAt(spots[i], i); return { x: b.x, y: b.y }; });
 }
 
 /** GM: move tokens to another scene around (cx, cy). Plain create + delete, no `replacements`, so
@@ -249,14 +299,15 @@ export async function carryTo(toks, dest, cx, cy, party = null) {
 
 /**
  * GM: who is about to move, before anything moves (usability Area 8, L11: an everyone-owned
- * scenery token joined the party silently). → true to go ahead.
+ * scenery token joined the party silently). → true to go ahead; an empty party → warn and false
+ * even with the setting off (portals-edge-4).
  */
 export async function confirmParty(party, title) {
-  if (!deps.setting("confirmPartyTeleport")) return true;
   if (!party.length) {
     ui.notifications.warn(_loc("PENTARYN_PORTALS.Party.Nobody"));
     return false;
   }
+  if (!deps.setting("confirmPartyTeleport")) return true;
   const rows = partyPreview(party).map(r => `<li>${esc(r.name)}${r.follower
     ? ` <span class="ppt-follows">${r.leaderName
       ? _loc("PENTARYN_PORTALS.Party.LandsBeside", { name: esc(r.leaderName) })
@@ -275,18 +326,31 @@ export async function confirmParty(party, title) {
 
 /**
  * GM: move the party on canvas.scene to `destRegion`'s centre. → `{ moved, cancelled }` (moved =
- * tokens moved; cancelled = the GM said no, or nobody counts as party); undefined for a player or
- * no region.
+ * tokens moved; cancelled = the GM said no, nobody counts as party, or every party token was
+ * deleted while the confirm was open); undefined for a player, no region or no scene on the canvas.
  */
-export async function teleportParty(destRegion, { confirm = true } = {}) {
-  if (!game.user.isGM || !destRegion) return;
+export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
+  if (!game.user.isGM) return;
+  const destRegion = docOf(regionOrUuid, "Region", "teleportParty");
+  if (!destRegion) return;
+  // portals-edge-5: no scene on the canvas → nothing to move, not a TypeError.
+  if (!canvas?.scene) { deps.log?.warn("teleportParty: no scene"); return; }
   const from = canvas.scene;
   const dest = destRegion.parent;
-  const party = partyRecords(from);
-  if (confirm && !(await confirmParty(party, cardFor(destRegion).title))) return { moved: 0, cancelled: true };
+  let party = partyRecords(from);
+  // portals-edge-4: an empty party never pulls players or moves the view, confirm or not.
+  if ((confirm || !party.length) && !(await confirmParty(party, cardFor(destRegion).title))) return { moved: 0, cancelled: true };
+  // ROB-2: a token deleted while the dialog was open is dropped, not recreated on the far side.
+  const kept = party.filter(r => from.tokens.has(r.doc.id));
+  if (kept.length < party.length) {
+    if (!kept.length) {
+      ui.notifications.warn(_loc("PENTARYN_PORTALS.Party.Nobody"));
+      return { moved: 0, cancelled: true };
+    }
+    party = kept;
+  }
   const toks = party.map(r => r.doc);
-  const b = destRegion.bounds;
-  const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  const { x: cx, y: cy } = boxCentre(destRegion.bounds);
   if (dest === from) {
     const places = landingPlaces(dest, toks, cx, cy, party);
     await from.updateEmbeddedDocuments("Token", toks.map((t, i) => ({ _id: t.id, ...places[i] })), { teleport: true, animate: false });
@@ -316,11 +380,8 @@ export async function linkRegions(from, to) {
     }
     return;
   }
-  await from.createEmbeddedDocuments("RegionBehavior", [{
-    name: "Teleport", type: "teleportToken",
-    system: { destinations: [to.uuid], placement: "center", snap: true, choice: true, revealed: true,
-      dialog: { revealed: null, unrevealed: null }, transition: { type: "fade", duration: 1500 } }
-  }]);
+  const { system, ...rest } = structuredClone(NEW_TELEPORT_BEHAVIOR);    // a fresh, unfrozen copy (EXT-2)
+  await from.createEmbeddedDocuments("RegionBehavior", [{ ...rest, system: { destinations: [to.uuid], ...system } }]);
 }
 
 /** The card's Add a destination and api.link(): from → to, and back when twoWay. */

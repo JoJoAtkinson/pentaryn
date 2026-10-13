@@ -17,7 +17,10 @@ tools read one at a time.
   - Defect — "It works, just not the way you expect, so it comes across as a bug. If you don't know, pick Bug."
   - Feature — "100% new: it does not exist yet, like a new tab or a new subsystem."
 - A text box (4000 characters), a "What gets attached" fold-out, **Send report** (disabled while
-  empty) and **Cancel**.
+  empty) and **Cancel**. The fold-out has one row per section a report carries: name and role,
+  world/system/Foundry versions, viewed scene, selected and targeted tokens (names and hp), combat
+  round and turn, recent actions, recent errors, own chat, open windows, module versions and browser
+  details (user agent, viewport, language, time zone).
 - One toast: "Thanks — report <id> saved." or, with no GM online, "…will be sent when one connects."
 - `/bug <text>` in chat opens the dialog pre-filled and posts nothing.
 
@@ -36,15 +39,15 @@ Ask it: `game.pentaryn.feedback.describe()` (offline: `test/golden/describe.json
 | Method | GM | Writes | Returns |
 |---|---|---|---|
 | `inspect(ref, { as })` | — | — | async. A user ref → `{ user, pending, reports, actions, errors }`; an Actor or Token (what the root `game.pentaryn.inspect` passes) → `{ actor, users, pending, reports, actions, errors }` for its players (non-GM owners and whoever has it as their character; none → empty lists, not an error). `pending` (queued ids) for a GM or that user only; `reports` (summaries, oldest first, last 20) on a GM client only; the rings only for the calling user |
-| `selftest()` | — | — | `{ ok, checks }` — published, bug button present, recorder installed, console wrap matches the setting |
+| `selftest()` | — | — | `{ ok, checks }` — published, bug button present, recorder installed, each console wrap (error, warn) present exactly when `captureConsole` is on |
 | `open({ category, text })` | — | — | opens the dialog pre-filled |
 | `submit({ category, text }, { dryRun })` | — | own User flag | `{ ok, id, status: "filed" \| "queued" }` / `fail` |
-| `ingest({ userId, ids })` | active GM | report files, the user's flag | `{ ok, filed, refused, done }` — the relay query |
-| `list({ status, limit })` | yes | — | `{ reports: [{ id, t, category, status, user, world, text60 }], count }`, oldest first |
+| `ingest({ userId, ids })` | active GM | report files, the user's flag | `{ ok, filed, refused, done }` — the relay query; a non-GM sender asking for someone else's queue gets `fail("REFUSED", …)` |
+| `list({ status, limit })` | yes | — | `{ reports: [{ id, t, category, status, user, world, text60 }], count }`, oldest first; report files are fetched up to 6 at a time (`LIMITS.readsInFlight`); a report file that cannot be read or is not a JSON object is skipped with a console warning |
 | `get({ id })` | yes | — | the report; `id` may be a unique prefix; throws `NOT_FOUND` / `AMBIGUOUS` / `BAD_ARGS` |
 | `resolve({ id, status, note, force, dryRun })` | yes | the report file | `{ ok, id, status, history }` / `fail("REFUSED", …)` |
 
-Queries: `pentaryn-feedback.ingest` (relay: any sender, the active GM runs it) and `inspect`,
+Queries: `pentaryn-feedback.ingest` (relay: that user or a GM may send it, the active GM runs it) and `inspect`,
 `list`, `get`, `resolve` (GM sender). Status rules (`nextStatus` in core): open → triaged; any →
 resolved / wontfix; the same status adds a note; back to open, or resolved → triaged, needs `force`.
 
@@ -60,8 +63,11 @@ whose queue held it — never from the payload), world, scene (viewed/active), c
 targeted tokens with hp, combat round/turn, open windows, active module versions, client (UA,
 viewport, language, time zone), the reporter's own last 10 chat cards (flavor and roll total;
 whisper as a yes/no), the error ring and the action ring. Never: other users' chat, whisper or
-chat content, setting values, form input values, journal text. Every string is clipped and passed
-through `redact()` (secret-looking `key=value`, Bearer tokens, URL query strings).
+chat content, setting values, form input values, journal text. Every string is clipped. Every
+error message (the error ring, the recorder's own failures, `sectionErrors`), error location and
+stack line, chat flavor, window title, click label and notification text also passes through
+`redact()` (secret-looking `key=value`, Bearer tokens, URL query strings). The player's own report
+text and document/user names are clipped only, never redacted.
 
 Nothing in world settings (blueprint §5.3).
 
@@ -106,7 +112,8 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
   (the server lets only that user, or a GM, write it — so the queue's owner *is* the reporter),
   then `queryGM("pentaryn-feedback.ingest", { userId, ids }, { timeout: 10000 })`.
 - The **active GM** files a user's queue on that query, on `updateUser` (a new queue key), on
-  `userConnected`, and at `ready` (every user). Per tab, one ingest per user at a time.
+  `userConnected`, and at `ready` (every user). Per tab, one ingest per user at a time, even
+  across a hot patch (`uninstall()` leaves an in-flight ingest's chain for the re-install to wait on).
 - A queue entry that fails `validateReport` (including a `t` no Date can hold) or cannot be
   normalised is **dropped** with a `refused report` warning, and the rest of the queue is filed; a
   failed upload instead stays queued for the next ingest.
@@ -124,8 +131,10 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
 ## Extending
 
 1. A pure rule → `feedback-core.mjs` with a row in `test/core.test.mjs`.
-2. A new recorded kind → a `reg.on` in `recorder.mjs` (sync, one push, no await), a case in
-   `test/glue.test.mjs`, a line format in `scripts/feedback_reports.py` `action_line`.
+2. A new recorded kind → a `reg.on` in `recorder.mjs` (sync, one push, no await), the kind in
+   `ACTION_KINDS` (core), a case in `test/glue.test.mjs`, a line format in
+   `scripts/feedback_reports.py` `action_line` and a row in its test's case table. `core.test`
+   refuses a pushed kind missing from `ACTION_KINDS`; the Python test refuses one without a case.
 3. A report field → `buildReport` + `normaliseReport` + `REPORT_KEYS` in core, the Python renderer,
    and bump `SCHEMA_VERSION` on both sides if a reader would misread an old file. A new list
    section also goes in `LIST_KEYS` (validateReport's shape check).
@@ -138,12 +147,13 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
   `!canvas.ready`. `/bug` and `game.pentaryn.feedback.open()` still work.
 - **Anything under `Data/` is served by URL** while the tunnel is up. Ids are 16 random
   characters, Foundry does not list folders, and a report holds only the reporter's own activity
-  (redacted). Acceptable at this table; never put a secret in a report field.
+  (errors and recorded free text redacted; their own text and names only clipped). Acceptable at this table; never put a secret in a report field.
 - A queued report rides on the User document every client receives: the queue is capped at 5
   (oldest dropped, the player is told) and each report at 256 KB.
-- The kit's `registerQueries` (1.1.0) passes no sender to a row's implementation (its inner
-  handler drops core's ctx; `guarded`/`relayed` do pass it), which is why the identity comes
-  from the queue's User document, not from the query.
+- The kit's `registerQueries` (1.2.0) passes core's ctx to a relay row's implementation, so
+  `ingest` refuses a non-GM sender asking for another user's queue. A call with no ctx (the
+  bridge's socket path, or a local call) is not checked, and the filed identity still comes from
+  the queue's User document, never from the query.
 - `lib/` and `test/kit/` are vendored: edit `foundry/lib/`, then `vendor.py sync`.
 - `module.json` is read at Foundry startup: a change needs a restart.
 

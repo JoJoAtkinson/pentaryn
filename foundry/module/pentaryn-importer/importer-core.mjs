@@ -128,6 +128,12 @@ const FLAG_SCOPE = "pentaryn";
 /** CONTRACT.md §1: the importer MUST refuse anything else. */
 const CONTRACT_ID = "pentaryn/actors.json@1";
 
+/**
+ * The module.json `flags.pentaryn.*` keys the version gate (`versionProblems`'s `expected`) reads.
+ * selftest checks each one is present; a missing one refuses every import (importer-M3).
+ */
+const GATE_KEYS = Object.freeze(["contract", "targetSystem", "targetSystemVersion", "generation"]);
+
 const DEFAULT_TIMEOUT_MS = 15000;
 
 /** CONTRACT.md §10. Digits, dice, arithmetic, whitespace — no `@`. */
@@ -363,7 +369,7 @@ function versionProblems(manifest, expected, live) {
   if (expected.contract !== CONTRACT_ID) {
     problems.push(
       `module.json declares contract "${expected.contract}" but this code implements `
-      + `"${CONTRACT_ID}" — module.json and pentaryn-importer.mjs are out of step.`
+      + `"${CONTRACT_ID}" — module.json and importer-core.mjs are out of step.`
     );
   }
 
@@ -467,6 +473,14 @@ function lintFormulas(actors) {
  * @returns {{data: object, items: object[], expected: object|null, slug: string}}
  */
 function preparePayload(entry) {
+  // importer-R4: a non-object entry (null, a string, an array) is a contract violation, refused like
+  // a missing slug rather than escaping as a TypeError from the clone or the slug lookup.
+  if (!isPlainObject(entry)) {
+    throw new PentarynAbort(
+      `An actor entry is not an object (got ${JSON.stringify(entry)}). `
+      + "Each element of actors is one Actor; refusing the run rather than guessing what it meant."
+    );
+  }
   const data = cloneJson(entry);
   const expected = data.expected ?? null;
 
@@ -489,6 +503,23 @@ function preparePayload(entry) {
       `An actor entry (name ${JSON.stringify(data.name)}) has no flags.${FLAG_SCOPE}.slug. `
       + "The slug is the upsert key; refusing the run rather than creating an unmatched Actor."
     );
+  }
+
+  // importer-EC4: `flags.pentaryn.action` is the upsert key for an entry's Items, so two rows with
+  // the same action would shadow each other (the readback's find() matches both to one live Item).
+  // A generator contract violation, refused here in the pre-pass before anything is written. Items
+  // without an action, or that are not objects, are left to the readback (assertItemsAddressable).
+  const actions = new Set();
+  for (const item of items) {
+    const action = isPlainObject(item) ? getPath(item, `flags.${FLAG_SCOPE}.action`) : undefined;
+    if (action === undefined) continue;
+    if (actions.has(action)) {
+      throw new PentarynAbort(
+        `Actor ${JSON.stringify(slug)} has two items with flags.${FLAG_SCOPE}.action ${JSON.stringify(action)}. `
+        + "The action is the upsert key for its Items; refusing the run rather than letting one row shadow the other."
+      );
+    }
+    actions.add(action);
   }
 
   return { data, items, expected, slug };
@@ -521,6 +552,33 @@ function toCreatePayload(data) {
   const payload = cloneJson(data);
   if (payload.flags?.[FLAG_SCOPE]) delete payload.flags[FLAG_SCOPE].contentHash;
   return payload;
+}
+
+const ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * The `_id` a NEW actor is created with (importer-AC-2): 16 characters of [A-Za-z0-9], a pure
+ * function of the slug, so two GM tabs creating the same slug at once ask for the same id and the
+ * server refuses the second (`keepId`) instead of storing a duplicate. Sixteen independently seeded
+ * FNV-1a lanes, each finished with murmur3's fmix32, one base-62 character per lane. Never change it:
+ * the ids of actors already imported would stop matching (they are still found by slug).
+ * @param {string} slug
+ * @returns {string}
+ */
+function idForSlug(slug) {
+  if (typeof slug !== "string" || slug === "") throw new TypeError(`idForSlug needs a non-empty slug string, got ${typeof slug}`);
+  let id = "";
+  for (let lane = 0; lane < 16; lane++) {
+    let h = (0x811c9dc5 ^ Math.imul(lane + 1, 0x9e3779b1)) >>> 0;
+    for (let i = 0; i < slug.length; i++) h = Math.imul(h ^ slug.charCodeAt(i), 0x01000193);
+    h ^= h >>> 16;
+    h = Math.imul(h, 0x85ebca6b);
+    h ^= h >>> 13;
+    h = Math.imul(h, 0xc2b2ae35);
+    h ^= h >>> 16;
+    id += ID_ALPHABET[(h >>> 0) % 62];
+  }
+  return id;
 }
 
 /* -------------------------------------------------------------------------------------------- */
@@ -570,8 +628,8 @@ function assertionMessage({ slug, action, activityId, path, expected, actual, hi
 }
 
 export {
-  FLAG_SCOPE, CONTRACT_ID, DEFAULT_TIMEOUT_MS, FORMULA_OK, FORMULA_GLOBS, FORMULA_PATTERNS,
+  FLAG_SCOPE, CONTRACT_ID, GATE_KEYS, DEFAULT_TIMEOUT_MS, FORMULA_OK, FORMULA_GLOBS, FORMULA_PATTERNS,
   STRIPPED_KEYS, STRIPPED_ACTOR_KEYS, STRIPPED_ITEM_KEYS, PentarynError, PentarynAbort, PentarynAssertionError,
   isPlainObject, normalise, cloneJson, walkStrings, walkLeaves, getPath, indexBySlug, versionProblems, lintFormulas,
-  preparePayload, toUpdatePayload, toCreatePayload, valuesMatch, assertionMessage,
+  preparePayload, toUpdatePayload, toCreatePayload, idForSlug, valuesMatch, assertionMessage,
 };

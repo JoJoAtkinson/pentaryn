@@ -63,8 +63,15 @@ def cmd_scan(args) -> int:
 
 
 def cmd_run(args) -> int:
-    from scripts.foundry.update import apply as apply_mod, report as report_mod
+    from scripts.foundry.update import apply as apply_mod, children, report as report_mod
 
+    # The wrapper's backstop TERMs this process: end the claude -p / node children it
+    # started, then SystemExit(143) so the run's finally blocks release the lock (AC-6).
+    with children.terminate_on_sigterm():
+        return _run(args, apply_mod, report_mod)
+
+
+def _run(args, apply_mod, report_mod) -> int:
     result = apply_mod.run(dry=args.dry, force=args.force, skip_llm=args.skip_llm)
     print(f"  outcome: {result.outcome}")
     for record in result.applied:
@@ -111,14 +118,16 @@ def cmd_run(args) -> int:
     # pathspec, never `-A`. Only paths under the plans directory are accepted.
     plan_paths = _plan_paths(result)
 
+    # Notify first: the commit and push touch the network and must never delay or
+    # lose the week's notification (AC-5).
+    apply_mod.notify_result(result)
+
     policy_report = policy.get("report", {}) or {}
     if policy_report.get("commit", True):
         for message in report_mod.commit_and_push(
                 [md_path, json_path, *plan_paths], push=policy_report.get("push", True)):
             result.messages.append(message)
             print(f"  · {message}")
-
-    apply_mod.notify_result(result)
     return 0 if result.outcome in ("done", "no-op", "skipped", "dry") else 1
 
 
@@ -223,9 +232,21 @@ def cmd_admin_configure(args) -> int:
 
 
 def cmd_recover_service(args) -> int:
-    """Put world + tunnel back after a run that died. What the watchdog calls."""
+    """Put world + tunnel back after a run that died. What the watchdog calls.
+
+    The watchdog's only evidence of death is 20 minutes of status silence, and a long
+    phase can be silent that long while alive. So a live lock owner wins: nothing is
+    touched, and a hung-but-alive run is the wrapper's backstop's job (``cli killed``)."""
     from scripts.foundry.update import apply as apply_mod, state
 
+    pid = state.Lock(state.LOCK_DIR).owner().get("pid")
+    try:
+        alive = pid is not None and state._pid_alive(int(pid))
+    except (TypeError, ValueError):
+        alive = False
+    if alive:
+        print(f"  run {pid} still alive — not restoring service")
+        return 0
     entry = state.EntryState.read()
     messages: list[str] = []
     if state.release_if_owner_dead():
@@ -244,9 +265,10 @@ def cmd_recover_service(args) -> int:
 def cmd_killed(args) -> int:
     """The wrapper's backstop killed the run (``automation/bin/vtt-update.sh``).
 
-    SIGTERM then SIGKILL: none of the run's own ``except``/``finally`` blocks ran, so the
-    status still says ``running``, the entry state was not restored, the lock is still
-    held and nothing was reported. The 06:12 watchdog would catch that — but only if the
+    SIGTERM then SIGKILL. On TERM the run ends its ``claude -p``/``node`` children and
+    unwinds its ``finally`` blocks (AC-6), which release the lock; but no ``except``
+    block ran, so the status still says ``running``, the entry state was not restored
+    and nothing was reported (after a KILL, not even the lock was released). The 06:12 watchdog would catch that — but only if the
     kill landed before it, and a slow escalation Saturday can move the kill past it. So
     whoever kills the run cleans up after it: mark the status, put service back the way
     the run found it (what the watchdog would do), release the dead lock, and notify."""

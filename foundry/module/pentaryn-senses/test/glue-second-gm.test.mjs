@@ -51,7 +51,6 @@ test("second GM: chain and setupLight act (any GM); the Break chain button shows
   rows.setupLight = await effects(() => game.pentaryn.senses.setupLight());
   const h = tokenHUD(game.scenes.get(ID.s1).tokens.get(ID.tHulk));
   F.fire("renderTokenHUD", h.app, h.element);
-  // [declared senses-edge-3] a button's tip is in data-tooltip-text (plain text), not data-tooltip
-  rows.hud = h.col.children.map(c => c.dataset.tooltipText);
+  rows.hud = h.col.children.map(c => c.dataset.tooltip);
   pinJSON("second-gm", rows, import.meta.url);
 });

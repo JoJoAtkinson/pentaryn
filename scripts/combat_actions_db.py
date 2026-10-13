@@ -30,6 +30,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
@@ -66,6 +67,33 @@ def read_all() -> list[dict]:
     return list(_iter_records())
 
 
+def _flock_within(fh: Any, lock: Path) -> None:
+    """Exclusive `flock` on `fh`, giving up after DND_MCP_TOOL_TIMEOUT seconds (py-mcp-ac-3).
+
+    The MCP server cannot kill a thread, so this deadline is what bounds an in-process
+    handler: it raises "could not lock <file> within Ns" rather than holding its worker
+    slot forever. Same env and default (60s) as subprocess tools; <=0 waits without limit.
+    """
+    try:
+        limit = int(os.environ.get("DND_MCP_TOOL_TIMEOUT") or 60)
+    except ValueError:
+        limit = 60
+    if limit <= 0:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        return
+    deadline = time.monotonic() + limit
+    while True:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return
+        except BlockingIOError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(
+                    f"could not lock {lock} within {limit}s (set DND_MCP_TOOL_TIMEOUT to adjust)"
+                ) from None
+            time.sleep(0.05)
+
+
 @contextlib.contextmanager
 def _locked() -> Iterator[None]:
     """Hold an exclusive lock on `<db>.lock` for one read-modify-write (python-tooling-44).
@@ -78,8 +106,9 @@ def _locked() -> Iterator[None]:
     """
     p = _db_path()
     p.parent.mkdir(parents=True, exist_ok=True)
-    with open(p.with_name(p.name + ".lock"), "a") as fh:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+    lock = p.with_name(p.name + ".lock")
+    with open(lock, "a") as fh:
+        _flock_within(fh, lock)
         try:
             yield
         finally:

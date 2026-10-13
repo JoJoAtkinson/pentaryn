@@ -38,6 +38,14 @@
   },
   "calls": [
     {
+      "op": "update",
+      "documentName": "Token",
+      "uuid": "Scene.s1.Token.rl",
+      "changes": {
+        "flags.pentaryn-prompts.claims.replace": "socket-gm-1"
+      }
+    },
+    {
       "op": "createEmbeddedDocuments",
       "scene": "s1",
       "type": "AmbientLight",

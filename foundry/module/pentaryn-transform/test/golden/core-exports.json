@@ -8,10 +8,6 @@
     "string"
   ],
   [
-    "MODULE_ID",
-    "string"
-  ],
-  [
     "STARRY_LIGHT",
     "object"
   ],

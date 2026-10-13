@@ -5,8 +5,8 @@ Modules cannot import across module directories (the imports gate fails a `../` 
 module, scripts/foundry/ops/modules.py), so shared code is VENDORED: one canonical file in
 foundry/lib, a byte-identical copy in each module's lib/, and this gate proving identity by sha256.
 
-    vendor.py sync  <module…|--all> [--tier small|full] [--kit a,b] [--root DIR]
-    vendor.py check <module…|--all> [--root DIR] [--json]
+    vendor.py sync  <module…|--all> [--tier small|full] [--kit a,b] [--root DIR] [--lib DIR]
+    vendor.py check <module…|--all> [--root DIR] [--lib DIR] [--json]
 
 `--all` means every module that already HAS a lib/kit.lock.json — the migrated ones. `sync --all`
 skips a module without a lock (listed, never written): adopting the kit is a per-module step,
@@ -35,6 +35,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -123,6 +124,9 @@ def resolve_module(arg: str, root: Path = MODULE_ROOT) -> Path:
 
 
 def all_modules(root: Path = MODULE_ROOT) -> list[Path]:
+    """Every module folder under `root`; none when `root` is not a directory."""
+    if not root.is_dir():
+        return []
     return sorted(p for p in root.iterdir() if (p / "module.json").exists())
 
 
@@ -130,18 +134,26 @@ def read_lock(module_dir: Path) -> dict | None:
     path = module_dir / "lib" / "kit.lock.json"
     if not path.exists():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as exc:  # py-blueprint-ROB-4: that module's problem, not a traceback
+        raise VendorError(f"{module_dir.name}: lib/kit.lock.json is not valid JSON: {exc}") from exc
 
 
-def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None = None,
-         lib_root: Path = LIB_ROOT) -> list[str]:
-    """Copy the kit closure and the test kit into the module. Returns the files written."""
+def plan(module_dir: Path, tier: str | None = None, extra: list[str] | None = None, *,
+         lib_root: Path = LIB_ROOT, manifest: dict | None = None) -> dict:
+    """What `sync` would vendor — `{"tier", "files"}` — after every closure/package/ext check.
+
+    Pure: reads kit.json, the lock and the manifest (or `manifest`, the one about to be written)
+    and raises VendorError on a refusal, so a caller can refuse before writing anything (PYB-E7).
+    """
     kit = load_kit(lib_root)
-    manifest = json.loads((module_dir / "module.json").read_text(encoding="utf-8"))
+    if manifest is None:
+        manifest = json.loads((module_dir / "module.json").read_text(encoding="utf-8"))
     lock = read_lock(module_dir)
 
     # an explicit tier wins; else the existing lock; else the manifest's tier (default full)
-    manifest_tier = (manifest.get("flags") or {}).get("pentaryn", {}).get("tier")
+    manifest_tier = ((manifest.get("flags") or {}).get("pentaryn") or {}).get("tier")  # py-blueprint-MAINT-7
     if tier is None and lock and lock.get("files"):
         base = list(lock["files"])
         lock_tier = lock.get("tier") or manifest_tier
@@ -164,6 +176,15 @@ def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None =
                               f"relationships first (refused: {module_dir.name})")
     for n in names:  # a bad `ext` refuses here, before anything is written
         kit_file(n, kit)
+    return {"tier": lock_tier, "files": names}
+
+
+def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None = None,
+         lib_root: Path = LIB_ROOT) -> list[str]:
+    """Copy the kit closure and the test kit into the module. Returns the files written."""
+    kit = load_kit(lib_root)
+    planned = plan(module_dir, tier, extra, lib_root=lib_root)
+    names, lock_tier = planned["files"], planned["tier"]
 
     written: list[str] = []
     lib_dir = module_dir / "lib"
@@ -197,7 +218,6 @@ def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None =
 
 def _lib_imports(module_dir: Path) -> set[str]:
     """Kit file stems imported as ./lib/x.mjs (or ../lib/x.mjs from a subfolder) by the module's own code."""
-    import re
     names: set[str] = set()
     pattern = re.compile(r"""["'](?:\./|(?:\.\./)+)lib/([\w-]+)\.mjs["']""")
     for f in module_dir.rglob("*.mjs"):
@@ -210,7 +230,6 @@ def _lib_imports(module_dir: Path) -> set[str]:
 
 def _lib_styles(module_dir: Path) -> set[str]:
     """Kit stylesheet stems the manifest loads as `lib/<name>.css`."""
-    import re
     try:
         manifest = json.loads((module_dir / "module.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -227,8 +246,11 @@ def check(module_dir: Path, *, lib_root: Path = LIB_ROOT) -> list[str]:
     """Problems that mean the vendored copies are not the canonical kit. Empty = healthy."""
     kit = load_kit(lib_root)
     problems: list[str] = []
-    lock = read_lock(module_dir)
     name = module_dir.name
+    try:
+        lock = read_lock(module_dir)
+    except VendorError as exc:
+        return [str(exc)]
     if lock is None:
         return [f"{name}: no lib/kit.lock.json — run vendor.py sync {name}"]
     if lock.get("version") != kit["version"]:
@@ -302,7 +324,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.all:
             targets = []
             for mod in all_modules(args.root):
-                (targets if read_lock(mod) is not None else skipped).append(mod)
+                try:
+                    locked = read_lock(mod) is not None
+                except VendorError:
+                    locked = True  # a corrupt lock: sync/check report it as that module's ✗
+                (targets if locked else skipped).append(mod)
             skipped = [m.name for m in skipped]
         else:
             targets = [resolve_module(m, args.root) for m in args.modules]

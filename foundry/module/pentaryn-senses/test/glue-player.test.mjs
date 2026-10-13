@@ -137,6 +137,5 @@ test("player: End light on the Token HUD only for the caster's owner", async () 
   tok(ID.tHulk).flags[MODULE] = { spellLight: { source: stake.items.get("itmStakeLight001").uuid, prior: null } };
   const theirs = tokenHUD(tok(ID.tHulk));
   F.fire("renderTokenHUD", theirs.app, theirs.element);
-  // [declared senses-edge-3] a button's tip is in data-tooltip-text (plain text), not data-tooltip
-  pinJSON("player-hud", { mine: mine.col.children.map(c => c.dataset.tooltipText), click, theirs: theirs.col.children.length }, import.meta.url);
+  pinJSON("player-hud", { mine: mine.col.children.map(c => c.dataset.tooltip), click, theirs: theirs.col.children.length }, import.meta.url);
 });

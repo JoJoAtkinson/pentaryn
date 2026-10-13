@@ -15,7 +15,7 @@
   "sceneName": "Crypt",
   "x": 1,
   "y": 2,
-  "pileUuid": "Actor.actorChest000001",
+  "pileUuid": "Scene.sceneOne00000001.Token.tokChest00000001",
   "item": {
     "documentName": "Item",
     "id": "itemSword0000001",

@@ -11,39 +11,24 @@ from __future__ import annotations
 import json
 import os
 import time
+from functools import partial
+from pathlib import Path
 
 import pytest
 
 from bundle_fakes import make_module
+from cloud_fakes import install, make_edit
+from cloud_fakes import bundle_names as _bundle_names
+from cloud_fakes import worlds as _names
 from scripts.foundry import cloud, storage
 
 DAY = 86400
 
 
-def _install(root):
-    mods = root / "Data/modules"
-    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": b"map art " * 512})
-    make_module(mods, "tools", version="1.1", packs=1)
-    return root
+_install = partial(install, system=None)
 
 
-_bump = [0]
-
-
-def _edit(root, text):
-    f = root / "Data/worlds/w/journal.txt"
-    f.write_text(text)
-    _bump[0] += 5
-    t = time.time() + _bump[0]
-    os.utime(f, (t, t))
-
-
-def _names(c, sub="world-backups"):
-    return sorted(p.name for p in (c / sub).iterdir() if p.name.endswith(".tar.gz"))
-
-
-def _bundle_names(c):
-    return sorted(p.name for p in (c / "bundles").iterdir())
+_edit = make_edit(step=5)
 
 
 # ── DL3: promotion copies the sidecar first, loudly, and repairs it later ────
@@ -648,6 +633,39 @@ def test_upload_missing_rebuilds_a_gone_staged_tar_and_replaces_its_entry(two_ho
                                     rebuild=cloud._rebuilder(rebuilt))
     assert up == [loc.name] and staged[loc.name] == rebuilt[0] != tar
     assert loc.name in _bundle_names(two_hosts.cloud)
+
+
+def test_perf1_rebuilding_one_bundle_hashes_only_that_folder(two_hosts, tmp_path,
+                                                             monkeypatch):
+    from scripts.foundry import bundles
+    loc, tar = _staged(two_hosts, tmp_path)
+    tar.unlink()
+    walked: list = []
+    real = bundles._walk
+    monkeypatch.setattr(bundles, "_walk", lambda root: (walked.append(Path(root)),
+                                                        real(root))[1])
+    rebuilt: list = []
+    with two_hosts.use("mac"):
+        assert cloud._rebuilder(rebuilt)(loc.name) == rebuilt[0]
+    assert walked and set(walked) == {Path(loc.path)}, walked    # never module/maps
+
+
+def test_m4_rebuilder_rebuilt_is_optional_and_tars_land_in_the_job_staging(two_hosts,
+                                                                           tmp_path):
+    """M4: every caller passed a throwaway `[]` for `rebuilt`, and its docstring said the
+    caller deletes those tars — it never does: they land in `dest_dir` (the job's staging
+    folder) and go with job.drop(). `rebuilt` is optional, collected only when given."""
+    from scripts.foundry import bundles
+    loc, tar = _staged(two_hosts, tmp_path)
+    tar.unlink()
+    dest = tmp_path / "job-staging"
+    dest.mkdir()
+    with two_hosts.use("mac"):
+        src = cloud._rebuilder(dest_dir=dest)(loc.name)
+    assert src is not None and src.parent == dest and src.is_file()
+    doc = cloud._rebuilder.__doc__ or ""
+    assert "for the caller to" not in " ".join(doc.split())
+    assert "drop()" in doc
 
 
 def test_a_staged_tar_built_days_ago_lands_with_a_fresh_cloud_mtime(two_hosts, tmp_path):

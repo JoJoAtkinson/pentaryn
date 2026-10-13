@@ -28,7 +28,7 @@ async function capture(fn) {
 test("a throwing corpse hp handler is logged with its label; a later listener still runs", async () => {
   let later = 0;
   Hooks.on("updateActor", () => { later++; });
-  const actor = { uuid: "Actor.boom", isToken: false, getActiveTokens() { throw new Error("boom"); } };
+  const actor = { uuid: "Actor.boom", isToken: false, getDependentTokens() { throw new Error("boom"); } };
   const lines = await capture(() => Hooks.callAll("updateActor", actor, { system: { attributes: { hp: { value: 5 } } } }));
   assert.deepEqual(lines, [["error", "pentaryn-dropbin | corpse: hp", "Error: boom"]]);
   assert.equal(F.hookErrors.length, 0, "Foundry's hook-error path saw nothing");

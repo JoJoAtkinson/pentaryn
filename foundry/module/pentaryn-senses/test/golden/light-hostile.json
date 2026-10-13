@@ -75,14 +75,6 @@
         "changes": {
           "flags.pentaryn-senses.lightCast": null
         }
-      },
-      {
-        "op": "update",
-        "documentName": "Item",
-        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
-        "changes": {
-          "flags.pentaryn-senses.claims.gone.3": "socket-gm-1"
-        }
       }
     ]
   },
@@ -118,7 +110,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "me",
-                          "tooltipText": "On me"
+                          "tooltip": "On me"
                         },
                         "attrs": {
                           "aria-label": "On me"
@@ -136,7 +128,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "pick",
-                          "tooltipText": "Pick a target"
+                          "tooltip": "Pick a target"
                         },
                         "attrs": {
                           "aria-label": "Pick a target"
@@ -154,7 +146,7 @@
                         "type": "button",
                         "data": {
                           "psLight": "end",
-                          "tooltipText": "End light"
+                          "tooltip": "End light"
                         },
                         "attrs": {
                           "aria-label": "End light"

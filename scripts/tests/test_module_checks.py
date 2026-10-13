@@ -152,6 +152,20 @@ def test_the_word_import_inside_a_string_is_not_an_import(tmp_path):
     assert modules._check_imports(build(tmp_path, files)) == 0
 
 
+def test_a_semicolon_less_side_effect_import_does_not_swallow_the_next(tmp_path, capsys):
+    """EC-5: `import "./a.mjs"` with no semicolon let the next import's clause span the
+    first string, so `{ gone }` was never checked against ./lib.mjs."""
+    files = {"main.mjs": 'import "./side.mjs"\nimport { gone } from "./lib.mjs"\nexport const x = gone\n',
+             "side.mjs": 'export {}\n',
+             "lib.mjs": 'export const beta = 2\n'}
+    spec = build(tmp_path, files)
+    found = jsscan.imports_of(jsscan.scan(spec.src / "main.mjs"))
+    assert [(i.spec, i.names, i.line) for i in found] == [
+        ("./side.mjs", [], 1), ("./lib.mjs", ["gone"], 2)]
+    assert modules._check_imports(spec) == 1
+    assert "gone" in capsys.readouterr().out
+
+
 # ── i18n keys ─────────────────────────────────────────────────────────────────
 
 LANG = {"DEMO.title": "Demo", "DEMO.row.remove": "Remove", "DEMO.row.keep": "Keep"}
@@ -287,6 +301,22 @@ def test_line_numbers_survive_templates_and_comments(tmp_path):
     assert [(r.key, r.line) for r in uses.definite] == [("DEMO.x", 5)]
 
 
+def test_rob_12_a_line_continuation_in_a_string_keeps_later_lines(tmp_path):
+    """rob-12: a backslash line continuation inside a quoted string consumed a newline
+    the lexer never emitted, so every later diagnostic named the line above."""
+    files = {"main.mjs": ('const msg = "first half \\\n'
+                          'second half";\n'
+                          "const other = 'a \\\n"
+                          "b';\n"
+                          'import { alpha } from "./lib.mjs";\n'),
+             "lib.mjs": "export const alpha = 1;\n"}
+    spec = build(tmp_path, files)
+    src = jsscan.scan(spec.src / "main.mjs")
+    assert src.code.count("\n") == (spec.src / "main.mjs").read_text().count("\n")
+    assert [i.line for i in jsscan.imports_of(src)] == [5]
+    assert [s.line for s in src.strings[:2]] == [1, 3]
+
+
 # ── doc paths the real modules cite (senses-walls-cursors-8 recipe, repo-wide) ─
 # Unlike the synthetic tests above, these read the real modules: a context/… or
 # playbooks/… path a module's source, README or module.json names must exist, or a
@@ -346,3 +376,65 @@ def test_a_key_under_a_mistyped_pentaryn_root_fails(tmp_path, capsys):
     assert modules._check_i18n(i18n_module(tmp_path / "typo", bad, lang)) == 1
     out = capsys.readouterr().out
     assert "PENTARYN_DEM.title" in out and "main.mjs:2" in out
+
+
+# ── scan cache (perf-2) ───────────────────────────────────────────────────────
+
+def _count_lexes(monkeypatch) -> list[int]:
+    fed = [0]
+
+    class Counting(jsscan._Lexer):
+        def __init__(self) -> None:
+            super().__init__()
+            fed[0] += 1
+
+    monkeypatch.setattr(jsscan, "_Lexer", Counting)
+    return fed
+
+
+def test_perf_2_the_i18n_gate_reuses_the_imports_gates_scan(tmp_path, monkeypatch):
+    """perf-2: one check lexed every source twice — once per gate. Each file once now."""
+    spec = build(tmp_path, GOOD, lang={"DEMO.title": "Demo"})
+    fed = _count_lexes(monkeypatch)
+    modules._gate_imports(spec)
+    assert fed[0] == 2                  # main.mjs and lib.mjs
+    modules._gate_i18n(spec)
+    assert fed[0] == 2                  # nothing lexed a second time
+
+
+def test_perf_2_an_edited_file_is_scanned_again(tmp_path, monkeypatch):
+    import os
+    f = tmp_path / "a.mjs"
+    f.write_text('export const a = "one";\n', encoding="utf-8")
+    assert [s.value for s in jsscan.scan(f).strings] == ["one"]
+    f.write_text('export const a = "two";\n', encoding="utf-8")      # same size
+    st = f.stat()
+    os.utime(f, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000))
+    assert [s.value for s in jsscan.scan(f).strings] == ["two"]
+    f.write_text('export const a = "three";\n', encoding="utf-8")    # new size
+    assert [s.value for s in jsscan.scan(f).strings] == ["three"]
+
+
+# ── module root resolved once (perf-3) ────────────────────────────────────────
+
+def test_perf_3_the_imports_gate_resolves_the_module_root_once(tmp_path, monkeypatch):
+    """perf-3: resolve() called spec.src.resolve() again for every import edge."""
+    from pathlib import Path
+    spec = build(tmp_path, {
+        "main.mjs": 'import { alpha } from "./lib.mjs";\nimport { beta } from "./lib.mjs";\n'
+                    'import { gamma } from "./more.mjs";\nexport * from "./more.mjs";\n',
+        "lib.mjs": 'export function alpha() { return 1; }\nexport const beta = 2;\n',
+        "more.mjs": 'export const gamma = 3;\n'})
+    root, calls = spec.src, [0]
+    real = Path.resolve
+
+    def counting(self, *a, **kw):
+        if self == root:
+            calls[0] += 1
+        return real(self, *a, **kw)
+
+    monkeypatch.setattr(Path, "resolve", counting)
+    res = modules._gate_imports(spec)
+    assert res.ok is True, res.problems
+    assert res.counts["edges"] == 3
+    assert calls[0] == 1

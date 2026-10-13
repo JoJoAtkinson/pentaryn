@@ -9,13 +9,15 @@
  */
 
 import {
-  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory
+  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, historyOf, runKey, SOLID, lintOnly, analyze, runEngine,
+  wallCategory
 } from "./core/engine.mjs";
 import { register, get, list, available, canonical, compare } from "./core/backends.mjs";
 import { MODULE_SCOPE, LEGACY_SCOPE, MIGRATION_VERSION, planScopeMigration } from "./core/migrate.mjs";
 
 export {
-  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory,
+  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, historyOf, runKey, SOLID, lintOnly, analyze,
+  runEngine, wallCategory,
   register, get, list, available, canonical, compare,
   MODULE_SCOPE, LEGACY_SCOPE, MIGRATION_VERSION, planScopeMigration,
 };
@@ -33,22 +35,33 @@ export const HOOKS = Object.freeze({});
 
 const plural = (n, one, many = `${one}s`) => (n === 1 ? one : many);
 
+/** HTML-escape text for a card, matching foundry.utils.escapeHTML (not available in node). */
+const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#x27;" };
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESCAPES[c]);
+
+/** A keybinding as the console names it: `{key: "KeyW", modifiers: ["Alt"]}` → "Alt+W". */
+const keyLabel = ({ key, modifiers = [] }) => [...modifiers, key.replace(/^(Key|Digit)/, "")].join("+");
+
 /**
- * The ready console line, without the `<module> |` prefix.
+ * The ready console line, without the `<module> |` prefix. The keys and the API list are passed
+ * in, not written here, so the line tracks KEYBINDINGS and the manifest (walls-EXT-11).
  * @param {string[]} names  the available backends, in registry order
+ * @param {string[]} paths  the GM API paths, in manifest order
+ * @param {{action: string, editable: {key: string, modifiers?: string[]}[]}[]} keys  KEYBINDINGS
+ *   rows; each is named by its first binding
  * @param {string|null} [wasmError]  why the compiled backend failed to load, if it did: appended so
  *   a missing or broken .wasm is visible in "auto" mode, which otherwise falls back silently
  */
-export function readyLine(names, wasmError = null) {
+export function readyLine(names, paths, keys, wasmError = null) {
   return `ready — backends: ${names.join(", ")}. ` +
-    `Alt+W run, Alt+Z undo, Alt+Shift+W preview. ` +
-    `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()` +
+    `${keys.map(k => `${keyLabel(k.editable[0])} ${k.action}`).join(", ")}. ` +
+    `API: game.pentaryn.${NS}.${paths.map(p => `${p}()`).join(" / .")}` +
     (wasmError ? ` (wasm unavailable: ${wasmError})` : "");
 }
 
 /**
  * The GM chat card for a preview or a run.
- * @param {string} sceneName
+ * @param {string} sceneName  escaped here, so a scene name can't inject markup (walls-edge-7)
  * @param {{report, refusals, lints}} result  an engine result
  * @param {{committed: boolean, backend: string, ms: number}} meta
  * @returns {string} HTML
@@ -56,7 +69,7 @@ export function readyLine(names, wasmError = null) {
 export function reportHtml(sceneName, result, {committed, backend, ms}) {
   const {report: r, refusals, lints} = result;
   const lines = [];
-  lines.push(`<p><strong>Wall autocomplete — ${sceneName}</strong></p>`);
+  lines.push(`<p><strong>Wall autocomplete — ${escapeHtml(sceneName)}</strong></p>`);
   lines.push(`<p>${committed ? "Committed" : "<em>Preview — nothing was written.</em>"} ` +
              `${r.created} ${plural(r.created, "wall")} created, ${r.moved} moved, ` +
              `${r.iterations} ${plural(r.iterations, "pass", "passes")} in ${Math.round(ms)} ms ` +
@@ -95,36 +108,76 @@ export function undoHtml({generated, restored, all, latest, remaining}) {
       ? `<p style="opacity:.7">${remaining} earlier ${plural(remaining, "run")} still applied — undo again to peel back further.</p>` : "");
 }
 
+/** An ISO-stamped run id's time (its dot-free `,` read back as `.`), else -Infinity. A strict ISO
+ *  prefix, not bare Date.parse, which reads "run-2099" as the year 2099 in V8 (walls-edge-5). */
+const runTime = id => {
+  const t = /^\d{4}-\d{2}-\d{2}T/.test(id) ? Date.parse(id.replaceAll(",", ".")) : NaN;
+  return Number.isFinite(t) ? t : -Infinity;
+};
+
+/** Run-id order for undo: by ISO time (non-ISO first), then by string (walls-edge-5). */
+const runOrder = (a, b) => {
+  const ta = runTime(a), tb = runTime(b);
+  return ta !== tb ? (ta < tb ? -1 : 1) : a < b ? -1 : a > b ? 1 : 0;
+};
+
+/** Every run id in a wall's history: its creating run, then each run that moved it. */
+const runsOf = h => [...(h.created ? [h.created] : []), ...Object.keys(h.moves)];
+
 /**
  * Which walls an undo touches. Reads the run stamps from PLAIN wall data (`toObject()`), never
  * `getFlag`, which throws for the non-package scope "wall-autocomplete" (senses-walls-cursors-1).
- * Stamps are read under every READ_SCOPES scope (stampOf), so a migrated wall undoes the same.
+ * Stamps are read under every READ_SCOPES scope (historyOf), so a migrated wall undoes the same.
  *
- * The latest run is the greatest `run` stamp by string order (ISO timestamps sort by time). A
- * stamped wall marked `generated` is deleted; one with only a `priorC` was a user wall the run
- * trimmed or welded, and gets its coordinates back. `remaining` counts the other runs still applied.
+ * Per-run history (walls-edge-2): the latest run is the greatest run id across every wall's
+ * creating `run` and `moves` keys, in runOrder (walls-edge-5): an ISO-stamped id (the glue's
+ * `toISOString()`, stored dot-free) ranks by its time and always outranks a non-ISO id; non-ISO ids
+ * (tests and the bridge pass short ones) rank below every ISO one, by string order. A generated wall
+ * is deleted only when the latest run created it; any wall with a `moves[latest]` entry gets those
+ * coordinates back — so undoing run 2 restores a run-1 wall run 2 moved, rather than deleting it.
+ * `all` deletes every generated wall and restores every other one to its earliest run's prior.
+ * `remaining` counts the other distinct runs still applied. Legacy flat stamps read as before.
  *
  * @param {{_id?: string, id?: string, flags?: object}[]} walls
  * @param {{all?: boolean}} [opts]  all: every run, not just the latest
  * @returns {{stamped: number, latest: string|null, generated: string[], restores: {_id: string, c: number[]}[], remaining: number}}
- *   restores carry only `_id` and `c`; the caller adds the flag deletion.
+ *   restores carry only `_id` and `c`; the caller adds the flag deletion (undoDrops).
  */
 export function planUndo(walls, {all = false} = {}) {
-  const flag = (w, key) => stampOf(w)[key];
-  const stamped = walls.filter(w => flag(w, "run"));
+  const stamped = walls.map(w => ({w, h: historyOf(w)})).filter(({h}) => runsOf(h).length);
   if (!stamped.length) return {stamped: 0, latest: null, generated: [], restores: [], remaining: 0};
-  const latest = stamped.map(w => flag(w, "run")).sort().at(-1);
-  const targets = all ? stamped : stamped.filter(w => flag(w, "run") === latest);
+  const ids = new Set(stamped.flatMap(({h}) => runsOf(h)));
+  const latest = [...ids].sort(runOrder).at(-1);
   const generated = [], restores = [];
-  for (const w of targets) {
-    if (flag(w, "generated")) generated.push(w._id ?? w.id);
-    else {
-      const prior = flag(w, "priorC");
-      if (prior) restores.push({_id: w._id ?? w.id, c: [...prior]});
-    }
+  for (const {w, h} of stamped) {
+    const id = w._id ?? w.id;
+    if (all ? h.generated : h.created === latest) { generated.push(id); continue; }
+    const from = all ? Object.keys(h.moves).sort(runOrder)[0] : latest;
+    const prior = from !== undefined && Object.hasOwn(h.moves, from) ? h.moves[from] : null;
+    if (prior) restores.push({_id: id, c: [...prior]});
   }
-  const remaining = new Set(stamped.map(w => flag(w, "run"))).size - 1;
-  return {stamped: stamped.length, latest, generated, restores, remaining};
+  return {stamped: stamped.length, latest, generated, restores, remaining: ids.size - 1};
+}
+
+/**
+ * The flag paths an undo deletes from a wall it restores. Once no run is left on the wall, its whole
+ * stamp under each scope it carries one in; otherwise only that run's entry — `moves.<run>`, or the
+ * legacy flat `run` + `priorC` — so the runs before it still undo (walls-edge-2).
+ * @param {{flags?: object}} w  plain wall data
+ * @param {string} run  the run being undone
+ * @param {{all?: boolean}} [opts]
+ * @returns {string[]} dotted update keys, each to be set to the deletion operator
+ */
+export function undoDrops(w, run, {all = false} = {}) {
+  const scopes = READ_SCOPES.filter(s => w?.flags?.[s]);
+  const h = historyOf(w);
+  if (all || runsOf(h).every(r => r === run)) return scopes.map(s => `flags.${s}`);
+  return scopes.flatMap(s => {
+    const f = w.flags[s];
+    if (f.moves && Object.hasOwn(f.moves, run)) return [`flags.${s}.moves.${run}`];
+    if (!h.generated && f.run === run) return [`flags.${s}.run`, `flags.${s}.priorC`];
+    return [];
+  });
 }
 
 /**

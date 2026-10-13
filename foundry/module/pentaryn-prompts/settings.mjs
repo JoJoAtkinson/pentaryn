@@ -8,7 +8,8 @@
  * keys for array choices.
  */
 
-import { GATHER_CHARS, SIZE_KEYS } from "./geometry-core.mjs";
+import { SIZE_KEYS } from "./geometry-core.mjs";
+import { DEFAULTS } from "./core/defaults.mjs";
 import { MODULE, I18N } from "./prompts-core.mjs";
 import { defineKeybindings, defineSettings, serialStore, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -28,27 +29,27 @@ export const SETTINGS = Object.freeze([
     doc: "Characters of text per side-panel row. Read on each panel draw.",
   },
   {
-    key: "gatherChars", scope: "world", config: true, type: Number, default: GATHER_CHARS, range: { min: 60, max: 1200, step: 20 },
+    key: "gatherChars", scope: "world", config: true, type: Number, default: DEFAULTS.gatherChars, range: { min: 60, max: 1200, step: 20 },
     name: "PENTARYN_PROMPTS.settings.gatherChars.name", hint: "PENTARYN_PROMPTS.settings.gatherChars.hint",
     doc: "Characters of a built thing's description in the gather text (cut at a sentence end). A gather's chars argument wins.",
   },
   {
-    key: "unseenWithinFt", scope: "world", config: true, type: Number, default: 60, range: { min: 0, max: 300, step: 5 },
+    key: "unseenWithinFt", scope: "world", config: true, type: Number, default: DEFAULTS.unseenWithinFt, range: { min: 0, max: 300, step: 5 },
     name: "PENTARYN_PROMPTS.settings.unseenWithinFt.name", hint: "PENTARYN_PROMPTS.settings.unseenWithinFt.hint",
     doc: "Things behind a wall or door are still listed when this close (ft), in the panel and the gather.",
   },
   {
-    key: "cropMaxPerCall", scope: "world", config: true, type: Number, default: 6, range: { min: 0, max: 12, step: 1 },
+    key: "cropMaxPerCall", scope: "world", config: true, type: Number, default: DEFAULTS.cropMaxPerCall, range: { min: 0, max: 12, step: 1 },
     name: "PENTARYN_PROMPTS.settings.cropMaxPerCall.name", hint: "PENTARYN_PROMPTS.settings.cropMaxPerCall.hint",
     doc: "Most encounter crops one gather (or crops call) returns.",
   },
   {
-    key: "cropLongSidePx", scope: "world", config: true, type: Number, default: 768, range: { min: 256, max: 1568, step: 64 },
+    key: "cropLongSidePx", scope: "world", config: true, type: Number, default: DEFAULTS.cropLongSidePx, range: { min: 256, max: 1568, step: 64 },
     name: "PENTARYN_PROMPTS.settings.cropLongSidePx.name", hint: "PENTARYN_PROMPTS.settings.cropLongSidePx.hint",
     doc: "Long side of each encounter crop, in px.",
   },
   {
-    key: "cropsDefault", scope: "world", config: true, type: String, default: "auto",
+    key: "cropsDefault", scope: "world", config: true, type: String, default: DEFAULTS.cropsDefault,
     name: "PENTARYN_PROMPTS.settings.cropsDefault.name", hint: "PENTARYN_PROMPTS.settings.cropsDefault.hint",
     choices: {
       auto: "PENTARYN_PROMPTS.settings.cropsDefault.auto",

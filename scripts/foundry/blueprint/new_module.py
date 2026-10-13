@@ -3,7 +3,8 @@
 
     ./.venv/bin/python scripts/foundry/blueprint/new_module.py <short> --title "Pentaryn <Title>"
         [--description "…"] [--namespace <ns>] [--css-prefix <px->] [--tier small|full] [--kit a,b]
-        [--no-dnd5e] [--out DIR] [--install] [--docs] [--docs-root DIR] [--check] [--force]
+        [--[no-]dnd5e] [--out DIR] [--install] [--docs] [--docs-root DIR] [--check] [--force]
+        [--no-run] [--modules-root DIR] [--app-root DIR]
 
 What it does, in order:
   1. validates <short> (^[a-z][a-z0-9]{1,15}$, not reserved) and refuses a namespace, module id or
@@ -25,6 +26,10 @@ are follow-ups printed after the check, so they are reported as pending, never a
 lib/kit.lock.json (and so every --kit extra the module added since), re-vendors from that lock,
 leaves test/golden/ alone and runs the suite WITHOUT GOLDEN_UPDATE — a module mid-refactor must
 never have its goldens rewritten (context/foundry/addon-blueprint.md §3.1 `--force`, §6).
+--tier, --namespace, --css-prefix and --[no-]dnd5e default to the existing module.json
+(flags.pentaryn, relationships.systems); an explicit flag wins, and an explicit --tier also moves
+the lock to that tier (its --kit extras kept). The vendoring plan (vendor.plan) is checked before
+anything is rendered, so a refusal leaves the existing folder untouched.
 
 It refuses to write under foundry/module/ unless --install is passed: that folder is what
 `make foundry-<m>-sync` deploys, so a module lands there only on purpose.
@@ -69,22 +74,26 @@ class Refused(Exception):
 
 # ── validation and collisions ────────────────────────────────────────────────
 
-def _modules(root: Path) -> list[Path]:
-    return sorted(p for p in root.iterdir() if (p / "module.json").exists()) if root.is_dir() else []
-
-
 def _read(p: Path) -> str:
     return p.read_text(encoding="utf-8", errors="replace")
 
 
+def _flags_of(mod: Path) -> dict:
+    """module.json flags.pentaryn, or {} when the manifest is unreadable (its sources still get scanned)."""
+    try:
+        man = json.loads(_read(mod / "module.json"))
+    except (OSError, ValueError):
+        return {}
+    return ((man.get("flags") or {}).get("pentaryn") or {}) if isinstance(man, dict) else {}
+
+
 def namespace_owner(ns: str, roots: list[Path]) -> str | None:
-    """A module that already publishes `ns`: declared, or found as game.pentaryn.<ns> / { ...current, <ns>: api }."""
+    """A module that already publishes `ns`: declared, or found as game.pentaryn.<ns> / { ...current or ...game.pentaryn, <ns>: api }."""
     src_res = [re.compile(rf"game\.pentaryn\.{re.escape(ns)}\b"),
-               re.compile(rf"\{{\s*\.\.\.\s*\w+\s*,\s*{re.escape(ns)}\s*:")]
+               re.compile(rf"\{{\s*\.\.\.\s*[\w.$]+\s*,\s*{re.escape(ns)}\s*:")]
     for root in roots:
-        for mod in _modules(root):
-            man = json.loads(_read(mod / "module.json"))
-            if ((man.get("flags") or {}).get("pentaryn") or {}).get("namespace") == ns:
+        for mod in vendor.all_modules(root):
+            if _flags_of(mod).get("namespace") == ns:
                 return mod.name
             for f in mod.rglob("*.mjs"):
                 if {"lib", "test", "node_modules"} & set(f.relative_to(mod).parts):
@@ -98,11 +107,10 @@ def namespace_owner(ns: str, roots: list[Path]) -> str | None:
 def css_owner(prefix: str, roots: list[Path], *, skip: str | None = None) -> str | None:
     sel = re.compile(rf"\.{re.escape(prefix)}[A-Za-z0-9_-]")
     for root in roots:
-        for mod in _modules(root):
+        for mod in vendor.all_modules(root):
             if mod.name == skip:
                 continue
-            man = json.loads(_read(mod / "module.json"))
-            if ((man.get("flags") or {}).get("pentaryn") or {}).get("cssPrefix") == prefix:
+            if _flags_of(mod).get("cssPrefix") == prefix:
                 return mod.name
             for css in mod.rglob("*.css"):
                 if sel.search(_read(css)):
@@ -155,7 +163,6 @@ def substitute(text: str, values: dict[str, str]) -> str:
 
 def render(target: Path, values: dict[str, str], *, tier: str, dnd5e: bool, force: bool) -> list[str]:
     src_root = TEMPLATE / "pentaryn-__SHORT__"
-    flags = {tier, "dnd5e" if dnd5e else "nodnd5e"}
     written = []
     for src in sorted(src_root.rglob("*")):
         if not src.is_file():
@@ -169,17 +176,67 @@ def render(target: Path, values: dict[str, str], *, tier: str, dnd5e: bool, forc
             raise Refused(f"{dst} exists")
         if force and rel == "lib/kit.lock.json" and dst.exists():
             continue                      # the lock is vendor.py's; --force never resets it
-        text = src.read_text(encoding="utf-8")
-        vals = dict(values)
-        if src.suffix == ".json":
-            vals = {k: json.dumps(v)[1:-1] for k, v in values.items()}
-        text = substitute(apply_blocks(text, flags), vals)
-        if rel == "module.json":
-            text = _manifest(text, tier=tier, dnd5e=dnd5e)
+        text = _render_text(src, rel, values, tier=tier, dnd5e=dnd5e)
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_text(text, encoding="utf-8")
         written.append(rel)
     return written
+
+
+def _render_text(src: Path, rel: str, values: dict[str, str], *, tier: str, dnd5e: bool) -> str:
+    text = src.read_text(encoding="utf-8")
+    vals = dict(values)
+    if src.suffix == ".json":
+        vals = {k: json.dumps(v)[1:-1] for k, v in values.items()}
+    text = substitute(apply_blocks(text, {tier, "dnd5e" if dnd5e else "nodnd5e"}), vals)
+    if rel == "module.json":
+        text = _manifest(text, tier=tier, dnd5e=dnd5e)
+    return text
+
+
+def planned_manifest(values: dict[str, str], *, tier: str, dnd5e: bool) -> dict:
+    """The module.json render() would write — vendor.plan checks it before anything is written."""
+    src = TEMPLATE / "pentaryn-__SHORT__" / "module.json"
+    return json.loads(_render_text(src, "module.json", values, tier=tier, dnd5e=dnd5e))
+
+
+def existing_settings(target: Path) -> dict:
+    """tier / namespace / cssPrefix / dnd5e an existing module was generated with (--force defaults, PYB-E7).
+
+    From module.json flags.pentaryn and relationships.systems; the tier falls back to the lock's.
+    A missing or unreadable manifest gives {} (the CLI defaults apply)."""
+    try:
+        man = json.loads(_read(target / "module.json"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(man, dict):
+        return {}
+    pent = (man.get("flags") or {}).get("pentaryn") or {}
+    out = {k: pent[k] for k in ("tier", "namespace", "cssPrefix") if isinstance(pent.get(k), str) and pent[k]}
+    if out.get("tier") not in (None, "small", "full"):
+        out.pop("tier")
+    if "tier" not in out:
+        try:
+            lock_tier = (vendor.read_lock(target) or {}).get("tier")
+        except (OSError, ValueError, vendor.VendorError):
+            lock_tier = None
+        if lock_tier in ("small", "full"):
+            out["tier"] = lock_tier
+    systems = (man.get("relationships") or {}).get("systems")
+    if isinstance(systems, list):
+        out["dnd5e"] = any(isinstance(x, dict) and x.get("id") == "dnd5e" for x in systems)
+    return out
+
+
+def lock_extras(target: Path, kit: dict) -> list[str]:
+    """Lock files beyond the closure of the lock's own tier: the --kit extras added earlier."""
+    lock = vendor.read_lock(target) or {}
+    tier_files = kit["tiers"].get(lock.get("tier") or "", [])
+    try:
+        base = set(vendor.closure(list(tier_files), kit))
+    except vendor.VendorError:
+        base = set()
+    return [n for n in lock.get("files") or [] if n not in base]
 
 
 def _manifest(text: str, *, tier: str, dnd5e: bool) -> str:
@@ -253,7 +310,7 @@ def run_checks(target: Path) -> int:
     spec = TmpSpec(target)
     for gate in spec.check:
         sys.stdout.flush()
-        if ops_modules._CHECKS[gate](spec) != 0:
+        if ops_modules.run_gate(spec, gate) != 0:
             print(f"  ✗ gate {gate} failed")
             return 1
     problems = vendor.check(target)
@@ -296,14 +353,33 @@ def _has_api_index(readme: Path | None = None) -> bool:
         return False
 
 
-def follow_ups(short: str, title: str, ns: str, installed: bool, target: Path | None = None) -> str:
+def _writes_after_sync(target: Path | None) -> bool:
+    """Whether module.json carries flags.pentaryn.afterSync (ModuleSpec reads it there first)."""
+    if target is None:
+        return False
+    try:
+        lines = json.loads(_read(target / "module.json"))["flags"]["pentaryn"]["afterSync"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+    return isinstance(lines, list) and bool(lines)
+
+
+def registration_row(short: str, target: Path | None = None) -> list[str]:
+    """The config.py MODULES row: every gate (ALL_GATES, so vendor + conformance run strict like
+    every other row), and after_sync only when module.json has no afterSync to read (EXT-2)."""
+    head = f'       "{short}": ModuleSpec("pentaryn-{short}", check=ALL_GATES'
+    if _writes_after_sync(target):
+        return [head + "),"]
     after = after_sync_tuple(target) if target is not None else "after_sync=()"
+    return [head + ",", f"                  {after}),"]
+
+
+def follow_ups(short: str, title: str, ns: str, installed: bool, target: Path | None = None) -> str:
     return "\n".join([
         "Manual follow-ups (not done by this script):",
         f"  1. {'' if installed else 'Move the folder to foundry/module/ (rerun with --install --out foundry/module). '}"
         "Register it in scripts/foundry/ops/config.py MODULES:",
-        f'       "{short}": ModuleSpec("pentaryn-{short}", check=(*_STATIC, "node-test"),',
-        f"                  {after}),",
+        *registration_row(short, target),
         "  2. Makefile:",
         f"       foundry-{short}-check: ; @$(OPS) module-check {short}",
         f"       foundry-{short}-sync: foundry-{short}-check ; @$(OPS) module-sync {short}",
@@ -323,9 +399,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--description", default="")
     ap.add_argument("--namespace")
     ap.add_argument("--css-prefix")
-    ap.add_argument("--tier", choices=("small", "full"), default="full")
+    ap.add_argument("--tier", choices=("small", "full"),
+                    help="default full; with --force, the existing module.json tier")
     ap.add_argument("--kit", default="", help="extra kit files, comma-separated (e.g. election,perf)")
-    ap.add_argument("--no-dnd5e", action="store_true")
+    ap.add_argument("--dnd5e", action=argparse.BooleanOptionalAction, default=None,
+                    help="--no-dnd5e drops the dnd5e system (default dnd5e; with --force, the existing module's)")
     ap.add_argument("--out", type=Path, default=MODULE_ROOT, help="parent folder (default foundry/module, needs --install)")
     ap.add_argument("--install", action="store_true", help="allow writing under foundry/module/")
     ap.add_argument("--docs", action="store_true", help="write the use-doc and plan stubs (never overwrites)")
@@ -343,16 +421,21 @@ def main(argv: list[str] | None = None) -> int:
             raise Refused(f"short name {short!r} must match {SHORT_RE.pattern}")
         if short in RESERVED:
             raise Refused(f"{short!r} is reserved ({', '.join(RESERVED)})")
-        ns = args.namespace or short
+        out = args.out.resolve()
+        target = out / f"pentaryn-{short}"
+        # --force over an existing folder re-renders at the module's own tier / namespace / CSS
+        # prefix / system unless a flag says otherwise (PYB-E7); a fresh module takes the defaults
+        prior = existing_settings(target) if (args.force and target.exists()) else {}
+        tier = args.tier or prior.get("tier") or "full"
+        dnd5e = args.dnd5e if args.dnd5e is not None else prior.get("dnd5e", True)
+        ns = args.namespace or prior.get("namespace") or short
         if ns in RESERVED or not re.match(r"^[a-z][A-Za-z0-9]*$", ns):
             raise Refused(f"namespace {ns!r} is reserved or not an identifier")
 
-        out = args.out.resolve()
         mod_root = MODULE_ROOT.resolve()
         if (out == mod_root or mod_root in out.parents) and not args.install:
             raise Refused(f"{out} is under foundry/module/ — the folder sync deploys. Pass --install to mean it, "
                           "or --out somewhere else")
-        target = out / f"pentaryn-{short}"
         if target.exists() and not args.force:
             raise Refused(f"{target} exists (--force overwrites template files only)")
 
@@ -362,7 +445,7 @@ def main(argv: list[str] | None = None) -> int:
         owner = namespace_owner(ns, others)
         if owner and owner != target.name:
             raise Refused(f"namespace {ns!r} is already published by {owner}")
-        css = args.css_prefix or pick_css_prefix(short, others, own=target.name)
+        css = args.css_prefix or prior.get("cssPrefix") or pick_css_prefix(short, others, own=target.name)
         if not CSS_RE.match(css):
             raise Refused(f"CSS prefix {css!r} must match {CSS_RE.pattern}")
         owner = css_owner(css, others)
@@ -384,26 +467,33 @@ def main(argv: list[str] | None = None) -> int:
         "__VERIFIED__": verified(args.app_root),
         "__TODAY__": today.isoformat(),
         "__YYYY_MM__": today.strftime("%Y-%m"),
-        "__TIER__": args.tier,
+        "__TIER__": tier,
     }
     existing = target.exists()
     rerender = args.force and existing
+    extra = [k for k in args.kit.split(",") if k]
     try:
-        files = render(target, values, tier=args.tier, dnd5e=not args.no_dnd5e, force=args.force)
-        # a re-render keeps the module's own lock (tier=None): earlier --kit extras stay vendored
-        has_lock = vendor.read_lock(target) is not None
-        vendored = vendor.sync(target, tier=None if (rerender and has_lock) else args.tier,
-                               extra=[k for k in args.kit.split(",") if k])
+        # a re-render keeps the module's own lock (tier=None): earlier --kit extras stay vendored;
+        # an explicit --tier moves the lock to that tier, carrying those extras along
+        sync_tier = tier
+        if rerender and vendor.read_lock(target) is not None:
+            sync_tier = args.tier
+            if args.tier:
+                extra = lock_extras(target, vendor.load_kit()) + extra
+        # every vendoring refusal is raised here, before render() writes anything (PYB-E7)
+        vendor.plan(target, sync_tier, extra, manifest=planned_manifest(values, tier=tier, dnd5e=dnd5e))
+        files = render(target, values, tier=tier, dnd5e=dnd5e, force=args.force)
+        vendored = vendor.sync(target, tier=sync_tier, extra=extra)
     except (Refused, vendor.VendorError) as exc:
         if not existing:  # "2 refused (nothing written)": drop only the folder this run created
             shutil.rmtree(target, ignore_errors=True)
         print(f"  ✗ refused: {exc}", file=sys.stderr)
         return 2
-    print(f"  ✓ pentaryn-{short} → {target} ({len(files)} template files, {len(vendored)} vendored, tier {args.tier}, "
+    print(f"  ✓ pentaryn-{short} → {target} ({len(files)} template files, {len(vendored)} vendored, tier {tier}, "
           f"namespace {ns}, CSS {css})")
 
     if args.docs:
-        for p in write_docs(args.docs_root, values, tier=args.tier, dnd5e=not args.no_dnd5e):
+        for p in write_docs(args.docs_root, values, tier=tier, dnd5e=dnd5e):
             print(f"  ✓ {p}")
 
     rc = 0

@@ -61,9 +61,17 @@ if [ "$OUTCOME" = "running" ]; then
   # 20 minutes without a phase change while a run claims to be alive means it is not.
   if [ "$AGE" -gt 1200 ]; then
     log "run appears dead in phase=$PHASE — restoring service first"
-    "$PY" -m scripts.foundry.update.cli recover-service >> "$LOG" 2>&1
-    notify failed "update run died" \
-      "The 04:06 run stopped responding in phase '$PHASE'. Service (world + tunnel) has been restored. See .state/logs/"
+    RECOVER=$("$PY" -m scripts.foundry.update.cli recover-service 2>&1)
+    echo "$RECOVER" >> "$LOG"
+    if echo "$RECOVER" | grep -q "still alive"; then
+      # Silent but alive (AC-1): recover-service left it alone; the wrapper's backstop
+      # (`cli killed`) cleans up if it never finishes.
+      notify attention "update run is slow" \
+        "The 04:06 run has been silent for 20+ min in phase '$PHASE' but is still alive. Service was left as the run has it; the wrapper's timeout will clean up if it hangs."
+    else
+      notify failed "update run died" \
+        "The 04:06 run stopped responding in phase '$PHASE'. Service (world + tunnel) has been restored. See .state/logs/"
+    fi
   else
     log "run still active in phase=$PHASE (${AGE}s since last update) — leaving it"
   fi

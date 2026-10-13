@@ -29,8 +29,8 @@ import { wrapMethod } from "./lib/patch.mjs";
 /** Document types whose own-user create/update/delete are recorded. */
 export const DOC_TYPES = Object.freeze(["Actor", "Item", "Token", "Combat", "Combatant", "ActiveEffect", "Scene", "JournalEntry"]);
 
-/** The console wraps, one adjustments row each (foundry/adjustments.yml). */
-const CONSOLE_PATCHES = Object.freeze([
+/** The console wraps, one adjustments row each (foundry/adjustments.yml); selftest reads them via ctx.exposed. */
+export const CONSOLE_PATCHES = Object.freeze([
   { name: "error", marker: "__pentarynFeedback_error", adjustments: "feedback-console-error" },
   { name: "warn", marker: "__pentarynFeedback_warn", adjustments: "feedback-console-warn" },
 ]);
@@ -48,7 +48,7 @@ const undo = [];                  // DOM listeners to remove on uninstall
  * after an unwrap would be refused), so they check this switch: off after uninstall, back on at the
  * next install. `console` follows the captureConsole setting read at install (requiresReload).
  */
-const live = { on: false, early: true, console: false, historySize: () => 200 };
+const live = { on: false, early: true, console: false, historySize: () => LIMITS.actionsDefault };
 
 const now = () => Date.now();
 const push = entry => {
@@ -66,12 +66,12 @@ const pushError = entry => {
 };
 /** The recorder's own failure, kept without going through the console (that would recurse). */
 const pushOwnError = e => {
-  ringPush(errors, { t: now(), source: "recorder", message: clip(messageOf(e), LIMITS.message) }, LIMITS.errorsMax);
+  ringPush(errors, { t: now(), source: "recorder", message: redact(messageOf(e), LIMITS.message) }, LIMITS.errorsMax);
 };
 
 /* ── sessionStorage: the rings survive a reload of this tab ───────────── */
 
-const store = { key: null, timer: null, dirty: false };
+const persisted = { key: null, timer: null, dirty: false };
 
 /** `g.sessionStorage`, or null when absent or blocked (the accessor itself can throw). */
 function storage(g = globalThis) {
@@ -84,15 +84,15 @@ function storage(g = globalThis) {
 
 /** Write the rings now (test seam; also the pagehide flush). Never throws. */
 export function persistNow(g = globalThis) {
-  store.dirty = false;
-  if (store.timer !== null) {
-    g.clearTimeout?.(store.timer);
-    store.timer = null;
+  persisted.dirty = false;
+  if (persisted.timer !== null) {
+    g.clearTimeout?.(persisted.timer);
+    persisted.timer = null;
   }
-  const s = store.key ? storage(g) : null;
+  const s = persisted.key ? storage(g) : null;
   if (!s) return false;
   try {
-    s.setItem(store.key, ringsToStore({ actions, errors }));
+    s.setItem(persisted.key, ringsToStore({ actions, errors }));
     return true;
   } catch (err) {
     return false;                       // quota or blocked storage: the in-memory rings still work
@@ -101,10 +101,10 @@ export function persistNow(g = globalThis) {
 
 /** Remove this tab's stored copy (uninstall). False when storage is absent or blocked. */
 function forgetStored(g = globalThis) {
-  const s = store.key ? storage(g) : null;
+  const s = persisted.key ? storage(g) : null;
   if (!s) return false;
   try {
-    s.removeItem(store.key);
+    s.removeItem(persisted.key);
     return true;
   } catch (err) {
     return false;                       // blocked storage: nothing was stored either
@@ -112,14 +112,14 @@ function forgetStored(g = globalThis) {
 }
 
 function persistSoon(g = globalThis) {
-  if (!store.key || !live.on) return;
-  store.dirty = true;
-  if (store.timer !== null || typeof g.setTimeout !== "function") return;
-  store.timer = g.setTimeout(() => {
-    store.timer = null;
-    if (store.dirty) persistNow(g);
+  if (!persisted.key || !live.on) return;
+  persisted.dirty = true;
+  if (persisted.timer !== null || typeof g.setTimeout !== "function") return;
+  persisted.timer = g.setTimeout(() => {
+    persisted.timer = null;
+    if (persisted.dirty) persistNow(g);
   }, LIMITS.persistMs);
-  store.timer?.unref?.();               // node: never hold a test process open
+  persisted.timer?.unref?.();           // node: never hold a test process open
 }
 
 /** Bring back what this tab stored before a reload: older entries first, then this page's. */
@@ -177,8 +177,8 @@ export function install(reg, ctx) {
   live.console = ctx.setting("captureConsole") === true;
   live.historySize = () => ctx.setting("historySize");
   listenWindow(g);
-  store.key = ringsKey(g.game?.world?.id, me());
-  restore(g, store.key);
+  persisted.key = ringsKey(g.game?.world?.id, me());
+  restore(g, persisted.key);
   const onPageHide = () => persistNow(g);
   if (typeof g.addEventListener === "function") {
     g.addEventListener("pagehide", onPageHide);
@@ -224,7 +224,7 @@ export function install(reg, ctx) {
     const row = appRow("render", app);
     if (!row) return;
     const t = now();
-    const key = row.id ?? row.cls;
+    const key = row.id || row.cls;                 // clip() turns a null id into "", so || not ??
     if (t - (lastRender.get(key) ?? -Infinity) < LIMITS.renderThrottleMs) return;
     lastRender.set(key, t);
     push(row);
@@ -232,7 +232,7 @@ export function install(reg, ctx) {
   const onClose = app => {
     const row = appRow("close", app);
     if (!row) return;
-    lastRender.delete(row.id ?? row.cls);
+    lastRender.delete(row.id || row.cls);
     push(row);
   };
   // AppV2 fires render<Class> once per class in the chain: the base name catches every window once
@@ -324,19 +324,19 @@ export function install(reg, ctx) {
     wrapMethod(MODULE, {
       target: Notifications.prototype, name: "notify", label: "Notifications#notify",
       marker: "__pentarynFeedbackNotify", adjustments: "feedback-notifications-notify",
-    }, function (wrapped, message, type = "info", ...rest) {
+    }, function (wrapped, message, ...rest) {
       try {
-        push({ kind: "notify", level: clip(type, 16), text: redact(messageOf(message), LIMITS.field) });
+        push({ kind: "notify", level: clip(rest[0] ?? "info", 16), text: redact(messageOf(message), LIMITS.field) });
       } catch (e) {
         pushOwnError(e);
       }
-      return wrapped(message, type, ...rest);
+      return wrapped(message, ...rest);
     }, { log: ctx.log });
   } else {
     ctx.log.debug("no Notifications#notify to record");
   }
 
-  ctx.expose({ actions: actionsOf, errors: errorsOf });
+  ctx.expose({ actions: actionsOf, errors: errorsOf, consolePatches: () => CONSOLE_PATCHES });
 }
 
 export function uninstall() {
@@ -344,10 +344,10 @@ export function uninstall() {
   live.early = false;
   for (const fn of undo.splice(0).reverse()) fn();
   windowUndo?.();
-  if (store.timer !== null) globalThis.clearTimeout?.(store.timer);
-  store.timer = null;
+  if (persisted.timer !== null) globalThis.clearTimeout?.(persisted.timer);
+  persisted.timer = null;
   forgetStored();
-  store.key = null;
+  persisted.key = null;
   actions.length = 0;
   errors.length = 0;
   lastRender.clear();

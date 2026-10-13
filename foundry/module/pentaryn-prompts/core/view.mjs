@@ -3,11 +3,12 @@
  * PURE (split out of geometry-core.mjs, which re-exports the public names): no Foundry global.
  */
 
+import { DEFAULTS } from "./defaults.mjs";
 import { doorLines } from "./doors.mjs";
 import { DIAGONALS, bearing, dedupeSquares, gaplessDistanceFt, occupiedSquares, squareDistanceFt } from "./grid.mjs";
 import { FORMATION_FT, LINK_FT, assignIds, groupScene } from "./group.mjs";
 import { atFeet } from "./placement.mjs";
-import { classifyBlocked, isSeen, rayPasses, wallSegment } from "./sight.mjs";
+import { asSegment, classifyBlocked, isSeen, rayPasses } from "./sight.mjs";
 import { callId, idCompare, stripHtml, textHash } from "./text.mjs";
 import { parseParty } from "./xp.mjs";
 
@@ -30,8 +31,8 @@ export const CREATURE_KINDS = Object.freeze(["npc", "character", "creature"]);
  * Returns `{ view, manifest, ids }` (`ids`: assignIds' output); `manifest.at` is left for the caller
  * to stamp. `view` is the shape `renderGather` documents.
  */
-export function buildView(scenes, { unseenWithinFt = 60, linkFt = LINK_FT, formationFt = FORMATION_FT, next = null, party = null,
-  partySource = null, cropsNote = null } = {}) {
+export function buildView(scenes, { unseenWithinFt = DEFAULTS.unseenWithinFt, linkFt = LINK_FT, formationFt = FORMATION_FT, next = null, party = null,
+  partySource = null, partyUnreadable = false, cropsNote = null } = {}) {
   const prepared = scenes.map(sc => {
     const byKey = new Map(sc.items.map(it => [it.key, it]));
     const prompts = sc.items.filter(it => it.isPrompt).map(it => it.key);
@@ -48,7 +49,7 @@ export function buildView(scenes, { unseenWithinFt = 60, linkFt = LINK_FT, forma
 
   const view = { call: null, counts: { scenes: 0, prompts: 0, built: 0, encounters: 0, alone: 0 },
     scenes: [], prompts: {}, built: {}, todo: [], next, unseenWithinFt, party: parseParty(party) ? party : null,
-    partySource: parseParty(party) ? partySource : null, cropsNote };
+    partySource: parseParty(party) ? partySource : null, partyUnreadable: !!partyUnreadable, cropsNote };
   const manifest = { call: null, at: null, scenes: {}, prompts: {}, built: {}, encounters: {} };
   const callEntries = [];
 
@@ -122,81 +123,16 @@ export function buildView(scenes, { unseenWithinFt = 60, linkFt = LINK_FT, forma
       return e;
     });
 
-    // Each encounter after the first: where it sits relative to the nearest earlier one.
-    const relations = [];
-    for (let i = 1; i < encounters.length; i++) {
-      let best = null;
-      for (let j = 0; j < i; j++) {
-        let ft = Infinity, los = false, near = null;
-        for (const a of encounters[i]._keys) {
-          for (const b of encounters[j]._keys) {
-            const r = sc.rel(a, b);
-            if (!r) continue;
-            if (r.ft < ft) { ft = r.ft; near = r; }
-            if (!los && isSeen(r)) los = true;
-          }
-        }
-        if (!best || ft < best.ft) best = { from: encounters[i].id, to: encounters[j].id, ft, los,
-          bearing: bearing(encounters[j]._centre, encounters[i]._centre), near };
-      }
-      if (best && Number.isFinite(best.ft)) {
-        const { near, ...rel } = best;
-        // what blocks the nearest pair: only classified for a line that prints "no LOS"
-        if (!rel.los && near) rel.block = near.los === "LOS" ? "wall" : near.los;
-        relations.push(rel);
-      }
-    }
+    const relations = encounterRelations(encounters, sc.rel);
     for (const e of encounters) { delete e._keys; delete e._centre; }
-
-    // A loner, placed: its nearest other prompt, and whether it can see it.
-    const aloneNotes = {};
-    for (const k of out.alone) {
-      let best = null;
-      for (const o of p.prompts) {
-        if (o === k) continue;
-        const r = sc.rel(o, k), back = sc.rel(k, o);
-        if (!r || !back) continue;
-        const ft = Math.min(r.ft, back.ft);
-        if (!best || ft < best.ft || (ft === best.ft && idCompare(idOf(o), best.of) < 0)) {
-          best = { of: idOf(o), ft, bearing: r.bearing, r, back };
-        }
-      }
-      // sight only for the one neighbour the line names
-      const note = {};
-      if (best) {
-        const los = isSeen(best.back) || isSeen(best.r) ? "LOS" : best.back.los;
-        Object.assign(note, { of: best.of, ft: best.ft, bearing: best.bearing, los });
-      }
-      // the nearest built thing it can see (the minion beside a leader built earlier)
-      let nb = null;
-      for (const o of p.built) {
-        const r = sc.rel(o, k), back = sc.rel(k, o);
-        if (!r || !back) continue;
-        const ft = Math.min(r.ft, back.ft);
-        if (ft > unseenWithinFt || (nb && ft > nb.ft)) continue;
-        if (!(isSeen(back) || isSeen(r))) continue;
-        if (nb && ft === nb.ft && idCompare(idOf(o), nb.of) > 0) continue;
-        nb = { of: idOf(o), name: p.byKey.get(o).name ?? "", ft, bearing: r.bearing };
-      }
-      if (nb) note.built = nb;
-      if (note.of || note.built) aloneNotes[idOf(k)] = note;
-    }
-
-    // doors within reach of a prompt group: who is on which side
-    const keyOfId = new Map(sc.items.map(it => [idOf(it.key), it.key]));
-    const member = id => { const it = p.byKey.get(keyOfId.get(id)); return { id, rect: it.rect, points: it.points ?? null }; };
-    const groupsForDoors = [
-      ...encounters.map(e => ({ label: e.id, prompt: true, members: [...e.prompts, ...e.built].map(member) })),
-      ...out.alone.map(k => ({ label: idOf(k), prompt: true, members: [member(idOf(k))] })),
-      ...out.contextOnly.map(k => ({ label: idOf(k), prompt: false, members: [member(idOf(k))] }))
-    ];
-    const doorText = doorLines(sc.doors ?? [], groupsForDoors, { dims: sc.dims, gridFt: sc.gridFt, withinFt: unseenWithinFt,
-      walls: sc.walls ?? null, reach: sc.doorReach ?? null });
+    const notes = aloneNotes(out.alone, p, sc.rel, idOf, unseenWithinFt);
+    const doorText = doorLines(sc.doors ?? [], doorGroups(sc, p, out, encounters, idOf), { dims: sc.dims, gridFt: sc.gridFt,
+      withinFt: unseenWithinFt, walls: sc.walls ?? null, reach: sc.doorReach ?? null });
 
     view.scenes.push({
       id: out.id, name: sc.name, nav: sc.nav ?? "", mapFt: sc.mapFt, squares: sc.squares, gridFt: sc.gridFt,
       regions: sc.regions ?? [], levels: sc.levels ?? 1, warn: sc.warn ?? [], notes: sc.notes ?? "",
-      encounters, relations, aloneNotes, doorLines: doorText,
+      encounters, relations, aloneNotes: notes, doorLines: doorText,
       alone: out.alone.map(idOf),
       contextOnly: out.contextOnly.map(idOf)
     });
@@ -210,6 +146,82 @@ export function buildView(scenes, { unseenWithinFt = 60, linkFt = LINK_FT, forma
   view.todo = Object.keys(view.prompts).sort(idCompare);
   view.call = manifest.call = callId(callEntries);
   return { view, manifest, ids };
+}
+
+/** Each encounter after the first: where it sits relative to the nearest earlier one (reads `_keys`/`_centre`). */
+function encounterRelations(encounters, rel) {
+  const relations = [];
+  for (let i = 1; i < encounters.length; i++) {
+    let best = null;
+    for (let j = 0; j < i; j++) {
+      let ft = Infinity, los = false, near = null;
+      for (const a of encounters[i]._keys) {
+        for (const b of encounters[j]._keys) {
+          const r = rel(a, b);
+          if (!r) continue;
+          if (r.ft < ft) { ft = r.ft; near = r; }
+          if (!los && isSeen(r)) los = true;
+        }
+      }
+      if (!best || ft < best.ft) best = { from: encounters[i].id, to: encounters[j].id, ft, los,
+        bearing: bearing(encounters[j]._centre, encounters[i]._centre), near };
+    }
+    if (best && Number.isFinite(best.ft)) {
+      const { near, ...line } = best;
+      // what blocks the nearest pair: only classified for a line that prints "no LOS"
+      if (!line.los && near) line.block = near.los === "LOS" ? "wall" : near.los;
+      relations.push(line);
+    }
+  }
+  return relations;
+}
+
+/** A loner, placed: its nearest other prompt, and whether it can see it; and the nearest built thing it sees. */
+function aloneNotes(alone, p, rel, idOf, unseenWithinFt) {
+  const notes = {};
+  for (const k of alone) {
+    let best = null;
+    for (const o of p.prompts) {
+      if (o === k) continue;
+      const r = rel(o, k), back = rel(k, o);
+      if (!r || !back) continue;
+      const ft = Math.min(r.ft, back.ft);
+      if (!best || ft < best.ft || (ft === best.ft && idCompare(idOf(o), best.of) < 0)) {
+        best = { of: idOf(o), ft, bearing: r.bearing, r, back };
+      }
+    }
+    // sight only for the one neighbour the line names
+    const note = {};
+    if (best) {
+      const los = isSeen(best.back) || isSeen(best.r) ? "LOS" : best.back.los;
+      Object.assign(note, { of: best.of, ft: best.ft, bearing: best.bearing, los });
+    }
+    // the nearest built thing it can see (the minion beside a leader built earlier)
+    let nb = null;
+    for (const o of p.built) {
+      const r = rel(o, k), back = rel(k, o);
+      if (!r || !back) continue;
+      const ft = Math.min(r.ft, back.ft);
+      if (ft > unseenWithinFt || (nb && ft > nb.ft)) continue;
+      if (!(isSeen(back) || isSeen(r))) continue;
+      if (nb && ft === nb.ft && idCompare(idOf(o), nb.of) > 0) continue;
+      nb = { of: idOf(o), name: p.byKey.get(o).name ?? "", ft, bearing: r.bearing };
+    }
+    if (nb) note.built = nb;
+    if (note.of || note.built) notes[idOf(k)] = note;
+  }
+  return notes;
+}
+
+/** The groups doorLines reads: each encounter, each loner, then each context-only built thing. */
+function doorGroups(sc, p, out, encounters, idOf) {
+  const keyOfId = new Map(sc.items.map(it => [idOf(it.key), it.key]));
+  const member = id => { const it = p.byKey.get(keyOfId.get(id)); return { id, rect: it.rect, points: it.points ?? null }; };
+  return [
+    ...encounters.map(e => ({ label: e.id, prompt: true, members: [...e.prompts, ...e.built].map(member) })),
+    ...out.alone.map(k => ({ label: idOf(k), prompt: true, members: [member(idOf(k))] })),
+    ...out.contextOnly.map(k => ({ label: idOf(k), prompt: false, members: [member(idOf(k))] }))
+  ];
 }
 
 /**
@@ -232,7 +244,7 @@ export function makeRel(items, { gridSize, gridFt = 5, rule = DIAGONALS.EQUIDIST
     if (!squares.has(it.key)) squares.set(it.key, it.squares?.length ? dedupeSquares(it.squares) : occupiedSquares(it.rect, gridSize));
     return squares.get(it.key);
   };
-  const segs = walls.map(w => (w.a && w.b && "sight" in w) ? w : wallSegment(w));
+  const segs = walls.map(asSegment);
   const originOf = A => A.origin ?? A.centre;
   const pointsOf = B => (B.points?.length ? B.points : [B.centre]);
   let visible, classify;

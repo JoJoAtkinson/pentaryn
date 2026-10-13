@@ -45,14 +45,6 @@
         }
       },
       {
-        "op": "update",
-        "documentName": "Item",
-        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
-        "changes": {
-          "flags.pentaryn-senses.claims.gone.1760000019200": "socket-gm-1"
-        }
-      },
-      {
         "op": "ChatMessage.create",
         "data": {
           "speaker": {

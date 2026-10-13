@@ -381,6 +381,27 @@ export async function boot({ user = null, users = [], settings = {}, entry = fal
   F.canvas.tokens = { placeables: [], controlled: [] };
   if (argon) F.ui.ARGON = argon;
 
+  // core's DialogV2.wait. By default the user presses the default button on the boxes the dialog
+  // shows ticked; a test sets F.dialog = (opts, inputs) => action | null to tick other boxes
+  // (inputs[i].checked) and press a button, or return null (the window closed). Logged as op "dialog".
+  F.foundry.applications.api.DialogV2 = class DialogV2 {
+    static async wait(opts = {}) {
+      const attr = (tag, name) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1] ?? "";
+      const inputs = [...String(opts.content ?? "").matchAll(/<input\b[^>]*>/g)].map(([tag]) => ({
+        name: attr(tag, "name"), value: attr(tag, "value"), checked: /\schecked\b/.test(tag),
+      }));
+      F.calls.push({ op: "dialog", title: opts.window?.title ?? null, inputs: F.plain(inputs) });
+      const action = F.dialog ? F.dialog(opts, inputs) : undefined;
+      if (action === null) return null;
+      const buttons = opts.buttons ?? [];
+      const button = buttons.find(b => b.action === action) ?? buttons.find(b => b.default) ?? buttons[0];
+      const form = {
+        querySelectorAll: sel => inputs.filter(i => sel.includes(`name="${i.name}"`) && (!sel.includes(":checked") || i.checked)),
+      };
+      return button?.callback ? button.callback({}, { form }, {}) : (button?.action ?? null);
+    }
+  };
+
   if (beforeEntry) await beforeEntry(F, W);
   if (entry) {
     await import("../../aoe.mjs");

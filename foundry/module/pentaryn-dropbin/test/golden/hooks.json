@@ -57,6 +57,22 @@
   },
   {
     "kind": "on",
+    "name": "item-piles-preRenderActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteScene"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
     "name": "renderItemPileInventoryApp"
   },
   {

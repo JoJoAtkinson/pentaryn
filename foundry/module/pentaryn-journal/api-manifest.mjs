@@ -3,14 +3,16 @@
  * describe() reports it, and buildApi() refuses to load when it and api.mjs drift apart.
  *
  * The legacy rows keep their signature (`legacy: true`): they take a Document of several kinds or a
- * User, so no first param is resolved as a `ref`, and they run as the CALLING user — add/status
- * answer for game.user, and return null for a GM unless `gmButton` is on. The reads added for an
+ * User, so no first param is resolved as a `ref` by the kit, and they run as the CALLING user — add/status
+ * answer for game.user, and return null for a GM unless `gmButton` is on. Their user param
+ * (personal, shouldShowBar, ensure) is `resolve: "self"`: api.mjs resolves an id or exact name itself
+ * (journal-rob-3). The reads added for an
  * LLM caller (items-journal-35: inspect, entriesOf, statusFor, lastReason) take a user ref instead.
  *
  * `core.<name>` are the pure helpers, published as `unlisted` constants and functions (a frozen copy).
  */
 
-import { CONTRACT, MODULE, NS, VERSION } from "./journal-core.mjs";
+import { CONTRACT, MODULE, NS, SKIP_REASONS, VERSION } from "./journal-core.mjs";
 
 /** The 18 core names published as `journal.core` since before the migration (golden/core-keys.json). */
 export const CORE_NAMES = Object.freeze([
@@ -20,7 +22,10 @@ export const CORE_NAMES = Object.freeze([
 ]);
 
 const DOC = { name: "doc", type: "JournalEntry|JournalEntryPage|Item", resolve: false, doc: "the readable, one of its pages, or a pile item" };
-const USER = { name: "user", type: "User", optional: true, resolve: false, doc: "default: the calling user" };
+const USER_DOC = "a User, an id or an exact name (never a substring)";
+const USER = { name: "user", kind: "user", type: "User|id|exact name", optional: true, resolve: "self",
+  doc: `${USER_DOC}; default: the calling user` };
+const USER_THROWS = ["NOT_FOUND", "AMBIGUOUS"];
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -34,6 +39,7 @@ export const MANIFEST = Object.freeze({
       params: [USER],
       returns: "JournalEntry | null",
       gm: false, writes: false, legacy: true,
+      throws: USER_THROWS,
       nullWhen: "the user has no personal journal yet",
       doc: "The user's personal journal (the oldest one flagged {kind: 'personal', userId}).",
     },
@@ -67,16 +73,19 @@ export const MANIFEST = Object.freeze({
       params: [{ name: "entry", type: "JournalEntry", resolve: false }, USER],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
+      throws: USER_THROWS,
       doc: "Whether that user gets the bar on that journal (observer and not owner; a GM only with gmButton).",
     },
     {
       path: "ensure",
-      params: [{ name: "user", type: "User", resolve: false }],
+      params: [{ name: "user", kind: "user", type: "User|id|exact name", resolve: "self", doc: USER_DOC }],
       returns: "Promise<JournalEntry>",
       gm: true, writes: true, legacy: true,
+      throws: USER_THROWS,
       sideEffects: ["JournalEntry (the user's journal)", "Folder (Player Journals)", "flags.pentaryn-journal.kind", "flags.pentaryn-journal.userId"],
       doc: "GM: find or create that player's journal. Rejects with a plain Error: 'GM only' on a player client, "
-        + "'no such user', or 'a GM does not get a journal through the relay'.",
+        + "'no such user', or 'a GM does not get a journal through the relay'; a string matching no user (or two) "
+        + "rejects NOT_FOUND (AMBIGUOUS).",
     },
     {
       path: "ensureAll",
@@ -85,7 +94,7 @@ export const MANIFEST = Object.freeze({
       gm: true, writes: true, legacy: true,
       sideEffects: ["JournalEntry (one per player)", "Folder (Player Journals)", "JournalEntry.folder (strays moved in)"],
       nullWhen: "called by a player",
-      doc: "GM: a journal for every player, and journals at the root moved into the folder. Returns report().",
+      doc: "GM: a journal for every player, and journals at the root moved into the folder (left there if the folder's create is vetoed). Returns report().",
     },
     {
       path: "report",
@@ -127,7 +136,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "lastReason",
       params: [],
-      returns: '"no-target" | "no-journal" | "nothing-visible" | "too-large" | null',
+      returns: [...SKIP_REASONS.map(r => `"${r}"`), "null"].join(" | "),
       gm: false, writes: false,
       since: "0.1.0",
       doc: "Why this client's last add() or status() returned null (null after a non-null result).",

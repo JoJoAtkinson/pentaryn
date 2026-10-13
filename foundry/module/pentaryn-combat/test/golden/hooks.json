@@ -49,6 +49,10 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.applyDamage"
+  },
+  {
+    "kind": "on",
     "name": "renderRollResolver"
   },
   {
@@ -185,10 +189,6 @@
   },
   {
     "kind": "on",
-    "name": "updateToken"
-  },
-  {
-    "kind": "on",
     "name": "dnd5e.preRollAttackV2"
   },
   {
@@ -229,6 +229,10 @@
   },
   {
     "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
     "name": "updateActor"
   },
   {
@@ -246,5 +250,13 @@
   {
     "kind": "on",
     "name": "createActor"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
   }
 ]

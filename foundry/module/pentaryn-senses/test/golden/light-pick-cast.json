@@ -35,7 +35,6 @@
       "type": "AmbientLight",
       "data": [
         {
-          "_id": "9ae644ef8f31fb29",
           "x": 1250,
           "y": 550,
           "elevation": 0,
@@ -68,8 +67,7 @@
             }
           }
         }
-      ],
-      "keepId": true
+      ]
     }
   ],
   "cancelled": [

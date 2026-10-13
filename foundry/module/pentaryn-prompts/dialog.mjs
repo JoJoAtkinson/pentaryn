@@ -22,12 +22,13 @@ import { panelFor, resolveItemEmbeds } from "./scene-adapter.mjs";
 import { cancel as cancelTyping, start as startTyping, take as takeTyped } from "./typeahead-adapter.mjs";
 import { tokenDataFrom } from "./tokens-adapter.mjs";
 import { setting } from "./settings.mjs";
+import { DEFAULTS } from "./core/defaults.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const log = makeLog(MODULE);
 
-const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 const AUTOSAVE_MS = 600;
 const FOCUS_GUARD_MS = 1200;
@@ -74,12 +75,15 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #fresh = false;
   #opened = "";
   #saved = "";
+  #pendingText = null;   // the textarea a size swap re-renders with, read once by _prepareContext (EC-4)
   #timer = null;
   #saving = Promise.resolve();
   #closing = false;
   #finishing = null;
+  #swapping = null;
   #discard = false;
   #deleted = false;
+  #deleting = null;   // our own Delete in flight (a promise that settles once it is decided): the box counts as going away (U1)
   #ticket = null;
   #panelRun = 0;
   #panelTimer = null;
@@ -117,14 +121,9 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     ticket ??= startTyping();
     if (!game.user?.isGM || !tokenDoc || !markerSizeOfToken(tokenDoc)) { cancelTyping(ticket); return null; }
 
+    const reuse = PromptDialog.#reuse(tokenDoc, ticket);
+    if (reuse) return reuse;
     const cur = PromptDialog.current;
-    if (cur && !cur.#closing && cur.edits(tokenDoc)) {
-      cur.bringToFront();
-      cur.#ticket ??= ticket;
-      if (cur.#ticket !== ticket) cancelTyping(ticket);
-      if (cur.rendered) cur.#focus();
-      return cur;
-    }
     // the same marker's box still saving (Esc, then straight back in): read its text after the save
     const prior = [...PromptDialog.#live].filter(a => a.#closing && a.edits(tokenDoc));
     if (cur && !cur.#closing) cur.close().catch(err => { log.error("closing the previous prompt", err); });   // not awaited: it saves from its own snapshot
@@ -132,6 +131,9 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       await Promise.all(prior.map(a => a.#finishing));
       tokenDoc = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? null;
       if (!tokenDoc) { cancelTyping(ticket); return null; }
+      // another open of this marker may have made its box during the await (EC-6): never two boxes on one marker
+      const raced = PromptDialog.#reuse(tokenDoc, ticket);
+      if (raced) return raced;
     }
 
     const app = new PromptDialog();
@@ -159,6 +161,17 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     return app;
   }
 
+  /** The open box already editing this marker, brought forward and handed the ticket; else null. */
+  static #reuse(tokenDoc, ticket) {
+    const cur = PromptDialog.current;
+    if (!cur || cur.#closing || !cur.edits(tokenDoc)) return null;
+    cur.bringToFront();
+    cur.#ticket ??= ticket;
+    if (cur.#ticket !== ticket) cancelTyping(ticket);
+    if (cur.rendered) cur.#focus();
+    return cur;
+  }
+
   #target(tokenDoc, fresh) {
     this.#sceneId = tokenDoc.parent.id;
     this.#tokenId = tokenDoc.id;
@@ -171,8 +184,10 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext() {
     const tok = this.token;
     const size = tok ? markerSizeOfToken(tok) : "mid";
+    const text = this.#pendingText ?? this.#saved;
+    this.#pendingText = null;
     return {
-      text: this.#saved,
+      text,
       size,
       footprint: footprintLabel(size, tok?.parent?.grid?.distance ?? 5),
       sizes: SIZE_KEYS.map(k => ({ key: k, active: k === size, title: footprintLabel(k, tok?.parent?.grid?.distance ?? 5) })),
@@ -291,14 +306,17 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#timer = setTimeout(() => this.#save(), AUTOSAVE_MS);
   }
 
-  /** Save `text` (default: the textarea) onto the token, skipped when unchanged. Serialised. */
+  /**
+   * Save `text` (default: the textarea) onto the token, skipped when unchanged. Serialised.
+   * Resolves true, or false when the update was rejected (#saved is then left as it was).
+   */
   #save(text) {
     const wanted = text ?? this.#currentText();
     this.#saving = this.#saving.then(async () => {
       const tok = this.token;
-      if (!tok || this.#deleted) return;
+      if (!tok || this.#deleted || this.#deleting) return true;   // a failed Delete reschedules (U1)
       const norm = normalisePrompt(wanted);
-      if (norm === this.#saved) return;
+      if (norm === this.#saved) return true;
       const size = markerSizeOfToken(tok);
       await tok.update({
         [`flags.${MODULE}.prompt`]: norm,
@@ -307,9 +325,11 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         "texture.tint": norm ? FULL_TINT : EMPTY_TINT
       });
       this.#saved = norm;
+      return true;
     }).catch(err => {
       log.error("saving the prompt failed", err);
       ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.saveFailed"));
+      return false;
     });
     return this.#saving;
   }
@@ -317,10 +337,13 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Everything that must happen once the window is going: save (or discard), empty-delete. */
   async #finish(text) {
     clearTimeout(this.#timer);
+    // Esc during an in-flight Delete: let it land (nothing more to do) or fail (then save as usual) (U1)
+    await this.#deleting;   // never rejects
     if (this.#deleted) return;
-    await this.#save(this.#discard ? this.#opened : text);
+    const ok = await this.#save(this.#discard ? this.#opened : text);
     const tok = this.token;
-    if (tok && this.#fresh && !this.#saved && setting("deleteEmptyOnClose", true)) {
+    // never delete a marker whose words did not save: it stays (tinted empty) with the error toast
+    if (ok && tok && this.#fresh && !this.#saved && setting("deleteEmptyOnClose", true)) {
       this.#deleted = true;
       await tok.delete();
       ui.notifications?.info(_loc("PENTARYN_PROMPTS.dialog.removedEmpty"));
@@ -341,11 +364,13 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
         this.#ticket = null;
       }
       if (PromptDialog.current === this) PromptDialog.current = null;
-      this.#finishing = this.#finish(text)
+      // a size swap in flight finishes first, so the save lands on the marker it made (EC-2)
+      this.#finishing = Promise.resolve(this.#swapping).catch(() => {}).then(() => this.#finish(text))
         .catch(err => { log.error("closing the prompt dialog", err); })
         .finally(() => PromptDialog.#live.delete(this));
     }
     try {
+      await this.#swapping?.catch(() => {});   // never tear the window down mid-swap
       return await super.close({ animate: false, ...options });
     } finally {
       await this.#finishing;
@@ -355,7 +380,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   /** deleteToken hook: the marker a dialog edits is gone (a replace, a delete elsewhere). */
   static onTokenDeleted(doc) {
     for (const app of PromptDialog.#live) {
-      if (!app.edits(doc) || app.#deleted) continue;   // the dialog deleted it itself (Delete, empty fresh marker)
+      if (!app.edits(doc) || app.#deleted || app.#deleting) continue;   // the dialog deleted it itself (Delete, empty fresh marker)
       clearTimeout(app.#timer);
       app.#deleted = true;
       app.close();
@@ -364,11 +389,31 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /* ── size chips: swap for the other marker actor, centred, text carried ── */
 
+  /**
+   * One swap at a time (EC-2): a second chip click while one runs (a double click) returns at once,
+   * the chips grey out meanwhile, and close() waits for it. One click → one new marker, one delete.
+   */
   static async #onSize(event, target) {
+    if (this.#swapping || this.#deleting) return;   // a Delete in flight: no new marker (U1)
     const size = target?.dataset?.size;
     const tok = this.token;
     if (!tok || !SIZE_BY_KEY[size] || size === markerSizeOfToken(tok)) return;
-    await this.#save();
+    this.element?.classList.add("pp-swapping");
+    this.#swapping = this.#swap(tok, size).finally(() => {
+      this.#swapping = null;
+      this.element?.classList.remove("pp-swapping");
+    });
+    return this.#swapping;
+  }
+
+  /** The marker this swap started from is gone (deleted elsewhere, or by the dialog) (R4). */
+  #lost(tok) {
+    return this.#deleted || !!this.#deleting || this.token !== tok;
+  }
+
+  async #swap(tok, size) {
+    if (!(await this.#save())) return;   // a failed save: no swap, so stale text is never carried
+    if (this.#lost(tok)) return;   // the marker went while saving: nothing to swap
     const actor = markerActor(size);
     if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return; }
     const scene = tok.parent;
@@ -378,26 +423,53 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     // elevation and level copied unconditionally (a null level stays an own property)
     const data = await tokenDataFrom(actor, scene, { at: { x: cx - w / 2, y: cy - w / 2 },
       x: Math.round(cx - w / 2), y: Math.round(cy - w / 2), extra: { elevation: tok.elevation, level: tok.level } });
-    foundry.utils.setProperty(data, `flags.${MODULE}.prompt`, this.#saved);
+    if (this.#lost(tok)) return;   // the marker went while its data was built: no orphan new marker (R4)
+    // the text as it stands now, keys typed during the swap included (EC-4)
+    foundry.utils.setProperty(data, `flags.${MODULE}.prompt`, normalisePrompt(this.#currentText()));
     foundry.utils.setProperty(data, `flags.${MODULE}.updatedAt`, Date.now());
     // a replace still holding the old id can say "resized (now marker X)" instead of a bare MARKER_GONE
     foundry.utils.setProperty(data, `flags.${MODULE}.swappedFrom`, tok.id);
     const [made] = await scene.createEmbeddedDocuments("Token", [data], { pentarynPrompts: { swap: true } });
     if (!made) return;
+    if (this.#lost(tok)) return;   // the marker went mid-create: the new one stays, no second delete (R4)
     this.#tokenId = made.id;   // before the delete: its deleteToken hook must not close this dialog
     await tok.delete();
+    await this.#saving;   // an autosave from mid-swap typing lands first, then #saved is what the new marker holds
+    this.#saved = made.flags?.[MODULE]?.prompt ?? "";
     if (this.#closing) return;
+    // keys typed during the swap survive the re-render (EC-4), and autosave onto the new marker
+    this.#pendingText = this.#currentText();
     // the frame (and its title) is only drawn on first render unless the title is passed again
     await this.render({ force: true, window: { title: this.title } });
+    this.#schedule();
   }
 
   static async #onDelete() {
-    if (this.#closing) return;
+    if (this.#closing || this.#deleting) return;   // a double click: one delete (U1)
+    await this.#swapping?.catch(() => {});   // a swap in flight first, so Delete removes the marker it made
+    if (this.#closing || this.#deleting) return;
     const tok = this.token;
     clearTimeout(this.#timer);
-    this.#deleted = true;
-    if (tok) await tok.delete();
-    await this.close();
+    // deleted only once the delete lands: a rejected one leaves the box open and still saving (U1).
+    // #deleting is set before tok.delete() runs (its deleteToken hook may fire at once) and settles
+    // only after #deleted is decided, so a close() waiting on it knows whether to save.
+    let settle;
+    this.#deleting = new Promise(r => { settle = r; });
+    try {
+      if (tok) await tok.delete();
+      this.#deleted = true;
+    } catch (err) {
+      if (!this.token) this.#deleted = true;   // the marker went anyway (deleted elsewhere meanwhile)
+      else {
+        log.error("deleting the prompt marker failed", err);
+        ui.notifications?.error(_loc("PENTARYN_PROMPTS.dialog.deleteFailed"));
+      }
+    } finally {
+      this.#deleting = null;
+      settle();
+    }
+    if (this.#deleted) await this.close();
+    else if (!this.#closing) this.#schedule();   // words typed just before the click still autosave
   }
 
   /* ── side panel ──────────────────────────────────────────────────────── */
@@ -442,7 +514,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!box || !tok || this.#closing) return;
     let p;
     try {
-      p = panelFor(tok, { rows: setting("panelRows", 12), unseenWithinFt: setting("unseenWithinFt", 60) });
+      p = panelFor(tok, { rows: setting("panelRows", 12), unseenWithinFt: setting("unseenWithinFt", DEFAULTS.unseenWithinFt) });
       // compendium monsters' biographies are often only `@Embed[<page>]`: show the page's words
       await resolveItemEmbeds([...p.shown, ...p.more, ...p.unseen].map(r => r.item));
     } catch (err) {
@@ -487,7 +559,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       ? `<p class="pp-door"><i class="fa-solid fa-door-closed"></i> ${esc(_loc("PENTARYN_PROMPTS.panel.behindDoor", { list: door.list.join(", ") + (door.extra ? ` +${door.extra}` : "") }))}</p>`
       : "";
     const unseen = p.unseen.length
-      ? `<details class="pp-out"><summary>${esc(_loc("PENTARYN_PROMPTS.panel.outOfSight", { ft: setting("unseenWithinFt", 60), n: p.unseen.length }))}</summary><ol class="pp-rows">${p.unseen.map(r => row(r, false, true)).join("")}</ol></details>`
+      ? `<details class="pp-out"><summary>${esc(_loc("PENTARYN_PROMPTS.panel.outOfSight", { ft: setting("unseenWithinFt", DEFAULTS.unseenWithinFt), n: p.unseen.length }))}</summary><ol class="pp-rows">${p.unseen.map(r => row(r, false, true)).join("")}</ol></details>`
       : "";
     box.innerHTML = `${head}${warn}${doorLine}${empty}<ol class="pp-rows">${shown}</ol>${more}${unseen}`;
   }

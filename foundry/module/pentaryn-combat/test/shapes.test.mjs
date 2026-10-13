@@ -15,6 +15,8 @@ const { F } = W;
 const lines = captureConsole();
 const shapes = await import("../shapes.mjs");
 const off = await import("../offhand.mjs");
+const { hookRegistry } = await import("../lib/hooks.mjs");
+const { makeLog } = await import("../lib/log.mjs");
 const settings = await import("../settings.mjs");
 settings.registerSettings();
 F.calls.length = 0;
@@ -302,21 +304,48 @@ test("seedWeaponSets: once per character with a class, never over a written flag
   assert.equal(rows.filter(r => r.seed).length, 2);
 });
 
-test("seedAll: active GM only, every character without the flag; a failure is warned per actor", async () => {
+test("seedAll: active GM only, every character without the flag in ONE Actor.updateDocuments; a compute failure is warned per actor (combat-core-AC-1)", async () => {
   for (const a of [...F.game.actors]) if (a.type === "character") delete a.flags.enhancedcombathud;
   const bad = fighter({ id: "seedBad000000001", name: "Broken" });
-  bad.setFlag = async () => { throw new Error("locked"); };
+  Object.defineProperty(bad, "items", { get() { throw new Error("locked"); }, configurable: true });
   lines.length = 0;
+  F.calls.length = 0;
   const out = await off.seedAll();
-  pinJSON("seed-all", { out, console: lines.splice(0) }, import.meta.url);
+  const batches = F.calls.filter(c => c.op === "Actor.updateDocuments");
+  assert.equal(batches.length, 1, "combat-core-AC-1: one batch write, not one setFlag per character");
+  assert.deepEqual(F.calls.filter(c => c.op === "update"), [], "combat-core-AC-1: no per-actor update");
+  const { updates } = batches[0];
+  for (const u of updates) assert.deepEqual(Object.keys(u), ["_id", "flags.enhancedcombathud.weaponSets"]);
+  assert.deepEqual(updates.map(u => u["flags.enhancedcombathud.weaponSets"]), out.map(r => r.seed));
+  pinJSON("seed-all", { out, updates: updates.map(u => u._id), console: lines.splice(0) }, import.meta.url);
   assert.ok(out.length >= 5);
+  for (const u of updates) assert.deepEqual(F.game.actors.get(u._id).flags.enhancedcombathud.weaponSets, u["flags.enhancedcombathud.weaponSets"]);
+  bad.delete();
   F.become({ userId: "player0000000001" });
   assert.deepEqual(await off.seedAll(), []);
   F.become({ userId: "gmUser0000000001" });
+  F.calls.length = 0;
+  assert.deepEqual(await off.seedAll(), [], "everyone already seeded");
+  assert.deepEqual(F.calls, [], "nothing to write: no batch");
 });
 
-test("installOffhand: createActor seeds a new character 500 ms later, on the active GM only", async () => {
-  off.installOffhand();
+test("seedAll: a failed batch warns once naming the actors, returns [] and seeds nobody (combat-core-AC-1)", async () => {
+  const fresh = [fighter({ id: "seedBatchFail001", name: "Ash" }), rogue({ id: "seedBatchFail002", name: "Birch" })];
+  const m = mock.method(globalThis.Actor, "updateDocuments", async () => { throw new Error("locked"); });
+  lines.length = 0;
+  try {
+    assert.deepEqual(await off.seedAll(), []);
+  } finally { m.mock.restore(); }
+  assert.equal(m.mock.callCount(), 1, "combat-core-AC-1: one batch");
+  const console_ = lines.splice(0);
+  assert.deepEqual(console_.map(l => l.level), ["warn"]);
+  assert.equal(console_[0].text, "pentaryn-combat | weapon-set seed failed for Ash, Birch");
+  for (const a of fresh) assert.equal(a.flags.enhancedcombathud, undefined, "nothing partially seeded");
+  for (const a of fresh) a.delete();
+});
+
+test("offhand install: createActor seeds a new character 500 ms later, on the active GM only", async () => {
+  off.install(hookRegistry(MODULE, makeLog(MODULE)));
   const fresh = fighter({ id: "seedNew000000001", name: "Newcomer" });
   F.Hooks.callAll("createActor", fresh);
   F.Hooks.callAll("createActor", wolf({ id: "seedNewWolf00001" }));
@@ -339,5 +368,62 @@ test("installOffhand: createActor seeds a new character 500 ms later, on the act
   F.Hooks.callAll("createActor", failing);
   mock.timers.tick(500);
   await drain();
-  assert.deepEqual(lines.filter(l => l.level === "warn"), [], "the createActor seed swallows its failure silently");
+  assert.deepEqual(lines.filter(l => l.level === "warn"), [{ level: "warn", text: "pentaryn-combat | weapon-set seed (new character)", err: "locked" }], "combat-core-ROB-5: the createActor seed warns its failure, never throws");
+});
+
+// combat-core-EXT-6: the Enhanced Dual Wielding flag read was copy-pasted in sequence.mjs, shapes.mjs
+// (twice) and hud/buttons-ui.mjs. One exported shapes.enhancedDualWieldingOf(actor) is the only read;
+// the test fixture legacy-combat.mjs keeps its own copy.
+test("combat-core-EXT-6: enhancedDualWieldingOf(actor) is the one Enhanced Dual Wielding flag read", async () => {
+  assert.equal(typeof shapes.enhancedDualWieldingOf, "function", "combat-core-EXT-6: shapes exports enhancedDualWieldingOf");
+  const flagged = { getFlag: (scope, key) => (scope === "dnd5e" && key === "enhancedDualWielding" ? 1 : undefined) };
+  assert.equal(shapes.enhancedDualWieldingOf(flagged), true, "a truthy flag reads true");
+  assert.equal(shapes.enhancedDualWieldingOf({ getFlag: () => undefined }), false, "no flag reads false");
+  assert.equal(shapes.enhancedDualWieldingOf({}), false, "an actor with no getFlag reads false");
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["../shapes.mjs", "../sequence.mjs", "../hud/buttons-ui.mjs"]) {
+    const src = readFileSync(new URL(file, import.meta.url), "utf8");
+    const reads = src.match(/getFlag\?\.\("dnd5e", "enhancedDualWielding"\)/g) ?? [];
+    assert.equal(reads.length, file === "../shapes.mjs" ? 1 : 0, `combat-core-EXT-6: ${file} reads the flag ${reads.length} time(s)`);
+    if (file !== "../shapes.mjs") assert.match(src, /enhancedDualWieldingOf\(actor\)/, `${file} calls enhancedDualWieldingOf`);
+  }
+});
+
+// combat-core-EXT-7: the Multiattack-item regex was copy-pasted in counting.mjs and shapes.mjs
+// (multiattackOf). One exported shapes.isMultiattackItem(item) is the only copy; matching unchanged.
+test("combat-core-EXT-7: isMultiattackItem(item) is the one Multiattack-item test", async () => {
+  assert.equal(typeof shapes.isMultiattackItem, "function", "combat-core-EXT-7: shapes exports isMultiattackItem");
+  for (const name of ["Multiattack", "multiattack", "MULTIATTACK (Wolf Form)", "Multiattack: two bites"]) {
+    assert.equal(shapes.isMultiattackItem({ name }), true, `"${name}" is a Multiattack item`);
+  }
+  for (const name of ["Multiattacks", "Bite", "Not Multiattack", ""]) {
+    assert.equal(shapes.isMultiattackItem({ name }), false, `"${name}" is not a Multiattack item`);
+  }
+  assert.equal(shapes.isMultiattackItem({}), false, "an item with no name is not one");
+  assert.equal(shapes.isMultiattackItem(null), false, "no item is not one");
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["../shapes.mjs", "../counting.mjs"]) {
+    const src = readFileSync(new URL(file, import.meta.url), "utf8");
+    const copies = src.match(/\/\^multiattack\\b\/i/g) ?? [];
+    assert.equal(copies.length, file === "../shapes.mjs" ? 1 : 0, `combat-core-EXT-7: ${file} has ${copies.length} copy(ies) of the regex`);
+    assert.match(src, /isMultiattackItem\(i(tem)?\)/, `${file} calls isMultiattackItem`);
+  }
+});
+
+// combat-core-EXT-13: Argon's package id "enhancedcombathud" was repeated in settings.mjs, offhand.mjs
+// and shapes.mjs (setPrimaryId). It is defined once in the core (combat-core.mjs, so the adapter
+// shapes.mjs may import it under C16) and settings.mjs exports it; offhand.mjs imports it from
+// settings.mjs. api-manifest's sideEffects strings stay literal (documentation data).
+test("combat-core-EXT-13: ARGON is the one Argon package id literal", async () => {
+  assert.equal(settings.ARGON, "enhancedcombathud", "combat-core-EXT-13: settings exports ARGON");
+  const { readFileSync } = await import("node:fs");
+  const imports = { "../offhand.mjs": "settings", "../shapes.mjs": "combat-core" };
+  for (const file of ["../combat-core.mjs", "../settings.mjs", "../offhand.mjs", "../shapes.mjs"]) {
+    const src = readFileSync(new URL(file, import.meta.url), "utf8");
+    const copies = src.match(/["'`]enhancedcombathud["'`]/g) ?? [];
+    assert.equal(copies.length, file === "../combat-core.mjs" ? 1 : 0, `combat-core-EXT-13: ${file} has ${copies.length} copy(ies) of the id`);
+    if (imports[file]) assert.match(src, new RegExp(`import \\{[^}]*\\bARGON\\b[^}]*\\} from "\\./${imports[file]}\\.mjs"`), `${file} imports ARGON from ${imports[file]}.mjs`);
+  }
+  const actor = { getFlag: (scope, key) => (scope === "enhancedcombathud" ? { weaponSets: { 2: { primary: "Actor.a.Item.bow0000000000001" } }, activeWeaponSet: "2" }[key] : undefined) };
+  assert.equal(shapes.setPrimaryId(actor), "bow0000000000001", "setPrimaryId reads the active Argon set's primary");
 });

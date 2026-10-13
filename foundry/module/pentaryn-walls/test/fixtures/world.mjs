@@ -2,7 +2,7 @@
  * The walls glue's stand-in world (guide step 1.8). A GM client, a scene stub whose wall documents
  * throw Foundry's inactive-scope error from `getFlag("wall-autocomplete", …)` (as Foundry 14 does for
  * a scope that is no active package), embedded-document writes logged to `F.calls`, and spies for
- * ChatMessage, Macro, the hotbar, canvas pings, the console and notifications (with their options).
+ * ChatMessage, Macro, the hotbar, canvas pings (broadcast and local), the console and notifications (with their options).
  */
 
 import { StubCollection, installFoundry, makeDoc, makeUser } from "../kit/foundry-stub.mjs";
@@ -71,11 +71,18 @@ export async function wallsWorld({ isGM = true } = {}) {
     getWhisperRecipients: role => (role === "GM" ? [gm] : []),
   };
   F.game.macros = new StubCollection();
+  // `{keepId: true}` keeps the given `_id`; a second create of a stored id is refused the way
+  // Foundry's server refuses it. `F.hold["Macro.create"]` parks every create (two overlapping
+  // calls, or two GM tabs, both past the lookup — walls-async-2).
   globalThis.Macro = {
-    create: async data => {
-      const macro = makeDoc("Macro", data);
+    create: async (data, options = {}) => {
+      F.calls.push({ op: "Macro.create", data: F.plain(data), options: F.plain(options) });
+      if (F.hold?.["Macro.create"]) await F.hold["Macro.create"];
+      const { _id, ...rest } = data;
+      const id = options.keepId ? _id : undefined;
+      if (id && F.game.macros.has(id)) throw new Error(`The Macro [${id}] already exists in the database`);
+      const macro = makeDoc("Macro", id ? { ...rest, id } : rest);
       F.game.macros.set(macro.id, macro);
-      F.calls.push({ op: "Macro.create", data: F.plain(data) });
       return macro;
     },
   };
@@ -83,6 +90,9 @@ export async function wallsWorld({ isGM = true } = {}) {
     F.calls.push({ op: "assignHotbarMacro", name: macro.name, slot: slot ?? null });
   };
   F.canvas.ping = at => F.calls.push({ op: "canvas.ping", at });
+  // Foundry 14: ControlsLayer#drawPing draws on this client only (canvas.ping broadcasts).
+  F.CONFIG.Canvas = { pings: { types: { PULSE: "pulse", ALERT: "alert", PULL: "chevron", ARROW: "arrow" } } };
+  F.canvas.controls = { drawPing: (at, opts) => F.calls.push({ op: "canvas.controls.drawPing", at, opts: opts ?? null }) };
   for (const level of ["info", "warn", "error"]) {
     F.ui.notifications[level] = (message, opts) => {
       F.calls.push({ op: "notify", level, message: String(message), opts: opts ?? null });

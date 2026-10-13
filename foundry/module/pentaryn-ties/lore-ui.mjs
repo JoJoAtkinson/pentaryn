@@ -216,7 +216,8 @@ export function bindLoreEditor(root, { rows, save, key = "lore", rerender }) {
       const list = current();
       const row = list.find(r => r.id === id);
       if (!row) return;
-      if (field === "dc") row.dc = Number(el.value);
+      // a cleared box is "no DC" (null → the default 15), never Number("") = 0 → 1 (M1)
+      if (field === "dc") row.dc = el.value.trim() === "" ? null : Number(el.value);
       else if (field === "hold") row.hold = el.value === "on" ? true : el.value === "off" ? false : null;
       else row[field] = el.value;
       await commit(list);

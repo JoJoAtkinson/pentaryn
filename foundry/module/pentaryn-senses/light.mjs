@@ -10,14 +10,13 @@
  */
 
 import {
-  MODULE, FLAGS, SPELL_LIGHT, ACTIVITY_PROFILES, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
-  readSpellCast, readSpellLight, castFlag, planSpellLight, squareId, spellLightUpdate, restoredLight,
+  MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
+  readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise, handSquareEdit,
   esc, unsetPath
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
-import { isActiveGM, isAnyGM, claimDocument } from "./lib/election.mjs";
-import { makeLog } from "./lib/log.mjs";
+import { isActiveGM, isAnyGM } from "./lib/election.mjs";
 import { realItem, itemFrom, casterToken, allItems, litBy, anyLitBy, allSources, findToken } from "./light-adapter.mjs";
 import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, pick, prompt } from "./light-ui.mjs";
 
@@ -28,21 +27,11 @@ const RECENT = 20;
 
 const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), reg: null, ctx: null, recent: [] };
 
-/** The kit log: the entry's ctx.log once installed (senses-R6). */
-let log = makeLog(MODULE);
-
-const warn = (label, err) => log.warn(`light ${label}`, err);
+const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 
 /* -------------------------------------------- */
 /*  Casting (any client that owns the item)     */
 /* -------------------------------------------- */
-
-/** The one owner check for cast, end, toggle and hood: a non-owner is told why nothing happened. */
-function ownerOrWarn(item) {
-  if (item.isOwner) return true;
-  ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
-  return false;
-}
 
 /**
  * Write where the light goes. `target` is {token: id} or {x, y}, on `target.scene` or the viewed
@@ -51,7 +40,10 @@ function ownerOrWarn(item) {
 export async function cast(item, target) {
   item = realItem(item);
   if (!item || !target) return false;
-  if (!ownerOrWarn(item)) return false;
+  if (!item.isOwner) {
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    return false;
+  }
   const flag = castFlag(target.scene ?? canvas?.scene?.id, target, Date.now());
   if (!flag) return false;
   await item.update({ [CAST]: flag });
@@ -76,7 +68,10 @@ function canSeeName(tok) {
 export async function end(item) {
   item = realItem(item);
   if (!item) return false;
-  if (!ownerOrWarn(item)) return false;
+  if (!item.isOwner) {
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    return false;
+  }
   if (!readSpellCast(item) && !anyLitBy(item.uuid)) {
     ui.notifications.info(_loc("PENTARYN_SENSES.Light.NoneLit"));
     return false;
@@ -88,15 +83,9 @@ export async function end(item) {
 
 export async function onMe(item) {
   item = realItem(item);
-  if (!canvas?.scene) {
-    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoScene"));
-    return false;
-  }
+  if (!canvas?.scene) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoScene"));
   const tok = casterToken(item?.actor);
-  if (!tok) {
-    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoToken"));
-    return false;
-  }
+  if (!tok) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoToken"));
   return cast(item, { scene: tok.parent.id, token: tok.id });
 }
 
@@ -114,7 +103,10 @@ export async function pickAndCast(item) {
 export async function toggle(item) {
   item = realItem(item);
   if (!item || !profileFor(item)) return false;
-  if (!ownerOrWarn(item)) return false;
+  if (!item.isOwner) {
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    return false;
+  }
   const lit = !isLit(item);
   await item.update(lit ? { [LIT]: true } : { [LIT]: false, [HOODED]: false });
   await announce(item, lit ? "PENTARYN_SENSES.Light.Lights" : "PENTARYN_SENSES.Light.Douses");
@@ -140,8 +132,7 @@ async function announce(item, key) {
 /** Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered). */
 export async function hood(item) {
   item = realItem(item);
-  if (!item || !profileFor(item)?.hooded) return false;
-  if (!ownerOrWarn(item)) return false;
+  if (!item?.isOwner || !profileFor(item)?.hooded) return false;
   const hooded = !isHooded(item);
   await item.update({ [HOODED]: hooded });
   // The table hears the hood too (usability Area 8, L5: lowering it posted nothing).
@@ -151,64 +142,33 @@ export async function hood(item) {
 
 /**
  * GM, idempotent: give every Torch (world items, actors, unlinked tokens) a "Light" activity that
- * toggles it. Lamps, lanterns and candles already have one. Plans first, then writes one batch per
- * parent (senses-ac-3): world items in one Item.updateDocuments, each actor's or unlinked token
- * actor's torches in one updateEmbeddedDocuments("Item"). → number of torches changed.
+ * toggles it. Lamps, lanterns and candles already have one. → number of torches changed.
  */
 export async function setup() {
   if (!isAnyGM()) {
     ui.notifications.warn(_loc("PENTARYN_SENSES.Light.SetupGMOnly"));
     return 0;
   }
-  const byParent = new Map();   // parent Actor, or null for world items → [update]
-  for (const item of allItems({ worldItems: true })) {
-    let change;
-    try {
-      change = torchActivityChange(item);
-    } catch (e) {
-      warn(`setup ${item?.uuid}`, e);
-    }
-    if (!change) continue;
-    const parent = item.parent ?? null;
-    if (!byParent.has(parent)) byParent.set(parent, []);
-    byParent.get(parent).push({ _id: item.id, ...change });
-  }
   let n = 0;
-  for (const [parent, updates] of byParent) {
-    try {
-      if (parent) await parent.updateEmbeddedDocuments("Item", updates);
-      else await Item.implementation.updateDocuments(updates);
-      n += updates.length;
-    } catch (e) {
-      warn(`setup ${parent?.uuid ?? "world items"}`, e);
-    }
+  for (const item of allItems({ worldItems: true })) {
+    if (await ensureTorchActivity(item)) n++;
   }
-  log.info(`setupLight: ${n} torch item(s) given a Light activity`);
+  console.info(`${MODULE} | setupLight: ${n} torch item(s) given a Light activity`);
   return n;
 }
 
-/**
- * The change that gives one item of an ACTIVITY_PROFILES profile its Light activity, sorted after
- * its last one; null when it is not such an item or already has one.
- */
-function torchActivityChange(item) {
-  if (!ACTIVITY_PROFILES.includes(profileKey(item)) || !item?.system?.activities) return null;
+/** One torch item: add the Light activity if it has none. → true when it was added. */
+async function ensureTorchActivity(item) {
+  if (profileKey(item) !== "torch" || !item?.system?.activities) return false;
   const has = item.system.activities.has?.(TORCH_ACTIVITY_ID)
     || [...item.system.activities.values()].some(a => a?.flags?.[MODULE]?.lightToggle === true);
-  if (has) return null;
-  const data = torchActivityData(_loc("PENTARYN_SENSES.Light.ActivityName"));
-  const sort = item.system.activities.size
-    ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
-    : 0;
-  return { [`system.activities.${TORCH_ACTIVITY_ID}`]: { ...data, sort } };
-}
-
-/** One item (the createItem hook): add the Light activity if it has none. → true when it was added. */
-async function ensureTorchActivity(item) {
-  const change = torchActivityChange(item);
-  if (!change) return false;
+  if (has) return false;
   try {
-    await item.update(change);
+    const data = torchActivityData(_loc("PENTARYN_SENSES.Light.ActivityName"));
+    const sort = item.system.activities.size
+      ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
+      : 0;
+    await item.update({ [`system.activities.${TORCH_ACTIVITY_ID}`]: { ...data, sort } });
     return true;
   } catch (e) {
     warn(`setup ${item.uuid}`, e);
@@ -233,43 +193,20 @@ async function tellOwners(item, key) {
   }
 }
 
-/**
- * Delete what is still there. Every tab of the active GM runs this (senses-ac-1): the other tab's
- * delete may land first, and the server's "does not exist" refusal then means it is already gone.
- * → how many are gone now (deleted here or by the other tab).
- */
-async function deleteLive(scene, type, ids, live) {
-  const there = ids.filter(id => live?.has(id));
-  if (!there.length) return 0;
-  try {
-    await scene.deleteEmbeddedDocuments(type, there);
-  } catch (e) {
-    if (!/does not exist/i.test(e?.message ?? "")) throw e;
-    log.debug(`${type} already deleted by another GM session`, e);
-  }
-  return there.length;
-}
-
-/**
- * The flag as the world allows it now. A cast on a token that is gone, or on a scene that is gone,
- * is cleared (the token case whispers "Gone" once); a token that moved scenes is followed silently.
- * → the desired cast, or null.
- */
-async function resolveDesired(item, done) {
+/** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
+async function reconcile(source) {
+  if (!isActiveGM() || !source) return null;
+  const item = itemFrom(source);
   let desired = item ? readSpellCast(item) : null;
-  const castAt = desired ? item.getFlag?.(MODULE, "lightCast")?.at ?? 0 : 0;   // this cast's own claim key
+  const done = { source, restored: 0, removed: 0, lit: null, created: false, released: null, cleared: false };
+
   if (desired?.token) {
     const tok = findToken(desired.token, desired.scene);
     if (!tok) {
       desired = null;
       done.cleared = true;
       await item.update({ [CAST]: null });
-      // Both GM tabs get here; the one that wins this cast's claim whispers (a per-cast key: a
-      // claim key is single-use on a document, blueprint §5.9.2). Off the chain: the claim's
-      // settle delay must not hold up the next reconcile.
-      void claimDocument(item, `gone.${castAt}`, { scope: MODULE })
-        .then(won => won && tellOwners(item, "PENTARYN_SENSES.Light.Gone"))
-        .catch(e => warn("whisper", e));
+      await tellOwners(item, "PENTARYN_SENSES.Light.Gone");
     } else if (tok.parent.id !== desired.scene) {
       desired = { ...desired, scene: tok.parent.id };
       await item.update({ [`${CAST}.scene`]: tok.parent.id }); // moved scenes (portals): correct silently
@@ -279,11 +216,11 @@ async function resolveDesired(item, done) {
     done.cleared = true;
     await item.update({ [CAST]: null });
   }
-  return desired;
-}
 
-/** Tokens no longer wanted get their own light back, one Token batch per scene. → the actors touched. */
-async function restoreTokens(plan, done) {
+  const existing = litBy(source);
+  const plan = planSpellLight({ desired, existing });
+
+  // Lights that are no longer wanted.
   const byScene = new Map();
   for (const r of plan.restore) {
     const t = game.scenes.get(r.scene)?.tokens.get(r.id);
@@ -298,24 +235,19 @@ async function restoreTokens(plan, done) {
     done.restored += updates.length;
     for (const u of updates) { const a = scene.tokens.get(u._id)?.actor; if (a) touchedActors.add(a); }
   }
-  return touchedActors;
-}
-
-/** Squares no longer wanted are deleted, one AmbientLight batch per scene. */
-async function removeSquares(plan, done) {
-  const byScene = new Map();
+  const removeByScene = new Map();
   for (const r of plan.remove) {
-    if (!byScene.has(r.scene)) byScene.set(r.scene, []);
-    byScene.get(r.scene).push(r.id);
+    if (!removeByScene.has(r.scene)) removeByScene.set(r.scene, []);
+    removeByScene.get(r.scene).push(r.id);
   }
-  for (const [sid, ids] of byScene) {
+  for (const [sid, ids] of removeByScene) {
     const scene = game.scenes.get(sid);
-    done.removed += await deleteLive(scene, "AmbientLight", ids, scene?.lights);
+    const live = ids.filter(id => scene?.lights.has(id));
+    if (live.length) await scene.deleteEmbeddedDocuments("AmbientLight", live);
+    done.removed += live.length;
   }
-}
 
-/** The light that is wanted: the token lit (newest caster wins), or the square made. */
-async function applyWanted(source, plan, done) {
+  // The light that is wanted.
   if (plan.light) {
     const tok = game.scenes.get(plan.light.scene)?.tokens.get(plan.light.token);
     if (tok) {
@@ -335,54 +267,27 @@ async function applyWanted(source, plan, done) {
   if (plan.create) {
     const scene = game.scenes.get(plan.create.scene);
     if (scene) {
-      try {
-        await scene.createEmbeddedDocuments("AmbientLight", [{
-          _id: squareId(source, scene.id, plan.create.x, plan.create.y),
-          x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
-          config: foundry.utils.deepClone(SPELL_LIGHT),
-          flags: { [MODULE]: { spellLight: { source } } }
-        }], { keepId: true });
-      } catch (e) {
-        // The other GM tab's create of this square landed first: the refusal is the election.
-        if (!/already exists/i.test(e?.message ?? "")) throw e;
-        log.debug("square already made by another GM session", e);
-      }
+      await scene.createEmbeddedDocuments("AmbientLight", [{
+        x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
+        config: foundry.utils.deepClone(SPELL_LIGHT),
+        flags: { [MODULE]: { spellLight: { source } } }
+      }]);
       done.created = true;
     }
   }
-}
 
-/** A restored token may carry a lit torch: let the carried-light path re-apply it. */
-async function resyncCarried(touchedActors) {
+  // A restored token may carry a lit torch: let the carried-light path re-apply it.
   const syncLight = state.ctx?.exposed?.syncLight;
   // Always the base actor: syncLight walks its tokens and reads each unlinked one's own items.
   if (syncLight) for (const id of new Set([...touchedActors].map(a => a.id))) {
     const base = game.actors.get(id);
     if (base) await syncLight(base);
   }
-}
-
-/** The summary: kept in the last-20 ring (its own copy) and logged at debug. → the summary. */
-function remember(plan, done, desired) {
   const summary = summarise(plan, { ...done, desired });
   state.recent.push({ ...summary, desired: summary.desired && { ...summary.desired } });   // the ring's own copy
   if (state.recent.length > RECENT) state.recent.splice(0, state.recent.length - RECENT);
-  log.debug("reconcile", summary);
+  state.ctx?.log.debug("reconcile", summary);
   return summary;
-}
-
-/** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
-async function reconcile(source) {
-  if (!isActiveGM() || !source) return null;
-  const item = itemFrom(source);
-  const done = { source, restored: 0, removed: 0, lit: null, created: false, released: null, cleared: false };
-  const desired = await resolveDesired(item, done);
-  const plan = planSpellLight({ desired, existing: litBy(source) });
-  const touchedActors = await restoreTokens(plan, done);
-  await removeSquares(plan, done);
-  await applyWanted(source, plan, done);
-  await resyncCarried(touchedActors);
-  return remember(plan, done, desired);
 }
 
 /** The last 20 reconcile summaries on this client, oldest first (copies). */
@@ -447,7 +352,7 @@ async function tidyOldSummons() {
       try {
         from = fromUuidSync(origin, { strict: false });
       } catch (e) {
-        log.debug("summon origin unresolvable", e);
+        state.ctx?.log.debug("summon origin unresolvable", e);
       }
       const spell = from?.documentName === "Item" ? from : from?.item ?? null;
       const base = game.actors.get(t.actorId);
@@ -455,8 +360,9 @@ async function tidyOldSummons() {
       if (isLightSpellData(spell) || phb) ids.push(t.id);
     }
     if (ids.length) {
-      log.info(`light: removing ${ids.length} old Light summon token(s) on ${scene.name}`, ids);
-      removed += await deleteLive(scene, "Token", ids, scene.tokens);
+      console.info(`${MODULE} | light: removing ${ids.length} old Light summon token(s) on ${scene.name}`, ids);
+      await scene.deleteEmbeddedDocuments("Token", ids);
+      removed += ids.length;
     }
   }
   return removed;
@@ -505,9 +411,8 @@ const exposed = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe,
 export function install(reg, ctx) {
   state.reg = reg;
   state.ctx = ctx;
-  log = ctx.log;
   ctx.expose({ light: exposed });
-  bindActions({ end, onMe, pickAndCast, toggle, hood, run });
+  bindActions({ cast, end, onMe, pickAndCast, toggle, hood, run });
 
   on("dnd5e.preUseActivity", onUse);
   on("dnd5e.postUseActivity", onUsed);

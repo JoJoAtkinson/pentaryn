@@ -1,4 +1,4 @@
-// pentaryn kit 1.1.0 · vendored from foundry/lib/argon-kit.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.2.0 · vendored from foundry/lib/argon-kit.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * The Argon Combat HUD helpers that pentaryn-combat and pentaryn-transform each hand-copied
  * (transform-creatures-12, combat-riders-3/-5, -18 phase 1; audit Wave 8.6, decision D7).
@@ -56,15 +56,17 @@ export function paintBadge(button, left, emptyClass, { g = globalThis } = {}) {
  *    detached panel that now has buttons is inserted before the next attached main panel (combat
  *    U-3-7).
  *  - `after(panel)`: called last (combat re-places open drawers whose buttons moved).
+ *  - `log`: a fresh button's render is async and not awaited (callers are synchronous); a rejected
+ *    render is warned through `log` (else `g.console`) instead of escaping unhandled (1.2.0 KIT-R6).
  */
-export function applyButtons(panel, next, fresh = [], { attachDetached = false, after = null, g = globalThis } = {}) {
+export function applyButtons(panel, next, fresh = [], { attachDetached = false, after = null, log = null, g = globalThis } = {}) {
   for (const old of panel._buttons) if (!next.includes(old)) old.element.remove();
   for (const b of next) {
     b._parent = panel;
     panel.element.appendChild(b.element);
   }
   panel._buttons = next;
-  for (const b of fresh) b.render();
+  for (const b of fresh) Promise.resolve(b.render()).catch(err => (log ?? g.console)?.warn?.("argon button render failed", err));
   if (attachDetached && next.length && !panel.element.isConnected) {
     const main = g.ui?.ARGON?.components?.main ?? [];
     const following = main.slice(main.indexOf(panel) + 1).find(p => p?.element?.isConnected);
