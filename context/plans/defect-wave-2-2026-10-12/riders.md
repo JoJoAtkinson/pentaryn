@@ -47,7 +47,8 @@ On the one GM tab, ZZ scratch actors/scene only; delete them after.
   `updateItem` hooks, run `game.pentaryn.riders.installBattleMedic("ZZ Healer")`: `removed`
   lists every Heal dX, only Battle Medic is left, counter is 2.
 - **riders-async-5** — ZZ Sorcerer with PHB Elemental Affinity and Elemental Adept (Fire).
-  Count `updateItem`, run `retireManual("ZZ Sorcerer")` then `setType("ZZ Sorcerer", "cold")`:
+  Count `updateItem`, run `setType("ZZ Sorcerer", "cold")` then `retireManual("ZZ Sorcerer")`
+  (`retireManual` leaves a typeless Affinity alone, so the type goes first):
   Affinity damage activities gone, both flags set, one batch per call, `report()` shows types.
 - **riders-maint-02 / riders-ext-6 / riders-maint-01** — code only (selftest still lists the
   same patches).

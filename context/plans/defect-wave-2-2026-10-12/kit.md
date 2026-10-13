@@ -83,6 +83,7 @@ Use only ZZ scratch docs you create, and delete them afterwards.
   personal-journal relay query, and every name in it exists in `CONFIG.queries`.
 - **names-ext-3**: on ZZ Names Test, with an unlinked ZZ Goblin and two tokens, run
   `await game.pentaryn.names.sync(tokenA.actor, "ZZ Goblin", "ZZ Gob")`. Both tokens and the
-  world actor's `prototypeToken.name` read ZZ Gob, and the toast count is 2. Delete the scene and
+  world actor's `prototypeToken.name` read ZZ Gob, and the toast count is 3 (the prototype token
+  plus the two placed tokens; `sync` returns 3). Delete the scene and
   actor afterwards.
 - Every other item is code only and is covered by the tests named in the table.

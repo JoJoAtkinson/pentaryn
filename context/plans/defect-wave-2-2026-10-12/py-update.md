@@ -65,4 +65,5 @@ log/report reads. None of them touches real PCs, campaign scenes or the tunnel.
   and no `claude -p` or `node` smoke child is left (`pgrep -fl smoke.mjs` prints nothing).
   The watchdog log says "still alive" rather than restoring service during a slow run.
 - **M9, M10, M11, ROB-4:** the README and the core-hold reason say 04:06 Saturday. The weekly
-  fork section shows ahead/behind counts measured against upstream main.
+  fork section shows ahead/behind counts measured against upstream's default branch, which for
+  the MCP fork (upstream `adambdooley/foundry-vtt-mcp`) is `master`, not `main`.
