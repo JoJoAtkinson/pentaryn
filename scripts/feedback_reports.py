@@ -548,7 +548,7 @@ MCP_TOOLS = [
             "required": [],
             "additionalProperties": False,
         },
-        "annotations": _RO,
+        "annotations": {"title": "List feedback reports", **_RO},
     },
     {
         "name": "feedback_next",
@@ -569,7 +569,7 @@ MCP_TOOLS = [
             "required": [],
             "additionalProperties": False,
         },
-        "annotations": _RO,
+        "annotations": {"title": "Next feedback report", **_RO},
     },
     {
         "name": "feedback_get",
@@ -587,7 +587,7 @@ MCP_TOOLS = [
             "required": ["id"],
             "additionalProperties": False,
         },
-        "annotations": _RO,
+        "annotations": {"title": "Get a feedback report", **_RO},
     },
     {
         "name": "feedback_resolve",
@@ -607,7 +607,7 @@ MCP_TOOLS = [
             "required": ["id", "status"],
             "additionalProperties": False,
         },
-        "annotations": _RW,
+        "annotations": {"title": "Resolve a feedback report", **_RW},
     },
 ]
 
