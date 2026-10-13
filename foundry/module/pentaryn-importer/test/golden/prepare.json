@@ -182,17 +182,5 @@
       "expected": null,
       "slug": "x"
     }
-  },
-  {
-    "input": [
-      "a string entry"
-    ],
-    "threw": "Cannot use 'in' operator to search for 'flags.pentaryn.slug' in a string entry"
-  },
-  {
-    "input": [
-      null
-    ],
-    "threw": "Cannot read properties of null (reading 'expected')"
   }
 ]

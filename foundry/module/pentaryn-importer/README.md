@@ -1,6 +1,6 @@
 ---
 created: 2026-08-10
-last_modified: 2026-10-11
+last_modified: 2026-10-12
 tags: ["foundry", "vtt", "module", "dnd5e"]
 status: active
 ---
@@ -23,11 +23,16 @@ them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook (`rea
 
 Nothing. The importer is GM-only and console-first. A GM sees a permanent error toast when the
 version gate or the @ref lint refuses a run, when a non-GM calls it, when an entry cannot be
-prepared (e.g. a missing slug), and when a readback fails; an info toast with the counts after a
-real run; and a permanent "delete `Data/<path>`" toast after a successful one. Players see a
+prepared (a missing slug, an entry that is not an object — `null`, a string — or two items on one
+entry sharing a `flags.pentaryn.action`), and when a readback fails; an info toast with the counts after a
+real run, only when no actor failed — when any actor fails the GM instead sees a permanent warning toast
+("N actor(s) failed") pointing at the console for the per-slug report; and a permanent "delete
+`Data/<path>`" toast after a fully successful real run (when any actor fails, that delete toast is not
+shown: `deleteJson.required` is `false`). Players see a
 toast only if they call `import()` themselves: the `NOT_GM` refusal. Some refusals throw a `PentarynAbort` with **no** toast — read `err.code` /
 `err.message`: a fetch failure (missing file, HTML body, network error, timeout), a bad option
-(`BAD_ARGS`), a `module.json` without `flags.pentaryn`, and a call while an import is already
+(`BAD_ARGS`: `only` not null or an array of slug strings, `timeout` not a positive number, `path`
+not a non-empty string, `unmanagedItems` not `"keep"`/`"delete"`; `import(null)` is `import({})`), a `module.json` without `flags.pentaryn`, and a call while an import is already
 running (`CONFLICT`).
 
 ## Settings
@@ -67,6 +72,9 @@ await game.pentaryn.import({
 The result is `{ ok, path, url, dryRun, manifest: { generator, generatorVersion, generatedAt,
 sourceRevision, skippedRows }, counts: { total, selected, created, updated, skipped, failed,
 assertions }, created, updated, skipped, failed: [{ slug, error }], deleteJson }`.
+Each selected actor appears in exactly one of `created`, `updated`, `skipped` or `failed`: a slug
+counts as created or updated only once its content hash is stamped (`importer-R6`), so an actor
+whose Item write fails after the Actor write is reported only in `failed`.
 `deleteJson.required` is `true` only after a non-dry run with zero failures; a run that left work
 undone should be re-run against the same file.
 
@@ -74,14 +82,19 @@ undone should be re-run against the same file.
 
 | Signal | Meaning | Scope |
 |---|---|---|
-| throws `PentarynAbort` | version gate, `@ref` lint, missing or malformed file, non-GM, missing slug, bad option, fetch failure, an import already running | whole run; **nothing was written** |
+| throws `PentarynAbort` | version gate, `@ref` lint, missing or malformed file, non-GM, missing slug, an entry that is not an object, two items on one entry with the same action, bad option, fetch failure, an import already running | whole run; **nothing was written** |
 | throws `PentarynAssertionError` | a readback mismatch (CONTRACT §8.3) | whole run; actors earlier in the batch **were** written |
 | `{ ok: false, failed: [...] }` | a `ValidationError` or similar from one Actor | that actor only |
 
 Every assertion failure names the actor slug, item action, activity id, path, expected and actual,
 as a permanent toast and a `console.error`.
+Each per-actor failure is a `console.warn` line `pentaryn-importer | failed <slug>: <error>` (and,
+with `CONFIG.debug["pentaryn-importer"] = true`, an `import.failed` row in `trace()`) before the
+summary's `console.table` (`importer-R8`).
 
-**For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. A thrown
+**For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. The
+dry run's split is the real run's, a slug repeated in the file included (`importer-EC5`): the
+first entry would create, a later one would update, or skip when its hash matches. A thrown
 `PentarynAbort` means nothing was written: fix the cause and re-run; its `code` (1.1.1) is
 `NOT_FOUND` for a missing file, `NOT_GM`, `BAD_ARGS`, `CONFLICT` (already running), `TIMEOUT`, else
 `REFUSED` (gate, lint, malformed entry, other fetch failures). A thrown
@@ -93,7 +106,7 @@ the first, then retry.
 
 | What | How |
 |---|---|
-| world Actors | created, or **updated in place** — never deleted and recreated (placed tokens hold the id) |
+| world Actors | created (a new one under an `_id` derived from its slug, `importer-AC-2`), or **updated in place** — never deleted and recreated (placed tokens hold the id) |
 | embedded Items | the managed ones (those with `flags.pentaryn.action`) are deleted and recreated; hand-added Items are kept unless `unmanagedItems: "delete"` |
 | `flags.pentaryn.*` | the generator's **contract scope** (slug, contentHash, action, sources … — CONTRACT §9.2), written as ordinary document data. It is not this module's id and is **never migrated**: moving it would change every slug lookup and contentHash (decision D5) |
 | `flags.pentaryn.contentHash` | stamped **last**, after the Items are written and every assertion passed, so an interrupted run is retried |
@@ -138,8 +151,14 @@ number.
 
 Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
 `PentarynAbort` (code `NOT_GM`) and a permanent error toast. A second call on the same tab while one is running is refused with
-`PentarynAbort` (`items-journal-4`); the guard is per tab, so two GM tabs (the MCP bridge tab and a
-browser tab) can still overlap — run imports from one place.
+`PentarynAbort` (`items-journal-4`). That guard is per tab, so two GM tabs (the MCP bridge tab and
+a browser tab) can still overlap; a concurrent create is then refused per slug rather than
+duplicated (`importer-AC-2`): a new actor is created with an `_id` derived from its slug
+(`idForSlug`, `keepId`), so whichever tab comes second gets
+`{ slug, error: "created concurrently by another GM tab — re-run" }` in `failed[]` and goes on with
+the rest. A re-run finds the actor by slug and updates it. Actors already in the world keep their
+random ids and are found by slug as before. Updates from two tabs at once are not guarded — run
+imports from one place.
 
 ## Extending
 

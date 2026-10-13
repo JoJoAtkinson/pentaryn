@@ -5,8 +5,9 @@
  */
 
 import {
-  CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, HOOKS, MODULE, NS, PentarynAbort, PentarynAssertionError,
-  lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload, valuesMatch
+  CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, GATE_KEYS, HOOKS, MODULE, NS, PentarynAbort,
+  PentarynAssertionError, idForSlug, isPlainObject, lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload,
+  valuesMatch
 } from "./importer-core.mjs";
 import {
   TAG, assertItemsAddressable, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
@@ -74,7 +75,7 @@ export async function importActors(options = {}) {
     force = false,
     timeout = DEFAULT_TIMEOUT_MS,
     unmanagedItems = "keep"
-  } = options;
+  } = options ?? {};   // import(null) is import({}) (importer-R3)
 
   if (!game.user?.isGM) {
     const message = "Refusing to import: only a GM can create or update world Actors.";
@@ -82,12 +83,38 @@ export async function importActors(options = {}) {
   }
   // Not re-entrant (items-journal-4): a second call while one is awaiting would read the same stored
   // contentHash and replace the same managed Items. Refused, not queued; per tab (module scope).
+  // Across tabs, a new slug's create is made idempotent instead (importer-AC-2, below).
   if (running) throw new PentarynAbort("An import is already running; await it or reload.", "CONFLICT");
   running = true;
   try {
     return await importOnce({ path, dryRun, only, force, timeout, unmanagedItems });
   } finally {
     running = false;
+  }
+}
+
+/**
+ * `preparePayload`, shouting its refusal once before rethrowing it: a malformed entry is a contract
+ * violation, not a per-actor hiccup.
+ * @param {*} entry  One element of `manifest.actors`.
+ * @returns {ReturnType<typeof preparePayload>}
+ */
+function prepareOrShout(entry) {
+  try {
+    return preparePayload(entry);
+  } catch (cause) {
+    shout(cause.message);
+    throw cause;
+  }
+}
+
+/** A received option value for a BAD_ARGS message: JSON where it is faithful, else String (NaN, undefined). */
+function shown(value) {
+  if (typeof value === "number" || value === undefined) return String(value);
+  try {
+    return JSON.stringify(value) ?? String(value);
+  } catch {
+    return String(value);
   }
 }
 
@@ -100,6 +127,16 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
   if (!["keep", "delete"].includes(unmanagedItems)) {
     throw new PentarynAbort(`unmanagedItems must be "keep" or "delete", got ${JSON.stringify(unmanagedItems)}`, "BAD_ARGS");
   }
+  // importer-R3: the other options are shape-checked the same way — refused before any fetch.
+  if (only != null && !(Array.isArray(only) && only.every(s => typeof s === "string"))) {
+    throw new PentarynAbort(`only must be null or an array of slug strings, got ${shown(only)}`, "BAD_ARGS");
+  }
+  if (typeof timeout !== "number" || !Number.isFinite(timeout) || timeout <= 0) {
+    throw new PentarynAbort(`timeout must be a positive number of milliseconds, got ${shown(timeout)}`, "BAD_ARGS");
+  }
+  if (typeof path !== "string" || path === "") {
+    throw new PentarynAbort(`path must be a non-empty string, got ${shown(path)}`, "BAD_ARGS");
+  }
 
   const url = foundry.utils.getRoute(path);
   log.info(`fetching ${url} (cache: no-cache, timeout ${timeout} ms)`);
@@ -111,6 +148,9 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
   assertVersionGate(manifest);
 
   // 4 ────────────────────────────────────────────────────────────────────────────────────────────
+  // importer-R4: a non-object entry is refused (preparePayload's PentarynAbort) before the lint walks
+  // it — the lint's slug lookup would otherwise throw a bare TypeError on a string entry.
+  for (const entry of manifest.actors) if (!isPlainObject(entry)) prepareOrShout(entry);
   assertNoBadFormulas(manifest.actors);
 
   log.info(
@@ -130,18 +170,14 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
   const ActorClass = getDocumentClass("Actor");
   const bySlug = indexActorsBySlug();
 
-  for (const entry of manifest.actors) {
-    /** @type {ReturnType<typeof preparePayload>} */
-    let prepared;
-    try {
-      prepared = preparePayload(entry);
-    } catch (cause) {
-      // A malformed entry is a contract violation, not a per-actor hiccup.
-      shout(cause.message);
-      throw cause;
-    }
+  // Prepare every entry before the first write (importer-R1): a malformed entry anywhere in the
+  // file refuses the whole run, so a thrown PentarynAbort still means nothing was written.
+  /** @type {ReturnType<typeof preparePayload>[]} */
+  const preparedAll = [];
+  for (const entry of manifest.actors) preparedAll.push(prepareOrShout(entry));
 
-    const { data, items, expected, slug } = prepared;
+  for (const [index, entry] of manifest.actors.entries()) {
+    const { data, items, expected, slug } = preparedAll[index];
     if (onlySet && !onlySet.has(slug)) continue;
     selected++;
 
@@ -164,6 +200,9 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       if (dryRun) {
         (existing ? updated : created).push(slug);
         log.info(`dry-run ${existing ? "would update" : "would create"} ${slug} (${items.length} item(s))`);
+        // importer-EC5: stand in for the hash the real run would stamp, so a later entry with the
+        // same slug reports "would update" (or "skip" on a matching hash), as the real run does.
+        bySlug.set(slug, { flags: { [FLAG_SCOPE]: { contentHash: incomingHash, slug } } });
         continue;
       }
 
@@ -171,12 +210,20 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
       if (actor) {
         // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld.
         await actor.update(toUpdatePayload(data), { render: false });
-        updated.push(slug);
       } else {
-        actor = await ActorClass.create(toCreatePayload(data), { renderSheet: false });
+        // CREATE under the slug's own id (importer-AC-2): another GM tab creating the same slug at the
+        // same moment asks for the same id, and the server refuses whichever comes second.
+        const id = idForSlug(slug);
+        try {
+          actor = await ActorClass.create({ ...toCreatePayload(data), _id: id }, { keepId: true, renderSheet: false });
+        } catch (cause) {
+          if (foundry.utils.getProperty(game.actors.get(id) ?? {}, `flags.${FLAG_SCOPE}.slug`) === slug) {
+            throw new Error("created concurrently by another GM tab — re-run", { cause });
+          }
+          throw cause;
+        }
         if (!actor) throw new Error("Actor.create returned nothing");
         bySlug.set(slug, actor);                 // a later entry with the same slug updates it
-        created.push(slug);
       }
 
       const itemResult = await replaceItems(actor, items, unmanagedItems, slug);
@@ -200,6 +247,9 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
 
       // Only now is the actor allowed to be marked current.
       await stampContentHash(actor, incomingHash);
+      // importer-R6: only a stamped actor counts as created/updated — a failure above lands in
+      // failed[] alone, so each actor has exactly one outcome in the summary.
+      (existing ? updated : created).push(slug);
 
       log.info(
         `${existing ? "update" : "create"} ${slug} — ${itemResult.created} item(s) written, `
@@ -283,11 +333,13 @@ function selftest(ctx) {
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: "game.pentaryn.importer is this API", ok: game.pentaryn?.importer === ctx.api },
     { label: "game.pentaryn.import is importActors", ok: game.pentaryn?.import === importActors },
-    {
-      label: "module.json flags.pentaryn.contract is the contract this code speaks",
-      ok: flags?.contract === CONTRACT_ID,
-      detail: flags?.contract ?? null
-    }
+    // One check per version-gate key (importer-M3): a module.json missing any of them refuses
+    // every import, so selftest must not pass. `contract` must also be the one this code speaks.
+    ...GATE_KEYS.map(key => ({
+      label: `module.json flags.${FLAG_SCOPE}.${key} present`,
+      ok: key === "contract" ? flags?.contract === CONTRACT_ID : flags?.[key] != null,
+      detail: flags?.[key] ?? null
+    }))
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }
