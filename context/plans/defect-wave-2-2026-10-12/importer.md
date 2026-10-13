@@ -52,3 +52,25 @@ One GM tab only; ZZ scratch docs only; delete everything ZZ afterwards. Never to
   "failed <slug>: …" before the table, `game.pentaryn.importer.trace()` lists the slug, the slug
   is not in `updated`, and the GM sees the permanent "1 actor(s) failed" warning, no counts toast.
 - **M4, EC5, AC-1-half** — code only (node suite).
+
+## Live check (FIX-3, 2026-10-13)
+
+Run in the one GM tab against a staged `Data/worlds/pentaryn/zz-importer-actors.json` (deleted
+afterwards, 404 confirmed); every "ZZ importer …" actor deleted. Deployed code matched main.
+
+| item | result | evidence |
+|---|---|---|
+| R1 | pass | entry 2 without slug → `PentarynAbort` REFUSED, one permanent toast, no ZZ actor |
+| R4 | pass | `null` entry → REFUSED "An actor entry is not an object (got null)", one toast, no ZZ actor |
+| EC4 | pass | two items with action `claw` → REFUSED naming `zz-ec4` and `claw`, one toast, no ZZ actor |
+| R3 | pass | `only:'skeleton'` → BAD_ARGS naming `only`, no toast; `timeout:-5` and `path:''` also BAD_ARGS |
+| AC-2 | **fail** | Foundry 14.369 does not refuse a `keepId` create over an existing *world* Actor id: it silently replaces it (no error, no `deleteActor`, new `createdTime`, the pre-created actor's biography wiped). The core server only checks duplicate ids for embedded collections (`m?.has(r._id)` in `server-backend.mjs`). So the import reported `created:['zz-race']`, `failed:[]`; the "created concurrently by another GM tab" branch never runs live. No duplicate results (one actor per id), but the second tab overwrites the first instead of losing. The second half passes: a plain import created `zz-plain` at `idForSlug('zz-plain')`. |
+| M3 | pass | `selftest()` ok:true with the four `flags.pentaryn` gate keys, details = module.json |
+| R5 | pass | loot and container `system.activities === undefined`; weapon has an `ActivityCollection` |
+| R8 / M2-followup | pass | forced create failure (`zz-bad`, blank name): `warn failed zz-bad: …` before `console.table`; `trace()` has `import.failed {slug:'zz-bad'}`; permanent "1 actor(s) failed" warning; no counts toast, no delete toast, `deleteJson.required:false` |
+| R6 | pass (create path) | `zz-bad` only in `failed`, not in created/updated. The item-write-after-update case cannot be forced live (an invalid Item is dropped → readback assertion, whole run) — pinned by the node suite |
+| M4, EC5, AC-1-half | not-run | code only (node suite) |
+
+Also seen (outside this wave): on the **update** path an invalid change (blank name) does not
+throw in Foundry 14 — the client toasts a validation error and the update is dropped — so the
+importer counted the actor `updated` and stamped its new `contentHash`; a re-run would skip it.
