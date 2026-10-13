@@ -202,6 +202,9 @@ async function guardedCascade(character, subject) {
 /**
  * The loop. One planner step at a time, batching everything it decides into two writes.
  * Reports `{ held }` rather than prompting, so the guard can release the claim first.
+ *
+ * M12: the loop only orchestrates — `cascadePlanner` decides the next rung, `rollRung` throws it,
+ * `recordRung` writes what it settled. Each step's rules live with the step.
  */
 async function runCascade(character, subject, release = []) {
   /*
@@ -246,105 +249,21 @@ async function runCascade(character, subject, release = []) {
    */
   const grants = {};
   let held = false;
-
-  /*
-   * Loop invariants, read once (ties-21): the loop writes only beliefs and knowledge, never an
-   * attribute link or the registry. ⚠ The cascade must never link an attribute inside this loop —
-   * if it ever does, move these back in.
-   */
-  const registryNow = reg();
-  const carried = attributeIdsOf(subject, kindActorOf);
-  const rollerCarries = attributeIdsOf(character, kindActorOf);
+  const plan = cascadePlanner(character, subject);
   let guard = 0;
   for (; guard < 24; guard++) {
-    const step = planStep({
-      registry: registryNow,
-      carried,
-      knowledge: knowledge(),
-      beliefs: readFlag(subject, MODULE, BELIEFS_FLAG) ?? {},
-      characterId: character.id,
-      rollerCarries
-    });
+    const step = plan();
     if (step.done) break;
-
-    const attrId = step.roll ?? step.grant;
-    const entry = step.entry;
     const now = Date.now();
-    const hold = holdResolved(entry.hold, holdDefault());
-
     /*
      * AC-3: claim before the first write of ANY kind — a grant writes ledger rows and a grant just
      * as a roll does, so a grant-only rung taken unclaimed was performed by every GM tab.
      */
     if (!(await claim())) break; // another GM session has this pair; roll and write nothing
-
-    let pass = true;
-    let total = null;
-    if (step.roll) {
-      const fact = {
-        skill: entry.skill,
-        dc: identDcOf(subject, attrId, entry),
-        name: entry.title,
-        skillLabel: CONFIG.DND5E?.skills?.[entry.skill]?.label ?? entry.skill,
-        silentRoll: true // chat-less: N rungs must not print N cards
-      };
-      const mode = combineAdvantage(step.advantage ? 1 : 0, 0, stackingRule());
-      const roll = await throwBlind(character, fact, { mode, situational: 0, silent: true });
-      if (!roll) break; // no roll evaluated: spend nothing, exactly as `tierOf`'s null contract
-      total = roll.total;
-      pass = total >= fact.dc;
-    }
-
-    // blank markup is an empty reveal, exactly like "" — never a card of literal `<p></p>`
-    const text = pass && !isBlankProse(String(entry.reveal ?? "")) ? String(entry.reveal) : "";
-    /*
-     * A failure hands over the attribute's written failure line (`miss`), or nothing when it is
-     * empty (Joe, 2026-10-08). It is NOT the ident row's text — that stays "" so every ledger
-     * still reads "not identified" — and it is not filed under the ident key, whose card is titled
-     * with the attribute and shown only once identified. `identMissKey` files it on this
-     * creature's page, titled with the creature, so it reads as what they noticed about them.
-     * Delivered at once, never held: the hold gate parks a pass on its ident row, and a failure
-     * has no row text to park.
-     */
-    const missText = !pass && step.roll && !isBlankProse(String(entry.miss ?? "")) ? String(entry.miss) : "";
-    /*
-     * Only a pass with something to say waits on the GM. A pass with an empty `reveal` has nothing
-     * to deliver, so parking it left it pending for good (Deliver only frees rows with text) —
-     * the same rule `applyStudy` applies to a silent outcome.
-     */
-    const parks = pass && hold && !!text.trim();
-    // the backfill: one roll settles both stages, and a failure closes stage 1 for good
-    if (step.backfill)
-      await setKnowledge([
-        // pending while held: the lock is spent (they rolled) but the answer is not theirs yet
-        { characterId: character.id, attrId, failed: !pass, via: "roll", when: now, pending: parks }
-      ]);
-    else if (step.roll && pass) {
-      /*
-       * They already knew of it only because they were TOLD (a Share's stage-1 row) and have now
-       * rolled it themselves on this creature: the knowledge is theirs, so it stops being a share.
-       * Otherwise forgetting that share later would clear — or turn back into a failure — a stage-1
-       * answer they earned here.
-       */
-      const row = knowledge()[character.id]?.[attrId];
-      if (row?.via === "shared")
-        await setKnowledge([{ characterId: character.id, attrId, failed: false, via: "roll", when: row.when, pending: false }]);
-    }
-    await writeIdentification(subject, character.id, attrId, {
-      text,
-      total,
-      when: now,
-      /*
-       * Only a held PASS with text waits on the GM. A failure, or a pass with no reveal, has
-       * nothing to deliver, and stamping it pending used to leave an empty row in `pending()` that
-       * no Deliver could do anything with.
-       */
-      delivered: parks ? null : now
-    });
-    if (pass && !hold && text.trim()) grants[identifiedKey(attrId)] = { text, when: now, icon: entry.icon, source: entry.title };
-    if (missText.trim()) grants[identMissKey(subject.id, attrId)] = { text: missText, when: now, icon: subject.img ?? null, source: subject.name };
-
-    if (!pass) break; // a failed rung blocks everything beneath it
+    const outcome = await rollRung(character, subject, step);
+    if (!outcome) break; // no roll evaluated: spend nothing, exactly as `tierOf`'s null contract
+    const parks = await recordRung(character, subject, step, outcome, now, grants);
+    if (!outcome.pass) break; // a failed rung blocks everything beneath it
     if (parks) {
       held = true;
       break; // suspends the climb; the GM's Deliver resumes it by calling back in
@@ -354,6 +273,109 @@ async function runCascade(character, subject, release = []) {
   if (guard === 24) log.debug$?.("cascade stopped at its 24-step guard", { characterId: character.id, subjectId: subject.id });
   await commitGrants(character, grants);
   return { held };
+}
+
+/**
+ * PLAN (M12): the cascade's next step, from the live ledgers. → `nextStep()`, one `planStep` per call.
+ *
+ * Loop invariants, read once (ties-21): the loop writes only beliefs and knowledge, never an
+ * attribute link or the registry. ⚠ The cascade must never link an attribute inside its loop —
+ * if it ever does, move these back into the closure.
+ */
+function cascadePlanner(character, subject) {
+  const registry = reg();
+  const carried = attributeIdsOf(subject, kindActorOf);
+  const rollerCarries = attributeIdsOf(character, kindActorOf);
+  const nextStep = () =>
+    planStep({
+      registry,
+      carried,
+      knowledge: knowledge(),
+      beliefs: readFlag(subject, MODULE, BELIEFS_FLAG) ?? {},
+      characterId: character.id,
+      rollerCarries
+    });
+  return nextStep;
+}
+
+/**
+ * ROLL (M12): throw one rung's identification check, blind and chat-less. A grant rung passes
+ * without a roll. → `{ pass, total }`, or `null` when no roll was evaluated.
+ */
+async function rollRung(character, subject, step) {
+  if (!step.roll) return { pass: true, total: null };
+  const entry = step.entry;
+  const fact = {
+    skill: entry.skill,
+    dc: identDcOf(subject, step.roll, entry),
+    name: entry.title,
+    skillLabel: CONFIG.DND5E?.skills?.[entry.skill]?.label ?? entry.skill,
+    silentRoll: true // chat-less: N rungs must not print N cards
+  };
+  const mode = combineAdvantage(step.advantage ? 1 : 0, 0, stackingRule());
+  const roll = await throwBlind(character, fact, { mode, situational: 0, silent: true });
+  if (!roll) return null;
+  return { pass: roll.total >= fact.dc, total: roll.total };
+}
+
+/**
+ * RECORD (M12): write what one rung settled — the stage-1 knowledge row, the identification row on
+ * the subject — and queue its grants for the gesture's single commit. → whether the rung parks
+ * (a held pass with text, waiting on the GM).
+ */
+async function recordRung(character, subject, step, { pass, total }, now, grants) {
+  const attrId = step.roll ?? step.grant;
+  const entry = step.entry;
+  const hold = holdResolved(entry.hold, holdDefault());
+  // blank markup is an empty reveal, exactly like "" — never a card of literal `<p></p>`
+  const text = pass && !isBlankProse(String(entry.reveal ?? "")) ? String(entry.reveal) : "";
+  /*
+   * A failure hands over the attribute's written failure line (`miss`), or nothing when it is
+   * empty (Joe, 2026-10-08). It is NOT the ident row's text — that stays "" so every ledger
+   * still reads "not identified" — and it is not filed under the ident key, whose card is titled
+   * with the attribute and shown only once identified. `identMissKey` files it on this
+   * creature's page, titled with the creature, so it reads as what they noticed about them.
+   * Delivered at once, never held: the hold gate parks a pass on its ident row, and a failure
+   * has no row text to park.
+   */
+  const missText = !pass && step.roll && !isBlankProse(String(entry.miss ?? "")) ? String(entry.miss) : "";
+  /*
+   * Only a pass with something to say waits on the GM. A pass with an empty `reveal` has nothing
+   * to deliver, so parking it left it pending for good (Deliver only frees rows with text) —
+   * the same rule `applyStudy` applies to a silent outcome.
+   */
+  const parks = pass && hold && !!text.trim();
+  // the backfill: one roll settles both stages, and a failure closes stage 1 for good
+  if (step.backfill)
+    await setKnowledge([
+      // pending while held: the lock is spent (they rolled) but the answer is not theirs yet
+      { characterId: character.id, attrId, failed: !pass, via: "roll", when: now, pending: parks }
+    ]);
+  else if (step.roll && pass) {
+    /*
+     * They already knew of it only because they were TOLD (a Share's stage-1 row) and have now
+     * rolled it themselves on this creature: the knowledge is theirs, so it stops being a share.
+     * Otherwise forgetting that share later would clear — or turn back into a failure — a stage-1
+     * answer they earned here.
+     */
+    const row = knowledge()[character.id]?.[attrId];
+    if (row?.via === "shared")
+      await setKnowledge([{ characterId: character.id, attrId, failed: false, via: "roll", when: row.when, pending: false }]);
+  }
+  await writeIdentification(subject, character.id, attrId, {
+    text,
+    total,
+    when: now,
+    /*
+     * Only a held PASS with text waits on the GM. A failure, or a pass with no reveal, has
+     * nothing to deliver, and stamping it pending used to leave an empty row in `pending()` that
+     * no Deliver could do anything with.
+     */
+    delivered: parks ? null : now
+  });
+  if (pass && !hold && text.trim()) grants[identifiedKey(attrId)] = { text, when: now, icon: entry.icon, source: entry.title };
+  if (missText.trim()) grants[identMissKey(subject.id, attrId)] = { text: missText, when: now, icon: subject.img ?? null, source: subject.name };
+  return parks;
 }
 
 /** One identification row, at its own path so nobody else's record is in the payload. */

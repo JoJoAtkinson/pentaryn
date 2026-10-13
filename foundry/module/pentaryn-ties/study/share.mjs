@@ -165,31 +165,61 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
   if (!game.user?.isGM) return { ...out, reason: "notGM" };
   const subject = game.actors?.get(spec?.subjectId);
   if (!subject || !["ident", "attr", "lore", "kind"].includes(spec?.ns)) return { ...out, reason: "invalid" };
-  const fromId = from ? (typeof from === "string" ? from : from.id) : "gm";
-  const fromActor = from && typeof from === "object" ? from : null;
-  const sourceBy = source => (fromActor ? _loc("PENTARYN_TIES.known.share.sourceBy", { source, name: fromActor.name }) : source);
-
   // resolve the fact once; a fact that cannot be said is refused for everyone
-  let entry = null;
-  let fact = null;
-  let text = "";
-  let kindState = null;
-  if (spec.ns === "ident") {
-    if (!attributeIdsOf(subject, kindActorOf).includes(spec.attrId)) return { ...out, reason: "notCarried" };
-    entry = describeAttribute(spec.attrId);
-    text = String(entry.reveal ?? "");
-    // a blank text row reads as NOT carrying, and would block every child beneath it
-    if (isBlankProse(text)) return { ...out, reason: "noText" };
-  } else if (spec.ns === "attr" || spec.ns === "lore") {
-    fact = resolveFact({ ns: spec.ns, subjectId: subject.id, factId: spec.factId, attrId: spec.attrId });
-    if (!fact) return { ...out, reason: "invalid" };
-    text = String(fact.row.text ?? "");
-    if (isBlankProse(text)) return { ...out, reason: "noText" };
-  } else {
-    kindState = studyStateFor(null, subject);
-    if (!kindState.kind || !kindState.content) return { ...out, reason: "noText" };
-  }
+  const said = resolveShared(spec, subject);
+  if (said.reason) return { ...out, reason: said.reason };
+  const { pcs, priorFor } = shareRecipients(spec, recipients, out);
+  if (!pcs.length) return { ...out, ok: true };
+  const ctx = { spec, subject, pcs, priorFor, out, ...said, ...tellerOf(from), now: Date.now() };
+  await (spec.ns === "ident" ? shareIdent(ctx) : said.fact ? shareLore(ctx) : shareKind(ctx));
+  if (notify) for (const id of out.shared) await whisperShare(game.actors.get(id), subject);
+  return { ...out, ok: true };
+}
 
+/**
+ * Who is telling (M12): `from` is a character, a character id string (rob-6), or null for the GM.
+ * → `{ fromId, fromActor, sourceBy }` — `sourceBy` credits a teller on the grant's source line.
+ */
+function tellerOf(from) {
+  const fromActor = from && typeof from === "object" ? from : null;
+  return {
+    fromId: from ? (typeof from === "string" ? from : from.id) : "gm",
+    fromActor,
+    sourceBy: source => (fromActor ? _loc("PENTARYN_TIES.known.share.sourceBy", { source, name: fromActor.name }) : source)
+  };
+}
+
+/**
+ * RESOLVE (M12): what a Share would say, once for every recipient.
+ * → `{ entry, fact, text, kindState }`, or `{ reason }` when the fact cannot be said
+ * (`notCarried` | `noText` | `invalid`).
+ */
+function resolveShared(spec, subject) {
+  if (spec.ns === "ident") {
+    if (!attributeIdsOf(subject, kindActorOf).includes(spec.attrId)) return { reason: "notCarried" };
+    const entry = describeAttribute(spec.attrId);
+    const text = String(entry.reveal ?? "");
+    // a blank text row reads as NOT carrying, and would block every child beneath it
+    if (isBlankProse(text)) return { reason: "noText" };
+    return { entry, fact: null, text, kindState: null };
+  }
+  if (spec.ns === "attr" || spec.ns === "lore") {
+    const fact = resolveFact({ ns: spec.ns, subjectId: subject.id, factId: spec.factId, attrId: spec.attrId });
+    if (!fact) return { reason: "invalid" };
+    const text = String(fact.row.text ?? "");
+    if (isBlankProse(text)) return { reason: "noText" };
+    return { entry: null, fact, text, kindState: null };
+  }
+  const kindState = studyStateFor(null, subject);
+  if (!kindState.kind || !kindState.content) return { reason: "noText" };
+  return { entry: null, fact: null, text: "", kindState };
+}
+
+/**
+ * SELECT (M12): who this Share reaches. Skips are pushed onto `out.skipped` (`held`, `knows`).
+ * → `{ pcs, priorFor }` — `priorFor` maps a recipient to the row the share replaces.
+ */
+function shareRecipients(spec, recipients, out) {
   const pcs = [];
   const priorFor = new Map();
   for (const pc of recipients ?? []) {
@@ -220,86 +250,89 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
       }
     }
   }
-  if (!pcs.length) return { ...out, ok: true };
-  const now = Date.now();
+  return { pcs, priorFor };
+}
 
-  if (spec.ns === "ident") {
-    const attrId = spec.attrId;
-    const know = knowledge();
-    const rows = pcs
-      .map(pc => {
-        const row = know[pc.id]?.[attrId];
-        /*
-         * A stage-1 row still PENDING (a pass held on another creature) is known to the planner
-         * but hidden from the player's world list — so the reveal this share files would show on
-         * the Known tab while the attribute itself stayed invisible. Release it, keeping its
-         * `via`: it was rolled, and a Forget must not delete it (`clearKnowledge` is shared-only).
-         */
-        if (row && row.failed === false && row.pending)
-          return { characterId: pc.id, attrId, failed: false, via: row.via, when: row.when, pending: false };
-        if (knowsAttribute(know, pc.id, attrId)) return null;
-        return {
-          characterId: pc.id,
-          attrId,
-          failed: false,
-          via: "shared",
-          when: now,
-          pending: false,
-          overFailed: failedAttribute(know, pc.id, attrId)
-        };
-      })
-      .filter(Boolean);
-    if (rows.length) await setKnowledge(rows); // one call: the setting is rewritten whole
-    // AC-5: every recipient's row in ONE subject update, every recipient's grant in ONE batch
-    await subject.update(
-      identificationRows(
-        pcs.map(pc => [pc.id, attrId, { text, total: null, when: now, delivered: now, from: fromId, prior: priorFor.get(pc.id) ?? null }])
-      ),
-      { render: false }
-    );
-    const grants = pcs.map(pc => {
-      const granted = readGranted(readFlag(pc, MODULE, GRANTED_FLAG));
-      granted[identifiedKey(attrId)] = {
-        text: text.slice(0, GRANTED_TEXT_MAX),
+/** WRITE (M12), ident: stage-1 knowledge, the identification rows and the reveal grants. */
+async function shareIdent({ spec, subject, pcs, priorFor, out, entry, text, fromId, sourceBy, now }) {
+  const attrId = spec.attrId;
+  const know = knowledge();
+  const rows = pcs
+    .map(pc => {
+      const row = know[pc.id]?.[attrId];
+      /*
+       * A stage-1 row still PENDING (a pass held on another creature) is known to the planner
+       * but hidden from the player's world list — so the reveal this share files would show on
+       * the Known tab while the attribute itself stayed invisible. Release it, keeping its
+       * `via`: it was rolled, and a Forget must not delete it (`clearKnowledge` is shared-only).
+       */
+      if (row && row.failed === false && row.pending)
+        return { characterId: pc.id, attrId, failed: false, via: row.via, when: row.when, pending: false };
+      if (knowsAttribute(know, pc.id, attrId)) return null;
+      return {
+        characterId: pc.id,
+        attrId,
+        failed: false,
+        via: "shared",
         when: now,
-        icon: entry.icon,
-        source: sourceBy(entry.title)
+        pending: false,
+        overFailed: failedAttribute(know, pc.id, attrId)
       };
-      return { _id: pc.id, [`flags.${MODULE}.${KNOWN_FLAG}`]: knownListWith(pc, subject, now), [`flags.${MODULE}.${GRANTED_FLAG}`]: granted };
-    });
-    await Actor.implementation.updateDocuments(grants); // by id: the world actor, where ties data lives
-    out.shared.push(...pcs.map(pc => pc.id));
-  } else if (fact) {
-    // a SECRET attribute's lore renders under this creature only once they have placed him in it
-    // (`visibleAttributesFor`) — written all the same, but the GM is told where it will show
-    const secret = spec.ns === "attr" && !!reg().find(e => e.id === spec.attrId)?.secret;
-    for (const pc of pcs) {
-      if (secret && !identifiedState(readFlag(subject, MODULE, BELIEFS_FLAG) ?? {}, pc.id, spec.attrId).carries) out.unseen.push(pc.id);
-      await putBelief(fact, pc.id, {
-        text,
-        tier: null,
-        total: null,
-        when: now,
-        delivered: now,
-        from: fromId,
-        prior: priorFor.get(pc.id) ?? null
-      });
-      await applyPlayerWrites(pc, fact, { text, silent: false, tier: null, source: sourceBy(fact.name) }, now);
-      out.shared.push(pc.id);
-    }
-  } else {
-    // perf-4: a Share is the GM telling the table one thing — compose the tier-25 page once, so
-    // every recipient gets the same words (an inline roll in it resolves once, not per recipient)
-    const page = await composeStudyPayload(kindState.kind, 25, kindState.skillLabel);
-    for (const pc of pcs) {
-      if (await grantKind(pc, subject, 25, { from: fromActor ?? "gm", quiet: true, prior: priorFor.get(pc.id) ?? null, text: page }))
-        out.shared.push(pc.id);
-      else out.skipped.push({ pcId: pc.id, reason: "knows" });
-    }
-  }
+    })
+    .filter(Boolean);
+  if (rows.length) await setKnowledge(rows); // one call: the setting is rewritten whole
+  // AC-5: every recipient's row in ONE subject update, every recipient's grant in ONE batch
+  await subject.update(
+    identificationRows(
+      pcs.map(pc => [pc.id, attrId, { text, total: null, when: now, delivered: now, from: fromId, prior: priorFor.get(pc.id) ?? null }])
+    ),
+    { render: false }
+  );
+  const grants = pcs.map(pc => {
+    const granted = readGranted(readFlag(pc, MODULE, GRANTED_FLAG));
+    granted[identifiedKey(attrId)] = {
+      text: text.slice(0, GRANTED_TEXT_MAX),
+      when: now,
+      icon: entry.icon,
+      source: sourceBy(entry.title)
+    };
+    return { _id: pc.id, [`flags.${MODULE}.${KNOWN_FLAG}`]: knownListWith(pc, subject, now), [`flags.${MODULE}.${GRANTED_FLAG}`]: granted };
+  });
+  await Actor.implementation.updateDocuments(grants); // by id: the world actor, where ties data lives
+  out.shared.push(...pcs.map(pc => pc.id));
+}
 
-  if (notify) for (const id of out.shared) await whisperShare(game.actors.get(id), subject);
-  return { ...out, ok: true };
+/** WRITE (M12), attr or lore: one belief row and the player's Known writes per recipient. */
+async function shareLore({ spec, subject, pcs, priorFor, out, fact, text, fromId, sourceBy, now }) {
+  // a SECRET attribute's lore renders under this creature only once they have placed him in it
+  // (`visibleAttributesFor`) — written all the same, but the GM is told where it will show
+  const secret = spec.ns === "attr" && !!reg().find(e => e.id === spec.attrId)?.secret;
+  for (const pc of pcs) {
+    if (secret && !identifiedState(readFlag(subject, MODULE, BELIEFS_FLAG) ?? {}, pc.id, spec.attrId).carries) out.unseen.push(pc.id);
+    await putBelief(fact, pc.id, {
+      text,
+      tier: null,
+      total: null,
+      when: now,
+      delivered: now,
+      from: fromId,
+      prior: priorFor.get(pc.id) ?? null
+    });
+    await applyPlayerWrites(pc, fact, { text, silent: false, tier: null, source: sourceBy(fact.name) }, now);
+    out.shared.push(pc.id);
+  }
+}
+
+/** WRITE (M12), kind: the tier-25 study page for each recipient. */
+async function shareKind({ subject, pcs, priorFor, out, kindState, fromActor }) {
+  // perf-4: a Share is the GM telling the table one thing — compose the tier-25 page once, so
+  // every recipient gets the same words (an inline roll in it resolves once, not per recipient)
+  const page = await composeStudyPayload(kindState.kind, 25, kindState.skillLabel);
+  for (const pc of pcs) {
+    if (await grantKind(pc, subject, 25, { from: fromActor ?? "gm", quiet: true, prior: priorFor.get(pc.id) ?? null, text: page }))
+      out.shared.push(pc.id);
+    else out.skipped.push({ pcId: pc.id, reason: "knows" });
+  }
 }
 
 /**

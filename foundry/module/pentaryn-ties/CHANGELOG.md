@@ -26,6 +26,11 @@ Added: `inspect(ref, { as })` (the dossier), `selftest()`, `attributes.effective
 (with the kind pointer), `attributes.tree/branch/describeId`, `study.factStatus/shareFact/forgetFact`,
 `study.identified`.
 
+Changed (declared, no table-visible change): `runCascade` is split into its plan / roll / record steps
+(`cascadePlanner`, `rollRung`, `recordRung`) and `shareFact` into resolve, select recipients, and one
+writer per namespace (`resolveShared`, `shareRecipients`, `shareIdent`, `shareLore`, `shareKind`). The
+cascade and share goldens are byte-identical. M12.
+
 Fixed (declared): a player's **Remove** on the Ties tab now removes the tie in both directions, as its
 confirm says — the active GM's client removes the NPC's row back (relay action `remove-reverse`; the
 sender must own their character and have removed their own side). ties-ui-E3.
