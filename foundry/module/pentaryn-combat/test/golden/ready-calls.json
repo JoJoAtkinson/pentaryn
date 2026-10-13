@@ -37,29 +37,30 @@
   ],
   "afterTick": [
     {
-      "op": "Hooks.call",
-      "name": "preUpdateActor"
-    },
-    {
-      "op": "update",
-      "documentName": "Actor",
-      "uuid": "Actor.fighter000000001",
-      "changes": {
-        "flags.enhancedcombathud.weaponSets": {
-          "1": {
-            "primary": "Actor.fighter000000001.Item.longsword0000001",
-            "secondary": "Actor.fighter000000001.Item.dagger0000000001"
-          },
-          "2": {
-            "primary": "Actor.fighter000000001.Item.shortbow00000001",
-            "secondary": null
-          },
-          "3": {
-            "primary": null,
-            "secondary": null
+      "op": "Actor.updateDocuments",
+      "updates": [
+        {
+          "_id": "fighter000000001",
+          "flags.enhancedcombathud.weaponSets": {
+            "1": {
+              "primary": "Actor.fighter000000001.Item.longsword0000001",
+              "secondary": "Actor.fighter000000001.Item.dagger0000000001"
+            },
+            "2": {
+              "primary": "Actor.fighter000000001.Item.shortbow00000001",
+              "secondary": null
+            },
+            "3": {
+              "primary": null,
+              "secondary": null
+            }
           }
         }
-      }
+      ]
+    },
+    {
+      "op": "Hooks.call",
+      "name": "preUpdateActor"
     },
     {
       "op": "Hooks.callAll",

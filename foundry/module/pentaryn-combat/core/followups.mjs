@@ -20,7 +20,7 @@ import { lightTrigger, nickCapable, offhandCapable, partnerWeapon } from "./weap
  * @param {string|null} [p.unarmedId]
  * @param {boolean} [p.isOwnTurn=true]
  * @param {string|null} [p.poleStrikeId]  the Polearm Master item (its Pole Strike attack), if any
- * @returns {{kind: string, weaponId?: string, count?: number, free?: boolean}[]}
+ * @returns {{kind: string, weaponId?: string, count?: number, free?: boolean, disabled?: "focus"}[]}
  */
 export function followUps({ turn, weapons = [], features = [], enhancedDualWielding = false, bonusFree = true,
   focus = null, unarmedId = null, isOwnTurn = true, poleStrikeId = null } = {}) {
@@ -55,8 +55,12 @@ export function followUps({ turn, weapons = [], features = [], enhancedDualWield
 
   if (bonusOk && unarmedId) {
     // 2024 Monk: neither needs the Attack action first.
-    if (feats.has("monks-focus") && (focus ?? 0) >= 1 && !t.followUps.includes("flurry")) {
-      out.push({ kind: "flurry", weaponId: unarmedId, count: feats.has("heightened-focus") ? 3 : 2 });
+    // No Focus left: Flurry stays on the bar greyed with its reason (usability area 3, C3) — until
+    // Martial Arts takes the Bonus Action, when it closes like the live one (combat-core-EXT-12).
+    if (feats.has("monks-focus") && !t.followUps.includes("flurry")) {
+      const count = feats.has("heightened-focus") ? 3 : 2;
+      if ((focus ?? 0) >= 1) out.push({ kind: "flurry", weaponId: unarmedId, count });
+      else if (!t.followUps.includes("martial-arts")) out.push({ kind: "flurry", weaponId: unarmedId, count, disabled: "focus" });
     }
     if (feats.has("martial-arts") && !t.followUps.includes("martial-arts") && !t.followUps.includes("flurry")) {
       out.push({ kind: "martial-arts", weaponId: unarmedId, count: 1 });

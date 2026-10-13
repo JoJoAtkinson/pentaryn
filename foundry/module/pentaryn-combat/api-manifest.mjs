@@ -5,19 +5,20 @@
  *
  * The 22 legacy members keep their signatures and their order (`legacy: true`). Since S11 (declared
  * D-c2) the twelve that take an actor resolve it themselves (api.mjs legacyActor): an Actor, Token,
- * UUID, id or exact name; a miss answers null. Their first param is still named `actor`, so
+ * UUID, id or exact name; a miss answers null. abort (combat-core-ROB-2) resolves the same way, its
+ * actor optional: omitted aborts whatever is running, a miss aborts nothing. Their first param is still named `actor`, so
  * buildApi's own `ref` resolution (which throws) does not apply. The runner
  * (sequence.mjs), the riders (turn-riders.mjs) and the weapon-set seed (offhand.mjs) contribute their
  * implementations from install(); the API never imports a feature. `core` is the pure core, published
  * as a frozen copy (`unlisted`). The new reads take a `ref` (Actor, Token, UUID, id or exact name).
  */
 
-import { CONTRACT, MODULE, NS, VERSION } from "./combat-core.mjs";
+import { CONTRACT, MODULE, NS, TURN_RIDERS, VERSION } from "./combat-core.mjs";   // the pure core, so the manifest stays node-importable
 
 const ACTOR = { name: "actor", type: "Actor|Token|uuid|id|exact name", resolve: false, doc: "resolved by the member itself (never a substring); a miss answers null" };
 const WEAPON = { name: "weaponId", type: "string", optional: true, doc: "an item id; default: the remembered weapon, else the active set's primary, else the first equipped melee weapon" };
 const REF = { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring" };
-const RIDER = { name: "key", type: '"sneak-attack"|"frenzy"|"colossus-slayer"|"divine-strike"' };
+const RIDER = { name: "key", type: TURN_RIDERS.map(r => JSON.stringify(r.key)).join("|") };   // a new TURN_RIDERS row reaches describe() by itself
 
 const TURN = "flags.pentaryn-combat.turn";
 
@@ -59,7 +60,7 @@ export const MANIFEST = Object.freeze({
       sideEffects: ["ActiveEffect (Reckless, flags.pentaryn-combat.reckless)"], doc: "Turn Reckless Attack on (the item's own effect plus Advantage on Strength attacks) or off." },
     { path: "running", params: [], returns: "{ actor, state, … } | null", gm: false, writes: false, legacy: true, nullWhen: "no sequence is running on this client",
       doc: "The sequence running on this client (live object; read only)." },
-    { path: "abort", params: [{ name: "actor", type: "Actor", optional: true, resolve: false }], returns: "void", gm: false, writes: false, legacy: true,
+    { path: "abort", params: [{ ...ACTOR, optional: true, doc: "resolved by the member itself (never a substring); omitted: whatever is running; a miss aborts nothing" }], returns: "void", gm: false, writes: false, legacy: true,
       doc: "Stop the running sequence (of that actor, or any)." },
     /* per-user choices */
     { path: "quick", params: [], returns: "boolean", gm: false, writes: false, legacy: true, doc: "This user's quick mode (swings after the first skip the dialog)." },

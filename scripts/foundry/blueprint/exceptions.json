@@ -2,20 +2,12 @@
   "doc": "Strict-gate exceptions (migration Stage 5 step 2, README §7 W3). Since 2026-10-12 the vendor and conformance gates FAIL every module (make foundry-<m>-check, make foundry-modules-check). The only way a failing fail-class rule passes the gate is a row here: module id → rule id → {reason, decision, until, match}. `match` lists regexes (re.search) for the findings the decision covers: a failing finding no pattern matches blocks the gate, so a row never accepts a later, unreviewed finding of the same rule. Every row names the decision that accepted it (an Open-for-Joe row with Joe's decision, or a parked step) and what retires it. The gate also FAILS on a stale row — a listed rule that no longer fails — so this list cannot outlive its reason: when the work in `until` lands, delete the row in the same commit. Never add a row to make a red gate green without a decision to cite; fix the module instead. The vendor gate has no exceptions.",
   "modules": {
     "pentaryn-combat": {
-      "C21": {
-        "reason": "turn-riders.mjs reads pentaryn-aoe.autoDamageOnHit with game.settings.get: aoe's kit settings() is only published at ready, and Foundry renders the chat log before ready, so the C23-clean read would show a per-swing Damage button on every card rendered at load",
-        "decision": "W4-C3 (wave-4-report.md): Joe 2026-10-12 keep — C21/C23 a documented exception",
+      "C23": {
+        "reason": "settings.mjs aoeAutoDamage() reads pentaryn-aoe.autoDamageOnHit with game.settings.get (the one reader, combat-core-M6): aoe's kit settings() is only published at ready, and Foundry renders the chat log before ready, so reading through it would show a per-swing Damage button on every card rendered at load",
+        "decision": "W4-C3 (wave-4-report.md): Joe 2026-10-12 keep — a documented exception",
         "until": "aoe publishes a pre-ready settings read (or an event) combat can use",
         "match": [
-          "^turn-riders\\.mjs:\\d+$"
-        ]
-      },
-      "C23": {
-        "reason": "same read as C21: combat reads another module's (pentaryn-aoe) setting directly",
-        "decision": "W4-C3 (wave-4-report.md): Joe 2026-10-12 keep",
-        "until": "as C21",
-        "match": [
-          "^turn-riders\\.mjs:\\d+ reads pentaryn-aoe$"
+          "^settings\\.mjs:\\d+ reads pentaryn-aoe$"
         ]
       }
     },

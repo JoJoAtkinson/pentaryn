@@ -21,3 +21,15 @@ test("no numeric literal as a setTimeout / debounce delay outside core/timing.mj
     .filter(h => h.file !== "core/timing.mjs").map(h => `${h.file}:${h.line}`);
   assert.deepEqual(hits, []);
 });
+
+test("combat-core-M5: sequence.mjs names its expect-TTL and damage-settle heuristics (values unchanged)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../sequence.mjs", import.meta.url), "utf8");
+  const named = { EXPECT_TTL_MS: 120000, DAMAGE_WAIT_MS: 120000, IDLE_POLLS: 4, IDLE_MIN_MS: 600 };
+  for (const [name, value] of Object.entries(named)) {
+    assert.match(src, new RegExp(`^const ${name} = ${value};`, "m"), `${name} = ${value} declared in sequence.mjs`);
+  }
+  const code = src.split("\n").filter(l => !/^const (EXPECT_TTL_MS|DAMAGE_WAIT_MS|IDLE_POLLS|IDLE_MIN_MS) =/.test(l)).join("\n");
+  assert.doesNotMatch(code, /\b120000\b/, "no bare 120000 left in sequence.mjs");
+  assert.doesNotMatch(code, /idle\s*>=\s*\d|>\s*600\b/, "the settle loop's idle heuristics use the named constants");
+});

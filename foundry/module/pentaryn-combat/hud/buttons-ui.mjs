@@ -12,7 +12,7 @@
 
 import * as core from "../combat-core.mjs";
 import { setting } from "../settings.mjs";
-import { weaponsOf, countFor, combatContext, turnOf, attackActivityOf, setPrimaryId, chosenWeapon, damageLabel, fullAttackPlanOf, multiattackFor, rememberedWeapon, rememberWeapon } from "../shapes.mjs";
+import { weaponsOf, countFor, combatContext, turnOf, attackActivityOf, setPrimaryId, chosenWeapon, damageLabel, fullAttackPlanOf, multiattackFor, rememberedWeapon, rememberWeapon, enhancedDualWieldingOf } from "../shapes.mjs";
 import { bindTooltipLeave, dropTooltip, paintBadge, refreshOwnTooltip } from "../argon.mjs";
 import { runSwings, runFollowUp, running } from "../sequence.mjs";
 import { pickWeapon } from "../strip.mjs";
@@ -49,7 +49,7 @@ export function fullAttackState(actor) {
   const plan = fullAttackPlanOf(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
   const weapons = weaponsOf(actor);
   const nick = !ma && weaponId ? core.extraSwings({ main: weapons.find(w => w.id === weaponId), weapons, turn,
-    enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") }).length : 0;
+    enhancedDualWielding: enhancedDualWieldingOf(actor) }).length : 0;
   // The pips count the Attack action's swings with any weapon: a Loading crossbow alone gives 1, but
   // a Fighter 5 holding one still has a second swing to make with something else.
   const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null, on));

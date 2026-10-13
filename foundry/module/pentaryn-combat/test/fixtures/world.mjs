@@ -12,6 +12,8 @@
  *    `dnd5e.preRollDamageV2` → `dnd5e.rollDamageV2`) and post chat messages; each is scripted per
  *    activity (`act.script.use / attack / damage`, arrays consumed in order; `null` = cancelled).
  *  - `game.user.targets` is a Set with `first()`; `canvas.tokens.setTargets` replaces it.
+ *  - `Actor.updateDocuments(updates)` logs ONE `{op: "Actor.updateDocuments", updates}` record, then
+ *    applies each `{ _id, ...changes }` with the per-document pre/update hooks (no per-actor "update").
  */
 
 import { readFileSync } from "node:fs";
@@ -115,8 +117,26 @@ export async function setupWorld({ gm = true, aoe = false, aoeAutoDamage = false
     getSpeaker: ({ actor } = {}) => ({ actor: actor?.id ?? null, alias: actor?.name ?? null }),
   };
   const def = (k, v) => Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
+  // Actor.updateDocuments: one batch write, logged once (op "Actor.updateDocuments"); each document
+  // is then updated through its own update so the per-document pre/update hooks fire as Foundry's do.
+  const Actor = {
+    async updateDocuments(updates = [], options = {}) {
+      F.calls.push({ op: "Actor.updateDocuments", updates: F.plain(updates) });
+      const out = [];
+      for (const { _id, ...changes } of updates) {
+        const a = F.game.actors.get(_id);
+        if (!a) continue;
+        const at = F.calls.length;
+        await a.update(changes, options);
+        F.calls.splice(at, F.calls.length - at, ...F.calls.slice(at).filter(c => c.op !== "update"));
+        out.push(a);
+      }
+      return out;
+    },
+  };
   def("Roll", Roll);
   def("ChatMessage", ChatMessage);
+  def("Actor", Actor);
   F.CONFIG.Dice = { D20Roll: { ADV_MODE: { NORMAL: 0, ADVANTAGE: 1, DISADVANTAGE: -1 } } };
   F.CONFIG.DND5E = {
     conditionTypes: { prone: { reference: "Compendium.dnd5e.rules.JournalEntry.c.JournalEntryPage.prone" } },
@@ -440,7 +460,7 @@ export function makeToken(actor, { id, x = 0, y = 0, width = 1, disposition = 1,
   const { F, placeables } = W;
   const tid = id ?? `tok${actor.id}`.slice(0, 16);
   const sc = scene ?? F.canvas.scene;
-  const document = { id: tid, uuid: `Scene.${sc?.id}.Token.${tid}`, disposition, hidden, width, parent: sc, flags: {}, actor };
+  const document = { documentName: "Token", id: tid, uuid: `Scene.${sc?.id}.Token.${tid}`, actorId: actor.id, disposition, hidden, width, parent: sc, flags: {}, actor };
   const t = {
     id: tid, name: actor.name, actor, document, scene: sc,
     center: { x: x * 100 + 50, y: y * 100 + 50 },

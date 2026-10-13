@@ -25,3 +25,11 @@ test("every top-level .mjs and both entries are under Files; at most 250 lines; 
   assert.ok(readme.trimEnd().split("\n").length <= 250, String(readme.trimEnd().split("\n").length));
   assert.equal(/\b\d+\s+(fixtures|cases|checks|assertions)\b/.test(readme), false);
 });
+
+test("combat-core-M14: per-player paragraph appears once; Data written turn shape names every manifest turn key", () => {
+  assert.equal(readme.split("Per player (user flags, not settings)").length - 1, 1);
+  const row = readme.split("\n").find(l => l.includes("`flags.pentaryn-combat.turn`"));
+  const shape = row.match(/`\{attackAction[^}]*\}`/)?.[0] ?? "";
+  const keys = MANIFEST.rows.find(r => r.path === "turn").returns.replace(/[{}\s]/g, "").split(",").filter(k => k !== "key");
+  for (const k of keys) assert.ok(shape.includes(k), k);
+});

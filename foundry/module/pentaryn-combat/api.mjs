@@ -102,14 +102,17 @@ function selftest(ctx) {
  * default); a miss, a bad ref or nothing at all answers null (a Promise of null for an async
  * member) instead of throwing a TypeError. The row stays `legacy: true`. The set is read from the
  * manifest (every legacy row whose first param is the self-resolving ACTOR), so a new row cannot miss it.
+ * An optional actor (abort, combat-core-ROB-2) omitted calls the member with null ("any"); a ref
+ * that resolves to nothing still answers null without calling it.
  */
-const ACTOR_ROWS = new Set(MANIFEST.rows
+const ACTOR_ROWS = new Map(MANIFEST.rows
   .filter(r => r.legacy && r.params?.[0]?.type === "Actor|Token|uuid|id|exact name" && r.params[0].resolve === false)
-  .map(r => r.path));
+  .map(r => [r.path, { optional: r.params[0].optional === true }]));
 
-function legacyActor(fn) {
+function legacyActor(fn, { optional = false } = {}) {
   const async = fn.constructor?.name === "AsyncFunction";
   const wrapped = (ref, ...rest) => {
+    if (optional && (ref === undefined || ref === null)) return fn(null, ...rest);
     let actor = null;
     try {
       actor = resolveRef(ref, "actor", { required: false });
@@ -123,7 +126,7 @@ function legacyActor(fn) {
   return wrapped;
 }
 
-const refRows = impl => Object.fromEntries(Object.entries(impl ?? {}).map(([k, fn]) => [k, ACTOR_ROWS.has(k) ? legacyActor(fn) : fn]));
+const refRows = impl => Object.fromEntries(Object.entries(impl ?? {}).map(([k, fn]) => [k, ACTOR_ROWS.has(k) ? legacyActor(fn, ACTOR_ROWS.get(k)) : fn]));
 
 /** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */
 export function buildApiFor(ctx) {

@@ -55,14 +55,18 @@ function guardScrollingText() {
     // burst, at PIXI's `set y` ← CanvasAnimation#updateAttribute. A floating text that started while
     // the tab was visible was still waiting (the tab went to the background) when a scene change
     // destroyed it; each waiting animation then set y on the destroyed text (its transform is null)
-    // and core logged the error. Setting x/y on a destroyed PreciseText is now a no-op.
+    // and core logged the error. Setting x/y on a destroyed PreciseText is now a no-op (reading it gives
+// 0). With the setting Off both the getter and the setter are core's own (combat-core-EC-7).
     if (P && !Object.hasOwn(P.prototype, "y")) {
       for (const axis of ["x", "y"]) {
         const d = protoDescriptor(P.prototype, axis);
         if (!d?.set || !d?.get) continue;
         handles.push(defineAccessor(MODULE, P.prototype, axis, {
           configurable: true, enumerable: d.enumerable,
-          get() { return this.transform ? d.get.call(this) : 0; },
+          get() {
+            if (!this.transform && setting("scrollingTextGuard")) return 0;
+            return d.get.call(this);
+          },
           set(v) {
             if (!this.transform && setting("scrollingTextGuard")) return;
             d.set.call(this, v);

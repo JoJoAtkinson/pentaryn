@@ -25,7 +25,11 @@ const ADDED_S8 = ["areaPlacementSkipped", "fullAttackPlanFrom"];
 const ADDED_29 = ["pruneOlder"];
 // §4 combat-riders-37's named timer delays.
 const ADDED_37 = ["DELAYS"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37];
+// combat-core-EXT-11's shared lists: the Attack action's swing kinds and the five movement keys.
+const ADDED_EXT11 = ["ATTACK_ACTION_KINDS", "MOVEMENT_KEYS"];
+// combat-core-EXT-13's Argon package id, written once (settings.mjs re-exports it).
+const ADDED_EXT13 = ["ARGON"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();
@@ -38,7 +42,7 @@ test("export surface (golden/core-exports.json): 81 names", () => {
 
 test("object exports are frozen tables, rows and arrays included", () => {
   const objects = Object.entries(core).filter(([, v]) => v && typeof v === "object");
-  assert.deepEqual(objects.map(([k]) => k).sort(), ["DELAYS", "HOOKS", "I18N_KEYS", "RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
+  assert.deepEqual(objects.map(([k]) => k).sort(), ["ATTACK_ACTION_KINDS", "DELAYS", "HOOKS", "I18N_KEYS", "MOVEMENT_KEYS", "RECKLESS_CHANGE", "SPECIAL_ACTIONS", "TURN_RIDERS"]);
   const deepFrozen = v => !v || typeof v !== "object" || (Object.isFrozen(v) && Object.values(v).every(deepFrozen));
   for (const [k, v] of objects) assert.ok(deepFrozen(v), k);
 });
@@ -88,4 +92,24 @@ test("tidyDiceCount: a resolver that throws leaves the part alone", () => {
   assert.equal(core.tidyDiceCount("(@scale.barbarian.rage-damage)d6", () => { throw new Error("x"); }), "(@scale.barbarian.rage-damage)d6");
   assert.equal(core.tidyDiceCount("(@scale.barbarian.rage-damage)d6", () => "2"), "2d6");
   assert.equal(core.tidyDiceCount(7), 7);
+});
+
+test("combat-core-EXT-12: core.followUps greys Flurry itself when no Focus is left; the strike count lives in core once", () => {
+  const turn = core.freshTurn("c1:1:cb1");
+  const monk = { turn, features: ["monks-focus", "martial-arts"], focus: 0, unarmedId: "unarmed" };
+  assert.deepEqual(core.followUps(monk), [
+    { kind: "flurry", weaponId: "unarmed", count: 2, disabled: "focus" },
+    { kind: "martial-arts", weaponId: "unarmed", count: 1 },
+  ]);
+  assert.deepEqual(core.followUps({ ...monk, features: ["monks-focus", "heightened-focus"], focus: null }),
+    [{ kind: "flurry", weaponId: "unarmed", count: 3, disabled: "focus" }], "no Focus pool, Heightened Focus: 3, greyed");
+  assert.deepEqual(core.followUps({ ...monk, focus: 1 })[0], { kind: "flurry", weaponId: "unarmed", count: 2 }, "Focus left: live");
+  // Not greyed-offered when the live one would not be: off-turn, Bonus spent, no Unarmed Strike, Martial Arts or Flurry used.
+  assert.deepEqual(core.followUps({ ...monk, isOwnTurn: false }), []);
+  assert.deepEqual(core.followUps({ ...monk, bonusFree: false }), []);
+  assert.deepEqual(core.followUps({ ...monk, turn: { ...turn, bonusUsed: true } }), []);
+  assert.deepEqual(core.followUps({ ...monk, unarmedId: null }), []);
+  assert.deepEqual(core.followUps({ ...monk, turn: core.recordFollowUp(turn, "martial-arts") }), []);
+  assert.deepEqual(core.followUps({ ...monk, turn: core.recordFollowUp(turn, "flurry") }), []);
+  assert.deepEqual(core.followUps({ ...monk, features: ["martial-arts"] }).map(f => f.kind), ["martial-arts"], "no Monk's Focus: no Flurry at all");
 });

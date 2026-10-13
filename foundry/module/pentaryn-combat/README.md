@@ -95,9 +95,6 @@ target itself, so it works either way.
 Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's
 checkbox) and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
 
-Per player (user flags, not settings): **Quick** (`flags.pentaryn-combat.quick`, the strip's checkbox)
-and **rider Ask/Auto** (`flags.pentaryn-combat.riders.<key>`, the Special-bar toggle).
-
 ## API — game.pentaryn.combat
 
 Built from `api-manifest.mjs` by the kit, frozen, published at `ready` (`game.modules.get("pentaryn-combat").api`
@@ -123,7 +120,8 @@ is canonical; `game.pentaryn.combat` the alias; `pentaryn-combat.ready` fires). 
 | `core` | a frozen copy of the pure core |
 
 The legacy members that take an actor accept an Actor, Token, UUID, 16-character id or exact name
-(never a substring); a miss answers `null`. `inspect` and `coversMultiattack` throw `NOT_FOUND` /
+(never a substring); a miss answers `null`. `abort()` with no argument stops whatever is running;
+`abort(ref)` stops only that actor's sequence, and a ref that resolves to nothing stops nothing. `inspect` and `coversMultiattack` throw `NOT_FOUND` /
 `AMBIGUOUS` / `BAD_ARGS` instead.
 
 ```js
@@ -135,7 +133,7 @@ CONFIG.debug["pentaryn-combat"] = true; game.pentaryn.combat.trace();   // why a
 
 | Where | Key | When |
 |---|---|---|
-| actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn. Removed by the active GM when its combat is deleted (0.2.1; the out-of-combat `nocombat` turn stays) |
+| actor | `flags.pentaryn-combat.turn` | each swing / rider / follow-up / Action Surge — `{key: "combat:round:combatantId", …}` — the combat is the started one the actor is in, not merely the one this client views (U-4-0) — `{attackAction, riders, followUps, nick, bonusUsed, otherActions, surges, quickened}`; self-invalidating (another turn's key reads as fresh). Always written whole (v14 `_replace`): a plain `setFlag` merges nested objects and carried last turn's used Sneak Attack into every later turn. Removed by the active GM when its combat is deleted (0.2.1; the out-of-combat `nocombat` turn stays) |
 | actor | `flags.pentaryn-combat.reaction` | `{combatId}` when a Reaction is taken in combat; set to null at the actor's turn start, removed when that combat is deleted (0.2.1) |
 | actor | (sweep) | the active GM removes every world actor's `turn` / `reaction` flag whose combat no longer exists, on load and 1.5 s after any combat is deleted (0.2.2; a combat deleted with no GM online, or before 0.2.1, left them for good) |
 | actor | `flags.pentaryn-combat.last.weapon` | after a Full Attack / weapon pick |
@@ -194,7 +192,8 @@ run those sweeps; each write is idempotent (a delete of a key already gone does 
 
 - **A setting:** a `SETTINGS` row (key, literal Name/Hint, doc), the two lang keys, `setting(key)` where it applies.
 - **A turn rider:** a `TURN_RIDERS` row in `core/turn-riders.mjs`, its `Rider.Name/Rule` keys in `I18N_KEYS` and lang.
-- **A follow-up kind:** `core/followups.mjs` `followUps`, a `runFollowUp` branch in `sequence.mjs`, its `FollowUp*` keys.
+  describe()'s rider `key` param (riderMode, setRiderMode, rollRider) comes from the manifest automatically: `api-manifest.mjs` builds its type from `TURN_RIDERS`.
+- **A follow-up kind:** `core/followups.mjs` `followUps`, a `SINGLE_SWING` row in `sequence.mjs` (or, for a multi-step one like Flurry, its own `runFollowUp` branch), its `FollowUp*` keys.
 - **A special action:** `SPECIAL_ACTIONS` / `recordSpecialAction` in `core/turnflow.mjs`, its after-click in `turnflow/action-buttons.mjs`.
 
 **Which riders module?** Once-per-turn attack-card riders (Sneak Attack, Frenzy, Colossus Slayer, Divine
@@ -227,8 +226,9 @@ Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy
   (players don't), so a miss needs the **Undo** on the card.
 - **Multiattack "in any combination"** runs the first listed weapon for every swing; right-click
   Full Attack to pick another, or pause and swap per swing.
-- **C23 open:** this module still reads pentaryn-aoe's `autoDamageOnHit` setting directly: aoe's
-  `settings()` member is published at `ready`, but chat cards first render before it.
+- **C23 open:** this module still reads pentaryn-aoe's `autoDamageOnHit` setting directly (one
+  reader, `aoeAutoDamage()` in `settings.mjs`): aoe's `settings()` member is published at `ready`,
+  but chat cards first render before it.
 
 ## Files
 

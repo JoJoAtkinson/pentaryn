@@ -16,7 +16,7 @@ import * as core from "./combat-core.mjs";
 import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
 import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor } from "./shapes.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor, enhancedDualWieldingOf } from "./shapes.mjs";
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
 import { cancelWaits, choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
@@ -48,13 +48,16 @@ let tag = null;                // { activityUuid, kind } for the attack roll in 
  */
 const expected = new Map();     // activityUuid → { kind, at }
 
+/** How long an announced roll (expectRoll) stays good: two minutes (combat-core-M5). */
+const EXPECT_TTL_MS = 120000;
+
 export function expectRoll(activityUuid, kind) {
   if (activityUuid) expected.set(activityUuid, { kind, at: Date.now() });
 }
 
 /** combat-riders-29: forget announced rolls past the two-minute window (taggedKind ignores them). */
 export function pruneSession(now = Date.now()) {
-  return core.pruneOlder(expected, now, 120000, v => v.at);
+  return core.pruneOlder(expected, now, EXPECT_TTL_MS, v => v.at);
 }
 
 export function forgetRoll(activityUuid) {
@@ -65,7 +68,7 @@ export function forgetRoll(activityUuid) {
 export function taggedKind(activityUuid) {
   if (tag && tag.activityUuid === activityUuid) return tag.kind;
   const e = expected.get(activityUuid);
-  if (e && Date.now() - e.at < 120000) return e.kind;
+  if (e && Date.now() - e.at < EXPECT_TTL_MS) return e.kind;
   return null;
 }
 
@@ -137,7 +140,14 @@ function watchDamage(activity) {
   return w;
 }
 
-async function settleDamage(w, { limitMs = 120000 } = {}) {
+/** The longest a swing waits on its damage roll before the next swing goes (combat-core-M5). */
+const DAMAGE_WAIT_MS = 120000;
+/** Polls in a row with no RollResolver open before the wait gives up early... */
+const IDLE_POLLS = 4;
+/** ...and only once this long has passed since the wait began (~0.6 s). */
+const IDLE_MIN_MS = 600;
+
+async function settleDamage(w, { limitMs = DAMAGE_WAIT_MS } = {}) {
   try {
     if (!w.started) return;
     const t0 = Date.now();
@@ -145,7 +155,7 @@ async function settleDamage(w, { limitMs = 120000 } = {}) {
     while (!w.done && Date.now() - t0 < limitMs && !current?.abort) {
       await new Promise(r => setTimeout(r, core.DELAYS.damagePoll));
       idle = resolverOpen() ? 0 : idle + 1;
-      if (idle >= 4 && Date.now() - t0 > 600) break;   // nothing to wait on: no resolver, ~0.6 s gone
+      if (idle >= IDLE_POLLS && Date.now() - t0 > IDLE_MIN_MS) break;   // nothing to wait on: no resolver, ~0.6 s gone
     }
   } finally {
     w.stop();
@@ -163,7 +173,7 @@ function swapExtras(actor, weaponId) {
     const weapons = weaponsOf(actor);
     const main = weapons.find(w => w.id === weaponId);
     if (!main) return null;
-    return core.extraSwings({ main, weapons, turn: turnOf(actor), enhancedDualWielding: !!actor.getFlag?.("dnd5e", "enhancedDualWielding") });
+    return core.extraSwings({ main, weapons, turn: turnOf(actor), enhancedDualWielding: enhancedDualWieldingOf(actor) });
   } catch { return null; }
 }
 
@@ -235,6 +245,63 @@ function tidyOrigins(ids) {
 }
 
 /**
+ * runSwings' paused branch (combat-core-M9): wait for the strip's choice (Resume / Retarget /
+ * another weapon / Adv / Stop) and apply it. true = the sequence ends here (Stop, Esc, an abort);
+ * false = go round the loop again (still paused, or running on).
+ */
+async function onPaused(actor, dispatch) {
+  const choice = await waitChoice(stripContext());
+  if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); return true; }
+  if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
+  if (choice.type === "retarget") {
+    const swing = current.state.swings[current.state.index];
+    const act = attackActivityOf(actor.items.get(swing.weaponId));
+    const before = [...game.user.targets];
+    picking(true);
+    let picked;
+    try { picked = await pickTarget(act); } finally { picking(false); }
+    if (current.abort || current.state.status === "stopped") return false;
+    // Picker cancelled (right-click): stay paused on the old target, don't roll at nobody.
+    if (!picked) { restoreTargets(before); render(); return false; }
+  }
+  if (choice.type === "adv") { dispatch({ type: "adv", value: choice.value }); return false; }
+  dispatch({ type: "resume" });
+  return false;
+}
+
+/**
+ * One swing's rollAttack arguments (combat-core-M9): the attack mode, the Adv / Dis to add, the
+ * dialog (quick mode skips it) and the chat message threaded under the usage card. `s` is the state
+ * the swing was read from. Synchronous: nothing runs between the usage card and the roll.
+ */
+function swingRollArgs(s, swing, item, activity, origin, { event, keyed }) {
+  const first = s.rolled === 0;
+  const quick = !first && (quickMode() || keyed);
+  const adv = s.adv ?? (quick ? current.lastAdv : null);
+  const config = {};
+  if (first && event) config.event = event;
+  if (swing.mode) config.attackMode = swing.mode;
+  else if (String(item.getFlag("dnd5e", `last.${activity.id}.attackMode`) ?? "").endsWith("offhand")) {
+    // A main swing never inherits a remembered Offhand (also with offhandModeReset off); any
+    // other remembered mode (Thrown, Two-Handed) stays the player's choice.
+    const main = core.mainMode(item.system?.attackModes ?? []);
+    if (main) config.attackMode = main;
+  }
+  // Only ever ADD advantage or disadvantage: a false here would erase a condition's own (Prone, Blinded…).
+  if (adv) config.rolls = [{ options: { [adv]: true } }];
+  const message = {
+    data: {
+      ...(origin ? { system: { origin } } : {}),
+      flags: { [MODULE]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
+    }
+  };
+  // Swing 1 leaves `configure` unset so dnd5e's fast-forward keys on the Full Attack click
+  // (Shift / Alt / Ctrl) can skip its dialog too; an explicit `true` would override them.
+  const dialog = first ? {} : { configure: !quick };
+  return { config, dialog, message };
+}
+
+/**
  * Run a list of swings for an actor.
  * @param {Actor} actor
  * @param {{weaponId, mode, kind}[]} swings
@@ -280,22 +347,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
       if (current.abort) { dispatch({ type: "stop" }); break; }
 
       if (current.state.status === "paused") {
-        const choice = await waitChoice(stripContext());
-        if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); break; }
-        if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
-        if (choice.type === "retarget") {
-          const swing = current.state.swings[current.state.index];
-          const act = attackActivityOf(actor.items.get(swing.weaponId));
-          const before = [...game.user.targets];
-          picking(true);
-          let picked;
-          try { picked = await pickTarget(act); } finally { picking(false); }
-          if (current.abort || current.state.status === "stopped") continue;
-          // Picker cancelled (right-click): stay paused on the old target, don't roll at nobody.
-          if (!picked) { restoreTargets(before); render(); continue; }
-        }
-        if (choice.type === "adv") { dispatch({ type: "adv", value: choice.value }); continue; }
-        dispatch({ type: "resume" });
+        if (await onPaused(actor, dispatch)) break;
         continue;
       }
 
@@ -320,35 +372,14 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
         emit("usage", activity, swing.kind);
       }
 
-      const first = s.rolled === 0;
-      const quick = !first && (quickMode() || keyed);
-      const adv = s.adv ?? (quick ? current.lastAdv : null);
-      const config = {};
-      if (first && event) config.event = event;
-      if (swing.mode) config.attackMode = swing.mode;
-      else if (String(item.getFlag("dnd5e", `last.${activity.id}.attackMode`) ?? "").endsWith("offhand")) {
-        // A main swing never inherits a remembered Offhand (also with offhandModeReset off); any
-        // other remembered mode (Thrown, Two-Handed) stays the player's choice.
-        const main = core.mainMode(item.system?.attackModes ?? []);
-        if (main) config.attackMode = main;
-      }
-      // Only ever ADD advantage or disadvantage: a false here would erase a condition's own (Prone, Blinded…).
-      if (adv) config.rolls = [{ options: { [adv]: true } }];
-      const message = {
-        data: {
-          ...(origin ? { system: { origin } } : {}),
-          flags: { [MODULE]: { swing: { i: s.index + 1, n: s.swings.length, kind: swing.kind } } }
-        }
-      };
+      const { config, dialog, message } = swingRollArgs(s, swing, item, activity, origin, { event, keyed });
 
       render();
       tag = { activityUuid: activity.uuid, kind: swing.kind };
       const dmg = watchDamage(activity);
       let rolls = null;
       try {
-        // Swing 1 leaves `configure` unset so dnd5e's fast-forward keys on the Full Attack click
-        // (Shift / Alt / Ctrl) can skip its dialog too; an explicit `true` would override them.
-        rolls = await activity.rollAttack(config, first ? {} : { configure: !quick }, message);
+        rolls = await activity.rollAttack(config, dialog, message);
       } finally {
         tag = null;
       }
@@ -366,7 +397,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
   } finally {
     const first = current?.state?.swings?.[0];
     if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
-      rememberWeapon(actor, first.weaponId).catch(err => { log.debug("remember weapon", err); return null; });
+      rememberWeapon(actor, first.weaponId).catch(err => { log.warn("remember weapon", err); return null; });
     }
     const created = [...(current?.created ?? [])];
     current = null;
@@ -392,18 +423,36 @@ export function abortFor(actor) {
 /* ── follow-ups ──────────────────────────────────────────────────────────── */
 
 /**
+ * The one-swing follow-ups (combat-core-EXT-4): each kind's swing mode and strip kind, and whether a
+ * rolled swing records the follow-up on the turn flag (and emits bonusSpent). Off-hand and Nick record
+ * through the off-hand swing itself. Pole Strike's weapon is the Polearm Master item's own attack
+ * activity (its usage card, its 1d4 Bludgeoning).
+ */
+const SINGLE_SWING = Object.freeze({
+  offhand: Object.freeze({ mode: "offhand", kind: "offhand", records: false }),
+  nick: Object.freeze({ mode: "offhand", kind: "nick", records: false }),
+  "martial-arts": Object.freeze({ mode: null, kind: "bonus", records: true }),
+  hew: Object.freeze({ mode: null, kind: "bonus", records: true }),
+  "pole-strike": Object.freeze({ mode: null, kind: "bonus", records: true }),
+});
+
+/**
  * One Bonus-bar (or free) follow-up.
  * @param {Actor} actor
  * @param {{kind: string, weaponId: string, count?: number}} f
  */
 export async function runFollowUp(actor, f, { event = null } = {}) {
+  if (!f || typeof f !== "object") return { rolled: 0, status: "unknown" };   // a console caller's bad argument (combat-core-ROB-6)
   const label = _loc(core.keyFor("FollowUp", f.kind), { weapon: actor.items.get(f.weaponId)?.name ?? "" });
-  if (f.kind === "offhand") {
-    const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: "offhand", kind: "offhand" }], { event, title: label, swappable: false });
+  // A kind is a string; an array or object that coerces to a table key (["hew"]) is "unknown" (combat-core-EXT-4).
+  const one = typeof f.kind === "string" && Object.hasOwn(SINGLE_SWING, f.kind) ? SINGLE_SWING[f.kind] : null;
+  if (one) {
+    const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: one.mode, kind: one.kind }], { event, title: label, swappable: false });
+    if (one.records && out.rolled) {
+      await updateTurn(actor, t => core.recordFollowUp(t, f.kind));
+      emit("bonusSpent", actor, f.kind);
+    }
     return out;
-  }
-  if (f.kind === "nick") {
-    return runSwings(actor, [{ weaponId: f.weaponId, mode: "offhand", kind: "nick" }], { event, title: label, swappable: false });
   }
   if (f.kind === "flurry") {
     const act = flurryActivity(actor);
@@ -418,15 +467,6 @@ export async function runFollowUp(actor, f, { event = null } = {}) {
     const n = f.count ?? 2;
     const swings = Array.from({ length: n }, () => ({ weaponId: unarmed.id, mode: null, kind: "bonus" }));
     return runSwings(actor, swings, { event, title: label, origins: new Map([[unarmed.id, res.message?.id]]), swappable: false, paid: true });
-  }
-  // Pole Strike: the Polearm Master item's own attack activity (its usage card, its 1d4 Bludgeoning).
-  if (f.kind === "martial-arts" || f.kind === "hew" || f.kind === "pole-strike") {
-    const out = await runSwings(actor, [{ weaponId: f.weaponId, mode: null, kind: "bonus" }], { event, title: label, swappable: false });
-    if (out.rolled) {
-      await updateTurn(actor, t => core.recordFollowUp(t, f.kind));
-      emit("bonusSpent", actor, f.kind);
-    }
-    return out;
   }
   return { rolled: 0, status: "unknown" };
 }

@@ -1,6 +1,8 @@
 {
   "abort": "abortFor",
   "contract": "string",
+  "core.ARGON": "string",
+  "core.ATTACK_ACTION_KINDS": "object",
   "core.CONTRACT": "string",
   "core.CSS": "string",
   "core.DELAYS.afterArgon": "number",
@@ -108,6 +110,7 @@
   "core.I18N_KEYS.Turn.EffectText.disengage": "string",
   "core.MOD": "string",
   "core.MODULE": "string",
+  "core.MOVEMENT_KEYS": "object",
   "core.NS": "string",
   "core.RECKLESS_CHANGE.key": "string",
   "core.RECKLESS_CHANGE.type": "string",

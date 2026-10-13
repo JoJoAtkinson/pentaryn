@@ -455,3 +455,44 @@ test("forced failures: each card hook is guarded on its own (golden/riders-conso
   pinJSON("riders-console", lines.splice(0), import.meta.url);
   assert.deepEqual(F.hookErrors, []);
 });
+
+test("combat-core-ROB-3: a click whose roll or write fails is one prefixed warning, not an unhandled rejection", async () => {
+  const unhandled = [];
+  const onUnhandled = err => unhandled.push(err?.message ?? String(err));
+  process.on("unhandledRejection", onUnhandled);
+  const broken = () => { throw new Error("roll broke"); };
+  try {
+    lines.length = 0;
+    // the + Sneak Attack button: the rider's damage roll throws
+    reset(rog);
+    const msg = attackCard(rog, "scimitar00000001", { adv: true });
+    const sneak = rog.items.get("sneakAttack00001").system.activities.get("sneakDmg00000001");
+    sneak.script.damage.push(broken);
+    await render(msg).querySelector(".pentaryn-combat-rider").fire("click");
+    await drain();
+    // the auto note's Undo: reading the card's undone mark throws
+    reset(rog);
+    const atk = attackCard(rog, "scimitar00000001", { adv: true });
+    rog.flags[MODULE] = { turn: { key: KEY(), riders: { "sneak-attack": `auto:${atk.id}` } } };
+    const dmg = makeMessage({ type: "damage", speaker: { actor: rog.id }, author: F.game.user, rolls: [],
+      flags: { [MODULE]: { auto: [{ key: "sneak-attack", dice: "3d6", attack: atk.id }] } } });
+    const note = render(dmg).querySelector(".pentaryn-combat-auto");
+    dmg.getFlag = () => { throw new Error("card unreadable"); };
+    await note.fire("click", { target: note.querySelector("[data-undo]") });
+    await drain();
+    // the per-swing Damage button: the weapon's damage roll throws
+    act(rog, "scimitar00000001").script.damage.push(broken);
+    await render(attackCard(rog, "scimitar00000001", { swing: true })).querySelector(".pentaryn-combat-damage button").fire("click");
+    await drain();
+    assert.deepEqual(unhandled, [], "no anonymous unhandled rejection");
+    assert.deepEqual(lines.splice(0).filter(l => l.level === "warn"), [
+      { level: "warn", text: "pentaryn-combat | rider roll", err: "roll broke" },
+      { level: "warn", text: "pentaryn-combat | rider undo", err: "card unreadable" },
+      { level: "warn", text: "pentaryn-combat | swing damage", err: "roll broke" },
+    ]);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+    reset(rog);
+    F.calls.length = 0;
+  }
+});
