@@ -42,12 +42,17 @@ export async function formImage(source) {
   const src = source?.prototypeToken?.texture?.src ?? null;
   const wildcard = hasWildcardToken(source);
   let images = [];
-  if (wildcard && src && (game.user.isGM || game.user.can?.("FILES_BROWSE"))) {
+  // A GM or a user who may browse answers it here and never relays: the GM's own query would run this
+  // same function again on the same client. No token path (core's Assign Token with the wildcard box
+  // drops texture.src) has no files to list, so it is the portrait, without asking anyone.
+  const canBrowse = game.user.isGM || !!game.user.can?.("FILES_BROWSE");
+  const listable = wildcard && !!src;
+  if (listable && canBrowse) {
     images = await wildcardFiles(src).catch(err => {
       log.debug("wildcard token images failed", { source: source.uuid }, err);
       return [];
     });
-  } else if (wildcard && source?.uuid) {
+  } else if (listable && source?.uuid) {
     const img = await queryGM(`${MODULE}.formImage`, { uuid: source.uuid }, { timeout: 5000 }).catch(err => {
       log.debug("asking the GM for the form image failed", { source: source.uuid }, err?.message ?? err);
       return null;

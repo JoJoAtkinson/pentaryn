@@ -216,3 +216,64 @@ test("wildcard-art-compendium: a player's shift asks the GM, who browses the com
     assert.deepEqual(errors(), []);
   } finally { restore(); }
 });
+
+/* wildcard-art-compendium (verifier R2): a beast with randomImg on and no token path at all — core's
+   Assign Token with the wildcard box ticked drops texture.src. There are no files to list, so the form
+   gets the portrait and nobody is asked: a GM's query runs on its own client, so relaying from the GM
+   would call formImage again without end. Each case counts the relay handler, capped so a regression
+   fails instead of hanging. */
+
+/** Count `formImage` relay handler calls; past `cap` the handler throws so a loop cannot run on. */
+function countRelay(cap = 20) {
+  const real = CONFIG.queries[QUERY];
+  const counter = { n: 0 };
+  CONFIG.queries[QUERY] = async (...a) => {
+    if (++counter.n > cap) throw new Error("formImage relay runaway");
+    return real(...a);
+  };
+  counter.restore = () => { CONFIG.queries[QUERY] = real; };
+  return counter;
+}
+
+for (const [label, src, pack] of [
+  ["a world beast with a null token path", null, null],
+  ["a compendium beast with an empty token path", "", PACK],
+]) {
+  test(`wildcard-art-compendium: a GM's shift into ${label} and randomImg on gets the portrait, never relaying`, async () => {
+    const { talo } = druid({ randomImg: true, texture: { src } }, { pack });
+    const relay = countRelay();
+    try {
+      const form = await T.shift(talo, "pw");
+      assert.ok(form, "the form");
+      assert.equal(relay.n, 0, "the GM never asks itself");
+      assert.equal(F.lastTransformData.prototypeToken.texture.src, "portraits/wolf.webp");
+      assert.deepEqual(ops("browse"), [], "nothing to browse");
+      assert.deepEqual(errors(), []);
+    } finally { relay.restore(); }
+  });
+}
+
+test("wildcard-art-compendium: a player's shift into a beast with randomImg on and no token path gets the portrait without asking the GM", async () => {
+  const { talo } = druid({ randomImg: true, texture: { src: null } });
+  const restore = gmAnswers();
+  const relay = countRelay();
+  try {
+    asPlayer();
+    const form = await T.shift(talo, "pw");
+    F.become({ userId: IDS.gm });
+    assert.ok(form, "the form");
+    assert.equal(relay.n, 0, "no path, nothing for the GM to list");
+    assert.equal(F.lastTransformData.prototypeToken.texture.src, "portraits/wolf.webp");
+    assert.deepEqual(errors(), []);
+  } finally { relay.restore(); restore(); F.become({ userId: IDS.gm }); }
+});
+
+test("wildcard-art-compendium: the relay row on the GM's client answers a no-path beast with its portrait in one call", async () => {
+  druid({ randomImg: true, texture: { src: "" } }, { pack: PACK });
+  const relay = countRelay();
+  try {
+    const api = game.modules.get(MODULE).api;
+    assert.equal(await api.formImage({ uuid: game.actors.get("mmWolfSrc0000001")?.uuid ?? "Actor.mmWolfSrc0000001" }), "portraits/wolf.webp");
+    assert.equal(relay.n, 0, "answering never re-asks");
+  } finally { relay.restore(); }
+});
