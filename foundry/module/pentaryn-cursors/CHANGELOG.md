@@ -7,6 +7,28 @@
   `assets/src/` (with `CREDITS.md` and every credited `alt-*`) → `scripts/foundry/cursors/src/`,
   `DESIGN.md` → `context/plans/cursors-design.md`. No runtime file changes; the module folder
   simply stops shipping `tools/` and `assets/src/`.
+- [declared] `uninstall()` keeps the board clear (cursors-rob-3): the wrapped tool `onChange`s,
+  the spell-area preview listeners, the `#board` observer and the setting's `onChange` are inert
+  while uninstalled, and the pending `canvasReady`/`ready` ticks are cancelled. A hot re-import's
+  `install()` re-arms them.
+- [declared] The `canvasReady` and `ready` ticks catch their own throws (cursors-rob-2): a throwing
+  resync logs `resync failed`; in the `ready` tick a throwing attach logs `refresh failed` and the
+  resync still runs, so a blanked cursor is still repaired.
+- [declared] `keyFor(null)` returns `null` (the system arrow) like `keyFor()` and
+  `keyFor(undefined)`, instead of throwing a TypeError (cursors-rob-1).
+- [declared] `scripts/foundry/cursors/build.mjs` checks every key before writing anything
+  (cursors-rob-4): a hotspot mismatch or a throwing key is named (`✗ <key>: <message>`) and the run
+  exits 1 with `assets/cursors/` untouched. The centre hotspot floors with the same `+ 0.01` as the
+  other extremes (cursors-edge-5), and `--check-sources` rejects an unknown `extreme` (EXT-4).
+  Today's assets rebuild byte-identical.
+- [declared] `scripts/foundry/cursors/build.mjs` validates `KEYS` without a resvg build
+  (cursors-EXT-4): one `EXTREMES` list drives both the hotspot score table and a pure
+  `checkKeys(KEYS, srcDir)`, which names a missing source, an `extreme` not in `EXTREMES`, or a
+  hotspot that is not two integers in 0..31. `--check-sources` prints them and exits 1; the full
+  build runs the same check before loading resvg. Importing `build.mjs` no longer runs the build.
+- [declared] The centre-hotspot arithmetic is a pure exported `centreHotspot(bbox)` in
+  `scripts/foundry/cursors/build.mjs`, unit-tested with a 15.9999 midpoint that measures 16
+  (cursors-edge-5). `target` and `aoe` still measure [16, 16]; assets rebuild byte-identical.
 
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 

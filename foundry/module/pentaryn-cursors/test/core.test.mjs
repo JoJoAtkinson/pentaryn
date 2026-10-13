@@ -71,6 +71,12 @@ test("keyFor: the design table", () => {
   check("DRAW_TOOLS", DRAW_TOOLS, ["rect", "ellipse", "polygon", "freehand", "text"]);
 });
 
+test("keyFor(null), keyFor(undefined) and keyFor({}) all give null (cursors-rob-1)", () => {
+  assert.equal(keyFor(null), null);
+  assert.equal(keyFor(undefined), null);
+  assert.equal(keyFor({}), null);
+});
+
 test("keyFor: the live golden's table (.state/live-goldens/before/cursors.json keyForTable)", () => {
   const tools = [["tokens", "select"], ["tokens", "target"], ["tokens", "ruler"], ["notes", "journal"], ["drawings", "rect"]];
   const got = tools.map(([control, tool]) => keyFor({ control, tool }))
