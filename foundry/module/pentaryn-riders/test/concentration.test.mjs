@@ -67,12 +67,14 @@ function world() {
   return { scenes, deleted };
 }
 const effect = (o = {}) => ({ ...conc, parent: { documentName: "Actor" }, ...o });
+// riders-async-3: each scene's cleanup claims its first stamped token (kit claimDocument) and waits 750 ms
+const settleCleanup = async () => { await drain(); mock.timers.tick(750); await drain(); };
 
 test("deleteActiveEffect on the active GM: every scene's stamped tokens the GM may delete go, with one info line each", async () => {
   const { deleted } = world();
   W.take();
   F.fire("deleteActiveEffect", effect(), {}, IDS.player);
-  await drain();
+  await settleCleanup();
   assert.deepEqual(deleted, [["One", "Token", ["tok0a00000000000"]], ["Two", "Token", ["tok1a00000000000"]]]);
   assert.deepEqual(W.take(), [
     ["info", `${MODULE} | concentration on Concentrating ended: removing 1 summon token(s) from One`],
@@ -90,7 +92,7 @@ test("cleanup election: a player client does nothing while a GM is active; with 
   F.fire("deleteActiveEffect", effect(), {}, IDS.player);
   W.gm.active = true;
   F.become({ userId: IDS.gm });
-  await drain();
+  await settleCleanup();
   assert.deepEqual(deleted.map(d => d[0]), ["One", "Two"]);
   W.take();
 });
@@ -106,7 +108,7 @@ test("cleanup: not an Actor's effect, the setting off → nothing; a failed dele
   scenes[0].fail = true;
   W.take();
   F.fire("deleteActiveEffect", effect({ uuid: FX }), {}, IDS.gm);
-  await drain();
+  await settleCleanup();
   assert.deepEqual(W.take().filter(l => l[0] === "warn"), [["warn", `${MODULE} | summon cleanup failed`, "server said no"]]);
   F.fire("deleteActiveEffect", { parent: { documentName: "Actor" }, get uuid() { throw new Error("odd effect"); } }, {}, IDS.gm);
   assert.deepEqual(W.take(), [["warn", `${MODULE} | concentration summon cleanup skipped`, "odd effect"]]);
@@ -124,9 +126,45 @@ test("combat-riders-23 [declared, edge]: a deleted effect without the concentrat
   assert.deepEqual(deleted, []);
   assert.equal(scanned, 0, "no scene was scanned");
   F.fire("deleteActiveEffect", effect({ statuses: ["concentrating"] }), {}, IDS.gm);
-  await drain();
+  await settleCleanup();
   assert.deepEqual(deleted.map(d => d[0]), ["One", "Two"], "a concentration effect (array statuses) still cleans up");
   delete scenes[Symbol.iterator];
+  W.take();
+});
+
+test("[declared] riders-async-3: two tabs on the active GM's account see one concentration end — each scene's summons are deleted once", async () => {
+  const { scenes, deleted } = world();
+  W.take();
+  try {
+    F.become({ socketId: "socket-bridge" });
+    F.fire("deleteActiveEffect", effect(), {}, IDS.player);     // the MCP bridge tab
+    F.become({ socketId: "socket-browser" });
+    F.fire("deleteActiveEffect", effect(), {}, IDS.player);     // a GM browser tab, same user
+    await settleCleanup();
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  assert.deepEqual(deleted, [["One", "Token", ["tok0a00000000000"]], ["Two", "Token", ["tok1a00000000000"]]], "one delete per scene");
+  assert.equal(scenes[0].tokens.get("tok0a00000000000").flags[MODULE].claims.summonCleanup, "socket-bridge", "the claim is on the scene's first stamped token");
+  assert.equal(W.take().filter(l => l[0] === "info").length, 2, "one info line per scene, from the winning tab");
+});
+
+test("[declared] riders-async-3: the later claim wins when both tabs write before either reads back", async () => {
+  const { scenes, deleted } = world();
+  W.take();
+  try {
+    F.become({ socketId: "socket-bridge" });
+    F.fire("deleteActiveEffect", effect(), {}, IDS.player);
+    // the browser tab's claims land second on the server; it read no claim before writing
+    for (const s of scenes) delete s.tokens.contents[0].flags[MODULE].claims;
+    F.become({ socketId: "socket-browser" });
+    F.fire("deleteActiveEffect", effect(), {}, IDS.player);
+    await settleCleanup();
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  assert.equal(scenes[1].tokens.get("tok1a00000000000").flags[MODULE].claims.summonCleanup, "socket-browser");
+  assert.deepEqual(deleted, [["One", "Token", ["tok0a00000000000"]], ["Two", "Token", ["tok1a00000000000"]]], "one delete per scene");
   W.take();
 });
 
@@ -148,12 +186,17 @@ test("Break Concentration buttons get their text once; a jQuery-like wrapper wor
 /* ── 3. auto-break and the result line ───────────────────────────────────── */
 
 function saveMessage({ total = 7, dc = 10, canBreak = true, canResist = false, actor = sorc, outcome, visible = true, user } = {}) {
-  const msg = makeDoc("ChatMessage", { id: `save${String(++saveMessage.n).padStart(12, "0")}`, type: "save", isContentVisible: visible, system: { type: "concentration", canBreakConcentration: canBreak, canResist, outcome }, rolls: [{ total, options: { target: dc } }], user });
+  const msg = makeDoc("ChatMessage", { id: `save${String(++saveMessage.n).padStart(12, "0")}`, type: "save", isContentVisible: visible, system: { type: "concentration", canBreakConcentration: canBreak, canResist, outcome }, rolls: [{ total, options: { target: dc } }], user }, { collection: F.game.messages });
   msg.getAssociatedActor = () => actor;
+  F.game.messages.set(msg.id, msg);   // the claim re-reads the card from game.messages
   return msg;
 }
 saveMessage.n = 0;
-const created = async (msg, userId = IDS.gm) => { await F.fire("createChatMessage", msg, {}, userId); await drain(); };
+// riders-async-1: the auto-break claims the card (kit claimMessage) and waits 750 ms before acting
+const settle = async () => { await drain(); mock.timers.tick(750); await drain(); };
+const created = async (msg, userId = IDS.gm) => { await F.fire("createChatMessage", msg, {}, userId); await settle(); };
+const CLAIM = `flags.${MODULE}.claims.autoBreak`;
+const notClaim = c => !(CLAIM in (c.changes ?? {}));
 
 test("auto-break: a failed save the owner rolled ends concentration and marks the card broken", async () => {
   sorc.concEnded = [conc];
@@ -162,7 +205,46 @@ test("auto-break: a failed save the owner rolled ends concentration and marks th
   const before = F.calls.length;
   await created(msg);
   assert.deepEqual(W.takeLog().filter(l => l.op === "endConcentration"), [{ op: "endConcentration", actor: "Ilsa Vantrel" }]);
-  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update").map(c => c.changes), [{ "system.outcome": "broken" }]);
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update").map(c => c.changes), [{ [CLAIM]: "socket-gm-1" }, { "system.outcome": "broken" }]);
+});
+
+test("[declared] riders-async-1: two tabs on the roller's account see one failed save — concentration ends once, the card is marked once", async () => {
+  sorc.concEnded = [conc];
+  W.takeLog();
+  const msg = saveMessage();
+  const before = F.calls.length;
+  try {
+    F.become({ socketId: "socket-bridge" });
+    F.fire("createChatMessage", msg, {}, IDS.gm);     // the MCP bridge tab
+    F.become({ socketId: "socket-browser" });
+    F.fire("createChatMessage", msg, {}, IDS.gm);     // a GM browser tab, same user
+    await settle();
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  assert.equal(W.takeLog().filter(l => l.op === "endConcentration").length, 1, "concentration ended once");
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update" && notClaim(c)).map(c => c.changes), [{ "system.outcome": "broken" }], "the card is marked once");
+});
+
+test("[declared] riders-async-1: the later claim wins when both tabs write before either reads back", async () => {
+  sorc.concEnded = [conc];
+  W.takeLog();
+  const msg = saveMessage();
+  const before = F.calls.length;
+  try {
+    F.become({ socketId: "socket-bridge" });
+    F.fire("createChatMessage", msg, {}, IDS.gm);
+    // the browser tab's claim lands second on the server; it read no claim before writing
+    delete msg.flags[MODULE]?.claims;
+    F.become({ socketId: "socket-browser" });
+    F.fire("createChatMessage", msg, {}, IDS.gm);
+    await settle();
+  } finally {
+    F.become({ socketId: "socket-gm-1" });
+  }
+  assert.equal(msg.flags[MODULE]?.claims?.autoBreak, "socket-browser");
+  assert.equal(W.takeLog().filter(l => l.op === "endConcentration").length, 1, "concentration ended once");
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update" && notClaim(c)).map(c => c.changes), [{ "system.outcome": "broken" }]);
 });
 
 test("auto-break: kept as a button — Legendary Resistance, Indomitable, an effect, dnd5e says no, the setting off, not the roller, not a concentration save, nothing ended", async () => {
@@ -184,7 +266,7 @@ test("auto-break: kept as a button — Legendary Resistance, Indomitable, an eff
   sorc.concEnded = [];
   const before = F.calls.length;
   await created(saveMessage());
-  assert.equal(F.calls.slice(before).filter(c => c.op === "update").length, 0, "nothing ended: the card is not marked");
+  assert.equal(F.calls.slice(before).filter(c => c.op === "update" && notClaim(c)).length, 0, "nothing ended: the card is not marked");
   const notMine = makeActor({ name: "Theirs", ownership: { default: 0 } });
   F.become({ userId: IDS.player });
   await created(saveMessage({ actor: notMine }), IDS.player);

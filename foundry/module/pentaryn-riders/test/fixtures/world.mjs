@@ -160,6 +160,21 @@ export function makeItem(data = {}, actor = null) {
       enumerable: false,
     },
   });
+  // An item update that writes `system.activities.<id>` (dnd5e's own deleteActivity form) lands on
+  // W.log as `updateItem` and, for a deletion value, drops the activity from the collection.
+  const update = item.update;
+  item.update = async function (changes = {}, options = {}) {
+    const acts = Object.keys(changes).filter(k => k.startsWith("system.activities."));
+    if (!acts.length) return update.call(this, changes, options);
+    logOp("updateItem", { item: this.name, changes: W?.F?.plain(changes) ?? changes });
+    const rest = { ...changes };
+    for (const k of acts) {
+      delete rest[k];
+      const id = k.slice("system.activities.".length).replace(/^-=/, "");
+      if (W?.F?.isDeletion(changes[k]) || k.includes(".-=")) this.system.activities.delete(id);
+    }
+    return update.call(this, rest, options);
+  };
   return item;
 }
 
@@ -201,6 +216,27 @@ export function makeActor({ items = [], ...data } = {}) {
       },
       enumerable: false,
       writable: true,
+    },
+    // One batched embedded write: a single `updateEmbeddedDocuments` entry on W.log and F.calls;
+    // each item still takes its update (hooks fire per item, as in Foundry), unlogged.
+    updateEmbeddedDocuments: {
+      async value(embeddedName, updates = [], options = {}) {
+        const F = W?.F;
+        const plain = F?.plain(updates) ?? updates;
+        const calls = F?.calls.length ?? 0, logged = W?.log.length ?? 0;
+        const coll = embeddedName === "Item" ? this.items : null;
+        const done = [];
+        for (const { _id, ...changes } of updates) {
+          const doc = coll?.get(_id);
+          if (doc) done.push(await doc.update(changes, options));
+        }
+        F?.calls.splice(calls);
+        W?.log.splice(logged);
+        F?.calls.push({ op: "updateEmbeddedDocuments", documentName: embeddedName, uuid: this.uuid, updates: plain });
+        logOp("updateEmbeddedDocuments", { actor: this.name, embeddedName, updates: plain });
+        return done;
+      },
+      enumerable: false,
     },
     getTokenImages: {
       async value() {

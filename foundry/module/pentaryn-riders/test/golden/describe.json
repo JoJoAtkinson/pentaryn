@@ -122,7 +122,7 @@
         "flags.pentaryn-riders.damageType"
       ],
       "legacy": true,
-      "doc": "Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for: one item, or every typed feature item of an actor (one rule's with ruleKey). Throws when type is empty."
+      "doc": "Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for: one item, or every typed feature item of an actor (one rule's with ruleKey). Only items whose rule lists the type are set. Throws when type is empty, and BAD_ARGS naming the allowed types when no targeted rule lists it."
     },
     {
       "path": "retireManual",
@@ -166,7 +166,7 @@
         "Actor.system.attributes.hd.spent (NPC) | Item(class).system.hd.spent"
       ],
       "legacy": true,
-      "doc": "Spend one Hit Die: the largest left, or of `faces` when the actor has one left of that size."
+      "doc": "Spend one Hit Die: the largest left, or of `faces` (a number or numeric string) when the actor has one left of that size."
     },
     {
       "path": "restoreHitDie",

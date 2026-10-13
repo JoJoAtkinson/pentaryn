@@ -128,6 +128,20 @@ test("selftest(): every check passes after ready", () => {
   ]);
 });
 
+test("selftest(): 'hooks registered' passes for any non-zero hook count, the count in detail (riders-ext-4) [declared]", async () => {
+  // The exact hook list is pinned by golden/hooks.json (hooks.test); selftest only checks some are live.
+  const { buildApiFor } = await import("../api.mjs");
+  const hooksCheck = n => {
+    const ids = Array.from({ length: n }, (_, i) => ({ kind: "on", name: `zzHook${i}`, id: i, label: `zzHook${i}` }));
+    const ctx = { reg: { ids: () => ids }, contributions: [], exposed: {}, log: { traces: () => [] }, uninstall() {}, setting: () => true };
+    ctx.api = buildApiFor(ctx);
+    return ctx.api.selftest().checks.find(c => c.label === "hooks registered");
+  };
+  assert.deepEqual(hooksCheck(24), { label: "hooks registered", ok: true, detail: 24 });
+  assert.deepEqual(hooksCheck(1), { label: "hooks registered", ok: true, detail: 1 });
+  assert.deepEqual(hooksCheck(0), { label: "hooks registered", ok: false, detail: 0 });
+});
+
 test("arcaneRecovery(ref): the picker for an owned wizard writes the chosen slots; a non-owner is refused; a miss is a refusal", async () => {
   const w4 = makeActor({ id: "wizardfour000001", name: "Wren", ownership: { default: 3 }, system: { spells: { spell1: { level: 1, value: 2, max: 4 }, spell2: { level: 2, value: 0, max: 2 } } }, items: [
     { id: "wrenclass0000001", name: "Wizard", type: "class", system: { identifier: "wizard", levels: 4 } },

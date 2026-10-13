@@ -7,58 +7,74 @@
  */
 
 import * as core from "./riders-core.mjs";
-import { HOOKS, MODULE, NS } from "./riders-core.mjs";
+import { HOOKS, MODULE, NS, RULES, matchRule } from "./riders-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
 import {
-  RELAY_QUERY, carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, restoreHitDie,
+  RELAY_QUERY, carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, itemInfo, restoreHitDie,
   spendHitDie, withLegacyActor,
 } from "./shapes.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
-import { fail, ok } from "./lib/errors.mjs";
+import { codedError, fail, ok } from "./lib/errors.mjs";
+import { flagPath } from "./lib/flags.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
 
 /**
  * Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for.
- * `target` is that item, or an actor: then every typed feature item on it is set (only the one
- * rule's items when `ruleKey` is given). Returns the names of the items set.
+ * `target` is that item (one setFlag), or an actor: then every typed feature item on it is set
+ * (only the one rule's items when `ruleKey` is given), in one updateEmbeddedDocuments.
+ * Only items whose rule lists the type are set; when no targeted rule lists it, throws BAD_ARGS
+ * naming each rule's types and writes nothing (rob-5). An item no typed rule matches is not set.
+ * Returns the names of the items set.
  */
 async function setType(target, type, ruleKey = null) {
   const t = String(type ?? "").toLowerCase().trim();
   if (!t) throw new Error("setType(item | actor, type, ruleKey?): type required");
-  const items = target instanceof Actor
-    ? featuresOf(target).filter(f => f.rule.types && (!ruleKey || f.key === ruleKey)).flatMap(f => f.items)
-    : [target];
-  const done = [];
-  for (const item of items) {
-    if (!item?.setFlag) continue;
-    await item.setFlag(MODULE, "damageType", t);
-    done.push(item.name);
+  if (!(target instanceof Actor) && !target?.setFlag) return [];
+  const targeted = target instanceof Actor
+    ? featuresOf(target).filter(f => f.rule.types && (!ruleKey || f.key === ruleKey)).map(f => ({ rule: f.rule, items: f.items }))
+    : RULES.filter(r => r.types && matchRule(r, itemInfo(target))).map(rule => ({ rule, items: [target] }));
+  if (!targeted.length) return [];
+  const fits = targeted.filter(x => x.rule.types.includes(t));
+  if (!fits.length) {
+    throw codedError("BAD_ARGS", `setType: "${t}" fits none of ${targeted.map(x => `${x.rule.label} (${x.rule.types.join(", ")})`).join(", ")}`);
   }
-  return done;
+  if (!(target instanceof Actor)) {
+    await target.setFlag(MODULE, "damageType", t);
+    return [target.name];
+  }
+  const items = fits.flatMap(x => x.items);
+  await target.updateEmbeddedDocuments("Item", items.map(i => ({ _id: i.id, [flagPath(MODULE, "damageType")]: t })));
+  return items.map(i => i.name);
 }
 
 /**
  * The PHB models Elemental Affinity as damage activities the player clicks to add +CHA. With the
  * rider on, clicking one adds it twice. This pins the resolved type into the item's flag (the
  * activities were one way to resolve it) and deletes those activities. Typeless → left alone.
+ * One write: each item's flag and activity deletions (dnd5e's own `system.activities.<id>: _del`
+ * form) go in a single updateEmbeddedDocuments on the actor.
  */
 async function retireManual(actor) {
   const out = [];
+  const updates = [];
   for (const f of featuresOf(actor)) {
     if (f.key !== "elemental-affinity" || !f.types?.length) continue;
     for (const item of f.items) {
       if (!item.isOwner) continue;
-      if (!item.getFlag(MODULE, "damageType")) await item.setFlag(MODULE, "damageType", f.types.length === 1 ? f.types[0] : f.types);
+      const update = {};
+      if (!item.getFlag(MODULE, "damageType")) update[flagPath(MODULE, "damageType")] = f.types.length === 1 ? f.types[0] : f.types;
       for (const a of item.system.activities?.contents ?? []) {
         if (a.type !== "damage") continue;
-        await item.deleteActivity(a.id);
+        update[`system.activities.${a.id}`] = _del;
         out.push(`${item.name}: ${a.name || a.id}`);
       }
+      if (Object.keys(update).length) updates.push({ _id: item.id, ...update });
     }
   }
+  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
   return out;
 }
 
@@ -101,7 +117,8 @@ function report(actor) {
  * @param {{ as?: * }} opts  `as`: a user ref — that user's view: rows and hd need OBSERVER on the
  *   actor; the concentration summons (tokens on any scene) are GM-only.
  */
-function inspect(actor, { as } = {}) {
+function inspect(actor, opts) {
+  const { as } = opts ?? {}; // a null opts reads as omitted (rob-1)
   const viewer = as === undefined || as === null ? null : resolveRef(as, "user");
   const gmView = !viewer || viewer.isGM === true;
   const observes = gmView || actor.testUserPermission?.(viewer, "OBSERVER") === true;
@@ -121,8 +138,9 @@ async function arcaneRecovery(actor, ctx) {
   return ok({ actor: refOf(actor), recovered: recovered ?? null });
 }
 
-/** This module's live patch records (a symbol marker by its description). */
-function patchRecords() {
+/** `describe().patches`: this module's live patch records (a symbol marker by its description).
+ *  The one definition; patches.mjs re-exports it (riders-maint-01). */
+export function patchRecords() {
   return patches().filter(p => p.moduleId === MODULE).map(({ moduleId: _m, ...p }) => ({
     ...p, marker: typeof p.marker === "symbol" ? p.marker.description : p.marker,
   }));
@@ -136,7 +154,7 @@ function selftest(ctx) {
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
     { label: "settings readable", ok: SETTINGS.every(r => typeof ctx.setting(r.key) === "boolean") },
-    { label: "hooks registered", ok: hooks.length === 23, detail: hooks.length },
+    { label: "hooks registered", ok: hooks.length > 0, detail: hooks.length },
     { label: "Battle Medic relay registered", ok: typeof CONFIG.queries?.[RELAY_QUERY] === "function" },
     { label: "patches installed", ok: true, detail: patchRecords().map(p => p.adjustments) },
   ];
@@ -146,7 +164,7 @@ function selftest(ctx) {
 /** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */
 export function buildApiFor(ctx) {
   return buildApi(MANIFEST, {
-    inspect: (actor, opts = {}) => inspect(actor, opts),
+    inspect: (actor, opts) => inspect(actor, opts),
     selftest: () => selftest(ctx),
     arcaneRecovery: actor => arcaneRecovery(actor, ctx),
     // legacy rows: a name, id, uuid or Token also resolves; a miss answers null (combat-riders-12)

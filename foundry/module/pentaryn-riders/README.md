@@ -57,11 +57,11 @@ object. Ask it: `describe()` (offline: `test/golden/describe.json`), `settings()
 | `arcaneRecovery(ref)` | spell slots, one chat line | `{ ok, actor, recovered }` / `{ ok: false, code: "REFUSED" \| "NOT_FOUND" … }`; the picker without spending a use |
 | `report(actor?)` | — | rows `{ actor, rule, items, types?, status, manual?, handAdded?, battleMedic? }` (+ `console.table`); no actor = every character |
 | `featuresOf(actor)` | — | `{ key, rule, items, types }[]` — `items` are **live** Item documents |
-| `setType(target, type, ruleKey?)` | `flags.pentaryn-riders.damageType` | names of the items set; throws on an empty type |
+| `setType(target, type, ruleKey?)` | `flags.pentaryn-riders.damageType` | names of the items set (only items whose rule lists the type; an Item no typed rule matches is not set); throws on an empty type, and `BAD_ARGS` naming the allowed types when no targeted rule lists it |
 | `retireManual(actor)` | the flag; deletes Affinity's damage activities | `"<item>: <activity>"[]` |
 | `installBattleMedic(actor, { replace })` | the Healer feat's activities | `{ ok, item, kit, kitFound, updated, removed }` / `{ ok: false, why }` |
 | `battleMedic(healer, token)` | the patient's Hit Die and HP | `{ faces, healed, hp, value, max }` / `null` — runs the flow without spending the kit |
-| `spendHitDie(actor, { faces })` / `restoreHitDie(actor)` | Hit Dice `spent` | the faces, or `null` |
+| `spendHitDie(actor, { faces })` (faces a number or numeric string) / `restoreHitDie(actor)` | Hit Dice `spent` | the faces, or `null` |
 | `hdPools(actor)` | — | `{ id, faces, value, spent }[]` |
 | `preview(formula, opts)` | — | the formula with a rider applied (`core.transformFormula`) |
 | `rules`, `core` | — | frozen copies of the `RULES` table and the riders-core exports |
@@ -89,6 +89,8 @@ R.inspect("Marrith Ashcroft").rows;                  // the same rows, plain, by
 | Battle Medic roll message `flags.pentaryn-riders` | `{ flow: "battle-medic", target, faces }` |
 | Activity flag `flags.pentaryn-riders.flow` | `"battle-medic"` on the activity `installBattleMedic` builds |
 | Token flag `flags.pentaryn-riders.concentration` | the uuid of the concentration effect that keeps a summon |
+| Summoned token `flags.pentaryn-riders.claims.summonCleanup` | the socket id of the one tab that deletes that scene's summons (the kit's `claimDocument`, riders-async-3); it goes with the token |
+| Concentration save card `flags.pentaryn-riders.claims.autoBreak` | the socket id of the one tab that ends the concentration (the kit's `claimMessage`, riders-async-1) |
 | Patient flag `flags.pentaryn-riders.relay.<requestId>` | the GM tabs' claim stamps (`claims.<socketId>`, removed when answered) and the winner's `{ result \| error, at }`; the last five kept |
 | Documents | class `system.hd.spent` / NPC `system.attributes.hd.spent`; HP via `applyDamage`; `system.spells.spellN.value` (Arcane Recovery); a concentration save card's `system.outcome = "broken"`; summoned tokens deleted |
 
@@ -128,7 +130,10 @@ Nothing in Argon's files is edited.
 ## Two sessions / who writes
 
 - **Damage riders, tray preset, Battle Medic roll, Arcane Recovery, auto-break**: the roller's
-  (owner's) own client; nothing runs twice.
+  (owner's) own client; nothing runs twice. Auto-break also claims the save card first (the kit's
+  `claimMessage`, key `autoBreak`), because two tabs on the roller's account (the MCP bridge tab and
+  a GM browser tab) both pass the roller test: one tab ends the concentration, about 750 ms after
+  the card posts (riders-async-1).
 - **Battle Medic on a target the player doesn't own**: the active GM writes, through the query
   `pentaryn-riders.battleMedic` (registered on every client; the kit's `guarded` with
   `sender: "any"`: a GM receiver, any sender). The handler checks the sender owns the healer, the
@@ -139,7 +144,9 @@ Nothing in Argon's files is edited.
   wait (up to 7 s) and answer with it; a tab that arrives after the result is recorded answers with
   it too and never heals (combat-riders-41).
 - **Concentration summon cleanup**: the active GM's client (with no GM online, the user who ended
-  the concentration) deletes the tokens.
+  the concentration) deletes the tokens. Two tabs on that account both qualify, so per scene each
+  claims the first stamped token first (the kit's `claimDocument`, key `summonCleanup`): one tab
+  deletes that scene's summons, about 750 ms after the concentration ends (riders-async-3).
 
 ## Extending
 

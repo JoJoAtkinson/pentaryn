@@ -224,7 +224,7 @@ export function arcaneRecoveryCheck(choice = {}, slots = {}, cap = 0) {
   return { ok: true, used, reason: null };
 }
 
-/** Is this item the Wizard's Arcane Recovery? Identifier, PHB source, or name. */
+/** Is this item the Wizard's Arcane Recovery? Identifier or name. */
 export function isArcaneRecovery({ type = "", identifier = "", name = "" } = {}) {
   if (type && type !== "feat") return false;
   return identifier === "arcane-recovery" || String(name).trim().toLowerCase() === "arcane recovery";

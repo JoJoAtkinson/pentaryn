@@ -15,6 +15,8 @@
  *      Familiar) gets no stamp and is never touched.
  *    - `deleteActiveEffect`: when an effect is deleted, the active GM (or, with no GM online, the
  *      user who deleted it) deletes every token on every scene stamped with that effect's uuid.
+ *      Two tabs on that user's account both qualify: per scene, the kit's claimDocument on the
+ *      first stamped token elects one tab to delete (riders-async-3).
  *      The world actor dnd5e made for the summon ("<PC> - summons & forms") is kept on purpose:
  *      dnd5e reuses it on the next cast.
  *    A re-cast is safe: the new effect has a new uuid, and dnd5e ends the old one after creating
@@ -27,7 +29,8 @@
  *    posts the save card with a Break Concentration button and ends nothing; the result showed a
  *    bare total with no DC and no pass or fail. On the roller's client, when dnd5e's own
  *    `canBreakConcentration` says the save failed, we call `actor.endConcentration()` and mark the
- *    card broken, as the button does. Kept as a button (nothing ends) when the creature can still
+ *    card broken, as the button does. Two tabs on the roller's account (the MCP bridge plus a GM
+ *    browser tab) both see the message: the kit's claimMessage elects one, so it ends once. Kept as a button (nothing ends) when the creature can still
  *    turn the failure around after the roll: an NPC with Legendary Resistance left, or a feature
  *    such as Indomitable, a Mind Sharpener or Bardic Inspiration (table-core AFTER_FAIL_FEATURES).
  *    The card gets one line: "DC 10 · Failed: concentration ended" / "DC 10 · Success".
@@ -40,6 +43,7 @@
 import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult, isConcentration } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { featureKeys } from "./shapes.mjs";
+import { claimDocument, claimMessage } from "./lib/election.mjs";
 
 const enabled = () => settingOr("concentrationSummons", false);
 
@@ -71,10 +75,18 @@ function cleanupSummons(effect, options, userId) {
     for (const scene of game.scenes) {
       const ids = summonTokenIds(scene.tokens, uuid).filter(id => scene.tokens.get(id)?.canUserModify(game.user, "delete"));
       if (!ids.length) continue;
-      log.info(`concentration on ${effect.name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
-      scene.deleteEmbeddedDocuments("Token", ids).catch(err => log.warn("summon cleanup failed", err));
+      removeSummons(scene, ids, effect.name).catch(err => log.warn("summon cleanup failed", err));
     }
   } catch (err) { log.warn("concentration summon cleanup skipped", err); }
+}
+
+// Two tabs on the active GM's account (the MCP bridge tab and a GM browser tab) both pass the gate
+// above: one wins the scene's first stamped token, and only it deletes (riders-async-3). The claim
+// stamp goes with the token.
+async function removeSummons(scene, ids, name) {
+  if (!await claimDocument(scene.tokens.get(ids[0]), "summonCleanup", { scope: MODULE })) return;
+  log.info(`concentration on ${name} ended: removing ${ids.length} summon token(s) from ${scene.name}`);
+  await scene.deleteEmbeddedDocuments("Token", ids);
 }
 
 /* ── 2. label the break button ────────────────────────────────────────── */
@@ -121,6 +133,8 @@ async function autoBreak(message, options, userId) {
     if (!res.autoBreak) return;
     const actor = message.getAssociatedActor?.();
     if (!actor?.isOwner) return;
+    // Two tabs on the roller's account both pass the gate above: one wins the card (riders-async-1).
+    if (!await claimMessage(message, "autoBreak", { scope: MODULE })) return;
     const ended = await actor.endConcentration();
     if (ended?.length) await message.update({ "system.outcome": "broken" });
   } catch (err) { log.warn("concentration auto-break skipped", err); }

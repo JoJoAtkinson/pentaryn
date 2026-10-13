@@ -776,7 +776,7 @@ adjustments:
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/cast-flow.mjs]
     markers: ["dnd5e.preSummon", "changeSidebarTab"]
-    what: between dnd5e.preSummon and postSummon the sidebar goes back to the tab it had (and collapses again) if it jumped to Actors, and a notice says "Click the map to place X"
+    what: between dnd5e.preSummon and postSummon the sidebar goes back to the tab it had (and collapses again) the first time it jumps to Actors (one-shot, EC-3), and a notice says "Click the map to place X"
     why: the first summon from a compendium profile imports the creature through WorldCollection#importFromCompendium, which ends in directory.activate() and flipped the player's sidebar to Actors; the placement then waited with no prompt (Area 5 S13)
     native_when: core's importFromCompendium takes an option not to activate the directory, or dnd5e's TokenPlacement shows a hint
     retire_class: safe
