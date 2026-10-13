@@ -32,16 +32,6 @@
       "why": "the conduit feature registers the study socket actions and clears the tempo state. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
     },
     {
-      "from": "look-menu.mjs",
-      "to": "study.mjs",
-      "why": "the look menu's 'take a closer look' starts an inspection (study.inspect). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
-    },
-    {
-      "from": "token-hud.mjs",
-      "to": "study.mjs",
-      "why": "the HUD eye starts an inspection (study.inspect). gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
-    },
-    {
       "from": "attributes-ui.mjs",
       "to": "attributes.mjs",
       "why": "the Attributes tab renders and writes the attribute layer. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
@@ -74,7 +64,7 @@
     {
       "from": "look-app.mjs",
       "to": "study.mjs",
-      "why": "the Look window resolves the kind pointer. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
+      "why": "the Look window resolves the kind pointer, and examine (the Inspect gesture every door calls) runs study.inspect after opening it. gap G1: the blueprint has no 'domain' role for Foundry-aware, non-UI logic; attributes.mjs, study.mjs (study/*), facts.mjs, known-data.mjs and relay.mjs score as glue"
     },
     {
       "from": "look-app.mjs",

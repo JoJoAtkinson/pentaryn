@@ -84,6 +84,20 @@ export function baseActorOf(token) {
 }
 
 /**
+ * The creature a token shows, for the Inspect doors (the HUD eye, the look menu, the GM's flask):
+ * the token's own actor — the synthetic one for an unlinked token, so the study reads what is on the
+ * canvas — else the world actor by `actorId`, else null (ties-ui-EXT-10). Ties go through
+ * `baseActorOf` instead (see its warning).
+ *
+ * @param {object|null} token  a Token placeable
+ * @returns {object|null}
+ */
+export function subjectOfToken(token) {
+  if (!token) return null;
+  return token.actor ?? game.actors?.get(token.document?.actorId) ?? null;
+}
+
+/**
  * Which actors are present on the current scene **as far as this user is concerned**.
  *
  * ⚠ This is a disclosure surface, not a convenience. Sorting a tie list into "here" and

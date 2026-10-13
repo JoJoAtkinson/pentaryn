@@ -190,6 +190,12 @@ own copy of the once-per-frame scheduler and the canvas-layer helpers. Both pain
 `framePainter` (the kit's `perFrame`, cancellable on uninstall) and one `interfaceLayer` / `dropLayer`
 pair in `ties-adapter.mjs`. Same frames, same pixels (canvas goldens byte-identical). ties-ui-EXT-9.
 
+Changed (declared, no table-visible change): the Inspect gesture is written once. The HUD eye and the
+double-click menu's "Take a closer look" both call `examine(who, subject)` in `look-app.mjs` (the
+player's Look window first, then the inspection) and resolve the creature with `subjectOfToken(token)`
+in `ties-adapter.mjs`; the GM's flask uses `subjectOfToken` too. Neither door imports the study conduit
+any more (two graph-allow debts retired). Door goldens byte-identical. ties-ui-EXT-10.
+
 ## 0.19.4 (2026-10-10, usability run, Area 7 re-run)
 
 - **The inspect window's Share switches are the table's PCs only** (`tablePCs`): each player's

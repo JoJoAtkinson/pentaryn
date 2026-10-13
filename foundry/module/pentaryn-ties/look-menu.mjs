@@ -1,16 +1,15 @@
 /**
  * Pentaryn NPC Ties — the player's double-click look menu (FEATURE).
  *
- * Moved out of the entry (guide S7). Imports ui, adapter, settings and the study conduit (a domain
- * file — graph-allow, gap G1).
+ * Moved out of the entry (guide S7). Imports ui, adapter and settings; the inspection goes through
+ * look-app's `examine`, the one Inspect gesture every door calls (ties-ui-EXT-10).
  */
 
 import { mayWrite } from "./settings.mjs";
-import { inspectorFor } from "./ties-adapter.mjs";
+import { inspectorFor, subjectOfToken } from "./ties-adapter.mjs";
 import { openTieDialogFor } from "./tie-dialog.mjs";
-import { openLook } from "./look-app.mjs";
+import { examine, openLook } from "./look-app.mjs";
 import { fileHovered } from "./known-ui.mjs";
-import { inspect } from "./study.mjs";
 import { readFlag } from "./lib/flags.mjs";
 
 /*
@@ -35,7 +34,7 @@ function closeLookMenu() {
 function openLookMenu(token, ev) {
   closeLookMenu();
   const who = inspectorFor();
-  const subject = token.actor ?? game.actors.get(token.document.actorId);
+  const subject = subjectOfToken(token);
   if (!who || !subject || subject.id === who.id) return;
 
   /*
@@ -61,8 +60,7 @@ function openLookMenu(token, ev) {
   };
   item("fa-eye", game.i18n.localize("PENTARYN_TIES.known.inspect.button"),
     game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name }), async () => {
-      openLook(who, subject);
-      await inspect(who, subject);
+      await examine(who, subject);
     });
   item("fa-book-open-reader", game.i18n.localize("PENTARYN_TIES.known.look.menu"),
     game.i18n.format("PENTARYN_TIES.known.look.menuTip", { name: token.name }), async () => {

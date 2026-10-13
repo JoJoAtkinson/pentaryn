@@ -7,12 +7,11 @@
 
 import { MODULE } from "./ties-core.mjs";
 import { mayWrite } from "./settings.mjs";
-import { inspectorFor } from "./ties-adapter.mjs";
+import { inspectorFor, subjectOfToken } from "./ties-adapter.mjs";
 import { openTieDialogFor } from "./tie-dialog.mjs";
 import { openPreview } from "./preview-app.mjs";
-import { openLook } from "./look-app.mjs";
+import { examine, openLook } from "./look-app.mjs";
 import { AttributeReview, openReview } from "./review-ui.mjs";
-import { inspect } from "./study.mjs";
 import { guardClick } from "./core/html.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -65,7 +64,7 @@ function injectTieHUD(app, element) {
     pv.addEventListener("click", ev => {
       ev.preventDefault();
       ev.stopPropagation();
-      openPreview(token.actor ?? game.actors.get(token.document.actorId));
+      openPreview(subjectOfToken(token));
     });
     col.appendChild(pv);
   }
@@ -92,9 +91,8 @@ function injectTieHUD(app, element) {
       ev.stopPropagation();
       // one gesture, one cascade — the eye is disabled while it runs, so a double-click cannot queue two
       return guardClick("inspect", eye, async () => {
-        const subject = token.actor ?? game.actors.get(token.document.actorId);
-        if (!game.user?.isGM) openLook(who, subject); // the player's page opens before the dice
-        await inspect(who, subject);
+        const subject = subjectOfToken(token);
+        await examine(who, subject); // the player's page opens before the dice
       }, CLICK);
     });
     col.appendChild(eye);

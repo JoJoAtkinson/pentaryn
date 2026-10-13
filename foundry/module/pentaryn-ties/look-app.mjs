@@ -39,8 +39,8 @@
  * Every observable consequence of a completed roll must be identical for a triumph, a failure and
  * a deliberate lie. The window keeps that in three ways:
  *
- *   1. **It opens before the dice, every time.** Each door calls `openLook` synchronously, first,
- *      then `Study.inspect`. Same moment, same frame, whatever the target carries and whether the
+ *   1. **It opens before the dice, every time.** Each door calls `examine` below, which calls
+ *      `openLook` synchronously, first, then `Study.inspect`. Same moment, same frame, whatever the target carries and whether the
  *      inspect is then refused (no GM, combat tempo, kill switch). Its opening is never a function
  *      of the result, because the result does not exist yet.
  *   2. **Only grants draw.** A locked, held or in-flight fact — or a failure with no written
@@ -67,7 +67,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { LiveHooks } from "./ties-adapter.mjs";
 import { mayWrite } from "./settings.mjs";
-import { kindActorOf } from "./study.mjs";
+import { inspect, kindActorOf } from "./study.mjs";
 import { grantCard, grantedHead } from "./known-ui.mjs";
 import { subjectFacts, knowsAbout, groupLabelKey } from "./facts.mjs";
 import { REGISTRY_SETTING, touchesFlagScope } from "./known-core.mjs";
@@ -300,3 +300,14 @@ export const openLook = (character, subject) => {
     return null;
   }
 };
+
+/**
+ * The Inspect gesture, for every door (the HUD eye, the look menu's "Take a closer look"): the
+ * player's Look window opens FIRST — synchronously, before the dice, whatever the inspect then does
+ * (point 1 above) — and then the inspection runs. For a GM `openLook` is null, so only the inspect
+ * runs (ties-ui-EXT-10).
+ */
+export async function examine(who, subject) {
+  openLook(who, subject);
+  return inspect(who, subject);
+}
