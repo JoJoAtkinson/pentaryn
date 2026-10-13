@@ -17,7 +17,7 @@
         "uuid": "Actor.zzNpc00000000001",
         "changes": {
           "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l1": {
-            "claim": "rid0000000000002",
+            "claim": "gmUser0000000001:rid0000000000001",
             "when": 1790000000000
           }
         }
@@ -204,7 +204,7 @@
         "uuid": "Actor.zzNpc00000000001",
         "changes": {
           "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l4": {
-            "claim": "rid0000000000002",
+            "claim": "gmUser0000000001:rid0000000000001",
             "when": 1790000000000
           }
         }
@@ -333,7 +333,7 @@
         "uuid": "Actor.zzNpc00000000001",
         "changes": {
           "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l3": {
-            "claim": "rid0000000000002",
+            "claim": "gmUser0000000001:rid0000000000001",
             "when": 1790000000000
           }
         }

@@ -15,9 +15,10 @@ import { canSee } from "../ties-adapter.mjs";
 /**
  * How obvious is it that this character is working the room?
  *
- * Joe's rule, and it is roleplay furniture rather than a mechanic: inspect two people and nobody
- * notices; by the third you are visibly studying the room; by the fifth you are sweeping it; by
- * the tenth you look paranoid. **Moving resets it** — *"if they look, move, look, move, they don't
+ * Joe's rule, and it is roleplay furniture rather than a mechanic: at the second look people might
+ * take offence; at the third you are looking people up and down; at the fifth, careful now; at the
+ * sixth you look paranoid (his 2026-08-23 retune, which replaced an earlier "by the tenth" — M5).
+ * **Moving resets it** — *"if they look, move, look, move, they don't
  * announce they are scoping people, which is how people do that in real life."*
  *
  * ## What this deliberately is NOT
@@ -40,13 +41,17 @@ import { canSee } from "../ties-adapter.mjs";
  * already been told twice.
  *
  * Keys are named for their count rather than numbered 1-2-3, so changing a threshold cannot leave
- * the strings quietly describing the wrong rung.
+ * the strings quietly describing the wrong rung. Each rung names its key once, in full (M6).
+ *
+ * The thresholds are 2, 3, 5, 6 — Joe, 2026-08-23: "at 2 … at 3 you are looking people up and
+ * down, at 5 careful now, at 6 you are looking paranoid" (context/plans/foundry-encounter-log.md).
+ * An earlier doc line said "by the tenth"; that was the pre-retune rule, not this one (M5).
  */
 const SCOPE_STEPS = [
-  { at: 2, key: "known.inspect.scope2", label: "PENTARYN_TIES.known.inspect.scope2" },
-  { at: 3, key: "known.inspect.scope3", label: "PENTARYN_TIES.known.inspect.scope3" },
-  { at: 5, key: "known.inspect.scope5", label: "PENTARYN_TIES.known.inspect.scope5" },
-  { at: 6, key: "known.inspect.scope6", label: "PENTARYN_TIES.known.inspect.scope6" }
+  { at: 2, label: "PENTARYN_TIES.known.inspect.scope2" },
+  { at: 3, label: "PENTARYN_TIES.known.inspect.scope3" },
+  { at: 5, label: "PENTARYN_TIES.known.inspect.scope5" },
+  { at: 6, label: "PENTARYN_TIES.known.inspect.scope6" }
 ];
 
 /** Feet of movement that reads as "they moved on" and clears the count. */
@@ -62,7 +67,7 @@ export const scopingState = characterId =>
   characterId ? scoping.get(characterId) ?? null : Object.fromEntries(scoping);
 
 /**
- * Count this look, and return the line to say — or null.
+ * Count this look, and return the line's i18n key — or null.
  *
  * The anchor is the position where the current run of looking began, not the previous look, so
  * drifting a foot at a time across a room still counts as standing there working it.
@@ -96,7 +101,7 @@ function scopeTell(character, token) {
   scoping.set(character.id, { count, anchor: count === 1 ? here : prev.anchor, sceneId: scene?.id });
 
   // exact thresholds only — the line should land once, not every look after three
-  return SCOPE_STEPS.find(s => s.at === count)?.key ?? null;
+  return SCOPE_STEPS.find(s => s.at === count)?.label ?? null;
 }
 
 /**
@@ -126,7 +131,7 @@ export async function announceTempo(character) {
   const line = scopeTell(character, own);
   if (!line) return;
   // the token name the table sees, never the actor name (TIE-3)
-  const text = _loc(SCOPE_STEPS.find(s => s.key === line).label, { name: own.document.name || cardName(character) });
+  const text = _loc(line, { name: own.document.name || cardName(character) });
 
   broadcastBubble(own.id, canvas.scene?.id, text);
 

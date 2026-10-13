@@ -672,6 +672,16 @@ an actor.
 If the claim write itself fails, `claimDocument` returns false when the document was deleted under
 it, and otherwise rejects coded `INTERNAL` — let the caller's coded-error handling report it.
 
+A repeatable claim on a long-lived document is a module-local stake-and-confirm: stake a ledger row
+holding this tab's session token, wait for the server's broadcast, read the row back, release it only
+if it still holds that token (pentaryn-ties `study/claim.mjs`). One token idiom per module, used by
+every stake and every release: **lazy and user-prefixed** — lazy so nothing reads `game` at import,
+user-prefixed so a stray row names the account that left it:
+```js
+let SESSION = null;
+const session = () => (SESSION ??= `${game.user?.id ?? "?"}:${foundry.utils.randomID()}`);
+```
+
 Shared value, one store (the relay must still be idempotent or request-keyed — two GM tabs race):
 ```js
 const ledger = serialStore(MODULE, ["counter", "log"], { anyGM: false });   // module scope, once

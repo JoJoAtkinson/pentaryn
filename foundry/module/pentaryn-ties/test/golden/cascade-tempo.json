@@ -44,6 +44,26 @@
       "state": 7
     },
     {
+      "look": 8,
+      "emitted": [],
+      "state": 8
+    },
+    {
+      "look": 9,
+      "emitted": [],
+      "state": 9
+    },
+    {
+      "look": 10,
+      "emitted": [],
+      "state": 10
+    },
+    {
+      "look": 11,
+      "emitted": [],
+      "state": 11
+    },
+    {
       "look": "after moving 20 ft",
       "state": {
         "count": 1,

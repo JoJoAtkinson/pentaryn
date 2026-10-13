@@ -9,7 +9,7 @@ import { MODULE } from "../ties-core.mjs";
 import { INSPECT_CLAIM_KEY } from "../core/rules.mjs";
 import { BELIEFS_FLAG, KIND_KEY } from "../known-core.mjs";
 import { putBelief, readBelief } from "./apply.mjs";
-import { readFlag } from "../lib/flags.mjs";
+import { flagPath, readFlag } from "../lib/flags.mjs";
 
 /**
  * ⚠ **`activeGM` identifies a USER, not a session — and one GM can be logged in twice.**
@@ -27,9 +27,12 @@ import { readFlag } from "../lib/flags.mjs";
  * between themselves: each stamps a per-load id into the ledger row *before* rolling, waits for
  * the server to broadcast whichever landed last, and only the client whose stamp survived goes
  * on. One extra document write per roll, and the loser is silent.
+ *
+ * One token idiom for every stake and release in this file (EXT-12): lazy, so nothing reads `game`
+ * at import, and user-prefixed, so a stray row names the account that left it.
  */
 let SESSION = null;
-const session = () => (SESSION ??= foundry.utils.randomID());
+const session = () => (SESSION ??= `${game.user?.id ?? "?"}:${foundry.utils.randomID()}`);
 
 /** Sleep on the global timer at call time (tests drive it with `mock.timers`). */
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -114,30 +117,64 @@ async function claimRoll(ledger, characterId, now, key = KIND_KEY) {
  * on a roll the handler would still refuse. That is worse than not resetting at all, because
  * the refusal is a message a plain failure never produces.
  *
- * Foundry's deletion syntax is the `-=` prefix on the key being removed, and it is the only
- * thing that works here. `{recursive: false}` is NOT the fix and is actively dangerous: applied
+ * Delete the key with core's `_del` value (`{ [path]: _del }`, a `ForcedDeletion`); the `-=key`
+ * prefix did the same job but is deprecated in v14 (ES-6). `{recursive: false}` is NOT the fix and is actively dangerous: applied
  * to `{"flags.pentaryn-ties.beliefs": {…}}` it replaces the whole **`flags`** object and takes
  * `ties`, `known` and `worn` with it.
  */
 export function dropRow(base, ownerId, key, owned) {
-  const rest = Object.keys(owned ?? {}).filter(k => k !== key);
-  return rest.length ? { [`${base}.${ownerId}.-=${key}`]: null } : { [`${base}.-=${ownerId}`]: null };
+  // `key` may be a list (AC-5): every row in one change, or the owner's entry when none is left
+  const gone = [key].flat();
+  const rest = Object.keys(owned ?? {}).filter(k => !gone.includes(k));
+  return rest.length ? Object.fromEntries(gone.map(k => [`${base}.${ownerId}.${k}`, _del])) : { [`${base}.${ownerId}`]: _del };
+}
+
+/**
+ * **The one beliefs-row drop** (ES-7, M10): remove `characterId`'s `key` row from a ledger's beliefs
+ * flag. False when there was no such row. Every caller that deletes a beliefs row comes through here
+ * — `putBelief(null)`, the two release twins, the identification do-over and `forgetFact`.
+ *
+ * ⚠ Unset the whole flag when the last row goes, rather than leaving `beliefs: {}` behind.
+ *
+ * `dropRow` removes the character's entry and stops there, so an inspection that rolled nothing
+ * against a creature nobody had studied leaves an empty container on that actor — permanently,
+ * and on every creature the party ever glanced at. Caught while restoring a test world: three
+ * actors held `beliefs: {}` where the baseline had no key at all. Harmless to read, but it is
+ * litter in every world export and every diff, and it makes "has anyone studied this?" a
+ * question you cannot answer by looking.
+ */
+export async function dropBeliefRow(ledger, characterId, key) {
+  const change = beliefRowsDrop(ledger, characterId, key);
+  if (!change) return false;
+  // quietly, like every other row drop
+  await ledger.update(change, { render: false });
+  return true;
+}
+
+/**
+ * The change `dropBeliefRow` writes, for one key or a list of them (AC-5: `resetInspection` drops
+ * every rung in one update). Only rows that are there are dropped; null when none is.
+ */
+export function beliefRowsDrop(ledger, characterId, keys) {
+  const all = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
+  const mine = all[characterId] ?? {};
+  const gone = [keys].flat().filter(k => mine[k]);
+  if (!gone.length) return null;
+  const others = Object.keys(mine).filter(k => !gone.includes(k));
+  const rest = Object.keys(all).filter(k => k !== characterId);
+  const base = flagPath(MODULE, BELIEFS_FLAG);
+  // the whole flag goes with core's `_del` too (ES-6)
+  return !others.length && !rest.length ? { [base]: _del } : dropRow(base, characterId, gone, mine);
 }
 
 /** Un-stake it — only ever called by the client that won, and only when no roll happened. */
 async function releaseClaim(ledger, characterId, key = KIND_KEY) {
-  const all = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
-  if (all?.[characterId]?.[key]?.claim !== session()) return;
-  await ledger.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, key, all[characterId]), {
-    render: false
-  });
+  if (readFlag(ledger, MODULE, BELIEFS_FLAG)?.[characterId]?.[key]?.claim !== session()) return;
+  await dropBeliefRow(ledger, characterId, key);
 }
 
-const inspectSession = () => `${game.user?.id ?? "?"}:${INSPECT_SESSION}`;
-const INSPECT_SESSION = foundry.utils.randomID();
-
 export async function claimInspect(subject, characterId) {
-  const mine = inspectSession();
+  const mine = session();
   const won = await stakeAndConfirm({
     write: () => subject.update({ [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${INSPECT_CLAIM_KEY}`]: { claim: mine } }, { render: false }),
     readBack: () => readFlag(subject, MODULE, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim,
@@ -148,27 +185,7 @@ export async function claimInspect(subject, characterId) {
 }
 
 export async function releaseInspect(subject, characterId, token = null) {
-  const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
-  const mine = token ?? inspectSession();
-  if (all?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim !== mine) return;
-
-  /*
-   * ⚠ Unset the whole flag when the last row goes, rather than leaving `beliefs: {}` behind.
-   *
-   * `dropRow` removes the character's entry and stops there, so an inspection that rolled nothing
-   * against a creature nobody had studied leaves an empty container on that actor — permanently,
-   * and on every creature the party ever glanced at. Caught while restoring a test world: three
-   * actors held `beliefs: {}` where the baseline had no key at all. Harmless to read, but it is
-   * litter in every world export and every diff, and it makes "has anyone studied this?" a
-   * question you cannot answer by looking.
-   */
-  const others = Object.keys(all[characterId] ?? {}).filter(k => k !== INSPECT_CLAIM_KEY);
-  const rest = Object.keys(all).filter(k => k !== characterId);
-  if (!others.length && !rest.length) {
-    await subject.unsetFlag(MODULE, BELIEFS_FLAG);
-    return;
-  }
-  await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, INSPECT_CLAIM_KEY, all[characterId]), {
-    render: false
-  });
+  const mine = token ?? session();
+  if (readFlag(subject, MODULE, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim !== mine) return;
+  await dropBeliefRow(subject, characterId, INSPECT_CLAIM_KEY);
 }

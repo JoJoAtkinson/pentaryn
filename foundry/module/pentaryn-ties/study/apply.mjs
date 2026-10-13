@@ -15,13 +15,14 @@ import {
   GRANTED_TEXT_MAX,
   isBlankProse,
   KNOWN_FLAG,
+  ledgerKeyOf,
   makeKnownEntry,
   readAttrBeliefs,
   readGranted,
   STUDIED_FLAG,
   toStoredKnown
 } from "../known-core.mjs";
-import { claimFact, dropRow, releaseFact } from "./claim.mjs";
+import { claimFact, dropBeliefRow, releaseFact, stakeAndConfirm } from "./claim.mjs";
 import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
 import { cardName, cardToken, clampSituational, esc, log } from "./shared.mjs";
@@ -278,7 +279,7 @@ async function applyClaimed(character, fact, payload, rollMode, refuse) {
  */
 export function readBelief(fact, characterId) {
   if (fact.ns === "attr") {
-    return readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[`${fact.factKey}:${characterId}`] ?? null;
+    return readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[ledgerKeyOf(fact.factKey, characterId)] ?? null;
   }
   return beliefsOf(fact.ledger)[characterId]?.[fact.beliefKey] ?? null;
 }
@@ -287,46 +288,51 @@ export function readBelief(fact, characterId) {
 export async function putBelief(fact, characterId, record) {
   if (fact.ns !== "attr") {
     if (record === null) {
-      const all = readFlag(fact.ledger, MODULE, BELIEFS_FLAG) ?? {};
-      if (!all[characterId]?.[fact.beliefKey]) return;
-      await fact.ledger.update(
-        dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, fact.beliefKey, all[characterId]),
-        { render: false }
-      );
+      await dropBeliefRow(fact.ledger, characterId, fact.beliefKey);
       return;
     }
     return writeBelief(fact, characterId, record);
   }
 
   /*
-   * ⚠ A setting is rewritten WHOLE, not merged. That cuts both ways: deletion is just leaving
-   * the key out (no `-=` syntax needed, and none available), but two GM sessions writing
-   * different rows in the same instant would clobber each other. The claim protocol (claim.mjs)
-   * already serialises rolls per character-and-fact, which is the only concurrency this
-   * ledger actually sees — a GM hand-editing the registry at the same moment is a person, not
-   * a race.
+   * ⚠ A setting is rewritten WHOLE, not merged. Deletion is just leaving the key out (no `-=`
+   * syntax needed, and none available) — but every write sets the whole ledger from the writing
+   * tab's own copy. The claim protocol (claim.mjs) serialises ONE FACT per character, not this
+   * ledger: two GM tabs (one GM signed in twice) finishing different rows in the same instant each
+   * write a ledger that lacks the other's row, and whichever lands last reverts the other (AC-2).
+   * So the write confirms the way a claim does: stake, wait for the broadcast, read back, and when
+   * this row is missing or different, apply the same one-row upsert once more. The re-apply reads
+   * the fresh value inside the queue, so it carries the other tab's row too and both converge.
    */
   if (!game.user?.isGM) return;
-  const key = `${fact.factKey}:${characterId}`;
+  const key = ledgerKeyOf(fact.factKey, characterId);
+  const row =
+    record === null
+      ? null
+      : {
+          text: record.text ?? "",
+          tier: null,
+          total: record.total ?? null,
+          when: record.when ?? 0,
+          delivered: record.delivered ?? null,
+          claim: record.claim ?? null,
+          sources: record.sources ?? null,
+          ...(typeof record.pass === "boolean" ? { pass: record.pass } : {}),
+          ...(record.from ? { from: record.from } : {}),
+          ...(record.from && record.prior ? { prior: record.prior } : {})
+        };
   // queued (ties-30): the read happens inside the queue, so a share racing a roll loses nothing
-  await attrBeliefsStore().write(raw => {
-    const all = readAttrBeliefs(raw);
-    if (record === null) delete all[key];
-    else
-      all[key] = {
-        text: record.text ?? "",
-        tier: null,
-        total: record.total ?? null,
-        when: record.when ?? 0,
-        delivered: record.delivered ?? null,
-        claim: record.claim ?? null,
-        sources: record.sources ?? null,
-        ...(typeof record.pass === "boolean" ? { pass: record.pass } : {}),
-        ...(record.from ? { from: record.from } : {}),
-        ...(record.from && record.prior ? { prior: record.prior } : {})
-      };
-    return all;
-  });
+  const upsert = () =>
+    attrBeliefsStore().write(raw => {
+      const all = readAttrBeliefs(raw);
+      if (row === null) delete all[key];
+      else all[key] = row;
+      return all;
+    });
+  // both sides through the same sanitiser, so field order and clamping never read as a difference
+  const token = JSON.stringify(row === null ? null : readAttrBeliefs({ [key]: row })[key] ?? null);
+  const readBack = () => JSON.stringify(readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[key] ?? null);
+  if (!(await stakeAndConfirm({ write: upsert, readBack, token }))) await upsert();
 }
 
 /**

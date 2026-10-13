@@ -110,8 +110,9 @@ test("ties-21: runCascade reads the registry once per run, not once per step", a
   F.rolls.push(16, 17); // Vel 16, the guild 17 (held)
   F.dialogs.push(false); // the held-rung prompt: Later
   let steps = 0;
-  const reads = await settingReads("attributes", "reg", "runCascade", async () => {
-    steps = await settingReads("attributeKnowledge", "knowledge", "runCascade", () => settle(Study.inspectAs(get(PC), get(NPC))));
+  // M12: the loop's invariants are read by `cascadePlanner`, once; each step is its `nextStep`
+  const reads = await settingReads("attributes", "reg", "cascadePlanner", async () => {
+    steps = await settingReads("attributeKnowledge", "knowledge", "nextStep", () => settle(Study.inspectAs(get(PC), get(NPC))));
   });
   assert.ok(steps >= 3, `the cascade took several steps (kin bypass, Vel, the guild): ${steps}`);
   assert.equal(reads, 1, "the registry is a loop invariant: read once, above the loop");

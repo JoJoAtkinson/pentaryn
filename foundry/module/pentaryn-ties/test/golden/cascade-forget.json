@@ -33,7 +33,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000002.-=attr:city:#id": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000002.attr:city:#id": "<_del>"
           }
         },
         {
@@ -125,7 +125,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.granted.-=attr:city:#id": null
+            "flags.pentaryn-ties.granted.attr:city:#id": "<_del>"
           }
         },
         {
@@ -150,7 +150,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000002.-=lore:zzNpc00000000001:l1": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000002.lore:zzNpc00000000001:l1": "<_del>"
           }
         },
         {
@@ -166,7 +166,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.studied.lore.-=lore:zzNpc00000000001:l1": null
+            "flags.pentaryn-ties.studied.lore.lore:zzNpc00000000001:l1": "<_del>"
           }
         },
         {
@@ -187,7 +187,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.granted.-=lore:zzNpc00000000001:l1": null
+            "flags.pentaryn-ties.granted.lore:zzNpc00000000001:l1": "<_del>"
           }
         },
         {
@@ -212,7 +212,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.-=zzPc000000000003": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000003": "<_del>"
           }
         },
         {
@@ -313,7 +313,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.studied.lore.-=attr:city:c1": null
+            "flags.pentaryn-ties.studied.lore.attr:city:c1": "<_del>"
           }
         },
         {
@@ -334,7 +334,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.granted.-=attr:city:c1": null
+            "flags.pentaryn-ties.granted.attr:city:c1": "<_del>"
           }
         },
         {
@@ -359,7 +359,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzKind0000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.-=zzPc000000000002": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000002": "<_del>"
           }
         },
         {
@@ -375,7 +375,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.studied.kind.-=zzKind0000000001": null
+            "flags.pentaryn-ties.studied.kind.zzKind0000000001": "<_del>"
           }
         },
         {
@@ -396,7 +396,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzPc000000000002",
           "changes": {
-            "flags.pentaryn-ties.granted.-=kind:zzKind0000000001": null
+            "flags.pentaryn-ties.granted.kind:zzKind0000000001": "<_del>"
           }
         },
         {

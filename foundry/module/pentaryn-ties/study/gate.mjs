@@ -24,7 +24,7 @@ import {
   STUDIED_FLAG
 } from "../known-core.mjs";
 import { applyPlayerWrites, putBelief, readBelief } from "./apply.mjs";
-import { beliefsOf, concealmentFor, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
+import { beliefsOf, identDcOf, identRowMissed, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
 import { esc } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 import { setting } from "../settings.mjs";
@@ -93,8 +93,7 @@ async function deliverFact(fact, character) {
    * nothing. The one exception is a KIND below 15 with no authored rung 0 now: rows held before
    * 2026-10 parked the generic "nothing about it means anything" card, which is no longer said.
    */
-  const missed = rowMissed(fact, rec);
-  const lie = fact.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0);
+  const { missed, lie } = missedAndLie(fact, rec);
   const silent = isBlankProse(String(rec.text ?? "")) || (fact.ns === "kind" && missed && !lie);
   if (!(await applyPlayerWrites(character, fact, { text: rec.text, silent, tier: rec.tier }, now))) return false;
   await putBelief(fact, character.id, { ...rec, delivered: now, claim: null });
@@ -122,6 +121,16 @@ export function rowMissed(fact, rec) {
   if (!rec || rec.from) return false;
   if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !kindPassed(rec.tier);
   return rolledMiss(rec, fact.dc);
+}
+
+/**
+ * `rowMissed`, plus whether that miss is a kind's authored rung-0 lie — a failed kind row that
+ * still counts as a card because the kind has an authored rung 0. One test, so `deliverFact` and
+ * `forgetFact` agree on which failures the player holds (M11; pinned by test/kind-lie.test.mjs).
+ */
+export function missedAndLie(fact, rec) {
+  const missed = rowMissed(fact, rec);
+  return { missed, lie: fact.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0) };
 }
 
 /**
@@ -171,8 +180,7 @@ export function pending() {
          * with `deliverHeld`.
          */
         if (parsed.ns === "attr" && parsed.fact === MEMBER_FACT && !String(rec.text ?? "").trim()
-          && typeof rec.total === "number"
-          && rec.total < (describeAttribute(parsed.subject)?.dc ?? Infinity) + concealmentFor(ledger, parsed.subject)) continue;
+          && identRowMissed(rec, identDcOf(ledger, parsed.subject))) continue;
         const label =
           parsed.ns === "lore"
             ? readLore(readFlag(ledger, MODULE, LORE_FLAG)).find(r => r.id === parsed.fact)?.label ?? parsed.fact
@@ -248,7 +256,7 @@ export async function reset(character, subject, loreId = null, attrId = null) {
 
   await putBelief(fact, character.id, null);
   if (studiedOf(character)[fact.axis][fact.lockKey]) {
-    await character.update({ [`flags.${MODULE}.${STUDIED_FLAG}.${fact.axis}.-=${fact.lockKey}`]: null });
+    await character.update({ [`flags.${MODULE}.${STUDIED_FLAG}.${fact.axis}.${fact.lockKey}`]: _del });
   }
   /*
    * Nothing already in their notebook is removed — not their notes, and not the grant.

@@ -228,7 +228,7 @@ export class LookWindow extends ApplicationV2 {
 
   /**
    * What the window draws from, hooked:
-   *   the character   flags.granted (grants land; forget writes `granted.-=key`)
+   *   the character   flags.granted (grants land; forget writes `granted.key: _del`)
    *   subject / kind  any module flag (beliefs → the secrecy gate on Deliver; kindOf, attributes,
    *                   attributesOff, lore → structure), and name / img
    *   world setting   the registry (secret flags, ladder parents, lore row ids)

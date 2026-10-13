@@ -91,6 +91,7 @@
   "isBlankProse",
   "kindHasContent",
   "knowsAttribute",
+  "ledgerKeyOf",
   "loreFactKey",
   "loreOfferable",
   "loreOutcome",

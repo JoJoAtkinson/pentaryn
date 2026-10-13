@@ -95,6 +95,9 @@ export function parseFactKey(key) {
   return { ns, subject, fact };
 }
 
+/** A ledger key (`<factKey>:<characterId>`), built in one place — `parseLedgerKey` splits it (EXT-5). */
+export const ledgerKeyOf = (factKey, characterId) => `${factKey}:${characterId}`;
+
 /**
  * A ledger key (`<factKey>:<characterId>`) split back into its two halves.
  *

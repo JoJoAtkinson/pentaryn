@@ -340,7 +340,7 @@
           "documentName": "Actor",
           "uuid": "Actor.zzNpc00000000001",
           "changes": {
-            "flags.pentaryn-ties.beliefs.zzPc000000000001.-=#inspect": null
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.#inspect": "<_del>"
           }
         },
         {

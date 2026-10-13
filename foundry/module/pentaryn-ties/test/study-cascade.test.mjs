@@ -192,8 +192,9 @@ test("resetIdentification / resetInspection", async () => {
   pinJSON("cascade-reset", { rows, ledgers: ledgers() }, import.meta.url);
 });
 
-test("combat: one inspection per combatant per round, one sentence for every target", async () => {
+test("combat: one inspection per combatant per round, marked not refused (ES-5)", async () => {
   game.combat = { id: "zzCombat00000001", started: true, round: 1, combatants: [{ id: "zzCombatant00001", actorId: PC }] };
+  game.combats = [game.combat];
   Object.defineProperty(get(PC), "inCombat", { value: true, configurable: true, writable: true });
   const rows = [];
   rows.push(await run("first look this round", () => Study.inspect(get(PC), get(LONE))));
@@ -201,14 +202,22 @@ test("combat: one inspection per combatant per round, one sentence for every tar
   game.combat.round = 2;
   rows.push(await run("next round", () => Study.inspect(get(PC), get(LONE))));
   game.combat = null;
+  game.combats = undefined;
   get(PC).inCombat = false;
   pinJSON("cascade-combat", rows, import.meta.url);
 });
 
+/*
+ * M5 (final review 2026-10-12, ties-study; repaired 2026-10-13): the last rung is the SIXTH look.
+ * Joe's retune of 2026-08-23 ("at 2 … at 3 you are looking people up and down, at 5 careful now,
+ * at 6 you are looking paranoid", context/plans/foundry-encounter-log.md) replaced his earlier
+ * "by the tenth". The code was right; the doc comment in tempo.mjs was the stale half. Looks 7–11
+ * say nothing — each line lands once, on its exact count.
+ */
 test("tempo: lines at the 2nd, 3rd, 5th and 6th look; a 20 ft move starts the count again", async () => {
   T().study.clearScoping();
   const said = [];
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 1; i <= 11; i++) {
     const mark = F.calls.length;
     await settle(Study.inspect(get(PC), get(LONE)));
     said.push({ look: i, emitted: F.calls.slice(mark).filter(c => c.op === "socket.emit").map(c => c.args[1].text), state: T().study.scoping(PC).count });
@@ -221,4 +230,7 @@ test("tempo: lines at the 2nd, 3rd, 5th and 6th look; a 20 ft move starts the co
   said.push({ look: "drifted 10 ft", state: T().study.scoping(PC) });
   pinJSON("cascade-tempo", { said, all: T().study.scoping(), cleared: (T().study.clearScoping(PC), T().study.scoping(PC)) }, import.meta.url);
   assert.equal(said[1].emitted.length, 1);
+  const spoke = said.filter(r => r.emitted?.length).map(r => r.look);
+  assert.deepEqual(spoke, [2, 3, 5, 6], "M5: the rungs land on the 2nd, 3rd, 5th and 6th look (Joe, 2026-08-23)");
+  assert.match(said[5].emitted[0], /looks openly paranoid/, "M5: the paranoid line is the sixth look's");
 });

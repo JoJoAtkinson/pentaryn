@@ -789,7 +789,7 @@
           "type": "[{ min, text }]"
         }
       ],
-      "returns": "Promise<boolean>",
+      "returns": "Promise<[{ min, text }]|false>",
       "gm": true,
       "writes": true,
       "query": false,
@@ -797,7 +797,7 @@
         "flags.pentaryn-ties.studyTiers"
       ],
       "legacy": true,
-      "doc": "GM: author the study ladder."
+      "doc": "GM: author the study ladder; answers the cleaned ladder as stored ([] clears it), false when refused."
     },
     {
       "path": "study.difficulty",
@@ -811,7 +811,7 @@
           "type": "number|\"auto\"|null"
         }
       ],
-      "returns": "Promise<boolean>",
+      "returns": "Promise<number|\"auto\"|false>",
       "gm": true,
       "writes": true,
       "query": false,
@@ -819,7 +819,7 @@
         "flags.pentaryn-ties.studyOffset"
       ],
       "legacy": true,
-      "doc": "GM: shift the kind's DC ladder."
+      "doc": "GM: shift the kind's DC ladder; answers the cleaned offset as stored (0 clears it), false when refused."
     },
     {
       "path": "study.readTiers",
@@ -870,7 +870,7 @@
           "doc": "a token reads its world actor"
         }
       ],
-      "returns": "[{ character, key, text, tier, total, when, delivered, … }]",
+      "returns": "[{ ns, factId, fact, character, characterId, tier, total, when, delivered, … }]",
       "gm": true,
       "writes": false,
       "query": false,
@@ -919,7 +919,9 @@
       "query": false,
       "sideEffects": [
         "flags.pentaryn-ties.beliefs",
-        "flags.pentaryn-ties.granted"
+        "flags.pentaryn-ties.granted",
+        "flags.pentaryn-ties.studied",
+        "flags.pentaryn-ties.known"
       ],
       "legacy": true,
       "doc": "GM: release one held reveal."
@@ -1087,7 +1089,7 @@
           "doc": "the creature or person studied"
         }
       ],
-      "returns": "[{ attrId, rows }]",
+      "returns": "[{ id, title, icon, rows }]",
       "gm": false,
       "writes": false,
       "query": false,
@@ -1193,7 +1195,9 @@
       "query": false,
       "sideEffects": [
         "flags.pentaryn-ties.beliefs",
-        "flags.pentaryn-ties.granted"
+        "flags.pentaryn-ties.granted",
+        "flags.pentaryn-ties.known",
+        "setting pentaryn-ties.attributeKnowledge"
       ],
       "legacy": true,
       "doc": "GM: run an inspection for a character by hand."
@@ -1218,7 +1222,9 @@
       "query": false,
       "sideEffects": [
         "flags.pentaryn-ties.beliefs",
-        "flags.pentaryn-ties.granted"
+        "flags.pentaryn-ties.granted",
+        "flags.pentaryn-ties.known",
+        "setting pentaryn-ties.attributeKnowledge"
       ],
       "legacy": true,
       "doc": "GM: release held identifications on this subject."
@@ -1375,7 +1381,9 @@
       "query": false,
       "sideEffects": [
         "flags.pentaryn-ties.beliefs",
-        "flags.pentaryn-ties.granted"
+        "flags.pentaryn-ties.granted",
+        "flags.pentaryn-ties.known",
+        "setting pentaryn-ties.attributeKnowledge"
       ],
       "legacy": true,
       "doc": "GM: tell characters one fact as if they had passed it (chain-aware)."
@@ -1419,13 +1427,13 @@
           "doc": "a player character"
         }
       ],
-      "returns": "\"passed\"|\"told\"|\"held\"|\"failed\"|\"locked\"|\"none\"",
+      "returns": "{ status, key, belief, tier, total, from, dc }",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Where one character stands on one fact."
+      "doc": "Where one character stands on one fact; status is passed | told | held | failed | locked | none."
     },
     {
       "path": "study.audit.legacyMissCards",
@@ -2087,7 +2095,7 @@
           "doc": "a player character"
         }
       ],
-      "returns": "\"passed\"|\"told\"|\"held\"|\"failed\"|\"locked\"|\"none\"",
+      "returns": "{ status, key, belief, tier, total, from, dc }",
       "gm": false,
       "writes": false,
       "query": false,
@@ -2119,7 +2127,9 @@
       "query": false,
       "sideEffects": [
         "flags.pentaryn-ties.beliefs",
-        "flags.pentaryn-ties.granted"
+        "flags.pentaryn-ties.granted",
+        "flags.pentaryn-ties.known",
+        "setting pentaryn-ties.attributeKnowledge"
       ],
       "since": "0.20.0",
       "doc": "Same as study.share (its own name, ties-6)."

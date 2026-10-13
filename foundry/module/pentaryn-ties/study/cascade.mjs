@@ -25,19 +25,20 @@ import {
   STUDY_RUNGS
 } from "../known-core.mjs";
 import { applyPlayerWrites, postStub, putBelief, throwBlind } from "./apply.mjs";
-import { claimInspect, dropRow, releaseInspect } from "./claim.mjs";
+import { beliefRowsDrop, claimInspect, dropBeliefRow, releaseInspect } from "./claim.mjs";
 import { composeStudyPayload } from "./compose.mjs";
 import {
   beliefsOf,
-  concealmentFor,
   holdDefault,
+  identDcOf,
+  identRowMissed,
   kindActorOf,
   reg,
   resolveFact,
   stackingRule,
   studySkillFor
 } from "./resolve.mjs";
-import { esc, INSPECT, log } from "./shared.mjs";
+import { esc, INSPECT, log, skillLabelOf } from "./shared.mjs";
 import { send } from "../socket-adapter.mjs";
 import { announceTempo } from "./tempo.mjs";
 import { readFlag } from "../lib/flags.mjs";
@@ -80,7 +81,7 @@ export async function inspect(character, subject) {
     ui.notifications.warn(_loc("PENTARYN_TIES.known.study.notify.noGM"));
     return false;
   }
-  if (!combatAllows(character)) return refused("one inspection per combatant per round");
+  markCombatLook(character);
 
   /*
    * ⚠ The stub is posted HERE, by the client that made the gesture — not by the GM handler.
@@ -122,22 +123,23 @@ export const _sizes = () => ({ inspected: inspected.size });
  *
  * dnd5e 5.3.3 keeps **no per-turn action ledger** to consume from (verified in phase 4), so
  * "inspection costs your action" cannot be implemented as an action. What can be implemented
- * truthfully is a rule about *this feature*: one inspection per combatant per round.
+ * truthfully is a rule about *this feature*: one inspection per combatant per round — **tracked and
+ * marked, never refused** (ES-5): a second look in the same round warns the looker and still runs.
  *
- * ⚠ The refusal must be **uniform** — the same sentence whatever the target — or a refusal that
- * varied would itself be a probe.
+ * Every started combat is consulted, not only `game.combat` (the one this client is viewing), so a
+ * fight on another scene still counts. `actor.inCombat` is not used for the same reason — it reads
+ * the viewed combat only.
  */
-function combatAllows(character) {
-  if (!game.combat?.started || !character.inCombat) return true;
-  const combatant = game.combat.combatants.find(c => c.actorId === character.id);
-  if (!combatant) return true;
-  const key = `${game.combat.id}:${game.combat.round}:${combatant.id}`;
-  if (inspected.has(key)) {
-    ui.notifications.warn(_loc("PENTARYN_TIES.known.inspect.spentThisRound"));
-    return false;
+function markCombatLook(character) {
+  let again = false;
+  for (const combat of game.combats?.filter(c => c.started) ?? []) {
+    const combatant = combat.combatants.find(c => c.actorId === character.id);
+    if (!combatant) continue;
+    const key = `${combat.id}:${combat.round}:${combatant.id}`;
+    if (inspected.has(key)) again = true;
+    else inspected.set(key, true);
   }
-  inspected.set(key, true);
-  return true;
+  if (again) ui.notifications.warn(_loc("PENTARYN_TIES.known.inspect.spentThisRound"));
 }
 
 /**
@@ -157,6 +159,7 @@ export async function applyInspect(payload, senderId, { postStubCard = false } =
     return false;
   };
   if (!user || !character || !subject) return refuse("unknown actor");
+  if (character.type !== "character") return refuse(`${character.name} is not a character sheet`);
   if (character.testUserPermission(user, "OWNER") !== true) return refuse(`${user.name} does not own ${character.name}`);
   if (!mayWrite(user)) return refuse(`playerAccess is off for ${user.name}`);
   if (!canReach(user, subject)) return refuse(`${user.name} cannot see ${subject.name}`);
@@ -185,24 +188,34 @@ export async function applyInspect(payload, senderId, { postStubCard = false } =
  */
 async function guardedCascade(character, subject) {
   const release = [];
+  let held = false;
   try {
-    return await runCascade(character, subject, release);
+    ({ held } = await runCascade(character, subject, release));
   } finally {
     if (release[0]) await releaseInspect(subject, character.id, release[0]);
   }
+  // AC-1: only now, with the claim handed back, may the GM's Deliver/Later dialog sit open
+  if (held) await promptCascadeDeliver(character, subject);
+  return true;
 }
 
-/** The loop. One planner step at a time, batching everything it decides into two writes. */
+/**
+ * The loop. One planner step at a time, batching everything it decides into two writes.
+ * Reports `{ held }` rather than prompting, so the guard can release the claim first.
+ *
+ * M12: the loop only orchestrates — `cascadePlanner` decides the next rung, `rollRung` throws it,
+ * `recordRung` writes what it settled. Each step's rules live with the step.
+ */
 async function runCascade(character, subject, release = []) {
   /*
-   * The claim is taken **lazily** — on the first rung that actually needs dice, and never for a
-   * gesture that rolls nothing.
+   * The claim is taken **lazily** — on the first rung that writes anything (a roll or a grant),
+   * and never for a gesture that reaches `done` without a step.
    *
    * Measured: the claim costs ~1.2s (two actor writes plus the arbitration wait) while a
    * chat-less roll costs 6ms. Taking it up-front made *every* inspection a three-second gesture,
    * including the overwhelmingly common one where the subject carries nothing secret or everything
    * is already settled. Arbitration exists to stop two GM sessions of one account both rolling —
-   * so a gesture with nothing to roll has nothing to arbitrate.
+   * or writing — so a gesture with nothing to roll or grant has nothing to arbitrate.
    *
    * ⚠ Safe against the timing channel: the stub is already posted before any of this, and it is
    * the only guaranteed observable. A slow fruitless cascade and a fast one both end in silence,
@@ -236,100 +249,21 @@ async function runCascade(character, subject, release = []) {
    */
   const grants = {};
   let held = false;
-
-  /*
-   * Loop invariants, read once (ties-21): the loop writes only beliefs and knowledge, never an
-   * attribute link or the registry. ⚠ The cascade must never link an attribute inside this loop —
-   * if it ever does, move these back in.
-   */
-  const registryNow = reg();
-  const carried = attributeIdsOf(subject, kindActorOf);
-  const rollerCarries = attributeIdsOf(character, kindActorOf);
+  const plan = cascadePlanner(character, subject);
   let guard = 0;
   for (; guard < 24; guard++) {
-    const step = planStep({
-      registry: registryNow,
-      carried,
-      knowledge: knowledge(),
-      beliefs: readFlag(subject, MODULE, BELIEFS_FLAG) ?? {},
-      characterId: character.id,
-      rollerCarries
-    });
+    const step = plan();
     if (step.done) break;
-
-    const attrId = step.roll ?? step.grant;
-    const entry = step.entry;
     const now = Date.now();
-    const hold = holdResolved(entry.hold, holdDefault());
-
-    let pass = true;
-    let total = null;
-    if (step.roll) {
-      if (!(await claim())) break; // another GM session has this pair; roll nothing
-      const fact = {
-        skill: entry.skill,
-        dc: entry.dc + concealmentFor(subject, attrId),
-        name: entry.title,
-        skillLabel: CONFIG.DND5E?.skills?.[entry.skill]?.label ?? entry.skill,
-        silentRoll: true // chat-less: N rungs must not print N cards
-      };
-      const mode = combineAdvantage(step.advantage ? 1 : 0, 0, stackingRule());
-      const roll = await throwBlind(character, fact, { mode, situational: 0, silent: true });
-      if (!roll) break; // no roll evaluated: spend nothing, exactly as `tierOf`'s null contract
-      total = roll.total;
-      pass = total >= fact.dc;
-    }
-
-    // blank markup is an empty reveal, exactly like "" — never a card of literal `<p></p>`
-    const text = pass && !isBlankProse(String(entry.reveal ?? "")) ? String(entry.reveal) : "";
     /*
-     * A failure hands over the attribute's written failure line (`miss`), or nothing when it is
-     * empty (Joe, 2026-10-08). It is NOT the ident row's text — that stays "" so every ledger
-     * still reads "not identified" — and it is not filed under the ident key, whose card is titled
-     * with the attribute and shown only once identified. `identMissKey` files it on this
-     * creature's page, titled with the creature, so it reads as what they noticed about them.
-     * Delivered at once, never held: the hold gate parks a pass on its ident row, and a failure
-     * has no row text to park.
+     * AC-3: claim before the first write of ANY kind — a grant writes ledger rows and a grant just
+     * as a roll does, so a grant-only rung taken unclaimed was performed by every GM tab.
      */
-    const missText = !pass && step.roll && !isBlankProse(String(entry.miss ?? "")) ? String(entry.miss) : "";
-    /*
-     * Only a pass with something to say waits on the GM. A pass with an empty `reveal` has nothing
-     * to deliver, so parking it left it pending for good (Deliver only frees rows with text) —
-     * the same rule `applyStudy` applies to a silent outcome.
-     */
-    const parks = pass && hold && !!text.trim();
-    // the backfill: one roll settles both stages, and a failure closes stage 1 for good
-    if (step.backfill)
-      await setKnowledge([
-        // pending while held: the lock is spent (they rolled) but the answer is not theirs yet
-        { characterId: character.id, attrId, failed: !pass, via: "roll", when: now, pending: parks }
-      ]);
-    else if (step.roll && pass) {
-      /*
-       * They already knew of it only because they were TOLD (a Share's stage-1 row) and have now
-       * rolled it themselves on this creature: the knowledge is theirs, so it stops being a share.
-       * Otherwise forgetting that share later would clear — or turn back into a failure — a stage-1
-       * answer they earned here.
-       */
-      const row = knowledge()[character.id]?.[attrId];
-      if (row?.via === "shared")
-        await setKnowledge([{ characterId: character.id, attrId, failed: false, via: "roll", when: row.when, pending: false }]);
-    }
-    await writeIdentification(subject, character.id, attrId, {
-      text,
-      total,
-      when: now,
-      /*
-       * Only a held PASS with text waits on the GM. A failure, or a pass with no reveal, has
-       * nothing to deliver, and stamping it pending used to leave an empty row in `pending()` that
-       * no Deliver could do anything with.
-       */
-      delivered: parks ? null : now
-    });
-    if (pass && !hold && text.trim()) grants[identifiedKey(attrId)] = { text, when: now, icon: entry.icon, source: entry.title };
-    if (missText.trim()) grants[identMissKey(subject.id, attrId)] = { text: missText, when: now, icon: subject.img ?? null, source: subject.name };
-
-    if (!pass) break; // a failed rung blocks everything beneath it
+    if (!(await claim())) break; // another GM session has this pair; roll and write nothing
+    const outcome = await rollRung(character, subject, step);
+    if (!outcome) break; // no roll evaluated: spend nothing, exactly as `tierOf`'s null contract
+    const parks = await recordRung(character, subject, step, outcome, now, grants);
+    if (!outcome.pass) break; // a failed rung blocks everything beneath it
     if (parks) {
       held = true;
       break; // suspends the climb; the GM's Deliver resumes it by calling back in
@@ -338,15 +272,126 @@ async function runCascade(character, subject, release = []) {
 
   if (guard === 24) log.debug$?.("cascade stopped at its 24-step guard", { characterId: character.id, subjectId: subject.id });
   await commitGrants(character, grants);
-  if (held) await promptCascadeDeliver(character, subject);
-  return true;
+  return { held };
+}
+
+/**
+ * PLAN (M12): the cascade's next step, from the live ledgers. → `nextStep()`, one `planStep` per call.
+ *
+ * Loop invariants, read once (ties-21): the loop writes only beliefs and knowledge, never an
+ * attribute link or the registry. ⚠ The cascade must never link an attribute inside its loop —
+ * if it ever does, move these back into the closure.
+ */
+function cascadePlanner(character, subject) {
+  const registry = reg();
+  const carried = attributeIdsOf(subject, kindActorOf);
+  const rollerCarries = attributeIdsOf(character, kindActorOf);
+  const nextStep = () =>
+    planStep({
+      registry,
+      carried,
+      knowledge: knowledge(),
+      beliefs: readFlag(subject, MODULE, BELIEFS_FLAG) ?? {},
+      characterId: character.id,
+      rollerCarries
+    });
+  return nextStep;
+}
+
+/**
+ * ROLL (M12): throw one rung's identification check, blind and chat-less. A grant rung passes
+ * without a roll. → `{ pass, total }`, or `null` when no roll was evaluated.
+ */
+async function rollRung(character, subject, step) {
+  if (!step.roll) return { pass: true, total: null };
+  const entry = step.entry;
+  const fact = {
+    skill: entry.skill,
+    dc: identDcOf(subject, step.roll, entry),
+    name: entry.title,
+    skillLabel: skillLabelOf(entry.skill),
+    silentRoll: true // chat-less: N rungs must not print N cards
+  };
+  const mode = combineAdvantage(step.advantage ? 1 : 0, 0, stackingRule());
+  const roll = await throwBlind(character, fact, { mode, situational: 0, silent: true });
+  if (!roll) return null;
+  return { pass: roll.total >= fact.dc, total: roll.total };
+}
+
+/**
+ * RECORD (M12): write what one rung settled — the stage-1 knowledge row, the identification row on
+ * the subject — and queue its grants for the gesture's single commit. → whether the rung parks
+ * (a held pass with text, waiting on the GM).
+ */
+async function recordRung(character, subject, step, { pass, total }, now, grants) {
+  const attrId = step.roll ?? step.grant;
+  const entry = step.entry;
+  const hold = holdResolved(entry.hold, holdDefault());
+  // blank markup is an empty reveal, exactly like "" — never a card of literal `<p></p>`
+  const text = pass && !isBlankProse(String(entry.reveal ?? "")) ? String(entry.reveal) : "";
+  /*
+   * A failure hands over the attribute's written failure line (`miss`), or nothing when it is
+   * empty (Joe, 2026-10-08). It is NOT the ident row's text — that stays "" so every ledger
+   * still reads "not identified" — and it is not filed under the ident key, whose card is titled
+   * with the attribute and shown only once identified. `identMissKey` files it on this
+   * creature's page, titled with the creature, so it reads as what they noticed about them.
+   * Delivered at once, never held: the hold gate parks a pass on its ident row, and a failure
+   * has no row text to park.
+   */
+  const missText = !pass && step.roll && !isBlankProse(String(entry.miss ?? "")) ? String(entry.miss) : "";
+  /*
+   * Only a pass with something to say waits on the GM. A pass with an empty `reveal` has nothing
+   * to deliver, so parking it left it pending for good (Deliver only frees rows with text) —
+   * the same rule `applyStudy` applies to a silent outcome.
+   */
+  const parks = pass && hold && !!text.trim();
+  // the backfill: one roll settles both stages, and a failure closes stage 1 for good
+  if (step.backfill)
+    await setKnowledge([
+      // pending while held: the lock is spent (they rolled) but the answer is not theirs yet
+      { characterId: character.id, attrId, failed: !pass, via: "roll", when: now, pending: parks }
+    ]);
+  else if (step.roll && pass) {
+    /*
+     * They already knew of it only because they were TOLD (a Share's stage-1 row) and have now
+     * rolled it themselves on this creature: the knowledge is theirs, so it stops being a share.
+     * Otherwise forgetting that share later would clear — or turn back into a failure — a stage-1
+     * answer they earned here.
+     */
+    const row = knowledge()[character.id]?.[attrId];
+    if (row?.via === "shared")
+      await setKnowledge([{ characterId: character.id, attrId, failed: false, via: "roll", when: row.when, pending: false }]);
+  }
+  await writeIdentification(subject, character.id, attrId, {
+    text,
+    total,
+    when: now,
+    /*
+     * Only a held PASS with text waits on the GM. A failure, or a pass with no reveal, has
+     * nothing to deliver, and stamping it pending used to leave an empty row in `pending()` that
+     * no Deliver could do anything with.
+     */
+    delivered: parks ? null : now
+  });
+  if (pass && !hold && text.trim()) grants[identifiedKey(attrId)] = { text, when: now, icon: entry.icon, source: entry.title };
+  if (missText.trim()) grants[identMissKey(subject.id, attrId)] = { text: missText, when: now, icon: subject.img ?? null, source: subject.name };
+  return parks;
 }
 
 /** One identification row, at its own path so nobody else's record is in the payload. */
 export async function writeIdentification(subject, characterId, attrId, rec) {
   await subject.update(
-    {
-      [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${identifiedKey(attrId)}`]: {
+    identificationRows([[characterId, attrId, rec]]),
+    { render: false } // GM-plane data: it must never repaint a sheet mid-gesture
+  );
+}
+
+/** The update `writeIdentification` makes, for any number of `[characterId, attrId, rec]` rows (AC-5). */
+export function identificationRows(rows) {
+  return Object.fromEntries(
+    rows.map(([characterId, attrId, rec]) => [
+      `flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${identifiedKey(attrId)}`,
+      {
         text: rec.text ?? "",
         tier: null,
         total: rec.total ?? null,
@@ -357,8 +402,7 @@ export async function writeIdentification(subject, characterId, attrId, rec) {
         ...(rec.from ? { from: rec.from } : {}),
         ...(rec.from && rec.prior ? { prior: rec.prior } : {})
       }
-    },
-    { render: false } // GM-plane data: it must never repaint a sheet mid-gesture
+    ])
   );
 }
 
@@ -399,12 +443,12 @@ async function promptCascadeDeliver(character, subject) {
       const entry = describeAttribute(attrId);
       const passed = !!String(rec.text ?? "").trim();
       // an empty row is a pass with no reveal authored, or a legacy failure parked before 2026-10
-      const missed = !passed && typeof rec.total === "number" && rec.total < entry.dc + concealmentFor(subject, attrId);
+      const missed = !passed && identRowMissed(rec, identDcOf(subject, attrId, entry));
       return `<li class="pt-belief${missed ? " pt-belief-miss" : ""}">
         <div class="pt-belief-head">
           <span class="pt-belief-who">${esc(entry.title)}</span>
           <span class="pt-belief-meta">${esc(
-            _loc("PENTARYN_TIES.known.inspect.holdMeta", { total: rec.total ?? "—", dc: entry.dc })
+            _loc("PENTARYN_TIES.known.inspect.holdMeta", { total: rec.total ?? "—", dc: entry.dc ?? "—" })
           )}</span>
         </div>
         <div class="pt-belief-text">${
@@ -468,7 +512,7 @@ export async function releaseHeldAttribute(character, attrId) {
  * one stub per gesture holds, and this is the GM's action, not the player's.
  */
 export async function deliverHeldIdentifications(character, subject) {
-  if (!game.user?.isGM) return false;
+  if (!game.user?.isGM || !character || !subject) return false;
   const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
   const mine = all[character.id] ?? {};
   const now = Date.now();
@@ -522,8 +566,11 @@ export async function deliverHeldIdentifications(character, subject) {
  *
  * The belief row is written as delivered with `total: null` — the ledger's honest record of *"they
  * did not roll for this; I told them."*
+ *
+ * `text` is the page to write when the caller already composed it — `shareFact` composes the
+ * tier-25 page once for every recipient (perf-4); without it the page is composed here.
  */
-export async function grantKind(character, kindOrSubject, tier = 15, { from = null, quiet = false, prior = null } = {}) {
+export async function grantKind(character, kindOrSubject, tier = 15, { from = null, quiet = false, prior = null, text: given = null } = {}) {
   if (!game.user?.isGM || !character) return false;
   const kind = kindActorOf(kindOrSubject);
   if (!kind) return false;
@@ -535,8 +582,8 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
     return false;
   }
 
-  const { label } = studySkillFor(kind);
-  const text = await composeStudyPayload(kind, tier, label);
+  // `text`: a Share's payload, composed once for every recipient (perf-4) — the same words to all
+  const text = given ?? (await composeStudyPayload(kind, tier, studySkillFor(kind).label));
   const now = Date.now();
   const fact = resolveFact({ ns: "kind", subjectId: kind.id });
   if (!fact) return false;
@@ -574,18 +621,11 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
  */
 export async function resetIdentification(character, subject, attrId) {
   if (!game.user?.isGM || !character || !subject || !attrId) return false;
-  const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
-  const key = identifiedKey(attrId);
-  if (!all[character.id]?.[key]) return false;
-
-  const others = Object.keys(all[character.id]).filter(k => k !== key);
-  const rest = Object.keys(all).filter(k => k !== character.id);
-  if (!others.length && !rest.length) await subject.unsetFlag(MODULE, BELIEFS_FLAG);
-  else await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, character.id, key, all[character.id]), { render: false });
+  if (!(await dropBeliefRow(subject, character.id, identifiedKey(attrId)))) return false;
   // a do-over takes back the failure line that roll handed them, if it handed one (2026-10-08)
   const missKey = identMissKey(subject.id, attrId);
   if (readGranted(readFlag(character, MODULE, GRANTED_FLAG))[missKey])
-    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${missKey}`]: null });
+    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.${missKey}`]: _del });
 
   ui.notifications.info(
     _loc("PENTARYN_TIES.known.inspect.resetDone", { character: character.name, subject: subject.name, attr: describeAttribute(attrId).title })
@@ -604,6 +644,15 @@ export async function resetInspection(character, subject) {
   const attrIds = Object.keys(mine)
     .map(k => (isIdentKey(k) ? parseFactKey(k)?.subject : null))
     .filter(Boolean);
-  for (const id of attrIds) await resetIdentification(character, subject, id);
+  // AC-5: every rung in ONE subject update, every miss line in ONE character update, ONE notification
+  const dropped = attrIds.filter(id => mine[identifiedKey(id)]);
+  const change = beliefRowsDrop(subject, character.id, dropped.map(identifiedKey));
+  if (!change) return attrIds.length;
+  await subject.update(change, { render: false });
+  const granted = readGranted(readFlag(character, MODULE, GRANTED_FLAG));
+  const misses = dropped.map(id => identMissKey(subject.id, id)).filter(k => granted[k]);
+  if (misses.length) await character.update(Object.fromEntries(misses.map(k => [`flags.${MODULE}.${GRANTED_FLAG}.${k}`, _del])));
+  const attr = new Intl.ListFormat(game.i18n?.lang || "en", { type: "conjunction" }).format(dropped.map(id => describeAttribute(id).title));
+  ui.notifications.info(_loc("PENTARYN_TIES.known.inspect.resetDone", { character: character.name, subject: subject.name, attr }));
   return attrIds.length;
 }

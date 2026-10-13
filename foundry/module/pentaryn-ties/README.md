@@ -157,15 +157,21 @@ registry's queue, so a script's `Promise.all` of several links on one actor land
   namespace — `factKeyOf` (`core/facts.mjs`, the key a share writes), `parseFactKey` (`core/lore.mjs`,
   the key read back), `factOrder` (`core/facts.mjs`, what a subject could hand a player), `knowsAbout`
   (`facts.mjs`, what the Look window draws) and `resolveFact` (`study/resolve.mjs`). Miss one and a
-  share lands under a key nothing reads.
+  share lands under a key nothing reads. **Plus** the `fact.ns` tests downstream of `resolveFact` —
+  `study/apply.mjs` (`readBelief`, `putBelief`, `applyPlayerWrites`), `study/claim.mjs`
+  (`claimFact`, `releaseFact`), `study/gate.mjs` (`promptDeliver`, `deliverFact`, `rowMissed`, the
+  parsed-key test in `pending`), `study/share.mjs`, and `study/authoring.mjs`'s `beliefs`. The kept
+  list is the seam note at `study/resolve.mjs:69`; a new place that tests `fact.ns` goes there too.
 
 ## Pitfalls
 
 - **An unlinked token's actor is not the actor.** Ties data lives on the world actor (`baseActorOf`);
   writing through `token.actor` lands on the token's delta and is lost to every other token.
 - **Never nest the registry's queued writes** (links and unlinks included) — a queued write that awaits another waits on itself.
-- **`Actor#update` merges.** Deleting a ledger row needs the deletion syntax (`dropRow`); writing the
-  object back without the key does nothing.
+- **`Actor#update` merges.** Deleting a ledger row needs core's `_del` value, never the v14-deprecated `-=key`; writing the
+  object back without the key does nothing. Drop a beliefs row only through `dropBeliefRow` (study/claim.mjs), which
+  removes the whole flag when the last row goes instead of leaving `beliefs: {}` behind; several of one
+  character's rows go in one update through its `beliefRowsDrop` (AC-5).
 - **`Number(null)` is 0.** Nullable numbers go through `numOrNull`; a "rolled 0" is a different lie.
 - **`isVisible`, never `visible`.** On v14 `Token#visible` is true for walled-off and hidden tokens.
 - **A setting read before `init`** returns the row default through `setting()`; `mayWrite` refuses instead.
