@@ -534,6 +534,41 @@ async function replaceItems(actor, itemsData, unmanagedItems, slug) {
 }
 
 /**
+ * Update an existing Actor in place, and throw when Foundry refused the change (wave-3 importer
+ * item 1, [declared]).
+ *
+ * Foundry 14's client does not throw on an invalid update. `#preUpdateDocumentArray`
+ * (client/data/client-backend.mjs) runs a dry-run `updateSource`; on a validation error — a blank
+ * `name`, say — it shows an error toast, drops that document from the request and `update()`
+ * resolves `undefined`. Without this check the run went on, the readback passed against the old
+ * values, the new content hash was stamped and the change was never retried.
+ *
+ * `undefined` is also what a genuine no-op returns (an empty diff is never sent), so on `undefined`
+ * the same dry run is repeated here, the way the client did it: a throw is a refusal, a non-empty
+ * diff is a pre-update veto, an empty one is a no-op and fine.
+ *
+ * @param {Actor} actor
+ * @param {object} payload            `toUpdatePayload(data)`
+ * @param {typeof Actor} ActorClass   `getDocumentClass("Actor")`, for its static `cleanData`
+ * @throws {Error} a plain Error (a per-actor failure) when the update was refused
+ */
+async function updateActor(actor, payload, ActorClass) {
+  const result = await actor.update(payload, { render: false });
+  if (result) return;
+  let diff;
+  try {
+    const changes = ActorClass.cleanData(foundry.utils.deepClone(payload), { migrate: true, sanitize: true, partial: true },
+      { creation: false, model: actor, source: actor._source });
+    diff = actor.updateSource(changes, { clean: true, dryRun: true, fallback: false });
+  } catch (cause) {
+    throw new Error(`update refused by Foundry — ${String(cause?.message ?? cause).split("] ").pop().trim()}`);
+  }
+  if (diff && !foundry.utils.isEmpty(diff)) {
+    throw new Error("update refused by Foundry — a preUpdateActor hook or _preUpdate vetoed it");
+  }
+}
+
+/**
  * Stamp `flags.pentaryn.contentHash` — the last write for an actor, and only once every item has
  * been created and every assertion has passed.
  *
@@ -602,6 +637,6 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
 export {
   TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout,
   assertVersionGate, assertNoBadFormulas, assertPrototypeToken, assertActivityIdsSurvived,
-  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, replaceItems, stampContentHash,
+  assertItemsAddressable, runExpectedAssertions, indexActorsBySlug, storedHash, replaceItems, stampContentHash, updateActor,
   reportSummary
 };

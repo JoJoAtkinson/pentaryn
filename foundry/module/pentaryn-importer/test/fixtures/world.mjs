@@ -20,6 +20,15 @@
  *                   when this run sends its first Actor.create, i.e. after our slug index was built
  *   failItems       slugs whose createEmbeddedDocuments throws a plain Error (a per-actor failure
  *                   after the Actor itself was written — importer-R6)
+ *   noopUpdate      slugs whose actor.update resolves undefined because the diff is empty (Foundry's
+ *                   client drops a no-op update: no request, no hook — wave-3 importer item 1); the
+ *                   content-hash stamp is still a real change
+ *
+ * An update whose `name` is blank is REFUSED the way Foundry 14's client refuses an invalid change
+ * (client/data/client-backend.mjs #preUpdateDocumentArray): the dry-run updateSource throws, an error
+ * toast is shown, nothing is sent and `update()` resolves undefined — no throw. `actor.updateSource(
+ * changes, {dryRun: true})` and `getDocumentClass("Actor").cleanData` are modelled for the importer's
+ * own dry-run check: blank name → throws the validation error; a noopUpdate slug → `{}`; else the changes.
  *
  * Actor.create honours `data._id` under `{keepId: true}`. An `_id` already in game.actors is silently
  * REPLACED (no error, no delete), as Foundry 14.369's server does for a world document — it checks
@@ -36,6 +45,12 @@ const TOKEN_KEYS = new Set([
   "disposition", "displayBars", "bar1", "bar2", "light", "sight", "detectionModes", "occludable", "ring",
   "turnMarker", "movementAction", "flags", "randomImg", "appendNumber", "prependAdjective",
 ]);
+
+/** The validation message Foundry 14 gives a blank required name (StringField, blank: false). */
+const BLANK_NAME = "Actor [x] validation errors:\n  name: may not be a blank string";
+
+/** The importer's last write for an actor: `{flags: {pentaryn: {contentHash}}}` alone. */
+const isStamp = changes => changes?.flags?.pentaryn?.contentHash !== undefined && Object.keys(changes).length === 1;
 
 const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 const hidden = (obj, name, value) => Object.defineProperty(obj, name, { value, configurable: true, writable: true, enumerable: false });
@@ -64,7 +79,7 @@ function tokenOf(data) {
 }
 
 export function makeWorld(F, knobs = {}) {
-  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), ...knobs };
+  const K = { dropTypes: new Set(), regenIds: false, stripAction: new Set(), failCreate: new Set(), raceCreate: new Set(), failItems: new Set(), noopUpdate: new Set(), ...knobs };
   let seq = 0;
 
   function makeItem(actor, data) {
@@ -93,7 +108,21 @@ export function makeWorld(F, knobs = {}) {
       actor.items.set(item.id, item);
     }
     const update = actor.update.bind(actor);
+    hidden(actor, "updateSource", (changes, { dryRun = false } = {}) => {
+      if (!dryRun) throw new Error("stub: only a dryRun updateSource is modelled");
+      if ("name" in changes && !String(changes.name ?? "").trim()) throw new Error(BLANK_NAME);
+      return K.noopUpdate.has(actor.flags?.pentaryn?.slug) ? {} : clone(changes);
+    });
     hidden(actor, "update", async (changes, options) => {
+      if ("name" in (changes ?? {}) && !String(changes.name ?? "").trim()) {      // Foundry: toast, no request, undefined
+        F.calls.push({ op: "update.refused", uuid: actor.uuid, error: BLANK_NAME });
+        globalThis.ui?.notifications?.error?.(BLANK_NAME);
+        return undefined;
+      }
+      if (K.noopUpdate.has(actor.flags?.pentaryn?.slug) && !isStamp(changes)) {  // Foundry: empty diff, no request
+        F.calls.push({ op: "update.noop", uuid: actor.uuid });
+        return undefined;
+      }
       const { prototypeToken: token, ...other } = clone(changes);
       if (token) {
         const kept = Object.fromEntries(Object.entries(token).filter(([k]) => TOKEN_KEYS.has(k)));
@@ -126,6 +155,11 @@ export function makeWorld(F, knobs = {}) {
   }
 
   class StubActor {
+    /** Foundry's DataModel.cleanData, as the client calls it before an update: a copy, unchanged here. */
+    static cleanData(source = {}) {
+      return clone(source);
+    }
+
     static async create(data, options) {
       F.calls.push({ op: "Actor.create", data: F.plain(data), options: F.plain(options) });
       const slug = data?.flags?.pentaryn?.slug;

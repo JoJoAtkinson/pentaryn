@@ -12,7 +12,7 @@ import {
 import {
   TAG, assertItemsAddressable, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
   fetchJsonWithTimeout, indexActorsBySlug, log, refuse, replaceItems, reportSummary,
-  runExpectedAssertions, shout, stampContentHash, storedHash
+  runExpectedAssertions, shout, stampContentHash, storedHash, updateActor
 } from "./documents-adapter.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { buildApi } from "./lib/api.mjs";
@@ -208,8 +208,9 @@ async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }
 
       let actor = existing;
       if (actor) {
-        // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld.
-        await actor.update(toUpdatePayload(data), { render: false });
+        // UPDATE — never recreate. `hp.value`, `img` and `prototypeToken.texture` are withheld. A change
+        // Foundry refuses (it resolves undefined, no throw) fails this actor: no Items, no stamp.
+        await updateActor(actor, toUpdatePayload(data), ActorClass);
       } else {
         // CREATE under the slug's own id (importer-AC-2): another GM tab creating the same slug asks for
         // the same id. Foundry 14.369's server does NOT refuse a keepId create over a world Actor that
