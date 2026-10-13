@@ -1178,6 +1178,12 @@
   overflow-wrap: anywhere;
 }
 
+/* authored HTML (wave 3): its paragraphs carry the breaks, so the source's newlines must not */
+.pentaryn-ties .pt-grant-text.pt-rich,
+.pt-study-hold-text.pt-rich {
+  white-space: normal;
+}
+
 /* ── Phase 4: the individual axis ─────────────────────────────────────────── */
 
 /*

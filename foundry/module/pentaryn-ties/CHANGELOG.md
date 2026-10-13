@@ -5,6 +5,14 @@ the old README's version-tagged sections.
 
 ## Unreleased — blueprint migration (2026-10, wave 3)
 
+- [declared] lore clean text (defect wave 3, Joe's ruling 2026-10-13): lore a player reads renders
+  as clean text, never literal tags. A grant card's authored HTML (Known tab, the Attributes tab's
+  detail, the Look window, the GM's inspect player view) is drawn as an empty `data-enrich` box and
+  filled after the paint by `TextEditor.enrichHTML(…, { secrets: false })`, so a GM
+  `<section class="secret">` never shows; the GM's hold/deliver prompt previews the same clean text.
+  Plain-text lore is drawn exactly as before (escaped, pre-line); a blank or secret-only grant draws
+  no card; a failed enrich falls back to tag-free text with the secret removed.
+
 - [declared] ties-ui belief text (defect wave 3, 2026-10-13): the GM-only belief row on a studied
   actor's Ties tab renders the authored lore as enriched HTML (`TextEditor.enrichHTML` relative to
   the actor, after the section binds) instead of printing its tags as literal text. Still GM-only;

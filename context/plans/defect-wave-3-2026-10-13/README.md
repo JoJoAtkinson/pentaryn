@@ -157,6 +157,10 @@ file it is Joe's call. The throwaway world was deleted.
 - **combat:** 2014-style SRD Multiattack text ("two with its … and one with its …") does not parse,
   so e.g. the SRD Bandit Captain plans one swing.
 - **ties:** the player's Known tab grant card and the hold card escape lore HTML too. Joe to rule.
+  - **Fixed 2026-10-13** (Joe ruled: players always see clean text), branch
+    `wave3/lore-clean-2026-10-13` `b7534485`: grant cards (Known tab, Attributes detail, Look window,
+    inspect player view) and the GM hold prompt enrich authored HTML with `secrets: false`; plain
+    text unchanged. Test `test/grant-text-clean.test.mjs`.
 - **combat vs riders/transform/portals:** `inspect(x, null)` throws in combat but is treated as no
   options in the others. One-line change if Joe wants them alike.
 - **importer:** detect-and-compensate, not a lock; a tab slower than the 10 s join wait still

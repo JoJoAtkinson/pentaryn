@@ -282,3 +282,95 @@ export function makeOpenState() {
     }
   };
 }
+
+/* ── lore a player reads: clean text, never tags (defect wave 3, Joe 2026-10-13) ─────────── */
+
+/** Does authored lore carry markup? Plain text keeps its old escaped, pre-line drawing exactly. */
+export const hasMarkup = s => /<[a-z!/][^>]*>/i.test(String(s ?? ""));
+
+const SECRET_OPEN = /<section\b[^>]*\bclass\s*=\s*(["'])[^"']*\bsecret\b[^"']*\1[^>]*>/i;
+
+/**
+ * The authored HTML with every GM `<section class="secret">` cut out, nested sections counted (a
+ * lazy regex would stop at the inner `</section>` and leave the secret's tail). An unclosed secret
+ * cuts to the end. Used for the blank-card test and the enrich-failed fallback; the live path is
+ * Foundry's own `enrichHTML(…, { secrets: false })`.
+ */
+export function dropSecrets(html) {
+  let out = String(html ?? "");
+  for (let m = SECRET_OPEN.exec(out); m; m = SECRET_OPEN.exec(out)) {
+    const tag = /<(\/?)section\b[^>]*>/gi;
+    tag.lastIndex = m.index + m[0].length;
+    let depth = 1;
+    let end = out.length;
+    for (let t = tag.exec(out); t; t = tag.exec(out)) {
+      depth += t[1] ? -1 : 1;
+      if (!depth) {
+        end = t.index + t[0].length;
+        break;
+      }
+    }
+    out = out.slice(0, m.index) + out.slice(end);
+  }
+  return out;
+}
+
+/**
+ * The fallback when enrichment fails: secrets gone, block ends as line breaks, every tag gone, and
+ * any stray `<` escaped — safe to assign as innerHTML, and entities the author wrote still decode.
+ */
+export const fallbackText = html =>
+  dropSecrets(html)
+    .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|blockquote)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/</g, "&lt;")
+    .trim();
+
+/**
+ * A lore text box, drawn synchronously. Plain text is escaped into it as it always was; markup is
+ * drawn as an empty box marked `data-enrich` (+ `pt-rich`, which drops `pre-line` — paragraphs
+ * carry the breaks) for `paintRich` to fill after the paint.
+ */
+export const richBox = (cls, text) =>
+  hasMarkup(text)
+    ? `<div class="${cls} pt-rich" data-enrich="${esc(text)}"></div>`
+    : `<div class="${cls}">${esc(text)}</div>`;
+
+/**
+ * Authored lore as player-safe HTML: Foundry's enricher with `secrets: false` (GM secret blocks
+ * stripped), or the tag-free fallback if it throws. Plain text comes back escaped, unenriched.
+ * Reads the TextEditor global only when called.
+ */
+async function enrichLore(raw, { relativeTo = null, log = null } = {}) {
+  const text = String(raw ?? "");
+  if (!hasMarkup(text)) return { html: esc(text), failed: false };
+  const TE = globalThis.foundry?.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
+  try {
+    const opts = { secrets: false };
+    if (relativeTo) Object.assign(opts, { relativeTo, rollData: relativeTo.getRollData?.() ?? {} });
+    return { html: String(await TE.enrichHTML(text, opts)), failed: false };
+  } catch (err) {
+    log?.warn?.("lore text enrichment failed", err);
+    return { html: fallbackText(text), failed: true };
+  }
+}
+
+export const cleanLoreHTML = async (raw, opts) => (await enrichLore(raw, opts)).html;
+
+/**
+ * Fill every `richBox` under `root` (the root itself included). Called by each place the sync
+ * markup is inserted: the Known and Attributes tab binds, the Look window and the inspect preview.
+ * A box whose enrich failed loses `pt-rich`, so its fallback line breaks show. Resolves when done.
+ */
+export function paintRich(root, { relativeTo = null, log = null } = {}) {
+  if (!root?.querySelectorAll) return Promise.resolve();
+  const boxes = [...root.querySelectorAll(".pt-rich[data-enrich]")];
+  if (root.matches?.(".pt-rich[data-enrich]")) boxes.unshift(root);
+  return Promise.all(
+    boxes.map(async box => {
+      const { html, failed } = await enrichLore(box.dataset.enrich ?? "", { relativeTo, log });
+      box.innerHTML = html;
+      if (failed) box.classList?.remove("pt-rich");
+    })
+  );
+}

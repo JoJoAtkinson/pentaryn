@@ -57,7 +57,7 @@ import {
   LORE_DC_MAX,
   LORE_DC_DEFAULT
 } from "./known-core.mjs";
-import { esc, bindRowToggle, makeOpenState, guardClick, skillOptionsHTML, skillLabelOf, gmBadge } from "./core/html.mjs";
+import { esc, bindRowToggle, makeOpenState, guardClick, skillOptionsHTML, skillLabelOf, gmBadge, paintRich } from "./core/html.mjs";
 import { isPersonalEntry } from "./core/rules.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -717,6 +717,7 @@ export function bindAttributes(root, actor, rerender = () => {}, viewerArg = nul
    */
   const box = root?.classList?.contains("pentaryn-attributes") ? root : root?.querySelector?.(".pentaryn-attributes");
   if (!box || !actor) return;
+  paintRich(box, { log }); // the detail's granted cards (the Known tab's own region), clean (wave 3)
   const isGM = game.user?.isGM === true;
   const open = openFor(actor.id);
   const viewer = viewerFor(actor, viewerArg); // the same viewer the build drew for

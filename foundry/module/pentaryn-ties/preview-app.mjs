@@ -76,7 +76,7 @@ import {
   STUDY_RUNGS
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName, kindPassed } from "./core/rules.mjs";
-import { FALLBACK_ART, skillLabelOf, openOrFront } from "./core/html.mjs";
+import { FALLBACK_ART, skillLabelOf, openOrFront, paintRich } from "./core/html.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -822,6 +822,8 @@ export class InspectPreview extends ApplicationV2 {
     this.keepScroll = false;
     content.innerHTML = result;
     if (top !== null) content.scrollTop = top;
+    // the player view's grant cards, painted exactly as the player's own Known tab paints them (wave 3)
+    paintRich(content, { log });
     for (const btn of content.querySelectorAll("[data-mode]")) {
       btn.addEventListener("click", () => {
         if (this.mode === btn.dataset.mode) return;
