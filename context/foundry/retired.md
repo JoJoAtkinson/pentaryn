@@ -55,8 +55,10 @@ then removed from the repo the same day.
    git revert 83543ac4ba2f75b259ed22e736bd4b23d4c482cc
    ```
 
-   Later edits to the same lines (the Makefile, the routing docs, the shared tests) may conflict;
-   take the archive's side for walls lines. The revert also deletes
+   It conflicts at least in `context/foundry/README.md`, `context/foundry/ops.md` and
+   `context/pentaryn.md` (the lines that link this page; tried 2026-10-13), and in anything else
+   edited since; keep the archive's walls lines and drop the links here, then
+   `make foundry-module-index` and `make check-context`. The revert also deletes
    `scripts/tests/test_walls_removed.py`; delete the walls section here, and
    `scripts/tests/test_retired_doc.py` with it.
 2. Single files only: `git checkout archive/pentaryn-walls -- <path>`, e.g.
