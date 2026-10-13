@@ -82,6 +82,17 @@ test("api.plan equals its legacy oracle, with and without an explicit weapon (co
   delete cast.wolf.flags[MODULE];
 });
 
+test("api.plan for a Multiattack actor checks its Multiattack before scanning weapons: an item whose properties are not iterable does not throw (wave 3, combat-2)", () => {
+  const brute = makeActor({ id: "bruteNpc00000001", name: "Brute", type: "npc", items: [
+    { id: "multiattack00010", name: "Multiattack", type: "feat", system: { description: { value: "<p>The brute makes two [[/item .maul]] attacks.</p>" } } },
+    { id: "maul", name: "Maul", type: "weapon", system: { equipped: true, type: { value: "martialM" }, properties: 5 }, activities: [{ id: "maulAtk000000001" }] },
+  ] });
+  const p = api.plan(brute);
+  assert.equal(p.count, 2);
+  assert.equal(p.weaponId, "maul");
+  assert.equal(api.plan(brute, "maul").count, 2, "an explicit weapon is ignored by a Multiattack plan, as before");
+});
+
 test("bad refs (D-c2 [declared], was KNOWN combat-riders-12): a miss answers null, an id / UUID / name resolves (golden/api-bad-refs.json)", async () => {
   const bad = [[undefined], [null], ["Fighter"], [cast.fighter.id], [cast.fighter.uuid], [{}]];
   const read = ["count", "plan", "turn", "multiattack", "weapons", "reckless"];

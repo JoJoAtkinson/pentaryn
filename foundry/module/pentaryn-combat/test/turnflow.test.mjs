@@ -740,6 +740,9 @@ test("damage at 0 HP (ac-6): the cards post after the damage lands, so a vetoed 
   assert.deepEqual([posted[0].speaker.token, posted[0].speaker.alias], [toks[fig.id].id, "Masked Knight"]);
   assert.equal(posted[0].content, "<p>Masked Knight takes damage at 0 Hit Points: a Death Saving Throw failure (1 of 3).</p>");
   assert.deepEqual(posted[1].whisper, ["gmUser0000000001"]);
+  // wave 3, combat-3: the massive-damage GM whisper names the token too, never the actor
+  assert.match(posted[1].content, /^<p>Masked Knight took 25 damage/);
+  assert.doesNotMatch(posted[1].content, /Fighter/);
   // applyDamage again on the same options (or for another actor) posts nothing more: the stash is spent
   F.Hooks.callAll("dnd5e.applyDamage", fig, 25, options);
   F.Hooks.callAll("dnd5e.applyDamage", rog, 25, vetoed);

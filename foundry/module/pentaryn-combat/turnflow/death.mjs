@@ -40,17 +40,19 @@ const onApplyDamage = (actor, _amount, options) => {
   delete options[MODULE];   // one card per application
   if (stash.actor !== actor?.uuid) return;
   const { failures, critical, massive, amount, max } = stash;
+  // both cards name the token, never the actor (chat cards use token names; wave 3, combat-3)
+  const token = actor.token ?? actor.getActiveTokens?.()[0]?.document ?? null;
+  const speaker = ChatMessage.getSpeaker(token ? { token } : { actor });
+  const name = speaker.alias ?? actor.name;
   if (failures !== null) {
-    const token = actor.token ?? actor.getActiveTokens?.()[0]?.document ?? null;
-    const speaker = ChatMessage.getSpeaker(token ? { token } : { actor });
     ChatMessage.create({
       speaker,
-      content: `<p>${_loc(critical ? "PENTARYN_COMBAT.Turn.DeathFailCrit" : "PENTARYN_COMBAT.Turn.DeathFail", { name: speaker.alias ?? actor.name, n: failures })}</p>`
+      content: `<p>${_loc(critical ? "PENTARYN_COMBAT.Turn.DeathFailCrit" : "PENTARYN_COMBAT.Turn.DeathFail", { name, n: failures })}</p>`
     }).catch(err => log.debug("death save card", err));
   }
   if (massive) {
     ChatMessage.create({
-      content: `<p>${_loc("PENTARYN_COMBAT.Turn.Massive", { name: actor.name, amount, max })}</p>`,
+      content: `<p>${_loc("PENTARYN_COMBAT.Turn.Massive", { name, amount, max })}</p>`,
       whisper: game.users.filter(u => u.isGM).map(u => u.id)
     }).catch(err => log.debug("massive damage whisper", err));
   }

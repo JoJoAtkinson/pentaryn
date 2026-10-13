@@ -16,6 +16,7 @@ import {
   newTurn, planFor, riderDiceFor, turnOf, weaponsOf,
 } from "./shapes.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
+import { codedError } from "./lib/errors.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
@@ -49,9 +50,12 @@ function coversMultiattack(actor) {
 
 /**
  * @param {Actor} actor  resolved by buildApi (the row's first param is `ref`)
- * @param {{ as?: * }} opts  a user ref: a viewer without OBSERVER on the actor gets the identity only
+ * @param {{ as?: * }} [opts]  a user ref: a viewer without OBSERVER on the actor gets the identity only.
+ *   Omitted reads as {}; null or a non-object throws the coded BAD_ARGS, never a TypeError (wave 3).
  */
-function inspect(actor, ctx, { as } = {}) {
+function inspect(actor, ctx, opts = {}) {
+  if (opts === null || typeof opts !== "object") throw codedError("BAD_ARGS", `inspect: opts must be an object or omitted, got ${opts === null ? "null" : typeof opts}`);
+  const { as } = opts;
   const viewer = as === undefined || as === null ? null : resolveRef(as, "user");
   const sees = !viewer || viewer.isGM === true || actor.testUserPermission?.(viewer, "OBSERVER") === true;
   const cc = combatContext(actor);
