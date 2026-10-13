@@ -764,6 +764,18 @@ def test_c62_a_non_first_ref_is_never_resolved(tmp_path):
     assert r["status"] == "fail" and "f(ref)" in r["detail"][0]
 
 
+@pytest.mark.parametrize("params,why", [
+    (({"name": "owner", "kind": "actor", "type": "Actor"},), "a Document kind the kit does not resolve"),
+    (({"name": "owner", "kind": "actor", "type": "Actor", "resolve": False},), "resolve:false"),
+    (({"name": "opts", "type": "{}"}, {"name": "ref", "kind": "actor", "type": "Actor"}), "a non-first ref"),
+])
+def test_c62_says_why_the_param_is_unresolved(tmp_path, params, why):
+    # py-blueprint-MAINT-9: a Document-kind param not named `ref` is not "not the first ref"
+    r = c62(tmp_path, *params)
+    assert r["status"] == "fail" and f", {why}, " in r["detail"][0], r
+    assert "not the first ref" not in r["detail"][0]
+
+
 def test_c62_the_row_doc_can_mark_the_whole_row_eval_js_only(tmp_path):
     r = c62(tmp_path, {"name": "owner", "kind": "actor", "type": "Actor", "resolve": False},
             row_doc="Confiscation (eval-js only: live Actors).")

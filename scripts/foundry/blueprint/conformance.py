@@ -1912,7 +1912,8 @@ def c62(m):
                 continue
             if EVAL_JS_ONLY.search(str(p.get("doc") or "")):
                 continue
-            why = "a non-first ref" if is_ref and i else "resolve:false" if p.get("resolve") is False else "not the first ref"
+            why = ("a non-first ref" if is_ref and i else "resolve:false" if p.get("resolve") is False
+                else "a Document kind the kit does not resolve")
             found.append(f"{row.get('path')}({p.get('name')}) kind {p.get('kind') or 'ref'}, {why}, "
                          f"type {type_text or '(none)'!s} — add uuid|id|exact name, or say eval-js only")
     return ok() if not found else bad(found)
