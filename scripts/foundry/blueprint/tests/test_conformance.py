@@ -1245,3 +1245,14 @@ def test_py_blueprint_ext_3_c49_keeps_the_hot_comment_and_count(tmp_path):
             'reg.on("updateActor", (a) => { for (const x of game.actors) x; });\n')
     r = res(one(tmp_path, code), "C49")
     assert r["status"] == "warn" and r["detail"] == ["a.mjs:2 refreshTile ×3"], r
+
+
+def test_py_blueprint_maint_5_score_comment_names_every_warn_manual_rule():
+    """py-blueprint-MAINT-5: the comment over score()'s `manual` list names every rule registered
+    as warn+manual, not a stale subset."""
+    src = Path(conformance.__file__).read_text(encoding="utf-8")
+    m = re.search(r"# warn\+manual rules \(([^)]*)\)", src)
+    assert m, "score() lost its warn+manual comment"
+    named = re.findall(r"C\d+", m.group(1))
+    registered = [rid for rid, cls, _full, _title in conformance.RULES if cls == "warn+manual"]
+    assert named == registered, (named, registered)

@@ -2058,7 +2058,7 @@ def score(m: Module) -> dict:
         "passed": passed, "failClassRules": total,
         "failing": [r.id for r in results if r.status == "fail"],
         "warnings": [r.id for r in results if r.status == "warn"],
-        # warn+manual rules (C36, C49): a hit is a warning AND an item on the manual review list
+        # warn+manual rules (C36, C49, C54, C59, C61): a hit is a warning AND an item on the manual review list
         "manual": [r.id for r in results if r.status == "manual"
                    or (r.status == "warn" and r.cls == "warn+manual")],
         "wait": WAIT.get(m.id),
