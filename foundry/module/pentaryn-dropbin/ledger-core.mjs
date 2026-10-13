@@ -56,13 +56,31 @@ export function isPlausibleSender(entry, { users, actors }) {
 }
 
 /**
- * Append `entry` as number `counter + 1`, or recognise it as a repeat of the tail. Never mutates
+ * A drop that finishes the tail's 'delete' row (DB-AC-1 live, FIX-3): Item Piles' drop removes the
+ * item from the character on the active GM's client before it fires the drop hook, so the sheet-delete
+ * capture has just recorded that same item (same actor, same item source _id, within `dedupeMs`).
+ * The drop is the one row; it takes the delete row's place and number.
+ */
+export function dropReplacesTail(log, entry, dedupeMs = DEDUPE_MS) {
+  const tail = log[log.length - 1];
+  const id = entry?.item?._id;
+  return !!(tail && entry?.reason === "drop" && tail.reason === "delete" && id && tail.item?._id === id
+    && tail.fromActorId === entry.fromActorId && entry.t - tail.t < dedupeMs);
+}
+
+/**
+ * Append `entry` as number `counter + 1`, recognise it as a repeat of the tail, or (a drop finishing
+ * the tail's delete, dropReplacesTail) put it in the tail's place under the tail's number. Never mutates
  * its inputs. @returns {{ log, counter, n, duplicate }} — on a duplicate the log and counter are
  * the ones passed in and `n` is the tail's number.
  */
 export function appendEntry(log, counter, entry, dedupeMs = DEDUPE_MS) {
   const tail = duplicateOfTail(log, entry, dedupeMs);
   if (tail) return { log, counter, n: tail.n, duplicate: true };
+  if (dropReplacesTail(log, entry, dedupeMs)) {
+    const n = log[log.length - 1].n;
+    return { log: [...log.slice(0, -1), { n, ...entry }], counter, n, duplicate: false };
+  }
   const n = (counter ?? 0) + 1;
   return { log: [...log, { n, ...entry }], counter: n, n, duplicate: false };
 }
@@ -101,6 +119,24 @@ export function makeEntry(reason, { actor, item, quantity, user, scene, now }) {
 export function pileScene(target) {
   const token = target?.documentName === "Actor" ? target.token : target;
   return token?.documentName === "Token" ? token.parent ?? null : null;
+}
+
+/**
+ * The pile Item Piles' drop hook names (DB-AC-1 live, FIX-3), as `{doc, uuid}`. Item Piles 3.3.4 passes
+ * a uuid string (dropped onto an existing pile; its callHook resolves it to the document when it can),
+ * the document itself, or — dropped onto empty ground — `_createItemPile`'s return value
+ * `{tokenUuid, actorUuid}`, which its callHook leaves as a plain object. `fromUuid` stands for
+ * `fromUuidSync`; a throw or a miss is a null doc, the uuid is kept. Anything else is nothing.
+ */
+export function resolvePile(target, fromUuid) {
+  const find = uuid => {
+    try { return (uuid && fromUuid?.(uuid)) || null; } catch { return null; }
+  };
+  if (typeof target === "string") return { doc: find(target), uuid: target };
+  if (!target || typeof target !== "object") return { doc: null, uuid: null };
+  if (target.documentName) return { doc: target, uuid: target.uuid ?? null };
+  const uuid = target.tokenUuid || target.actorUuid || null;
+  return { doc: find(target.tokenUuid) ?? find(target.actorUuid), uuid };
 }
 
 /** Item Piles passes one delta or an array of them. */

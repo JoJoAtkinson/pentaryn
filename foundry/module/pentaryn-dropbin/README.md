@@ -158,7 +158,12 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 
 - **Ledger:** a drop onto the canvas (Item Piles' hook, which fires on every client) is recorded
   by the active GM user only, on the pile token's scene, with that GM as the entry's user (the hook
-  does not say who dropped; `fromActorName` does) — DB-AC-1. A delete off a sheet is captured by
+  does not say who dropped; `fromActorName` does) — DB-AC-1. The pile is whatever Item Piles names:
+  an existing pile's uuid, or, onto empty ground, the new pile's `{tokenUuid, actorUuid}` (the token's
+  scene and uuid are recorded). One drop is one row: Item Piles takes the item off the sheet first,
+  which the delete capture records, and the drop row then takes that delete row's place and number
+  (same actor and item `_id`, within 2 s) — DB-AC-1 live. Part of a stack is an update, not a delete,
+  so it was only ever the drop row. A delete off a sheet is captured by
   the deleting client; players relay it through socketlib (`executeAsGM`) to a GM, and a GM records
   locally. A relay that reaches a GM tab still loading (before `ready`) is held and recorded at
   `ready`, in arrival order; the player's relay resolves with its number then — DB-AC-2. Appends on one client are serialised and coalesced (one counter + log write per burst). A malformed relayed entry (bad reason, itemName, t, quantity or item) is one

@@ -22,7 +22,7 @@
 
 import {
   MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, isEntryShape, isPlausibleSender, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
-  briefOf, shouldCaptureDelete, restoreTarget, pileScene, isActiveGMSelf,
+  briefOf, shouldCaptureDelete, restoreTarget, pileScene, resolvePile, isActiveGMSelf,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
 import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
@@ -139,14 +139,15 @@ function registerCapture(reg) {
       if (!isActiveGMSelf(game.users)) return;
       try {
         const actor = source?.actor ?? source;
-        const scene = pileScene(typeof target === "string" ? globalThis.fromUuidSync?.(target) : target);
+        const pile = resolvePile(target, u => globalThis.fromUuidSync?.(u));
+        const scene = pileScene(pile.doc);
         for (const d of normaliseDeltas(itemDeltas)) {
           const doc = d?.item ?? d;
           const obj = doc?.toObject ? doc.toObject() : foundry.utils.duplicate(doc ?? {});
           const e = baseEntry("drop", actor, obj, Math.abs(d?.quantity ?? obj?.system?.quantity ?? 1), scene);
           e.x = position?.x ?? null;
           e.y = position?.y ?? null;
-          e.pileUuid = target?.uuid ?? (typeof target === "string" ? target : null);
+          e.pileUuid = pile.uuid;
           submit(e);
         }
       } catch (err) {

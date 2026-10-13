@@ -72,3 +72,37 @@ test("DB-AC-1 pileScene: a pile token's scene, a synthetic pile actor's token's 
   assert.equal(core.pileScene(null), null);
   assert.equal(core.pileScene("Scene.x.Token.y"), null, "an unresolved uuid");
 });
+
+// DB-AC-1 live (FIX-3) [declared]: Item Piles 3.3.4 `_dropItems` onto empty ground hands the hook the new
+// pile as `_createItemPile`'s return value, `{tokenUuid, actorUuid}` — an object, which its callHook
+// does not resolve (it resolves only uuid strings). The row still takes the pile token's scene and uuid.
+test("DB-AC-1 live: a new pile given as Item Piles' {tokenUuid, actorUuid} takes that token's scene and uuid", async () => {
+  await quiet(() => everyClient({ tokenUuid: pile.uuid, actorUuid: "Actor.defaultPile00001" }, [{ item: loot("Rope"), quantity: -2 }]));
+  const last = game.pentaryn.dropbin.list(1)[0];
+  assert.deepEqual([last.quantity, last.sceneId, last.sceneName, last.pileUuid], [2, "sceneVault000001", "Vault", pile.uuid]);
+});
+
+test("DB-AC-1 live: a pile that is only {actorUuid} (a linked pile actor) records that uuid and no scene", async () => {
+  await quiet(() => everyClient({ actorUuid: "Actor.defaultPile00001" }, [{ item: loot("Lamp"), quantity: -1 }]));
+  const last = game.pentaryn.dropbin.list(1)[0];
+  assert.deepEqual([last.itemName, last.sceneId, last.sceneName, last.pileUuid], ["Lamp", null, null, "Actor.defaultPile00001"]);
+});
+
+test("DB-AC-1 live: a vetoed pile (target false) records no scene and no pile", async () => {
+  await quiet(() => everyClient(false, [{ item: loot("Torch"), quantity: -1 }]));
+  const last = game.pentaryn.dropbin.list(1)[0];
+  assert.deepEqual([last.itemName, last.sceneId, last.pileUuid], ["Torch", null, null]);
+});
+
+test("DB-AC-1 resolvePile: a uuid string, Item Piles' {tokenUuid, actorUuid}, a document, else nothing", () => {
+  const scene = { documentName: "Scene", id: "s" };
+  const token = { documentName: "Token", parent: scene, uuid: "Scene.s.Token.t" };
+  const docs = { "Scene.s.Token.t": token };
+  const from = u => docs[u] ?? null;
+  assert.deepEqual(core.resolvePile("Scene.s.Token.t", from), { doc: token, uuid: "Scene.s.Token.t" });
+  assert.deepEqual(core.resolvePile({ tokenUuid: "Scene.s.Token.t", actorUuid: "Actor.a" }, from), { doc: token, uuid: "Scene.s.Token.t" });
+  assert.deepEqual(core.resolvePile({ actorUuid: "Actor.a" }, from), { doc: null, uuid: "Actor.a" });
+  assert.deepEqual(core.resolvePile(token, from), { doc: token, uuid: "Scene.s.Token.t" });
+  assert.deepEqual(core.resolvePile(false, from), { doc: null, uuid: null });
+  assert.deepEqual(core.resolvePile("Scene.x.Token.gone", () => { throw new Error("bad"); }), { doc: null, uuid: "Scene.x.Token.gone" });
+});

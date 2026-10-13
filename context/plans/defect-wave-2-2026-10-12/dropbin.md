@@ -78,3 +78,22 @@ Restart required (lang/en.json and a new asset changed). ZZ scratch docs only; d
 - **dropbin-R6** — `corpses.toCorpse(zzToken.object)` returns undefined with one `pentaryn-dropbin |` warning, token unchanged.
 - **dropbin-R8** — point EYE at a missing path, drag a ZZ corpse: one warning; after a scene change one more attempt.
 - **dropbin-R9** — two unlinked tokens of a ZZ locked container, simulated player, fire item-piles-preRenderInterface with the second: float over the second.
+
+## Forward fix FIX-3 (2026-10-13) — DB-AC-1 live
+
+Branch `fix2/dropbin-live-2026-10-13`, declared. The FIX-2 live check of DB-AC-1 failed:
+
+- **No scene on a drop onto empty ground.** Item Piles 3.3.4 `_dropItems` passes the new pile to
+  its drop hook as `_createItemPile`'s return value `{tokenUuid, actorUuid}`; its `callHook` resolves
+  only uuid strings, so `pileScene` saw a plain object and `target?.uuid` was undefined. The node test
+  passed a TokenDocument and missed it. Fix: `resolvePile(target, fromUuidSync)` in ledger-core takes
+  a uuid string, a document or `{tokenUuid, actorUuid}` (token first) → `{doc, uuid}`.
+- **Two rows per drop.** Item Piles removes the item on the active GM's client (`_removeItems` /
+  `_transferItems`, no options), so `preDeleteItem` recorded a `delete` row before the `drop` row.
+  Fix: `appendEntry` puts a drop in the tail's place (same number) when the tail is a `delete` of the
+  same actor and item `_id` within DEDUPE_MS (`dropReplacesTail`). Older than this wave; fixed here
+  because the check's "exactly one row per item" depends on it.
+
+Tests: `test/drop-capture.test.mjs` (object/actor-only/vetoed targets, resolvePile),
+`test/drop-merge.test.mjs` (delete-then-drop is one row; a hand delete then another item's drop is two;
+appendEntry merge rules). Gate `make foundry-dropbin-check`: 188 tests, 40 checks, conformance 100 %.
