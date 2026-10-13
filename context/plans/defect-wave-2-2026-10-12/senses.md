@@ -76,3 +76,41 @@ beyond the module loading without console errors after a reload.
 - **senses-R1**: ZZ actor with a torch and one unlinked ZZ token of it on a ZZ scene. Light the
   token's own torch, then the world actor's torch within 250 ms; both the `prototypeToken` light
   and the unlinked token's light come on.
+
+## Live check result (FIX-3, 2026-10-13 ~07:40Z)
+
+Run on main f5c0c098 in the one GM tab. The deployed senses files are sha-identical to the repo, and
+the tab was loaded at 07:13Z, so no reload was needed. Only ZZ senses scratch docs were used, and all
+of them were deleted afterwards. No ZZ doc of any type is left.
+
+- **senses-ac-1 — pass.** Light was cast on square (350, 450) of a ZZ scene. Two concurrent
+  `sweep()` calls and two sequential ones left exactly one AmbientLight, with the derived id
+  `squareId(source, scene, x, y)`. Deleting it by hand cleared the item's `lightCast` flag.
+- **senses-edge-4 — pass.** The shard flag was `{bright 5, dim 10, color '#FF0000', zzExtra}`.
+  `syncLight` returned 1, then 0. After the debounce it returned 0 again. The prototype stored
+  `#ff0000`.
+- **senses-edge-4 (FIX-3) — pass.**
+  - The shard flag was `{bright 0, dim 15, color '#8844ff'}`, plus a ZZ Torch.
+  - Lit: the prototype `animation.type` was `torch` and `dim` was 40.
+  - Doused: the only `prototypeToken.light` keys written were `bright`, `dim` and `color`. The shard
+    flag still had those 3 keys, the animation was still `torch`, and a further `syncLight` call
+    returned 0.
+  - Live golden (the frozen FIX-2 `senses.js`): `diff.mjs` against FIX-2/before (pre-FIX-2) and
+    against FIX-2/after both exit 0 with shared identical. The `torchDoused` token animation is
+    `torch` (`.state/live-goldens/FIX-3-senses/`).
+- **senses-edge-3 — pass.**
+  - Chain to: the HUD on a second ZZ token, with `Z & <b>Q</b>` targeted, shows the tip
+    `Chain to Z & <b>Q</b>` as literal text. The tooltip has no `<b>` element, and the aria-label
+    is the same text.
+  - Outshone: two lit ZZ torches show an Outshone tip that names `ZZ Torch & <b>A</b>` literally.
+- **senses-ac-3 — pass.** `setup()` returned 3, then 0, and all three items have
+  `psLightToggle000`. It made one Item batch for the actor and one `updateDocuments` call for world
+  items. A dry run first confirmed that no non-ZZ item lacked the activity.
+- **senses-R1 — pass.** The unlinked token's torch and the world actor's torch were lit 28 ms
+  apart. Both the prototype light and the unlinked token's light came on (dim 40, torch).
+- **Code-only items — pass, with one limit.**
+  - Evidence: API 0.5.0 and `pentaryn-senses/api@1` are loaded. The `describe()` text matches M11.
+    `inspect(actor, null)` does not throw (R4). `trace()` is empty. No senses warnings or errors
+    appeared in the console during the run.
+  - Limit: the console from load time (07:13Z) was not available, and a reload is forbidden in this
+    run, so loading without console errors could not be re-checked.
