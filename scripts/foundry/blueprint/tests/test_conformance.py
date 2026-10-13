@@ -256,6 +256,44 @@ def test_package_hits_scans_once_per_module_py_blueprint_perf_2(tmp_path, monkey
     assert calls == {"aliases": 2, "strip": 6}, calls
 
 
+def test_module_scans_are_memoised_per_module_py_blueprint_perf_3(tmp_path, monkeypatch):
+    """imports, reexports, feature_files, listeners and tier are computed once per Module, not
+    once per rule that asks (a Module does not change after load_module)."""
+    d = _tiny(tmp_path, files={
+        "one.mjs": 'import * as two from "./two.mjs";\nexport * from "./three.mjs";\n'
+                   'Hooks.on("ready", () => two.install());\n',
+        "two.mjs": "export function install() {}\nexport function uninstall() {}\n",
+        "three.mjs": "export const x = 1;\n"})
+    calls = {"imports_of": 0, "read_lock": 0}
+    real = {"imports_of": conformance.jsscan.imports_of, "read_lock": conformance.vendor.read_lock}
+
+    def counted(name):
+        def f(*a, **k):
+            calls[name] += 1
+            return real[name](*a, **k)
+        return f
+
+    monkeypatch.setattr(conformance.jsscan, "imports_of", counted("imports_of"))
+    monkeypatch.setattr(conformance.vendor, "read_lock", counted("read_lock"))
+    m = conformance.load_module(d, installed=False, registry=None, registry_root=tmp_path)
+    imps = m.imports("one.mjs")
+    assert [t for t, _ in imps] == ["two.mjs"]
+    assert m.imports("one.mjs") is imps
+    rex = m.reexports("one.mjs")
+    assert rex == ["three.mjs"] and m.reexports("one.mjs") is rex
+    feats = conformance.feature_files(m)
+    assert feats == {"two.mjs"} and conformance.feature_files(m) is feats
+    ls = conformance.listeners(m)
+    assert [x.name for x in ls] == ["ready"] and conformance.listeners(m) is ls
+    assert m.tier == "full" and m.tier == "full"
+    assert calls == {"imports_of": 1, "read_lock": 1}, calls
+    conformance.score(m)                       # every rule asks again: nothing is rescanned
+    locks = calls["read_lock"]                 # C14's vendor.check reads the lock itself
+    assert m.tier == "full" and calls["read_lock"] == locks, calls
+    assert calls["imports_of"] <= len(m.files), calls    # once per file at most, however many rules ask
+    assert conformance.feature_files(m) is feats and conformance.listeners(m) is ls
+
+
 # ── gap-fill: lock tier fallback and scorer fixes R2–R9 ──────────────────────
 
 def test_tier_falls_back_to_the_lock_before_wave_7(tmp_path):

@@ -107,6 +107,9 @@ class Module:
     all_manifests: dict[str, dict | None] = field(default_factory=dict)   # None: unreadable (C38 says so)
     registry_error: str | None = None            # why the registry could not be loaded (C47/C32 fail on it)
     package_scan: dict[bool, dict[str, list[str]]] = field(default_factory=dict, repr=False, compare=False)
+    # memo for tier, imports, reexports, feature_files and listeners: a Module does not change after
+    # load_module, so each is computed once however many rules ask (perf-3). Callers must not mutate.
+    cache: dict = field(default_factory=dict, repr=False, compare=False)
 
     @property
     def id(self) -> str:
@@ -125,13 +128,18 @@ class Module:
         """module.json flags.pentaryn.tier, else lib/kit.lock.json's tier (vendor.py sync --tier
         writes it, so a migrated module is scored by its tier before the Wave 7 restart batch adds
         the flag), else "full"."""
+        if "tier" in self.cache:
+            return self.cache["tier"]
         if self.flags.get("tier"):
-            return self.flags["tier"]
-        try:
-            lock = vendor.read_lock(self.dir) or {}
-        except (OSError, ValueError, vendor.VendorError):
-            lock = {}
-        return lock.get("tier") or "full"
+            tier = self.flags["tier"]
+        else:
+            try:
+                lock = vendor.read_lock(self.dir) or {}
+            except (OSError, ValueError, vendor.VendorError):
+                lock = {}
+            tier = lock.get("tier") or "full"
+        self.cache["tier"] = tier
+        return tier
 
     @property
     def entries(self) -> list[str]:
@@ -146,6 +154,9 @@ class Module:
 
     def reexports(self, rel: str) -> list[str]:
         """Module-relative targets of `rel`'s `export … from "./x"` and `export * [as N] from "./x"`."""
+        key = ("reexports", rel)
+        if key in self.cache:
+            return self.cache[key]
         src, out = self.files[rel], []
         base = (self.dir / rel).parent
         marks = [m.group(2) for m in jsscan._RE_EXPORT_LIST.finditer(src.code) if m.group(2)]
@@ -158,10 +169,14 @@ class Module:
                 out.append((base / lit.value).resolve().relative_to(self.dir.resolve()).as_posix())
             except ValueError:
                 pass
+        self.cache[key] = out
         return out
 
     def imports(self, rel: str) -> list[tuple[str, jsscan.Import]]:
         """(resolved module-relative target, import) for each relative import of `rel`."""
+        key = ("imports", rel)
+        if key in self.cache:
+            return self.cache[key]
         out = []
         base = (self.dir / rel).parent
         for imp in jsscan.imports_of(self.files[rel]):
@@ -172,6 +187,7 @@ class Module:
             except ValueError:
                 target = imp.spec
             out.append((target, imp))
+        self.cache[key] = out
         return out
 
 
@@ -296,7 +312,9 @@ def registered_hook_names(m: Module) -> list[tuple[str, str]]:
 
 
 def feature_files(m: Module) -> set[str]:
-    """The entry's `import * as` targets (D12), plus any file that exports install()."""
+    """The entry's `import * as` targets (D12), plus any file that exports install(). Memoised on the Module."""
+    if "feature_files" in m.cache:
+        return m.cache["feature_files"]
     out: set[str] = set()
     for e in m.entries:
         if e in m.files:
@@ -305,7 +323,8 @@ def feature_files(m: Module) -> set[str]:
         names, _ = jsscan.exports_of(src)
         if "install" in names and rel not in m.entries:
             out.add(rel)
-    return {f for f in out if f in m.files}
+    m.cache["feature_files"] = feats = {f for f in out if f in m.files}
+    return feats
 
 
 def package_hits(m: Module, *, include_lib: bool = True) -> dict[str, list[str]]:
@@ -1608,12 +1627,16 @@ def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | Non
 
 
 def listeners(m: Module) -> list[Listener]:
+    """Every hook registration in the module's own files. Memoised on the Module."""
+    if "listeners" in m.cache:
+        return m.cache["listeners"]
     out = []
     for rel, src in m.files.items():
         for mm in HOOK_REG.finditer(src.code):
             name = src.strings[int(mm.group(1))].value
             is_async, body, ident = handler_at(src.code, mm.end())
             out.append(Listener(rel, src.line_of(mm.start()), name, is_async, body, ident))
+    m.cache["listeners"] = out
     return out
 
 
