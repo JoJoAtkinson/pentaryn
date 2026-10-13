@@ -42,6 +42,18 @@ def test_verify_behind_access_with_the_tunnel_up_fails(monkeypatch):
     assert pipeline.verify() == 1
 
 
+@pytest.mark.repo
+def test_readme_documents_verify_skip_behind_access():
+    """M16: the foundry-verify row named only the unreachable-root skip; verify() also
+    passes when Cloudflare Access answers and this host's tunnel is down, and fails (asking
+    for a browser check) with the tunnel up behind Access."""
+    readme = (cfg.REPO_ROOT / "scripts/foundry/README.md").read_text(encoding="utf-8")
+    row = next(line for line in readme.splitlines() if line.startswith("| `make foundry-verify`"))
+    assert "only when the root itself is unreachable" not in row
+    assert "Cloudflare Access" in row and "tunnel is not running" in row
+    assert "browser" in row
+
+
 def test_access_gated_reads_the_login_redirect(monkeypatch):
     login = "https://team.cloudflareaccess.com/cdn-cgi/access/login/vtt.atjoseph.com?x=1"
     monkeypatch.undo()
