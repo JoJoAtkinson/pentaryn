@@ -45,7 +45,7 @@ from typing import Callable
 
 from scripts.foundry.ops import config as ops_cfg
 from scripts.foundry.update import adjustments as adj_mod
-from scripts.foundry.update import llm, risk
+from scripts.foundry.update import llm, risk, state
 from scripts.foundry.update.report import IPV4, IPV6
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -183,13 +183,29 @@ def load_registry(policy: dict | None) -> tuple[adj_mod.Registry, str | None]:
 
 
 BASE_RUN_SECONDS = 5400
+# The backstop must kill a stuck run before its lock is old enough to read as stale, or a
+# second run could break the lock while the first is still alive (EC-10): 90 minutes.
+MAX_STEP_MINUTES = (state.STALE_LOCK_SECONDS - BASE_RUN_SECONDS) / 60.0
+
+
+def _requested_minutes(cfg: dict) -> float:
+    try:
+        return max(float(cfg.get("max_minutes", 40)), 5.0)
+    except (TypeError, ValueError):
+        return 40.0
 
 
 def max_minutes(cfg: dict) -> float:
-    try:
-        return min(max(float(cfg.get("max_minutes", 40)), 5.0), 180.0)
-    except (TypeError, ValueError):
-        return 40.0
+    return min(_requested_minutes(cfg), MAX_STEP_MINUTES)
+
+
+def max_minutes_note(cfg: dict) -> str | None:
+    """Why the step's cap is lower than the policy asked, or None when it is not."""
+    asked = _requested_minutes(cfg)
+    if asked <= MAX_STEP_MINUTES:
+        return None
+    return (f"max_minutes {asked:g} clamped to {MAX_STEP_MINUTES:g} (the run's backstop "
+            "must fire before its lock reads as stale)")
 
 
 def wrapper_timeout(policy: dict | None = None) -> int:
@@ -368,6 +384,8 @@ def ceiling(cfg: dict, *, minutes_remaining: float, budget_left: float) -> tuple
     reasons: list[str] = []
     if not cfg.get("enabled"):
         return Tier.NONE, ["escalation disabled in policy"]
+    if note := max_minutes_note(cfg):
+        reasons.append(note)
     top = Tier.parse(cfg.get("max_tier"), Tier.NONE)
     if top > BUILT_MAX:
         reasons.append(f"max_tier {top.label} clamped to {BUILT_MAX.label} "

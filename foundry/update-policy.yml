@@ -126,6 +126,7 @@ escalation:
   # The whole step's wall clock. The wrapper's backstop is 90 min + this (130 min), so a
   # stuck 04:06 run is killed ~06:16 — and the wrapper then restores service, releases
   # the lock and notifies itself (cli killed), since the 06:12 watchdog may have passed.
+  # Capped at 90, so the backstop fires before the 3 h stale-lock threshold.
   max_minutes: 40
   budget_usd_per_run: 12  # all escalation calls together, after the adjudicator
   # A failed analysis is retried on later Saturdays at most this many times for the same

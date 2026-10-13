@@ -40,6 +40,8 @@ SYSTEM_ASIDE_DIR = STATE_DIR / "system-aside"
 # A lock older than this is from a run that died without cleaning up. Long enough to
 # cover a core download plus a full smoke test on both worlds.
 STALE_LOCK_SECONDS = 3 * 3600
+# A lock directory with no owner.json yet is mid-acquire, not abandoned, for this long.
+OWNERLESS_GRACE_SECONDS = 60
 
 
 class Locked(RuntimeError):
@@ -57,21 +59,45 @@ class Lock:
         try:
             self.path.mkdir(parents=True)
         except FileExistsError:
+            self._break_stale()
+        token = f"{os.getpid()}-{time.time_ns()}"
+        (self.path / "owner.json").write_text(
+            json.dumps({"pid": os.getpid(), "started": time.time(), "token": token}),
+            encoding="utf-8")
+        # Another run breaking the same stale lock may have replaced ours in between.
+        if self.owner().get("token") != token:
+            raise Locked("another run took the lock at the same moment")
+        self.held = True
+        return self
+
+    def _break_stale(self) -> None:
+        """Remove a stale lock and take it, or raise :class:`Locked`. Any filesystem
+        failure (the lock vanished, filled up, or was re-taken under us) means held."""
+        try:
             info = self.owner()
             age = time.time() - self.path.stat().st_mtime
             pid = info.get("pid")
-            alive = pid is not None and _pid_alive(int(pid))
+            if not info and age < OWNERLESS_GRACE_SECONDS:
+                # The owner may be between its mkdir and its owner.json write.
+                raise Locked(f"another run is taking the lock ({age:.0f} s old, "
+                             "no owner yet)")
+            try:
+                alive = pid is not None and _pid_alive(int(pid))
+            except (TypeError, ValueError):
+                alive = False
             if alive and age < STALE_LOCK_SECONDS:
                 raise Locked(f"another run holds the lock (pid {pid}, "
-                             f"{age / 60:.0f} min old)") from None
+                             f"{age / 60:.0f} min old)")
             # Stale: the owner is gone, or it has been running implausibly long.
+            if self.owner() != info:
+                raise Locked("the lock changed hands while it was being checked")
             (self.path / "owner.json").unlink(missing_ok=True)
             self.path.rmdir()
             self.path.mkdir(parents=True)
-        (self.path / "owner.json").write_text(
-            json.dumps({"pid": os.getpid(), "started": time.time()}), encoding="utf-8")
-        self.held = True
-        return self
+        except OSError as exc:
+            raise Locked(f"could not take the stale lock: {exc}") from None
+        if self.owner():
+            raise Locked("another run took the stale lock first")
 
     def owner(self) -> dict:
         try:

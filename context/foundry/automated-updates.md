@@ -120,7 +120,9 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `foundry/logs/auto-updates/` | Per-run `.md` + `.json`, committed and pushed. |
 
 Runtime state (all gitignored) lives in `.state/`: `vtt-update.lock/` (a **directory** —
-macOS has no `flock`), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
+macOS has no `flock`; a lock with no `owner.json` counts as held for its first 60 s, since
+its owner may be between `mkdir` and the write, and any failure breaking a stale lock
+reports it held rather than crashing), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
 `vtt-update-cache/`, `vtt-update-analysis/` (T1 cache, one JSON per package × key),
 `vtt-update-dry-plans/` (plans from dry runs), `core-rollback/`, `system-aside/`, `logs/`.
 The rollback tars in `core-rollback/` and `system-aside/` are written as `<name>.partial`
@@ -398,7 +400,9 @@ the cost line adds "+ up to $X unreported".
 **Time.** The step stops at the earlier of `window.latest − reserve_minutes` and its own
 `max_minutes` (40). `vtt-update.sh`'s backstop is 90 min + `max_minutes` = 7 800 s
 (`escalate.wrapper_timeout()`) — not a flat three hours, which put the kill (07:06) after
-the 06:12 watchdog with nothing left to notice it. And whoever kills the run now cleans
+the 06:12 watchdog with nothing left to notice it. `max_minutes` is clamped to 90 so the
+backstop always fires before the lock is old enough to read as stale (3 h); a clamp is
+listed in the run's `ceiling_reasons`. And whoever kills the run now cleans
 up after it: on a 143/137 exit the wrapper runs `cli killed`, which marks the status
 `failed`/`killed`, restores service from the entry state, removes the lock if its owner is
 dead (`make vtt-up` refuses while it exists) and notifies. The watchdog stays quiet about
