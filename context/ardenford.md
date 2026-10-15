@@ -398,20 +398,33 @@ Backup before the change: local tar `ardenford-2026-10-15-premodules.tgz` (plus 
 `/private/tmp/claude-501/-Users-joe-Documents-GitHub-pentaryn/00048ef4-fe52-4efe-a872-614236e141a0/scratchpad/`
 — temporary; the next `make foundry-down` snapshot is the durable one.
 
-## 2026-10-15 — Temp folder — three scenes for Joe to review
+## 2026-10-15 — Temp folder — the Brennick Hall night
 
-Imported from installed compendiums (`game.scenes.importFromCompendium`, `keepId` — no id
-collisions) into a new top-level Scene folder **`Temp`** (`qRxVEfrNdxuRgRr6`). All three are
-inactive, off navigation, never viewed. Walls, lights, regions, behaviors, sounds, tiles and
-levels match the compendium source exactly; every image HEADs 200. Scene count 119 → 122.
+Joe's session night in Brennick Hall (an Ardenford keep), in route order:
+**prison → wine cellar → feast hall → out a window → courtyard.** Every scene sits in the
+top-level Scene folder **`Temp`** (`qRxVEfrNdxuRgRr6`), imported from installed compendiums
+with `game.scenes.importFromCompendium` — inactive, off navigation, never viewed or activated
+for players. Walls, lights, regions, region behaviors, sounds, tiles and levels match the
+compendium source exactly; every background, tile and thumbnail image HEADs 200.
 
-| Scene | id | Source pack | Story use |
-|---|---|---|---|
-| Brior Keep - Lit (Night - Spring) | `qKZWFtGa3xeZXxWL` | `eledryll-maps-castle-life-bundle-1.eledryll-maps-castle-life-bundle-1` | Prison break → feast hall: jailed in the Dungeon, escape up the SE spiral stair to the 1st-floor gallery, drop into the ground-floor great hall mid-feast/ball (Brennick Hall). 3 levels (Dungeon / Ground-Floor / 1st floor); both `changeLevel` stair regions intact. |
-| 07. Child's Bedroom | `RUKfJ7ogh7Yih0Q4` | `mad-endlesswiz2.mad-endlesswiz2-maps` | Party shrunk by a toymaker's "shrinking dollhouse"; toy war; the giant child picks favourites; the music box reverses it. **0 lights — needs lighting.** Source thumb pointed at another world (404); a new one was generated at `worlds/ardenford/assets/scenes/thumb-RUKfJ7ogh7Yih0Q4.webp`. |
-| Wine Cellar - WINE | `Ge5f1fuKrr54Ftpi` | `eledryll-maps-castle-life-bundle-1.eledryll-maps-castle-life-bundle-1` | Flooded cellar: a drunk, singing wine elemental in a Lower Tier vintner's "haunted" cellar; CON save vs poisoned each round spent in the wine. |
+| # | Scene | id | Source pack | Story use |
+|---|---|---|---|---|
+| 1 | Arena Prison of the Condemned | `3L7PArmd7RTkC8vp` | `pentaryn-seafoot-maps.scenes` | **The prison.** Brennick Hall's gaol, cut into the rock under the keep: two rows of barred cells (~30), an octagonal yard ringed by more cells, guard room with a dice table, warden's office, mess, stores, two round guard posts, and a long stair climbing out on the west side (to the cellar). 738 walls, 17 lights, 16 sounds. The yard floor has a painted blood sigil (it was a fighting pit) — describe it, or cover it. |
+| 1-alt | 15. Dungeon | `s7kWp2zIzo5ihsU7` | `mad-endlesswiz.mad-endlesswiz-maps` | **Alternate prison** — a smaller round gaol, as if under one of the keep's towers: a ring of eight barred cells, a guard post with weapon rack and door, and a central grated oubliette with a spiral stair. 164 walls, **only 3 lights** (add torches), 1 tile (the module's journal "reader" icon). Green fog surrounds the tower in the art. The source thumbnail pointed at another world (404), so a new one was made at `worlds/ardenford/assets/scenes/thumb-s7kWp2zIzo5ihsU7.webp`. |
+| 2 | Wine Cellar - WINE | `Ge5f1fuKrr54Ftpi` | `eledryll-maps-castle-life-bundle-1.eledryll-maps-castle-life-bundle-1` | Up out of the gaol into the keep's wine cellar. The flooded cellar: a drunk, singing wine elemental; CON save vs poisoned each round spent in the wine. |
+| 3 | Brior Keep - Lit (Night - Spring) | `qKZWFtGa3xeZXxWL` | `eledryll-maps-castle-life-bundle-1.eledryll-maps-castle-life-bundle-1` | **The feast hall** — use the Ground-Floor level: the great hall mid-feast. 3 levels (Dungeon / Ground-Floor / 1st floor); both `changeLevel` stair regions intact. **Its Dungeon level was rejected as the prison** (Joe, 2026-10-15: it doesn't read as a prison) — scene 1 replaces it. |
+| 4 | Windhorne Castle - Night | `ZlTTWIxVZXDh5ev2` | `eledryll-maps-castle-life-bundle-1.eledryll-maps-castle-life-bundle-1` | **The courtyard** the party drops into from a feast-hall window: First Level = the night bailey — a large cobbled inner court with carts, a well and the gatehouse, a formal garden court behind the north range, lit windows all round. Same Eledryll art as the cellar and hall. 1555 walls, 152 lights, 16 regions (16 behaviors), 3 levels (First Level / Second Level / Roofs), 2 tiles. A separate copy: the original `cEn1DAbKlPfkkju8` stays in `4 · The Keeps`, untouched. |
 
-The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is untouched.
+Searched for the prison and passed over: **City Prison** (`EDJYGMiBk5d0deEg`) — the same gaol
+as scene 1 but with city rooftops around it, so it stands in the street rather than under a
+keep, and it has 9 lights to scene 1's 17; The Kings Prison and Devils Hold Prison (the same
+art in a forest and in lava); the keep basements (Seaside, Clifftop, Abandoned, Adventurers
+Seaside); The Wardens Keep and Dragon Lord's Basement (crypts, not cells); the DMG Keep (parchment
+style, no gaol); Castle Life has no prison map.
+
+`07. Child's Bedroom` (`RUKfJ7ogh7Yih0Q4`) was deleted from Temp on Joe's word (2026-10-15), along
+with its generated thumbnail. The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is
+untouched. Scene count 122 → 121 (delete) → 124.
 
 ## Still unbuilt
 
