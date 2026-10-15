@@ -437,6 +437,24 @@ but a forest around it.
 | Death's Gate | `VhbnfBzDoxOu8mJp` | `pentaryn-seafoot-maps.scenes` | A glowing teal river of drifting skeletons between pillars, ending at a rune dais over a starfield. 83 walls, 26 lights. |
 | 13. Golem Forge | `IycAS89J2liH5WUX` | `mad-endlesswiz2.mad-endlesswiz2-maps` | A round workshop split by a lava channel; furnace arch, golem parts, blueprints. 41 walls, 18 lights. New thumbnail at `worlds/ardenford/assets/scenes/thumb-X5MgX90geG42y5E4bgrSSw.webp` (the source one 404'd). |
 
+### 2026-10-15 — Arena Prison populated from Joe's 29 prompt markers
+
+Call `pm-f9fe`, party 3 x L2. All 29 markers replaced with patched Monster Manual stock (actors in
+`Foundry MCP Creatures`), each with tokens-01 art as a ring subject:
+
+- **Prisoners (neutral):** Oswin Harrow, Brannoc Tull, Kit Rellan, Old Haskel (knows the place),
+  Fenn Marlowe, Ivo Penck, Gorrin Ashby (would help), Nobody Ned, Pip Underbough (halfling), the
+  drunks Wendel Pike / Hob & Lem Tanner (Drunk trait = poisoned), Jory "Knuckles" Vane (Tough,
+  troublemaker), Silas Crane (Spy, shady, next to the PCs).
+- **Staff (neutral):** Clerk Aldo Penwright, secretary Marta Quillon (carries the Prison Intake
+  Ledger), Grub the Cook; Mollie Fairweather, the girl distracting the card-table guards.
+- **Guards (hostile):** card table Corran / Tobbin / Hesk (Hesk has the Cell-Row Key Ring);
+  arena post Big Marga (half-ogre: Ogre cut to CR 1, 45 HP, Int 7), Sgt Dace Orrin (Int 14),
+  Grusk (half-orc, Int 6), Pell Wainright; Willet (smoking in the storeroom, Mellow trait) with his
+  dealer Dossie Klep (Bandit, neutral); Rudd (Asleep trait); **Warden Bastian Krole** (Bandit
+  Captain CR 2, Warden's Master Key — note the stock **Pistol** is still on him).
+- Difficulty: card table 75 XP, arena post 275 XP, storeroom 25 XP: all under "low" for 3 x L2.
+
 `07. Child's Bedroom` (`RUKfJ7ogh7Yih0Q4`) was deleted from Temp on Joe's word (2026-10-15), along
 with its generated thumbnail. The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is
 untouched. Scene count 122 → 121 (delete) → 126 (with the two inspiration maps).
