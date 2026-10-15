@@ -455,6 +455,20 @@ Call `pm-f9fe`, party 3 x L2. All 29 markers replaced with patched Monster Manua
   Captain CR 2, Warden's Master Key — note the stock **Pistol** is still on him).
 - Difficulty: card table 75 XP, arena post 275 XP, storeroom 25 XP: all under "low" for 3 x L2.
 
+### 2026-10-15 — Connector A: Arena Prison ↔ Brior Keep (Ground-Floor)
+
+Joe's two `connector A` prompt markers, built per [`foundry/scene-links.md`](foundry/scene-links.md)
+as native `teleportToken` regions (pentaryn-portals is off in this world), two-way, `choice: true`,
+`placement: center`, fade, regions visible on the Regions layer only, plus a `travel-ring` sign tile
+at alpha 0.45 on each end. Markers consumed (call `pm-7f86`, `kind: none`).
+
+| End | Region | Square (canvas) | Sign tile |
+|---|---|---|---|
+| Arena Prison, bottom-left | `Wr7TC8n0RM9Ki6cg` "Connector A → Brior Keep (Ground-Floor)" | 1500, 3450 | `66p1Sub06AjQV7vu` |
+| Brior Keep, Ground-Floor level | `JbGdpOsgAqZlF15l` "Connector A → Arena Prison" | 1800, 1600 | `skDtS2VPruXoEolc` |
+
+Cross-scene teleports need a GM logged in when a player triggers them.
+
 `07. Child's Bedroom` (`RUKfJ7ogh7Yih0Q4`) was deleted from Temp on Joe's word (2026-10-15), along
 with its generated thumbnail. The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is
 untouched. Scene count 122 → 121 (delete) → 126 (with the two inspiration maps).

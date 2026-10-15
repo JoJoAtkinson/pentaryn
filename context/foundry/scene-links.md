@@ -114,6 +114,16 @@ await B.deleteEmbeddedDocuments("Token", [b.marker.id]);
 return { a: rA.uuid, b: rB.uuid };
 ```
 
+⚠️ **v14 stores destinations as relative UUIDs.** The field is a `DocumentUUIDField` with
+`relative: true, relativize: true`, so `rB.uuid` (`Scene.<id>.Region.<id>`) is saved as
+`...<sceneId>.Region.<regionId>` — relative to the behavior. That is correct, not corruption:
+`fromUuidSync(d)` on it returns `null`; resolve with `fromUuidSync(d, {relative: behavior})`.
+Links copied raw out of LevelDB from older worlds still hold full `Scene.…` strings; both work.
+(Seen 2026-10-15 building Ardenford's connector A.)
+
+On a scene with **Levels**, set the region's `levels: [<levelId>]` (and a sign tile's `levels`) to
+the floor the landing is on — read it from the marker token's `level`.
+
 Verify the same way as anything else on the canvas — read the documents back, don't trust
 `_source`:
 
