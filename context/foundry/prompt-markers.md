@@ -492,3 +492,6 @@ Check these on a built result; the dry run does not flag them.
   prototype's `texture.scaleX/Y` (the MM Ogre and Tough ship at 2), so the new ring art draws at twice the
   footprint. After a replace, check for placed tokens with `texture.scaleX !== 1` and set them (and the
   actor's prototype) back to 1.
+- **Hidden nameplates and stock portraits** (same run): MM stock tokens arrive with `displayName: 0` (never),
+  and `img` changes only the token, so the sheet keeps the MM portrait. Joe wants hover nameplates like his PCs
+  (`displayName: 30`) — set it on the tokens and prototypes after a replace; set `actor.img` if the sheet art matters.
