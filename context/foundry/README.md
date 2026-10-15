@@ -21,7 +21,7 @@ server, the tunnel, the updater, the asset pipeline.
 
 ## The platform
 
-Foundry **v14.369** (since 2026-10-10) · system **dnd5e 6.0.6** (pentaryn world; the other three worlds migrate from 5.3.3 on first launch) · **D&D 2024 rules**
+Foundry **v14.369** (since 2026-10-10) · system **dnd5e 6.0.6** (all four worlds — pentaryn, ardenford, ardenhaven, space-journey; `world.json` systemVersion checked 2026-10-15) · **D&D 2024 rules**
 
 > **This domain is not written for one world.** Everything here applies to **any dnd5e world**
 > authored in this setup — the tooling, the modules and the conventions travel; only the content

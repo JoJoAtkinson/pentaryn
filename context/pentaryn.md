@@ -16,7 +16,7 @@ method → [`foundry/ops.md`](foundry/ops.md) *Creating a new world* · other ca
 
 > **Volatile file.** Dated findings and IDs belong here.
 
-Foundry world id **`pentaryn`**, title **Pentaryn**, dnd5e 5.3.3 on core 14.369 (since 2026-10-10), rules
+Foundry world id **`pentaryn`**, title **Pentaryn**, dnd5e 6.0.6 on core 14.369 (both since 2026-10-10), rules
 `modern` (2024). This is Joe's main Pentaryn world build. First use: a 3200 A.F. Underdark
 one-shot with PCs Marrith, Caven and Talo (built to level 12, 2026-10-04).
 
@@ -37,7 +37,7 @@ Attended update after the unattended 10-03 run crashed partway. Plan and rationa
 | Component | Before | After |
 |---|---|---|
 | Foundry core | 14.367 | **14.369** |
-| dnd5e | 5.3.3 | 5.3.3 (6.0.6 held, no-go: Argon dnd5e 5.2.2 and Item Piles 1.1.0 not 6-ready) |
+| dnd5e | 5.3.3 | 5.3.3 (6.0.6 held at the time — later the same day upgraded to **6.0.6**, see *dnd5e 6.0.6 upgrade* below) |
 | Dice So Nice | 6.4.2 | **6.4.4** |
 | Multi Token Edit | 3.3.7 | 3.3.7 (already current) |
 | mad-endlesswiz2 | 13.0.1 | **14.1.0** (installed through `installPackage` on the licence; no pentaryn scene uses it) |

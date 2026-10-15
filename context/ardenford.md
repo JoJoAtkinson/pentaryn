@@ -1,7 +1,7 @@
 ---
 title: "Ardenford — campaign state"
 status: active
-last_modified: 2026-09-17
+last_modified: 2026-10-15
 tags: [context, campaign, ardenford, ardenhaven, campaign-state]
 ---
 
@@ -16,7 +16,7 @@ the city's lore, districts, shops and NPCs → `world/factions/ardenhaven/locati
 > **This is a volatile file.** Dated findings and IDs belong here, not in the Foundry
 > domain root.
 
-Foundry world id **`ardenford`**, title **Ardenford**, dnd5e 5.3.3 on core 14.367.
+Foundry world id **`ardenford`**, title **Ardenford**, dnd5e 6.0.6 on core 14.369 (migrated 2026-10-10).
 Seated in [Ardenford](../world/factions/ardenhaven/locations/ardenford/ardenford.md), the
 three-tiered capital of Ardenhaven — Lower Tier harbour, Middle Tier trade and
 residential, Upper Tier ridge, and an ancient tunnel network under all of it.
@@ -364,6 +364,39 @@ per the convention in [`foundry/markers.md`](foundry/markers.md), **plus one bes
 | Corr Ashgate | **Forged Reclamation Writ** — registry number of an expedition that never came back |
 
 `Ardenford Watch` came pre-equipped from the Monster Manual (Spear, Chain Shirt, Shield).
+
+## 2026-10-15 — ready to play: the module set
+
+Brought up live on the Mac (local world, no cloud restore), tunnel left down. Changed by
+editing `core.moduleConfiguration` in `worlds/ardenford/data/settings` with both worlds
+closed (method: [`foundry/ops.md`](foundry/ops.md) → *Creating a new world*).
+
+**Joe's table does not use character sheets, the Argon HUD for players, portals, cursors or
+GM vision**, so only the modules that serve that table were added.
+
+| Module | State | Why |
+|---|---|---|
+| `pentaryn-prompts` | **on** | prompt markers; the six `Prompt · <size>` actors exist in `Prompt Markers` (made by `ensureMarkers` on ready) |
+| `pentaryn-feedback` | **on** | player bug/feature reports |
+| `pentaryn-lookup` | **on** | rules lookup (`game.pentaryn.rules`) |
+| `pentaryn-senses` | **on** | senses / light |
+| `pentaryn-names` | **on** | name generation |
+| `pentaryn-aoe` | **on** | area effects; `autoApplySelf`, `highlightUnapplied`, `npcSaveRollMode` copied from `pentaryn` |
+| `pentaryn-creatures` | **on** | `ownerSees`, `lightRadius` copied from `pentaryn` |
+| `pentaryn-movement` | **off** | Joe's call, 2026-10-15: no player ghost movement (he manages movement himself) |
+| `pentaryn-walls` | **removed** | retired 2026-10-13, folder gone |
+| `pentaryn-combat`, `-transform`, `-portals`, `-cursors`, `-journal`, `-riders`, `gm-vision` | off | the table doesn't use sheets, the HUD/portals/cursors or GM vision |
+
+Everything already on stayed on (incl. `enhancedcombathud`, `foundry-mcp-bridge`
+0.8.3-pentaryn.2). 36 modules active, every `requires` satisfied. Not copied:
+`pentaryn-prompts.lastCalls` (per-world log) and `pentaryn-senses.sightReset` (per-world
+one-shot migration marker — ardenford runs its own). Load console: no errors, only
+scene-packer's v13 global-namespace deprecation warnings.
+
+Backup before the change: local tar `ardenford-2026-10-15-premodules.tgz` (plus the
+`pentaryn` settings DB) in that session's scratchpad,
+`/private/tmp/claude-501/-Users-joe-Documents-GitHub-pentaryn/00048ef4-fe52-4efe-a872-614236e141a0/scratchpad/`
+— temporary; the next `make foundry-down` snapshot is the durable one.
 
 ## Still unbuilt
 
