@@ -179,6 +179,7 @@ Work in this order:
 | A light source and nothing else | `light` | `config` = AmbientLight config |
 | A picture on the floor (rug, blood, rubble) | `tile` | `src` under `assets/`; `width`/`height` in grid squares (default: the marker's footprint) |
 | Nothing after all ("cut this", a note to self) | `none` | `reason`; the marker is deleted, the text stays in the readback |
+| **A pair of scene links** — two markers with the same label ("link A", "connector A") on two scenes | **not a replace kind** | Build a **pentaryn-portals passage** between them — see *Scene links from prompts* below — then consume both markers with `none` |
 
 **Size word → creature size:** tiny→tiny, small→small, mid→medium, large→large, xl→huge,
 xxl→gargantuan. A `tiny` on a table is usually an **object** (hotspot/note), not a creature.
@@ -431,6 +432,33 @@ module (a `cleanup:` line under it); the marker stays. An npc feature that would
 | `MODULE_MISSING` | `pentaryn-prompts` is not active in the GM tab | `make foundry-prompts-sync`, world restart on first install, reload the GM tab |
 | `TIMEOUT` | no answer within the transport timeout (60 s for gather/replace) | gather one scene, `crops: false`; check the GM tab is in the foreground |
 
+## Scene links from prompts
+
+"link A" / "connector A" on two scenes means **the Pentaryn portal experience**, never a bare core
+region: Joe expects the violet badge with the destination's picture, the card (picture, title,
+description) when a token steps on it, and GM right-click *Teleport party* / *Preview card*. A bare
+`teleportToken` region has none of that and reads to him as "not working" (Ardenford, 2026-10-15).
+
+1. `game.modules.get("pentaryn-portals").active` — if false, it is off in this world: enable it
+   (`core.moduleConfiguration` live + reload the GM tab, ops.md §5) and say so to Joe.
+2. Read each marker's square (snap its centre to the grid) and, on a Levels scene, its `level`.
+3. Per end, create a Region: `name: "Passage → <other scene short name>"`, `color: "#8a5cff"`,
+   `visibility: 4`, one grid-square rectangle, `levels: [<level>]` on a Levels scene. No behavior.
+4. `await game.pentaryn.portals.link(rA, {to: rB.uuid, twoWay: true})` — writes the Teleport
+   behaviors exactly as Pentaryn's (choice, revealed, centre, snap, fade 1500).
+5. Card on **each** region at `flags.pentaryn-portals = {title, img, description}` — the card a
+   region carries is what travellers see when going **to** it. `img` from
+   `game.pentaryn.portals.snapshot(region)`; **it returns `null` on a scene with no background**
+   (every Levels scene — the floors are tiles): crop it yourself from that level's tile image, 8 × 5
+   squares around the region, white circle on the arrival square, 480×300 webp, into
+   `assets/tokens/custom/portals/<sceneId>-<regionId>.webp`. Append `?v=<time>` to the flag path.
+   Title "<Place> — <the spot>", two or three sentences of what you see arriving.
+6. A `travel-ring` sign tile per end (scene-links.md *Placing one*: alpha 0.45, `flags.pentaryn.travel`,
+   `levels` on a Levels scene).
+7. Verify: `portals.destinations()` each way, both card images HEAD 200, and `portals.badges()`
+   after viewing each scene in the GM tab (local view only), then return the view.
+8. Consume both markers: `replace` with `{kind: "none", reason: "link A built as …"}`.
+
 ## Afterwards
 
 Tell Joe what each `p#` became, by name, one line each (`p1 → Skarra Wolf-Helm, goblin boss CR 1`),
@@ -439,6 +467,11 @@ monsters and NPCs, `Foundry MCP Characters` for PCs unless `folder` named one, `
 different, and what still needs a hand: features you could not express, map work the prompt
 implies (a hidden door, a ledge's height), art (new NPCs and PCs get the default image unless
 you passed `img`; the ring tier is set per replacement).
+
+**After any `actor` replacement with stock monsters, fix three things before reporting** (each bit
+Joe on 2026-10-15; see Known gaps): placed tokens and prototypes with `texture.scaleX/Y !== 1` → 1;
+`displayName` → 30 (hover, as his PCs have); and `actor.img` → the token's source art when it was
+changed with `img`, so the sheet doesn't show the stock MM portrait.
 
 ## Troubleshooting
 

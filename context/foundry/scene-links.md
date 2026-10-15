@@ -214,6 +214,10 @@ on that flag would keep them married.
 
 ## Destination cards (pentaryn-portals)
 
+**This is the default for any link Joe asks for** — he expects the badge, card and Teleport party. The
+step-by-step build (including the snapshot that fails on Levels scenes) is in
+[`prompt-markers.md`](prompt-markers.md) § Scene links from prompts.
+
 The confirmation dialog shows a **card** per destination: a thumbnail, a title and a description. With several destinations, the cards replace the core `<select>` as radio buttons; they submit the same `destination` field, so the teleport logic is unchanged. The card data lives on the **destination** region, at `flags["pentaryn-portals"] = { title, img, description }`.
 
 To author a card, open Region config, then the Appearance tab, then **Portal card**. The camera button crops the map art around the region (8×5 squares, with the arrival square circled) into `assets/tokens/custom/portals/`. To add a choice, append another region uuid to `system.destinations` on the behavior. The behavior needs `choice: true`, and `revealed: true` if players should see the cards. Module README: `foundry/module/pentaryn-portals/README.md`.
