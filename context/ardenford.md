@@ -398,6 +398,21 @@ Backup before the change: local tar `ardenford-2026-10-15-premodules.tgz` (plus 
 `/private/tmp/claude-501/-Users-joe-Documents-GitHub-pentaryn/00048ef4-fe52-4efe-a872-614236e141a0/scratchpad/`
 — temporary; the next `make foundry-down` snapshot is the durable one.
 
+## 2026-10-15 — Temp folder — three scenes for Joe to review
+
+Imported from installed compendiums (`game.scenes.importFromCompendium`, `keepId` — no id
+collisions) into a new top-level Scene folder **`Temp`** (`qRxVEfrNdxuRgRr6`). All three are
+inactive, off navigation, never viewed. Walls, lights, regions, behaviors, sounds, tiles and
+levels match the compendium source exactly; every image HEADs 200. Scene count 119 → 122.
+
+| Scene | id | Source pack | Story use |
+|---|---|---|---|
+| Brior Keep - Lit (Night - Spring) | `qKZWFtGa3xeZXxWL` | `eledryll-maps-castle-life-bundle-1.eledryll-maps-castle-life-bundle-1` | Prison break → feast hall: jailed in the Dungeon, escape up the SE spiral stair to the 1st-floor gallery, drop into the ground-floor great hall mid-feast/ball (Brennick Hall). 3 levels (Dungeon / Ground-Floor / 1st floor); both `changeLevel` stair regions intact. |
+| 07. Child's Bedroom | `RUKfJ7ogh7Yih0Q4` | `mad-endlesswiz2.mad-endlesswiz2-maps` | Party shrunk by a toymaker's "shrinking dollhouse"; toy war; the giant child picks favourites; the music box reverses it. **0 lights — needs lighting.** Source thumb pointed at another world (404); a new one was generated at `worlds/ardenford/assets/scenes/thumb-RUKfJ7ogh7Yih0Q4.webp`. |
+| Wine Cellar - WINE | `Ge5f1fuKrr54Ftpi` | `eledryll-maps-castle-life-bundle-1.eledryll-maps-castle-life-bundle-1` | Flooded cellar: a drunk, singing wine elemental in a Lower Tier vintner's "haunted" cellar; CON save vs poisoned each round spent in the wine. |
+
+The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is untouched.
+
 ## Still unbuilt
 
 - No map chosen for anything else. Every location is still a candidate list.
