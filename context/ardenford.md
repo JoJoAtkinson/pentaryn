@@ -455,19 +455,26 @@ Call `pm-f9fe`, party 3 x L2. All 29 markers replaced with patched Monster Manua
   Captain CR 2, Warden's Master Key — note the stock **Pistol** is still on him).
 - Difficulty: card table 75 XP, arena post 275 XP, storeroom 25 XP: all under "low" for 3 x L2.
 
-### 2026-10-15 — Connector A: Arena Prison ↔ Brior Keep (Ground-Floor)
+### 2026-10-15 — Link A: Arena Prison ↔ Brior Keep (Ground-Floor), as a portal
 
-Joe's two `connector A` prompt markers, built per [`foundry/scene-links.md`](foundry/scene-links.md)
-as native `teleportToken` regions (pentaryn-portals is off in this world), two-way, `choice: true`,
-`placement: center`, fade, regions visible on the Regions layer only, plus a `travel-ring` sign tile
-at alpha 0.45 on each end. Markers consumed (call `pm-7f86`, `kind: none`).
+**`pentaryn-portals` is now ON in this world** (Joe, 2026-10-15: he wants the Pentaryn link experience —
+badge, destination card with a map preview, GM right-click Teleport party / Preview). Enabled live via
+`core.moduleConfiguration` + GM-tab reload; its one Pentaryn setting (`confirmPartyTeleport`) is the default.
 
-| End | Region | Square (canvas) | Sign tile |
-|---|---|---|---|
-| Arena Prison, bottom-left | `Wr7TC8n0RM9Ki6cg` "Connector A → Brior Keep (Ground-Floor)" | 1500, 3450 | `66p1Sub06AjQV7vu` |
-| Brior Keep, Ground-Floor level | `JbGdpOsgAqZlF15l` "Connector A → Arena Prison" | 1800, 1600 | `skDtS2VPruXoEolc` |
+A first build with bare core regions ("Connector A", no cards) was replaced. The link now matches
+Pentaryn's passages exactly: regions named `Passage → …`, colour `#8a5cff`, visibility 4, a two-way
+`teleportToken` made by `game.pentaryn.portals.link` (choice, revealed, centre, snap, fade 1500), a card
+on each end, and a `travel-ring` tile at alpha 0.45. Markers consumed through the prompts API (`kind: none`).
 
-Cross-scene teleports need a GM logged in when a player triggers them.
+| End | Region | Square | Card (shown when travelling **to** it) | Tile |
+|---|---|---|---|---|
+| Arena Prison, west misty passage | `GRfIByRVaJiygkqv` "Passage → Brior Keep" | 1500, 3450 | "Arena Prison — the west passage" (module snapshot) | `EWu2MLcXUzjQU1Y6` |
+| Brior Keep, Ground-Floor, foot of the corner-tower spiral stair | `7xkf3m8kLaEiYqkp` "Passage → Arena Prison" | 1800, 1600 | "Brennick Hall — the tower stair" | `6MqVwZJcLHl5pkgn` |
+
+⚠ **The module's snapshot returns `null` on Brior Keep** — the scene has no background; each floor is a
+tile. Its card image was cropped by hand from the Ground-Floor tile (8 × 5 squares, arrival circled, 480×300)
+into `assets/tokens/custom/portals/qKZWFtGa3xeZXxWL-7xkf3m8kLaEiYqkp.webp`. Do the same for any other link on
+a Levels scene. Badges verified drawing on both scenes. Cross-scene moves need a GM logged in.
 
 `07. Child's Bedroom` (`RUKfJ7ogh7Yih0Q4`) was deleted from Temp on Joe's word (2026-10-15), along
 with its generated thumbnail. The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is
