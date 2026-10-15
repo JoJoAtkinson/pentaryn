@@ -488,3 +488,7 @@ Check these on a built result; the dry run does not flag them.
   mechanic) and a PC's `Carries:` includes mundane pack items; read the spec, not only the gather.
 - A small stock creature on a `mid` marker becomes Medium (footprint wins) although both occupy one square.
 - `replaceMany({specFile})` needs the spec directory to exist; create it first.
+- **Inherited art scale** (seen 2026-10-15, module 0.4.5): an `actor` replacement with `img` keeps the stock
+  prototype's `texture.scaleX/Y` (the MM Ogre and Tough ship at 2), so the new ring art draws at twice the
+  footprint. After a replace, check for placed tokens with `texture.scaleX !== 1` and set them (and the
+  actor's prototype) back to 1.
