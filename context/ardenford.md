@@ -385,7 +385,7 @@ GM vision**, so only the modules that serve that table were added.
 | `pentaryn-creatures` | **on** | `ownerSees`, `lightRadius` copied from `pentaryn` |
 | `pentaryn-movement` | **off** | Joe's call, 2026-10-15: no player ghost movement (he manages movement himself) |
 | `pentaryn-walls` | **removed** | retired 2026-10-13, folder gone |
-| `pentaryn-combat`, `-transform`, `-portals`, `-cursors`, `-journal`, `-riders`, `gm-vision` | off | the table doesn't use sheets, the HUD/portals/cursors or GM vision |
+| `pentaryn-combat`, `-transform`, `-cursors`, `-journal`, `-riders`, `gm-vision` | off | the table doesn't use sheets, the HUD/portals/cursors or GM vision (portals turned **on** later the same day — see Link A below)
 
 Everything already on stayed on (incl. `enhancedcombathud`, `foundry-mcp-bridge`
 0.8.3-pentaryn.2). 36 modules active, every `requires` satisfied. Not copied:
