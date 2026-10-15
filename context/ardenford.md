@@ -422,9 +422,24 @@ art in a forest and in lava); the keep basements (Seaside, Clifftop, Abandoned, 
 Seaside); The Wardens Keep and Dragon Lord's Basement (crypts, not cells); the DMG Keep (parchment
 style, no gaol); Castle Life has no prison map.
 
+A second, prison-only search (every installed pack plus the other worlds) reached the same
+answer: Arena Prison first, 15. Dungeon second. Two things it measured: **most of Arena Prison's
+cell bars are fixed walls** (only the five bedded cells along the bottom have working doors, so
+add doors where a cell must open), and **no prison map ships a Night variant** (all darkness 0).
+Runner-up if working doors matter more than being underground: **The Kings Prison**
+(`UTc1KnXPxaa6dSDl`, not imported) — City Prison's layout with all 15 barred doors openable,
+but a forest around it.
+
+**Inspiration** — two maps with no planned use, for Joe to browse (also in `Temp`):
+
+| Scene | id | Source pack | Why |
+|---|---|---|---|
+| Death's Gate | `VhbnfBzDoxOu8mJp` | `pentaryn-seafoot-maps.scenes` | A glowing teal river of drifting skeletons between pillars, ending at a rune dais over a starfield. 83 walls, 26 lights. |
+| 13. Golem Forge | `IycAS89J2liH5WUX` | `mad-endlesswiz2.mad-endlesswiz2-maps` | A round workshop split by a lava channel; furnace arch, golem parts, blueprints. 41 walls, 18 lights. New thumbnail at `worlds/ardenford/assets/scenes/thumb-X5MgX90geG42y5E4bgrSSw.webp` (the source one 404'd). |
+
 `07. Child's Bedroom` (`RUKfJ7ogh7Yih0Q4`) was deleted from Temp on Joe's word (2026-10-15), along
 with its generated thumbnail. The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is
-untouched. Scene count 122 → 121 (delete) → 124.
+untouched. Scene count 122 → 121 (delete) → 126 (with the two inspiration maps).
 
 ## Still unbuilt
 
