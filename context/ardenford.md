@@ -494,6 +494,30 @@ Call `pm-ac4e`, party 3 x L2, all on the **Ground-Floor** level. Patched Monster
 - **9 Brennick house guards (Guard, hostile):** Brine, Penn, Sole, Rook, Durn, Venn, Harrow, Barrow, Dray.
   Each post is under "low" for 3 x L2.
 
+### 2026-10-15 — The Red Floor: fight club in the wine cellar, and Link B
+
+**The night's route now:** Arena Prison → *Link A* → Brior Keep NW tower stair → the feast (Ground-Floor)
+→ NE tower stair → *Link B* → **Wine Cellar - WINE**, which is the **Red Floor**, a bare-knuckle club that
+meets in Brennick Hall's flooded cellar (the red floor is spilled wine; they fight ankle-deep in it). The
+cellar is no longer between the prison and the feast; it is a secret under the keep found from the feast.
+The earlier "drunk wine elemental" pitch for this map is dropped.
+
+Call `pm-33e6` (26 NPCs, all neutral, hover names, sheet art = token art):
+- **Keep, NE tower (story connectors):** Vell Sarran (Scout) — the club's lookout, dressed to pass as a
+  feast guest; Tobin Reave — a cellar boy carrying wine up, white-faced, too scared to talk.
+- **The ring:** 'Iron' Dacey Morrow (Tough, champion, *Crowd Favourite* trait) vs Gruff Haldane (Tough).
+- **The corner table:** Madam Ilse Varrow (Spy) runs the club and pays off the Brennicks' cellarmaster —
+  carries the **Red Floor Guest List** (regulars incl. feast guests, and their debts); Crake the Book,
+  bookmaker (Betting Purse, 85 gp); Skarn (Tough), her enforcer.
+- **Crowd (16, Commoner/Bandit/Tough):** dockers, sellswords, a pickpocket (Quiet Jessa), dwarves, a
+  mercenary captain recruiting. **Three masked feast guests** — the Porcelain Mask, the Hooded Gentleman
+  (rings match a guest upstairs), the Veiled Lady — the hook back to the feast.
+
+**Link B** (portals, same recipe as Link A): Brior Keep Ground-Floor NE tower stair `9X7WssEzofim0hC5`
+"Passage → Wine Cellar" (card "Brennick Hall — the north-east tower", hand-cropped) ↔ Wine Cellar south door
+`CplCzOLvfqDCEyaU` "Passage → Brior Keep" (card "The Red Floor — under Brennick Hall", module snapshot).
+Badges verified on both scenes; markers consumed.
+
 `07. Child's Bedroom` (`RUKfJ7ogh7Yih0Q4`) was deleted from Temp on Joe's word (2026-10-15), along
 with its generated thumbnail. The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is
 untouched. Scene count 122 → 121 (delete) → 126 (with the two inspiration maps).
