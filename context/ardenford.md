@@ -476,6 +476,24 @@ tile. Its card image was cropped by hand from the Ground-Floor tile (8 × 5 squa
 into `assets/tokens/custom/portals/qKZWFtGa3xeZXxWL-7xkf3m8kLaEiYqkp.webp`. Do the same for any other link on
 a Levels scene. Badges verified drawing on both scenes. Cross-scene moves need a GM logged in.
 
+### 2026-10-15 — Brior Keep feast populated from Joe's 45 prompt markers
+
+Call `pm-ac4e`, party 3 x L2, all on the **Ground-Floor** level. Patched Monster Manual stock in
+`Foundry MCP Creatures`, tokens-01 art as ring subjects, hover names (30), sheet portrait = token art.
+
+- **The house:** Lord Harlan Brennick and Lady Corisande Brennick (Noble), the Dowager Agathe
+  Brennick among the guests, Steward Edric Fallowmere (household ledger: who holds the cellar and tower
+  keys tonight), Advocate Severin Lisle (the lord's lawyer), house wizard Master Quillon Aske (Mage
+  Apprentice CR 2, wants to be left alone).
+- **The band (Performer):** Lark Dellacourt (lead singer), Oriel Vantry (harp), Tamsin Reel (drum).
+- **Staff (Commoner):** waiters Benet Collow and Wenna Hask, maid Maisie Brook, woodworker Hobb Carrow;
+  the servants' poker game — Cook Barnaby Lusk, stable boy Pip Hallow, footman Doyle Marchet (knows the
+  servants' passages).
+- **21 guests (Noble, grey ring):** Council of Consuls members, merchants, an elven envoy, a dwarf
+  merchant — one-line snob bios each.
+- **9 Brennick house guards (Guard, hostile):** Brine, Penn, Sole, Rook, Durn, Venn, Harrow, Barrow, Dray.
+  Each post is under "low" for 3 x L2.
+
 `07. Child's Bedroom` (`RUKfJ7ogh7Yih0Q4`) was deleted from Temp on Joe's word (2026-10-15), along
 with its generated thumbnail. The Day Brior Keep already in the world (`ZQX7eXhy0Oi4CAZO`) is
 untouched. Scene count 122 → 121 (delete) → 126 (with the two inspiration maps).
