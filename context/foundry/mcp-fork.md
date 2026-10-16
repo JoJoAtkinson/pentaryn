@@ -15,9 +15,13 @@ Module APIs) · the design history → [`../plans/foundry-mcp-fork.md`](../plans
 
 ## Where it is
 
-- Repo: `/Users/joe/Documents/GitHub/foundry-vtt-mcp`, branch `pentaryn` (fork of
+- Repo, per host: Mac `/Users/joe/Documents/GitHub/foundry-vtt-mcp` · BOSS (WSL, the primary
+  since 2026-10-15) `/home/joe/code/foundry-vtt-mcp`, on the Linux filesystem, never under
+  `/mnt/c` (not cloned there as of 2026-10-15). Branch `pentaryn` (fork of
   `adambdooley/foundry-vtt-mcp`; remote `upstream`). Claude Code runs its built wrapper,
-  `packages/mcp-server/dist/index.js` (`.mcp.json` in this repo).
+  `packages/mcp-server/dist/index.js` (`.mcp.json` in this repo). **`.mcp.json` still holds the
+  Mac's absolute paths** (the wrapper and `PENTARYN_MCP_LOG_DIR`), so on BOSS the bridge fails to
+  connect until the fork is cloned and built there and that file points at the BOSS paths.
 - **`FORK.md`** at the fork root lists every upstream file the fork edits — hunks, purpose, local
   vs upstream-PR candidate, covering test. `scripts/fork-footprint.sh` fails when an upstream file
   is touched without a row there. Run it before committing anything outside `src/fork/`.
@@ -116,7 +120,7 @@ through `eval-js` on the token's actor. Seen live in W3L (merge-and-go-live-2026
 ## Build, restart, verify
 
 ```bash
-cd /Users/joe/Documents/GitHub/foundry-vtt-mcp
+cd /Users/joe/Documents/GitHub/foundry-vtt-mcp   # BOSS: cd /home/joe/code/foundry-vtt-mcp
 npm -w @foundry-mcp/server run typecheck
 npm -w @foundry-mcp/server test -- --run      # vitest, includes the timeout and dnd5e 6 suites
 npm -w @foundry-mcp/module run typecheck

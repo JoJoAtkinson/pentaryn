@@ -49,10 +49,17 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
 | First-run activation only | `make foundry-key` → copies to the clipboard (pbcopy / clip.exe / xclip) → clear the clipboard after |
 | Debug a dead tunnel | `make tunnel-logs` |
+| Back up a world left running, every night | The 03:00 nightly: `make vtt-nightly-register` once (Windows Task Scheduler → `automation/bin/vtt-nightly.sh`). Stops tunnel + Foundry, snapshot + upload (waits), starts them again, relaunches the world. Skips if anyone is connected or an update runs. `make vtt-nightly-log` · `make vtt-nightly-dry` · `make vtt-nightly-unregister` |
 
 ---
 
 ## 1. Topology
+
+> **2026-10-15: the primary moved to BOSS** (WSL, Foundry 14.369 as the systemd user unit
+> `foundryvtt`, data root `~/foundry/data`; `~/.config/pentaryn/env` sets `PENTARYN_HOST=boss`,
+> `PENTARYN_PRIMARY_HOST=boss`). The Mac is now the alt: its env file says the same primary, and its
+> updater LaunchAgents are unloaded. The tunnel credentials live in BOSS's `~/.cloudflared/`. Where
+> this section still says "the Mac", read "the primary".
 
 Foundry runs on the **primary host — the Mac today** — as a desktop app. There is no server, no
 container, no cloud host. Players reach it through a Cloudflare tunnel that exists only while
@@ -202,7 +209,7 @@ file for file (497/497) — [`../plans/defect-wave-3-2026-10-13/README.md`](../p
 
 **The upload runs in the background.** `foundry-down` (and so `vtt-down`) builds the tar while Foundry is stopped (that
 part needs "stopped", so it finishes before the command returns — the world tar and a tar of any
-module/system bundle the cloud lacks), then hands the upload (~45 MB + those bundles) to a
+module/system bundle the cloud lacks), then hands the upload (~95 MB + those bundles) to a
 detached process and prints one line: the name, `make foundry-cloud` for progress, and *don't
 sleep the laptop until it finishes* (on the Mac `caffeinate` holds off idle sleep while it runs,
 but closing the lid still sleeps). `make vtt-down WAIT=1` / `make foundry-down WAIT=1` is the blocking behaviour. The
@@ -358,19 +365,26 @@ OneDrive/DnD/foundry/
                     (the tool still creates the empty folder — defect wave 3 still open)
 ```
 
-A world snapshot holds `Data/worlds` + `Config` only (~45 MB). Every folder under `Data/modules`
+A world snapshot holds `Data/worlds` + `Config` + the loose `Data/` files (~95 MB; loose = everything
+under `Data/` but worlds, modules, systems, `Backups` and unpacked packs `Data/assets/<kind>/<kind>-NN`,
+~50 MB — generated tokens, hand-placed maps, splash art). Every folder under `Data/modules`
 and `Data/systems` travels as a **bundle**, uploaded once per content fingerprint and shared by
 both machines; the snapshot's sidecar (and its tar's first member, `pentaryn-snapshot.json`) lists
 the bundle each module and system was at. Snapshots from before bundles (untagged, and the first
 `-mac` one) are **full** — worlds + Config + modules in one tar — and restore as they always did.
 
+**A snapshot that carries loose files needs a checkout from 2026-10-16 or later.** An older one
+refuses it before touching anything (`… is bundled but holds 'Data/assets/…' outside Data/worlds
+and Config — nothing was touched`), so its boot fails. `git pull` on the other machine before its
+next boot or restore.
+
 | Target | Direction | What it does |
 | ------ | --------- | ------------ |
 | `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
-| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar, and stages a tar of every module/system bundle the cloud lacks (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing). The upload sends those bundles **first**, then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), checking before the sidecar and again after the tar that every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle its snapshot names that was deleted by hand — after a restore of a full snapshot, nothing). A backup that uploaded ends with the bundle sweep. With `BACKGROUND=1` (what `vtt-down` passes) the upload runs in a detached process |
+| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + the loose `Data/` files (**~95 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar, and stages a tar of every module/system bundle the cloud lacks (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing). The upload sends those bundles **first**, then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), checking before the sidecar and again after the tar that every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle its snapshot names that was deleted by hand — after a restore of a full snapshot, nothing). A backup that uploaded ends with the bundle sweep. With `BACKGROUND=1` (what `vtt-down` passes) the upload runs in a detached process |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant, `foundry-up`'s pre-launch backup |
-| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → finish any queued upload, download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore` (without a terminal it refuses unless `--yes` is passed). A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
+| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → finish any queued upload, download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, lay the loose `Data/` files over what is here (added and overwritten, never cleared), swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore` (without a terminal it refuses unless `--yes` is passed). A full snapshot clears and extracts worlds, Config and modules, as before — keeping in place whatever in `Data/modules` is not a bundle (the safety copy cannot hold it) |
 | `make foundry-cloud` | — | Status: this host's background upload (in progress / pending / last result; a dropped one names the tar kept in `.pentaryn-tmp/incomplete/`), storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count, bundles (in the cloud, unreferenced, local ones not yet uploaded) |
 | `make foundry-bundles` | — | Every local module and system with its version, fingerprint, size and whether its bundle is in the cloud; then the cloud bundles no snapshot references |
 | `make foundry-bundles-gc` | manual | The sweep every uploading backup runs, by hand: lists the bundles no retained snapshot references that are older than 7 days. A dry run; `YES=1` deletes them |
@@ -394,7 +408,7 @@ world is *based on*:
   boot from [latest] or keep local?  (Enter = latest, l/latest, k/local, or a number)  >
 ```
 
-- **Enter** downloads the newest (~45 MB plus the bundles this machine lacks — the first boot on a
+- **Enter** downloads the newest (~95 MB plus the bundles this machine lacks — the first boot on a
   new machine fetches all of them, ~3.5 GB), archives the local world first (as a `.safety`
   snapshot, unless it is unchanged since a snapshot still in the cloud, or one the restored
   snapshot's lineage contains), replaces worlds + Config and swaps in the changed modules. The
@@ -1010,7 +1024,7 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 | **Closing Chrome kills the GM bridge** | `eval-js` and the other `foundry` tools go dead. Reopen Chrome, then `make vtt-login WORLD=<id>` |
 | **A player test writes real knowledge** | An inspect from a test login rolls on the GM client and writes `beliefs`/`granted` flags plus chat cards. Snapshot first; `unsetFlag` and delete the messages after |
 | **`~/Library/CloudStorage` reads can hang 30 s** | The OneDrive File Provider daemon, not the path. Never read assets through it at runtime. rclone (§3) avoids the daemon entirely |
-| **The first bundled backup, or a new machine's first boot, needs ~7 GB free locally** | Every bundle (~3.5 GB) is staged or downloaded in `FOUNDRY_DATA/.pentaryn-tmp/` once; after that it is ~45 MB + the modules that changed. Backup and restore check and refuse with the numbers |
+| **The first bundled backup, or a new machine's first boot, needs ~7 GB free locally** | Every bundle (~3.5 GB) is staged or downloaded in `FOUNDRY_DATA/.pentaryn-tmp/` once; after that it is ~95 MB + the modules that changed. Backup and restore check and refuse with the numbers |
 
 ---
 

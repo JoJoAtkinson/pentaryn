@@ -26,7 +26,7 @@
 # Foundry does not quietly ask the router to expose port 30000 alongside the tunnel.
 
 tunnel: ardenhaven
-credentials-file: /Users/joe/.cloudflared/3f188349-3bfb-4674-bde1-b4eb61b872f0.json
+credentials-file: ~/.cloudflared/3f188349-3bfb-4674-bde1-b4eb61b872f0.json
 
 # Foundry's world load is chatty; the defaults are tuned for short requests.
 originRequest:

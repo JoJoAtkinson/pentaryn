@@ -41,6 +41,16 @@ inside `~/Documents`.
     System Settings → Privacy & Security → Full Disk Access → +
     /Users/joe/.local/share/uv/python/cpython-3.14.6-macos-aarch64-none/bin/python3.14
 
+**Mac only.** This section and the launchd plists in `automation/launchd/` belong to the Mac.
+BOSS (WSL2, the primary since 2026-10-15) has no TCC and no launchd. The updater is not
+scheduled there yet. Its equivalent is a systemd user `.service` + `.timer` (beside
+`~/.config/systemd/user/foundryvtt.service`) with `%h`-relative paths. systemd `--user`'s PATH
+has no nvm, so the unit sets `Environment=PATH=` with the nvm bin dir first, or relies on
+`PENTARYN_NODE` in `~/.config/pentaryn/env` (`host.node()` checks it first and falls back to
+the newest `~/.nvm` install). The smoke stage also needs a browser: no Chrome/Chromium is
+installed on BOSS, so install `chromium` or set `CHROME_PATH`, and pass `DISPLAY`/`WAYLAND_DISPLAY`
+in the unit (smoke launches headed, and systemd `--user` may not carry WSLg's).
+
 Add the **resolved** binary, not the `.venv/bin/python` symlink — TCC keys on the real
 executable. Confirm with `make vtt-update-dry`. Until it is granted, every Saturday
 run fails at the 60-second preflight with that path in the log.
@@ -263,10 +273,12 @@ every package action 400 while `authenticate()` reported success.
 
 ### Backup retention (reworked 2026-08-21; per host since 2026-10-11)
 
-A world snapshot is **~45 MB** (worlds + Config) since module bundles; modules and systems are
+A world snapshot is **~95 MB** (worlds + Config + loose `Data/` files) since module bundles; modules and systems are
 content-addressed bundles in `bundles/`, uploaded only when they change ([`ops.md`](ops.md) §3).
 Snapshots from before that are **~2.5–3.2 GB** (they hold `Data/modules`). The retention below
-was sized for those and still applies to every snapshot:
+was sized for those and still applies to every snapshot. Since 2026-10-16 a snapshot also carries
+the loose `Data/` files, and an older checkout refuses to restore it — pull on both machines
+before a run there ([`ops.md`](ops.md) §3):
 
 * **10** rolling snapshots **per host** (was 100 — a 250 GB ceiling). Each machine prunes only
   its own; legacy untagged snapshots are never pruned automatically.
