@@ -23,9 +23,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import sys as _sys
+if __package__ in (None, ""):   # run as a file (./.venv/bin/python scripts/foundry/x.py)
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.foundry import host  # noqa: E402
+
 from PIL import Image, ImageDraw, ImageFilter
 
-FOUNDRY_DATA = Path.home() / "Library/Application Support/FoundryVTT/Data"
+FOUNDRY_DATA = host.foundry_data() / "Data"   # this host's Data/ (env file, else platform default)
 OUT_DIR = FOUNDRY_DATA / "assets/tokens/custom/props"
 
 SIZE = 256

@@ -52,12 +52,15 @@ from pathlib import Path
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
+from scripts.foundry import host  # noqa: E402
 from scripts.foundry.blueprint import vendor  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = REPO_ROOT / "foundry" / "blueprint" / "template"
 MODULE_ROOT = REPO_ROOT / "foundry" / "module"
-DEFAULT_APP = Path("/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app")
+# The app payload this machine runs (FOUNDRY_APP_ROOT from env or ~/.config/pentaryn/env,
+# else the platform default) — never a hardcoded Mac bundle.
+DEFAULT_APP = host.foundry_app_root
 
 SHORT_RE = re.compile(r"^[a-z][a-z0-9]{1,15}$")
 RESERVED = ("import", "moduleId", "contract", "_internals", "describe", "inspect", "namespaces",
@@ -268,12 +271,13 @@ def write_docs(docs_root: Path, values: dict[str, str], *, tier: str = "full", d
 # ── running ──────────────────────────────────────────────────────────────────
 
 def run_tests(target: Path, *, write_goldens: bool = True) -> int:
-    if shutil.which("node") is None:
+    node = host.node()
+    if not (os.path.isabs(node) or shutil.which(node)):
         print("  ✗ node is not installed — cannot run the generated suite")
         return 1
-    env = {k: v for k, v in os.environ.items() if k != "GOLDEN_UPDATE"}
+    env = host.node_env({k: v for k, v in os.environ.items() if k != "GOLDEN_UPDATE"})
     if write_goldens:
-        rc = subprocess.run(["node", "test/run.mjs"], cwd=target, env={**env, "GOLDEN_UPDATE": "1"},
+        rc = subprocess.run([node, "test/run.mjs"], cwd=target, env={**env, "GOLDEN_UPDATE": "1"},
                             capture_output=True, text=True)
         if rc.returncode != 0:
             print(rc.stdout[-4000:], rc.stderr[-2000:])
@@ -282,7 +286,7 @@ def run_tests(target: Path, *, write_goldens: bool = True) -> int:
     else:
         print("  · --force: test/golden/ left alone (GOLDEN_UPDATE not set); a missing or changed golden "
               "fails below — update one file at a time with GOLDEN_UPDATE=1 node --test test/<file>.test.mjs")
-    rc = subprocess.run(["node", "test/run.mjs"], cwd=target, env=env, capture_output=True, text=True)
+    rc = subprocess.run([node, "test/run.mjs"], cwd=target, env=env, capture_output=True, text=True)
     tail = [ln for ln in rc.stdout.splitlines() if ln.startswith("ℹ ")]
     print("  " + " · ".join(t[2:] for t in tail[:3]))
     if rc.returncode != 0:
@@ -412,8 +416,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--force", action="store_true", help="overwrite template files in an existing folder")
     ap.add_argument("--no-run", action="store_true", help="skip running the generated suite (tests only)")
     ap.add_argument("--modules-root", type=Path, default=MODULE_ROOT, help="where to look for collisions")
-    ap.add_argument("--app-root", type=Path, default=Path(os.environ.get("FOUNDRY_APP_ROOT", DEFAULT_APP)))
+    ap.add_argument("--app-root", type=Path, default=None,
+                    help="Foundry app payload (default: host.foundry_app_root())")
     args = ap.parse_args(argv)
+    if args.app_root is None:
+        args.app_root = DEFAULT_APP()
 
     try:
         short = args.short

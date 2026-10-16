@@ -27,11 +27,16 @@ import argparse
 import math
 from pathlib import Path
 
+import sys as _sys
+if __package__ in (None, ""):   # run as a file (./.venv/bin/python scripts/foundry/x.py)
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.foundry import host  # noqa: E402
+
 from PIL import Image, ImageDraw, ImageFont
 
 REPO = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO / "foundry/module/pentaryn-prompts/assets"
-DATA_DIR = Path.home() / "Library/Application Support/FoundryVTT/Data/assets/tokens/custom/markers"
+DATA_DIR = host.foundry_data() / "Data/assets/tokens/custom/markers"
 
 SIZE = 512
 SS = 2                      # supersample, then downscale for smooth edges

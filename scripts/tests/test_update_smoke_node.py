@@ -2,8 +2,9 @@
 
 ``smoke.py`` hard-coded ``/opt/homebrew/bin/node``, so on a primary that is not a
 Homebrew Mac every world's client check failed with ``FileNotFoundError`` and the run
-rolled back. ``host.node()`` now resolves it — ``PATH`` first, the Homebrew path when it
-exists (launchd's PATH omits it), else plain ``node`` — and ``run_browser`` asks at call
+rolled back. ``host.node()`` now resolves it — ``PENTARYN_NODE``, ``PATH``, the Homebrew
+path when it exists (launchd's PATH omits it), the newest ~/.nvm install (systemd --user
+omits it), else plain ``node`` — and ``run_browser`` asks at call
 time. A machine with no Node at all gets a not-ok client payload that names the problem.
 """
 
@@ -32,6 +33,7 @@ def test_ext2_node_falls_back_to_homebrew_when_path_lacks_it(monkeypatch, tmp_pa
 def test_ext2_node_is_plain_node_when_nothing_is_found(monkeypatch, tmp_path):
     monkeypatch.setattr(host.shutil, "which", lambda name: None)
     monkeypatch.setattr(host, "HOMEBREW_NODE", tmp_path / "absent")
+    monkeypatch.setattr(host, "NVM_NODE_GLOB", "no-nvm/v*/bin/node")   # not the real ~/.nvm
     assert host.node() == "node"
 
 

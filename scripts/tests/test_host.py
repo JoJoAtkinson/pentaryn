@@ -405,8 +405,100 @@ def test_is_running_probes_the_configured_port(monkeypatch):
     assert seen == [("127.0.0.1", 31234), ("::1", 31234)]
 
 
-def test_clipboard_never_prints(monkeypatch, capsys):
+def test_clipboard_never_prints(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(host.shutil, "which", lambda name: None)
+    monkeypatch.setattr(host, "WSL_CLIP", tmp_path / "no-clip.exe")   # never the real one
     assert host.clipboard("s3cret") is False
     out = capsys.readouterr()
     assert "s3cret" not in out.out + out.err
+
+
+def _fake_exe(path: Path, body: str = "cat > \"$(dirname \"$0\")/got\"") -> Path:
+    path.write_text(f"#!/bin/sh\n{body}\n")
+    path.chmod(0o755)
+    return path
+
+
+def test_clipboard_falls_back_to_wsl_clip_by_full_path(monkeypatch, tmp_path, capsys):
+    """appendWindowsPath=false: clip.exe is not on PATH, but its full path still works,
+    and the text reaches it on stdin, never argv."""
+    clip = _fake_exe(tmp_path / "clip.exe")
+    monkeypatch.setattr(host, "WSL_CLIP", clip)
+    monkeypatch.setattr(host.shutil, "which", lambda name: None)
+    assert host.clipboard("s3cret") is True
+    assert (tmp_path / "got").read_text() == "s3cret"
+    out = capsys.readouterr()
+    assert "s3cret" not in out.out + out.err
+
+
+def test_clipboard_failure_is_false(monkeypatch, tmp_path):
+    monkeypatch.setattr(host, "WSL_CLIP", _fake_exe(tmp_path / "clip.exe", "exit 1"))
+    monkeypatch.setattr(host.shutil, "which", lambda name: None)
+    assert host.clipboard("x") is False
+
+
+def test_node_prefers_pentaryn_node(monkeypatch, tmp_path):
+    exe = _fake_exe(tmp_path / "node", "true")
+    monkeypatch.setenv("PENTARYN_NODE", str(exe))
+    monkeypatch.setattr(host.shutil, "which", lambda name: "/usr/bin/node")
+    assert host.node() == str(exe)
+
+
+def test_node_falls_back_to_newest_nvm(monkeypatch, tmp_path):
+    """systemd --user has no nvm on PATH: the newest ~/.nvm install (by version, not text)."""
+    for v in ("v9.0.0", "v24.21.0", "v10.1.0"):
+        d = tmp_path / ".nvm/versions/node" / v / "bin"
+        d.mkdir(parents=True)
+        _fake_exe(d / "node", "true")
+    monkeypatch.delenv("PENTARYN_NODE", raising=False)
+    monkeypatch.setenv("PENTARYN_ENV_FILE", str(tmp_path / "none"))
+    monkeypatch.setattr(host.Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setattr(host.shutil, "which", lambda name: None)
+    monkeypatch.setattr(host, "HOMEBREW_NODE", tmp_path / "no-brew")
+    assert host.node() == str(tmp_path / ".nvm/versions/node/v24.21.0/bin/node")
+
+
+def test_open_url_without_an_opener_is_false_not_a_raise(monkeypatch, tmp_path):
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host, "WSL_INTEROP", tmp_path / "no-interop")
+    monkeypatch.setattr(host, "WSL_INTEROP_LATE", tmp_path / "no-interop-late")
+    monkeypatch.setattr(host, "PROC_VERSION", tmp_path / "no-version")
+    monkeypatch.setattr(host.shutil, "which", lambda name: None)
+    assert host.open_url("http://localhost:1/x") is False
+
+
+@pytest.mark.parametrize("present", ["WSLInterop", "WSLInterop-late", "version"])
+def test_is_wsl_any_marker(monkeypatch, tmp_path, present):
+    """systemd=true builds register WSLInterop-late; /proc/version is the last resort."""
+    monkeypatch.setattr(host, "WSL_INTEROP", tmp_path / "WSLInterop")
+    monkeypatch.setattr(host, "WSL_INTEROP_LATE", tmp_path / "WSLInterop-late")
+    monkeypatch.setattr(host, "PROC_VERSION", tmp_path / "version")
+    (tmp_path / "version").write_text("Linux version 6.8.0-generic (gcc)\n")
+    assert host.is_wsl() is False
+    if present == "version":
+        (tmp_path / "version").write_text("Linux version 6.18.54.1-microsoft-standard-WSL2\n")
+    else:
+        (tmp_path / present).write_text("")
+    assert host.is_wsl() is True
+
+
+def test_open_url_uses_explorer_by_full_path_on_wsl(monkeypatch, tmp_path):
+    interop = tmp_path / "WSLInterop"
+    interop.write_text("")
+    seen = tmp_path / "got"
+    explorer = _fake_exe(tmp_path / "explorer.exe", f'echo "$1" > {seen}; exit 1')
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host, "WSL_INTEROP", interop)
+    monkeypatch.setattr(host, "WSL_EXPLORER", explorer)
+    monkeypatch.setattr(host.shutil, "which", lambda name: None)
+    assert host.open_url("http://localhost:1/x") is True   # explorer.exe's rc is always 1
+    assert seen.read_text().strip() == "http://localhost:1/x"
+
+
+def test_no_script_hardcodes_the_mac_data_dir():
+    """Data/ comes from host.foundry_data(); only host.py's Mac default may name it."""
+    root = Path(host.__file__).resolve().parents[1]
+    hits = [str(p) for p in root.rglob("*.py")
+            if "tests" not in p.parts and p.name != "host.py"
+            and "Library/Application Support" in p.read_text(encoding="utf-8", errors="ignore")]
+    assert hits == []

@@ -41,7 +41,6 @@ import http.server
 import json
 import re
 import secrets
-import subprocess
 import sys
 import threading
 import time
@@ -50,6 +49,7 @@ import urllib.parse
 import requests
 
 from . import config as cfg, service
+from .. import host as host_tools
 from .out import say
 from ..admin_password import AdminPasswordUnavailable, foundry_admin_password
 from ..update.admin import FoundryAdmin, FoundryError
@@ -342,9 +342,9 @@ def _handoff(session_id: str, host: str, game_url: str, open_browser: bool) -> b
     threading.Thread(target=srv.serve_forever, daemon=True).start()
 
     url = f"http://{host}:{port}/{nonce}"
-    if open_browser:
-        subprocess.run(["open", url], check=False, capture_output=True)
-    else:
+    # host_tools.open_url: `open` on the Mac, explorer.exe by full path on WSL, else xdg-open.
+    # No opener (or NO_OPEN) prints the URL instead of raising.
+    if not (open_browser and host_tools.open_url(url)):
         _say(f"▸ open this once, in the browser you want logged in:\n     {url}")
 
     ok = served.wait(HANDOFF_TIMEOUT)

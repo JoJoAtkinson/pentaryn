@@ -38,6 +38,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import config as cfg, jsscan
+from .. import host
 from .digest import SYNC_STAMP, tree_digest  # noqa: F401 — re-exported for callers and tests
 from .out import FAIL, OK, append_jsonl, event, now_iso, say as _say
 
@@ -60,8 +61,16 @@ def _rel(spec: cfg.ModuleSpec, path: Path) -> str:
     return str(path.relative_to(spec.src))
 
 
+def _node() -> str:
+    """host.node(): PENTARYN_NODE, PATH, Homebrew, then nvm — systemd --user and non-login
+    shells have no nvm on PATH, and a bare `node` there would silently skip the parse gate."""
+    return host.node()
+
+
 def _node_available() -> bool:
-    return shutil.which("node") is not None
+    exe = _node()
+    return (Path(exe).is_file() and os.access(exe, os.X_OK)) if os.path.isabs(exe) \
+        else shutil.which(exe) is not None
 
 
 # ── gate results ──────────────────────────────────────────────────────────────
@@ -99,7 +108,7 @@ def _emit(res: GateResult) -> int:
 
 
 def _node_check(path: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(["node", "--check", str(path)], capture_output=True, text=True)
+    return subprocess.run([_node(), "--check", str(path)], capture_output=True, text=True)
 
 
 def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
@@ -377,16 +386,16 @@ def _gate_node_test(spec: cfg.ModuleSpec, *, capture: bool = False) -> GateResul
         return GateResult("node-test", False, "node is not installed — cannot run the suite")
     # `node test/run.mjs` from the module folder, exactly as a person runs it: a suite
     # that resolves fixtures against the cwd must not pass or fail by where make ran.
-    cmd = ["node", "test/run.mjs"]
+    cmd = [_node(), "test/run.mjs"]
     if capture:
-        proc = subprocess.run(cmd, cwd=spec.src, capture_output=True, text=True)
+        proc = subprocess.run(cmd, cwd=spec.src, capture_output=True, text=True, env=host.node_env())
         tail = (proc.stdout + proc.stderr).rstrip("\n").splitlines()[-40:]
         rc = proc.returncode
     else:
         # The suite writes straight to the real stdout while our own `print` is buffered
         # when the output is a pipe; without this the ✓ lines land after the suite's.
         sys.stdout.flush()
-        rc = subprocess.run(cmd, cwd=spec.src).returncode
+        rc = subprocess.run(cmd, cwd=spec.src, env=host.node_env()).returncode
         tail = []
     ok = rc == 0
     return GateResult("node-test", ok,

@@ -972,13 +972,13 @@ def test_handoff_is_single_use_and_nonce_guarded():
     import urllib.request
 
     urls = []
-    real_run = login.subprocess.run
+    real_open = login.host_tools.open_url
 
-    def fake_run(argv, **kw):
-        urls.append(argv[1])
-        return real_run(["true"], **kw)
+    def fake_open(url):
+        urls.append(url)
+        return True
 
-    login.subprocess.run = fake_run
+    login.host_tools.open_url = fake_open
     try:
         import threading
         result = {}
@@ -1036,7 +1036,7 @@ def test_handoff_is_single_use_and_nonce_guarded():
         with pytest.raises(Exception):
             urllib.request.urlopen(url, timeout=3)
     finally:
-        login.subprocess.run = real_run
+        login.host_tools.open_url = real_open
 
 
 # ── FoundryAdmin.authenticate(): the route depends on the world state ─────────
@@ -1545,3 +1545,18 @@ def test_tunnel_logs_prints_only_the_last_n_lines(monkeypatch, tmp_path, capsys,
     monkeypatch.setattr(cfg, "CF_LOG", log)
     assert service.tunnel_logs(n) == 0
     assert capsys.readouterr().out == (expected + "\n" if expected else "")
+
+
+def test_handoff_prints_the_url_when_no_browser_opener_works(monkeypatch, capsys):
+    """BOSS has no `open`: the handoff must print the URL, not raise FileNotFoundError."""
+    import threading
+    monkeypatch.setattr(login.host_tools, "open_url", lambda url: False)
+    monkeypatch.setattr(login, "HANDOFF_TIMEOUT", 0.2)
+    result = {}
+    t = threading.Thread(target=lambda: result.update(
+        ok=login._handoff("sess-id", "localhost", "http://localhost:30000/game", True)), daemon=True)
+    t.start()
+    t.join(10)
+    assert result == {"ok": False}
+    out = capsys.readouterr()
+    assert "http://localhost:" in out.out + out.err

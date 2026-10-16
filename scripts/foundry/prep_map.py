@@ -25,12 +25,17 @@ import json
 import sys
 from pathlib import Path
 
+import sys as _sys
+if __package__ in (None, ""):   # run as a file (./.venv/bin/python scripts/foundry/x.py)
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.foundry import host  # noqa: E402
+
 import numpy as np
 from PIL import Image
 
 Image.MAX_IMAGE_PIXELS = None
 
-FOUNDRY_DATA = Path.home() / "Library/Application Support/FoundryVTT/Data"
+FOUNDRY_DATA = host.foundry_data() / "Data"   # this host's Data/ (env file, else platform default)
 MAPS_DIR = FOUNDRY_DATA / "assets/maps"
 
 # Grid cells in published battlemaps are essentially always in this range.

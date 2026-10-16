@@ -41,13 +41,24 @@ MAC_APP_NAME = "Foundry Virtual Tabletop"
 MAC_APP_BUNDLE = Path("/Applications/Foundry Virtual Tabletop.app")
 # launchd's PATH has no /opt/homebrew/bin, so the Saturday updater cannot rely on `which`.
 HOMEBREW_NODE = Path("/opt/homebrew/bin/node")
+# nvm's installs (BOSS). systemd --user and non-login shells never source nvm.sh, so the
+# newest of these is the fallback after PATH and Homebrew.
+NVM_NODE_GLOB = ".nvm/versions/node/v*/bin/node"
+# WSL with [interop] appendWindowsPath=false keeps System32 off PATH, so the Windows
+# binaries are reached by full path. WSL_INTEROP exists only inside WSL (WSLInterop-late
+# on builds with systemd=true); /proc/version naming "microsoft" is the fallback.
+WSL_INTEROP = Path("/proc/sys/fs/binfmt_misc/WSLInterop")
+WSL_INTEROP_LATE = Path("/proc/sys/fs/binfmt_misc/WSLInterop-late")
+PROC_VERSION = Path("/proc/version")
+WSL_CLIP = Path("/mnt/c/Windows/System32/clip.exe")
+WSL_EXPLORER = Path("/mnt/c/Windows/explorer.exe")
 
 # Every key the env file may set, with what it means. host.env.example is checked
 # against this list by a test, so the two cannot drift.
 KEYS = (
     "PENTARYN_HOST", "PENTARYN_PRIMARY_HOST", "PENTARYN_ROLE_OVERRIDE", "FOUNDRY_DATA",
     "FOUNDRY_APP_ROOT", "FOUNDRY_PORT", "PENTARYN_CLOUD", "PENTARYN_RCLONE",
-    "PENTARYN_KEEP_SNAPSHOTS", "PENTARYN_START_CMD", "PENTARYN_STOP_CMD",
+    "PENTARYN_KEEP_SNAPSHOTS", "PENTARYN_START_CMD", "PENTARYN_STOP_CMD", "PENTARYN_NODE",
 )
 
 
@@ -127,13 +138,6 @@ def system() -> str:
 
 def is_mac() -> bool:
     return system() == "Darwin"
-
-
-def is_wsl() -> bool:
-    try:
-        return "microsoft" in Path("/proc/version").read_text().lower()
-    except OSError:
-        return False
 
 
 # ── identity and role ────────────────────────────────────────────────────────
@@ -379,7 +383,7 @@ def start() -> None:
     log.parent.mkdir(parents=True, exist_ok=True)
     main_js = foundry_app_root() / "main.js"
     with open(log, "ab") as fh:
-        subprocess.Popen(["node", str(main_js), f"--dataPath={data}", f"--port={foundry_port()}"],
+        subprocess.Popen([node(), str(main_js), f"--dataPath={data}", f"--port={foundry_port()}"],
                          stdout=fh, stderr=fh, stdin=subprocess.DEVNULL, start_new_session=True)
 
 
@@ -440,25 +444,98 @@ def stop(timeout: float = 30) -> None:
 
 # ── tools ────────────────────────────────────────────────────────────────────
 
+def _nvm_version(path: Path) -> tuple:
+    """v24.21.0 → (24, 21, 0) so v10 sorts after v9."""
+    raw = path.parent.parent.name.lstrip("v")
+    return tuple(int(p) if p.isdigit() else 0 for p in raw.split("."))
+
+
 def node() -> str:
-    """The Node.js to run: PATH first, then Homebrew's (launchd jobs lack it on PATH),
-    else plain ``node`` so the caller's spawn fails with a nameable error."""
+    """The Node.js to run: PENTARYN_NODE, then PATH, then Homebrew's (launchd jobs lack it
+    on PATH), then the newest nvm install (systemd --user and non-login shells never source
+    nvm), else plain ``node`` so the caller's spawn fails with a nameable error."""
+    pinned = get("PENTARYN_NODE")
+    if pinned:
+        p = Path(pinned).expanduser()
+        if p.is_file() and os.access(p, os.X_OK):
+            return str(p)
     found = shutil.which("node")
     if found:
         return found
     if HOMEBREW_NODE.exists():
         return str(HOMEBREW_NODE)
+    nvm = sorted(Path.home().glob(NVM_NODE_GLOB), key=_nvm_version)
+    if nvm:
+        return str(nvm[-1])
     return "node"
+
+
+def node_env(base: dict | None = None) -> dict:
+    """The environment for a node child (kit stubs, module suites): `base` (default
+    os.environ) plus FOUNDRY_APP_ROOT from the env file when the process env lacks it.
+    ~/.config/pentaryn/env is not exported to shells, and without this the stubs fall back
+    to the Mac bundle and silently test against shims instead of Foundry's own common/."""
+    env = dict(os.environ if base is None else base)
+    if not env.get("FOUNDRY_APP_ROOT"):
+        env["FOUNDRY_APP_ROOT"] = str(foundry_app_root())
+    return env
+
+
+def is_wsl() -> bool:
+    if WSL_INTEROP.exists() or WSL_INTEROP_LATE.exists():
+        return True
+    try:
+        return "microsoft" in PROC_VERSION.read_text().lower()
+    except OSError:
+        return False
+
+
+def _runnable(exe: str | Path) -> bool:
+    """On PATH by name, or an absolute path that exists and is executable."""
+    p = Path(exe)
+    if p.is_absolute():
+        return p.is_file() and os.access(p, os.X_OK)
+    return shutil.which(str(exe)) is not None
+
+
+def open_url(url: str) -> bool:
+    """Open `url` in the desktop browser: `open` (Mac), explorer.exe by full path (WSL),
+    else xdg-open / wslview. A missing opener is False, never a raise — the caller prints
+    the URL instead."""
+    if is_mac():
+        candidates = [["open", url]]
+    else:
+        candidates = []
+        if is_wsl():
+            # explorer.exe returns 1 even when it opened the URL, so its rc is not checked.
+            candidates.append([str(WSL_EXPLORER), url])
+        candidates += [["wslview", url], ["xdg-open", url]]
+    for argv in candidates:
+        if not _runnable(argv[0]):
+            continue
+        try:
+            rc = subprocess.run(argv, check=False, capture_output=True, timeout=30).returncode
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if rc == 0 or argv[0] == str(WSL_EXPLORER):
+            return True
+    return False
 
 
 # ── clipboard ────────────────────────────────────────────────────────────────
 
 def clipboard(text: str) -> bool:
-    """Copy `text`. pbcopy, then clip.exe (WSL), then xclip. Never prints the text —
-    what goes through here is usually a secret; no tool means False, not an echo."""
-    for argv in (["pbcopy"], ["clip.exe"], ["xclip", "-selection", "clipboard"]):
-        if shutil.which(argv[0]):
-            return subprocess.run(argv, input=text, text=True).returncode == 0
+    """Copy `text`. pbcopy, then clip.exe (WSL; by name, else by full path because
+    appendWindowsPath=false keeps System32 off PATH), then xclip. The text goes on stdin,
+    never argv, and is never printed — it is usually a secret; no tool means False."""
+    for argv in (["pbcopy"], ["clip.exe"], [str(WSL_CLIP)],
+                 ["xclip", "-selection", "clipboard"]):
+        if _runnable(argv[0]):
+            try:
+                return subprocess.run(argv, input=text, text=True,
+                                      capture_output=True).returncode == 0
+            except OSError:
+                continue
     return False
 
 
@@ -501,7 +578,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if cmd == "clipboard":
             if not clipboard(sys.stdin.read()):
-                print("  ✗ no clipboard tool (pbcopy, clip.exe, xclip) — nothing copied",
+                print("  ✗ no clipboard tool worked (pbcopy, clip.exe, xclip) — nothing copied",
                       file=sys.stderr)
                 return 1
             return 0
