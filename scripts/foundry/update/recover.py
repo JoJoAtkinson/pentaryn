@@ -224,8 +224,8 @@ def _restore_world_tar(snapshot: "cloud.Snapshot | Path | None", rec: Recovery) 
     with cloud._exclusive():
         fetched = cloud.fetch_snapshot(st, snapshot, systems=False)
         try:
-            cloud.apply_snapshot(fetched, systems=False)
-            cloud.record_restored(st, snapshot, "updater-rollback", fetched.manifest)
+            loose = cloud.apply_snapshot(fetched, systems=False)
+            cloud.record_restored(st, snapshot, "updater-rollback", fetched.manifest, loose)
         finally:
             cloud.discard_fetched(fetched)
     rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")

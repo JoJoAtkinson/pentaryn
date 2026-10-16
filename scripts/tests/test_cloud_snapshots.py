@@ -2409,3 +2409,182 @@ def test_a_zero_member_tar_cannot_answer_for_either_reader(tmp_path):
         cloud._read_marker(p)
     with pytest.raises(cloud.RestoreError, match="nothing was touched"):
         cloud.extract_snapshot(p)
+
+
+# ── loose Data/ files ride in the world tar ──────────────────────────────────
+
+def _loose_tree(root):
+    """Generated art, a pack, a module store with a lock, and junk."""
+    files = {
+        "Data/assets/tokens/custom/props/travel-ring.webp": b"ring",
+        "Data/assets/tokens/tokens-01/goblin.webp": b"pack art",     # a pack: its zip is the copy
+        "Data/assets/splash/pentaryn-splash.webp": b"splash",
+        "Data/assets/maps/inn.jpg": b"inn",
+        "Data/assets/tokens/custom/.DS_Store": b"junk",
+        "Data/pentaryn-feedback/pentaryn/a.json": b"{}",
+        "Data/pentaryn-feedback/pentaryn/a.json.lock": b"",
+    }
+    for rel, data in files.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_bytes(data)
+
+
+def test_loose_rels_skip_worlds_modules_packs_and_junk(fake_data):
+    _loose_tree(fake_data)
+    assert cloud.loose_rels() == [
+        "Data/assets/maps/inn.jpg", "Data/assets/splash", "Data/assets/tokens/custom",
+        "Data/pentaryn-feedback"]
+    got = sorted(p.relative_to(fake_data).as_posix() for p in cloud._loose_files())
+    assert got == ["Data/assets/maps/inn.jpg", "Data/assets/splash/pentaryn-splash.webp",
+                   "Data/assets/tokens/custom/props/travel-ring.webp",
+                   "Data/pentaryn-feedback/pentaryn/a.json"]
+    assert cloud.is_loose_rel("Data/assets/tokens/custom/x.webp")
+    assert not cloud.is_loose_rel("Data/assets/tokens/tokens-01/x.webp")
+    assert not cloud.is_loose_rel("Data/modules/m/module.json")
+    assert not cloud.is_loose_rel("Config/options.json")
+
+
+def test_loose_file_changes_the_world_digest(fake_data):
+    before = cloud.world_tree_digest()
+    _loose_tree(fake_data)
+    after = cloud.world_tree_digest()
+    assert after != before
+    (fake_data / "Data/assets/tokens/tokens-01/goblin.webp").write_bytes(b"pack art 2")
+    assert cloud.world_tree_digest() == after          # a pack is not the snapshot's
+
+
+def test_loose_files_restore_on_the_other_host_as_an_overlay(two_hosts):
+    mac = _install(two_hosts.data["mac"])
+    _loose_tree(mac)
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    snap = _newest(two_hosts.cloud)
+    with tarfile.open(two_hosts.cloud / "world-backups" / snap) as tar:
+        names = tar.getnames()
+    assert "Data/assets/tokens/custom/props/travel-ring.webp" in names
+    assert not any("tokens-01" in n or n.endswith((".DS_Store", ".lock")) for n in names)
+
+    boss = _install(two_hosts.data["boss"])
+    (boss / "Data/assets/tokens/custom").mkdir(parents=True)
+    (boss / "Data/assets/tokens/custom/boss-only.webp").write_bytes(b"only here")
+    (boss / "Data/assets/maps").mkdir(parents=True)
+    (boss / "Data/assets/maps/inn.jpg").write_bytes(b"older inn")
+    with two_hosts.use("boss"):
+        cloud.restore(snap, yes=True)
+    assert (boss / "Data/assets/tokens/custom/props/travel-ring.webp").read_bytes() == b"ring"
+    assert (boss / "Data/assets/maps/inn.jpg").read_bytes() == b"inn"          # overwritten
+    assert (boss / "Data/assets/tokens/custom/boss-only.webp").exists()        # never cleared
+    assert not (boss / "Data/assets/tokens/tokens-01").exists()
+
+
+def test_loose_rel_refuses_climbing_members_and_foundrys_own_backups(fake_data):
+    assert not cloud.is_loose_rel("Data/assets/../modules/m/module.json")
+    assert not cloud.is_loose_rel("Data/assets/tokens/custom/../../../systems/x")
+    assert not cloud.is_loose_rel("Data/Backups/snapshots/s.json")
+    (fake_data / "Data/Backups/snapshots").mkdir(parents=True)
+    (fake_data / "Data/Backups/snapshots/s.json").write_text("{}")
+    assert cloud.loose_rels() == []
+
+
+def test_loose_skip_is_case_blind(fake_data):
+    """A mis-cased Data/Modules/ on ext4 is not loose: on APFS it would land in modules/."""
+    assert not cloud.is_loose_rel("Data/Modules/foo/module.json")
+    assert not cloud.is_loose_rel("Data/WORLDS/w/world.json")
+    (fake_data / "Data/Modules/foo").mkdir(parents=True)
+    (fake_data / "Data/Modules/foo/module.json").write_text("{}")
+    assert cloud.loose_rels() == []
+
+
+@pytest.mark.parametrize("insensitive", [True, False])
+def test_loose_members_one_file_on_a_case_insensitive_disk_are_refused(fake_data,
+                                                                       monkeypatch,
+                                                                       insensitive):
+    monkeypatch.setattr(cloud, "_case_insensitive", lambda root: insensitive)
+    members = [tarfile.TarInfo("Data/assets/tokens/custom/Goblin.webp"),
+               tarfile.TarInfo("Data/assets/tokens/custom/goblin.webp")]
+    if insensitive:
+        with pytest.raises(cloud.RestoreError, match="case-insensitive"):
+            cloud._refuse_loose_collisions(members, "snap")
+    else:
+        cloud._refuse_loose_collisions(members, "snap")      # ext4 holds both
+
+
+def test_case_insensitive_probe(tmp_path):
+    root = tmp_path / "data"
+    root.mkdir()
+    if (tmp_path / "DATA").exists():                          # the Mac's APFS itself
+        assert cloud._case_insensitive(root) is True
+        return
+    assert cloud._case_insensitive(root) is False             # ext4 / tmpfs
+    (tmp_path / "DATA").symlink_to(root)                      # what APFS resolves to
+    assert cloud._case_insensitive(root) is True
+
+
+def _loose_on_both(two_hosts):
+    mac = _install(two_hosts.data["mac"])
+    _loose_tree(mac)
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    return _newest(two_hosts.cloud), _install(two_hosts.data["boss"])
+
+
+def test_a_local_only_loose_file_is_uploaded_by_the_backup_after_a_restore(two_hosts):
+    """The overlay leaves boss-only.webp in place; the snapshot does not hold it, so the
+    recorded digest must not either — else the next backup skips and only the safety
+    copy (pruned in time) ever holds it."""
+    snap, boss = _loose_on_both(two_hosts)
+    (boss / "Data/assets/tokens/custom").mkdir(parents=True)
+    (boss / "Data/assets/tokens/custom/boss-only.webp").write_bytes(b"only here")
+    with two_hosts.use("boss"):
+        cloud.restore(snap, yes=True)
+        cloud.backup("shutdown")
+    [after] = [n for n in _names(two_hosts.cloud) if n.endswith("-boss.tar.gz")]
+    with tarfile.open(two_hosts.cloud / "world-backups" / after) as tar:
+        assert "Data/assets/tokens/custom/boss-only.webp" in tar.getnames()
+
+
+def test_a_restore_with_no_local_only_loose_files_leaves_nothing_to_back_up(two_hosts):
+    snap, boss = _loose_on_both(two_hosts)
+    with two_hosts.use("boss"):
+        cloud.restore(snap, yes=True)
+        before = _names(two_hosts.cloud)
+        cloud.backup("shutdown")
+    assert _names(two_hosts.cloud) == before
+
+
+@pytest.mark.parametrize("clash", ["symlink", "file-for-folder", "folder-for-file"])
+def test_a_loose_path_clash_is_refused_before_anything_is_touched(two_hosts, tmp_path,
+                                                                  capsys, clash):
+    snap, boss = _loose_on_both(two_hosts)
+    (boss / "Data/worlds/w/journal.txt").write_text("boss's own")
+    if clash == "symlink":
+        (tmp_path / "elsewhere").mkdir()
+        (boss / "Data/assets/tokens").mkdir(parents=True)
+        (boss / "Data/assets/tokens/custom").symlink_to(tmp_path / "elsewhere")
+    elif clash == "file-for-folder":
+        (boss / "Data/assets").mkdir(parents=True)
+        (boss / "Data/assets/splash").write_bytes(b"a file")
+    else:
+        (boss / "Data/assets/maps/inn.jpg").mkdir(parents=True)
+    capsys.readouterr()
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(snap, yes=True)
+    err = capsys.readouterr().err
+    assert "nothing was touched" in err, err
+    assert (boss / "Data/worlds/w/journal.txt").read_text() == "boss's own"
+    if clash == "symlink":
+        assert list((tmp_path / "elsewhere").iterdir()) == []
+
+
+def test_an_older_checkout_refuses_a_snapshot_with_loose_files_untouched(two_hosts,
+                                                                         monkeypatch, capsys):
+    """Before loose files, the stray check read every member outside WORLD_PATHS as a
+    stray and refused before the clear: an old checkout fails safe on a new snapshot."""
+    snap, boss = _loose_on_both(two_hosts)
+    (boss / "Data/worlds/w/journal.txt").write_text("boss's own")
+    monkeypatch.setattr(cloud, "is_loose_rel", lambda _rel: False)
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(snap, yes=True)
+    assert "is bundled but holds 'Data/" in capsys.readouterr().err
+    assert (boss / "Data/worlds/w/journal.txt").read_text() == "boss's own"
+    assert not (boss / "Data/assets/tokens/custom").exists()

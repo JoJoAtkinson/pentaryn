@@ -6,9 +6,12 @@ never touch the same files.**
 
 - **Assets flow DOWN.** You drop ``tokens-02.zip`` into OneDrive; the next server
   start unpacks it into ``Data/assets/tokens/tokens-02/``. Extracted once, tracked
-  by hash, never re-extracted, never overwritten. Local assets are never uploaded.
+  by hash, never re-extracted, never overwritten. Unpacked packs are never uploaded
+  (their zip is the copy); the loose ``Data/`` files beside them ride UP with the world.
 - **The world flows UP.** Every server stop (and every start, before launch)
-  archives the world and Config to OneDrive as a timestamped snapshot, tagged with
+  archives the world, Config and the loose ``Data/`` files (everything under ``Data/``
+  but worlds, modules, systems, Backups and unpacked packs; restored as an additive
+  overlay, never cleared) to OneDrive as a timestamped snapshot, tagged with
   the machine that took it (``world-<UTC stamp>-fvtt<ver>-<host>.tar.gz``). Modules
   and systems travel beside it as content-addressed **bundles** (below).
 - **Restore is never silent.** At an interactive boot, when the newest snapshot in the
@@ -31,14 +34,14 @@ snapshots, and resolves conflicts by writing *conflict copies* into the director
 inside a live database. A *stopped* database is copied wholesale, which is always
 consistent. A *running* one is never touched by the cloud at all.
 
-Sizes, re-measured 2026-10-11: ``Data/worlds`` ~37 MB and ``Config`` ~6 MB, so a world
-snapshot is **~45 MB**. ``Data/modules`` (~3.45 GB, mostly premium map art that almost never
+Sizes, re-measured 2026-10-11: ``Data/worlds`` ~37 MB and ``Config`` ~6 MB, plus ~50 MB of
+loose ``Data/`` files since 2026-10-16, so a world snapshot is **~95 MB**. ``Data/modules`` (~3.45 GB, mostly premium map art that almost never
 changes) and ``Data/systems`` (~135 MB) are not in it. Each module and system folder is a
 **bundle** in ``bundles/``, named ``<kind>@<id>@<version>@<fingerprint>.tar.gz``
 (``scripts/foundry/bundles.py``). The fingerprint is a content hash that ignores LevelDB
 housekeeping, so a Foundry launch changes nothing and the same bytes on either machine get
 the same name. A bundle is uploaded only when the cloud lacks that name, so a backup costs
-~45 MB plus whatever modules really changed. Each world snapshot's ``.parent`` sidecar,
+~95 MB plus whatever modules really changed. Each world snapshot's ``.parent`` sidecar,
 and the tar's first member ``pentaryn-snapshot.json``, list the bundle each module and
 system was at (the manifest). A restore downloads the world tar and only the bundles this
 machine lacks. Snapshots from before bundles (untagged ones, and the first ``-mac``
@@ -86,9 +89,11 @@ import sys
 import tarfile
 import tempfile
 import time
+import unicodedata
 import zipfile
 import zlib
 from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Collection
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -163,10 +168,94 @@ KINDS = {
 # A full restore still clears all three; the boot clock (local_tree_mtime) still reads them.
 SNAPSHOT_PATHS = ["Data/worlds", "Config", "Data/modules"]
 
-# What a BUNDLED snapshot contains: the world and Config only. Every folder under
+# What a BUNDLED snapshot contains: the world and Config, plus the loose Data/ files
+# (LOOSE_SKIP_TOP below). Every folder under
 # Data/modules and Data/systems is a content-addressed bundle in the cloud's bundles/
 # (scripts/foundry/bundles.py), named by the snapshot's manifest.
 WORLD_PATHS = ["Data/worlds", "Config"]
+
+# LOOSE Data/ files: whatever under Data/ nothing else carries — not a world (WORLD_PATHS),
+# not a module or system (a bundle), not an unpacked asset pack (its zip in assets/ is the
+# copy). That is the art the scripts generate into Data/assets/tokens/custom/, hand-placed
+# maps and splash images, and module stores kept outside their module (pentaryn-feedback/).
+# Until 2026-10-16 none of it reached the cloud: the move to BOSS restored every world with
+# 33 token images missing. It rides in the bundled world tar beside WORLD_PATHS and a
+# restore lays it down as an OVERLAY — added and overwritten, never cleared — because a
+# file only this machine has has no other copy to come back from.
+# Data/Backups is Foundry's own package backups and snapshots (the updater's createBackup,
+# update/admin.py): copies of what the bundles already hold, up to GBs, never carried.
+LOOSE_SKIP_TOP = ("worlds", "modules", "systems", "Backups")
+# Matched case-blind: a stray Data/Modules/ on ext4 would otherwise ride as loose and, on the
+# Mac's case-insensitive APFS, land straight inside the real Data/modules.
+_LOOSE_SKIP_FOLDED = frozenset(s.casefold() for s in LOOSE_SKIP_TOP)
+PACK_DIR = re.compile(r"^([a-z]+)-\d+$")      # Data/assets/<kind>/<kind>-NN, a pack
+
+
+def _loose_junk(name: str) -> bool:
+    """Never carried: hidden files, OS junk, lock files a live store leaves behind."""
+    return name.startswith(".") or name in JUNK_NAMES or name.endswith(".lock")
+
+
+def _is_pack_rel(parts: tuple[str, ...]) -> bool:
+    """("Data", "assets", "tokens", "tokens-01", ...) — a member of an unpacked pack."""
+    if len(parts) < 4 or parts[:2] != ("Data", "assets"):
+        return False
+    if f"Data/assets/{parts[2]}" not in KINDS.values():
+        return False
+    m = PACK_DIR.match(parts[3])
+    return bool(m and m.group(1) == parts[2])
+
+
+def is_loose_rel(rel: str) -> bool:
+    """Whether a root-relative path is loose Data/ content (see LOOSE_SKIP_TOP)."""
+    parts = tuple(x for x in rel.split("/") if x and x != ".")
+    if ".." in parts:              # a member that climbs could land in worlds/modules/systems
+        return False
+    if len(parts) < 2 or parts[0] != "Data" or parts[1].casefold() in _LOOSE_SKIP_FOLDED:
+        return False
+    return not _is_pack_rel(parts)
+
+
+def loose_rels() -> list[str]:
+    """The top-level loose entries, root-relative: each Data/ child except worlds, modules
+    and systems; inside Data/assets, each child — and inside a pack kind's folder
+    (KINDS), each child that is not a pack. Links and junk are skipped at every level."""
+    root = data_root()
+    data = root / "Data"
+    if not data.is_dir() or data.is_symlink():
+        return []
+    out: list[str] = []
+
+    def walk(folder: Path) -> None:
+        for p in sorted(folder.iterdir()):
+            rel = p.relative_to(root).as_posix()
+            if _loose_junk(p.name) or p.is_symlink():
+                continue
+            if folder == data and p.name.casefold() in _LOOSE_SKIP_FOLDED:
+                continue
+            if p.is_dir() and (rel == "Data/assets" or rel in KINDS.values()):
+                walk(p)
+            elif is_loose_rel(rel):
+                out.append(rel)
+    walk(data)
+    return out
+
+
+def _loose_files() -> list[Path]:
+    """Every file the world tar carries as loose content, junk and links skipped."""
+    root = data_root()
+    files: list[Path] = []
+    for rel in loose_rels():
+        base = root / rel
+        if base.is_file():
+            files.append(base)
+            continue
+        for p in sorted(base.rglob("*")):
+            if any(_loose_junk(x) for x in p.relative_to(base).parts) or p.is_symlink():
+                continue
+            if p.is_file():
+                files.append(p)
+    return files
 
 # The first member of a bundled snapshot's tar: {"bundled": 1, "modules", "systems",
 # "host", "core"}. Authoritative; the `.parent` sidecar carries a copy. Never extracted.
@@ -753,9 +842,29 @@ def _tree_digest(paths: list[str]) -> str:
     return h.hexdigest()
 
 
-def world_tree_digest() -> str:
-    """The world snapshot's own files (WORLD_PATHS), by path, size and int mtime."""
-    return _tree_digest(WORLD_PATHS)
+def world_tree_digest(only_loose: Collection[str] | None = None) -> str:
+    """The world snapshot's own files (WORLD_PATHS, then the loose Data/ files), by path,
+    size and int mtime. With no loose files it is the WORLD_PATHS digest alone.
+
+    `only_loose` (root-relative names) counts only those loose files: a restore records
+    the digest of what the snapshot holds, and its overlay leaves local-only loose files
+    in place that the snapshot does not (record_restored)."""
+    digest = _tree_digest(WORLD_PATHS)
+    loose = _loose_files()
+    if only_loose is not None:
+        root = data_root()
+        keep = set(only_loose)
+        loose = [p for p in loose if p.relative_to(root).as_posix() in keep]
+    if not loose:
+        return digest
+    root = data_root()
+    h = hashlib.sha256(digest.encode())
+    for p in loose:
+        s = p.stat()
+        h.update(p.relative_to(root).as_posix().encode())
+        h.update(str(s.st_size).encode())
+        h.update(str(int(s.st_mtime)).encode())
+    return h.hexdigest()
 
 
 def legacy_snapshot_digest() -> str:
@@ -763,14 +872,16 @@ def legacy_snapshot_digest() -> str:
     return _tree_digest(SNAPSHOT_PATHS)
 
 
-def snapshot_digest(manifest: dict | None = None) -> str:
+def snapshot_digest(manifest: dict | None = None,
+                    only_loose: Collection[str] | None = None) -> str:
     """What a bundled snapshot of this tree would hold: the world tree plus the manifest
     (each module/system's bundle name). A Foundry launch changes neither for an untouched
     module — the fingerprint ignores LevelDB housekeeping — so the digest-skip holds."""
     if manifest is None:
         manifest = bundles.manifest(bundles.local_inventory())
     m = bundles.sections(manifest)
-    return hashlib.sha256((world_tree_digest() + "\n" + json.dumps(m, sort_keys=True))
+    world = world_tree_digest() if only_loose is None else world_tree_digest(only_loose)
+    return hashlib.sha256((world + "\n" + json.dumps(m, sort_keys=True))
                           .encode()).hexdigest()
 
 
@@ -1030,7 +1141,11 @@ def _build(st: Storage, reason: str, *, safety: bool = False,
     missing = sorted((loc for loc in inv.values() if loc.name not in have),
                      key=lambda loc: loc.name)
     last = newest([s for s in own(existing, me) if not s.safety])
-    _check_backup_disk(tmp.parent, last.size if last else WORLD_ESTIMATE_BYTES, missing)
+    # The loose files are stored as they are (mostly compressed art): the first backup
+    # that carries them can be far bigger than the last snapshot.
+    loose_bytes = sum(p.stat().st_size for p in _loose_files())
+    _check_backup_disk(tmp.parent, max(last.size if last else WORLD_ESTIMATE_BYTES,
+                                       loose_bytes), missing)
 
     job = uploadq.Job(name=name, reason=reason, digest=digest, parent=parent, host=me,
                       size=0, created=time.time(), safety=safety,
@@ -1713,7 +1828,8 @@ def _gc_after_backup(st: Storage) -> None:
 
 def _build_world_tar(tmp: Path, marker: dict) -> None:
     """The world snapshot: SNAPSHOT_MARKER first (a restore reads only that member to
-    tell bundled from full), then each WORLD_PATHS entry that exists."""
+    tell bundled from full), then each WORLD_PATHS entry that exists, then every loose
+    Data/ file (loose_rels)."""
     data = (json.dumps(marker, sort_keys=True, indent=1) + "\n").encode()
     try:
         with tarfile.open(tmp, "w:gz") as tar:
@@ -1724,6 +1840,9 @@ def _build_world_tar(tmp: Path, marker: dict) -> None:
                 src = data_root() / rel
                 if src.exists():
                     tar.add(src, arcname=rel)
+            root = data_root()
+            for p in _loose_files():
+                tar.add(p, arcname=p.relative_to(root).as_posix(), recursive=False)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise
@@ -2388,6 +2507,57 @@ def _refuse_links(links: list[str], label: str, done: str) -> None:
                        f"Remove the link and rerun, or boot FROM=local — {done}")
 
 
+def _case_insensitive(root: Path) -> bool:
+    """Whether the data root sits on a case-insensitive filesystem (the Mac's APFS)."""
+    probe = root.parent / root.name.swapcase()
+    if probe.name == root.name:
+        return False
+    try:
+        return probe.exists() and os.path.samefile(probe, root)
+    except OSError:
+        return False
+
+
+def _refuse_loose_collisions(members: list[tarfile.TarInfo], label: str) -> None:
+    """The loose files are an overlay — never cleared first — so what is already here
+    decides where each lands. A symlink on the way (followed: the file lands wherever it
+    points, or the data filter stops the extract part-way, after worlds/Config are gone
+    and before any bundle is in place), a file where the snapshot needs a folder, or a
+    folder where it brings a file: refused before anything is touched. So are two members
+    that are one file here (case-insensitive disk: Goblin.webp and goblin.webp from ext4,
+    or NFC/NFD spellings) — the second would silently replace the first."""
+    root = data_root()
+    if _case_insensitive(root):
+        seen: dict[str, str] = {}
+        for m in members:
+            key = unicodedata.normalize("NFC", m.name).casefold()
+            other = seen.setdefault(key, m.name)
+            if other != m.name:
+                raise RestoreError(f"{label} brings both {other} and {m.name}, one file on "
+                                   "this case-insensitive disk — rename one where the "
+                                   "snapshot was taken and back up again — nothing was "
+                                   "touched")
+    for m in members:
+        parts = [x for x in m.name.split("/") if x and x != "."]
+        here = root
+        for i, part in enumerate(parts):
+            here = here / part
+            last = i == len(parts) - 1
+            why = None
+            if here.is_symlink():
+                why = "is a symlink"
+            elif not here.exists():
+                break
+            elif not last and not here.is_dir():
+                why = "is a file, where the snapshot needs a folder"
+            elif last and here.is_dir() and not m.isdir():
+                why = "is a folder, where the snapshot brings a file"
+            if why:
+                rel = here.relative_to(root).as_posix()
+                raise RestoreError(f"{label} brings {m.name}, but here {rel} {why} — move "
+                                   "it out of the way and rerun — nothing was touched")
+
+
 def _move_aside(keys: list[str]) -> list[str]:
     """Move each folder to REPLACED_DIRNAME/<UTC stamp>/<its relpath>; return the lines."""
     if not keys:
@@ -2456,7 +2626,7 @@ def _keep_filter(keep: list[Path]):
     return guard
 
 
-def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
+def apply_snapshot(f: Fetched, *, systems: bool = True) -> frozenset[str]:
     """Make this machine the snapshot. Full: clear worlds/Config/modules and extract (as
     before bundles) — except what in Data/modules is not a bundle, which no bundled safety
     copy holds: it stays, or is moved aside to REPLACED_DIRNAME when the snapshot brings
@@ -2469,9 +2639,12 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
 
     Each target is cleared before extracting: `extractall` overlays, so restoring an older
     snapshot over a newer tree would keep every file the newer version added — a
-    mixed-version install that runs, the worst kind of failed restore."""
+    mixed-version install that runs, the worst kind of failed restore. The loose Data/
+    files are the exception: an overlay, never cleared (no other copy of a local-only
+    one exists). Returns the loose names the snapshot held (record_restored)."""
     root = data_root()
     bundled = f.manifest is not None
+    loose: frozenset[str] = frozenset()
 
     def ours(key: str) -> bool:
         return systems or not key.startswith("system/")
@@ -2479,14 +2652,18 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
     with tarfile.open(f.tar, "r:gz") as tar:
         members = None
         if bundled:
-            # Before anything is cleared: a bundled world tar holds only WORLD_PATHS, and
-            # every bundle to install is on this disk.
+            # Before anything is cleared: a bundled world tar holds only WORLD_PATHS and
+            # loose Data/ files (is_loose_rel), and every bundle to install is on this disk.
             members = [m for m in tar.getmembers() if m.name != SNAPSHOT_MARKER]
             stray = [m.name for m in members if not any(
-                m.name == r or m.name.startswith(r + "/") for r in WORLD_PATHS)]
+                m.name == r or m.name.startswith(r + "/") for r in WORLD_PATHS)
+                and not is_loose_rel(m.name)]
             if stray:
                 raise RestoreError(f"{f.tar.name} is bundled but holds {stray[0]!r} outside "
-                                   f"{' and '.join(WORLD_PATHS)} — nothing was touched")
+                                   f"{' and '.join(WORLD_PATHS)} and the loose Data/ files "
+                                   "— nothing was touched")
+            loose = frozenset(m.name for m in members if is_loose_rel(m.name))
+            _refuse_loose_collisions([m for m in members if m.name in loose], f.tar.name)
             unfetched = [n for k, n in f.needed.items() if ours(k) and n not in f.bundle_tars]
             if unfetched:
                 raise RestoreError(f"bundles not fetched: {', '.join(unfetched)} — nothing "
@@ -2518,7 +2695,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
         log(f"kept this machine's {', '.join(Path(r).name for r in kept)}")
     _fix_foreign_data_path(root, kept)
     if not bundled:
-        return
+        return loose
 
     _move_aside(unbundled)
     installed, removed, left = [], [], []
@@ -2555,6 +2732,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
             [k for k in left if k.startswith(kind + "/")]))
     label = f.snap.name if f.snap else f.tar.name
     log(f"restored {label}: world {_mb(f.tar.stat().st_size)}; {'; '.join(parts)}")
+    return loose
 
 
 def extract_snapshot(tar_path: Path, *, systems: bool = True) -> None:
@@ -2620,15 +2798,20 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
         _restore_locked(st, snap, reason)
 
 
-def record_restored(st: Storage, snap: Snapshot, by: str, manifest: dict | None) -> None:
+def record_restored(st: Storage, snap: Snapshot, by: str, manifest: dict | None,
+                    loose: Collection[str] | None = None) -> None:
     """The bootstate record of a restore of `snap` that has just been applied — one
-    record for `restore` and the updater rollback alike (review M15)."""
+    record for `restore` and the updater rollback alike (review M15). `loose` is what
+    apply_snapshot returned: the loose Data/ files `snap` holds. The overlay leaves
+    local-only loose files in place; they are not in `snap`, so they stay out of the
+    digest and the next backup uploads them."""
     anc = read_lineage(st, snap)
     # The digest of what `snap` holds — its world, as now on disk, and ITS manifest —
     # not of the local tree: extras a world-less restore left in place are not in
     # that manifest, so the next backup differs, uploads, and its manifest references
     # them before any later restore may remove them (review DL5/R1, §1 #9).
-    digest = snapshot_digest(manifest) if manifest is not None else snapshot_digest()
+    digest = (snapshot_digest(manifest, loose) if manifest is not None
+              else snapshot_digest(only_loose=loose))
     bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, digest, by=by,
                                      lineage=list(anc.names) if anc else [],
                                      lineage_mtimes=list(anc.mtimes) if anc else [],
@@ -2660,12 +2843,12 @@ def _restore_locked(st: Storage, snap: Snapshot, reason: str) -> None:
                 back = (f"the previous state ({before}) is contained in {snap.name}: "
                         f"make foundry-restore SNAP={snap.name}")
         try:
-            apply_snapshot(f)
+            loose = apply_snapshot(f)
         except RestoreError as exc:
             die(f"restore of {snap.name} refused: {exc}\n    {back}")
         except Exception as exc:  # noqa: BLE001
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
-        record_restored(st, snap, f"restore:{reason}", f.manifest)
+        record_restored(st, snap, f"restore:{reason}", f.manifest, loose)
         log(f"restored {snap.name}" + (f" (the state it replaced: {before})" if before else ""))
     finally:
         discard_fetched(f)
