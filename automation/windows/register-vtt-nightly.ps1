@@ -7,10 +7,11 @@
 #
 # From WSL: make vtt-nightly-register (it passes the distro name for you).
 #
-# Runs as the logged-on Windows user, only while logged on (Interactive). Reason: WSL2
-# distros live in the user's own session; S4U ("whether logged on or not" without a stored
-# password) cannot start the WSL VM reliably, and storing the account password in the task
-# is worse than the gap. A locked screen still counts as logged on.
+# Runs as the Windows user via S4U: "whether logged on or not", no stored password. The
+# 03:00 run must happen with nobody signed in; an Interactive task silently never fired
+# (2026-10-16). S4U drives WSL fine on BOSS - the \WSL keep-alive task and the boot-time
+# Claude task both run that way. S4U has no network credentials for Windows shares; the
+# script only uses Linux-side network (rclone, cloudflared), so that does not matter.
 # WakeToRun wakes a sleeping PC; StartWhenAvailable runs a missed 03:00 at the next chance.
 # The time is local wall-clock, so it follows DST.
 # ExecutionTimeLimit must exceed the script's own step timeouts summed (stop+backup 2400s,
@@ -49,7 +50,7 @@ $settings = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable `
 # name that maps to no SID. The token's own name is always the real MACHINE\user.
 $account = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $principal = New-ScheduledTaskPrincipal -UserId $account `
-    -LogonType Interactive -RunLevel Limited
+    -LogonType S4U -RunLevel Limited
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
     -Settings $settings -Principal $principal -Force `
