@@ -123,6 +123,20 @@ vtt: vtt-status
 vtt-status:
 	@$(OPS) status
 
+# The 03:00 nightly (Windows Task Scheduler → wsl.exe → automation/bin/vtt-nightly.sh): stop,
+# snapshot + upload, start, relaunch the world. Log: .state/logs/vtt-nightly-YYYY-MM.log.
+.PHONY: vtt-nightly vtt-nightly-dry vtt-nightly-log vtt-nightly-register vtt-nightly-unregister
+.PHONY: vtt-nightly-host-check
+NIGHTLY_PS1 = $(shell wslpath -w $(ROOT)/automation/windows/register-vtt-nightly.ps1 2>/dev/null)
+POWERSHELL = /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+vtt-nightly: vtt-nightly-host-check ; @$(ROOT)/automation/bin/vtt-nightly.sh; rc=$$?; tail -n 25 $(ROOT)/.state/logs/vtt-nightly-$$(date +%Y-%m).log; exit $$rc
+vtt-nightly-dry: vtt-nightly-host-check ; @DRY=1 $(ROOT)/automation/bin/vtt-nightly.sh; tail -n 25 $(ROOT)/.state/logs/vtt-nightly-$$(date +%Y-%m).log
+vtt-nightly-log:        ; @tail -n $(or $(N),60) $(ROOT)/.state/logs/vtt-nightly-$$(date +%Y-%m).log
+vtt-nightly-register: vtt-nightly-host-check ; @$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File "$(NIGHTLY_PS1)" $(if $(WSL_DISTRO_NAME),-Distro "$(WSL_DISTRO_NAME)")
+vtt-nightly-unregister: vtt-nightly-host-check ; @$(POWERSHELL) -NoProfile -ExecutionPolicy Bypass -File "$(NIGHTLY_PS1)" -Unregister
+vtt-nightly-host-check:
+	@[ -x "$(POWERSHELL)" ] && command -v wslpath >/dev/null || { echo "  ✗ the nightly is a Windows Task Scheduler job — BOSS/WSL only"; exit 1; }
+
 # ─── The pieces: application, tunnel ────────────────────────────────────
 .PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-logs tunnel-setup foundry-boot
 .PHONY: foundry-bridge-status foundry-bridge-clean foundry-eval-report
@@ -169,11 +183,13 @@ foundry-eval-report:   ; @$(OPS) eval-report $(if $(SINCE),--since $(SINCE),) $(
 foundry-check:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.license_key
 
-# host.clipboard: pbcopy (Mac), clip.exe (WSL), xclip — the value goes through a pipe, never argv.
+# host.clipboard: pbcopy (Mac), clip.exe (WSL, by full path when System32 is off PATH), xclip —
+# the value goes through a pipe, never argv. The ✓ prints only when the copy succeeded; a
+# failure (no clipboard tool, Infisical auth) keeps its stderr and fails the target.
 foundry-key:
 	@cd $(ROOT) && infisical run --silent -- \
-	  sh -c 'printf "%s" "$$FOUNDRY_VTT_LICENSE_KEY" | $(PY) -m scripts.foundry.host clipboard' 2>/dev/null
-	@echo "  ✓ license key copied to clipboard — paste into Foundry, then clear the clipboard"
+	  sh -c 'printf "%s" "$$FOUNDRY_VTT_LICENSE_KEY" | $(PY) -m scripts.foundry.host clipboard' \
+	  && echo "  ✓ license key copied to clipboard — paste into Foundry, then clear the clipboard"
 
 foundry-admin-push:
 	@$(ROOT)/automation/bin/foundry-admin-push.sh
@@ -270,7 +286,11 @@ foundry-modules-check: ; @$(OPS) module-check --all $(if $(JSON),--json,)
 # Playbook: context/foundry/addon-blueprint.md. M=<short> picks one module.
 .PHONY: foundry-lib-check foundry-lib-vendor foundry-module-new foundry-conformance foundry-module-index
 # The kit's own suite (foundry/lib).
-foundry-lib-check:  ; @cd $(ROOT) && node foundry/lib/test/run.mjs
+# host.node() / host.foundry_app_root(): nvm's node and this host's app even where neither is
+# on PATH or exported (systemd --user, non-login shells) — else the stub silently uses shims.
+foundry-lib-check:
+	@cd $(ROOT) && FOUNDRY_APP_ROOT="$${FOUNDRY_APP_ROOT:-$$($(PY) -c 'from scripts.foundry import host; print(host.foundry_app_root())')}" \
+	  "$$($(PY) -c 'from scripts.foundry import host; print(host.node())')" foundry/lib/test/run.mjs
 # Re-vendor the kit into every migrated module (those with lib/kit.lock.json), or M=<short>.
 foundry-lib-vendor: ; @$(OPS) module-vendor sync $(if $(M),$(M),--all)
 # make foundry-module-new M=<short> TITLE="Pentaryn <Title>" [TIER=small] [ARGS="--kit perf"]
@@ -284,9 +304,10 @@ foundry-module-new:
 # `L -- M=x`, a bare `WORLD=x` with no flags at all; 4.x: `L --no-print-directory -- M=x`), so:
 # drop the command-line assignments (they are exactly MAKEOVERRIDES), then look for the L in the
 # short-flag words alone — the first word when it has no dash, and every single-dash word. Long
-# options (--x, --x=y, the bare --) and option arguments (`-I Lib` -> `I Lib`) never count.
+# options (--x, --x=y, the bare --) and option arguments (`-I Lib` -> `I Lib` on 3.81, one word
+# `-ILib` on 4.4, like `-Oline`) never count.
 MAKEFLAGS_NO_VARS = $(subst $(MAKEOVERRIDES),,$(MAKEFLAGS))
-MAKE_SHORT_FLAGS = $(filter-out -%,$(firstword $(MAKEFLAGS_NO_VARS))) $(filter-out --%,$(filter -%,$(MAKEFLAGS_NO_VARS)))
+MAKE_SHORT_FLAGS = $(filter-out -%,$(firstword $(MAKEFLAGS_NO_VARS))) $(filter-out --% -I% -W% -O%,$(filter -%,$(MAKEFLAGS_NO_VARS)))
 INDEX_CHECK = $(if $(or $(CHECK),$(findstring L,$(MAKE_SHORT_FLAGS))),--check,)
 foundry-module-index: ; @$(OPS) module-index $(INDEX_CHECK)
 # Score against rules C01–C62: every module, or M=<short>; MD=1 for the markdown table.

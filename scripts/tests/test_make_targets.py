@@ -60,7 +60,7 @@ def test_every_registered_module_has_a_check_target(module):
 @pytest.mark.parametrize("target, expect", [
     ("foundry-pings-sync", "module-sync pings"),
     ("foundry-modules-check", "module-check --all"),
-    ("foundry-lib-check", "node foundry/lib/test/run.mjs"),
+    ("foundry-lib-check", "host.node())')\" foundry/lib/test/run.mjs"),
     ("foundry-lib-vendor", "module-vendor sync --all"),
     ("foundry-conformance", "module-conformance"),
     ("foundry-module-index", "module-index"),
