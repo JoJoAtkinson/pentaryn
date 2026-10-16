@@ -200,3 +200,7 @@
 {"ts": "2026-10-16T00:14:15Z", "cmd": "cloud-upload", "host": "mac", "state": "queued", "snapshot": "world-2026-10-16-001414-fvtt14.369-mac.tar.gz", "reason": "shutdown", "bytes": 24168106}
 {"ts": "2026-10-16T00:14:37Z", "cmd": "cloud-upload", "host": "mac", "state": "uploading", "snapshot": "world-2026-10-16-001414-fvtt14.369-mac.tar.gz", "reason": "shutdown", "bytes": 24168106}
 {"ts": "2026-10-16T00:15:49Z", "cmd": "cloud-upload", "host": "mac", "state": "done", "snapshot": "world-2026-10-16-001414-fvtt14.369-mac.tar.gz", "reason": "shutdown", "bytes": 24168106, "seconds": 72.4}
+{"ts": "2026-10-16T00:49:47Z", "cmd": "boot", "host": "boss", "action": "restore", "snapshot": "world-2026-10-16-001414-fvtt14.369-mac.tar.gz", "why": "FROM=latest", "from": "latest", "interactive": false}
+{"ts": "2026-10-16T00:54:06Z", "cmd": "boot", "host": "boss", "action": "restore", "snapshot": "world-2026-10-16-001414-fvtt14.369-mac.tar.gz", "why": "FROM=latest", "from": "latest", "interactive": false}
+{"ts": "2026-10-16T01:00:24Z", "cmd": "cloud-upload", "host": "boss", "state": "uploading", "snapshot": "world-2026-10-16-010024-fvtt14.369-boss.safety.tar.gz", "reason": "pre-restore safety copy (boot)", "bytes": 850}
+{"ts": "2026-10-16T01:01:19Z", "cmd": "cloud-upload", "host": "boss", "state": "done", "snapshot": "world-2026-10-16-010024-fvtt14.369-boss.safety.tar.gz", "reason": "pre-restore safety copy (boot)", "bytes": 850, "seconds": 55.3}
