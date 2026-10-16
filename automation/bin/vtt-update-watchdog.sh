@@ -24,6 +24,11 @@ STATUS="$REPO/.state/vtt-update.status"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
+# nvm (BOSS/WSL): launchd and systemd --user never source nvm.sh, so put the newest
+# install's bin first when there is one (bare `node` callers such as foundry-lib-check).
+NVM_BIN=$(for d in "$HOME"/.nvm/versions/node/v*/bin; do [ -d "$d" ] && echo "$d"; done | sort -V | tail -n 1)
+if [ -n "$NVM_BIN" ]; then PATH="$NVM_BIN:$PATH"; fi
+
 mkdir -p "$LOG_DIR"
 cd "$REPO" || exit 1
 

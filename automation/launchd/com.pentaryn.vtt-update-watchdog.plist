@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Watchdog for the 04:06 update — Saturdays at 06:12.
+<!-- MAC ONLY (launchd, /Users/joe paths). BOSS/WSL: not scheduled yet; the equivalent would be
+     a systemd user .service + .timer (see context/foundry/automated-updates.md).
+     Watchdog for the 04:06 update — Saturdays at 06:12.
 
      On its own timer on purpose. One of the things it exists to catch is "the update
      job never fired", and a check that runs as the last step of the job it monitors

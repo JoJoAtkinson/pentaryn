@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Foundry VTT auto-update — Saturdays at 04:06.
+<!-- MAC ONLY (launchd, /Users/joe paths). BOSS/WSL: not scheduled yet; the equivalent would be
+     a systemd user .service + .timer (see context/foundry/automated-updates.md).
+     Foundry VTT auto-update — Saturdays at 04:06.
 
      Install:  make vtt-update-install
      Run now:  launchctl kickstart -p gui/$(id -u)/com.pentaryn.vtt-update

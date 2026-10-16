@@ -35,12 +35,20 @@
  */
 
 import { createRequire } from "node:module";
-import { writeFileSync, readFileSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 const puppeteer = require("puppeteer-core");
 
-const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+// CHROME_PATH wins; else the first browser that exists on this host (Mac Chrome, then the
+// usual Linux installs). None found is a clear fatal below, not a spawn error — and not a
+// skip: an updater that cannot load the client must not report the client as fine.
+const CHROME_CANDIDATES = [
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium", "/usr/bin/chromium-browser", "/snap/bin/chromium",
+];
+const CHROME = process.env.CHROME_PATH || CHROME_CANDIDATES.find((p) => existsSync(p)) || null;
 const GAMEMASTER_ROLE = 4;
 
 function arg(name, fallback = null) {
@@ -72,6 +80,10 @@ let browser;
 const ignored = (text) => ignores.some((p) => p && text.includes(p));
 
 try {
+  if (!CHROME) {
+    throw new Error("no Chrome/Chromium found (set CHROME_PATH, or install google-chrome or "
+      + "chromium) — the browser smoke test cannot run on this host");
+  }
   browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: false,
