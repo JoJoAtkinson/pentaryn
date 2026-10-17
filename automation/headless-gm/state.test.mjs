@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { BOOTSTRAP_MIN_GAP_MS, COOKIE_REFRESH_MS, LOGIN_MIN_GAP_MS, READY_TIMEOUT_MS,
-         RESTART_MAX_BACKOFF_MS, RESTART_MIN_GAP_MS, afterBootstrap, afterConnected, afterLogin,
+         RESTART_MAX_BACKOFF_MS, RESTART_MIN_GAP_MS, STALE_RESTARTS_BEFORE_LOGIN, afterBootstrap, afterConnected, afterLogin,
          afterRestart, bootDecision, freshMemory, nextAction, trackReady, SAME_BOOT_MS,
          UNPAUSE_WINDOW_MS } from "./state.mjs";
 
@@ -150,4 +150,29 @@ test("bootDecision: nothing to decide until the page is ready as a GM in this wo
     assert.equal(bootDecision(obs({ bootAt: boot, page: p }), freshMemory(), T0), null);
   }
   assert.equal(bootDecision(obs({ bootAt: 0, page: page({ paused: true }) }), freshMemory(), T0), null);
+});
+
+test("a page that says connected while the broker's probe fails is stale: restart, then reload", () => {
+  const stale = obs({ bridge: { enabled: true, connected: true, probe: false } });
+  const mem = loggedIn();
+  mem.lastLoginAt = 0;
+  let d = nextAction(stale, mem, T0);
+  assert.deepEqual([d.state, d.action], ["BRIDGE_STALE", "restart-bridge"]);
+  afterRestart(mem, T0, false, { stale: true });
+  assert.equal(nextAction(stale, mem, T0 + 1000).action, "wait", "restart backoff");
+  for (let i = 1; i < STALE_RESTARTS_BEFORE_LOGIN; i++) afterRestart(mem, T0, false, { stale: true });
+  d = nextAction(stale, mem, T0 + RESTART_MAX_BACKOFF_MS + 1);
+  assert.deepEqual([d.state, d.action], ["BRIDGE_STALE", "login"]);
+  afterLogin(mem, T0 + RESTART_MAX_BACKOFF_MS + 1, { ok: true, world: "w" });
+  assert.equal(mem.staleRestarts, 0);
+});
+
+test("probe true or unknown (old broker) trusts getStatus; a good probe clears the stale count", () => {
+  for (const probe of [true, null, undefined]) {
+    assert.equal(nextAction(obs({ bridge: { enabled: true, connected: true, probe } }), loggedIn(), T0).state, "CONNECTED");
+  }
+  const mem = loggedIn();
+  afterRestart(mem, T0, false, { stale: true });
+  afterConnected(mem);
+  assert.equal(mem.staleRestarts, 0);
 });

@@ -143,7 +143,8 @@ The watchdog ticks every 10 s, and the decision is `state.mjs nextAction()`.
 | `NO_WORLD` | Foundry is at setup | Closes the page and waits |
 | `BOT_MISSING` | `cookie --as bot` exited 3 (no bot) or 7 (bot refused its password) | Bootstrap (create, or re-set the password), at most once every 5 min |
 | `LOGIN` | No page, the world changed, not on `/game`, `game.ready` false for 120 s, not a GM, or the session is older than 20 h | Mints a cookie and loads `/game`; logins are at least 30 s apart |
-| `CONNECTED` | `foundryMCPBridge.getStatus().connected` | Nothing |
+| `CONNECTED` | `foundryMCPBridge.getStatus().connected`, and the broker's probe agrees (or cannot be asked) | Nothing |
+| `BRIDGE_STALE` | The page says connected, but the broker's own round trip fails (control `:31414` `foundry_ping`, a fork method; checked every tick) | `foundryMCPBridge.restart()` on the restart backoff; after 3 restarts that do not fix it, a fresh login (page reload) |
 | `BRIDGE_DOWN` | Not connected | If no broker is on :31415/:31416, it waits (no Claude session on BOSS). If a broker is there, it runs `foundryMCPBridge.restart()`, backing off from 15 s to 2 min |
 | `BRIDGE_DISABLED` | The bridge's world setting `enabled` is off | Nothing, and does not loop |
 | `BRIDGE_MISSING` | No `foundryMCPBridge` on the page (module off in this world) | Nothing |
@@ -191,11 +192,12 @@ The watchdog ticks every 10 s, and the decision is `state.mjs nextAction()`.
 - **Exit 7, the bot refusing its password**, and the bootstrap re-setting it. This is covered
   by unit tests only.
 
-- **A broker that goes away and comes back — seen 2026-10-17, NOT recovered by itself.** After
-  the broker was `kill -9`'d, `foundryMCPBridge.getStatus().connected` stayed `true`, so the bot
-  stayed `CONNECTED` while every bridge tool said "module not connected". The same symptom was
-  there that morning after the 03:00 nightly. Fix by hand: `make foundry-headless-restart`. A real
-  fix needs a liveness probe that does not trust `getStatus()`.
+- **The page says connected but the broker cannot reach it.** Seen 2026-10-17 after the 03:00
+  nightly: every bridge tool said "module not connected" while the bot showed `CONNECTED`. Since
+  then the watchdog asks the broker itself (`BRIDGE_STALE`). Live, a `kill -9` of the broker with
+  the new watchdog recovered on its own (the page reconnected to the respawned broker, and the
+  probe answered `ok: true`). The stale branch itself (restart, then reload) is covered by
+  `state.test.mjs` only.
 - **A broker that goes away and comes back (the normal case).** This happens naturally when Claude sessions end
   and start. Look in the log for `BRIDGE_DOWN … no MCP broker`, then `✓ BRIDGE-RESTART`, then
   `CONNECTED`.

@@ -67,6 +67,8 @@ const BOT = process.env.PENTARYN_BOT_USER || "Claude";
 // whole 1.5 GB MemoryMax on BOSS (2026-10-16). PENTARYN_HEADLESS_CANVAS=1 turns it back on.
 const NO_CANVAS = !/^(1|true|yes)$/i.test(process.env.PENTARYN_HEADLESS_CANVAS || "");
 const BROKER_PORTS = [31415, 31416];
+/** The broker's control channel (JSON lines): foundry_ping is the liveness probe. */
+const CONTROL_PORT = 31414;
 const MAX_CONSECUTIVE_ERRORS = 5;
 
 const argv = new Set(process.argv.slice(2));
@@ -150,6 +152,31 @@ function portOpen(port, host = "127.0.0.1", ms = 1500) {
     sock.setTimeout(ms, () => done(false));
     sock.once("connect", () => done(true));
     sock.once("error", () => done(false));
+  });
+}
+
+/**
+ * Ask the broker whether it can reach the page: true / false, or null when it cannot be asked
+ * (no control port, a broker built before foundry_ping, a garbled reply). Never logged by the
+ * broker — it is not a tool call.
+ */
+function brokerProbe(ms = 8000) {
+  return new Promise((resolve) => {
+    const sock = net.connect({ port: CONTROL_PORT, host: "127.0.0.1" });
+    let buf = "";
+    const done = (v) => { sock.destroy(); resolve(v); };
+    sock.setTimeout(ms, () => done(null));
+    sock.once("error", () => done(null));
+    sock.once("connect", () => sock.write(JSON.stringify({ id: "headless-gm", method: "foundry_ping" }) + "\n"));
+    sock.on("data", (chunk) => {
+      buf += chunk;
+      const i = buf.indexOf("\n");
+      if (i < 0) return;
+      try {
+        const msg = JSON.parse(buf.slice(0, i));
+        done(msg.result ? msg.result.ok === true : null);   // error: Unknown method → null
+      } catch { done(null); }
+    });
   });
 }
 
@@ -406,7 +433,9 @@ async function doRestartBridge() {
   }
   await new Promise((r) => setTimeout(r, 3000));
   const { bridge } = await inspectPage(page);
-  return { ok: !!bridge?.connected, reason: `after restart: ${bridge?.connectionState ?? "?"}` };
+  const probe = bridge?.connected ? await brokerProbe() : null;
+  return { ok: !!bridge?.connected && probe !== false,
+           reason: `after restart: ${bridge?.connectionState ?? "?"}${probe === false ? ", broker probe still fails" : ""}` };
 }
 
 // ── the loop ────────────────────────────────────────────────────────────────
@@ -452,8 +481,10 @@ async function tick() {
   const fs = await foundryStatus();
   const pg = fs.up && fs.world ? await inspectPage(page) : { page: page ? { open: true } : null, bridge: null };
   trackReady(mem, now, pg.page);
+  const broker = await brokerUp();
+  if (pg.bridge?.connected && broker) pg.bridge.probe = await brokerProbe();
   const obs = { foundryUp: fs.up, world: fs.world, bootAt: fs.bootAt, page: pg.page, bridge: pg.bridge,
-                broker: await brokerUp() };
+                broker };
   const d = nextAction(obs, mem, now);
   transition(d, obs);
   if (pg.page?.ready && pg.page.patched === false && page) {
@@ -485,7 +516,7 @@ async function tick() {
     }
     case "restart-bridge": {
       const r = await doRestartBridge();
-      afterRestart(mem, Date.now(), r.ok);
+      afterRestart(mem, Date.now(), r.ok, { stale: d.state === "BRIDGE_STALE" });
       log(`${r.ok ? "✓" : "✗"} BRIDGE-RESTART ${r.reason}` +
           (r.ok ? "" : ` (next try in ${Math.round(mem.restartBackoffMs / 1000)} s)`));
       break;

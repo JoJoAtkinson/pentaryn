@@ -182,3 +182,10 @@ Upstream edits are small `// fork:`-marked hunks, each with a FORK.md row; logic
 `src/fork/` behind one call wherever it can. PR candidates (the per-query timeout, the dnd5e 6
 port, the `mapGenAutoStart` default) go upstream and then leave FORK.md. Rebase onto a new upstream
 release, then `scripts/fork-footprint.sh` and the vitest suite before building.
+
+## Control-channel additions
+
+- **`foundry_ping`** (2026-10-17) on the backend's control port `127.0.0.1:31414` (JSON lines,
+  `{"id","method":"foundry_ping"}`): a real round trip to the module (`foundry-mcp-bridge.ping`,
+  5 s timeout), answered `{ok, ms}` or `{ok: false, error}`. Not a tool call, so it never reaches
+  the action log. The headless GM watchdog calls it every tick ([`headless-gm.md`](headless-gm.md) `BRIDGE_STALE`).

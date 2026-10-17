@@ -4,7 +4,9 @@
  * it did in `mem` with the helpers below. Use-doc: context/foundry/headless-gm.md.
  *
  * obs  = { foundryUp, world, bootAt, page: {open, onGame, ready, isGM, world, paused} | null,
- *          bridge: {enabled, connected, connectionState} | null, broker }
+ *          bridge: {enabled, connected, connectionState, probe} | null, broker }
+ *          probe: the broker's own round trip to the page (control :31414 foundry_ping) —
+ *          true / false, or null when it could not be asked (old broker, no control port)
  * mem  = { world, loggedInAt, notReadySince, lastLoginAt, lastRestartAt, restartBackoffMs,
  *          botMissingWorld, lastBootstrapAt, bootstrapBlockedWorld, handledBootAt }
  * returns { state, action, reason }, action ∈
@@ -28,12 +30,15 @@ export const BOOTSTRAP_MIN_GAP_MS = 5 * 60_000;
 export const UNPAUSE_WINDOW_MS = 15 * 60_000;
 /** Two boot times (now − /api/status uptime) this close are the same boot. */
 export const SAME_BOOT_MS = 60_000;
+/** Bridge restarts that leave the broker's probe failing before the page is reloaded instead. */
+export const STALE_RESTARTS_BEFORE_LOGIN = 3;
 
 export function freshMemory() {
   return {
     world: null, loggedInAt: 0, notReadySince: 0, lastLoginAt: 0,
     lastRestartAt: 0, restartBackoffMs: RESTART_MIN_GAP_MS,
     botMissingWorld: null, lastBootstrapAt: 0, bootstrapBlockedWorld: null, handledBootAt: 0,
+    staleRestarts: 0,
   };
 }
 
@@ -82,7 +87,22 @@ export function nextAction(obs, mem, now) {
   const b = obs.bridge;
   if (!b) return { state: "BRIDGE_MISSING", action: "none",
                    reason: "foundryMCPBridge is not on the page (module disabled in this world?)" };
-  if (b.connected) return { state: "CONNECTED", action: "none", reason: "bridge connected" };
+  // getStatus().connected can stay true on a dead peer (seen 2026-10-17 after the nightly and
+  // after a broker kill -9): only the broker's own round trip is trusted when it answers.
+  if (b.connected && b.probe !== false) return { state: "CONNECTED", action: "none", reason: "bridge connected" };
+  if (b.connected && obs.broker) {
+    if (now - (mem.lastRestartAt || 0) < (mem.restartBackoffMs || RESTART_MIN_GAP_MS)) {
+      return { state: "BRIDGE_STALE", action: "wait", reason: "page says connected, broker probe fails; backoff" };
+    }
+    if ((mem.staleRestarts || 0) >= STALE_RESTARTS_BEFORE_LOGIN) {
+      if (now - (mem.lastLoginAt || 0) < LOGIN_MIN_GAP_MS) {
+        return { state: "BRIDGE_STALE", action: "wait", reason: "bridge restarts did not help (login backoff)" };
+      }
+      return { state: "BRIDGE_STALE", action: "login",
+               reason: `bridge restarts did not help (${mem.staleRestarts}) — reloading the page` };
+    }
+    return { state: "BRIDGE_STALE", action: "restart-bridge", reason: "page says connected, broker probe fails" };
+  }
   if (b.enabled === false) {
     return { state: "BRIDGE_DISABLED", action: "none",
              reason: "the bridge's world setting 'enabled' is off — not restarting" };
@@ -115,16 +135,18 @@ export function bootDecision(obs, mem, now) {
 // ── what the watchdog records after acting ──────────────────────────────────
 
 /** After a restart attempt: on success the backoff resets, on failure it doubles. */
-export function afterRestart(mem, now, ok) {
+export function afterRestart(mem, now, ok, { stale = false } = {}) {
   mem.lastRestartAt = now;
+  if (stale) mem.staleRestarts = ok ? 0 : (mem.staleRestarts || 0) + 1;
   mem.restartBackoffMs = ok ? RESTART_MIN_GAP_MS
     : Math.min(RESTART_MAX_BACKOFF_MS, (mem.restartBackoffMs || RESTART_MIN_GAP_MS) * 2);
   return mem;
 }
 
-/** A bridge seen connected resets the restart backoff. */
+/** A bridge seen connected resets the restart backoff and the stale count. */
 export function afterConnected(mem) {
   mem.restartBackoffMs = RESTART_MIN_GAP_MS;
+  mem.staleRestarts = 0;
   return mem;
 }
 
@@ -133,6 +155,7 @@ export function afterLogin(mem, now, { ok, world, botMissing = false }) {
   mem.lastLoginAt = now;
   if (ok) {
     mem.world = world; mem.loggedInAt = now; mem.notReadySince = now; mem.botMissingWorld = null;
+    mem.staleRestarts = 0;
   } else if (botMissing) {
     mem.botMissingWorld = world;
   }
