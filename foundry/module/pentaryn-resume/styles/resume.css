@@ -1,0 +1,7 @@
+/*
+ * Pentaryn Resume — every selector sits under .pentaryn-resume or the module's prefix (.pre-…),
+ * so nothing here can restyle another package's DOM. Use core's CSS variables and
+ * .theme-dark / .theme-light rather than fixed colours. No !important in new rules.
+ *
+ * Nothing to style: the module has no UI.
+ */

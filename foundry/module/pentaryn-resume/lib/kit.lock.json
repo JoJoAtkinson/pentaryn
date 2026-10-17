@@ -1,0 +1,11 @@
+{
+  "version": "1.2.0",
+  "tier": "small",
+  "files": [
+    "errors",
+    "log",
+    "hooks",
+    "publish",
+    "resolve"
+  ]
+}

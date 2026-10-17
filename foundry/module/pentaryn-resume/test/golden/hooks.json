@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "canvasPan"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "updateScene"
+  },
+  {
+    "kind": "on",
+    "name": "ready"
+  }
+]
