@@ -412,6 +412,40 @@ async function doBootstrap(world) {
   }
 }
 
+/**
+ * The updater's notices (scripts/foundry/update/notify.py queue_notice — off the Mac it has no
+ * Notification Center): one JSON per notice, posted to the world's chat as a whisper to the
+ * full GMs, oldest first, then deleted. Stops at the first that fails (no GM user, no world)
+ * and tries again next tick; a file that is not JSON is set aside as .bad.
+ */
+const NOTICE_DIR = path.join(REPO, ".state", "vtt-notices");
+async function postNotices() {
+  let files;
+  try { files = readdirSync(NOTICE_DIR).filter((f) => f.endsWith(".json")).sort(); } catch { return; }
+  for (const f of files) {
+    const full = path.join(NOTICE_DIR, f);
+    let notice;
+    try { notice = JSON.parse(readFileSync(full, "utf8")); } catch {
+      try { renameSync(full, `${full}.bad`); } catch { /* gone */ }
+      continue;
+    }
+    const ok = await page.evaluate(async (n) => {
+      const g = globalThis.game;
+      const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      const gms = g.users.filter((u) => u.role >= CONST.USER_ROLES.GAMEMASTER).map((u) => u.id);
+      if (!gms.length) return false;
+      await ChatMessage.create({
+        speaker: { alias: "Updater" }, whisper: gms,
+        content: `<p><strong>${esc(n.title)}</strong> — ${esc(n.subtitle)}</p><p>${esc(n.message).replace(/\n/g, "<br>")}</p>`,
+      });
+      return true;
+    }, notice).catch(() => false);
+    if (!ok) return;
+    try { unlinkSync(full); } catch { /* already gone */ }
+    log(`✉ NOTICE posted to the GMs: ${notice.subtitle ?? f}`);
+  }
+}
+
 /** Foundry launches every world paused; after a restart the bot lifts it (bootDecision). */
 async function doUnpause() {
   try {
@@ -522,7 +556,10 @@ async function tick() {
       break;
     }
     case "none":
-      if (d.state === "CONNECTED") afterConnected(mem);
+      if (d.state === "CONNECTED") {
+        afterConnected(mem);
+        await postNotices();
+      }
       break;
     default: break;   // idle | wait
   }

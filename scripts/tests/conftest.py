@@ -13,6 +13,7 @@ Four things live here, and only these:
 * ``_isolate_ops_log`` (autouse) — every module install appends to
   ``foundry/logs/ops-YYYY-MM.jsonl`` (python-tooling-10). No test may write there, so the log
   folder is a tmp folder for every test, and ``$PENTARYN_OPS_LOG`` is unset.
+* ``_isolate_notices`` (autouse) — notify's off-Mac queue for the headless GM is a tmp folder.
 * ``fake_cloud`` / ``fake_data`` (autouse) — the cloud is a temp folder and Foundry's data
   root a tiny temp tree, and the host is the primary ``testhost``; see the section at the
   bottom (rclone-two-hosts-2026-10 §10).
@@ -78,6 +79,15 @@ def _isolate_ops_log(monkeypatch, tmp_path_factory):
 
     monkeypatch.setattr(cfg, "OPS_LOG_DIR", tmp_path_factory.mktemp("ops-log"))
     monkeypatch.delenv("PENTARYN_OPS_LOG", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_notices(monkeypatch, tmp_path_factory):
+    """Off the Mac, notify() queues a file for the headless GM to post into the world's
+    chat. No test may queue a real one."""
+    from scripts.foundry.update import notify
+
+    monkeypatch.setattr(notify, "NOTICE_DIR", tmp_path_factory.mktemp("vtt-notices"))
 
 
 # ── two hosts, one cloud (context/plans/rclone-two-hosts-2026-10.md §10) ──────

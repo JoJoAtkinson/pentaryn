@@ -5,7 +5,8 @@
 #                   world — a forgotten open tab must not block the backup), take the shutdown
 #                   snapshot and WAIT for its upload (make vtt-down WAIT=1), start everything
 #                   again (make vtt-up FROM=local), relaunch the world that was active, prove
-#                   it serves.
+#                   it serves. MONDAYS (VTT_UPDATE_DAY) it then runs the updater
+#                   (automation/bin/vtt-update.sh) with the headless GM stopped.
 #   Foundry down  → the stopped-server backup alone (make foundry-backup). Nothing starts.
 #
 # Started by Windows Task Scheduler through wsl.exe (automation/windows/register-vtt-nightly.ps1),
@@ -195,7 +196,9 @@ fi
 if [ $? -eq 0 ]; then RESTARTED=1; else RC=1; exit 1; fi   # the trap retries once
 
 # ── relaunch the world that was active (needs the admin password from Infisical) ──
-if [ "$WORLD" != "-" ] && [ -z "$DRY" ]; then
+relaunch_world() {
+  [ "$WORLD" != "-" ] || return 0
+  if [ -n "$DRY" ]; then log "▸ relaunch world $WORLD (dry run — not run)"; return 0; fi
   log "▸ relaunch world $WORLD"
   if WORLD="$WORLD" timeout 360 "$PY" - >>"$LOG" 2>&1 <<'EOF'
 import os
@@ -208,25 +211,49 @@ if a.status().world != world:
     a.launch_world(world)
 print("  world serving:", a.wait_for_world(world, timeout=300))
 EOF
-  then log "  ✓ $WORLD is serving"
-  else log "✗ FAILED: world $WORLD did not relaunch — Foundry is up; launch it from /setup"; RC=1
+  then log "  ✓ $WORLD is serving"; return 0
+  else log "✗ FAILED: world $WORLD did not relaunch — Foundry is up; launch it from /setup"; return 1
   fi
-elif [ -n "$DRY" ]; then
-  log "▸ relaunch world $WORLD (dry run — not run)"
+}
+relaunch_world || RC=1
+
+# ── Monday: the updater, after the backup above (context/plans/monday-updater-2026-10.md) ──
+# Only when everything so far succeeded: an update with no fresh backup behind it is the one
+# thing this must never do. The headless GM is stopped for it — the updater's gate refuses
+# while any user is connected, and the bot would otherwise hold a session through /setup and
+# a core restart. The updater restores the tunnel and world itself; this proves it.
+UPDATE_DAY="${VTT_UPDATE_DAY:-1}"      # date +%u — 1 is Monday
+if [ "$(date +%u)" = "$UPDATE_DAY" ]; then
+  if [ $RC -ne 0 ]; then
+    log "  Monday update skipped: the backup/restart above did not succeed"
+  elif [ -n "$DRY" ]; then
+    log "▸ Monday update: stop the headless GM, automation/bin/vtt-update.sh (dry run — not run)"
+  else
+    systemctl --user stop foundry-headless-gm >/dev/null 2>&1 && log "  headless GM stopped for the update"
+    step "Monday update" 9000 "$REPO/automation/bin/vtt-update.sh"
+    URC=$?
+    [ $URC -eq 0 ] || log "  ! the update run ended rc=$URC — .state/logs/vtt-update-$(date +%F).log, foundry/logs/auto-updates/"
+    # the updater leaves Foundry as it found it; if it did not, bring the world back here
+    if [ "$WORLD" != "-" ] && ! "$PY" -c "import sys; from scripts.foundry.update.admin import FoundryAdmin; sys.exit(0 if FoundryAdmin().status().world == sys.argv[1] else 1)" "$WORLD" 2>>"$LOG"; then
+      log "  ! $WORLD is not serving after the update — relaunching"
+      relaunch_world || RC=1
+    fi
+  fi
 fi
 
 # ── the headless Assistant-GM bot (context/foundry/headless-gm.md) ──
-# It recovers from the restart on its own; restarting it gives it a fresh Chrome after one.
-# Non-fatal and silent where the unit is not installed (the Mac, a fresh host).
+# A fresh Chrome after the restart; it unpauses the world once per Foundry boot. Started, not
+# only restarted: the Monday branch stopped it. Silent where the unit is not installed.
 if [ -z "$DRY" ]; then
-  if systemctl --user try-restart foundry-headless-gm >/dev/null 2>&1 \
+  if systemctl --user is-enabled --quiet foundry-headless-gm 2>/dev/null \
+     && systemctl --user restart foundry-headless-gm >/dev/null 2>&1 \
      && systemctl --user is-active --quiet foundry-headless-gm 2>/dev/null; then
-    log "  headless GM restarted"
+    log "  headless GM (re)started"
   else
     log "  headless GM not installed/running (ok)"
   fi
 else
-  log "▸ try-restart foundry-headless-gm (dry run — not run)"
+  log "▸ restart foundry-headless-gm (dry run — not run)"
 fi
 
 [ $RC -eq 0 ] && log "✓ nightly complete"

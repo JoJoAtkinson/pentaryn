@@ -81,7 +81,9 @@ window:
   # Must contain the scheduled 04:06 start with room in front of it, and must NOT
   # stretch into the afternoon — the whole point is to refuse a run that launchd
   # deferred onto a wake hours later, which would take the tunnel down before a session.
-  earliest: "03:30"
+  # BOSS (2026-10-17): the run starts inside the Monday 03:00 nightly, right after its
+  # backup (~03:06), so earliest is 03:00.
+  earliest: "03:00"
   latest: "09:00"
 
 report:

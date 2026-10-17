@@ -1,5 +1,6 @@
 #!/bin/bash
-# The Saturday-04:06 entrypoint. Invoked by com.pentaryn.vtt-update.
+# The updater's entrypoint. Mac: com.pentaryn.vtt-update (Saturday 04:06, unloaded since
+# 2026-10). BOSS: the Monday branch of automation/bin/vtt-nightly.sh, after its backup.
 #
 # Everything interesting lives in Python; this exists to give that Python the
 # environment launchd does not:
@@ -146,8 +147,11 @@ fi
 echo "  run timeout ${RUN_TIMEOUT}s" >> "$LOG"
 
 # caffeinate -i (no idle sleep) -m (no disk sleep), holding the assertion for exactly
-# as long as the run takes.
-run_with_timeout "$RUN_TIMEOUT" caffeinate -im "$PY" -m scripts.foundry.update.cli run "$@" >> "$LOG" 2>&1
+# as long as the run takes. macOS only: BOSS/WSL has no caffeinate (and no sleep to
+# fear: the VM lives as long as Foundry's systemd unit does), so there it runs bare.
+AWAKE=()
+if command -v caffeinate >/dev/null 2>&1; then AWAKE=(caffeinate -im); fi
+run_with_timeout "$RUN_TIMEOUT" "${AWAKE[@]}" "$PY" -m scripts.foundry.update.cli run "$@" >> "$LOG" 2>&1
 RC=$?
 
 if [ "$RC" -eq 143 ] || [ "$RC" -eq 137 ]; then

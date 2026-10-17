@@ -27,6 +27,12 @@
  * runs in the GUI session so a real window is available. Testing on the same renderer
  * the table uses is the point.
  *
+ * Linux with no display (BOSS at 03:00 under Task Scheduler S4U: no WSLg session) runs
+ * headless instead, WebGL on SwiftShader — the renderer differs, but a module that throws
+ * on load still throws. SMOKE_HEADLESS=1 forces it anywhere, SMOKE_HEADLESS=0 forbids it.
+ * There the headless GM's chrome-headless-shell (PENTARYN_HEADLESS_CHROME) is a candidate
+ * after CHROME_PATH and the usual installs.
+ *
  * Usage:
  *   node smoke.mjs --url http://127.0.0.1:30000 --world space-journey \
  *                  --dwell 60 --out result.json [--ignore "substr" ...]
@@ -48,7 +54,13 @@ const CHROME_CANDIDATES = [
   "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable",
   "/usr/bin/chromium", "/usr/bin/chromium-browser", "/snap/bin/chromium",
 ];
-const CHROME = process.env.CHROME_PATH || CHROME_CANDIDATES.find((p) => existsSync(p)) || null;
+const CHROME = process.env.CHROME_PATH || CHROME_CANDIDATES.find((p) => existsSync(p))
+  || (process.env.PENTARYN_HEADLESS_CHROME && existsSync(process.env.PENTARYN_HEADLESS_CHROME)
+      ? process.env.PENTARYN_HEADLESS_CHROME : null)
+  || null;
+const NO_DISPLAY = process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
+const HEADLESS = process.env.SMOKE_HEADLESS === "1"
+  || (process.env.SMOKE_HEADLESS !== "0" && (NO_DISPLAY || /chrome-headless-shell/.test(CHROME ?? "")));
 const GAMEMASTER_ROLE = 4;
 
 function arg(name, fallback = null) {
@@ -71,7 +83,7 @@ const profileDir = arg("profile", "/tmp/vtt-smoke-chrome");
 const result = {
   ok: false, world, stage: "start", errors: [], warnings: [],
   gameReady: false, canvasReady: false, activeModules: [], scene: null,
-  durationMs: 0, note: null,
+  durationMs: 0, note: null, renderer: null,
 };
 
 const started = Date.now();
@@ -86,18 +98,20 @@ try {
   }
   browser = await puppeteer.launch({
     executablePath: CHROME,
-    headless: false,
-    // Off-screen rather than headless: same renderer as the players, no window in the
-    // way if Joe happens to be at the machine.
+    // Off-screen rather than headless where there is a display: same renderer as the
+    // players, no window in the way if Joe happens to be at the machine.
+    headless: HEADLESS ? (/chrome-headless-shell/.test(CHROME) ? "shell" : true) : false,
     args: [
       "--window-position=-4000,-4000", "--window-size=1600,1000",
       "--no-first-run", "--no-default-browser-check",
       "--disable-features=Translate,MediaRouter",
+      ...(HEADLESS ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--no-sandbox"] : []),
     ],
     userDataDir: profileDir,
     protocolTimeout: 300000,
   });
 
+  result.renderer = HEADLESS ? "headless (SwiftShader)" : "headful (off-screen)";
   const page = await browser.newPage();
   await page.setViewport({ width: 1600, height: 1000 });
 

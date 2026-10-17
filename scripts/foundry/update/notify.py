@@ -38,6 +38,28 @@ CLASSES = {
 }
 
 
+NOTICE_DIR = REPO_ROOT / ".state" / "vtt-notices"
+
+
+def queue_notice(kind: str, title: str, subtitle: str, message: str) -> Path | None:
+    """One JSON file per notice in NOTICE_DIR, for the headless GM to post and delete.
+    Never raises. Written to a temp name and renamed, so the bot never reads half a file."""
+    import json
+    import time
+    try:
+        NOTICE_DIR.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        path = NOTICE_DIR / f"{stamp}-{time.monotonic_ns() % 10**6:06d}-{kind}.json"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"kind": kind, "title": title, "subtitle": subtitle,
+                                   "message": message.strip(), "at": time.time()}),
+                       encoding="utf-8")
+        tmp.rename(path)
+        return path
+    except OSError:
+        return None
+
+
 def notify(kind: str, subtitle: str, message: str, *, title: str = "Ardenhaven VTT",
            modal: bool | None = None, sound: str | None = None) -> None:
     """Post one notification. Never raises — this is the last thing in a run.
@@ -48,8 +70,12 @@ def notify(kind: str, subtitle: str, message: str, *, title: str = "Ardenhaven V
     """
     spec = CLASSES.get(kind, CLASSES["done"])
     from scripts.foundry import host
-    if not host.is_mac():  # no Notification Center off the Mac: the run log has it
+    if not host.is_mac():
+        # No Notification Center off the Mac. The run log has it, and the notice is queued
+        # for the headless GM, which posts it to the world's chat as a whisper to the full
+        # GMs once it is connected (automation/headless-gm, context/foundry/headless-gm.md).
         print(f"  [{kind}] {title}: {subtitle} — {message.strip()}")
+        queue_notice(kind, f"{spec['prefix']} {title}", subtitle, message)
         return
     use_modal = spec["modal"] if modal is None else modal
     use_sound = sound if sound is not None else spec["sound"]
