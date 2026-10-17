@@ -1465,7 +1465,7 @@ MAKE_CHECKS_PIN = [
     "make foundry-lookup-check",
     "make foundry-movement-check", "make foundry-names-check", "make foundry-pings-check",
     "make foundry-portals-check",
-    "make foundry-prompts-check", "make foundry-riders-check", "make foundry-senses-check",
+    "make foundry-prompts-check", "make foundry-resume-check", "make foundry-riders-check", "make foundry-senses-check",
     "make foundry-ties-check", "make foundry-transform-check",
 ]
 

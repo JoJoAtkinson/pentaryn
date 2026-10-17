@@ -307,6 +307,7 @@ def test_every_subcommand_routes(monkeypatch):
         monkeypatch.setattr(cli.modules, fn, lambda *a, **k: 0)
     monkeypatch.setattr(cli.login_mod, "login", lambda *a, **k: 0)
     monkeypatch.setattr(cli.index, "main", lambda *a, **k: 0)
+    monkeypatch.setattr(cli.headless_gm, "main", lambda *a, **k: 0)
 
     # a subcommand left unstubbed must never reach the real Foundry Data folder (an unstubbed
     # importer-install rewrote the live pentaryn-importer on every pytest run, 2026-10-12)

@@ -23,8 +23,8 @@ import os
 import sys
 from pathlib import Path
 
-from . import (bridge, config as cfg, evallog, index, login as login_mod, modules, pipeline,
-               service)
+from . import (bridge, config as cfg, evallog, headless_gm, index, login as login_mod, modules,
+               pipeline, service)
 from .out import say
 
 
@@ -66,6 +66,18 @@ def build_parser() -> argparse.ArgumentParser:
     bc = add("bridge-clean", "Kill orphaned MCP bridge processes. Never touches a server "
                              "whose parent is a live Claude session.")
     bc.add_argument("--dry-run", action="store_true", help="list what would be killed")
+    hg = add("headless-gm", "The always-on headless Assistant-GM bot (context/foundry/headless-gm.md): "
+                            "ensure (JSON: world, bot id, GM id), cookie (mint a session into a 0600 "
+                            "file for the watchdog), status.")
+    hg.add_argument("action", nargs="?", default="status", choices=("ensure", "cookie", "status"))
+    hg.add_argument("--as", dest="as_", choices=("bot", "gm"), default="bot",
+                    help="cookie: log in as the bot (default) or the world's Gamemaster")
+    hg.add_argument("--out", type=Path, metavar="PATH",
+                    help="cookie: where to write it (default $XDG_RUNTIME_DIR/pentaryn-headless-gm/cookie.json)")
+    hg.add_argument("--bot-password", action="store_true",
+                    help="cookie: also put the bot's password (from Infisical; created there if "
+                         "missing) in the file, for the bootstrap that creates the bot user")
+    hg.add_argument("--json", action="store_true", help="status: print JSON")
     er = add("eval-report", "What the MCP action logs show: eval-js outcomes, the "
                             "game.pentaryn paths it reaches (promotion candidates), discovery "
                             "calls, top errors, per-tool counts. Read-only.")
@@ -174,6 +186,9 @@ def main(argv: list[str] | None = None) -> int:
     if c == "tunnel-logs":   return service.tunnel_logs(args.lines)
     if c == "bridge-status": return bridge.status(as_json=args.json)
     if c == "bridge-clean":  return bridge.clean(dry_run=args.dry_run)
+    if c == "headless-gm":   return headless_gm.main(args.action, as_=args.as_, out=args.out,
+                                                 with_bot_password=args.bot_password,
+                                                 as_json=args.json)
     if c == "eval-report":   return eval_report(args.dir, since=args.since, as_json=args.json)
 
     if c == "actors":        return pipeline.build_actors()

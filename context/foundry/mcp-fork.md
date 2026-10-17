@@ -17,11 +17,13 @@ Module APIs) · the design history → [`../plans/foundry-mcp-fork.md`](../plans
 
 - Repo, per host: Mac `/Users/joe/Documents/GitHub/foundry-vtt-mcp` · BOSS (WSL, the primary
   since 2026-10-15) `/home/joe/code/foundry-vtt-mcp`, on the Linux filesystem, never under
-  `/mnt/c` (not cloned there as of 2026-10-15). Branch `pentaryn` (fork of
+  `/mnt/c` (cloned and built 2026-10-16). Branch `pentaryn` (fork of
   `adambdooley/foundry-vtt-mcp`; remote `upstream`). Claude Code runs its built wrapper,
-  `packages/mcp-server/dist/index.js` (`.mcp.json` in this repo). **`.mcp.json` still holds the
-  Mac's absolute paths** (the wrapper and `PENTARYN_MCP_LOG_DIR`), so on BOSS the bridge fails to
-  connect until the fork is cloned and built there and that file points at the BOSS paths.
+  `packages/mcp-server/dist/index.js` (`.mcp.json` in this repo). **`.mcp.json` holds the
+  Mac's absolute paths**; BOSS overrides it with a local-scope server of the same name
+  (`claude mcp add --scope local foundry -e FOUNDRY_CONNECTION_TYPE=websocket -e
+  PENTARYN_MCP_LOG_DIR=/home/joe/code/pentaryn/foundry/logs -- node
+  /home/joe/code/foundry-vtt-mcp/packages/mcp-server/dist/index.js`, stored in `~/.claude.json`).
 - **`FORK.md`** at the fork root lists every upstream file the fork edits — hunks, purpose, local
   vs upstream-PR candidate, covering test. `scripts/fork-footprint.sh` fails when an upstream file
   is touched without a row there. Run it before committing anything outside `src/fork/`.

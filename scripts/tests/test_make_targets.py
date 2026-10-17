@@ -67,6 +67,14 @@ def test_every_registered_module_has_a_check_target(module):
     ("test", "pytest -q"),
     ("foundry-eval-report", "scripts.foundry.ops eval-report"),
     ("foundry-importer-install", "scripts.foundry.ops importer-install"),
+    ("foundry-headless-install", "automation/headless-gm/install.sh"),
+    ("foundry-headless-start", "systemctl --user start foundry-headless-gm"),
+    ("foundry-headless-stop", "systemctl --user stop foundry-headless-gm"),
+    ("foundry-headless-restart", "systemctl --user restart foundry-headless-gm"),
+    ("foundry-headless-status", "scripts.foundry.ops headless-gm status"),
+    ("foundry-headless-logs", "journalctl --user -u foundry-headless-gm -n 60"),
+    ("foundry-headless-ensure", "automation/headless-gm/watchdog.mjs --bootstrap-only"),
+    ("foundry-headless-test", "--test automation/headless-gm/state.test.mjs"),
 ])
 def test_new_targets(target, expect):
     assert expect in _dry(target)

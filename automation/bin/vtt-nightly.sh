@@ -1,9 +1,11 @@
 #!/bin/bash
 # 03:00 nightly: a world left running for days still reaches the cloud every night.
 #
-#   Foundry up    → close the tunnel, stop Foundry, take the shutdown snapshot and WAIT for
-#                   its upload (make vtt-down WAIT=1), start everything again (make vtt-up
-#                   FROM=local), relaunch the world that was active, prove it serves.
+#   Foundry up    → close the tunnel, stop Foundry (which disconnects anyone still in the
+#                   world — a forgotten open tab must not block the backup), take the shutdown
+#                   snapshot and WAIT for its upload (make vtt-down WAIT=1), start everything
+#                   again (make vtt-up FROM=local), relaunch the world that was active, prove
+#                   it serves.
 #   Foundry down  → the stopped-server backup alone (make foundry-backup). Nothing starts.
 #
 # Started by Windows Task Scheduler through wsl.exe (automation/windows/register-vtt-nightly.ps1),
@@ -12,7 +14,6 @@
 # Refuses, logged and with nothing touched:
 #   - another nightly run holding the lock;
 #   - an auto-update run (its lock — vtt-up/vtt-down check it themselves too);
-#   - anyone connected to the world (a 3am session is not interrupted; FORCE=1 overrides);
 #   - a late start outside 02:00–06:59 (StartWhenAvailable fires a missed 03:00 at the next
 #     logon/wake, which can be mid-afternoon — the stopped-server backup still runs then;
 #     FORCE=1 overrides);
@@ -149,18 +150,12 @@ if [ "$FOUNDRY" = down ]; then
   exit $RC
 fi
 
-# Fail closed: anything but a plain integer counts as "someone may be connected".
-case "$USERS" in ''|*[!0-9]*)
-  if [ -z "$FORCE" ]; then
-    log "skipped: connected-user count unreadable ('$USERS') — not risking a session (FORCE=1 overrides)"
-    RC=75; exit 75
-  fi
-  USERS=0 ;;
-esac
-if [ "$USERS" -gt 0 ] && [ -z "$FORCE" ]; then
-  log "skipped: $USERS user(s) connected to $WORLD — not interrupting a session (FORCE=1 overrides)"
-  RC=75; exit 75
-fi
+# Connected users do not stop the run: nobody plays at 03:00, so anyone still connected is a
+# tab left open, and stopping Foundry disconnects them. The 02:00–06:59 window below is what
+# keeps a late catch-up run from landing on a real session.
+# The headless GM bot ("Claude", make foundry-headless-status) is always connected, so this
+# count is one higher than the humans while it runs.
+case "$USERS" in ''|0|-) ;; *) log "  disconnecting $USERS connected user(s) from $WORLD" ;; esac
 
 HOUR=$(date +%-H)
 if { [ "$HOUR" -lt 2 ] || [ "$HOUR" -ge 7 ]; } && [ -z "$FORCE" ] && [ -n "$DRY" ]; then
@@ -218,6 +213,20 @@ EOF
   fi
 elif [ -n "$DRY" ]; then
   log "▸ relaunch world $WORLD (dry run — not run)"
+fi
+
+# ── the headless Assistant-GM bot (context/foundry/headless-gm.md) ──
+# It recovers from the restart on its own; restarting it gives it a fresh Chrome after one.
+# Non-fatal and silent where the unit is not installed (the Mac, a fresh host).
+if [ -z "$DRY" ]; then
+  if systemctl --user try-restart foundry-headless-gm >/dev/null 2>&1 \
+     && systemctl --user is-active --quiet foundry-headless-gm 2>/dev/null; then
+    log "  headless GM restarted"
+  else
+    log "  headless GM not installed/running (ok)"
+  fi
+else
+  log "▸ try-restart foundry-headless-gm (dry run — not run)"
 fi
 
 [ $RC -eq 0 ] && log "✓ nightly complete"

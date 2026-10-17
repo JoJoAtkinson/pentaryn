@@ -143,6 +143,27 @@ def test_socket_call_raises_when_no_ack_ever_comes():
         fa._socket_call("getSetupData")
 
 
+def test_socket_call_mints_a_session_first(monkeypatch):
+    """Without a session cookie Foundry binds no socket listeners and never acks; a fresh
+    client makes one HTTP request first (/api/status sets the cookie)."""
+    import requests
+    fa = admin_mod.FoundryAdmin(timeout=0.01)
+    calls: list[str] = []
+    monkeypatch.setattr(fa, "status", lambda: calls.append("status"))
+    real = fa.session
+    fa.session = _PollingSession(['431[{}]'])
+    fa.session.cookies = requests.cookies.RequestsCookieJar()
+    assert fa._socket_call("getJoinData") == {}
+    assert calls == ["status"]
+    fa.session.cookies.set("session", "x")
+    calls.clear()
+    fa.session = type(fa.session)(['431[{}]'])
+    fa.session.cookies = real.cookies
+    fa.session.cookies.set("session", "x")
+    fa._socket_call("getJoinData")
+    assert calls == []
+
+
 def test_setup_data_authenticates_then_emits_getSetupData(monkeypatch):
     fa = admin_mod.FoundryAdmin()
     order: list[str] = []

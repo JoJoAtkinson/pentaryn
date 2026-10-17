@@ -1,0 +1,25 @@
+# The headless Assistant-GM bot: keeps the Foundry MCP bridge connected on this host.
+# Installed by `make foundry-headless-install` (automation/headless-gm/install.sh), which
+# replaces @REPO@ with the checkout path. Use-doc: context/foundry/headless-gm.md
+[Unit]
+Description=Pentaryn headless Assistant-GM (keeps the Foundry MCP bridge connected)
+# Ordering only. No Wants=: a restart of this unit (Restart=always, the nightly's
+# try-restart, make foundry-headless-restart) must never start Foundry while the nightly,
+# the updater or Joe has stopped it on purpose. The watchdog idles in FOUNDRY_DOWN instead.
+After=foundryvtt.service network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/pentaryn/env
+WorkingDirectory=@REPO@
+ExecStart=/bin/sh -c 'exec "${PENTARYN_NODE:-node}" automation/headless-gm/watchdog.mjs'
+Restart=always
+RestartSec=10
+# SIGTERM closes Chrome; give it a moment before the cgroup is killed. Chrome stays in this
+# cgroup (the watchdog gives it no session bus), so MemoryMax and the final kill cover it.
+TimeoutStopSec=20
+MemoryMax=1500M
+Nice=10
+
+[Install]
+WantedBy=default.target

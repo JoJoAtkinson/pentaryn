@@ -31,6 +31,11 @@ written, and the notification still fires.
 
 ---
 
+> **Also in `automation/`, and not part of the updater:** `headless-gm/` and `systemd/` hold the
+> always-on headless Assistant-GM bot that keeps the MCP bridge connected on BOSS
+> ([`context/foundry/headless-gm.md`](../context/foundry/headless-gm.md)), and `bin/vtt-nightly.sh`
+> is the 03:00 BOSS nightly.
+
 ## One-time setup
 
 ```bash

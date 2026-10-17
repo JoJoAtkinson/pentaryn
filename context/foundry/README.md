@@ -83,6 +83,7 @@ The table is generated from each `module.json`, the module's code and its
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
 | `portals` | `pentaryn-portals` | 0.5.0 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `spreadArrival` … (+3) | [README](../../foundry/module/pentaryn-portals/README.md) |
 | `prompts` | `pentaryn-prompts` | 0.4.5 | full tier | `list`, `gather`, `crops`, `replaceMany`, `show`, `replace`, `open`, `place` … (+6) | [README](../../foundry/module/pentaryn-prompts/README.md) |
+| `resume` | `pentaryn-resume` | 0.1.0 | small tier | — (no describe golden yet) | [`resume.md`](resume.md) · [README](../../foundry/module/pentaryn-resume/README.md) |
 | `riders` | `pentaryn-riders` | 0.3.0 | full tier | `arcaneRecovery`, `featuresOf`, `report`, `setType`, `retireManual`, `spendHitDie`, `restoreHitDie`, `hdPools` … (+3) | [README](../../foundry/module/pentaryn-riders/README.md) |
 | `chain`, `senses` | `pentaryn-senses` | 0.5.0 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
@@ -103,6 +104,7 @@ The table is generated from each `module.json`, the module's code and its
 | Day-to-day server ops — start/stop, tunnel, OneDrive backups (world snapshots ~95 MB + module bundles, §3; `make vtt-down` uploads in the background, `make foundry-cloud` shows progress) and the boot choice between the Mac and BOSS (`host.py`), module install | [`ops.md`](ops.md) |
 | Who can reach vtt.atjoseph.com — the Google login, whitelisting a player's Gmail (**two lists: Google test users + Cloudflare policy**), session length | [`cloudflare-access.md`](cloudflare-access.md) |
 | Adding or changing an MCP bridge tool (`mcp__foundry__*`), the fork repo, its build, logs and upstream footprint | [`mcp-fork.md`](mcp-fork.md) |
+| Bridge not connected on BOSS, or the always-on headless GM user "Claude" (role 3) — its unit, Chrome, login, states | [`headless-gm.md`](headless-gm.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
 | "Process the prompt markers" / "replace the prompts" — `Prompt · <size>` tokens with typed text | [`prompt-markers.md`](prompt-markers.md) |
 | "The party goes upstairs" — Region + teleport scene links; destination cards, travel badges, party teleport (`pentaryn-portals`) | [`scene-links.md`](scene-links.md) · [README](../../foundry/module/pentaryn-portals/README.md) |
@@ -114,6 +116,7 @@ The table is generated from each `module.json`, the module's code and its
 | Spell circles you can't move/delete, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
+| "Log back in where I was" — each player's last map, level, pan and zoom restored at login, also after the 03:00 nightly restart (`pentaryn-resume`) | [`resume.md`](resume.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
 | Feat and spell riders — Elemental Adept / Affinity, Battle Medic, Hit Dice −/+, rituals, Arcane Recovery, concentration and summon clean-up — `pentaryn-riders` | [`../../foundry/module/pentaryn-riders/README.md`](../../foundry/module/pentaryn-riders/README.md) (which riders module: [`melee.md`](melee.md)) |
 | Wild Shape / Starry Form / Return / Change Form / a form left in the sidebar — `pentaryn-transform` | [`../../foundry/module/pentaryn-transform/README.md`](../../foundry/module/pentaryn-transform/README.md) |
@@ -142,6 +145,10 @@ Three current sessions sat there unable to bind.
 
     make foundry-bridge-status    # who is live, who is an orphan, who holds the ports
     make foundry-bridge-clean     # kill orphans only  (DRY=1 to preview)
+
+**On BOSS the GM tab is a headless bot** (`Claude`, role 3, the `foundry-headless-gm` unit): when
+bridge tools fail there, `make foundry-headless-status` is the first check, then
+`make foundry-headless-restart` rather than reloading a tab ([`headless-gm.md`](headless-gm.md)).
 
 **`clean` never kills a server whose parent is a live `claude` process.** That
 restraint is the point: the obvious fix — kill everything matching `foundry-vtt-mcp` —
@@ -278,7 +285,7 @@ keep showing the *host's* own relationships. See [`../plans/foundry-npc-ties.md`
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`
 - `foundry/module/` — in-house modules: `pentaryn-ties`, `-importer`,
   `-pings`, `-dropbin`, `-attunement`, `-lookup`, `-feedback` (player bug/defect/feature reports, [`feedback.md`](feedback.md)), `-prompts`, `-journal`, `-combat`, `-transform` (Wild Shape and Starry Form on the Argon Bonus bar: pick a form, Return/Change Form, use count; revert from an item; blocks stacked transforms), `-names` (actor rename carries to token labels;
-  nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (lights: an item flagged
+  nicknames kept), `-cursors` (tool cursors), `-resume` (log back in on your last map and view), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (lights: an item flagged
   `flags.pentaryn-senses.light` lights its carrier; torches, lamps, lanterns and candles get a flame
   button; the Light cantrip asks where the light goes; `glow.mjs` adds the wandering "Broken glow"
   light animation; `chain.mjs` draws an iron chain between two tokens, GM Token HUD → Chain to

@@ -1,0 +1,13 @@
+{
+  "name": "pentaryn-headless-gm",
+  "private": true,
+  "type": "module",
+  "description": "Always-on headless Assistant-GM tab that keeps the Foundry MCP bridge connected on BOSS — see watchdog.mjs and context/foundry/headless-gm.md",
+  "scripts": {
+    "test": "node --test state.test.mjs"
+  },
+  "dependencies": {
+    "@puppeteer/browsers": "^2.10.0",
+    "puppeteer-core": "^24.10.0"
+  }
+}

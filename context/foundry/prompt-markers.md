@@ -1,7 +1,7 @@
 ---
 title: "Prompt markers — turning Joe's typed map notes into built things"
 created: 2026-10-10
-last_modified: 2026-10-11
+last_modified: 2026-10-16
 status: active
 tags: [context, foundry, markers, mcp, prompt-markers, playbook]
 ---
@@ -22,6 +22,12 @@ A hidden token from the **`Prompt Markers`** actor folder — `Prompt · tiny` (
 `mid` (1 sq), `large` (2×2), `xl` (3×3), `xxl` (4×4) — carrying the text Joe typed into its
 dialog (`flags.pentaryn-prompts.prompt` on the **token**). The footprint is the space the thing
 should take. Recognised by `flags.pentaryn-prompts.marker`, never by name.
+
+Joe puts them down two ways, both GM-only and both opening the same prompt box: drag a `Prompt ·`
+actor onto the scene, or press **P** (rebindable in Configure Controls → Pentaryn Prompt Markers),
+which drops a marker of the client setting *Prompt marker size for the P key* (default `mid`)
+centred on the grid square under the cursor. **Shift+P** reopens the hovered marker's box. Keys are
+ignored while a text field has focus (core's `game.keyboard.hasFocus`).
 
 ## First: is the tool there?
 

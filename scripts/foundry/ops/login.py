@@ -65,7 +65,8 @@ WORLD_READY_TIMEOUT = 240.0
 # Shorter and Foundry logs `LEVEL_DATABASE_NOT_OPEN`; smoke.py learned this the same way.
 SETTLE_SECONDS = 8.0
 
-ROLE_LABEL = {4: "Gamemaster", 3: "Assistant", 2: "Player", 1: "Trusted"}
+# CONST.USER_ROLES: 1 PLAYER, 2 TRUSTED, 3 ASSISTANT, 4 GAMEMASTER (this once had 1 and 2 swapped).
+ROLE_LABEL = {4: "Gamemaster", 3: "Assistant", 2: "Trusted", 1: "Player"}
 
 
 def _say(msg: str) -> None:

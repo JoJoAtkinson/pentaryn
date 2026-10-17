@@ -91,6 +91,10 @@ class FoundryError(RuntimeError):
     """A Foundry API call returned an ``error`` field, or refused the request."""
 
 
+class JoinRejected(FoundryError):
+    """``/join`` refused the user's password (401). Never carries the password."""
+
+
 # 14.369's express.mjs answers a cross-origin POST with exactly this body — and so does
 # setup.mjs, for any action other than worldShutdown/editWorld while a world is active.
 REFUSED_400 = "The request could not be processed."
@@ -360,7 +364,16 @@ class FoundryAdmin:
         arrives. A poll can carry several packets separated by ``\x1e``, and the
         server may push unrelated events ahead of the ack, so the ack is picked out by
         packet rather than by grabbing everything after the first ``431``.
+
+        **The socket needs a session cookie first.** ``sockets.mjs`` looks the session up
+        from the handshake's cookie and, with none, emits ``session: null`` and binds *no*
+        listeners — so on a fresh client every event goes unanswered and this used to
+        poll out its whole timeout. Any HTTP route mints one; ``/api/status`` is the
+        cheapest, so a client that has made no request yet makes that one.
         """
+        jar = getattr(self.session, "cookies", None)     # test fakes have no jar
+        if jar is not None and not jar.get("session"):
+            self.status()
         q = {"EIO": "4", "transport": "polling"}
         r = self.session.get(f"{self.base_url}/socket.io/", params=q, timeout=self.timeout)
         r.raise_for_status()
@@ -517,6 +530,31 @@ class FoundryAdmin:
         data = r.json()
         if data.get("status") != "success":
             raise FoundryError(f"loginAs {user_id} failed: {data}")
+
+    def join(self, user_id: str, password: str) -> None:
+        """Log in as a user **with that user's password**, the way the ``/join`` form does.
+
+        Unlike :meth:`login_as` this never authenticates as admin, so the session it
+        leaves behind has ``session.admin`` false. That matters for a session handed to a
+        long-lived browser: an admin-flagged session passes ``/setup``'s
+        ``authenticateAdmin`` without a password, so its page could shut the world down
+        (``game.shutDown()``) even as a role-3 user, and Foundry offers no way to drop the
+        flag while a world is active (``adminLogout`` is a setup-screen action).
+        Call it on a fresh instance that has never called :meth:`authenticate`.
+
+        ``join.mjs`` → ``sessions.authenticateUser`` reads ``{userId, password}``; a wrong
+        password is 401 ``JOIN.ErrorInvalidPassword`` (raised as :class:`JoinRejected`).
+        """
+        r = self.session.post(f"{self.base_url}/join",
+                              json={"action": "join", "userId": user_id, "password": password},
+                              timeout=self.timeout, allow_redirects=False)
+        if r.status_code == 401:
+            raise JoinRejected(f"join {user_id} refused: HTTP 401 {r.text[:120]}")
+        if r.status_code != 200:
+            raise FoundryError(f"join {user_id} failed: HTTP {r.status_code} {r.text[:200]}")
+        data = r.json()
+        if data.get("status") != "success":
+            raise FoundryError(f"join {user_id} failed: {data}")
 
     def deactivate_world(self) -> bool:
         """Return the server to the setup screen **without quitting the app**.

@@ -49,7 +49,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
 | First-run activation only | `make foundry-key` → copies to the clipboard (pbcopy / clip.exe / xclip) → clear the clipboard after |
 | Debug a dead tunnel | `make tunnel-logs` |
-| Back up a world left running, every night | The 03:00 nightly: `make vtt-nightly-register` once (Windows Task Scheduler → `automation/bin/vtt-nightly.sh`). Stops tunnel + Foundry, snapshot + upload (waits), starts them again, relaunches the world. Skips if anyone is connected or an update runs. `make vtt-nightly-log` · `make vtt-nightly-dry` · `make vtt-nightly-unregister` |
+| Back up a world left running, every night | The 03:00 nightly: `make vtt-nightly-register` once (Windows Task Scheduler → `automation/bin/vtt-nightly.sh`). Stops tunnel + Foundry, snapshot + upload (waits), starts them again, relaunches the world. The active scene, tokens and fog are on disk, so they come back as they were; each player's own map and view comes back through `pentaryn-resume` ([`resume.md`](resume.md)). The world comes back **unpaused**: Foundry launches paused, and the headless GM lifts it once per boot ([`headless-gm.md`](headless-gm.md)). Disconnects anyone still connected (a forgotten tab doesn't block it); skips if an update runs or it fires outside 02:00–06:59. `make vtt-nightly-log` · `make vtt-nightly-dry` · `make vtt-nightly-unregister` |
 
 ---
 
@@ -60,6 +60,9 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 > `PENTARYN_PRIMARY_HOST=boss`). The Mac is now the alt: its env file says the same primary, and its
 > updater LaunchAgents are unloaded. The tunnel credentials live in BOSS's `~/.cloudflared/`. Where
 > this section still says "the Mac", read "the primary".
+> A second user unit, `foundry-headless-gm`, keeps a headless Assistant-GM tab ("Claude") in the
+> active world so the MCP bridge works on BOSS with nobody at a browser
+> ([`headless-gm.md`](headless-gm.md)).
 
 Foundry runs on the **primary host — the Mac today** — as a desktop app. There is no server, no
 container, no cloud host. Players reach it through a Cloudflare tunnel that exists only while

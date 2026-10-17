@@ -140,6 +140,8 @@ vtt-nightly-host-check:
 # ─── The pieces: application, tunnel ────────────────────────────────────
 .PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-logs tunnel-setup foundry-boot
 .PHONY: foundry-bridge-status foundry-bridge-clean foundry-eval-report
+.PHONY: foundry-headless-install foundry-headless-start foundry-headless-stop foundry-headless-restart
+.PHONY: foundry-headless-status foundry-headless-logs foundry-headless-ensure foundry-headless-test
 
 # The boot choice: newest cloud snapshot (any host) or the local world. Asks only at a
 # terminal and only when the cloud is newer than what this world is based on.
@@ -173,6 +175,22 @@ foundry-bridge-clean:  ; @$(OPS) bridge-clean $(if $(DRY),--dry-run,)
 # What the MCP action logs show (eval-js outcomes, game.pentaryn paths, per-tool counts).
 # Read-only. SINCE=2026-10-01 narrows it; JSON=1 for --json.
 foundry-eval-report:   ; @$(OPS) eval-report $(if $(SINCE),--since $(SINCE),) $(if $(JSON),--json,)
+
+# The headless Assistant-GM bot "Claude" (context/foundry/headless-gm.md): an always-on
+# headless Chrome on this host that keeps the MCP bridge connected for every Claude session.
+# install: node deps, chrome-headless-shell, Chrome's libs (no sudo; APT=1 = apt-get them),
+# env keys, the systemd --user unit (NO_START=1: enable only). ensure: create the bot user in
+# the active world if it is missing. status: JSON=1 for --json.
+HEADLESS_UNIT := foundry-headless-gm
+HEADLESS_NODE = "$$($(PY) -c 'from scripts.foundry import host; print(host.node())')"
+foundry-headless-install: ; @cd $(ROOT) && $(if $(APT),APT=1 ,)$(if $(NO_START),NO_START=1 ,)automation/headless-gm/install.sh
+foundry-headless-start:   ; @systemctl --user start $(HEADLESS_UNIT)
+foundry-headless-stop:    ; @systemctl --user stop $(HEADLESS_UNIT)
+foundry-headless-restart: ; @systemctl --user restart $(HEADLESS_UNIT)
+foundry-headless-status:  ; @$(OPS) headless-gm status $(if $(JSON),--json,)
+foundry-headless-logs:    ; @journalctl --user -u $(HEADLESS_UNIT) -n $(or $(N),60) --no-pager
+foundry-headless-ensure:  ; @cd $(ROOT) && $(HEADLESS_NODE) automation/headless-gm/watchdog.mjs --bootstrap-only
+foundry-headless-test:    ; @cd $(ROOT) && $(HEADLESS_NODE) --test automation/headless-gm/state.test.mjs
 
 # ─── Secrets ────────────────────────────────────────────────────────────
 # Both live in Infisical and are read at the point of use. The checks print length

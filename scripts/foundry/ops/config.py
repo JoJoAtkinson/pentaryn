@@ -289,6 +289,12 @@ MODULES = {
         # follow-up and Sneak Attack eligibility, Multiattack parsing, weapon-set seeds) is pure.
         check=ALL_GATES,
     ),
+    "resume": ModuleSpec(
+        "pentaryn-resume",
+        # node-test: resume-core.mjs decides whether a login goes back to the saved view (the
+        # active scene unchanged since the save) and what counts as a change worth writing.
+        check=ALL_GATES,
+    ),
     "pings": ModuleSpec(
         "pentaryn-pings",
         # node-test: test/run.mjs runs the characterisation suites (pings guide step 9; C39).
