@@ -9,8 +9,11 @@
 
 import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox, boxCentre,
   occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
-  partyPreview, hasDestination, withoutDestination, displaceOptions, TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
+  partyPreview, hasDestination, withoutDestination, displaceOptions, followersOf, elevationOnLevel, carriedLevel,
+  TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
+import { fail } from "./lib/errors.mjs";
 import { flagPath } from "./lib/flags.mjs";
+import { rootActorId } from "./lib/root-actor.mjs";
 
 const deps = { setting: () => undefined, log: null };
 
@@ -220,10 +223,14 @@ export function recordOf(t, { gmIds = gmUserIds() } = {}) {
   const a = t.actor;
   let pile = false;
   try { pile = !!(a && game.itempiles?.API?.isValidItemPile?.(a)); } catch (err) { deps.log?.debug("item piles check", err); }
+  const actorId = a?.id ?? t.actorId ?? null;
+  // a transformed token's summons name its ORIGINAL actor (review #4); only then, so a record keeps its shape
+  const root = rootActorOf(t, a);
   return {
     id: t.id,
     name: t.name,
-    actorId: a?.id ?? t.actorId ?? null,
+    actorId,
+    ...(root && root !== actorId ? { rootActorId: root } : {}),
     type: a?.type ?? null,
     linked: !!t.actorLink,
     pile,
@@ -251,16 +258,21 @@ export function partyRecords(scene) {
  * Snapped top-left positions for `toks`, filled outward from (cx, cy) on `dest`. With `party`
  * (the partySelection records for `toks`, same order) each follower lands beside its PC.
  * Every token is tested by its whole footprint (portals-edge-2): a Large token never lands over a
- * stander or another arrival.
+ * stander or another arrival. `{ level }` counts only the standers on that level and the walls on
+ * it (a wall with no levels is on every level): teleportToken, and carryTo's plain path when every
+ * token arrives on one floor. Left out, every token and every wall counts.
  */
-export function landingPlaces(dest, toks, cx, cy, party = null) {
+export function landingPlaces(dest, toks, cx, cy, party = null, { level } = {}) {
   const g = dest.grid.size;
+  const onLevel = typeof level === "string";
   // Skip squares a wall cuts off from the landing (the pit wall, a cell's bars). Tested against
   // the destination's wall documents, because that scene may not be on the canvas.
-  const walls = blockingWallCoords(dest.walls);
+  // core's own rule (CanvasDocument#includedInLevel: no levels = every level), not a copy of it (review R8)
+  const walls = blockingWallCoords(onLevel ? dest.walls.filter(w => w.includedInLevel?.(level) !== false) : dest.walls);
   // Don't land on someone already standing there (the PC who just arrived, a guard).
   const moving = new Set(toks.map(t => t.id));
-  const occupied = occupiedBy(dest.tokens.filter(t => !moving.has(t.id)).map(t => tokenBox(t, g)));
+  const standing = dest.tokens.filter(t => !moving.has(t.id) && (!onLevel || !t.level || t.level === level));
+  const occupied = occupiedBy(standing.map(t => tokenBox(t, g)));
   // toks[i]'s box centred on a ring spot, top-left snapped to the grid: what is tested is what lands.
   const boxes = new Map();
   const boxAt = ({ x, y }, i) => {
@@ -288,14 +300,149 @@ export function landingPlaces(dest, toks, cx, cy, party = null) {
 }
 
 /** GM: move tokens to another scene around (cx, cy). Plain create + delete, no `replacements`, so
- *  this never re-triggers the follow hook (party.mjs). */
-export async function carryTo(toks, dest, cx, cy, party = null) {
+ *  this never re-triggers the follow hook (party.mjs). Each token's data is its own toObject() with
+ *  the landing spot and what arrivals() gives it: `{ level }` (teleportToken) puts every token on
+ *  that level; left out (bringFollowers, teleportParty) each lands on a level the destination has
+ *  (carriedLevel: `preferLevel`, else its own id when the destination has it, else the destination's
+ *  initial level). Carrying the source level id across left the token on no floor, and core then
+ *  refused every move of it ("level must exist"). Its elevation is mapped onto the floor it lands on.
+ *  A keepId create the server refuses with "already exists" rejects as it is: bringFollowers reads
+ *  that as the GM-tab election, so a mover whose id the destination ALREADY held (a duplicated scene)
+ *  is the caller's to filter out first (idClash; review L3). */
+export async function carryTo(toks, dest, cx, cy, party = null, { level, preferLevel = null } = {}) {
   if (!toks.length) return;
   const from = toks[0].parent;
-  const places = landingPlaces(dest, toks, cx, cy, party);
-  const data = toks.map((t, i) => ({ ...t.toObject(), ...places[i] }));
-  await dest.createEmbeddedDocuments("Token", data, { keepId: true });
+  const { onFloor, patch } = arrivals(toks, dest, { level, preferLevel });
+  const places = landingPlaces(dest, toks, cx, cy, party, onFloor);
+  await dest.createEmbeddedDocuments("Token", toks.map((t, i) => ({ ...t.toObject(), ...places[i], ...patch(i) })), { keepId: true });
   await from.deleteEmbeddedDocuments("Token", toks.map(t => t.id));
+}
+
+/** A scene's initial level id (else its first), or null. */
+const initialOf = scene => scene.initialLevel?.id ?? scene.firstLevel?.id ?? null;
+
+/** The level `t` stands on as `dest` sees it: its source level; with none, on its own scene, the initial
+ *  level (core's own default, v14 TokenDocument#_initializeSource); null otherwise. */
+const ownLevel = (t, dest) => t._source?.level ?? t.level ?? (t.parent === dest ? initialOf(dest) : null);
+
+/**
+ * Where each of `toks` arrives on `dest` (another scene, or its own), one rule for every mover
+ * (review R3 / L2 / A2-1 / A2-5). `level` (teleportToken, already checked against `dest`): every
+ * token lands on it. Left out (bringFollowers, teleportParty): carriedLevel — `preferLevel` when
+ * `dest` has it, else the token's own level when `dest` has that id, else the initial level; a
+ * scene with no levels (pre-v14 data) leaves the level alone.
+ * → `{ onFloor, patch }`: `onFloor` is `{ level }` when every token lands on one floor (landing then
+ * counts only that floor's standers and walls), else `{}` (every floor counts, as before);
+ * `patch(i)` is the i-th token's `{ level?, elevation? }`: the level when it is given or changes, and
+ * the elevation mapped onto the floor whenever the token changes floor or scene (elevationPatch).
+ */
+function arrivals(toks, dest, { level, preferLevel = null } = {}) {
+  const given = typeof level === "string";
+  const lv = toks.map(t => (given ? level : arrivalLevel(t, dest, preferLevel)));
+  const floors = new Set(lv.map((l, i) => l ?? ownLevel(toks[i], dest)));
+  const [one] = floors;
+  const onFloor = floors.size === 1 && typeof one === "string" && dest.levels?.has?.(one) ? { level: one } : {};
+  const patch = i => {
+    if (!lv[i]) return {};
+    const lift = elevationPatch(toks[i], dest, lv[i]);
+    return given || lv[i] !== ownLevel(toks[i], dest) ? { level: lv[i], ...lift } : lift;
+  };
+  return { onFloor, patch };
+}
+
+/** The level a token lands on in `dest` by the plain rule (carriedLevel); null when `dest` has no levels (pre-v14 data). */
+function arrivalLevel(t, dest, preferLevel) {
+  const levels = dest.levels;
+  if (!levels || typeof levels.has !== "function") return null;
+  return carriedLevel(ownLevel(t, dest), { has: id => levels.has(id), preferred: preferLevel, initial: initialOf(dest) });
+}
+
+/** The movers whose token id `dest` already holds (a duplicated scene keeps token ids): a keepId create of
+ *  them fails every time, so it is no race. None on the movers' own scene. */
+export function idClash(toks, dest) {
+  return toks.filter(t => t.parent !== dest && dest.tokens.has(t.id));
+}
+
+/** GM: tell the GM that `stuck` stayed behind because `dest` already holds their token ids (review L3). */
+export function clashNotice(stuck, dest) {
+  const names = stuck.map(t => t.name).join(", ");
+  deps.log?.warn("token ids already on the destination", { scene: dest.id, ids: stuck.map(t => t.id) });
+  ui.notifications.warn(_loc("PENTARYN_PORTALS.Notify.IdClash", { names, place: dest.navName || dest.name }));
+}
+
+/** The token's ROOT actor id (the kit's rule, shared with pentaryn-pins: review #11); `a` = its actor, already read. */
+const rootActorOf = (t, a) => rootActorId({ actorId: a?.id ?? t.actorId ?? null, tokenOriginal: t.flags?.dnd5e?.originalActor,
+  actorOriginal: a?.getFlag?.("dnd5e", "originalActor"), previousIds: a?.getFlag?.("dnd5e", "previousActorIds") });
+
+/** `{ elevation }` mapped onto `level` of `dest` when that is another floor or another scene (elevationOnLevel);
+ *  `{}` on its own floor. Two scenes' default levels share the id defaultLevel0000 but not their range
+ *  (its top is 4 grid units, review A2-5), so another scene always maps. A token outside its own floor's
+ *  range (flying, burrowing) keeps its height above the base, unclamped (review T1). */
+function elevationPatch(t, dest, level) {
+  const own = ownLevel(t, t.parent);
+  if (dest === t.parent && own === level) return {};
+  const to = dest.levels?.get?.(level);
+  if (!to?.elevation || typeof to.clampElevation !== "function") return {};
+  const from = t.parent?.levels?.get?.(own);
+  const srcBase = from?.elevation?.base ?? 0;
+  const srcClamp = typeof from?.clampElevation === "function" ? (e, d) => from.clampElevation(e, d) : null;
+  return { elevation: elevationOnLevel(t.elevation, t.depth, srcBase, to.elevation.base, (e, d) => to.clampElevation(e, d), srcClamp) };
+}
+
+/** GM: move `toks` on their own scene around (cx, cy) in ONE displace update, no animation: carryTo's
+ *  rule for the level and elevation (arrivals), each waypoint carrying them (displaceOptions). */
+async function moveOnScene(toks, cx, cy, party, { level, preferLevel = null } = {}) {
+  const scene = toks[0].parent;
+  const { onFloor, patch } = arrivals(toks, scene, { level, preferLevel });
+  const places = landingPlaces(scene, toks, cx, cy, party, onFloor);
+  const updates = toks.map((t, i) => ({ _id: t.id, ...places[i], ...patch(i) }));
+  await scene.updateEmbeddedDocuments("Token", updates, displaceOptions(updates));
+}
+
+/**
+ * GM (teleportToken): move one token and, when it is a PC (a character, or polymorphed — the same
+ * leader rule as party.mjs bringFollowers), its company to (x, y) on `dest`, its own scene or
+ * another. The company is followersOf the PC, gathered before anything moves, exactly as portal
+ * travel picks it, but with no portal check: this is a deliberate GM move, not a hop. A non-PC
+ * moves alone. No canvas, no pull, no view: the bot calls this too, and has no canvas.
+ * → `{ followers: [{ id, name }], moved }`, `fail("REFUSED")` when a mover's id is already on the
+ * destination (dryRun too), or `fail("CONFLICT")` when another session's keepId create won (the same
+ * election bringFollowers relies on). Any other error rethrows. A move to another floor maps each
+ * token's elevation onto it; landing counts only that floor's tokens and walls.
+ * @param {TokenDocument} token  @param {Scene} dest
+ * @param {{x: number, y: number, level: string|null}} to  the centre point and the resolved level
+ * @param {{dryRun?: boolean}} [opts]
+ */
+export async function moveCompany(token, dest, { x, y, level }, { dryRun = false } = {}) {
+  const from = token.parent;
+  const gmIds = gmUserIds();
+  const record = recordOf(token, { gmIds });
+  const leads = record.type === "character" || record.polymorphed;
+  // `leader`: assignSpots groups its company beside it even when it is not isPC (review #5)
+  const lead = leads ? { ...record, leader: true } : record;
+  const company = leads ? followersOf([lead], from.tokens.filter(t => t.id !== token.id).map(t => recordOf(t, { gmIds }))) : [];
+  const party = [lead, ...company];
+  const toks = party.map(r => r.doc);
+  const followers = company.map(r => ({ id: r.id, name: r.name }));
+  // an id already on the destination (a duplicated scene) fails keepId every time: no race, so not CONFLICT
+  const clash = idClash(toks, dest);
+  if (clash.length) {
+    return fail("REFUSED", `token id${clash.length > 1 ? "s" : ""} already on ${dest.name}: `
+      + `${clash.map(t => `${t.name} (${t.id})`).join(", ")} (a duplicated scene keeps token ids: delete or re-create those)`);
+  }
+  if (dryRun) return { followers, moved: 0 };
+  if (dest === from) {
+    await moveOnScene(toks, x, y, party, { level });
+  } else {
+    try {
+      await carryTo(toks, dest, x, y, party, { level });
+    } catch (err) {
+      if (!/already exists/i.test(err?.message ?? "")) throw err;
+      deps.log?.debug("teleportToken: another session moved it first", err);
+      return fail("CONFLICT", "another session moved it first");
+    }
+  }
+  return { followers, moved: toks.length };
 }
 
 /**
@@ -326,9 +473,11 @@ export async function confirmParty(party, title) {
 }
 
 /**
- * GM: move the party on canvas.scene to `destRegion`'s centre. → `{ moved, cancelled }` (moved =
- * tokens moved; cancelled = the GM said no, nobody counts as party, or every party token was
- * deleted while the confirm was open); undefined for a player, no region or no scene on the canvas.
+ * GM: move the party on canvas.scene to `destRegion`'s centre, onto its one floor when it is on
+ * exactly one (on this scene too: review A2-1). → `{ moved, cancelled }` (moved = tokens moved;
+ * cancelled = the GM said no, nobody counts as party, every party token was deleted while the
+ * confirm was open, or the destination scene already holds a mover's token id — review L3, the GM
+ * is warned); undefined for a player, no region or no scene on the canvas.
  */
 export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
   if (!game.user.isGM) return;
@@ -352,12 +501,16 @@ export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
   }
   const toks = party.map(r => r.doc);
   const { x: cx, y: cy } = boxCentre(destRegion.bounds);
+  // the destination region's one floor, when it is on exactly one (core's own teleport rule) — on
+  // this scene too: a stair region upstairs puts the party upstairs (review A2-1)
+  const onLevels = destRegion.levels?.size === 1 ? [...destRegion.levels][0] : null;
   if (dest === from) {
-    const places = landingPlaces(dest, toks, cx, cy, party);
-    const updates = toks.map((t, i) => ({ _id: t.id, ...places[i] }));
-    await from.updateEmbeddedDocuments("Token", updates, displaceOptions(updates));
+    await moveOnScene(toks, cx, cy, party, { preferLevel: onLevels });
   } else {
-    await carryTo(toks, dest, cx, cy, party);
+    // review L3: a duplicated scene keeps token ids; the create would be refused whole
+    const clash = idClash(toks, dest);
+    if (clash.length) { clashNotice(clash, dest); return { moved: 0, cancelled: true }; }
+    await carryTo(toks, dest, cx, cy, party, { preferLevel: onLevels });
     dest.pullUsers(game.users.filter(u => !u.isGM && u.active));
     await dest.view();
   }

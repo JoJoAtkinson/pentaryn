@@ -95,11 +95,11 @@ export const MANIFEST = Object.freeze({
     {
       path: "place",
       params: [{ name: "sizeKey", optional: true, type: "tiny | small | mid | large | xl | xxl (else the client's default)" },
-        { name: "opts", optional: true, type: "{ ticket? }" }],
+        { name: "opts", optional: true, type: "{ ticket?, at? }", doc: "at: { x, y } canvas point to centre the marker on (default: under the cursor)" }],
       returns: "TokenDocument | null",
       gm: true, writes: true, legacy: true, nullWhen: "not a GM, no canvas or scene, no marker actor of that size, or the create failed",
-      sideEffects: ["Token create under the cursor", "arms type-ahead capture on this client for 3.5 s"],
-      doc: "Place a marker under the cursor and open its box (the P key).",
+      sideEffects: ["Token create under the cursor (or at opts.at)", "arms type-ahead capture on this client for 3.5 s"],
+      doc: "Place a marker under the cursor, or centred on opts.at, and open its box (the P key; the pins GM menu's Prompt note passes at).",
     },
     {
       path: "ensureMarkers",

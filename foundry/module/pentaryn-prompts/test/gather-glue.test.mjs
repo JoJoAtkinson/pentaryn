@@ -86,7 +86,7 @@ test("gather: the console summary line (prompts-lookup-18) and the result's shap
   const { value, out } = await g({ scenes: ["s1"], crops: "off" });
   assert.deepEqual(out.map(o => o.text.replace(/\d+ ms$/, "<ms> ms")), [`pentaryn-prompts | gather ${value.call}: 2 prompts on 1 scene(s), 0 crop(s), <ms> ms`]);
   assert.deepEqual(Object.keys(value), ["call", "text", "counts", "manifest", "crops", "next", "ms", "version", "party", "partySource", "cropsNote"]);
-  assert.deepEqual([value.cropsNote, value.party, value.partySource, value.next, value.version], ["crops: off", null, null, null, "0.4.5"]);
+  assert.deepEqual([value.cropsNote, value.party, value.partySource, value.next, value.version], ["crops: off", null, null, null, "0.4.6"]);
   assert.deepEqual(value.manifest.opts, { scenes: ["s1"], unseenWithinFt: 60, chars: 400, party: null });
   assert.equal(value.manifest.at, NOW);
 });

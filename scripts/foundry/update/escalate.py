@@ -626,11 +626,16 @@ def make_checks(root: Path = REPO_ROOT) -> list[str]:
     return _MAKE_TARGETS
 
 
-def checks_for(files: list[str]) -> list[str]:
+def checks_for(files: list[str], rows: list[adj_mod.Adjustment] | tuple = ()) -> list[str]:
     """The checks a fix to these files may cite: their modules' make targets, the
-    updater's pytest suite for scripts/foundry, and nothing else."""
+    updater's pytest suite for scripts/foundry, the make targets the package's
+    adjustment ``rows`` name in their ``check`` field (``make foundry-pins-check
+    foundry-portals-check``; pins review C7), and nothing else."""
     targets = set(make_checks())
-    out: list[str] = []
+    out: list[str] = [t for r in rows
+                      for t in (f"make {m}" for m in re.findall(r"\bfoundry-[a-z0-9-]+-check\b",
+                                                                  r.check or ""))
+                      if t in targets]
     for area in sorted({area_of(f) for f in files}):
         if area.startswith("pentaryn-"):
             t = f"make foundry-{area.removeprefix('pentaryn-')}-check"
@@ -887,28 +892,46 @@ def triage_input(plan: dict, facts: dict, registry: adj_mod.Registry) -> str:
 
 # ── the T1 source bundle ─────────────────────────────────────────────────────
 
-def _trim(text: str, terms: list[str]) -> str:
-    """Line-numbered text; for a file over the cap, only ±80 lines around each mention."""
+def _trim(text: str, terms: list[str], cap: int = BUNDLE_FILE_CAP) -> str:
+    """Line-numbered text; for a file over ``cap``, only the lines around each mention:
+    ±80 lines, narrowed (40, 20, 10, 5, 2, 0) until every mention fits, cut at ``cap``
+    only when even the bare mention lines do not."""
     lines = text.splitlines()
     numbered = [f"{i + 1:>5}| {line}" for i, line in enumerate(lines)]
     whole = "\n".join(numbered)
-    if len(whole) <= BUNDLE_FILE_CAP:
+    if len(whole) <= cap:
         return whole
     low_terms = [t.lower() for t in terms if t]
-    keep: set[int] = set()
-    for i, line in enumerate(lines):
-        if any(t in line.lower() for t in low_terms):
-            keep.update(range(max(0, i - TRIM_CONTEXT_LINES),
-                              min(len(lines), i + TRIM_CONTEXT_LINES + 1)))
-    if not keep:
-        keep = set(range(min(len(lines), 2 * TRIM_CONTEXT_LINES)))
-    out, prev = [], -2
-    for i in sorted(keep):
-        if i != prev + 1:
-            out.append("  ...| (lines omitted)")
-        out.append(numbered[i])
-        prev = i
-    return "\n".join(out)[:BUNDLE_FILE_CAP]
+    hits = [i for i, line in enumerate(lines) if any(t in line.lower() for t in low_terms)]
+    text_out = ""
+    for ctx in (TRIM_CONTEXT_LINES, 40, 20, 10, 5, 2, 0):
+        keep: set[int] = set()
+        for i in hits:
+            keep.update(range(max(0, i - ctx), min(len(lines), i + ctx + 1)))
+        if not keep:
+            keep = set(range(min(len(lines), 2 * ctx or 1)))
+        out, prev = [], -2
+        for i in sorted(keep):
+            if i != prev + 1:
+                out.append("  ...| (lines omitted)")
+            out.append(numbered[i])
+            prev = i
+        text_out = "\n".join(out)
+        if len(text_out) <= cap:
+            return text_out
+    return text_out[:cap]
+
+
+def _fair_share(sizes: list[int], budget: int) -> int:
+    """The largest per-file size ``s`` with ``sum(min(size, s)) <= budget`` (water-filling):
+    files under it go in whole, every larger one is trimmed to it."""
+    remaining, left = budget, len(sizes)
+    for size in sorted(sizes):
+        if size * left > remaining:
+            return max(0, remaining // left)
+        remaining -= size
+        left -= 1
+    return max(sizes, default=0)
 
 
 def build_bundle(pkg: str, registry: adj_mod.Registry, *,
@@ -916,7 +939,12 @@ def build_bundle(pkg: str, registry: adj_mod.Registry, *,
     """``(bundle_text, files_included, content_hash)`` for one package.
 
     The hash covers every candidate file's full bytes, so editing a file the analyst
-    read invalidates the cached analysis even if the edit fell outside the trimmed part."""
+    read invalidates the cached analysis even if the edit fell outside the trimmed part.
+
+    When the files do not fit in :data:`BUNDLE_TOTAL_CAP` they share it fairly (each
+    over the fair share is trimmed to the lines around its mentions) instead of the
+    rows listed last being dropped whole (pins review C7: dnd5e's transform-root row
+    came after 400k of other modules' files and its analysis never saw it)."""
     rows = registry.rows_for(pkg)
     candidates: list[str] = []
     for rel in [f for r in rows for f in r.files] + registry.exposure(pkg, root=root):
@@ -927,7 +955,7 @@ def build_bundle(pkg: str, registry: adj_mod.Registry, *,
     terms = [pkg, *registry.aliases.get(pkg, ()), *(m for r in rows for m in r.markers)]
 
     digest = hashlib.sha256()
-    parts, included, total = [], [], 0
+    sources: list[tuple[str, str]] = []
     for rel in candidates:
         path = root / rel
         try:
@@ -935,8 +963,20 @@ def build_bundle(pkg: str, registry: adj_mod.Registry, *,
         except OSError:
             continue
         digest.update(rel.encode() + b"\0" + raw.encode() + b"\0")
-        body = _trim(raw, terms)
-        block = f"=== {rel} ===\n{body}\n"
+        sources.append((rel, raw))
+
+    def block_of(rel: str, raw: str, cap: int) -> str:
+        return f"=== {rel} ===\n{_trim(raw, terms, max(0, cap))}\n"
+
+    blocks = [block_of(rel, raw, BUNDLE_FILE_CAP) for rel, raw in sources]
+    if sum(len(b) for b in blocks) > BUNDLE_TOTAL_CAP:
+        # "\n".join adds one separator per block; headers stay whole
+        share = _fair_share([len(b) + 1 for b in blocks], BUNDLE_TOTAL_CAP)
+        blocks = [b if len(b) + 1 <= share else
+                  block_of(rel, raw, min(BUNDLE_FILE_CAP, share - len(rel) - 10))
+                  for (rel, raw), b in zip(sources, blocks)]
+    parts, included, total = [], [], 0
+    for (rel, _raw), block in zip(sources, blocks):
         if total + len(block) > BUNDLE_TOTAL_CAP:
             parts.append(f"=== {rel} === (omitted: bundle cap reached)\n")
             continue
@@ -1454,7 +1494,7 @@ def _run(plan: dict, cfg: dict, record: dict, *, run_id: str, dry: bool, forced:
                 defer([pkg], "out of budget for its analysis")
                 continue
             beat("escalate/analyze", pkg)()
-            checks = checks_for(files)
+            checks = checks_for(files, registry.rows_for(pkg))
             areas = sorted({area_of(x) for x in files})
             res = caller(an_spec, analysis_input({**f, "checks": checks, "areas": areas},
                                                  plan, registry, text,

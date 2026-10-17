@@ -1,0 +1,36 @@
+{
+  "PENTARYN_PINS": {
+    "Setting": {
+      "pinning": {
+        "Name": "Pinning",
+        "Hint": "When on, each pinned player sees the scene their pinned character's token is on, and GM scene activation and pulls do not move them. Moving the token moves the player. Turning it on checks that every pinned character has exactly one token."
+      }
+    },
+    "Notify": {
+      "AuditOk": "Pinning on: all {n} pins have one token.",
+      "AuditProblems": "Pinning on: {k} problem(s) — {list}",
+      "Follows": "Your view follows {actor}.",
+      "Teleported": "{actor}{more} → {scene}",
+      "TeleportFailed": "{actor} not moved: {reason}"
+    },
+    "Audit": {
+      "NoToken": "{actor} ({user}) has no token",
+      "ManyTokens": "{actor} ({user}) has several tokens: {detail}",
+      "NoActor": "{user} is pinned to a deleted actor",
+      "GmUser": "{user} is a GM and is pinned to {actor}",
+      "SharedActor": "{actor} is pinned to several players: {detail}",
+      "Unlinked": "{actor} ({user}) has an unlinked token",
+      "NotOwner": "{user} cannot observe {actor}: their view follows a token they get no vision from"
+    },
+    "Sheet": {
+      "PinnedTo": "Pinned to {name}"
+    },
+    "Menu": {
+      "PromptNote": "Prompt note",
+      "Teleport": "Teleport pinned character",
+      "NoPlayers": "No players logged in",
+      "NoPin": "no pin",
+      "NoToken": "no token"
+    }
+  }
+}

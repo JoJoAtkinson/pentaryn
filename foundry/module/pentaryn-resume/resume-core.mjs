@@ -9,7 +9,7 @@
 export const MODULE = "pentaryn-resume";
 export const SHORT = "resume";
 export const NS = "resume";
-export const VERSION = "0.1.0";                       // === module.json version (core.test pins it)
+export const VERSION = "0.1.1";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-resume/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_RESUME";
 export const CSS = "pre-";
@@ -69,14 +69,24 @@ export function sameView(a, b) {
  *  - otherwise the saved view: `{ scene, level, position }`, position null when none was stored.
  *    It is returned even when the saved scene is the one already showing, for the position.
  *
+ * With pentaryn-pins' pinning on, `pinnedScene` is the scene id of this user's pinned token, and
+ * the pin wins at login (pins plan D7): a saved view of another scene → null; a saved view of the
+ * pinned scene → `{ scene, level: null, position }` whatever the active scene did (the "table
+ * moved on" rule does not apply, and `level: null` keeps the token's level). `pinnedScene` null →
+ * the rules above, unchanged.
+ *
  * @param {*} saved              the raw flag value
- * @param {{activeId: string|null, sceneExists: (id: string) => boolean}} world
+ * @param {{activeId: string|null, sceneExists: (id: string) => boolean, pinnedScene?: string|null}} world
  */
-export function resumeTarget(saved, { activeId = null, sceneExists = () => false } = {}) {
+export function resumeTarget(saved, { activeId = null, sceneExists = () => false, pinnedScene = null } = {}) {
   const view = viewRecord(saved);
   if (!view) return null;
+  const position = "x" in view ? { x: view.x, y: view.y, scale: view.scale } : null;
+  if (pinnedScene !== null && pinnedScene !== undefined) {
+    if (view.scene !== pinnedScene || !sceneExists(view.scene)) return null;
+    return { scene: view.scene, level: null, position };
+  }
   if (view.active !== (activeId ?? null)) return null;
   if (!sceneExists(view.scene)) return null;
-  const position = "x" in view ? { x: view.x, y: view.y, scale: view.scale } : null;
   return { scene: view.scene, level: view.level, position };
 }

@@ -1,0 +1,71 @@
+{
+  "id": "pentaryn-pins",
+  "title": "Pentaryn Pins",
+  "description": "Pin a character to a player: with the world switch on, that player's view follows the scene their character's token is on and ignores GM scene activation; the sheet says 'Pinned to {player}'. GM right-click on empty canvas: Prompt note, Teleport pinned character (with its summons and pets). Exposes game.pentaryn.pins.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.369"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0",
+          "verified": "6.0.6"
+        }
+      }
+    ],
+    "recommends": [
+      {
+        "id": "lib-wrapper",
+        "type": "module",
+        "reason": "Wraps Scene#view and Scene#_onActivate for pinned players (MIXED); without it both are wrapped by hand."
+      },
+      {
+        "id": "pentaryn-portals",
+        "type": "module",
+        "reason": "Teleport pinned character calls its teleportToken, which brings the character's summons and pets; without it teleport answers UNSUPPORTED."
+      },
+      {
+        "id": "pentaryn-prompts",
+        "type": "module",
+        "reason": "The GM canvas menu's Prompt note calls its place; without it the item is hidden."
+      }
+    ]
+  },
+  "esmodules": [
+    "pins.mjs"
+  ],
+  "styles": [
+    "styles/pins.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": false,
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "pins",
+      "flagScope": "pentaryn-pins",
+      "cssPrefix": "ppi-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Pins', then reload.",
+        "  game.pentaryn.pins.describe()"
+      ]
+    }
+  }
+}

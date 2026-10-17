@@ -306,6 +306,13 @@ MODULES = {
         # suite drives the recorder, the queue/relay delivery and the dialog markup in node.
         check=ALL_GATES,
     ),
+    "pins": ModuleSpec(
+        "pentaryn-pins",
+        # node-test: pins-core.mjs (root actor, token pick, view/queue/activate decisions, the
+        # audit, the menu trigger and gate) is pure; the glue suites drive the Scene#view and
+        # _onActivate patches, the view queue, the sheet badge and the GM canvas menu in node.
+        check=ALL_GATES,
+    ),
     # The actor pipeline stages this one, not module-sync (which refuses it by name) —
     # but the static gates are free and it is real code, so it gets them.
     # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites

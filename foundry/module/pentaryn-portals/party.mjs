@@ -13,7 +13,7 @@
  */
 
 import { MODULE, FLAG_SCOPE, crowded, displaceOptions, followersOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
-import { carryTo, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
+import { carryTo, clashNotice, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
 import { claimDocument } from "./lib/election.mjs";
@@ -78,7 +78,24 @@ export async function spreadArrival(tokenOrUuid) {
   return arrived;
 }
 
-export async function bringFollowers(scene, deleted, replacements) {
+/**
+ * The token ids of `scene` that each destination scene of `replacements` ALREADY holds (a duplicated
+ * scene keeps token ids), read in the delete hook, before any GM tab has carried anyone: later, a
+ * follower another tab just carried looks exactly the same (review L3). → Map<sceneId, Set<tokenId>>
+ */
+export function heldIds(scene, replacements) {
+  const out = new Map();
+  for (const uuid of Object.values(replacements ?? {})) {
+    let dest = null;
+    try { dest = fromUuidSync(uuid)?.parent ?? null; } catch (err) { log?.debug("replacement uuid", err); }
+    if (!dest || dest === scene || out.has(dest.id)) continue;
+    out.set(dest.id, new Set(scene.tokens.filter(t => dest.tokens.has(t.id)).map(t => t.id)));
+  }
+  return out;
+}
+
+/** `held`: heldIds() from the delete hook; a follower whose id the destination already held stays, and the GM is told. */
+export async function bringFollowers(scene, deleted, replacements, { held = new Map() } = {}) {
   const leaders = [];
   const gmIds = gmUserIds();
   for (const t of deleted) {
@@ -101,12 +118,19 @@ export async function bringFollowers(scene, deleted, replacements) {
   const sameDest = leaders.filter(l => l.arrived.parent === leaders[0].arrived.parent);
   if (sameDest.length > 1) passes.push({ group: sameDest.map(l => l.record), arrived: sameDest[0].arrived });
   for (const { group, arrived } of passes) {
-    const followers = followersOf(group, remaining.filter(x => scene.tokens.has(x.id))).map(x => x.doc);
-    if (!followers.length) continue;
+    let followers = followersOf(group, remaining.filter(x => scene.tokens.has(x.id))).map(x => x.doc);
     const dest = arrived.parent;
+    const taken = held.get(dest.id);
+    const stuck = taken ? followers.filter(f => taken.has(f.id)) : [];
+    if (stuck.length) {
+      clashNotice(stuck, dest);
+      followers = followers.filter(f => !taken.has(f.id));
+    }
+    if (!followers.length) continue;
     const { x: cx, y: cy } = tokenCentre(arrived, dest.grid.size);
     try {
-      await carryTo(followers, dest, cx, cy);
+      // onto the PC's own floor (core put it there), never the source level id (carryTo)
+      await carryTo(followers, dest, cx, cy, null, { preferLevel: arrived.level ?? null });
     } catch (err) {
       // Two tabs on the GM account (the MCP bridge and a browser) both run this. carryTo creates
       // with keepId, so the server takes one create and refuses the other: that refusal is the
@@ -135,7 +159,8 @@ function onDeleteToken(token, options) {
   const deleted = [token];
   pendingOps.set(options, deleted);
   const scene = token.parent;
-  setTimeout(() => bringFollowers(scene, deleted, replacements)
+  const held = heldIds(scene, replacements);
+  setTimeout(() => bringFollowers(scene, deleted, replacements, { held })
     .catch(err => log.warn("summons did not follow", err)), 0);
 }
 

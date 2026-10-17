@@ -23,10 +23,11 @@ test("core loads with no Foundry globals present", () => {
 
 // [declared] Wave 7 batch (Joe 2026-10-12): flipped from "as shipped (0.4.4)" — the batch bumps portals
 // to 0.5.0 (the blueprint migration's API additions, lang/en.json, D-P1…D-P6) with VERSION.
-test("module.json: id and version as shipped (0.5.0)", () => {
+// [declared] 0.6.0 (pins plan 2026-10, D5): the additive teleportToken row; CONTRACT major unchanged.
+test("module.json: id and version as shipped (0.6.0)", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, "pentaryn-portals");
-  assert.equal(manifest.version, "0.5.0");
+  assert.equal(manifest.version, "0.6.0");
 });
 
 test("VERSION === module.json version (C41; live since S2 moved VERSION/MODULE into core)", () => {
@@ -96,11 +97,56 @@ test("followersOf (native teleport)", () => {
   assert.deepEqual(ids(followersOf([caven, marrith], [handleTok])), []);
 });
 
+test("teleportToken helpers: a wild-shaped lead's root actor, elevation onto another floor", () => {
+  const wolf = { ...rec("wolf", { owners: ["p1"], actorId: "FORM" }), polymorphed: true, rootActorId: "CAV" };
+  assert.deepEqual(ids(followersOf([wolf], all)), ["skel1", "skel2"], "a summon naming the original follows the form");
+  assert.deepEqual(ids(followersOf([{ ...wolf, rootActorId: undefined }], all)), ["skel2"], "without a root: only by ownership, as portal travel");
+  assert.equal(leaderOf(skel1, [wolf]), "wolf", "lands beside the form");
+  // code review 2026-10-17 #11: the rule is the kit's rootActorId (lib/root-actor.mjs, its own tests), not core's
+  assert.equal(core.originalActorId, undefined, "portals keeps no second copy of the root-actor rule");
+  const clamp = (lo, hi) => (e, d = 0) => Math.min(Math.max(Math.min(Math.max(e + d * 5, lo), hi) - d * 5, lo), hi);
+  assert.equal(core.elevationOnLevel(0, 0, 0, 10, clamp(10, 20)), 10, "ground → upper floor: 0 ft above it, not -10");
+  assert.equal(core.elevationOnLevel(20, 0, 0, 0, clamp(0, 10)), 10, "clamped into a 0-10 floor");
+  assert.equal(core.elevationOnLevel(15, 1, 10, 100, clamp(100, 110)), 105, "relative height kept, the head clamped in");
+  assert.equal(core.elevationOnLevel(undefined, undefined, undefined, 0, clamp(0, 10)), 0);
+  // review T1: a token its OWN floor's clamp would move (flying above, burrowing below, head through the
+  // ceiling: core never clamps a token into its level) keeps its height above the base, unclamped
+  assert.equal(core.elevationOnLevel(30, 1, 0, 0, clamp(0, 20), clamp(0, 20)), 30, "flying over a 0-20 floor → 30 on an identical one, not 15");
+  assert.equal(core.elevationOnLevel(-10, 1, 0, 100, clamp(100, 110), clamp(0, 20)), 90, "burrowing 10 ft under → 10 ft under the new base");
+  assert.equal(core.elevationOnLevel(18, 1, 0, 0, clamp(0, 20), clamp(0, 20)), 18, "head through the ceiling: left as it stands");
+  assert.equal(core.elevationOnLevel(15, 1, 0, 0, clamp(0, 10), clamp(0, 20)), 5, "inside its own floor: clamped into the new one as before");
+  // review R8: walls by level are core's CanvasDocument#includedInLevel (scene-adapter landingPlaces), no copy here
+  assert.equal(core.wallOnLevel, undefined, "portals keeps no copy of core's includedInLevel");
+});
+
+// [declared] pins-live S12-S18 (2026-10-17): teleportParty / bringFollowers carried the source
+// level id onto a destination without it; core then refused every move ("level must exist").
+test("carriedLevel: preferred, else own when the destination has it, else initial; never a level the destination lacks", () => {
+  const has = id => ["G", "U", "defaultLevel0000"].includes(id);
+  assert.equal(core.carriedLevel("Src", { has, preferred: "U", initial: "G" }), "U");
+  assert.equal(core.carriedLevel("defaultLevel0000", { has, preferred: "Nope", initial: "G" }), "defaultLevel0000");
+  assert.equal(core.carriedLevel("Src", { has, initial: "G" }), "G", "the source level id is not on the destination");
+  assert.equal(core.carriedLevel(null, { has, initial: "G" }), "G");
+  assert.equal(core.carriedLevel("Src", { has, initial: "Nope" }), null);
+  assert.equal(core.carriedLevel("Src", {}), null);
+});
+
 test("leaderOf", () => {
   assert.equal(leaderOf(eye, [caven, marrith]), "marrith");
   assert.equal(leaderOf(skel2, [caven, marrith]), "caven");
   assert.equal(leaderOf(steed, [caven, marrith]), "caven");
   assert.equal(leaderOf(rec("x", { owners: ["p9"] }), [caven, marrith]), null);
+});
+
+// review R1 (earlier pass): the rootActorId branch, alone. The familiar has no owners, so only its
+// summon.origin (the ORIGINAL druid, dnd5e 6.0.6) can tie it to the wild-shaped PC.
+test("leaderOf: a summon naming a wild-shaped PC's ORIGINAL actor lands beside the form; its own actorId still wins", () => {
+  const wolf = { ...rec("wolf", { type: "character", linked: true, owners: ["p1"], actorId: "FORM" }), rootActorId: "CAV" };
+  const fam = rec("fam", { summoner: "CAV" });
+  assert.equal(leaderOf(fam, [marrith, wolf]), "wolf", "matched by rootActorId");
+  assert.equal(leaderOf(fam, [marrith, { ...wolf, rootActorId: undefined }]), null, "no root: nothing ties it to the form");
+  assert.equal(leaderOf(fam, [caven, wolf]), "caven", "a PC whose actorId is the summoner comes first, in party order");
+  assert.equal(leaderOf(rec("x", { summoner: null }), [{ ...wolf, rootActorId: null }]), null, "a null root never matches a missing summoner");
 });
 
 test("assignSpots: followers land beside their PC", () => {
@@ -209,8 +255,11 @@ test("EXT-2: TELEPORT_TYPE and a frozen NEW_TELEPORT_BEHAVIOR in core; no 'telep
   assert.equal("destinations" in nb.system, false);
   const files = readdirSync(ROOT).filter(f => f.endsWith(".mjs"));
   assert.ok(files.includes("scene-adapter.mjs") && files.includes("card-app.mjs"));
+  // 0.6.0: the API row `teleportToken` (a method name, not the RegionBehavior type) is named by its
+  // manifest path and its audit event; those two sites are not the type literal this test hunts.
+  const apiName = /path: "teleportToken"|log\.info\("teleportToken"/g;
   for (const file of files) {
-    const n = (readFileSync(new URL(file, ROOT), "utf8").match(/["']teleportToken["']/g) ?? []).length;
+    const n = (readFileSync(new URL(file, ROOT), "utf8").replace(apiName, "").match(/["']teleportToken["']/g) ?? []).length;
     assert.equal(n, file === "portals-core.mjs" ? 1 : 0, `${file}: ${n} 'teleportToken' literal(s)`);
   }
 });

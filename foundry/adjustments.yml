@@ -1368,3 +1368,37 @@ adjustments:
     native_when: n/a
     retire_class: never
     check: make foundry-portals-check
+
+  # pentaryn-pins (2026-10-17; design context/plans/pin-2026-10.md §3).
+  - id: pins-scene-view
+    packages: [lib-wrapper, core]
+    modules: [pentaryn-pins]
+    files: [foundry/module/pentaryn-pins/follow.mjs]
+    markers: ["__pentarynPinsView", "view"]
+    what: wraps CONFIG.Scene.documentClass.prototype.view through wrapMethod (libWrapper MIXED when lib-wrapper is active, else a direct wrap marked __pentarynPinsView) so that, with the pinning switch on, a pinned player always draws the scene of their pinned token (a view of another scene is redirected) and never sends core a second view of the scene already being drawn (no "cannot switch Scenes" toast); GMs, unpinned users and the switch off call the original with the same this and arguments
+    why: core has no hook that vetoes or redirects a scene draw (updateScene fires before the activation draw), and every way a client changes scene (login draw, activation, pullToScene, nav clicks, TeleportToken) ends in Scene#view
+    native_when: core lets a client veto or redirect a scene view
+    retire_class: guarded
+    check: make foundry-pins-check
+
+  - id: pins-scene-activate
+    packages: [lib-wrapper, core]
+    modules: [pentaryn-pins]
+    files: [foundry/module/pentaryn-pins/follow.mjs]
+    markers: ["__pentarynPinsActivate", "_onActivate"]
+    what: wraps the protected Scene#_onActivate (CONFIG.Scene.documentClass.prototype._onActivate, marker __pentarynPinsActivate) so that, for a pinned player with the switch on, activating another scene does nothing and deactivating the viewed scene that holds the pinned token does not blank the canvas; unview itself is not patched (scene and level deletion still blank it)
+    why: core has no hook that vetoes or redirects a scene draw; activation calls _onActivate(true) on the activated scene only, so skipping it is the whole change
+    native_when: core lets a client veto or redirect a scene view
+    retire_class: guarded
+    check: make foundry-pins-check
+
+  - id: dnd5e-pins-transform-root
+    packages: [dnd5e]
+    modules: [pentaryn-pins, pentaryn-portals]
+    files: [foundry/module/pentaryn-pins/world-adapter.mjs, foundry/lib/root-actor.mjs, foundry/module/pentaryn-portals/lib/root-actor.mjs]
+    markers: ["originalActor", "previousActorIds"]
+    what: a token's root actor is read from flags.dnd5e.originalActor (on the token, then its actor), else flags.dnd5e.previousActorIds[0], else its actorId, so a wild-shaped or polymorphed character keeps its pin, its sheet badge and its teleport; portals (vendored kit root-actor.mjs, leaderOf) uses the same rule so a summon of a wild-shaped PC's original actor follows the form through portals and teleportToken (review C7)
+    why: dnd5e 6.0.6 transformInto creates a new world actor for the form and rewrites each token in place with actorId = the form and flags.dnd5e.originalActor = the original; it exposes no API for "the original of this token"
+    native_when: dnd5e exposes the original actor of a transformed token through an API
+    retire_class: never
+    check: make foundry-pins-check foundry-portals-check

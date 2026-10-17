@@ -2,7 +2,7 @@
  * Pentaryn Portal Cards — the API manifest. PURE DATA: node imports it without a Foundry stub,
  * describe() reports it, and buildApi() refuses to load when it and the implementations drift.
  *
- * Eight own rows; the first four keep their old signatures (`legacy: true`): a document or its uuid
+ * Nine own rows; the first four keep their old signatures (`legacy: true`): a document or its uuid
  * in (ROB-6: a uuid naming no document of that kind → null / undefined, logged), the old return shapes. Features contribute the rest from install(): badges → open, redraw, badges;
  * party → spreadArrival.
  */
@@ -48,9 +48,10 @@ export const MANIFEST = Object.freeze({
         { name: "destRegion", type: "RegionDocument|uuid", doc: "where the party lands (its centre)" },
         { name: "opts", type: "{ confirm = true }", optional: true, doc: "confirm: false skips the GM's confirm dialog" },
       ],
-      returns: "{ moved, cancelled } | undefined (not a GM, no region or a uuid that names no region, or no scene on the canvas)",
+      returns: "{ moved, cancelled } (cancelled: the GM said no, nobody counts as party, or the destination scene already holds a mover's token id — a duplicated scene; the GM is warned) | undefined (not a GM, no region or a uuid that names no region, or no scene on the canvas)",
       gm: true, writes: true, legacy: true,
-      sideEffects: ["Token: update (same scene) or create + delete (another scene)", "pulls active players to the destination"],
+      sideEffects: ["Token: update (same scene) or create + delete (another scene)", "Token: level — the destination region's one floor (same scene too), else a level the scene has; elevation mapped onto it",
+        "pulls active players to the destination"],
       doc: "Move the party on canvas.scene (PCs, their summons, player-owned tokens) to the region. Opens a "
         + "confirm dialog first unless the setting confirmPartyTeleport is off — a console or bridge caller passes { confirm: false }.",
     },
@@ -97,11 +98,27 @@ export const MANIFEST = Object.freeze({
       sideEffects: ["RegionBehavior: system.destinations (update)"],
       doc: "The region no longer leads to opts.to: the entry is dropped from every enabled teleport behavior. removed = behaviors changed.",
     },
+    {
+      path: "teleportToken",
+      params: [
+        { name: "ref", kind: "token", type: "Token|uuid|id|exact name", resolve: false,
+          doc: "the token to move (a PC brings its company); opts.sceneId scopes an id or a name. A bare id held by more than one scene (a duplicated scene keeps token ids) is AMBIGUOUS without opts.sceneId (review C6)" },
+        { name: "opts", type: "{ x, y, scene?, level?, dryRun = false, sceneId? }",
+          doc: "x, y: canvas point on the destination where the token's centre should land; scene: destination Scene|id|uuid|exact name (kit resolveRef), default the token's own scene; level: destination level id (v14), default the token's level on the same scene (the initial level when the scene no longer has it), the destination's initial level (else its first) on another" },
+      ],
+      returns: "{ ok: true, token: { documentName, id, uuid, name }, from: sceneId, to: { scene: sceneId, x, y, level: levelId|null }, followers: [{ id, name }], moved, dryRun? } | { ok: false, code, reason }",
+      gm: true, writes: true, dryRun: true, since: "0.6.0",
+      sideEffects: ["Token: x, y, level — same scene, one update with displace waypoints that carry the level, no animation",
+        "Token: create keepId on the destination + plain delete on the source — another scene (no replacements; combatants are not remapped)",
+        "Token: elevation — onto another floor (another level or scene), the same height above its base, clamped into it unless it was outside its own floor (flying, burrowing)"],
+      doc: "Move one token and, when it is a PC (character or polymorphed), its company (its summons — a wild-shaped PC's too, by its original actor — and tokens only its players own) to a point, on its own scene or another. Same follower rule as portal travel, without the portal check. No confirm; nobody is pulled; no view changes. Each follower lands beside the PC; landing counts only the destination floor's tokens and walls. "
+        + "REFUSED (dryRun too) when a mover's token id is already on the destination scene (a duplicated scene keeps token ids); CONFLICT when another session's create of it landed first.",
+    },
   ],
   flags: {
     writes: ["flags.pentaryn-portals.title", "flags.pentaryn-portals.img", "flags.pentaryn-portals.description"],
     reads: ["flags.pentaryn.travel.regionId", "flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor",
-      "flags.dnd5e.summon.origin", "flags.dnd5e.isPolymorphed"],
+      "flags.dnd5e.summon.origin", "flags.dnd5e.isPolymorphed", "flags.dnd5e.originalActor", "flags.dnd5e.previousActorIds"],
   },
   unlisted: [],
 });

@@ -1,0 +1,276 @@
+{
+  "module": "pentaryn-pins",
+  "namespace": "pins",
+  "contract": "pentaryn-pins/api@1",
+  "flagScope": "pentaryn-pins",
+  "methods": [
+    {
+      "path": "pin",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|uuid|id|exact name",
+          "doc": "the player (never a substring)"
+        },
+        {
+          "name": "opts",
+          "type": "{ actor: Actor|uuid|id|exact name, replace = false, dryRun = false }",
+          "doc": "actor: the character (a wild-shaped form is stored as its original); replace: take the actor from the user it is pinned to"
+        }
+      ],
+      "returns": "{ ok: true, user, actor, previous, cleared, audit, warning?: NOT_OWNER, dryRun? } | { ok: false, code, reason, restored? }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "dryRun": true,
+      "sideEffects": [
+        "flags.pentaryn-pins.actor on the User (the root actor id)",
+        "with replace: that flag deleted on the user who had the actor"
+      ],
+      "doc": "Pin a character to a player: with the pinning switch on, that player's view follows the character's token. BAD_ARGS for a GM user or no actor; CONFLICT when the actor is pinned to another user (unless replace). warning NOT_OWNER when the player cannot observe the actor (pinned anyway: their view follows a token they get no vision from). A write that throws (INTERNAL) or that a preUpdateUser hook vetoes (REFUSED) changes no pin: the cleared pins are put back (restored: their user ids)."
+    },
+    {
+      "path": "unpin",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|uuid|id|exact name",
+          "doc": "the player (never a substring)"
+        },
+        {
+          "name": "opts",
+          "type": "{ dryRun = false }",
+          "optional": true
+        }
+      ],
+      "returns": "{ ok: true, user, previous, dryRun? } | { ok: false, code, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "dryRun": true,
+      "sideEffects": [
+        "flags.pentaryn-pins.actor deleted on the User"
+      ],
+      "doc": "Clear a player's pin (an unpinned user is ok, previous: null)."
+    },
+    {
+      "path": "pins",
+      "params": [],
+      "returns": "[{ user: { id, name, active }, actor: { id, name } | null, tokens: [{ id, scene, level, form }] }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Every pin: the user, the pinned (root) actor, and its tokens on every scene (form: the token's actor name while wild-shaped or polymorphed)."
+    },
+    {
+      "path": "pinnedToken",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|uuid|id|exact name",
+          "doc": "the player (never a substring)"
+        }
+      ],
+      "returns": "{ token: uuid, actor: uuid, scene: id string, level: id string | null, x, y } | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "the pinning switch is off, the user is a GM (even with a pin flag), the user is unpinned, or the pin has no token or more than one",
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "The token a pinned player's view follows. scene and level are id strings (pentaryn-resume reads scene)."
+    },
+    {
+      "path": "audit",
+      "params": [],
+      "returns": "{ enabled, ok, pins, violations: [{ code, level, user, actor, tokens: [{ id, scene, sceneName }], detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Each pinned actor has exactly one token across all scenes. Codes: GM_USER NO_ACTOR SHARED_ACTOR NO_TOKEN MANY_TOKENS (problems), UNLINKED and NOT_OWNER (the player cannot observe the actor) (warnings). Runs whether or not the switch is on; this is the switch-on audit's API return. Deletes nothing."
+    },
+    {
+      "path": "teleport",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|uuid|id|exact name",
+          "doc": "the player (never a substring)"
+        },
+        {
+          "name": "opts",
+          "type": "{ x, y, scene?, level?, dryRun = false }",
+          "doc": "x, y: canvas point on the destination; scene: id|uuid (default the token's own); level: the destination level id"
+        }
+      ],
+      "returns": "the pentaryn-portals teleportToken result + { user, viewFollows, online, warning? } | { ok: false, code, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "dryRun": true,
+      "sideEffects": [
+        "through pentaryn-portals teleportToken: the pinned token and its company (summons, pets) moved"
+      ],
+      "doc": "Teleport a player's pinned character, with its summons and pets, to a point (portals teleportToken). BAD_ARGS unpinned, NOT_FOUND no token, AMBIGUOUS several, UNSUPPORTED without pentaryn-portals (teleportToken). With the switch off the player's view does not follow (viewFollows false; a cross-scene move adds warning VIEW_UNCHANGED). With it on, viewFollows is true while the player is online; an offline player (online false) lands on the token's scene at login, so no warning."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "resolve": "self",
+          "type": "User|Actor|uuid|id|exact name",
+          "doc": "a user or an actor; an id or name is tried as a user first"
+        }
+      ],
+      "returns": "{ user, actor, root, enabled, token, ok }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "Read-only pin state for one user or actor, plain JSON, depth ≤ 4: who it is pinned to, the root actor, the token followed, ok = exactly one token. Options are ignored (the root game.pentaryn.inspect passes kind/sceneId/base to every namespace)."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Live smoke checks after a sync: patches installed, setting readable, portals teleportToken present."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "pinning",
+      "scope": "world",
+      "type": "Boolean",
+      "default": false,
+      "doc": "The world switch. On: a pinned player sees the scene their pinned token is on and ignores GM activation and pulls; the sheet shows 'Pinned to'; the GM gets the right-click canvas menu. Off: everything in pins is inert."
+    }
+  ],
+  "events": [
+    {
+      "key": "followed",
+      "name": "pentaryn-pins.followed",
+      "legacyName": null,
+      "pre": false,
+      "args": "({ scene, level, reason: login|pull|move|reconcile|switch })"
+    },
+    {
+      "key": "audited",
+      "name": "pentaryn-pins.audited",
+      "legacyName": null,
+      "pre": false,
+      "args": "(result)"
+    }
+  ],
+  "hooks": [
+    {
+      "name": "createToken",
+      "label": "createToken: follow"
+    },
+    {
+      "name": "deleteToken",
+      "label": "deleteToken: follow"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: follow"
+    },
+    {
+      "name": "updateUser",
+      "label": "updateUser: pin changed"
+    },
+    {
+      "name": "deleteLevel",
+      "label": "deleteLevel: core's fallback view"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: reconcile"
+    },
+    {
+      "name": "ready",
+      "label": "ready: reconcile"
+    },
+    {
+      "name": "renderBaseActorSheet",
+      "label": "sheet: pinned badge"
+    },
+    {
+      "name": "updateUser",
+      "label": "updateUser: sheet badge"
+    },
+    {
+      "name": "deleteUser",
+      "label": "deleteUser: sheet badge"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: bind board"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "canvasTearDown: close menu"
+    },
+    {
+      "name": "canvasPan",
+      "label": "canvasPan: close menu"
+    }
+  ],
+  "patches": [
+    {
+      "label": "Scene#view",
+      "marker": "__pentarynPinsView",
+      "adjustments": "pins-scene-view"
+    },
+    {
+      "label": "Scene#_onActivate",
+      "marker": "__pentarynPinsActivate",
+      "adjustments": "pins-scene-activate"
+    }
+  ],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-pins.actor"
+    ],
+    "reads": [
+      "flags.dnd5e.originalActor",
+      "flags.dnd5e.previousActorIds",
+      "api:pentaryn-portals.teleportToken",
+      "api:pentaryn-prompts.place"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

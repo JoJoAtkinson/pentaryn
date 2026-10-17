@@ -8,7 +8,9 @@ Each player logs back in on the map they last had open, at the same spot and zoo
 
 Logging in puts them back on the map, level, spot and zoom they last had, instead of the active
 scene. This holds unless the GM has made a different scene active since then; in that case they
-land on the new one, as in stock Foundry. There is no UI. Table-side guide: `context/foundry/resume.md`.
+land on the new one, as in stock Foundry. With pentaryn-pins' pinning on, a pinned player ignores
+activation and pulls; resume restores only pan and zoom on the pinned scene (no restore at all when
+the saved view is of another scene). A GM resumes as stock even if it carries a pin flag. There is no UI. Table-side guide: `context/foundry/resume.md`.
 
 ## Settings
 
@@ -30,8 +32,14 @@ before the login restore has run.
 
 ## Flags other modules read
 
-n/a — no other module reads this module's flags yet. When one does, list it here and in
-`api-manifest.mjs` `flags.reads/writes` on both sides, with a contract test.
+No other module reads this module's flag. This module reads one foreign API:
+
+| API | Owner | Read for |
+|---|---|---|
+| `api:pentaryn-pins.pinnedToken` (`game.user`) → `{ scene: id string, … } \| null` | pentaryn-pins | the pinned scene at login (`pinnedScene`); declared in `describe().flags.reads`. Both sides pin the shape: pins' describe golden, and resume's glue test (including a non-string `scene`, which is logged and read as no pin) |
+
+pins publishes at its own `ready`, registered when its entry evaluates — before this module's
+`ready: resume` listener (registered in `setup`) — so the call sees the API at login.
 
 ## Events
 

@@ -1,0 +1,72 @@
+/*
+ * Pentaryn Pins — every selector sits under .pentaryn-pins or the module's prefix (.ppi-…),
+ * so nothing here can restyle another package's DOM. Use core's CSS variables and
+ * .theme-dark / .theme-light rather than fixed colours. No !important in new rules.
+ */
+
+/* the sheet badge, inside the sheet's .window-header (a span pins creates) */
+.ppi-pinned {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  margin-right: 0.5em;
+  padding: 0 0.4em;
+  border-radius: 3px;
+  font-size: var(--font-size-12, 12px);
+  white-space: nowrap;
+  /* opaque, so it reads on a dark character header and on an NPC sheet's pale parchment alike
+     (white on #5b3fb0 is about 7.6:1) */
+  color: #ffffff;
+  background: #5b3fb0;
+  pointer-events: none;
+}
+/* a minimized window is 200px wide: the title, not the badge, says which sheet it is */
+.minimized .ppi-pinned,
+.minimizing .ppi-pinned { display: none; }
+
+/* the GM canvas menu (portals' badge menu look, under pins' own prefix) */
+.ppi-menu {
+  position: fixed;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 0.25rem 0;
+  background: var(--color-cool-5, #1b1a24);
+  color: var(--color-light-1, #eee);
+  border: 1px solid #8a5cff;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+}
+.ppi-menu .ppi-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ppi-menu .ppi-item:hover { background: rgba(138, 92, 255, 0.25); }
+.ppi-menu .ppi-item > i:first-child { width: 1.2em; text-align: center; }
+.ppi-menu .ppi-caret { margin-left: auto; }
+.ppi-menu .ppi-disabled { cursor: default; opacity: 0.55; }
+.ppi-menu .ppi-disabled:hover { background: none; }
+.ppi-menu .ppi-note { margin-left: auto; font-style: italic; opacity: 0.8; }
+.ppi-menu .ppi-group { position: relative; }
+.ppi-menu .ppi-sub {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: -0.25rem;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 0.25rem 0;
+  background: var(--color-cool-5, #1b1a24);
+  border: 1px solid #8a5cff;
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+}
+.ppi-menu.ppi-flip-x .ppi-sub { left: auto; right: 100%; }
+.ppi-menu.ppi-flip-y .ppi-sub { top: auto; bottom: -0.25rem; }
+.ppi-menu .ppi-group:hover > .ppi-sub,
+.ppi-menu .ppi-group.ppi-open > .ppi-sub { display: flex; }

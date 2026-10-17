@@ -5,8 +5,12 @@
  *
  * A "token record" is a plain object the Foundry side builds from a TokenDocument:
  *
- *   { id, name, actorId, type, linked, pile, excluded, owners, summoner, polymorphed, handle, doc }
+ *   { id, name, actorId, rootActorId?, type, linked, pile, excluded, owners, summoner, polymorphed, handle, leader?, doc }
  *
+ *     rootActorId: string      only while wild-shaped/polymorphed: the ORIGINAL actor's id, which its
+ *                              summons name as their origin (followersOf, leaderOf, partySelection)
+ *     leader:      true        teleportToken's lead only: it leads its company in assignSpots even
+ *                              when it is not isPC
  *     owners:      string[]    non-GM user ids with OWNER on the token's actor (explicit, not default)
  *     summoner:    string|null actor id from flags.dnd5e.summon.origin ("Actor.<id>.Item.<id>")
  *     polymorphed: boolean     flags.dnd5e.isPolymorphed on the token's actor
@@ -17,7 +21,7 @@
 export const MODULE = "pentaryn-portals";
 export const SHORT = "portals";
 export const NS = "portals";
-export const VERSION = "0.5.0";                        // === module.json version (core.test pins it)
+export const VERSION = "0.6.0";                        // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-portals/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_PORTALS";
 export const CSS = "ppt-";                             // every class this module puts in the DOM starts ppt- (S7)
@@ -41,11 +45,56 @@ export const NEW_TELEPORT_BEHAVIOR = Object.freeze({
  * Update options for an instant token move: one `displace` waypoint per token (core's own
  * region-teleport shape in v14, RegionDocument#teleportTokens), no animation. Replaces the
  * `teleport` update option, deprecated since v13 (portals-w3-1b).
- * @param {{_id: string, x: number, y: number}[]} moves
+ *
+ * A move that carries `level` (a string) or `elevation` (a finite number) carries it in its waypoint
+ * too: core takes the movement from explicit waypoints and fills a missing `waypoint.level` /
+ * `waypoint.elevation` with the token's previous one, so a value only in the update would be
+ * dropped (v14 token.mjs #cleanAndValiateMovementWaypoints). A move with neither gets exactly
+ * `{ x, y, action }`, as before (spreadArrival, a same-floor party move). One builder for every
+ * caller (review R3: teleportToken's displaceToLevel was a copy of this).
+ * @param {{_id: string, x: number, y: number, elevation?: number, level?: string}[]} moves
  */
 export function displaceOptions(moves) {
-  return { animate: false, movement: Object.fromEntries(moves.map(({ _id, x, y }) => [_id, { waypoints: [{ x, y, action: "displace" }] }])) };
+  const point = ({ x, y, elevation, level }) => ({ x, y, ...(Number.isFinite(elevation) ? { elevation } : {}),
+    ...(typeof level === "string" ? { level } : {}), action: "displace" });
+  return { animate: false, movement: Object.fromEntries(moves.map(m => [m._id, { waypoints: [point(m)] }])) };
 }
+
+/**
+ * The elevation a token gets when it lands on another floor: the same height above the floor's base
+ * as above its old floor's, clamped into the new floor (core's own paste rule, placeables/token.mjs
+ * _pasteObject). `clamp(elevation, depth)` is the destination Level's clampElevation.
+ *
+ * `srcClamp` (optional) is the source Level's clampElevation. A token it would move — flying above
+ * its floor, burrowing below it, its head through the ceiling — is outside its floor (core never
+ * clamps a token into its own level; a v14 default level is only 0 to 4 grid units), so it keeps its
+ * height above the base, unclamped: a familiar at 30 ft follows its PC at 30, not 15 (review T1).
+ */
+export function elevationOnLevel(elevation, depth, srcBase, destBase, clamp, srcClamp = null) {
+  const e = Number(elevation) || 0;
+  const d = Number(depth) || 0;
+  const mapped = e - (Number(srcBase) || 0) + (Number(destBase) || 0);
+  if (typeof srcClamp === "function" && srcClamp(e, d) !== e) return mapped;
+  return clamp(mapped, d);
+}
+
+/**
+ * The level a token carried to another scene by carryTo's plain path (bringFollowers,
+ * teleportParty) is created on: `preferred` (the arrived PC's level, the destination region's one
+ * level) when the destination has it, else the token's own level when the destination has that id
+ * too (single-level scenes share core's defaultLevel0000), else `initial` (the destination's
+ * initial level). Never a level the destination does not have: core creates such a token, and then
+ * refuses every later move of it with "level must exist" (v14 token.mjs
+ * #cleanAndValiateMovementWaypoints). null only when there is nothing to pick.
+ * @param {string|null} own  @param {{has: (id: string) => boolean, preferred?: string|null, initial?: string|null}} dest
+ */
+export function carriedLevel(own, { has, preferred = null, initial = null } = {}) {
+  const ok = id => typeof id === "string" && !!id && !!has?.(id);
+  if (ok(preferred)) return preferred;
+  if (ok(own)) return own;
+  return ok(initial) ? initial : null;
+}
+
 /** The fallback card image. */
 export const DOOR_ICON = "icons/svg/door-exit.svg";
 
@@ -109,7 +158,8 @@ const carriable = t => !t.pile && !t.excluded && !t.handle && !isPC(t);
  */
 export function partySelection(records) {
   const pcs = records.filter(isPC);
-  const pcActors = new Set(pcs.map(t => t.actorId));
+  // a wild-shaped PC's summons name its original actor (rootActorId): code review 2026-10-17 #4
+  const pcActors = new Set(pcs.flatMap(t => [t.actorId, t.rootActorId]).filter(Boolean));
   const followers = records.filter(t => carriable(t)
     && (t.owners.length > 0 || (t.summoner && pcActors.has(t.summoner))));
   return [...pcs, ...followers];
@@ -123,7 +173,7 @@ export function partySelection(records) {
  */
 export function leaderOf(follower, pcs) {
   if (follower.summoner) {
-    const pc = pcs.find(p => p.actorId === follower.summoner);
+    const pc = pcs.find(p => p.actorId === follower.summoner || (p.rootActorId && p.rootActorId === follower.summoner));
     if (pc) return pc.id;
   }
   const owners = new Set(follower.owners ?? []);
@@ -145,18 +195,20 @@ export function leaderOf(follower, pcs) {
 export function assignSpots(spots, party, { fits = () => true } = {}) {
   const free = spots.map((s, i) => ({ ...s, i }));
   const take = idx => free.splice(idx, 1)[0];
-  const pcs = party.filter(isPC);
+  // a leader: a PC, or teleportToken's lead (`leader: true`, e.g. a polymorphed NPC) — code review 2026-10-17 #5
+  const leads = t => isPC(t) || t.leader === true;
+  const pcs = party.filter(leads);
   const at = new Map();
   const out = new Array(party.length);
-  // Group: each PC, then its followers; followers with no leader last.
+  // Group: each leader, then its followers; followers with no leader last.
   const order = [];
-  const lead = party.map(t => (isPC(t) ? null : leaderOf(t, pcs)));
+  const lead = party.map(t => (leads(t) ? null : leaderOf(t, pcs)));
   for (const [i, t] of party.entries()) {
-    if (!isPC(t)) continue;
+    if (!leads(t)) continue;
     order.push(i);
     for (const [j] of party.entries()) if (lead[j] === t.id) order.push(j);
   }
-  for (const [j, t] of party.entries()) if (!isPC(t) && !lead[j]) order.push(j);
+  for (const [j, t] of party.entries()) if (!leads(t) && !lead[j]) order.push(j);
   // ringSpots pads a boxed-in landing with copies of the centre; a copy is a last resort.
   const used = new Set();
   const key = s => `${s.x},${s.y}`;
@@ -172,7 +224,7 @@ export function assignSpots(spots, party, { fits = () => true } = {}) {
     const { x, y } = take(idx);
     used.add(key({ x, y }));
     out[i] = { x, y };
-    if (isPC(party[i])) at.set(party[i].id, { x, y });
+    if (leads(party[i])) at.set(party[i].id, { x, y });
   }
   for (let i = 0; i < out.length; i++) out[i] ??= { ...(spots[0] ?? { x: 0, y: 0 }) };
   return out;
@@ -199,7 +251,9 @@ export function partyPreview(party) {
  */
 export function followersOf(leaders, records) {
   const leaderIds = new Set(leaders.map(t => t.id));
-  const leaderActors = new Set(leaders.map(t => t.actorId).filter(Boolean));
+  // a leader's `rootActorId` (recordOf: the original of a wild-shaped PC) also counts,
+  // since dnd5e names the ORIGINAL actor as a summon's origin
+  const leaderActors = new Set(leaders.flatMap(t => [t.actorId, t.rootActorId]).filter(Boolean));
   const leaderOwners = new Set(leaders.flatMap(t => t.owners));
   return records.filter(t => {
     if (leaderIds.has(t.id) || !carriable(t)) return false;

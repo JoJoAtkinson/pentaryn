@@ -20,8 +20,12 @@ let log = null;
 
 /* ── the P key ───────────────────────────────────────────────────────────── */
 
-/** The P key: a marker of the client's default size under the cursor, snapped, dialog open. */
-export async function placeAtCursor(sizeKey, { ticket = null } = {}) {
+/**
+ * The P key: a marker of the client's default size under the cursor, snapped, dialog open.
+ * `at` (canvas coordinates) centres it there instead of under the cursor (the pins GM menu's
+ * "Prompt note", which captures the click point before its menu item is picked).
+ */
+export async function placeAtCursor(sizeKey, { ticket = null, at = null } = {}) {
   ticket ??= startTyping();   // the API path too: keys typed while the token is created are held
   const giveUp = () => { if (ticket !== null) cancelTyping(ticket); return null; };
   if (!game.user?.isGM || !canvas?.ready || !canvas.scene) return giveUp();
@@ -34,7 +38,7 @@ export async function placeAtCursor(sizeKey, { ticket = null } = {}) {
     const actor = markerActor(size);
     if (!actor) { ui.notifications?.warn(_loc("PENTARYN_PROMPTS.dialog.noActor", { size })); return giveUp(); }
     const w = SIZE_BY_KEY[size].w * g;
-    const m = canvas.mousePosition;
+    const m = at ?? canvas.mousePosition;
     const data = await tokenDataFrom(actor, canvas.scene, { at: { x: m.x - w / 2, y: m.y - w / 2 }, snap: true,
       extra: { elevation: canvas.level?.elevation?.base ?? 0, ...(canvas.level?.id ? { level: canvas.level.id } : {}) } });
     [tok] = await canvas.scene.createEmbeddedDocuments("Token", [data], { pentarynPrompts: { placed: true } });

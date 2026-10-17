@@ -82,7 +82,7 @@ query and the version. The twelve calls published before the migration keep thei
 | `replace(spec, opts)` — ONE replacement (run options from `opts` or the spec) | same |
 | `show({call, id})` / `show({sceneId, markerId})` | `{ok, sceneId, x, y}` (views the scene, pans, pings) |
 | `status()` | `{version, listed, npcBridge, party, specDir, doubleClick, markers}` |
-| `open(tokenOrId)` · `place(size?)` · `ensureMarkers()` · `model(sceneId)` · `manifests()` | the box · the token · a summary · the scene model · the ring |
+| `open(tokenOrId)` · `place(size?, {at?})` · `ensureMarkers()` · `model(sceneId)` · `manifests()` | the box · the token · a summary · the scene model · the ring |
 | `inspect(ref, {sceneId})` | `{token, marker: {size, text} \| null, provenance}` (exact ref, never a substring) |
 | `markersOn(sceneId)` · `manifest(call)` | `[{id, size, text}]` · one stored manifest or null |
 
@@ -94,7 +94,8 @@ default: `Data/pentaryn-prompts-crops/<call>/E1.webp`, no base64 in an eval-js r
 `maxPrompts` (60) after the first scene; pass `next` as `from` with the same `scenes` (under `"all"`, a
 `from` that has since lost its prompts resumes at the next prompted scene after it). `specFile`: a JSON
 file under the Data dir (`pentaryn-prompts-specs/<name>.json`): replacements, or `{call, party, replacements}`.
-`place` and a drop arm the keyboard capture on the **calling** client for up to 3.5 s.
+`place` and a drop arm the keyboard capture on the **calling** client for up to 3.5 s. `place(null, {at: {x, y}})`
+centres the marker on that canvas point instead of the cursor (the pentaryn-pins GM menu's Prompt note).
 
 **Queries** (registered from the manifest, GM-guarded on sender and receiver):
 `pentaryn-prompts.list`, `.gather`, `.crops`, `.replace` (= `replaceMany`), `.show`; a query before
@@ -171,7 +172,8 @@ modelled: wall heights and Levels elevations (a `WARN` line says so).
 ## Flags other modules read
 
 None. `pentaryn-portals` and `pentaryn-aoe` decide what a "Marker" is with their own predicates;
-the table is in `context/foundry/markers.md`.
+the table is in `context/foundry/markers.md`. API consumer: pentaryn-pins' GM canvas menu calls
+`place(null, { at })` (its "Prompt note"; pins hides the item when this module is absent).
 
 ## Events
 

@@ -43,13 +43,14 @@ const flag = () => game.user.getFlag(MODULE, VIEW_FLAG);
 let loads = 0;
 
 /** One browser load. `canvasReady: false` is a client with the canvas disabled. */
-async function login({ saved, active = IDS.town, canvasReady = true } = {}) {
+async function login({ saved, active = IDS.town, canvasReady = true, drawn = null } = {}) {
   game.modules.get(MODULE).api?.uninstall();
   game.ready = false;
   if (saved === null) delete game.user.flags[MODULE];
   else if (saved) game.user.flags[MODULE] = { [VIEW_FLAG]: structuredClone(saved) };
   for (const s of [town, cave]) s.active = s.id === active;
-  Object.assign(canvas, { ready: canvasReady, scene: canvasReady ? game.scenes.active ?? town : null, level: null });
+  // `drawn`: the scene Foundry's first draw showed (pentaryn-pins redirects a pinned player's)
+  Object.assign(canvas, { ready: canvasReady, scene: canvasReady ? (drawn ? game.scenes.get(drawn) : game.scenes.active ?? town) : null, level: null });
   views.length = 0;
   pans.length = 0;
   F.calls.length = 0;
@@ -146,6 +147,92 @@ test("canvas disabled: nothing restored, nothing saved", async () => {
   await login({ saved: { scene: IDS.cave, active: IDS.town }, canvasReady: false });
   assert.deepEqual(views, []);
   assert.equal(userWrites().length, 0);
+});
+
+/* ── pentaryn-pins (resume 0.1.1, pins plan D7): the pin wins at login ───────────────────── */
+
+const PINS = "pentaryn-pins";
+/**
+ * A pins stub of the published shape: pinnedToken(user) → { token, actor, scene: id string, level, x, y } | null.
+ * A function is the implementation itself (to throw, or to answer whatever the user is).
+ */
+function pinsPublishing(pinned) {
+  const pinnedToken = typeof pinned === "function" ? pinned : () => pinned;
+  // pins registers Hooks.once("ready") when its entry evaluates — before resume's setup listener
+  Hooks.once("ready", () => game.modules.set(PINS, { id: PINS, active: true, api: { pinnedToken } }));
+}
+const resumedDuring = async fn => {
+  const seen = [];
+  const id = Hooks.on(HOOKS.resumed.name, view => seen.push(view));
+  try { await fn(); } finally { Hooks.off(HOOKS.resumed.name, id); game.modules.delete(PINS); }
+  return seen;
+};
+
+test("pins absent: no pentaryn-pins module, the rules above apply unchanged", async () => {
+  assert.equal(game.modules.get(PINS), undefined);
+  await login({ saved: { scene: IDS.cave, active: IDS.town, x: 1, y: 2, scale: 1 } });
+  assert.deepEqual(views, [[IDS.cave, {}]]);
+});
+
+test("pinned and the saved scene is the pinned one: no scene.view (pins drew it), pans, level null — even after the table moved on", async () => {
+  pinsPublishing({ token: "Scene.x.Token.y", actor: "Actor.z", scene: IDS.cave, level: null, x: 0, y: 0 });
+  const seen = await resumedDuring(() => login({ saved: { scene: IDS.cave, level: IDS.caveLower, active: IDS.cave, x: 300, y: 400, scale: 0.75 },
+    active: IDS.town, drawn: IDS.cave }));
+  assert.deepEqual(views, []);
+  assert.deepEqual(pans.at(-1), { x: 300, y: 400, scale: 0.75 });
+  assert.deepEqual(seen, [{ scene: IDS.cave, level: null, position: { x: 300, y: 400, scale: 0.75 } }]);
+});
+
+test("pinned and the saved scene is another: no view, no pan, no resumed event", async () => {
+  pinsPublishing({ token: "Scene.x.Token.y", actor: "Actor.z", scene: IDS.cave, level: null, x: 0, y: 0 });
+  const seen = await resumedDuring(() => login({ saved: { scene: IDS.town, active: IDS.town, x: 50, y: 60, scale: 2 }, drawn: IDS.cave }));
+  assert.deepEqual(views, []);
+  assert.deepEqual(pans, [{ x: 1000, y: 1000, scale: 1 }], "only Foundry's first draw");
+  assert.deepEqual(seen, []);
+  assert.equal(canvas.scene.id, IDS.cave);
+});
+
+test("contract: a pinnedToken whose scene is not an id string reads as no pin, and says so", async () => {
+  pinsPublishing({ token: "Scene.x.Token.y", actor: "Actor.z", scene: { id: IDS.town }, level: null, x: 0, y: 0 });
+  consoleLines.length = 0;
+  await resumedDuring(() => login({ saved: { scene: IDS.cave, active: IDS.town } }));
+  assert.deepEqual(views, [[IDS.cave, {}]], "the unpinned rules");
+  assert.deepEqual(consoleLines, [["warn", `${MODULE} | pentaryn-pins pinnedToken().scene is not a scene id string; resuming as unpinned`]]);
+});
+
+test("pinnedToken throws: logged, the unpinned rules, and resumed still fires", async () => {
+  pinsPublishing(() => { const e = new Error("BAD_ARGS: user"); e.code = "BAD_ARGS"; throw e; });
+  consoleLines.length = 0;
+  const seen = await resumedDuring(() => login({ saved: { scene: IDS.cave, active: IDS.town, x: 7, y: 8, scale: 1 } }));
+  assert.deepEqual(views, [[IDS.cave, {}]], "the unpinned rules");
+  assert.deepEqual(pans.at(-1), { x: 7, y: 8, scale: 1 });
+  assert.deepEqual(seen, [{ scene: IDS.cave, level: null, position: { x: 7, y: 8, scale: 1 } }]);
+  assert.deepEqual(consoleLines, [["warn", `${MODULE} | pentaryn-pins pinnedToken() failed; resuming as unpinned`]]);
+});
+
+test("a GM carrying a pin flag (a promoted player) resumes as stock: pins is never asked for a GM", async () => {
+  let asked = 0;
+  // a pins that would still answer for a GM: resume must not take the pinned branch anyway
+  pinsPublishing(() => { asked++; return { token: "Scene.x.Token.y", actor: "Actor.z", scene: IDS.town, level: null, x: 0, y: 0 }; });
+  game.user.isGM = true;
+  try {
+    const seen = await resumedDuring(() => login({ saved: { scene: IDS.cave, level: IDS.caveLower, active: IDS.town, x: 3, y: 4, scale: 1 } }));
+    assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower }]], "stock restore, with its level");
+    assert.deepEqual(seen, [{ scene: IDS.cave, level: IDS.caveLower, position: { x: 3, y: 4, scale: 1 } }]);
+    assert.equal(asked, 0);
+  } finally {
+    game.user.isGM = false;
+  }
+});
+
+test("pinning off or unpinned (pinnedToken null): the unpinned rules", async () => {
+  pinsPublishing(null);
+  await resumedDuring(() => login({ saved: { scene: IDS.cave, active: IDS.town } }));
+  assert.deepEqual(views, [[IDS.cave, {}]]);
+});
+
+test("describe().flags.reads declares the pins API read", () => {
+  assert.deepEqual(game.modules.get(MODULE).api.describe().flags, { writes: [], reads: ["api:pentaryn-pins.pinnedToken"] });
 });
 
 test("a throw inside our own handler is logged with the module prefix and never reaches Foundry", () => {

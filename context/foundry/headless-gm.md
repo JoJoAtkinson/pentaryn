@@ -50,7 +50,8 @@ Windows.
   session that has never authenticated as server admin (`cookie --as bot` →
   `FoundryAdmin.join`). The session cookie reaches Node in a 0600 file under
   `$XDG_RUNTIME_DIR` (tmpfs), which Node deletes as soon as it has read it. It never appears
-  in argv or stdout.
+  in argv or stdout. `cookie --out /dev/fd/3` writes to an inherited pipe instead, with no file
+  at all (it refuses a tty or a regular file there); `automation/smoke/pins-live.mjs` uses that.
   - **Why not `loginAs`, as `make login` and the smoke test do.** `loginAs` needs an admin
     session, and the admin flag **stays on the session the browser gets**. Foundry can only
     drop it from the setup screen, so it would last the cookie's 24 h. With it, `/setup`

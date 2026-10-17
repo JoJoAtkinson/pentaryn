@@ -6,6 +6,7 @@ per-module lines first; the pattern rules that replace them must pass it unchang
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 
@@ -232,11 +233,18 @@ def test_foundry_module_index_passes_check_through_wave3_2():
 # with a second makefile that swaps OPS for a stub (recipes expand OPS when they run, so the
 # later definition wins) — no `-n`, and no assignment unless the row is about one.
 
+# Each row models a top-level `make`. Under `make test` the outer make's MAKELEVEL and
+# MAKEFLAGS reach this one, which then prints "Entering directory" and inherits the outer
+# flags, so they are dropped here.
+_OUTER_MAKE_ENV = ("MAKELEVEL", "MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES")
+
+
 def _index_run(tmp_path, *argv, ops="echo OPS"):
     probe = tmp_path / "probe.mk"
     probe.write_text(f"OPS := {ops}\n", encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k not in _OUTER_MAKE_ENV}
     return subprocess.run(["make", "-f", "Makefile", "-f", str(probe), "foundry-module-index", *argv],
-                          cwd=cfg.REPO_ROOT, capture_output=True, text=True, timeout=120)
+                          cwd=cfg.REPO_ROOT, capture_output=True, text=True, timeout=120, env=env)
 
 
 @pytest.mark.parametrize("argv", [

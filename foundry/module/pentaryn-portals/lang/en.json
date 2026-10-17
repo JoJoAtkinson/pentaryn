@@ -47,7 +47,8 @@
       "SnapshotFailed": "The snapshot could not be saved; the card image is unchanged.",
       "Looking": "Looking at {title}. Nobody moved; players can't see this.",
       "PartyMovedOne": "{n} party token moved to {title}.",
-      "PartyMovedMany": "{n} party tokens moved to {title}."
+      "PartyMovedMany": "{n} party tokens moved to {title}.",
+      "IdClash": "{names} stayed behind: {place} already has a token with the same id (a duplicated scene keeps token ids; delete or re-create it there)."
     },
     "Party": {
       "Nobody": "Teleport party: nobody on this scene counts as the party.",

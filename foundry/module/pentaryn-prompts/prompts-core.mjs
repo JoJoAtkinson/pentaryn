@@ -13,7 +13,7 @@ export const SHORT = "prompts";
 export const NS = "prompts";
 
 /** The code's own version: `status().version` prints it (game.modules can lag until a rescan). Kept equal to module.json by the suite. */
-export const VERSION = "0.4.5";
+export const VERSION = "0.4.6";
 export const CONTRACT = "pentaryn-prompts/api@1";
 export const I18N = "PENTARYN_PROMPTS";
 export const CSS = "pp-";

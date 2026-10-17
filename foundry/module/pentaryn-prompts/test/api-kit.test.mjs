@@ -10,7 +10,7 @@ import { installWorld, captureConsole, MODULE } from "./fixtures/world.mjs";
 
 const flush = () => new Promise(r => setImmediate(r));
 const F = await installWorld();
-F.game.modules.set(MODULE, { id: MODULE, version: "0.4.5", active: true });
+F.game.modules.set(MODULE, { id: MODULE, version: "0.4.6", active: true });
 await captureConsole(() => import("../prompts.mjs"));
 F.fire("init");
 await captureConsole(() => F.fire("setup"));
@@ -35,7 +35,7 @@ test("rows ↔ implementations: every row is a function on the API; a row withou
   for (const row of MANIFEST.rows) assert.equal(typeof row.path.split(".").reduce((o, k) => o?.[k], api), "function", row.path);
   for (const k of LEGACY) assert.ok(MANIFEST.rows.some(r => r.path === k), k);
   assert.throws(() => buildApi(MANIFEST, {}), /has no implementation/);
-  assert.equal(api.version, "0.4.5");
+  assert.equal(api.version, "0.4.6");
   assert.equal(api.contract, "pentaryn-prompts/api@1");
 });
 

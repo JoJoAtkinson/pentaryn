@@ -1253,12 +1253,18 @@ def test_ties_suite_is_gated():
 @pytest.mark.repo
 def test_the_fork_has_a_use_doc_and_routes_to_it():
     """mcp-fork-19: a use-doc for the MCP fork exists, opens with its bail-out line, and both
-    routing tables point at it."""
+    routing tables point at it. Since 2f0715e1 CLAUDE.md routes through skills, so the
+    always-on route is the mcp-fork skill (or a CLAUDE.md row, whichever is present)."""
     doc = cfg.REPO_ROOT / "context/foundry/mcp-fork.md"
     head = doc.read_text(encoding="utf-8").splitlines()[:15]
     assert any("**Read this when:**" in line for line in head)
-    for index in ("CLAUDE.md", "context/foundry/README.md"):
-        assert "mcp-fork.md" in (cfg.REPO_ROOT / index).read_text(encoding="utf-8"), index
+    assert "mcp-fork.md" in (cfg.REPO_ROOT / "context/foundry/README.md").read_text(encoding="utf-8")
+    routes = ("CLAUDE.md", ".claude/skills/mcp-fork/SKILL.md")
+    assert any(
+        (cfg.REPO_ROOT / r).is_file()
+        and "context/foundry/mcp-fork.md" in (cfg.REPO_ROOT / r).read_text(encoding="utf-8")
+        for r in routes
+    ), routes
 
 
 # ── a corrupt tunnel pidfile never names a process group ──────────────────────

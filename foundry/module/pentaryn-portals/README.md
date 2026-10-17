@@ -78,13 +78,14 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 | `redraw()` | anyone | redraws this client's badges |
 | `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background, or the upload failed — warns, card image unchanged) |
 | `lookAt(region)` | GM | pans **your** view; nobody moves. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
-| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged). Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change |
+| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged). Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change. A destination region on one floor puts the party on that floor, on the same scene too (elevation mapped). A destination scene that already holds a mover's token id (a duplicated scene keeps ids) → a GM warning naming them and `{ moved: 0, cancelled: true }`, nothing written |
 | `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination. A `to` with any behavior other than Teleport Token is not a landing spot (the card does not list it): `fail("BAD_ARGS", "not a landing spot: …")`, dryRun too |
 | `unlink(ref, { to, dryRun })` | GM | `ok({ from, to, removed })` / `fail(…)` |
+| `teleportToken(ref, { x, y, scene, level, dryRun, sceneId })` | GM | `ok({ token, from, to: { scene, x, y, level }, followers, moved })` / `fail(…)`. `ref` is a **token** ref. Moves that token so its centre lands on (x, y) of `scene` (Scene, id, uuid or exact name, through the kit's `resolveRef`; another kind → `BAD_ARGS`; default its own scene) and, when it is a PC (character or polymorphed), its company — the same follower rule as portal travel (its summons, tokens only its players own), **without** the portal check. Same scene: one update with displace waypoints that carry the level. Another scene: keepId create + plain delete (no `replacements`, so the follow hook does not run again; combatants are not remapped). `level` defaults to the token's own on the same scene (the initial level when the scene no longer has it), the destination's initial level on another — never the source level id. Onto another floor (another level, or another scene) each token keeps its height above the floor's base, clamped into the new floor (core's paste rule); landing counts only that floor's tokens and walls. A wild-shaped PC brings its summons too (they name the original actor). No confirm, nobody pulled, no view change. `to.scene`/`to.level`/`from` are id strings. `NOT_GM` · `NOT_FOUND` (ref, scene) · `BAD_ARGS` (`x`/`y` not finite, a level the destination lacks) · `REFUSED` (a mover's token id is already on the destination — a duplicated scene keeps token ids; dryRun too) · `CONFLICT` (another session's create landed first) |
 | `open(region, { edit })` | GM | the Portal card window. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
 | `spreadArrival(tokenDoc)` | GM | the token, moved off an occupied square if it was on one. `tokenDoc`: `TokenDocument\|uuid` (a uuid naming no token → `undefined`, logged) |
 
-Writes (`link`, `unlink`) never throw for a bad ref or a player: they return `fail("NOT_FOUND" |
+Writes (`link`, `unlink`, `teleportToken`) never throw for a bad ref or a player: they return `fail("NOT_FOUND" |
 "AMBIGUOUS" | "BAD_ARGS" | "NOT_GM", reason)`. The seven old members keep their signatures.
 
 ## Data written
@@ -96,7 +97,7 @@ Writes (`link`, `unlink`) never throw for a bad ref or a player: they return `fa
 | Region `name`, `hidden`; behaviors' `revealed` / `choice` | the Portal card window's switches |
 | Region `shapes`; Tile `x`/`y` with `flags.pentaryn.travel.regionId` | moving a travel spot |
 | Data `assets/tokens/custom/portals/<sceneId>-<regionId>.webp` | Snapshot (the flag gets `?v=<time>` so it refreshes) |
-| Token create/delete/update | Teleport party, the summons follow, an arrival's step |
+| Token create/delete/update | Teleport party, the summons follow, an arrival's step, `teleportToken` (x, y, level) |
 
 ## Flags other modules read
 
@@ -104,6 +105,9 @@ n/a — no other module reads portals' flags. **Flags portals reads:** `flags.pe
 on Tiles (travel glyphs), `flags.pentaryn-aoe.handle` (token) and `flags.pentaryn-aoe.handleActor`
 (actor) — pentaryn-aoe's area handles, through `isAoeHandle`, a tested copy of aoe's
 `isHandleTarget` — and dnd5e's `flags.dnd5e.summon.origin` / `isPolymorphed`.
+
+**API consumer:** pentaryn-pins calls `teleportToken` (its GM canvas menu and `pins.teleport`); it
+reads no portals flag.
 
 ## Events
 
@@ -124,9 +128,16 @@ core 14.368), `core-teleport-default-and-spread` (DialogV2's yes/no buttons, the
 - **Summons follow** runs on the active GM user — with the MCP bridge tab and a GM browser tab both
   open, in **both**. `carryTo` creates with `keepId`, so the server takes one create and refuses the
   other with "already exists"; the losing tab logs one debug line and shows no toast. Any other
-  failure warns `pentaryn-portals | summons did not follow`. The arrival step may be written twice
+  failure warns `pentaryn-portals | summons did not follow`. A follower whose id the destination
+  already held **before** the hop (a duplicated scene keeps token ids) is read in the delete hook
+  (`heldIds`, before any tab has carried anyone), left behind and named in a GM warning; the rest
+  of the company still follows. The arrival step may be written twice
   (both tabs compute the same square).
 - **Teleport party, link, unlink, snapshot, the card window** write from the GM tab that asked.
+- **teleportToken** writes from the GM tab that asked (no query: a `User#query` runs in every
+  socket of the recipient and would write twice). Two simultaneous cross-scene calls → one wins the
+  keepId create, the other returns `fail("CONFLICT")`. An id that is already on the destination
+  before the call (a duplicated scene) is `REFUSED` up front instead, naming the tokens.
 - **Badges** are per client; nothing is written for them.
 
 ## Extending
@@ -153,6 +164,28 @@ core 14.368), `core-teleport-default-and-spread` (DialogV2's yes/no buttons, the
   falls back to its flags. aoe tolerates a false positive (it only skips creatures); portals must
   never leave a pile-PC behind. Unifying them is a decision for Joe (finding -36).
 - Region hooks redraw the badges 50 ms after the last write (debounced); `redraw()` is immediate.
+- **Known gaps (teleportToken, and Teleport party before it).** A cross-scene move deletes without
+  `replacements`, so core does not remap combatants: mid-combat, the PC and its company drop off the
+  tracker (re-add by hand). A **wild-shaped** druid's summons name the original druid: every record
+  of a transformed token carries `rootActorId` (the kit's `rootActorId`, shared with pentaryn-pins),
+  so portal travel, Teleport party and teleportToken all bring them.
+- `teleportToken` is not portal-hop follow: `party.mjs` (`bringFollowers`, `onDeleteToken`,
+  `cameThroughPortal`) is not involved. They share `recordOf`, `followersOf`, `landingPlaces` and
+  `carryTo`; `carryTo`'s `{ level }` is teleportToken's only. Every mover's level and elevation come
+  from one rule (`arrivals` in scene-adapter), same scene or another, and one builder
+  (`displaceOptions`) puts a move's level and elevation in its waypoint (a move with neither gets
+  `{ x, y, action }`, as before).
+- Teleport party and portal-hop follow land each token on a level the destination has: the
+  destination region's one floor (Teleport party) or the arrived PC's floor (follow), else its own
+  level id when the destination shares it, else the destination's initial level — never the source
+  scene's level id, which left the token on no floor and core refusing every later move of it
+  ("level must exist"). A token that changes floor or scene has its elevation mapped onto the new
+  floor (two scenes' `defaultLevel0000` share an id, not a range) — the same height above its base,
+  clamped into the floor unless it was already outside its own (flying, burrowing): that one keeps
+  its height, as the PC it follows does — and a party arriving on one floor
+  lands counting only that floor's tokens and walls (core's `includedInLevel` for walls). Teleport
+  party on the **same** scene follows the same rule: the destination region's one floor, a token
+  stranded on a deleted level going to the initial one.
 
 ## Files
 
@@ -161,7 +194,7 @@ core 14.368), `core-teleport-default-and-spread` (DialogV2's yes/no buttons, the
 | `portals.mjs` | entry: wiring, lifecycle, publish |
 | `portals-core.mjs` | pure: constants, party and landing rules, card HTML, dialog-id parse, geometry, `isAoeHandle` |
 | `settings.mjs` | the `SETTINGS` table, `setting()` |
-| `scene-adapter.mjs` | adapter: records, snapshot, region move, Teleport party, link/unlink |
+| `scene-adapter.mjs` | adapter: records, snapshot, region move, Teleport party, `moveCompany` (teleportToken), link/unlink |
 | `card-app.mjs` | ui: the Portal card window |
 | `party.mjs` · `badges.mjs` · `cards.mjs` | features: summons follow · badges, hover, menu, drag · dialog cards, Region-config fieldset |
 | `api-manifest.mjs` · `api.mjs` | API rows · implementations, `inspect`, `buildApiFor` |

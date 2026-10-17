@@ -77,7 +77,7 @@ test("ready: publishes game.pentaryn.prompts synchronously (DP1) into a plain ro
   const legacy = readJSON(new URL("golden/legacy-surface.json", import.meta.url));
   for (const [k, type] of legacy.keys) assert.equal(typeof api[k], type, k);
   assert.equal(api.version, legacy.version);
-  assert.equal(api.version, "0.4.5");
+  assert.equal(api.version, "0.4.6");
   assert.equal(Object.isFrozen(api), true, "[declared] DP2: the API object is frozen");
   // nothing created or repaired: the six actors already hold what ensureMarkers wants
   assert.equal(F.calls.filter(c => ["Actor.createDocuments", "Folder.create", "update"].includes(c.op)).length, 0);
@@ -86,7 +86,7 @@ test("ready: publishes game.pentaryn.prompts synchronously (DP1) into a plain ro
 test("status(): version, listed, npcBridge, party, specDir, doubleClick, six marker ids", () => {
   const api = F.game.pentaryn.prompts;
   assert.deepEqual(api.status(), {
-    version: "0.4.5", listed: null, npcBridge: false, party: "none set",
+    version: "0.4.6", listed: null, npcBridge: false, party: "none set",
     specDir: "pentaryn-prompts-specs/ (under the Foundry Data dir; replaceMany({specFile: \"pentaryn-prompts-specs/<name>.json\"}))",
     doubleClick: "direct",
     markers: [["tiny", "markerActortiny0"], ["small", "markerActorsmall"], ["mid", "markerActormid00"], ["large", "markerActorlarge"],

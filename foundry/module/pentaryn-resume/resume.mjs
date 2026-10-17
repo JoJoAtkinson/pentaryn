@@ -85,7 +85,7 @@ function buildSmallApi() {
       })),
       hooks: reg.ids().map(h => ({ name: h.name, label: h.label })),
       patches: [],
-      flags: { writes: [], reads: [] },
+      flags: { writes: [], reads: ["api:pentaryn-pins.pinnedToken"] },
       errors: [...CODES],
     }),
     settings: () => ({}),

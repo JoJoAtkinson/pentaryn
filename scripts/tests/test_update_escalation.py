@@ -654,6 +654,66 @@ def test_bundle_is_line_numbered_capped_and_trimmed(tmp_path):
     assert len(text) <= esc.BUNDLE_FILE_CAP + 200
 
 
+def test_bundle_over_the_cap_trims_every_file_instead_of_dropping_the_last_rows(tmp_path):
+    """Pins review C7: dnd5e's rows list ~780k of files; the transform-root row came last
+    and was dropped whole ("omitted: bundle cap reached"), so its analysis never saw it."""
+    rows = []
+    for n in range(12):
+        f = tmp_path / f"foundry/module/pentaryn-m{n}/big.mjs"
+        f.parent.mkdir(parents=True)
+        lines = [f"// filler {i} " + "x" * 80 for i in range(600)]
+        lines[300] = f"game.itempiles.API.thing{n}()"
+        f.write_text("\n".join(lines))
+        rows.append(adj_mod.Adjustment(id=f"row-{n}", packages=("item-piles",), modules=(f"pentaryn-m{n}",),
+                                       files=(f"foundry/module/pentaryn-m{n}/big.mjs",), markers=("itempiles",), what="w"))
+    last = tmp_path / "foundry/module/pentaryn-pins/world-adapter.mjs"
+    last.parent.mkdir(parents=True)
+    last.write_text("const root = flags.dnd5e.originalActor;\n")
+    rows.append(adj_mod.Adjustment(id="row-pins", packages=("item-piles",), modules=("pentaryn-pins",),
+                                   files=("foundry/module/pentaryn-pins/world-adapter.mjs",),
+                                   markers=("originalActor",), what="w"))
+    reg = adj_mod.Registry(rows=rows)
+    whole = sum(len(esc._trim((tmp_path / r.files[0]).read_text(), ["itempiles"])) for r in rows)
+    assert whole > esc.BUNDLE_TOTAL_CAP // 8                 # the files alone overflow the cap below
+    old_cap = esc.BUNDLE_TOTAL_CAP
+    esc.BUNDLE_TOTAL_CAP = whole // 3
+    try:
+        text, files, _ = esc.build_bundle("item-piles", reg, root=tmp_path)
+    finally:
+        esc.BUNDLE_TOTAL_CAP = old_cap
+    assert "omitted: bundle cap reached" not in text
+    assert "foundry/module/pentaryn-pins/world-adapter.mjs" in files and len(files) == 13
+    assert "flags.dnd5e.originalActor" in text                # the small file is whole
+    for n in range(12):
+        assert f"  301| game.itempiles.API.thing{n}()" in text   # every mention survives the trim
+    assert len(text) <= whole // 3 + 13
+
+
+def test_trim_narrows_the_context_before_cutting_a_mention_off():
+    lines = [f"// filler {i} " + "x" * 80 for i in range(2000)]
+    for i in (100, 900, 1900):
+        lines[i] = f"hook{i}(itempiles)"
+    out = esc._trim("\n".join(lines), ["itempiles"], cap=5_000)
+    assert len(out) <= 5_000
+    for i in (100, 900, 1900):
+        assert f"hook{i}(itempiles)" in out
+
+
+def test_fair_share_water_fills():
+    assert esc._fair_share([10, 20, 30], 100) == 30           # everything fits
+    assert esc._fair_share([10, 100, 100], 110) == 50         # the small one whole, the rest split
+    assert esc._fair_share([], 10) == 0
+
+
+def test_checks_for_adds_the_rows_check_targets(monkeypatch):
+    monkeypatch.setattr(esc, "_MAKE_TARGETS", None)
+    row = adj_mod.Adjustment(id="dnd5e-pins-transform-root", packages=("dnd5e",),
+                             modules=("pentaryn-pins", "pentaryn-portals"), files=(), markers=(), what="w",
+                             check="make foundry-pins-check foundry-portals-check foundry-gone-check")
+    assert esc.checks_for([], [row]) == [
+        "make foundry-adjustments-check", "make foundry-pins-check", "make foundry-portals-check"]
+
+
 def test_held_major_gets_a_plan_once(tmp_path):
     held = decision("dice-so-nice", bucket="hold", bump="major", target="7.0.0")
     caller = FakeCaller(T0=triage("analyze", ("dice-so-nice", "breaking")),
@@ -1453,10 +1513,10 @@ def test_a_malformed_policy_never_crashes_the_run(block, on):
 # ── make_checks: pinned before python-tooling-2 step (a) moves it off the Makefile ──
 
 # The literal make_checks() returned on 2026-10-11 by scraping the Makefile. Step (a)
-# derives the same set from ops config.MODULES (pings joined when it was registered —
-# its target comes from the foundry-%-check pattern rule); walls (absent then, target
-# foundry-walls-test) has since left the repo, and admin-check is still present until step
-# (b), which changes this pin on purpose.
+# derives the same set from ops config.MODULES (pings and pins joined when they were
+# registered — their targets come from the foundry-%-check pattern rule); walls (absent
+# then, target foundry-walls-test) has since left the repo, and admin-check is still
+# present until step (b), which changes this pin on purpose.
 MAKE_CHECKS_PIN = [
     "make foundry-adjustments-check", "make foundry-admin-check", "make foundry-aoe-check",
     "make foundry-attunement-check", "make foundry-combat-check",
@@ -1464,7 +1524,7 @@ MAKE_CHECKS_PIN = [
     "make foundry-dropbin-check", "make foundry-feedback-check", "make foundry-journal-check",
     "make foundry-lookup-check",
     "make foundry-movement-check", "make foundry-names-check", "make foundry-pings-check",
-    "make foundry-portals-check",
+    "make foundry-pins-check", "make foundry-portals-check",
     "make foundry-prompts-check", "make foundry-resume-check", "make foundry-riders-check", "make foundry-senses-check",
     "make foundry-ties-check", "make foundry-transform-check",
 ]

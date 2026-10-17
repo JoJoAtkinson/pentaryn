@@ -13,6 +13,7 @@
   "snapshot": "snapshot",
   "spreadArrival": "spreadArrival",
   "teleportParty": "teleportParty",
+  "teleportToken": "teleportToken",
   "trace": "trace",
   "uninstall": "uninstall",
   "unlink": "unlink",

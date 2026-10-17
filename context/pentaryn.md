@@ -77,6 +77,9 @@ settings were copied on disk with classic-level while both worlds were closed.
 - Combat HUD: enhancedcombathud, enhancedcombathud-dnd5e
 - Item piles: item-piles, itempilesdnd5e
 - Scene stack: levels, wall-height, betterroofs, monks-active-tiles, tile-scroll, scene-packer
+- Props: fa-nexus 0.5.3 (added 2026-10-17, filesystem drop; Forgotten Adventures' browser that
+  drops furniture as tiles). Free prop packs `tiles-02` (Tom Cartos) and `tiles-03` (FA) — see
+  [`foundry/props.md`](foundry/props.md)
 - Map packs: eledryll-maps-castle-life-bundle-1, eledryll-spiders-tear-opera-house,
   mad-endlesswiz, mad-endlesswiz2, pentaryn-seafoot-maps
 - Bridge: foundry-mcp-bridge
@@ -109,6 +112,15 @@ settings were copied on disk with classic-level while both worlds were closed.
   `Data/modules/pentaryn-walls/` folder moved to the macOS Trash (defect wave 3), and then its source
   left the repo (exact copy on branch `archive/pentaryn-walls`) (below). Record:
   [`plans/merge-and-go-live-2026-10-11.md`](plans/merge-and-go-live-2026-10-11.md).
+- **Pinning live (2026-10-17).** New module **pentaryn-pins 0.1.0** (pin a character to a player;
+  with the world switch on, their view follows the token and ignores activation; "Pinned to" on the
+  sheet; GM right-click canvas menu: Prompt note, Teleport pinned character with its summons and
+  pets) plus **portals 0.6.0** (`teleportToken`), **prompts 0.4.6** (`place` takes `at`) and
+  **resume 0.1.1** (the pin wins at login). All four synced (last stamp `2f0715e1`, dirty,
+  18:12Z) and enabled; **Pinning** is ON and the six players are pinned to their own characters
+  (Bazgar, Caven, Marrith, Marwen, Sabriel, Talo; one token each, on camp-site and the Wayward
+  Compass). Keep both as they are. Using it and the live scenarios
+  (`automation/smoke/pins-live.mjs`, `PinTest*` documents only): [`foundry/pins.md`](foundry/pins.md).
 
 **Left out**
 
@@ -316,6 +328,14 @@ Ownership of shapes and summons, checked in the dnd5e 5.3.3 source and live:
 
 ## Underdark scenes
 
+**2026-10-17: the candidates are gone.** The three scenes that were played — Drow Prison,
+Fighting Pit, Molten Ward — are in Scene folder **`Marrith's Memory`** (`3Vqy7CgyxT2f8pVl`). The 12
+unused candidates (Fallen Dungeon of Bron’Darha, Fungal Caverns, Ruined Dwarven Vaults, Tangled
+Caverns, Underdark Abyss, Underdark Caverns; Drow City Chasm Edge, Spore Den, Underwood Bazaar,
+Tiered Quarter ×3) were deleted with both candidate folders. None had been edited since import on
+10-04, and none was linked or referenced. To get one back, re-import it from `pentaryn-seafoot-maps`.
+`Surface — Kharg's Adit` was left in `Surface — Candidates`. The record below is history.
+
 Folder `Underdark — Candidates` (7 scenes, off the nav bar), all darkness 1 / global light off / darkness locked, built-in lights stripped except Fungal Caverns' mushroom glow. The Drow Prison is Devils Hold Prison art with The Kings Prison's walls (27 doors, cells included — same 4500x3000 layout).
 
 ## Drow City scenes (2026-10-04)
@@ -407,14 +427,21 @@ GM-only journals live in Journal folder `Encounters` (`hTv3o8BmDeyIFMA7`): `Enco
 - **The 2024 MM has no drow stat blocks.** "Drow" actors are official NPC blocks renamed (Guard Captain, Warrior Veteran, Mage, Priest, Assassin, Spy Master, Warrior Commander, etc.). Drow traits (Fey Ancestry, Sunlight Sensitivity, innate Darkness/Faerie Fire, poisoned bolts) are **not on the actors**; the Caves journal carries them as a "drow overlay".
 - **House Barrabin** is a placeholder name the designers invented; it is not in the vault.
 
+## Multi-floor places: one Scene subfolder each (2026-10-17)
+
+A building with one scene per floor gets its own Scene subfolder, named after the place, with the
+floors inside it (sorted alphabetically, so name them ground → top):
+`Erdenford/The Wayward Compass` (`dsdOulWvEDgPLYnr`, 3 scenes) and `travel/Reclaimed Ruins`
+(`VkX0jRgA5tvXLqQ2`, 3 scenes). The floors are still linked by `teleportToken` regions.
+v14 native Levels (one scene, `changeLevel`) was considered and not chosen: these scenes are
+already built (about 1,700 walls, 64 tokens, 150 tiles, 17 regions), and tokens can't be moved
+onto a new level, only recreated (`foundry/ops.md` §9). **Use Levels for a new multi-floor build**
+when the floors share one footprint.
+
 ## Still unbuilt
 
 - Maps/scenes not chosen
-- PCs built (level 12); player users, ownership and summon-folder ownership not made (see Player characters)
 - `scripts/foundry/ops/config.py` still defaults the actor pipeline to `space-journey`
-- `scripts/foundry/ring_subject.py` bug: `canvas.paste(art, ..., art)` squares alpha of
-  semi-transparent sources (x0.8 becomes x0.64). Fix: `canvas.alpha_composite(art, (OFFSET, OFFSET))`.
-  The 12 Underdark webps were regenerated correctly; re-running the script would reintroduce it
 - Browser-console module errors not checked (server logs only)
 - `pentaryn-lookup` selftest read 9/10 on v14.369: the old getIndex({fields}) canary was
   order-dependent, not a sign the bug was fixed. Replaced 2026-10-10 with a mechanism check

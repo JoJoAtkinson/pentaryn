@@ -20,6 +20,7 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | Plan | Built what | Status |
 |---|---|---|
 | [`foundry-content-pipeline.md`](foundry-content-pipeline.md) | Repo content → Foundry documents (actors, scenes, walls, lights) | partly executed — see its own status line |
+| [`map-library-design-2026.md`](map-library-design-2026.md) | A reorganised map library (sets/scenes tree, manifest, contact sheet, AI captions) | never built — the library as it is: [`../foundry/map-library.md`](../foundry/map-library.md) |
 | [`foundry-importer-verification.md`](foundry-importer-verification.md) | How `pentaryn-importer` 1.0 was verified, and what was left for Gate 2 | history |
 | [`foundry-npc-ties.md`](foundry-npc-ties.md) | The `pentaryn-ties` module | shipped |
 | [`foundry-npc-ties-gui.md`](foundry-npc-ties-gui.md) | The ties sheet GUI — read rows, the tie dialog, inbound view | shipped through 0.10.0; iterations 3–4 in build |
@@ -46,6 +47,7 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | [`feedback-module-2026-10.md`](feedback-module-2026-10.md) | `pentaryn-feedback`: the in-world bug / defect / feature reporter — market survey and BUILD decision, the per-client action/error recorder, the User-flag queue + `ingest` relay to the GM's disk, the `feedback_*` MCP review tools | built 2026-10-11 (unit-tested; not yet synced or tested live) — use-doc [`../foundry/feedback.md`](../foundry/feedback.md) |
 | [`rclone-two-hosts-2026-10.md`](rclone-two-hosts-2026-10.md) | Two hosts, one cloud: the rclone storage layer, host tags and roles, the boot choice, lineage sidecars, per-host coalescing and pruning | built and merged 2026-10-11 (go-live §15); extended by [`module-bundles-2026-10.md`](module-bundles-2026-10.md) — use-doc [`../foundry/ops.md`](../foundry/ops.md) §3 |
 | [`module-bundles-2026-10.md`](module-bundles-2026-10.md) | World snapshot → worlds+Config; modules and systems as content-addressed bundles shared by both hosts; mark-and-sweep GC | built 2026-10-11 on feature/module-bundles; main merged in per §5 (§14); go-live pending (§10, §15) |
+| [`pin-2026-10.md`](pin-2026-10.md) | `pentaryn-pins` (pinned characters, GM canvas menu), portals `teleportToken` | shipped 2026-10-17 — use-doc [`../foundry/pins.md`](../foundry/pins.md); review fixes [`pin-2026-10-review-max-fixes.md`](pin-2026-10-review-max-fixes.md) (uncommitted, awaiting follow-up) |
 | [`world/timeline-refactor.md`](world/timeline-refactor.md) | History TSVs → per-event markdown under `history/` | complete |
 | [`obsidian-first-migration.md`](obsidian-first-migration.md) | Wikilinks + tag-based multi-home, Obsidian alongside VS Code | proposed — nothing executed |
 

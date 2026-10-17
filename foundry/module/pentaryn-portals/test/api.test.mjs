@@ -26,7 +26,7 @@ test("buildApiFor: the own rows plus the features' rows; the seven old ones lega
   const api = buildApiFor(offline());
   const methods = api.describe().methods;
   const paths = methods.map(m => m.path);
-  assert.deepEqual(paths, ["snapshot", "cardFor", "teleportParty", "lookAt", "inspect", "destinations", "link", "unlink", "spreadArrival", "open", "redraw", "badges"]);
+  assert.deepEqual(paths, ["snapshot", "cardFor", "teleportParty", "lookAt", "inspect", "destinations", "link", "unlink", "teleportToken", "spreadArrival", "open", "redraw", "badges"]);
   for (const p of paths) assert.equal(typeof api[p], "function", p);
   assert.deepEqual(methods.filter(m => m.legacy).map(m => m.path), ["snapshot", "cardFor", "teleportParty", "lookAt", "spreadArrival", "open", "redraw"]);
   assert.equal(api.version, VERSION);
@@ -46,7 +46,7 @@ test("drift fails at build: a row without an implementation, or a contribution r
   const ctx = offline();
   ctx.contributions.push({ rows: PARTY_ROWS, impl: {} });
   assert.throws(() => buildApiFor(ctx), /defined twice/);
-  assert.equal(BADGE_ROWS.length + PARTY_ROWS.length + MANIFEST.rows.length, 12);
+  assert.equal(BADGE_ROWS.length + PARTY_ROWS.length + MANIFEST.rows.length, 13);
 });
 
 test("describe(): flags written and read, the three settings, no events, no patches", () => {

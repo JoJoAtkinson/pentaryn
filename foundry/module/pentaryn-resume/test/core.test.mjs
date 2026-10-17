@@ -77,4 +77,23 @@ test("resumeTarget: back to the saved view only while the active scene is unchan
       { scene: "cave", level: null, position: null }],
   ];
   for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, world), want, why);
+  // pinnedScene null (pins absent, off, unpinned) is exactly the table above
+  for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, { ...world, pinnedScene: null }), want, `${why} (pinnedScene null)`);
+});
+
+test("resumeTarget with a pinned scene (pentaryn-pins): the pin wins; pan and zoom only on the pinned scene", () => {
+  const saved = { scene: "cave", level: "l2", active: "town", x: 500, y: 600, scale: 0.5 };
+  const exists = id => ["town", "cave"].includes(id);
+  const table = [
+    ["pinned on the saved scene, the active scene changed since: position, level null", saved,
+      { activeId: "keep", sceneExists: exists, pinnedScene: "cave" }, { scene: "cave", level: null, position: { x: 500, y: 600, scale: 0.5 } }],
+    ["pinned on the saved scene, active unchanged: level still null (the token's level)", saved,
+      { activeId: "town", sceneExists: exists, pinnedScene: "cave" }, { scene: "cave", level: null, position: { x: 500, y: 600, scale: 0.5 } }],
+    ["pinned on another scene: the pin wins", saved, { activeId: "town", sceneExists: exists, pinnedScene: "town" }, null],
+    ["pinned, no saved view", undefined, { activeId: "town", sceneExists: exists, pinnedScene: "cave" }, null],
+    ["pinned, the saved scene was deleted", saved, { activeId: "town", sceneExists: () => false, pinnedScene: "cave" }, null],
+    ["pinned, no position stored", { scene: "cave", active: "town" }, { activeId: "x", sceneExists: exists, pinnedScene: "cave" },
+      { scene: "cave", level: null, position: null }],
+  ];
+  for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, world), want, why);
 });

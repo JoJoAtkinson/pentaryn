@@ -4,11 +4,15 @@
  * GLUE, one feature. Saves `flags.pentaryn-resume.view` on the user's own User document (a player
  * may update its own flags) whenever the drawn scene, level or pan/zoom settles. At `ready` —
  * after Foundry has drawn the active scene — it views the saved scene and pans to the saved spot,
- * unless core's resumeTarget says the table has moved on. Saving is held off until that decision
+ * unless core's resumeTarget says the table has moved on — or, with pentaryn-pins' pinning on, that
+ * the user's pinned token is on another scene (then only pan and zoom on the pinned scene). Saving is held off until that decision
  * is made, so the first draw of the active scene never overwrites the view it is about to restore.
  */
 
 import { MODULE, SAVE_DELAY, VIEW_FLAG, resumeTarget, sameView, viewRecord } from "./resume-core.mjs";
+import { apiOf } from "./lib/publish.mjs";
+
+const PINS = "pentaryn-pins";
 
 /** False until the login restore has run: nothing is saved before then. */
 let armed = false;
@@ -41,6 +45,27 @@ function schedule(delay = SAVE_DELAY) {
   timer = setTimeout(() => save().catch(err => console.error(`${MODULE} | save view`, err)), delay);
 }
 
+/**
+ * The scene id of this user's pinned token (pentaryn-pins `pinnedToken`, published at pins' own
+ * `ready`, which runs before this module's `ready: resume`), or null: pins absent, pinning off,
+ * unpinned, a GM, or anything unexpected. A GM's view is never redirected by pins (its follow
+ * treats GMs as stock), so a GM carrying a pin flag (a promoted player) resumes as stock too. A
+ * `scene` that is not an id string is a contract break: it is logged and read as no pin, so a
+ * resume never silently drops for every pinned user.
+ */
+function pinnedSceneOf(ctx) {
+  if (game.user?.isGM) return null;
+  try {
+    const pinned = apiOf(PINS)?.pinnedToken?.(game.user) ?? null;
+    if (!pinned) return null;
+    if (typeof pinned.scene === "string" && pinned.scene) return pinned.scene;
+    ctx.log.warn("pentaryn-pins pinnedToken().scene is not a scene id string; resuming as unpinned", pinned.scene);
+  } catch (err) {
+    ctx.log.warn("pentaryn-pins pinnedToken() failed; resuming as unpinned", err);
+  }
+  return null;
+}
+
 /** The login restore. Always arms saving at the end, whatever happened. */
 async function resume(ctx) {
   try {
@@ -48,6 +73,7 @@ async function resume(ctx) {
     const target = resumeTarget(game.user.getFlag(MODULE, VIEW_FLAG), {
       activeId: game.scenes.active?.id ?? null,
       sceneExists: id => !!game.scenes.get(id),
+      pinnedScene: pinnedSceneOf(ctx),
     });
     if (!target) return;
     const scene = game.scenes.get(target.scene);

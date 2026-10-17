@@ -1,0 +1,16 @@
+{
+  "audit": "audit",
+  "contract": "string",
+  "describe": "function",
+  "inspect": "inspect",
+  "pin": "pin",
+  "pinnedToken": "pinnedToken",
+  "pins": "pins",
+  "selftest": "selftest",
+  "settings": "settings",
+  "teleport": "teleport",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "unpin": "unpin",
+  "version": "string"
+}

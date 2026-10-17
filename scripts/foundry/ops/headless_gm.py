@@ -10,6 +10,7 @@ touches credentials, so that Node never sees the admin password.
     python -m scripts.foundry.ops headless-gm ensure                    # JSON: world, bot, gm
     python -m scripts.foundry.ops headless-gm cookie --as bot --out F   # 0600 file, JSON summary (never admin)
     python -m scripts.foundry.ops headless-gm cookie --as gm --out F --bot-password
+    python -m scripts.foundry.ops headless-gm cookie --as gm --out /dev/fd/3   # the caller's pipe, no file
     python -m scripts.foundry.ops headless-gm status [--json]
 
 ## How the bot gets in
@@ -26,6 +27,12 @@ carries only ``{ok, world, user_id, user, role}``.
 
 ``cookie --as gm`` (the bootstrap only: a throwaway context that creates the bot and is
 closed) still uses admin + ``loginAs``, because no GM password is stored anywhere.
+
+**Or on a pipe, with no file at all.** ``--out /dev/fd/N`` writes the same JSON to fd ``N``,
+which the caller opened for this process (``automation/smoke/pins-live.mjs`` gives it a fourth
+stdio pipe and reads it into memory). Only a pipe or an AF_UNIX socket on fd 3 or above is
+accepted, checked before any network call: fds 0-2 (our own stdout/stderr), a terminal, a
+regular file or a TCP socket are refused (:class:`HandOffRefused`, exit 1) before a byte is written.
 
 ## The bot's own password
 
@@ -52,6 +59,8 @@ import json
 import os
 import re
 import secrets
+import socket
+import stat
 import subprocess
 import sys
 import time
@@ -85,6 +94,10 @@ EXIT_BOT_PW = 6
 EXIT_BOT_AUTH = 7       # the bot exists but its password (Infisical) was refused
 
 _INFISICAL_AUTH_RE = re.compile(r"auth|login|token|unauthor", re.IGNORECASE)
+
+
+class HandOffRefused(RuntimeError):
+    """``--out /dev/fd/N`` names an fd that is not a pipe (a terminal, a file, or closed)."""
 
 
 class BotPasswordUnavailable(RuntimeError):
@@ -221,8 +234,70 @@ def _emit(obj: dict) -> None:
     print(json.dumps(obj), flush=True)
 
 
-def _write_private(path: Path, payload: dict) -> None:
-    """Write JSON readable by this user only. O_EXCL-free but 0600 from the first byte."""
+_FD_PATH = re.compile(r"^/dev/fd/(\d+)$")
+
+
+def _fd_of(out: Path | None) -> int | None:
+    m = _FD_PATH.match(str(out)) if out is not None else None
+    return int(m.group(1)) if m else None
+
+
+def _claim_fd(fd: int) -> tuple[int, int]:
+    """Check ``fd`` is the caller's hand-off pipe; → its (st_dev, st_ino) identity.
+
+    Refused (:class:`HandOffRefused`): fds 0-2 (this process's own stdio — a piped stdout is a
+    pipe too, and the summary goes there), a closed fd, a terminal, a regular file, and any socket
+    that is not AF_UNIX (a TCP socket on that number is this process's own connection to Foundry,
+    not something the caller handed over). :func:`cookie` claims it before any network call, so
+    the number cannot yet belong to one of our own connections.
+    """
+    if fd < 3:
+        raise HandOffRefused(f"fd {fd} is this process's own stdio: refusing to write a session to it")
+    try:
+        st = os.fstat(fd)
+    except OSError:
+        raise HandOffRefused(f"fd {fd} is not open") from None
+    if os.isatty(fd):
+        raise HandOffRefused(f"fd {fd} is a terminal: refusing to write a session to it")
+    if stat.S_ISSOCK(st.st_mode):
+        try:
+            with socket.socket(fileno=os.dup(fd)) as sock:
+                family = sock.family
+        except OSError:
+            family = None
+        if family != socket.AF_UNIX:
+            raise HandOffRefused(f"fd {fd} is a network socket, not the caller's pipe: refusing it")
+    elif not stat.S_ISFIFO(st.st_mode):
+        raise HandOffRefused(f"fd {fd} is not a pipe: refusing to write a session to it")
+    return (st.st_dev, st.st_ino)
+
+
+def _write_fd(fd: int, payload: dict, expect: tuple[int, int] | None = None) -> None:
+    """Hand ``payload`` to the caller's pipe on ``fd``, then close it. Never stdio, a tty or a file.
+
+    ``expect``: the identity :func:`_claim_fd` saw before any network call; a different file on
+    that number now is refused.
+    """
+    ident = _claim_fd(fd)
+    if expect is not None and ident != expect:
+        raise HandOffRefused(f"fd {fd} changed since it was claimed: refusing to write a session to it")
+    view = memoryview(json.dumps(payload).encode("utf-8"))
+    try:
+        while view:
+            view = view[os.write(fd, view):]
+    finally:
+        os.close(fd)
+
+
+def _write_private(path: Path, payload: dict, expect: tuple[int, int] | None = None) -> None:
+    """Write JSON readable by this user only. O_EXCL-free but 0600 from the first byte.
+
+    ``/dev/fd/N`` is the caller's pipe instead (:func:`_write_fd`): nothing touches disk.
+    """
+    fd = _fd_of(path)
+    if fd is not None:
+        _write_fd(fd, payload, expect)
+        return
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     try:
         path.unlink()
@@ -231,6 +306,19 @@ def _write_private(path: Path, payload: dict) -> None:
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(payload, fh)
+
+
+def _hand_off(out: Path, payload: dict, world: str, expect: tuple[int, int] | None = None) -> bool:
+    """:func:`_write_private`, reporting a refused or broken hand-off on stdout (never the payload)."""
+    try:
+        _write_private(out, payload, expect)
+        return True
+    except HandOffRefused as exc:
+        _emit({"ok": False, "error": str(exc), "world": world})
+    except OSError as exc:
+        _emit({"ok": False, "error": f"hand-off to {out} failed: {exc.strerror or type(exc).__name__}",
+               "world": world})
+    return False
 
 
 def ensure() -> int:
@@ -258,7 +346,7 @@ def ensure() -> int:
     return OK
 
 
-def _bot_cookie(world: str, out: Path) -> int:
+def _bot_cookie(world: str, out: Path, claim: tuple[int, int] | None = None) -> int:
     """The bot's session: its own password on a session that has never been admin."""
     adopt_cached_infisical_token()
     try:
@@ -286,7 +374,8 @@ def _bot_cookie(world: str, out: Path) -> int:
     except (FoundryError, requests.RequestException) as exc:
         _emit({"ok": False, "error": str(exc)[:300], "world": world})
         return FAIL
-    _write_private(out, {"cookies": fresh.session_cookies()})
+    if not _hand_off(out, {"cookies": fresh.session_cookies()}, world, claim):
+        return FAIL
     _emit({"ok": True, "world": world, "user_id": _uid(who), "user": who.get("name"),
            "role": who.get("role"), "out": str(out)})
     return OK
@@ -298,15 +387,25 @@ def cookie(as_: str, out: Path | None, *, with_bot_password: bool = False) -> in
     ``bot``: :func:`_bot_cookie` — password join, never admin. ``gm``: admin + ``loginAs``,
     for the short-lived bootstrap context only.
     The file is ``{"cookies": [...], "botPassword"?: "..."}`` at mode 0600; the watchdog
-    deletes it on read. stdout is only the summary — never a cookie or a password.
+    deletes it on read. ``out`` = ``/dev/fd/N`` writes the same JSON to the caller's pipe
+    instead, with no file. stdout is only the summary — never a cookie or a password.
     """
     out = out or runtime_dir() / "cookie.json"
+    claim = None
+    fd = _fd_of(out)
+    if fd is not None:
+        # before any network call: the fd must be the caller's pipe, not one of our own sockets
+        try:
+            claim = _claim_fd(fd)
+        except HandOffRefused as exc:
+            _emit({"ok": False, "error": str(exc), "world": None})
+            return FAIL
     world = active_world()
     if not world:
         _emit({"ok": False, "error": "no active world", "world": None})
         return EXIT_NO_WORLD
     if as_ == "bot":
-        return _bot_cookie(world, out)
+        return _bot_cookie(world, out, claim)
     try:
         fa = _admin()
         users = fa.join_data().get("users") or []
@@ -336,7 +435,8 @@ def cookie(as_: str, out: Path | None, *, with_bot_password: bool = False) -> in
         _emit({"ok": False, "error": str(exc)[:300], "world": world})
         return FAIL
     payload["cookies"] = fa.session_cookies()
-    _write_private(out, payload)
+    if not _hand_off(out, payload, world, claim):
+        return FAIL
     _emit({"ok": True, "world": world, "user_id": _uid(who), "user": who.get("name"),
            "role": who.get("role"), "out": str(out)})
     return OK

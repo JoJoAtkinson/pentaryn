@@ -305,3 +305,93 @@ def test_admin_join_401_is_join_rejected_without_the_password(monkeypatch):
     with pytest.raises(admin.JoinRejected) as ei:
         fa.join("u", "the-password")
     assert "the-password" not in str(ei.value)
+
+
+# ── cookie --out /dev/fd/N: the caller's pipe, never our own stdio or sockets (K1, A2-2) ───
+
+@pytest.mark.parametrize("fd", [0, 1, 2])
+def test_fd_hand_off_refuses_own_stdio(fake, capsys, fd):
+    """A piped stdout is a pipe too: /dev/fd/1 would put the session (and botPassword) on stdout."""
+    assert hg.cookie("gm", hg.Path(f"/dev/fd/{fd}"), with_bot_password=True) == hg.FAIL
+    summary, printed = _out(capsys)
+    assert summary["ok"] is False and "own stdio" in summary["error"]
+    assert SECRET_COOKIE not in printed and "bot-pw-value" not in printed
+    assert FakeAdmin.logged_in_as == []          # refused before any Foundry call
+
+
+def test_fd_hand_off_refuses_a_tcp_socket(fake, capsys):
+    """A number that is a TCP socket is this process's own connection, not the caller's pipe."""
+    import socket as _s
+    srv = _s.socket(_s.AF_INET, _s.SOCK_STREAM)
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    cli_sock = _s.create_connection(srv.getsockname())
+    peer, _ = srv.accept()
+    try:
+        assert hg.cookie("bot", hg.Path(f"/dev/fd/{cli_sock.fileno()}")) == hg.FAIL
+        summary, printed = _out(capsys)
+        assert "network socket" in summary["error"] and SECRET_COOKIE not in printed
+        assert FakeAdmin.joined == []            # refused before any Foundry call
+        peer.settimeout(0.2)
+        with pytest.raises((TimeoutError, _s.timeout)):
+            peer.recv(10)                        # nothing was written to it
+    finally:
+        for x in (cli_sock, peer, srv):
+            x.close()
+
+
+def test_fd_hand_off_to_a_pipe_and_an_af_unix_socketpair(fake, capsys):
+    import os
+    import socket as _s
+    r, w = os.pipe()
+    try:
+        assert hg.cookie("bot", hg.Path(f"/dev/fd/{w}")) == 0
+        assert json.loads(os.read(r, 65536))["cookies"][0]["value"] == SECRET_COOKIE
+        with pytest.raises(OSError):
+            os.fstat(w)                          # closed after the write
+    finally:
+        os.close(r)
+    a, b = _s.socketpair()                       # node's stdio 'pipe' is an AF_UNIX socketpair
+    try:
+        assert hg.cookie("gm", hg.Path(f"/dev/fd/{os.dup(b.fileno())}"), with_bot_password=True) == 0
+        got = json.loads(a.recv(65536))
+        assert got["botPassword"] == "bot-pw-value" and got["cookies"][0]["value"] == SECRET_COOKIE
+    finally:
+        a.close()
+        b.close()
+    _, printed = _out(capsys)
+    assert SECRET_COOKIE not in printed and "bot-pw-value" not in printed
+
+
+def test_fd_hand_off_refuses_a_closed_fd_and_a_regular_file(fake, capsys, tmp_path):
+    import os
+    assert hg.cookie("bot", hg.Path("/dev/fd/987")) == hg.FAIL
+    assert "not open" in _out(capsys)[0]["error"]
+    fd = os.open(tmp_path / "f", os.O_WRONLY | os.O_CREAT, 0o600)
+    try:
+        assert hg.cookie("bot", hg.Path(f"/dev/fd/{fd}")) == hg.FAIL
+        assert "not a pipe" in _out(capsys)[0]["error"]
+        assert (tmp_path / "f").read_text() == ""
+    finally:
+        os.close(fd)
+
+
+def test_fd_hand_off_refuses_an_fd_replaced_after_the_claim(fake, capsys, monkeypatch):
+    import os
+    r, w = os.pipe()
+    r2, w2 = os.pipe()
+    real_join = FakeAdmin.join
+
+    def swap(self, user_id, password):           # the number now names a different pipe
+        os.dup2(w2, w)
+        return real_join(self, user_id, password)
+    monkeypatch.setattr(FakeAdmin, "join", swap)
+    try:
+        assert hg.cookie("bot", hg.Path(f"/dev/fd/{w}")) == hg.FAIL
+        assert "changed since it was claimed" in _out(capsys)[0]["error"]
+    finally:
+        for x in (r, w, r2, w2):
+            try:
+                os.close(x)
+            except OSError:
+                pass

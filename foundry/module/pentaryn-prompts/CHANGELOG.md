@@ -1,5 +1,12 @@
 # Changelog — Pentaryn Prompt Markers (`pentaryn-prompts`)
 
+## 0.4.6 — 2026-10-17
+
+`place(sizeKey, { ticket, at })` takes an optional `at` (canvas coordinates): the marker is centred
+there instead of under the cursor. The pentaryn-pins GM canvas menu's **Prompt note** passes the
+point that was right-clicked. The P key passes no `at` and is unchanged. Test: `place-at.test.mjs`.
+Restart (module.json).
+
 ## Unreleased — blueprint migration (wave 3, 2026-10-11)
 
 `module.json` stays 0.4.5 until the Wave 7 restart batch adds `flags.pentaryn` (tier, namespace,

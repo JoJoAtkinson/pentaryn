@@ -2,7 +2,7 @@
   "id": "pentaryn-resume",
   "title": "Pentaryn Resume",
   "description": "Each player logs back in on the map they last had open, at the same spot and zoom, as long as the GM has not moved the table to a new active scene since. Survives the 03:00 nightly restart. Exposes game.pentaryn.resume.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "compatibility": {
     "minimum": "14",
     "verified": "14.369"

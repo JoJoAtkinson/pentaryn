@@ -37,5 +37,5 @@ test("glue exports by name and type (prompts.mjs exports nothing)", async () => 
 test("VERSION is module.json's version", async () => {
   const { VERSION } = await import("../geometry-core.mjs");
   assert.equal(VERSION, manifestOf(new URL("..", import.meta.url)).version);
-  assert.equal(VERSION, "0.4.5");
+  assert.equal(VERSION, "0.4.6");
 });

@@ -11,6 +11,7 @@
     "api",
     "queries",
     "election",
-    "flags"
+    "flags",
+    "root-actor"
   ]
 }

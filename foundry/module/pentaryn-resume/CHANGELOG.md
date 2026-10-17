@@ -1,5 +1,17 @@
 # Changelog — Pentaryn Resume (`pentaryn-resume`)
 
+## 0.1.1 — 2026-10-17
+
+- Coexists with pentaryn-pins (pins plan D7): with pinning on, the pin wins at login.
+  `resumeTarget` takes `pinnedScene` (a scene id string from `pins.pinnedToken(game.user).scene`):
+  a saved view of another scene → no restore (no pan, no `resumed`); a saved view of the pinned
+  scene → pan and zoom only (`level: null`, the token's level), even when the active scene changed.
+  Pins absent, pinning off or unpinned: today's rules, byte for byte. A `scene` that is not a string
+  is logged and read as no pin. `describe().flags.reads` declares `api:pentaryn-pins.pinnedToken`.
+  A GM never takes the pinned branch (pins never redirects a GM's view), even with a leftover pin
+  flag from before a promotion. A `pinnedToken` that throws is logged and read as no pin, and
+  `resumed` still fires. Restart (module.json).
+
 ## 0.1.0 — 2026-10-16
 
 - Generated from the Pentaryn addon blueprint (tier `small`, kit vendored in `lib/`).

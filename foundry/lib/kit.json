@@ -15,6 +15,7 @@
     "flags":    { "deps": [] },
     "perf":     { "deps": [] },
     "pins":     { "deps": [] },
+    "root-actor": { "deps": [] },
     "argon-kit": { "deps": [], "packages": ["enhancedcombathud"] },
     "argon-tooltip": { "deps": [], "ext": "css", "packages": ["enhancedcombathud"] }
   },
