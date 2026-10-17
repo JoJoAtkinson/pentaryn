@@ -168,8 +168,13 @@ The watchdog ticks every 10 s, and the decision is `state.mjs nextAction()`.
   minus `/api/status` `uptime`. Either way the boot is recorded, so a pause the GM sets later is
   never undone, even if the bot restarts. The decision is `state.mjs bootDecision()`, and the log
   line is `✓ UNPAUSE`. A world relaunched from `/setup` without a server restart stays paused.
-- **Nightly.** At 03:00 the nightly runs `systemctl --user try-restart foundry-headless-gm`
-  after it relaunches the world. This is not fatal, and it does nothing where the unit is not
+- **Updater notices.** Off the Mac the updater has no Notification Center. It queues one JSON
+  file per notice in `.state/vtt-notices/`. While `CONNECTED`, the bot posts each one to the
+  world's chat as a whisper from "Updater" to the full GMs (role 4), then deletes it. The log line
+  is `✉ NOTICE`.
+- **Nightly.** At 03:00 the nightly restarts the bot after it relaunches the world, then waits
+  up to 150 s for `CONNECTED`. On Mondays it stops the bot for the updater first, and rolls back a
+  chrome-headless-shell update if the bot does not come back on it. This is not fatal, and it does nothing where the unit is not
   installed. The bot counts in the nightly's `users=`.
 
 ## Verified 2026-10-16 (pentaryn)

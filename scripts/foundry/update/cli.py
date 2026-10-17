@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -43,6 +44,8 @@ def cmd_scan(args) -> int:
             return 1
 
     result = plan_mod.build(admin=fa, notes=args.notes, check_forks=not args.no_forks)
+    from scripts.foundry.update import hostdeps, risk as risk_mod
+    result["host"] = hostdeps.plan(risk_mod.load_policy())
     preview = None
     if args.escalation:
         # Facts, floor and ceiling only — no LLM call, nothing written.
@@ -53,6 +56,8 @@ def cmd_scan(args) -> int:
                          indent=2))
     else:
         print(plan_mod.render_text(result))
+        if result["host"]:
+            print(hostdeps.render_text(result["host"]))
         if preview is not None:
             print()
             print(escalate.render_preview(preview))
@@ -86,6 +91,15 @@ def _run(args, apply_mod, report_mod) -> int:
         print(f"  ↩ ROLLED BACK {rec['kind']} {rec['target']} — {verdict}")
         for step in rec.get("steps", []):
             print(f"      · {step}")
+    for record in result.host_applied:
+        print(f"  ✓ host    {record['id']} {record.get('from')} → {record.get('to')}")
+    for record in result.host_failed:
+        print(f"  ✗ host    {record['id']}: {record.get('error')}")
+    for record in result.host_rollbacks:
+        print(f"  ↩ host ROLLED BACK {record['id']} → {record.get('to')}: {record['why']}")
+    if result.verify:
+        from scripts.foundry.update import verify as verify_mod
+        print(verify_mod.render_text(result.verify))
     for message in result.messages:
         print(f"  · {message}")
     if result.traceback:
@@ -107,6 +121,9 @@ def _run(args, apply_mod, report_mod) -> int:
         if result.plan:
             print()
             print(plan_mod.render_text(result.plan))
+            if result.plan.get("host"):
+                from scripts.foundry.update import hostdeps
+                print(hostdeps.render_text(result.plan["host"]))
         return 0
 
     policy = _policy()
@@ -303,6 +320,31 @@ def cmd_killed(args) -> int:
     return 0
 
 
+def cmd_host_rollback(args) -> int:
+    """Undo one host update from today's run record (the nightly calls this when the
+    headless GM does not come back on a new chrome-headless-shell)."""
+    from scripts.foundry.update import hostdeps, report as report_mod
+    today = time.strftime("%Y-%m-%d")
+    records = sorted(report_mod.REPORT_DIR.glob(f"{today}-*.json"))
+    for path in reversed(records):
+        try:
+            rec = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        hit = next((r for r in rec.get("host_applied") or [] if r.get("id") == args.id), None)
+        if not hit:
+            continue
+        if any(r.get("id") == args.id for r in rec.get("host_rollbacks") or []):
+            print(f"  {args.id}: already rolled back by {path.name}")
+            return 0
+        error = hostdeps.rollback(hit)
+        print(f"  {'✗' if error else '↩'} {args.id} {hit.get('to')} → {hit.get('from')}"
+              + (f": {error}" if error else f" (from {path.name})"))
+        return 1 if error else 0
+    print(f"  {args.id}: not updated by any run today — nothing to roll back")
+    return 3
+
+
 def _plan_paths(result) -> list[Path]:
     from scripts.foundry.update import escalate
     plans_dir = escalate.PLANS_DIR.resolve()
@@ -342,6 +384,10 @@ def main(argv: list[str] | None = None) -> int:
                      help="no adjudication, no escalation and no written report; holds "
                           "every review item")
     run.set_defaults(func=cmd_run)
+
+    host_rb = sub.add_parser("host-rollback", help="undo one host update from today's run")
+    host_rb.add_argument("id", help="hostdeps id: node, rclone, chrome, apt:<pkg>")
+    host_rb.set_defaults(func=cmd_host_rollback)
 
     status = sub.add_parser("status", help="what the last run did")
     status.set_defaults(func=cmd_status)

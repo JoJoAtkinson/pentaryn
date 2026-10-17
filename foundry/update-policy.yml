@@ -59,7 +59,11 @@ lifecycle:
   # `make vtt-down` does. The run already snapshotted before touching anything, and a
   # second snapshot minutes later would fall inside the 5-day coalescing window and
   # REPLACE it — destroying the week's only pre-update restore point.
-  shutdown_when_done: true
+  #
+  # 2026-10-17: false. BOSS is an always-on server — the world stays up so players can
+  # explore without Joe, and the run happens inside the Monday nightly, which expects the
+  # world it relaunched to still be serving afterwards.
+  shutdown_when_done: false
 
 smoke:
   # "all" smokes every installed world. Migration is per-world and happens on launch,

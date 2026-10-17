@@ -13,6 +13,7 @@ Four things live here, and only these:
 * ``_isolate_ops_log`` (autouse) — every module install appends to
   ``foundry/logs/ops-YYYY-MM.jsonl`` (python-tooling-10). No test may write there, so the log
   folder is a tmp folder for every test, and ``$PENTARYN_OPS_LOG`` is unset.
+* ``_no_host_side`` (autouse) — the updater's host plan is empty and validation is skipped.
 * ``_isolate_notices`` (autouse) — notify's off-Mac queue for the headless GM is a tmp folder.
 * ``fake_cloud`` / ``fake_data`` (autouse) — the cloud is a temp folder and Foundry's data
   root a tiny temp tree, and the host is the primary ``testhost``; see the section at the
@@ -79,6 +80,17 @@ def _isolate_ops_log(monkeypatch, tmp_path_factory):
 
     monkeypatch.setattr(cfg, "OPS_LOG_DIR", tmp_path_factory.mktemp("ops-log"))
     monkeypatch.delenv("PENTARYN_OPS_LOG", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_host_side(monkeypatch):
+    """The updater's host side (apt, nvm, rclone, nodejs.org, claude -p) is real-world I/O.
+    A test that drives a whole run gets an empty host plan and no validation; the
+    hostdeps/verify tests call the component functions directly, with RUN/FETCH faked."""
+    from scripts.foundry.update import hostdeps, verify
+
+    monkeypatch.setattr(hostdeps, "plan", lambda *a, **k: [])
+    monkeypatch.setattr(verify, "run_all", lambda *a, **k: [])
 
 
 @pytest.fixture(autouse=True)

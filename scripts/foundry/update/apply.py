@@ -36,8 +36,8 @@ from scripts.foundry import admin_password as admin_pw
 from scripts.foundry import host
 from scripts.foundry.cloud import WORLD_BACKUPS, Snapshot
 from scripts.foundry.update import (
-    adjudicate, admin as admin_mod, escalate, inventory, llm, notify, plan as plan_mod,
-    recover, risk, smoke, state, upstream,
+    adjudicate, admin as admin_mod, escalate, hostdeps, inventory, llm, notify,
+    plan as plan_mod, recover, risk, smoke, state, upstream, verify,
 )
 from scripts.foundry.update.admin import FoundryAdmin
 
@@ -63,6 +63,10 @@ class RunResult:
     escalation: dict | None = None    # set only when the escalation step ran
     snapshot: str | None = None
     native_snapshot: str | None = None
+    host_applied: list[dict] = field(default_factory=list)    # hostdeps records
+    host_failed: list[dict] = field(default_factory=list)
+    host_rollbacks: list[dict] = field(default_factory=list)
+    verify: list[dict] = field(default_factory=list)          # verify.run_all checks
     started: str = ""
     finished: str = ""
 
@@ -77,6 +81,11 @@ class RunResult:
             "traceback": self.traceback, "plan": self.plan,
             # Only when escalation ran, so a --skip-llm record is byte-identical to before.
             **({"escalation": self.escalation} if self.escalation is not None else {}),
+            # Only when the host side did something, so a Mac record is byte-identical.
+            **({"host_applied": self.host_applied} if self.host_applied else {}),
+            **({"host_failed": self.host_failed} if self.host_failed else {}),
+            **({"host_rollbacks": self.host_rollbacks} if self.host_rollbacks else {}),
+            **({"verify": self.verify} if self.verify else {}),
         }
 
 
@@ -575,6 +584,9 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             fa.wait_for_setup(timeout=180)
         assisted = fa if (admin_mod.port_open() and not fa.world_active()) else None
         result.plan = plan_mod.build(admin=assisted, notes=True, policy=policy)
+        # Host dependencies (node, apt, rclone, chrome …): their own list, kept out of
+        # "decisions" so adjudication and escalation only ever see Foundry packages.
+        result.plan["host"] = hostdeps.plan(policy, refresh=not dry)
 
         status.set_phase("adjudicate")
         adjudication_cost = 0.0
@@ -610,6 +622,7 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             # first-sighting review guard for the next real run.
             if not dry:
                 risk.save_seen(packages, exclude=held)
+                _host_phase(result, fa, status, policy)
             return _finish(result, status, entry, dry=dry, policy=policy)
 
         status.set_phase("snapshot")
@@ -669,6 +682,7 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             result.outcome = "done"
             risk.save_seen(inventory.scan(), exclude=held)
 
+        _host_phase(result, fa, status, policy)
         return _finish(result, status, entry, dry=False, policy=policy)
 
     except Aborted as exc:
@@ -732,6 +746,97 @@ def _recover(result: RunResult, fa: FoundryAdmin, system, broken) -> None:
             else f"{world.world}: smoke test failed")
 
 
+# ── Phase 8: host dependencies, then the weekly validation ───────────────────
+
+def _restart_foundry(fa: FoundryAdmin, messages: list[str]) -> bool:
+    """Stop and start the server (a new node binary), back at /setup, re-authenticated."""
+    try:
+        admin_mod.quit_app()
+        admin_mod.start_app()
+        fa.wait_for_setup(timeout=240)
+        fa.reauthenticate()
+        return True
+    except Exception as exc:  # noqa: BLE001
+        messages.append(f"could not restart Foundry after the host update: {exc}")
+        return False
+
+
+def _host_phase(result: RunResult, fa: FoundryAdmin, status: state.RunStatus,
+                policy: dict) -> None:
+    """Apply the host plan's auto items, after the packages (and their smoke) are settled.
+
+    Node is applied last and restarts Foundry; the worlds are then smoked again on the new
+    runtime, and a failure rolls node back. cloudflared needs nothing here: the tunnel is
+    down for the run and restore_service starts it on the new binary. The headless GM is
+    restarted by the nightly after the run.
+    """
+    if not any(d.get("bucket") == hostdeps.AUTO for d in result.plan.get("host") or []):
+        return
+    status.set_phase("host")
+    result.host_applied, result.host_failed = hostdeps.apply(result.plan["host"])
+    for f in result.host_failed:
+        result.messages.append(f"host update failed: {f['id']} {f.get('from')} → {f.get('to')}: "
+                               f"{f.get('error', '')[:200]}")
+    if result.host_applied and result.outcome == "no-op":
+        result.outcome = "done"
+    if "foundry" not in hostdeps.restarts(result.host_applied):
+        return
+    if not _restart_foundry(fa, result.messages):
+        return
+    status.set_phase("smoke")
+    rerun = smoke.run_all(fa, result.plan["worlds"], policy=policy, touched=set(),
+                          error_offset=admin_mod.error_log_offset(time.strftime("%Y-%m-%d")),
+                          log_day=time.strftime("%Y-%m-%d"))
+    result.smoke += [{**r.to_json(), "after": "node update"} for r in rerun]
+    if all(r.ok for r in rerun):
+        return
+    node = next((r for r in result.host_applied if r["id"] == "node"), None)
+    if node:
+        _roll_back_host(result, node, "the worlds failed their smoke test on the new Node")
+        _restart_foundry(fa, result.messages)
+
+
+def _roll_back_host(result: RunResult, record: dict, why: str) -> None:
+    error = hostdeps.rollback(record)
+    result.host_rollbacks.append({"id": record["id"], "from": record.get("to"),
+                                  "to": record.get("from"), "why": why,
+                                  **({"error": error} if error else {})})
+    result.messages.append(f"host rollback {record['id']} → {record.get('from')}: {why}"
+                           + (f" — FAILED: {error}" if error else ""))
+    if not error and result.outcome == "done":
+        result.outcome = "recovered"
+
+
+def _verify(result: RunResult, *, world: str | None, tunnel_expected: bool) -> None:
+    """The checklist, after service is back. A failure whose likely cause is a host item
+    this run updated rolls that item back (restarting what it needs) and checks again."""
+    checks = verify.run_all(world=world, tunnel_expected=tunnel_expected)
+    updated = {r["id"]: r for r in result.host_applied}
+    culprits = {c["component"] for c in checks if not c["ok"] and c.get("component") in updated}
+    for cid in sorted(culprits):
+        rec = updated[cid]
+        failing = ", ".join(c["label"] for c in checks if not c["ok"] and c.get("component") == cid)
+        _roll_back_host(result, rec, f"validation failed after the update: {failing}")
+        if "foundry" in (rec.get("restart") or []):
+            _restart_foundry(_admin_client(), result.messages)
+            if world:
+                try:
+                    fa = _admin_client()
+                    fa.launch_world(world)
+                    fa.wait_for_world(world, timeout=240)
+                except Exception as exc:  # noqa: BLE001
+                    result.messages.append(f"could not relaunch {world} after the rollback: {exc}")
+        if "tunnel" in (rec.get("restart") or []) and tunnel_expected:
+            recover.tunnel_down(REPO_ROOT)
+            recover.tunnel_up(REPO_ROOT)
+    if culprits:
+        checks = verify.run_all(world=world, tunnel_expected=tunnel_expected)
+    result.verify = checks
+    for c in checks:
+        if not c["ok"]:
+            result.messages.append(f"validation FAILED: {c['label']} — {c['detail']}")
+
+
 def _finish(result: RunResult, status: state.RunStatus,
             entry: state.EntryState | None, *, dry: bool,
             policy: dict | None = None) -> RunResult:
@@ -740,7 +845,10 @@ def _finish(result: RunResult, status: state.RunStatus,
         if shutdown:
             shut_down_service(result.messages)
         else:
+            world, tunnel = entry.active_world, entry.tunnel_up
             restore_service(entry, result.messages)
+            status.set_phase("verify")
+            _verify(result, world=world, tunnel_expected=tunnel)
     elif entry and dry:
         state.EntryState.clear()
     result.finished = time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -757,7 +865,7 @@ def notify_result(result: RunResult) -> None:
         detail = "; ".join(result.messages[:2]) or "see the run report"
         # Only say "rolled back" when something was. A crash rolls nothing back, and
         # this title used to tell Joe it had while untested modules sat live.
-        title = ("update rolled back" if result.recoveries
+        title = ("update rolled back" if result.recoveries or result.host_rollbacks
                  else "update FAILED, nothing rolled back")
         notify.notify("failed", f"{title} ({result.run_id})",
                       f"{detail}\n\nRestore point: {result.snapshot or 'none'}")
@@ -767,7 +875,17 @@ def notify_result(result: RunResult) -> None:
                       else "the gate declined this run")
         return
 
-    lines = [f"{a['id']} {a['from']} → {a['to']}" for a in applied] or ["nothing to update"]
+    lines = [f"{a['id']} {a['from']} → {a['to']}" for a in applied + result.host_applied] \
+        or ["nothing to update"]
+    lines += [f"ROLLED BACK · {r['id']} → {r['to']}: {r['why']}" for r in result.host_rollbacks]
+    bad = [c for c in result.verify if not c["ok"]]
+    if result.verify:
+        lines += ["", f"validation: {len(result.verify) - len(bad)}/{len(result.verify)} checks pass"]
+        lines += [f"✗ {c['label']}: {c['detail']}" for c in bad]
+    if bad or result.host_failed:
+        notify.notify("attention", f"{len(applied) + len(result.host_applied)} updated, "
+                      f"{len(bad)} check(s) failing", "\n".join(lines))
+        return
     if any("Foundry stopped" in m for m in result.messages):
         lines.append("")
         lines.append("Server left down — bring it up with: make vtt-up")

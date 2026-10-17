@@ -1,6 +1,6 @@
 ---
 title: "Monday updater on BOSS — the whole stack, after the backup"
-status: building
+status: shipped
 created: 2026-10-17
 last_modified: 2026-10-17
 tags: [plan, foundry, automation, updates, boss]
@@ -82,4 +82,15 @@ and how host dependencies got into it. Never load this to operate it. The use-do
 
 ## Live-test notes
 
-Pending.
+- 2026-10-17, on BOSS:
+  - `hostdeps.plan` read every component in about 2 s: node 24.21.0 → 24.22.0, cloudflared
+    2026.10.0 → .1, infisical 0.43.141 → 0.44.2 and 4 Ubuntu packages pending; rclone, chrome
+    and claude current.
+  - `verify.run_all` passed 12/12 in about 5 s, including a real `claude -p`, and
+    `https://vtt.atjoseph.com` answered with Access's 302.
+  - `vtt-update.sh --dry --force --skip-llm` ran through the wrapper with rc 0, with no
+    caffeinate failure.
+  - A queued notice was whispered into the pentaryn chat by the bot.
+- **Not yet exercised live:** a real apply (the first Monday, 2026-10-19 03:00). Watch
+  `make vtt-nightly-log`, `.state/logs/vtt-update-2026-10-19.log`, the report in
+  `foundry/logs/auto-updates/`, and the whisper in chat.

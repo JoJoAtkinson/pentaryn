@@ -240,12 +240,42 @@ def fallback_markdown(record: dict) -> str:
         for f in plan["forks"]:
             lines.append(f"- `{f['fork']}` ahead {f['ahead']} / behind {f['behind']}"
                          + (f" — {f['notes'][0]}" if f.get("notes") else ""))
+    lines += _host_section(record)
     lines += _escalation_section(record)
     if record.get("messages"):
         lines += ["", "## Notes", ""] + [f"- {m}" for m in record["messages"]]
     if record.get("traceback"):
         lines += ["", "## Traceback", "", "```", record["traceback"].rstrip(), "```"]
     return "\n".join(lines) + "\n"
+
+
+def _host_section(record: dict) -> list[str]:
+    """Host dependencies (hostdeps.py) and the weekly validation (verify.py). Empty on the
+    Mac, where neither runs, so its reports are unchanged."""
+    host_plan = (record.get("plan") or {}).get("host") or []
+    lines: list[str] = []
+    if host_plan or record.get("host_applied") or record.get("host_failed"):
+        lines += ["", "## Host dependencies", ""]
+        done = {r["id"]: r for r in record.get("host_applied") or []}
+        bad = {r["id"]: r for r in record.get("host_failed") or []}
+        back = {r["id"]: r for r in record.get("host_rollbacks") or []}
+        for d in host_plan:
+            if d["id"] in back:
+                state = f"rolled back to {back[d['id']]['to']} — {back[d['id']]['why']}"
+            elif d["id"] in done:
+                state = f"updated {done[d['id']]['from']} → {done[d['id']]['to']}"
+            elif d["id"] in bad:
+                state = f"FAILED: {bad[d['id']].get('error', '')[:200]}"
+            else:
+                to = f" → {d['target']}" if d.get("target") else ""
+                state = f"{d.get('installed') or '?'}{to} [{d['bucket']}] {d.get('reason', '')}"
+            lines.append(f"- **{d['label']}**: {state}")
+    checks = record.get("verify") or []
+    if checks:
+        ok = sum(1 for c in checks if c["ok"])
+        lines += ["", f"## Validation — {ok}/{len(checks)} pass", ""]
+        lines += [f"- {'✓' if c['ok'] else '✗'} {c['label']}: {c['detail']}" for c in checks]
+    return lines
 
 
 def _escalation_section(record: dict) -> list[str]:

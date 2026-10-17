@@ -1,23 +1,60 @@
 ---
 created: 2026-08-21
-last_modified: 2026-10-10
-tags: ["automation", "foundry", "launchd"]
+last_modified: 2026-10-17
+tags: ["automation", "foundry", "launchd", "boss"]
 status: active
 ---
 
-# Foundry VTT auto-update — Saturdays at 04:06
+# Foundry VTT auto-update — Mondays, inside the 03:00 nightly (BOSS)
 
-Keeps Foundry, its 27 modules and the `dnd5e` system on the latest stable, unattended,
-backed by the OneDrive snapshots `make vtt-down` already writes. The bet is deliberate:
-**everything is backed up before anything is touched, so being on the edge is cheap.**
+Keeps Foundry, its modules, the `dnd5e` system **and the host it runs on** (Node.js,
+cloudflared, infisical, gh, rclone, the headless GM's Chrome, Ubuntu's own updates) on the
+latest stable, unattended. The bet is deliberate: **everything is backed up before anything is
+touched, so being on the edge is cheap.**
 
-Runs as a launchd LaunchAgent on the **primary host** (the Mac) — survives reboots, needs
-no terminal open, and lands after the weekly token reset. On the alt host (BOSS) it refuses:
-`vtt-update.sh` checks `python -m scripts.foundry.host require-primary` first and exits 0
-with a log line, and `apply.gate()` aborts too (`PENTARYN_ROLE_OVERRIDE=primary` passes both;
-`make vtt-update-install` refuses off macOS). **04:06**, because a full run (~3 GB backup, core
-download and install, a browser smoke test per world) takes 20–40 minutes: starting at
-four means it is done, or visibly finishing, by the time anyone opens a laptop.
+**When:** Mondays. Games are at the end of the week and at weekends, and nobody plays on a
+Monday. The run lives **inside** the 03:00 BOSS nightly (`automation/bin/vtt-nightly.sh`): the
+nightly signs everyone out, backs the world up and waits for the upload, then restarts and
+relaunches the world. Only then, and only if all of that succeeded, it stops the headless GM
+(the gate refuses while any user is connected) and runs `automation/bin/vtt-update.sh`. After
+the run it makes sure the world is serving, starts the bot again (which unpauses the world),
+and waits for the bot to reconnect. The day is `VTT_UPDATE_DAY` (`date +%u`, default `1`).
+Design: [`context/plans/monday-updater-2026-10.md`](../context/plans/monday-updater-2026-10.md).
+
+**Where:** the primary host only. `vtt-update.sh` checks `python -m scripts.foundry.host
+require-primary` first and `apply.gate()` aborts off it (`PENTARYN_ROLE_OVERRIDE=primary` passes
+both). The Mac's Saturday 04:06 launchd jobs below are history: unloaded since 2026-10, and the
+gate would refuse them anyway.
+
+**Host dependencies** (`scripts/foundry/update/hostdeps.py`) are planned beside the packages,
+applied after the packages and their smoke test, and rolled back one by one:
+
+| Component | Updates to | Rollback |
+|---|---|---|
+| Node.js (Foundry's service) | newest within the core's `engines.node` (`>=24.13.1 <25` on 14.369) | `~/.local/share/pentaryn/node` symlink back to the old nvm version. Foundry is restarted and the worlds smoked again on the new Node |
+| cloudflared, infisical, gh | apt's candidate | `apt-get install <pkg>=<old>` |
+| other Ubuntu packages | `apt-get upgrade` | none |
+| rclone | `rclone selfupdate --stable` | the old binary from `.state/host-rollback/` |
+| chrome-headless-shell | Chrome for Testing stable | `PENTARYN_HEADLESS_CHROME` back. The nightly does it if the bot does not reconnect |
+| claude, Python deps, npm deps, WSL | — | report only |
+
+**Validation** (`scripts/foundry/update/verify.py`) runs at the end of every real run, after
+service is back, whether or not anything changed. It checks:
+
+- Node is within Foundry's engines.
+- The world serves.
+- `https://vtt.atjoseph.com` answers through the tunnel (Access's 302).
+- rclone reaches the backup folder.
+- Infisical resolves the admin password.
+- `claude -p` answers.
+- Every tool runs.
+
+A failing check whose likely cause is a host item this run updated rolls that item back and
+checks again.
+
+**Where you hear about it:** the run log, the report committed to `foundry/logs/auto-updates/`,
+and a whisper from "Updater" in the world's chat. Off the Mac, notices queue in
+`.state/vtt-notices/` and the headless GM posts them to the full GMs.
 
 ```
 GATE → BACKUP → SCAN → [ADJUDICATE] → [ESCALATE] → APPLY → SMOKE → RECOVER? → [REPORT] → NOTIFY → RESTORE
@@ -34,7 +71,7 @@ written, and the notification still fires.
 > **Also in `automation/`, and not part of the updater:** `headless-gm/` and `systemd/` hold the
 > always-on headless Assistant-GM bot that keeps the MCP bridge connected on BOSS
 > ([`context/foundry/headless-gm.md`](../context/foundry/headless-gm.md)), and `bin/vtt-nightly.sh`
-> is the 03:00 BOSS nightly.
+> is the 03:00 BOSS nightly, which also runs this updater on Mondays.
 
 ## One-time setup
 
@@ -148,22 +185,14 @@ Turn it off with `escalation.enabled: false`; skip every LLM step for one run wi
 `--skip-llm`. Engineering detail:
 [`context/foundry/automated-updates.md`](../context/foundry/automated-updates.md#escalation-tiered-llm-review-v1-2026-10-10).
 
-### It leaves the table down
+### It puts the table back
 
-A finished run **shuts everything down**: world deactivated, Foundry quit, tunnel closed.
-Nobody is playing at four in the morning, and leaving a public tunnel up all week is
-exposure for nothing. Bring it back with `make vtt-up` when you want to play; the
-notification and the log both say so.
-
-The shutdown deliberately skips the parting backup `make foundry-down` (so `vtt-down`) takes; it
-stops Foundry itself, never through make. The run already
-snapshotted before touching anything, and that snapshot is the week's rollback point — a
-second one minutes later would fall inside the 5-day coalescing window and **replace** it
-with post-update state, destroying the restore point on the very run that made it.
-
-A run that *crashes* is the exception: it hands back whatever it found, because it may
-have been started by hand while the table was in use. Set
-`lifecycle.shutdown_when_done: false` to make every run behave that way.
+`lifecycle.shutdown_when_done` is **false** (2026-10-17): a finished run puts back what it
+found: Foundry up, the world relaunched, the tunnel restored. BOSS is an always-on server, and
+the nightly expects the world it relaunched to still be serving. With `true` (the old Mac
+behaviour) a finished run shut everything down, and it skipped the parting backup: a second
+snapshot minutes later would fall inside the 5-day coalescing window and **replace** the
+pre-update restore point.
 
 ### Backups and what they cost
 

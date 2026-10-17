@@ -42,8 +42,10 @@ inside `~/Documents`.
     /Users/joe/.local/share/uv/python/cpython-3.14.6-macos-aarch64-none/bin/python3.14
 
 **Mac only.** This section and the launchd plists in `automation/launchd/` belong to the Mac.
-BOSS (WSL2, the primary since 2026-10-15) has no TCC and no launchd. The updater is not
-scheduled there yet. Its equivalent is a systemd user `.service` + `.timer` (beside
+BOSS (WSL2, the primary since 2026-10-15) has no TCC and no launchd. **Since 2026-10-17 the
+updater runs on BOSS on Mondays, inside the 03:00 nightly** (see *BOSS: Mondays* below). The
+paragraph that follows is the earlier sketch of a systemd timer, kept as history; it was not
+built. Its equivalent is a systemd user `.service` + `.timer` (beside
 `~/.config/systemd/user/foundryvtt.service`) with `%h`-relative paths. systemd `--user`'s PATH
 has no nvm, so the unit sets `Environment=PATH=` with the nvm bin dir first, or relies on
 `PENTARYN_NODE` in `~/.config/pentaryn/env` (`host.node()` checks it first and falls back to
@@ -72,6 +74,36 @@ the 10-03 failure.
 **TCC grant: still outstanding as far as anyone can tell.** Only a launchd-started run
 exercises it, so it stays unconfirmed until the first Saturday after this re-arm. If that run
 fails at the 60-second preflight, Joe must add the resolved python binary (above).
+
+## BOSS: Mondays, inside the nightly (2026-10-17)
+
+Design and decisions: [`../plans/monday-updater-2026-10.md`](../plans/monday-updater-2026-10.md).
+How to run it: [`../../automation/README.md`](../../automation/README.md).
+
+- **Schedule.** `automation/bin/vtt-nightly.sh` runs `automation/bin/vtt-update.sh` on Mondays
+  (`VTT_UPDATE_DAY`), and only after its own stop, backup (upload awaited), start and relaunch
+  succeeded. The headless GM is stopped first, because the gate refuses while any user is
+  connected. Afterwards the nightly makes sure the world serves, restarts the bot, waits up to
+  150 s for `CONNECTED`, and rolls a new chrome-headless-shell back
+  (`cli host-rollback chrome`) if the bot does not come back.
+- **Policy changes for BOSS.** `window.earliest` is 03:00 (the run starts about 03:06).
+  `lifecycle.shutdown_when_done` is false: put back what was found.
+- **`vtt-update.sh` on Linux.** `caffeinate` is used only where it exists. Before this every
+  BOSS run died there.
+- **Smoke on BOSS** runs headless with SwiftShader when there is no display (S4U at 03:00). The
+  bot's chrome-headless-shell is a fallback browser, and `automation/smoke/node_modules` must be
+  installed (`npm install` in that folder).
+- **Host dependencies.** `hostdeps.py` plans them into `plan["host"]`, a separate list so
+  adjudication and escalation see only Foundry packages. They are applied in `_host_phase`
+  after the packages, in the order apt, rclone, chrome, then node. Node restarts Foundry and the
+  worlds are smoked again; a failure rolls node back.
+- **Validation.** `verify.py` runs in `_finish` after `restore_service`. Each check names the
+  host item that would cause it to fail, and `_verify` rolls back exactly the items this run
+  updated, then checks again.
+- **Notices.** With no Notification Center off the Mac, `notify.queue_notice` writes
+  `.state/vtt-notices/*.json` and the headless GM whispers each one to the full GMs.
+- **Tests.** `scripts/tests/test_hostdeps.py` fakes `hostdeps.RUN`/`FETCH`. The conftest's
+  autouse `_no_host_side` gives every other test an empty host plan and no validation.
 
 ## What it is
 
@@ -115,7 +147,9 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `scripts/foundry/update/report.py` | Scrubbing, LLM prose, plain fallback, git commit/push. |
 | `scripts/foundry/update/state.py` | mkdir lock, run status file, entry state. |
 | `scripts/foundry/update/children.py` | Registry of the run's `claude -p` / `node` children; on SIGTERM `cli run` terminates them and exits 143 through its `finally` blocks (AC-6). |
-| `scripts/foundry/update/notify.py` | The three notification classes. Prints instead of posting off the Mac. |
+| `scripts/foundry/update/notify.py` | The three notification classes. Off the Mac: printed, and queued in `.state/vtt-notices/` for the headless GM to whisper to the GMs. |
+| `scripts/foundry/update/hostdeps.py` | Host dependencies (node, apt, rclone, chrome-headless-shell; claude, Python/npm deps and WSL are report only): plan / apply / rollback, every subprocess through `RUN`. |
+| `scripts/foundry/update/verify.py` | The weekly validation checklist, run after service is restored. |
 | `scripts/foundry/update/cli.py` | `scan` `run` `status` `notify` `admin-configure` `recover-service`. |
 | `scripts/foundry/admin_password.py` | The admin secret: env → Infisical → macOS keychain. |
 | `scripts/foundry/cloud.py` | **Pre-existing**, modified. OneDrive backup/restore, per-host retention. I/O through `storage.py` (rclone or folder). |

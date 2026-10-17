@@ -244,11 +244,33 @@ fi
 # ── the headless Assistant-GM bot (context/foundry/headless-gm.md) ──
 # A fresh Chrome after the restart; it unpauses the world once per Foundry boot. Started, not
 # only restarted: the Monday branch stopped it. Silent where the unit is not installed.
+# bot_connected: wait up to 150 s for the watchdog to report CONNECTED (its status file).
+bot_connected() {
+  local f="$XDG_RUNTIME_DIR/pentaryn-headless-gm/status.json" i
+  for i in $(seq 1 30); do
+    if [ -f "$f" ] && "$PY" -c "import json,sys; sys.exit(0 if json.load(open(sys.argv[1])).get('state')=='CONNECTED' else 1)" "$f" 2>/dev/null; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
 if [ -z "$DRY" ]; then
   if systemctl --user is-enabled --quiet foundry-headless-gm 2>/dev/null \
      && systemctl --user restart foundry-headless-gm >/dev/null 2>&1 \
      && systemctl --user is-active --quiet foundry-headless-gm 2>/dev/null; then
     log "  headless GM (re)started"
+    if bot_connected; then
+      log "  ✓ headless GM CONNECTED"
+    elif [ -n "${URC+x}" ] && "$PY" -m scripts.foundry.update.cli host-rollback chrome >>"$LOG" 2>&1; then
+      # the Monday run updated chrome-headless-shell and the bot is not back: undo that
+      log "  ! headless GM not CONNECTED on the new chrome — rolled chrome back, restarting it"
+      systemctl --user restart foundry-headless-gm >/dev/null 2>&1
+      if bot_connected; then log "  ✓ headless GM CONNECTED after the chrome rollback"
+      else log "  ✗ headless GM still not CONNECTED — make foundry-headless-status"; fi
+    else
+      log "  ✗ headless GM not CONNECTED after 150 s — make foundry-headless-status (bridge tools are down)"
+    fi
   else
     log "  headless GM not installed/running (ok)"
   fi
