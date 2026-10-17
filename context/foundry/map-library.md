@@ -1,187 +1,158 @@
-# Map library — storage, organisation, and findability
+# Map library — where the battlemaps are and how to find one
 
-**Read this when:** finding one battlemap out of ~1,750, or filing a new pack into the library.
-**Not this file:** getting a found map into a scene → [`../plans/foundry-content-pipeline.md`](../plans/foundry-content-pipeline.md)
+**Read this when:** looking for a battlemap ("find me a map for…", "do I have a…"), working out
+which maps go together (tiles, floors, variants), or filing a new pack into the library.
+**Not this file:** getting a chosen map into a scene → [`foundry-ops`](ops.md) (creating scenes) and
+[`scene-links.md`](scene-links.md) (floors and moves between them); the never-built reorganisation
+plan → [`../plans/map-library-design-2026.md`](../plans/map-library-design-2026.md) (history).
 
-How ~1,750 battlemaps are stored, and how a specific one gets found in under a minute.
-
-Extends the existing convention: **OneDrive is source of truth; assets down, world up.**
-
----
-
-## The decisions
-
-### 1. The Library App is being retired. The download folder becomes ordinary files.
-
-The DriveThruRPG Library App is **x86_64-only** (verified: no arm64 slice, running under Rosetta on an
-Apple-silicon Mac). Apple pares Rosetta back after macOS 27, so the app has a visible expiry date and
-is being removed once the sync is reconciled.
-
-**Consequence: `~/Documents/DriveThruRPG/` stops being a managed cache and becomes just a folder.**
-Nothing tracks state in it, so nothing is at risk from touching it. That simplifies everything
-downstream:
-
-- The extract **moves** files rather than copying them — no ~70 GB of duplication.
-- The "never edit this folder" rule disappears.
-- Once emptied of anything useful, the print-file residue can be deleted outright rather than kept
-  in a cache that no longer serves a purpose.
-
-**Keep the installer.** `DriveThruRPG_3.6.3.dmg` is already in `~/Downloads` — archive it to OneDrive
-alongside the maps. A future re-install then doesn't depend on the vendor still hosting an Intel build
-after they ship an Apple-silicon one (or don't).
-
-**What is lost by removing the app:** automatic update detection (publishers revise files) and
-one-click downloads of future purchases. Both fall back to the website, which is tedious but works —
-and at 535 products already synced, the marginal cost is low.
-
-### 2. OneDrive organises by scene type, not by publisher.
-
-Nobody ever needs "a Seafoot map." They need *a gallows*. Publisher and product survive as metadata in
-the manifest, where they're searchable, rather than as directory levels you have to remember.
-
-Two exceptions, both deliberate:
-
-- **`sets/`** — coherent multi-map *locations* stay together, because their value is the adjacency.
-  `Tower-City` is 26 maps of one vertical city; splitting it across `scenes/streets/` and
-  `scenes/interiors/` destroys what makes it useful.
-- **`unsorted/`** — the 1,217 numbered castle maps live here until captioned, then get filed.
-
-### 3. Print files stay behind. No deletion, no copying.
-
-Roughly 90% of the 58 GB is `*_300dpi_VTT.jpg`, `*_A1_Poster.jpg` and print PDFs — ~110 MB per product
-against ~4 MB of actually-usable VTT image.
-
-They are **not deleted** (they're part of the purchase and occasionally you'll want to print), and they
-are **not synced to OneDrive** (they'd dominate the quota for files that will never load in a VTT).
-They simply stay in the app cache, which is where they already are. This decision costs zero work.
-
-**Extraction rule:** only web-resolution VTT files are pulled forward — `*_72dpi_VTT.*`, or the
-smallest image per product when the naming doesn't follow that pattern.
-
-### 4. Foundry gets a curated per-campaign copy, never a mirror.
-
-Everything under Foundry's `Data/` is visible to **every world** — there is no per-world asset scoping.
-Dumping 1,750 maps in makes the file picker unusable for all campaigns at once.
-
-So assets are namespaced by world and staged deliberately:
-
-```
-Data/assets/maps/<world-id>/     ← this campaign's picks
-Data/assets/maps/_common/        ← things every campaign wants
-```
-
-`_ardenhaven-next-picks/` already hinted at this workflow; it becomes `_staging/ardenhaven/` and gets a
-sync script rather than manual copying.
-
-### 5. Findability is a manifest plus a generated contact sheet.
-
-Naming conventions don't scale to 1,750 files and nobody maintains them. Two artefacts do the work:
-
-- **`foundry/map-index.json`** — follows the `roll20-maps.json` precedent. Per map: slug, path,
-  publisher, product, dimensions, grid size where known, file size, tags, and a one-line caption.
-- **`_index/contact-sheet.html`** — a generated static page: thumbnail grid, live filter box, click to
-  copy the path. This is the thing that actually answers *"do I own a gallows?"* in ten seconds.
-
-**The 1,217 unnamed castle maps get captioned by AI vision in bulk** — a one-line description plus tags
-per image, written into the manifest. That is the single highest-value job in this plan: it converts
-88% of the library from invisible to searchable.
+Checked 2026-10-17 against the cloud listing: **1,371 images** in `OneDrive/DnD/Maps`.
 
 ---
 
-## Directory tree
+## Where the maps are
 
-```
-~/Library/CloudStorage/OneDrive-Personal/DnD/Maps/
-├── _index/
-│   ├── contact-sheet.html          # generated: thumbnails + filter box
-│   └── thumbs/                     # 400px webp, ~30 KB each (~50 MB total)
-├── _staging/
-│   ├── ardenhaven/                 # was _ardenhaven-next-picks
-│   └── space-journey/              # symlinks or copies of chosen maps
-├── sets/                           # multi-map locations that belong together
-│   ├── tower-city/                 # 26 — streets, districts, underground, top floor
-│   ├── abandoned-village/          # summer + winter, exterior/1st/2nd/basement
-│   ├── snaketown/
-│   ├── island-village/
-│   ├── logging-camp/               # NB: delete plague-village — it's a subset of this
-│   ├── dwarf-city-wall/
-│   ├── druid-circle/
-│   └── harpy-cliffs/
-├── scenes/                         # single-purpose maps, filed by what they are
-│   ├── execution/                  # gallows, scaffolds, plazas
-│   ├── tavern-inn/
-│   ├── throne-court/
-│   ├── prison-dungeon/
-│   ├── crypt-catacomb/
-│   ├── sewer/
-│   ├── arena/
-│   ├── temple/
-│   ├── shop-interior/
-│   ├── town-street/
-│   ├── docks-ship/
-│   ├── wilderness/
-│   └── tower/
-├── modules/                        # Foundry module packages (.rar/.zip) — NOT loose images
-└── unsorted/
-    └── castle-fort/                # the 1,217, until captioned and filed
+The library lives in OneDrive at **`DnD/Maps`**. Reach it through **rclone** with the `onedrive:` remote
+(the same one the Foundry backups use, see [`ops.md`](ops.md) §3):
 
-~/Documents/DriveThruRPG/           # plain folder once the app is removed; source for the move
-└── <Publisher>/<Product>/          # full-fat originals incl. all print files
-
-~/Documents/GitHub/pentaryn/
-├── foundry/map-index.json          # the manifest
-└── scripts/foundry/
-    ├── dtrpg_progress.sh           # (exists) sync monitor
-    ├── map_extract.py              # cache → OneDrive, VTT files only
-    ├── map_index.py                # build/refresh the manifest + thumbnails
-    ├── map_caption.py              # AI captions for unnamed maps
-    └── map_stage.py                # OneDrive staging → Foundry Data/assets
+```bash
+rclone lsf -R --files-only onedrive:DnD/Maps | grep -i dock    # search by name, nothing downloaded
+rclone lsd onedrive:DnD/Maps/Battlemaps                        # browse one level
 ```
 
----
+- **Don't read the Windows path** (`/mnt/c/Users/AtJos/OneDrive/DnD/Maps`). On BOSS those are cloud-only
+  placeholders and the OneDrive app isn't running, so every read fails with an I/O error. rclone works.
+- **Don't download the library to search it.** The filenames below and `rclone lsf` are enough to shortlist
+  candidates. Fetch only the few you want to look at (see "Looking at a candidate").
+- On the Mac the same folder is `~/Library/CloudStorage/OneDrive-Personal/DnD/Maps`. The DriveThruRPG
+  originals (print files and products not yet copied to OneDrive) were in `~/Documents/DriveThruRPG/` on
+  the Mac. That's where the older "~1,750 maps" figure came from. Not checked from BOSS. Ask the
+  `mac-pentaryn` session if you need it.
+- What is in Foundry is separate: `Data/assets/maps/roll20/` (6 Ardenhaven maps, see
+  `foundry/roll20-maps.json`) and `Data/assets/maps/space-journey/` (2). Only maps picked for a campaign
+  are copied in, into `assets/maps/<world-id>/`, because everything under `Data/` shows in every world's
+  file picker.
 
-## Workflow: "I need maps for next session"
+## Layout
 
-1. Open `_index/contact-sheet.html`, type what you want — *gallows*, *two-level tavern*, *sewer*.
-2. Filter narrows live across captions, tags, product names and publishers.
-3. Click a result to copy its path.
-4. Drop chosen maps into `_staging/<campaign>/`.
-5. Run `map_stage.py --campaign <world-id>` — copies them to `Data/assets/maps/<world-id>/`.
-6. In Foundry, create scenes from those files. Grid sizes come from the manifest where known.
-7. Anything used repeatedly across campaigns gets promoted to `_common/`.
+```
+DnD/Maps/
+├── Battlemaps/                                  148  named maps, see the catalog below
+│   ├── Cities and Settlements/
+│   │   ├── Towns/                                38  the town kit + Mapvember buildings + streets
+│   │   ├── Tower-City/                           26  one vertical city, many levels
+│   │   ├── Abandoned-Village/                     9
+│   │   ├── Dwarf-City-Wall/                      11
+│   │   ├── island-village/                       19
+│   │   ├── logging-camp/                          9
+│   │   ├── snaketown/                             8
+│   │   ├── snaketown-tower/                       3
+│   │   └── harpy-village/                         3
+│   ├── Building Interiors/Dwarf-Fortress/         1
+│   └── Wilderness-Maps/druid-circle/             21
+├── Castle & Fort Maps/                        1,217  "Castle Maps - <n> - DnDMasterDesigns.jpeg", no captions
+├── _ardenhaven-next-picks/                        5  picks for Ardenford (already used for its Roll20 maps)
+├── Castle Maps - 220 - DnDMasterDesigns.jpeg          a stray copy of #220
+├── Battlemaps-…zip, Castle & Fort Maps.zip            the same images zipped. Don't unpack them
+└── BattlemapsLink.pdf, DownloadMapsHere.pdf           download-link sheets, not maps
+```
 
-## Workflow: "a new purchase arrives"
+Filenames carry a 6–8 digit upload id before `.jpg` (`Town-Streets-17538848.jpg`). Ignore it when matching
+names. Nearly every Battlemap is **2048×2048**. The exceptions: Dwarf-Fortress and Harpy-Cliffs are
+3500×3500, Snaketown is 1600×1600, and `Snaketown-Tower-for-Roll20` is 7500×7500.
 
-1. Let the Library App sync into its own folder. Don't intervene.
-2. Run `map_extract.py` — pulls VTT-resolution files only into `scenes/` or `sets/`, and routes
-   `.rar`/`.zip` module packages to `modules/` instead.
-3. Run `map_index.py` — refreshes the manifest, generates thumbnails, rebuilds the contact sheet.
-4. Anything it can't classify lands in `unsorted/` for captioning.
+## How the maps go together
 
----
+There are three kinds of relationship. Know which one you have before you build a scene:
 
-## Build order
+| Kind | What it means | How to use it in Foundry |
+|---|---|---|
+| **Tiles** | Separate pieces that sit side by side to make a bigger area | Place them as tiles on one large scene |
+| **Floors** | The same footprint at different heights (exterior/roof, interior, upstairs, basement) | One scene per floor, linked with [`scene-links.md`](scene-links.md) |
+| **Variants** | The same map with different lighting, weather, season or grid | Pick one, or swap the background for a time-of-day change |
 
-**Order matters now that the app is going away:** retry the failed `Part_4.zip` from the app's error
-list *while the app is still installed*, then remove the app, then reorganise. Doing it in the other
-order makes the retry much harder.
+### Tiles — the only real building blocks
 
-**Before the sync finishes** — nothing that touches files:
+**The town kit** (`Battlemaps/Cities and Settlements/Towns/`). One artist, all 2048×2048, the same
+look, and roads, walls and water run off the edges:
 
-1. **Write `map_extract.py`.** It's the gate everything else waits on, and it needs the finished tree to
-   run against anyway.
-2. **Delete `plague-village/`.** Verified: all 8 of its files are byte-identical to their counterparts
-   in `logging-camp/`, which also has one file it lacks. It is a strict subset with a misleading name —
-   there is no actual plague-village map set in the library. Remove it before indexing so those maps
-   aren't captioned twice.
+- **Town walls:** `Town-Walls-B`, `-C`, `-E`, `Walls-X-A`. Corners and straight runs of a town wall
+  with round towers and square gatehouses.
+- **Harbour:** `Town-Street-Docks-Day-1` … `-4` (with `-Night-1` … `-3`). Piers, a bay and waterfront.
+- **Town edge:** `town-forest-day-1` … `-4` (with `-night-1` … `-4`). Houses that thin out into woods
+  and ravines.
+- **Inner town:** `Town-Streets-1` (with `-1-night`). Dense blocks of houses.
 
-**After the sync completes:**
+Every tile has a dark vignette around its border, so the joins show a dark seam. The edges don't
+continue pixel for pixel, so **nobody has worked out which tile goes next to which**. Lay them out
+and look. Crop or fade the vignettes if the seams matter.
 
-3. **Extract by moving, not copying.** 76 GB becomes ~5 GB of VTT-ready images in OneDrive with no
-   duplication, because nothing manages the source folder any more. Biggest single win.
-4. **Separate the modules.** `.rar`/`.zip` products install into Foundry as modules — they must not sit
-   in an assets folder pretending to be maps.
-5. **Index and thumbnail.** Cheap, mechanical, and makes the library visible for the first time.
-6. **Caption the 1,217.** Slowest step, highest value, and it runs unattended. Do it last because
-   nothing else depends on it — and the moment it lands, 88% of the library stops being dead weight.
-7. **Stage Space Journey's ten scenes** and build them out.
+`Town-Streets-2` and `Town-Streets-Draft` are a different, close-up scale. They are **not** part of the kit.
+
+**Snaketown** (`snaketown/`): `west-snaketown`, `snaketown-mage-guild`, `Southeast-snaketown`,
+`snaketown-east-docks` (each with `-night`). Named like quarters of one swamp town on stilts, but their
+edges don't line up. Treat them as four views of the same town, not as a grid.
+`snaketown-tower/` is the town's tower, a separate map.
+
+### Floors
+
+- **Tower-City**: one vertical city.
+  - From the top: `Top-Floor` / `Balcony`, then `Upper-Streets` / `Upper-Interiors`, then
+    `Middle-District-1` … `-4` (each as `-Exteriors` and `-Interiors` of the same footprint), then
+    `Lower Streets _1_` / `_2_` and the `50x50-tower-city-maps-*` street maps, then `Underground-1`
+    / `-2` (lava and gears).
+  - `Tower City Interiors _1_` / `_3_` / `_4_` are extra interiors.
+  - `streets` and `streets-tower` are the same map with one quarter swapped for a tower.
+- **Abandoned-Village**: `Exterior`, `1st-Floor` (with or without `-Trimmed-Trees`), `2nd-Floors` and
+  `Basement`, in `Summer` and `Winter`.
+- **Mapvember buildings** (`Towns/`): Warehouse (exterior, floors 1 and 2), Factory (floors 1 and 2),
+  Vault (stories 1 and 2), Office (exterior and interior). Inn, Temple and Laboratory are single maps.
+- **Harpy-Cliffs**: building interiors and a cave level. The files are undressed versions, with no
+  furniture or clutter.
+
+### Variants (one map each)
+
+- `Dwarf-City-Wall`: day or night, with or without fog, with one dragon or several.
+- `logging-camp`: day or night, summer or winter, with or without snow.
+- `island-village`: calm or raging sea, sky, swamp or planar, with darkness or snow. `island-tower`
+  is an unfinished extra.
+- `druid-circle`: base, a magic circle for each element (air, earth, fire, ice, magma, water), with or
+  without mist and darkness.
+- `Inn-at-the-Docks-Exterior` and `Abandoned-Mining-Company-Exterior` are single maps.
+
+## Castle & Fort Maps — 1,217 rooms with no captions
+
+`Castle & Fort Maps/Castle Maps - <n> - DnDMasterDesigns.jpeg`, n = 1 … 1217.
+
+- Each one is a **standalone, AI-rendered castle or keep room or floor** on a black background:
+  great halls, taverns, bedrooms, offices, chambers. None of them are tiles.
+- There are only five sizes: 2048×2048, 1632×2912, 2912×1632, 1856×2464 and 2464×1856.
+- They are plain JPEGs: **no Foundry walls, doors or lights** (and no Universal Battlemap Import
+  `.dd2vtt` files). Walls are drawn into the art, but in Foundry you wall them by hand.
+- **There is no grid size you can trust.** They're AI renders. Some have faint floor tiles, but not
+  at a fixed size. Set the grid by eye per map, sized so a doorway is about one 5 ft square.
+  The Battlemaps, by contrast, have a real grid and a `5ft` scale marker in the corner.
+- **Nothing is captioned yet**, so a name search finds nothing in this folder. To find "a throne
+  room" here you have to look at images.
+- If that comes up more than once, write the captions once into a committed index (a one-line
+  description and tags per number). Don't caption the same images again in every session.
+
+## Looking at a candidate
+
+Fetch only the maps you shortlisted. Put them in the session scratchpad, shrink them, and read the
+small copy:
+
+```bash
+rclone copyto "onedrive:DnD/Maps/Battlemaps/Cities and Settlements/Towns/Town-Walls-B-Compressed3133285.jpg" "$SCRATCH/m.jpg"
+.venv/bin/python -c "from PIL import Image as I; i=I.open('$SCRATCH/m.jpg'); i.thumbnail((800,800)); i.save('$SCRATCH/m-small.jpg')"
+```
+
+To compare several, put them side by side in one image (a contact sheet) instead of reading each one.
+A full-size map costs far more to view and shows no more at this scale.
+
+## Filing a new pack
+
+1. Upload the VTT-resolution images only (not the print or A1 poster files) to `onedrive:DnD/Maps/Battlemaps/<category>/<set>/`:
+   `rclone copy <folder> "onedrive:DnD/Maps/Battlemaps/<category>/<set>"`.
+   Keep a multi-map set in one folder. Its value is that the maps go together.
+2. Add it to the layout and the right section above (tiles, floors or variants) in the same change.

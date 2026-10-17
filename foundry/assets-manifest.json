@@ -9,6 +9,24 @@
       "sha256": "f2ecca8fa261122e57f3c7a13d757ab5d746317e43617547ed9e38644b522621",
       "zip": "tiles-01.zip"
     },
+    "tiles-02": {
+      "bytes": 19741223,
+      "dest": "Data/assets/tiles/tiles-02",
+      "extracted": "2026-10-17T13:24:41+00:00",
+      "files": 303,
+      "mtime": 1792242879.0,
+      "sha256": "5c78d5eb97e58440e7b1f7de9b4f18cab1593b173e1a9d45827e6650b649cc09",
+      "zip": "tiles-02.zip"
+    },
+    "tiles-03": {
+      "bytes": 531678580,
+      "dest": "Data/assets/tiles/tiles-03",
+      "extracted": "2026-10-17T13:25:08+00:00",
+      "files": 65240,
+      "mtime": 1792243317.0,
+      "sha256": "5b8bfe4a698322dfca8001da8e9c6100c0d402a464df0a218ff2c063cdda23d3",
+      "zip": "tiles-03.zip"
+    },
     "tokens-01": {
       "bytes": 201593499,
       "dest": "Data/assets/tokens/tokens-01",
