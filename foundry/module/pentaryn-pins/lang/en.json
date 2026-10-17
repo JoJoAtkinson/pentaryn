@@ -3,13 +3,14 @@
     "Setting": {
       "pinning": {
         "Name": "Pinning",
-        "Hint": "When on, each pinned player sees the scene their pinned character's token is on, and GM scene activation and pulls do not move them. Moving the token moves the player. Turning it on checks that every pinned character has exactly one token."
+        "Hint": "When on, each pinned player sees the scene their pinned character's token is on and ignores GM scene activation; moving the token moves the player, and a GM 'Pull to Scene' moves them too. Turning it on checks that every pinned character has exactly one token and brings online pinned players to their token."
       }
     },
     "Notify": {
       "AuditOk": "Pinning on: all {n} pins have one token.",
       "AuditProblems": "Pinning on: {k} problem(s) — {list}",
-      "Follows": "Your view follows {actor}.",
+      "Stranded": "{actor} ({user}) has no token left: {user}'s view stays where it is. Place {actor} again and {user} is brought to it (at their next login if offline).",
+      "Paused": "{actor} ({user}) now has {n} tokens ({scenes}): the view follows only the copy on the scene {user} is viewing. Delete the extra one.",
       "Teleported": "{actor}{more} → {scene}",
       "TeleportFailed": "{actor} not moved: {reason}"
     },

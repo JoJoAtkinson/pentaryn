@@ -110,13 +110,27 @@ function tokenRef(ref, { sceneId } = {}) {
 }
 
 /**
+ * opts.pull (0.7.0): an array of User documents or user ids → the User documents; null when it is
+ * not one (BAD_ARGS). Validated before anything moves.
+ */
+function pullUsersOf(pull) {
+  if (pull === undefined || pull === null) return [];
+  if (!Array.isArray(pull)) return null;
+  const users = pull.map(u => (typeof u === "string" ? game.users?.get?.(u) : u?.documentName === "User" ? u : null));
+  return users.every(Boolean) ? users : null;
+}
+
+/**
  * teleportToken (0.6.0): one token, and a PC's company, to a point on its own scene or another.
  * Runs on the calling GM client (no query: a User#query runs in every socket of the recipient).
  * The moving is scene-adapter moveCompany, which reuses the follower code; party.mjs (portal-hop
- * follow) is not involved and not changed.
+ * follow) is not involved and not changed. 0.7.0: on another scene the move ends with one pull —
+ * core's Teleport Token rule plus `pull` (pins rebuild 2026-10-17 §2) — reported as `pulled`.
  */
-async function teleportToken(token, ctx, { x, y, scene, level: wanted, dryRun = false } = {}) {
+async function teleportToken(token, ctx, { x, y, scene, level: wanted, pull, dryRun = false } = {}) {
   if (!game.user?.isGM) return fail("NOT_GM", "only a GM teleports tokens");
+  const extra = pullUsersOf(pull);
+  if (!extra) return fail("BAD_ARGS", "pull must be an array of users or user ids");
   const from = token.parent;
   let dest;
   // the kit's one resolver (review R1): a Scene, id, uuid or exact name; another kind → BAD_ARGS
@@ -131,7 +145,7 @@ async function teleportToken(token, ctx, { x, y, scene, level: wanted, dryRun = 
   const to = { scene: dest.id, x, y, level };
   let moved;
   try {
-    moved = await moveCompany(token, dest, { x, y, level }, { dryRun });
+    moved = await moveCompany(token, dest, { x, y, level }, { dryRun, pull: extra });
   } catch (err) {
     ctx.log.error("teleportToken failed", err);
     return toFail(err);
@@ -139,7 +153,8 @@ async function teleportToken(token, ctx, { x, y, scene, level: wanted, dryRun = 
   if (moved.ok === false) return moved;
   const out = { token: refOf(dest.tokens.get(token.id) ?? token), from: from.id, to, followers: moved.followers, moved: moved.moved };
   if (dryRun) return ok({ dryRun: true, ...out });
-  ctx.log.info("teleportToken", { uuid: token.uuid, ids: [token.id, ...moved.followers.map(f => f.id)], by: game.user.id });
+  out.pulled = moved.pulled ?? [];
+  ctx.log.info("teleportToken", { uuid: token.uuid, ids: [token.id, ...moved.followers.map(f => f.id)], pulled: out.pulled.map(u => u.id), by: game.user.id });
   return ok(out);
 }
 

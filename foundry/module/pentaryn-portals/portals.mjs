@@ -26,12 +26,12 @@
  * `await import("/modules/pentaryn-portals/portals.mjs?v=2")`. Any edit to another file needs a reload.
  */
 
-import { MODULE, NS } from "./portals-core.mjs";
+import { HOOKS, MODULE, NS, VERSION } from "./portals-core.mjs";
 import { registerSettings, setting } from "./settings.mjs";
 import { configureSceneAdapter } from "./scene-adapter.mjs";
 import { buildApiFor } from "./api.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { hookRegistry } from "./lib/hooks.mjs";
+import { emitter, hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
 import * as party from "./party.mjs";
 import * as badges from "./badges.mjs";
@@ -42,7 +42,8 @@ const FEATURES = [party, badges, cards];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
-const ctx = { log, reg, setting, api: null, contributions: [], uninstall };
+const emit = emitter(MODULE, HOOKS, { log, version: VERSION });
+const ctx = { log, reg, emit, setting, api: null, contributions: [], uninstall };
 
 /** Remove every hook and feature state (hot patch: then re-import the entry to re-wire). */
 function uninstall() {
@@ -64,7 +65,7 @@ function onReady() {
   publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
 
-configureSceneAdapter({ setting, log });
+configureSceneAdapter({ setting, log, emit });
 for (const feature of FEATURES) {
   const contribution = feature.install(reg, ctx);
   if (contribution) ctx.contributions.push(contribution);

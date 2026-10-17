@@ -359,7 +359,7 @@ test("18 Prompt note calls prompts' place(null, { at }) with the clicked CANVAS 
   game.modules.set("pentaryn-prompts", prompts);
 });
 
-test("19 Teleport ▸ lists only logged-in players; a pick calls portals teleportToken with { x, y, scene, level }", async () => {
+test("19 Teleport ▸ lists only logged-in players; a pick calls portals teleportToken with { x, y, scene, level, pull: [the player] }", async () => {
   game.users.get(IDS.miraUser).active = false;
   game.users.set("zedUser000000001", makeUser({ id: "zedUser000000001", name: "Zed" }));
   rightClick({ x: 700, y: 800 });
@@ -374,7 +374,7 @@ test("19 Teleport ▸ lists only logged-in players; a pick calls portals telepor
   await flush();
   await flush();
   assert.deepEqual(teleported, [[`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`,
-    { x: 700, y: 800, scene: IDS.sceneB, level: IDS.levelB2, dryRun: false }]]);
+    { x: 700, y: 800, scene: IDS.sceneB, level: IDS.levelB2, pull: [IDS.taloUser], dryRun: false }]]);
   assert.deepEqual(toasts().at(-1), ["info", "Talo (+1) → Lighthouse"]);
   game.users.delete("zedUser000000001");
   game.users.get(IDS.miraUser).active = true;

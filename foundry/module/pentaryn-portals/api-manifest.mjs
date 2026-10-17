@@ -51,9 +51,10 @@ export const MANIFEST = Object.freeze({
       returns: "{ moved, cancelled } (cancelled: the GM said no, nobody counts as party, or the destination scene already holds a mover's token id — a duplicated scene; the GM is warned) | undefined (not a GM, no region or a uuid that names no region, or no scene on the canvas)",
       gm: true, writes: true, legacy: true,
       sideEffects: ["Token: update (same scene) or create + delete (another scene)", "Token: level — the destination region's one floor (same scene too), else a level the scene has; elevation mapped onto it",
-        "pulls active players to the destination"],
+        "pullToScene (another scene): every active player the pentaryn-portals.prePull listeners leave in (pentaryn-pins drops one whose pinned character is on another scene) — with { level } when the party landed on one floor; the GM's own view goes there too"],
       doc: "Move the party on canvas.scene (PCs, their summons, player-owned tokens) to the region. Opens a "
-        + "confirm dialog first unless the setting confirmPartyTeleport is off — a console or bridge caller passes { confirm: false }.",
+        + "confirm dialog first unless the setting confirmPartyTeleport is off — a console or bridge caller passes { confirm: false }. "
+        + "On another scene it pulls every active player, with { level } when the party landed on one floor (0.7.0).",
     },
     {
       path: "lookAt",
@@ -103,15 +104,16 @@ export const MANIFEST = Object.freeze({
       params: [
         { name: "ref", kind: "token", type: "Token|uuid|id|exact name", resolve: false,
           doc: "the token to move (a PC brings its company); opts.sceneId scopes an id or a name. A bare id held by more than one scene (a duplicated scene keeps token ids) is AMBIGUOUS without opts.sceneId (review C6)" },
-        { name: "opts", type: "{ x, y, scene?, level?, dryRun = false, sceneId? }",
-          doc: "x, y: canvas point on the destination where the token's centre should land; scene: destination Scene|id|uuid|exact name (kit resolveRef), default the token's own scene; level: destination level id (v14), default the token's level on the same scene (the initial level when the scene no longer has it), the destination's initial level (else its first) on another" },
+        { name: "opts", type: "{ x, y, scene?, level?, pull?: (User|id)[], dryRun = false, sceneId? }",
+          doc: "x, y: canvas point on the destination where the token's centre should land; scene: destination Scene|id|uuid|exact name (kit resolveRef), default the token's own scene; level: destination level id (v14), default the token's level on the same scene (the initial level when the scene no longer has it), the destination's initial level (else its first) on another; pull (0.7.0): users pulled on a cross-scene move whatever core's rule says (not an array of Users / user ids → BAD_ARGS)" },
       ],
-      returns: "{ ok: true, token: { documentName, id, uuid, name }, from: sceneId, to: { scene: sceneId, x, y, level: levelId|null }, followers: [{ id, name }], moved, dryRun? } | { ok: false, code, reason }",
+      returns: "{ ok: true, token: { documentName, id, uuid, name }, from: sceneId, to: { scene: sceneId, x, y, level: levelId|null }, followers: [{ id, name }], moved, pulled: [{ id, name }] (another scene only; [] on the same scene; absent on dryRun), dryRun? } | { ok: false, code, reason }",
       gm: true, writes: true, dryRun: true, since: "0.6.0",
       sideEffects: ["Token: x, y, level — same scene, one update with displace waypoints that carry the level, no animation",
         "Token: create keepId on the destination + plain delete on the source — another scene (no replacements; combatants are not remapped)",
-        "Token: elevation — onto another floor (another level or scene), the same height above its base, clamped into it unless it was outside its own floor (flying, burrowing)"],
-      doc: "Move one token and, when it is a PC (character or polymorphed), its company (its summons — a wild-shaped PC's too, by its original actor — and tokens only its players own) to a point, on its own scene or another. Same follower rule as portal travel, without the portal check. No confirm; nobody is pulled; no view changes. Each follower lands beside the PC; landing counts only the destination floor's tokens and walls. "
+        "Token: elevation — onto another floor (another level or scene), the same height above its base, clamped into it unless it was outside its own floor (flying, burrowing)",
+        "pullToScene (another scene only): the users core's Teleport Token rule picks (#getUsersToPull for a GM mover — the kit's lib/pull-rule.mjs — as the pentaryn-portals.prePull listeners leave them), plus `pull`, with { level: the token's landed level, controlledTokens: [token] }"],
+      doc: "Move one token and, when it is a PC (character or polymorphed), its company (its summons — a wild-shaped PC's too, by its original actor — and tokens only its players own) to a point, on its own scene or another. Same follower rule as portal travel, without the portal check. No confirm; the calling GM's view does not change. On another scene the move ends with one pull, as core's own Teleport Token region does: the players who were watching the token there (core's rule) plus `pull` (0.7.0); the same scene pulls nobody. Each follower lands beside the PC; landing counts only the destination floor's tokens and walls. "
         + "REFUSED (dryRun too) when a mover's token id is already on the destination scene (a duplicated scene keeps token ids); CONFLICT when another session's create of it landed first.",
     },
   ],

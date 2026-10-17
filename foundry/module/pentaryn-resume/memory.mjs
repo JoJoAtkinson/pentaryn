@@ -4,9 +4,11 @@
  * GLUE, one feature. Saves `flags.pentaryn-resume.view` on the user's own User document (a player
  * may update its own flags) whenever the drawn scene, level or pan/zoom settles. At `ready` —
  * after Foundry has drawn the active scene — it views the saved scene and pans to the saved spot,
- * unless core's resumeTarget says the table has moved on — or, with pentaryn-pins' pinning on, that
- * the user's pinned token is on another scene (then only pan and zoom on the pinned scene). Saving is held off until that decision
- * is made, so the first draw of the active scene never overwrites the view it is about to restore.
+ * unless core's resumeTarget says the table has moved on. With pentaryn-pins' pinning on, resume
+ * owns "which scene at login" for a pinned player: their token's scene and level, the token
+ * controlled when they own it, then the saved pan/zoom when it was of that scene (pins 0.2.0 has no login path).
+ * Saving is held off until that decision is made, so the first draw of the active scene never
+ * overwrites the view it is about to restore.
  */
 
 import { MODULE, SAVE_DELAY, VIEW_FLAG, resumeTarget, sameView, viewRecord } from "./resume-core.mjs";
@@ -46,19 +48,21 @@ function schedule(delay = SAVE_DELAY) {
 }
 
 /**
- * The scene id of this user's pinned token (pentaryn-pins `pinnedToken`, published at pins' own
- * `ready`, which runs before this module's `ready: resume`), or null: pins absent, pinning off,
- * unpinned, a GM, or anything unexpected. A GM's view is never redirected by pins (its follow
- * treats GMs as stock), so a GM carrying a pin flag (a promoted player) resumes as stock too. A
- * `scene` that is not an id string is a contract break: it is logged and read as no pin, so a
- * resume never silently drops for every pinned user.
+ * This user's pinned token `{ scene, level, token }` (pentaryn-pins `pinnedToken`, published at pins'
+ * own `ready`, which runs before this module's `ready: resume`), or null: pins absent, pinning off,
+ * unpinned, a GM, or anything unexpected. A GM is never pinned (pins treats GMs as stock), so a GM
+ * carrying a pin flag (a promoted player) resumes as stock too. A `scene` that is not an id string is
+ * a contract break: it is logged and read as no pin, so a resume never silently drops for every
+ * pinned user.
  */
-function pinnedSceneOf(ctx) {
+function pinnedOf(ctx) {
   if (game.user?.isGM) return null;
   try {
     const pinned = apiOf(PINS)?.pinnedToken?.(game.user) ?? null;
     if (!pinned) return null;
-    if (typeof pinned.scene === "string" && pinned.scene) return pinned.scene;
+    if (typeof pinned.scene === "string" && pinned.scene) {
+      return { scene: pinned.scene, level: pinned.level ?? null, token: pinned.token ?? null };
+    }
     ctx.log.warn("pentaryn-pins pinnedToken().scene is not a scene id string; resuming as unpinned", pinned.scene);
   } catch (err) {
     ctx.log.warn("pentaryn-pins pinnedToken() failed; resuming as unpinned", err);
@@ -66,23 +70,41 @@ function pinnedSceneOf(ctx) {
   return null;
 }
 
+/** The token id at the end of a token uuid (`Scene.<id>.Token.<id>`), or null. */
+const tokenIdOf = uuid => (typeof uuid === "string" && /\.Token\.[^.]+$/.test(uuid) ? uuid.split(".").at(-1) : null);
+
+/**
+ * `{ controlledTokens: [id] }` when this user owns the pinned token on `scene`, else `{}` — the same
+ * rule as pins' followOptions (code review CR10). Core's #initializeTokenControl takes
+ * `controlledTokens` instead of its own fallback (character's tokens, owned tokens, else pan to an
+ * observed one), and Token#control fails for a non-owner, so an unowned id would leave the view
+ * unpanned. TokenDocument#testUserPermission only: it already answers through the actor (CR4).
+ */
+function controlOptions(scene, uuid) {
+  const id = tokenIdOf(uuid);
+  const doc = id ? scene.tokens?.get?.(id) : null;
+  return doc?.testUserPermission?.(game.user, "OWNER") === true ? { controlledTokens: [id] } : {};
+}
+
 /** The login restore. Always arms saving at the end, whatever happened. */
 async function resume(ctx) {
   try {
-    if (!canvas?.ready) return;
+    const pinned = pinnedOf(ctx);
+    // a pinned player with no active scene has a blank canvas: initialized, never ready (board.mjs)
+    if (!(pinned ? canvas?.initialized : canvas?.ready)) return;
     const target = resumeTarget(game.user.getFlag(MODULE, VIEW_FLAG), {
       activeId: game.scenes.active?.id ?? null,
       sceneExists: id => !!game.scenes.get(id),
-      pinnedScene: pinnedSceneOf(ctx),
+      pinned,
     });
     if (!target) return;
     const scene = game.scenes.get(target.scene);
     const level = target.level && scene.levels?.get?.(target.level) ? target.level : null;
     if (canvas.scene?.id !== scene.id || (level && canvas.level?.id !== level)) {
-      await scene.view(level ? { level } : {});
+      await scene.view({ ...(level ? { level } : {}), ...controlOptions(scene, target.token) });
     }
     if (target.position && canvas.scene?.id === scene.id) canvas.pan(target.position);
-    ctx.emit("resumed", { ...target, level });
+    ctx.emit("resumed", { scene: target.scene, level, position: target.position });
   } finally {
     armed = true;
     schedule(0);

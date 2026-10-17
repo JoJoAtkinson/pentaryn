@@ -62,9 +62,11 @@ export function world(moduleId, extra = {}) {
 }
 
 /**
- * The stub plus what pins touches: a Scene document class whose prototype carries core's `view`
- * and `_onActivate` (recorded, never real), a canvas with `loading`, levels on B, and helpers that
- * replay core's token create/delete/update hooks.
+ * The stub plus what pins touches: a Scene document class whose prototype carries core's `view`,
+ * `_onActivate` and `pullUsers` (recorded, never real), a canvas with `loading`, levels on B, a
+ * game.socket with `on`/`off` and `F.socketFire` (core's own "pullToScene" listener, registered
+ * after pins', as Game#activateSocketListeners does), and helpers that replay core's token
+ * create/delete/update hooks.
  *
  * The stub's `view` mirrors core where it matters: called while `canvas.loading` it toasts core's
  * loading warning and does nothing; otherwise it sets `loading` two microtasks later (core sets it
@@ -75,6 +77,9 @@ export function world(moduleId, extra = {}) {
 export async function pinsWorld(moduleId, extra = {}) {
   const F = await installFoundry(world(moduleId, extra));
   F.views = [];
+  F.pulls = [];
+  /** A canvas level object: `isView` while it is the drawn level (core's Level#isView). */
+  F.level = id => ({ id, get isView() { return canvas.level === this; } });
   F.activations = [];
   F.unviews = [];
   F.autoDraw = true;
@@ -99,7 +104,7 @@ export async function pinsWorld(moduleId, extra = {}) {
       if (!F.autoDraw) await new Promise(r => pending.push(r));
       else await Promise.resolve();
       canvas.scene = this;
-      canvas.level = options.level ? { id: options.level } : null;
+      canvas.level = options.level ? F.level(options.level) : null;
       canvas.ready = true;
       Hooks.call("canvasReady", canvas);
       canvas.loading = false;
@@ -114,6 +119,36 @@ export async function pinsWorld(moduleId, extra = {}) {
       F.unviews.push(this.id);
       if (canvas.scene === this) canvas.scene = null;
     }
+    /** core's Scene#pullUsers (GM-only, emits pullToScene per active user): recorded. */
+    pullUsers(users, viewOptions = {}) {
+      if (!game.user.isGM) throw new Error("You must be a GM to pull players to a scene");
+      const ids = [...users].map(u => game.users.get(u?.id ?? u)).filter(u => u?.active).map(u => u.id);
+      F.pulls.push([this.id, ids, structuredClone(viewOptions)]);
+    }
+  }
+  // core's TokenDocument#testUserPermission answers as the token's actor (getUserLevel,
+  // common/documents/token.mjs:940-945); the kit stub reads only the token's own `ownership`. Every
+  // token on a pins scene gets core's answer (or its own stub ownership, for a test that sets one),
+  // so pins' adapter asks the token alone, as in Foundry (code review CR4).
+  const tokenPermission = tok => {
+    if (!tok || tok.__corePermission) return tok;
+    const own = tok.testUserPermission;
+    Object.defineProperty(tok, "testUserPermission", {
+      value(user, level = "OWNER") {
+        if (own?.call(this, user, level) === true) return true;
+        const actor = game.actors.get(this.actorId);
+        if (actor) return actor.testUserPermission(user, level) === true;
+        return !!user?.isGM || !this.actorId;
+      },
+      enumerable: false, configurable: true,
+    });
+    Object.defineProperty(tok, "__corePermission", { value: true, enumerable: false });
+    return tok;
+  };
+  for (const s of game.scenes.values()) {
+    for (const t of s.tokens.values()) tokenPermission(t);
+    const set = s.tokens.set.bind(s.tokens);
+    s.tokens.set = (id, tok) => set(id, tokenPermission(tok));
   }
   CONFIG.Scene = { documentClass: Scene };
   for (const s of game.scenes.values()) Object.setPrototypeOf(s, Scene.prototype);
@@ -135,6 +170,20 @@ export async function pinsWorld(moduleId, extra = {}) {
   });
   globalThis.innerWidth = 1920;
   globalThis.innerHeight = 1080;
+
+  // socket.io-client: listeners per event in registration order; core's pullToScene handler last
+  const socketListeners = new Map();
+  Object.assign(game.socket, {
+    on: (event, fn) => void socketListeners.set(event, [...(socketListeners.get(event) ?? []), fn]),
+    off: (event, fn) => void socketListeners.set(event, (socketListeners.get(event) ?? []).filter(f => f !== fn)),
+  });
+  const coreSocket = { pullToScene: (sceneId, viewOptions) => game.scenes.get(sceneId)?.view(viewOptions) };
+  /** A server broadcast reaching this client: every module listener, then core's own handler. */
+  F.socketFire = (event, ...args) => {
+    for (const fn of [...(socketListeners.get(event) ?? [])]) fn(...args);
+    return coreSocket[event]?.(...args);
+  };
+  F.socketListeners = event => (socketListeners.get(event) ?? []).length;
 
   /** Core's create: a token on `sceneId` (the hooks fire with `userId`, default the GM). */
   F.createToken = (sceneId, data, { userId = IDS.gm, options = {} } = {}) => {

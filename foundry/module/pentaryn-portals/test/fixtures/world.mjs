@@ -154,7 +154,7 @@ export function scene({ id, name, navName = "", thumb = null, background = null,
         delete data._id;
         if (want) data.id = want;
         else delete data.id;
-        const doc = type === "Token" ? makeToken(data, s) : makeDoc(type, data, { parent: s });
+        const doc = type === "Token" ? asCoreToken(makeToken(data, s)) : makeDoc(type, data, { parent: s });
         doc.parent = s;
         doc.collection = coll;
         coll.set(doc.id, doc);
@@ -177,11 +177,14 @@ export function scene({ id, name, navName = "", thumb = null, background = null,
       for (const { _id, ...rest } of updates) Object.assign(coll.get(_id) ?? {}, rest);
       return updates;
     },
-    async view() {
-      F.calls.push({ op: "scene.view", scene: s.id });
+    // viewOptions are recorded only when the caller passes them, so a bare view() / pullUsers(users) records as before
+    async view(...args) {
+      F.calls.push({ op: "scene.view", scene: s.id, ...(args.length ? { options: F.plain(args[0]) } : {}) });
       F.canvas.scene = s;
     },
-    pullUsers(users) { F.calls.push({ op: "pullUsers", scene: s.id, users: users.map(u => u.id) }); },
+    pullUsers(users, ...args) {
+      F.calls.push({ op: "pullUsers", scene: s.id, users: [...users].map(u => (typeof u === "string" ? u : u.id)), ...(args.length ? { options: F.plain(args[0]) } : {}) });
+    },
   });
   for (const r of regions) region(s, r);
   for (const t of tokens) token(s, t);
@@ -238,9 +241,22 @@ export function behavior(r, { id, name = "Teleport", type = "teleportToken", dis
   return b;
 }
 
+/**
+ * Core's TokenDocument#testUserPermission: a token with an actor answers by its actor's ownership
+ * (client/documents/token.mjs), not by its own (the kit stub's makeDoc reads the document's own).
+ */
+function asCoreToken(t) {
+  const own = t.testUserPermission;
+  Object.defineProperty(t, "testUserPermission", {
+    value(user, level = "OWNER") { return this.actor ? this.actor.testUserPermission(user, level) : own.call(this, user, level); },
+    enumerable: false,
+  });
+  return t;
+}
+
 /** A token on `s`. */
 export function token(s, data) {
-  const t = makeToken({ actorLink: false, ...data }, s);
+  const t = asCoreToken(makeToken({ actorLink: false, ...data }, s));
   t.collection = s.tokens;
   s.tokens.set(t.id, t);
   return t;

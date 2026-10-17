@@ -1,6 +1,7 @@
 // The core is imported FIRST and BARE — no Foundry stub installed. If it touched a Foundry
 // global at load, this file would fail before any test ran: that is the purity proof.
-// One fixture table per rule (plan context/plans/pin-2026-10.md §3 "Pure rules").
+// One fixture table per rule (plan context/plans/pin-2026-10.md §3 "Pure rules"; the 0.2.0 rules:
+// context/plans/pin-2026-10-rebuild.md §8.1).
 import * as core from "../pins-core.mjs";
 import { rootActorId } from "../lib/root-actor.mjs";
 import { test } from "node:test";
@@ -17,8 +18,11 @@ test("core loads with no Foundry globals present", () => {
   for (const name of ["game", "canvas", "ui", "Hooks", "CONFIG", "foundry"]) {
     assert.equal(name in globalThis, false, `${name} is defined in a bare node process`);
   }
-  for (const fn of ["pinOf", "pickToken", "viewDecision", "queueDecision", "followNeeded", "activateDecision",
-    "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "pinnedName"]) assert.equal(typeof core[fn], "function", fn);
+  for (const fn of ["pinOf", "pickToken", "activateDecision", "netDecision", "coreSwitchesLevel", "levelFollow", "replayDecision",
+    "tokenNotice", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "pinnedName"]) assert.equal(typeof core[fn], "function", fn);
+  for (const gone of ["viewDecision", "queueDecision", "followNeeded", "TOAST_EVERY_MS", "SETTLE_MS", "SETTLE_GIVE_UP_MS"]) {
+    assert.equal(gone in core, false, `${gone} was deleted in 0.2.0 (core's own pull moves the player)`);
+  }
 });
 
 test("VERSION === module.json version; ids agree", () => {
@@ -72,7 +76,7 @@ test("rootActorId (kit lib/root-actor): the token's actor, or the original while
   for (const [why, input, want] of table) assert.equal(rootActorId(input), want, why);
 });
 
-test("pickToken: one is it; the latest by uuid; the viewed scene; else ambiguous", () => {
+test("pickToken: one is it; several → the only one on the viewed scene; else ambiguous", () => {
   const a = { id: "tokA000000000001", uuid: "Scene.B.Token.tokA000000000001", scene: "B" };
   const b = { id: "tokB000000000001", uuid: "Scene.C.Token.tokB000000000001", scene: "C" };
   const sameIdOnC = { id: a.id, uuid: `Scene.C.Token.${a.id}`, scene: "C" };
@@ -81,74 +85,97 @@ test("pickToken: one is it; the latest by uuid; the viewed scene; else ambiguous
     ["none", [], {}, null],
     ["one", [a], {}, a],
     ["one polymorphed token whose root is the pin", [form], {}, form],
-    ["two, one is the latest (a cross-scene move in flight)", [a, b], { latestUuid: b.uuid }, b],
-    ["the same token id on two scenes: the latest by uuid", [a, sameIdOnC], { latestUuid: sameIdOnC.uuid }, sameIdOnC],
     ["two, one on the viewed scene", [a, b], { viewedSceneId: "C" }, b],
-    ["two, neither latest nor viewed", [a, b], { viewedSceneId: "Z" }, null],
-    ["two, a stale latest", [a, b], { latestUuid: "Scene.X.Token.gone" }, null],
+    ["the same token id on two scenes (a keepId carry): the one on the viewed scene", [a, sameIdOnC], { viewedSceneId: "C" }, sameIdOnC],
+    ["two, neither viewed", [a, b], { viewedSceneId: "Z" }, null],
+    ["two, nothing viewed", [a, b], {}, null],
+    ["two on the viewed scene", [a, form], { viewedSceneId: "B" }, null],
+    ["latestUuid is no longer an option (0.2.0)", [a, b], { latestUuid: b.uuid }, null],
   ];
   for (const [why, cands, opts, want] of table) assert.equal(core.pickToken(cands, opts), want, why);
 });
 
-test("viewDecision: stock unless pinned; same scene passes; another redirects", () => {
-  const target = { scene: "B", level: "L2" };
-  const base = { enabled: true, isGM: false, target, sceneId: "A", level: null };
-  const table = [
-    ["switch off", { ...base, enabled: false }, { action: "stock" }],
-    ["a GM", { ...base, isGM: true }, { action: "stock" }],
-    ["no pin / no token", { ...base, target: null }, { action: "stock" }],
-    ["same scene, no level asked → the token's level", { ...base, sceneId: "B" }, { action: "pass", scene: "B", level: "L2" }],
-    ["same scene, a level the player chose → as asked", { ...base, sceneId: "B", level: "L1", chosen: true }, { action: "pass", scene: "B", level: "L1" }],
-    // code review 2026-10-17 #1: scene-nav "Pull everyone" on Upper, an activation at a level, the login draw
-    ["same scene, a level a pull or activation asked → the token's level", { ...base, sceneId: "B", level: "L1", chosen: false }, { action: "pass", scene: "B", level: "L2" }],
-    ["chosen defaults to false: not the player's own view", { ...base, sceneId: "B", level: "L1" }, { action: "pass", scene: "B", level: "L2" }],
-    ["same scene, a pulled level, a token with no level → as asked", { ...base, target: { scene: "B", level: null }, sceneId: "B", level: "L1" }, { action: "pass", scene: "B", level: "L1" }],
-    ["another scene, chosen → still the token's scene and level", { ...base, chosen: true, level: "L9" }, { action: "redirect", scene: "B", level: "L2" }],
-    ["another scene → the token's scene and level", base, { action: "redirect", scene: "B", level: "L2" }],
-    ["a token with no level", { ...base, target: { scene: "B", level: null } }, { action: "redirect", scene: "B", level: null }],
-  ];
-  for (const [why, input, want] of table) assert.deepEqual(core.viewDecision(input), want, why);
-});
-
-test("queueDecision: none when there or being drawn; view; defer while something else loads", () => {
-  const viewed = { scene: "A", level: "L1" };
-  const table = [
-    ["not loading, already viewed", { loading: false, viewed, want: { scene: "A", level: "L1" } }, "none"],
-    ["not loading, want names no level", { loading: false, viewed, want: { scene: "A", level: null } }, "none"],
-    ["not loading, another scene", { loading: false, viewed, want: { scene: "B", level: null } }, "view"],
-    ["not loading, another level", { loading: false, viewed, want: { scene: "A", level: "L2" } }, "view"],
-    ["not loading, nothing viewed", { loading: false, viewed: { scene: null, level: null }, want: { scene: "B" } }, "view"],
-    ["loading, want is the inflight draw", { loading: true, inflight: { scene: "B", level: "L2" }, viewed, want: { scene: "B", level: "L2" } }, "none"],
-    ["loading, inflight scene, want names no level", { loading: true, inflight: { scene: "B", level: "L2" }, viewed, want: { scene: "B", level: null } }, "none"],
-    ["loading, inflight scene, another level", { loading: true, inflight: { scene: "B", level: "L2" }, viewed, want: { scene: "B", level: "L3" } }, "defer"],
-    // code review 2026-10-17 #2: a draw pins did not start is of an unknown scene and level, and core
-    // sets canvas.loading BEFORE it assigns canvas.scene (board.mjs #draw): wait, then recompute
-    ["loading, no inflight, a level of the viewed scene: retried after the draw", { loading: true, inflight: null, viewed, want: { scene: "A", level: "L2" } }, "defer"],
-    ["loading, no inflight, the viewed scene and level: still deferred (viewed may be stale)", { loading: true, inflight: null, viewed, want: { scene: "A", level: "L1" } }, "defer"],
-    ["loading, no inflight, another scene", { loading: true, inflight: null, viewed, want: { scene: "B" } }, "defer"],
-    ["loading, inflight elsewhere", { loading: true, inflight: { scene: "C", level: null }, viewed, want: { scene: "B" } }, "defer"],
-    // core sets canvas.loading only inside its queued #draw, after an await: a view let through
-    // this tick is in flight with loading still false
-    ["not loading YET, inflight is the want", { loading: false, inflight: { scene: "C", level: null }, viewed: { scene: "B", level: null }, want: { scene: "C" } }, "none"],
-    ["not loading YET, inflight elsewhere", { loading: false, inflight: { scene: "C", level: null }, viewed: { scene: "B", level: null }, want: { scene: "A" } }, "defer"],
-  ];
-  for (const [why, input, want] of table) assert.equal(core.queueDecision(input), want, why);
-});
-
-test("followNeeded: the token's scene AND level, unless the player chose the level being viewed", () => {
+test("netDecision: none without a target or when there; wait while loading; view another scene or level (R1, R5)", () => {
   const target = { scene: "B", level: "L2" };
   const table = [
-    ["no target (off, a GM, no pin, ambiguous)", { target: null, viewed: { scene: "A", level: null } }, false],
-    ["another scene", { target, viewed: { scene: "A", level: "L2" } }, true],
-    ["nothing viewed", { target, viewed: { scene: null, level: null } }, true],
-    ["the token's scene and level", { target, viewed: { scene: "B", level: "L2" } }, false],
-    ["another level, nobody chose it (a pull, a redraw)", { target, viewed: { scene: "B", level: "L1" } }, true],
-    ["another level the player chose", { target, viewed: { scene: "B", level: "L1" }, choice: { scene: "B", level: "L1" } }, false],
-    ["a choice of another level than the one viewed", { target, viewed: { scene: "B", level: "L3" }, choice: { scene: "B", level: "L1" } }, true],
-    ["a choice on another scene", { target, viewed: { scene: "B", level: "L1" }, choice: { scene: "C", level: "L1" } }, true],
-    ["a token with no level: any level of its scene", { target: { scene: "B", level: null }, viewed: { scene: "B", level: "L1" } }, false],
+    ["no target (off, a GM, no pin, 0 or several tokens)", { target: null, viewed: { scene: "A", level: null }, loading: false }, "none"],
+    ["no target while loading", { target: null, viewed: { scene: "A", level: null }, loading: true }, "none"],
+    ["loading: wait for the draw to end, then check again", { target, viewed: { scene: "A", level: null }, loading: true }, "wait"],
+    ["loading, already there: still wait (viewed may be stale)", { target, viewed: { scene: "B", level: "L2" }, loading: true }, "wait"],
+    ["the token is on another scene", { target, viewed: { scene: "A", level: null }, loading: false }, "view"],
+    ["nothing viewed (a blank canvas)", { target, viewed: { scene: null, level: null }, loading: false }, "view"],
+    ["the viewed scene, another level (a copy-paste onto another floor, A1-3 / R5)", { target, viewed: { scene: "B", level: "L1" }, loading: false }, "view"],
+    ["the token's scene and level", { target, viewed: { scene: "B", level: "L2" }, loading: false }, "none"],
+    ["a token with no level (or an orphan one): the scene is enough", { target: { scene: "B", level: null }, viewed: { scene: "B", level: "L1" }, loading: false }, "none"],
+    ["loading defaults to false", { target, viewed: { scene: "A", level: null } }, "view"],
   ];
-  for (const [why, input, want] of table) assert.equal(core.followNeeded(input), want, why);
+  for (const [why, input, want] of table) assert.equal(core.netDecision(input), want, why);
+});
+
+// A copy of the per-token test in TokenDocument.#handleMovementOperation, token.mjs:2927-2946 (v14.369)
+test("coreSwitchesLevel: one row per clause of core's level switch (token.mjs:2927-2946)", () => {
+  const base = { viewedLevel: "L1", origin: "L1", observes: true, ownsOtherSighted: false, selfMove: false, method: "api" };
+  const table = [
+    ["viewed the origin level, observes, no other owned sighted token there: core switches", base, true],
+    ["no viewed level", { ...base, viewedLevel: null }, false],
+    [":2934 the client viewed another level than the origin", { ...base, viewedLevel: "L3" }, false],
+    [":2937 not observable (hidden, or no OBSERVER)", { ...base, observes: false }, false],
+    [":2943 the user owns another non-hidden sighted token on the origin level", { ...base, ownsOtherSighted: true }, false],
+    [":2945 …unless they moved it themselves by config", { ...base, ownsOtherSighted: true, selfMove: true, method: "config" }, true],
+    [":2945 …by the HUD", { ...base, ownsOtherSighted: true, selfMove: true, method: "hud" }, true],
+    [":2945 …by dragging", { ...base, ownsOtherSighted: true, selfMove: true, method: "dragging" }, true],
+    [":2945 …by keyboard", { ...base, ownsOtherSighted: true, selfMove: true, method: "keyboard" }, true],
+    [":2945 a self move by api is not one of them", { ...base, ownsOtherSighted: true, selfMove: true, method: "api" }, false],
+    [":2945 a GM's drag is not a self move", { ...base, ownsOtherSighted: true, selfMove: false, method: "dragging" }, false],
+    ["defaults: no self move", { viewedLevel: "L1", origin: "L1", observes: true, ownsOtherSighted: true }, false],
+  ];
+  for (const [why, input, want] of table) assert.equal(core.coreSwitchesLevel(input), want, why);
+});
+
+test("levelFollow: pins views the new level only where core will not", () => {
+  const tok = { uuid: "Scene.B.Token.t1" };
+  const base = { target: { scene: "B", level: "L2", token: tok }, tokenUuid: tok.uuid, to: "L2", viewedLevel: "L1", core: false };
+  const table = [
+    ["the pinned token moved to another level and core will not switch", base, true],
+    ["core switches: never both", { ...base, core: true }, false],
+    ["no target (off, a GM, ambiguous)", { ...base, target: null }, false],
+    ["another token of the same root (not the target)", { ...base, tokenUuid: "Scene.B.Token.other" }, false],
+    ["the target's level is not `to` (an orphan level: levelOn gave null)", { ...base, target: { ...base.target, level: null } }, false],
+    ["already viewing that level", { ...base, viewedLevel: "L2" }, false],
+    ["no destination level", { ...base, to: null }, false],
+  ];
+  for (const [why, input, want] of table) assert.equal(core.levelFollow(input), want, why);
+});
+
+test("replayDecision: only a pinned player whose canvas is loading (core drops that pull)", () => {
+  const table = [
+    [{ pinned: true, loading: true }, true],
+    [{ pinned: true, loading: false }, false],
+    [{ pinned: false, loading: true }, false],
+    [{ pinned: false, loading: false }, false],
+  ];
+  for (const [input, want] of table) assert.equal(core.replayDecision(input), want, JSON.stringify(input));
+});
+
+test("tokenNotice: 0 → STRANDED, 2+ → PAUSED, 1 → forget; the same count never twice in a row", () => {
+  const table = [
+    ["one token: nothing, forget", { n: 1, last: null }, { notice: null, last: null }],
+    ["one token after a toast: forget", { n: 1, last: 2 }, { notice: null, last: null }],
+    ["no token left", { n: 0, last: null }, { notice: "STRANDED", last: 0 }],
+    ["still none", { n: 0, last: 0 }, { notice: null, last: 0 }],
+    ["a second token", { n: 2, last: null }, { notice: "PAUSED", last: 2 }],
+    ["still two", { n: 2, last: 2 }, { notice: null, last: 2 }],
+    ["a third", { n: 3, last: 2 }, { notice: "PAUSED", last: 3 }],
+    ["from none to two", { n: 2, last: 0 }, { notice: "PAUSED", last: 2 }],
+    ["last defaults to null", { n: 0 }, { notice: "STRANDED", last: 0 }],
+  ];
+  for (const [why, input, want] of table) assert.deepEqual(core.tokenNotice(input), want, why);
+});
+
+test("timings: the grace window and the poll", () => {
+  assert.equal(core.NET_GRACE_MS, 1500);
+  assert.equal(core.NET_POLL_MS, 250);
+  assert.equal(core.HOOKS.followed.args, "({ scene, level, reason: cut|level|retry })");
 });
 
 test("activateDecision: skip another scene's activation and the token scene's deactivation", () => {

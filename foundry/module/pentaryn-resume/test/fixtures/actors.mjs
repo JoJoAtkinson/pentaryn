@@ -8,11 +8,17 @@ export const IDS = Object.freeze({
   cave: "scenecave0000001",
   caveLower: "levellower000001",
   player: "player0000000001",
+  /** On the cave's lower level: one the player owns, one it only observes (resume 0.2.0, CR10). */
+  caveOwned: "caveTalo0000001",
+  caveObserved: "caveOthr0000001",
 });
 
 export const SCENES = Object.freeze([
   { id: IDS.town, name: "Town", active: true },
-  { id: IDS.cave, name: "Cave", active: false },
+  { id: IDS.cave, name: "Cave", active: false, tokens: [
+    { id: IDS.caveOwned, level: IDS.caveLower, ownership: { [IDS.player]: 3 } },
+    { id: IDS.caveObserved, level: IDS.caveLower, ownership: { [IDS.player]: 2 } },
+  ] },
 ]);
 
 export const USERS = Object.freeze([{ id: IDS.player, name: "P", isGM: false }]);

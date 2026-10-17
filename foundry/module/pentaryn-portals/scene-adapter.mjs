@@ -14,13 +14,15 @@ import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow,
 import { fail } from "./lib/errors.mjs";
 import { flagPath } from "./lib/flags.mjs";
 import { rootActorId } from "./lib/root-actor.mjs";
+import { pullCandidates, sourceLevel, usersToPull } from "./lib/pull-rule.mjs";
 
-const deps = { setting: () => undefined, log: null };
+const deps = { setting: () => undefined, log: null, emit: null };
 
-/** The entry hands over the setting reader and the module's one log. */
-export function configureSceneAdapter({ setting, log } = {}) {
+/** The entry hands over the setting reader, the module's one log and its event emitter (kit emitter over HOOKS). */
+export function configureSceneAdapter({ setting, log, emit } = {}) {
   if (setting) deps.setting = setting;
   if (log) deps.log = log;
+  if (emit) deps.emit = emit;
 }
 
 /* -------------------------------------------- */
@@ -308,14 +310,17 @@ export function landingPlaces(dest, toks, cx, cy, party = null, { level } = {}) 
  *  refused every move of it ("level must exist"). Its elevation is mapped onto the floor it lands on.
  *  A keepId create the server refuses with "already exists" rejects as it is: bringFollowers reads
  *  that as the GM-tab election, so a mover whose id the destination ALREADY held (a duplicated scene)
- *  is the caller's to filter out first (idClash; review L3). */
+ *  is the caller's to filter out first (idClash; review L3).
+ *  → the one floor every token landed on (a level id), or null when they landed on several, the
+ *  destination has no levels, or there was nothing to carry (teleportParty pulls and views with it). */
 export async function carryTo(toks, dest, cx, cy, party = null, { level, preferLevel = null } = {}) {
-  if (!toks.length) return;
+  if (!toks.length) return null;
   const from = toks[0].parent;
   const { onFloor, patch } = arrivals(toks, dest, { level, preferLevel });
   const places = landingPlaces(dest, toks, cx, cy, party, onFloor);
   await dest.createEmbeddedDocuments("Token", toks.map((t, i) => ({ ...t.toObject(), ...places[i], ...patch(i) })), { keepId: true });
   await from.deleteEmbeddedDocuments("Token", toks.map(t => t.id));
+  return onFloor.level ?? null;
 }
 
 /** A scene's initial level id (else its first), or null. */
@@ -389,6 +394,50 @@ function elevationPatch(t, dest, level) {
   return { elevation: elevationOnLevel(t.elevation, t.depth, srcBase, to.elevation.base, (e, d) => to.clampElevation(e, d), srcClamp) };
 }
 
+/* -------------------------------------------- */
+/*  Who is pulled (pins rebuild 2026-10-17 §2)   */
+/* -------------------------------------------- */
+
+/*
+ * core's Teleport Token pull rule is the kit's (lib/pull-rule.mjs: usersToPull over pullCandidates,
+ * shared with pentaryn-pins — code review 2026-10-17 CR8), evaluated the way core does: AFTER the
+ * carry, against the source scene, so the carried company is already off it (review R6: core's own
+ * hop leaves the company behind for a tick and so does not pull an owner with a sighted familiar;
+ * teleportToken carries it first, so it does — on purpose). core: teleport-token.mjs:212-236.
+ */
+
+/**
+ * Fire `pentaryn-portals.prePull` (HOOKS.prePull, CR7) over `users` — once per pull site, only when
+ * there is someone to leave out — and return who is left: a listener splices users out in place
+ * (pentaryn-pins drops a player pinned to a token on another scene); a veto (false) leaves nobody.
+ * A throwing listener is caught by Foundry's Hooks.call (logged, the rest still run). No emitter
+ * configured (a bare import) → `users` unchanged.
+ */
+function filterPull(users, info) {
+  if (!users.length || !deps.emit) return users;
+  const list = [...users];
+  return deps.emit("prePull", list, info) === false ? [] : list.filter(Boolean);
+}
+
+/**
+ * GM, after a cross-scene carry: pull core's rule's users (as the prePull listeners leave them) plus `pull` (the
+ * caller's own, whatever the rule says) to `dest`, with core's view options `{ level,
+ * controlledTokens }` — `level` the carried token's LANDED level (what core passes:
+ * destinationToken._source.level), not the requested one. De-duplicated, inactive dropped (core's
+ * pullUsers drops them too); no emit when nobody is left. → `[{ id, name }]` of the users pulled.
+ */
+function pullAfterCarry(token, from, dest, { hidden, srcLevel, pull = [] }) {
+  const landed = sourceLevel(dest.tokens.get(token.id));
+  const byRule = usersToPull(pullCandidates(token, from, game.users, srcLevel), { hidden, scene: from.id, level: srcLevel })
+    .map(id => game.users.get(id)).filter(u => u?.active);
+  const kept = filterPull(byRule, { scene: dest, level: typeof landed === "string" ? landed : null,
+    token: dest.tokens.get(token.id) ?? token, reason: "token", pull: [...pull] });
+  const users = [...new Set([...kept, ...pull])].filter(u => u?.active);
+  if (!users.length) return [];
+  dest.pullUsers(users, { ...(typeof landed === "string" ? { level: landed } : {}), controlledTokens: [token.id] });
+  return users.map(u => ({ id: u.id, name: u.name }));
+}
+
 /** GM: move `toks` on their own scene around (cx, cy) in ONE displace update, no animation: carryTo's
  *  rule for the level and elevation (arrivals), each waypoint carrying them (displaceOptions). */
 async function moveOnScene(toks, cx, cy, party, { level, preferLevel = null } = {}) {
@@ -404,16 +453,20 @@ async function moveOnScene(toks, cx, cy, party, { level, preferLevel = null } = 
  * leader rule as party.mjs bringFollowers), its company to (x, y) on `dest`, its own scene or
  * another. The company is followersOf the PC, gathered before anything moves, exactly as portal
  * travel picks it, but with no portal check: this is a deliberate GM move, not a hop. A non-PC
- * moves alone. No canvas, no pull, no view: the bot calls this too, and has no canvas.
- * → `{ followers: [{ id, name }], moved }`, `fail("REFUSED")` when a mover's id is already on the
+ * moves alone. No canvas and no GM view (the bot calls this too, and has no canvas). On another
+ * scene the move ends with ONE pull (pullAfterCarry): the users core's Teleport Token rule picks,
+ * plus `pull` — the mover pulls the owner (pins rebuild 2026-10-17 §2). The same scene never pulls:
+ * core's same-scene rule pulls only a non-self mover, and this mover is a GM.
+ * → `{ followers: [{ id, name }], moved, pulled: [{ id, name }] }` (`pulled` [] on the same scene;
+ * absent on dryRun), `fail("REFUSED")` when a mover's id is already on the
  * destination (dryRun too), or `fail("CONFLICT")` when another session's keepId create won (the same
  * election bringFollowers relies on). Any other error rethrows. A move to another floor maps each
  * token's elevation onto it; landing counts only that floor's tokens and walls.
  * @param {TokenDocument} token  @param {Scene} dest
  * @param {{x: number, y: number, level: string|null}} to  the centre point and the resolved level
- * @param {{dryRun?: boolean}} [opts]
+ * @param {{dryRun?: boolean, pull?: User[]}} [opts]  pull: resolved User documents (api.mjs validates)
  */
-export async function moveCompany(token, dest, { x, y, level }, { dryRun = false } = {}) {
+export async function moveCompany(token, dest, { x, y, level }, { dryRun = false, pull = [] } = {}) {
   const from = token.parent;
   const gmIds = gmUserIds();
   const record = recordOf(token, { gmIds });
@@ -433,16 +486,21 @@ export async function moveCompany(token, dest, { x, y, level }, { dryRun = false
   if (dryRun) return { followers, moved: 0 };
   if (dest === from) {
     await moveOnScene(toks, x, y, party, { level });
-  } else {
-    try {
-      await carryTo(toks, dest, x, y, party, { level });
-    } catch (err) {
-      if (!/already exists/i.test(err?.message ?? "")) throw err;
-      deps.log?.debug("teleportToken: another session moved it first", err);
-      return fail("CONFLICT", "another session moved it first");
-    }
+    return { followers, moved: toks.length, pulled: [] };
   }
-  return { followers, moved: toks.length };
+  // read before the carry: core evaluates its rule against the token's SOURCE level and visibility
+  const hidden = !!token.hidden, srcLevel = sourceLevel(token);
+  try {
+    await carryTo(toks, dest, x, y, party, { level });
+  } catch (err) {
+    if (!/already exists/i.test(err?.message ?? "")) throw err;
+    deps.log?.debug("teleportToken: another session moved it first", err);
+    return fail("CONFLICT", "another session moved it first");
+  }
+  // the tokens have moved: a failing pull is warned, never reported as a failed move
+  let pulled = [];
+  try { pulled = pullAfterCarry(token, from, dest, { hidden, srcLevel, pull }); } catch (err) { deps.log?.warn("teleportToken: the pull failed (the move stands)", err); }
+  return { followers, moved: toks.length, pulled };
 }
 
 /**
@@ -510,9 +568,13 @@ export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
     // review L3: a duplicated scene keeps token ids; the create would be refused whole
     const clash = idClash(toks, dest);
     if (clash.length) { clashNotice(clash, dest); return { moved: 0, cancelled: true }; }
-    await carryTo(toks, dest, cx, cy, party, { preferLevel: onLevels });
-    dest.pullUsers(game.users.filter(u => !u.isGM && u.active));
-    await dest.view();
+    // pins rebuild §2.2/§2.5: with the party's one floor when it landed on one; the prePull listeners
+    // may leave players out (pentaryn-pins: one whose character stayed on another scene, review R2)
+    const floor = await carryTo(toks, dest, cx, cy, party, { preferLevel: onLevels });
+    const view = floor ? { level: floor } : {};
+    const users = filterPull(game.users.filter(u => !u.isGM && u.active), { scene: dest, level: floor ?? null, token: null, reason: "party", pull: [] });
+    if (users.length) dest.pullUsers(users, view);
+    await dest.view(view);
   }
   ui.notifications.info(_loc(toks.length === 1 ? "PENTARYN_PORTALS.Notify.PartyMovedOne" : "PENTARYN_PORTALS.Notify.PartyMovedMany",
     { n: toks.length, title: cardFor(destRegion).title }));

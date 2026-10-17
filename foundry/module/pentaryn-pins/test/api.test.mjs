@@ -28,14 +28,18 @@ const B = game.scenes.get(IDS.sceneB), C = game.scenes.get(IDS.sceneC);
 
 const portalsCalls = [];
 let portalsAnswer = null;
+/** What the portals stub reports as pulled on a cross-scene move; null → exactly its `pull` (portals ≥ 0.7.0). */
+let portalsPulled = null;
 function installPortals() {
   game.modules.set("pentaryn-portals", { id: "pentaryn-portals", active: true, api: {
     teleportToken: async (token, opts) => {
       portalsCalls.push([token.uuid, opts]);
       if (portalsAnswer) return portalsAnswer;
+      const cross = !!opts.scene && opts.scene !== token.parent.id;
+      const pulled = portalsPulled ?? (opts.pull ?? []).map(id => ({ id, name: game.users.get(id)?.name ?? null }));
       return { ok: true, token: { documentName: "Token", id: token.id, uuid: token.uuid, name: token.name },
         from: token.parent.id, to: { scene: opts.scene ?? token.parent.id, x: opts.x, y: opts.y, level: opts.level ?? null },
-        followers: [], moved: 1, ...(opts.dryRun ? { dryRun: true } : {}) };
+        followers: [], moved: 1, ...(opts.dryRun ? { dryRun: true } : { pulled: cross ? pulled : [] }) };
     },
   } });
 }
@@ -70,14 +74,14 @@ test("no queries: pins has no socket and registers nothing in CONFIG.queries", (
   assert.deepEqual(Object.keys(CONFIG.queries).filter(k => k.startsWith(MODULE)), []);
 });
 
-test("describe().patches lists both adjustments rows; flags reads name the dnd5e flags and the two foreign APIs", () => {
+test("describe().patches lists the one adjustments row (0.2.0: no Scene#view patch); flags reads name the dnd5e flags, the two foreign APIs and portals' prePull hook", () => {
   const d = api.describe();
   assert.deepEqual(d.patches.map(p => [p.label, p.adjustments, p.marker]), [
-    ["Scene#view", "pins-scene-view", "__pentarynPinsView"],
     ["Scene#_onActivate", "pins-scene-activate", "__pentarynPinsActivate"],
   ]);
   assert.deepEqual(d.flags, { writes: ["flags.pentaryn-pins.actor"],
-    reads: ["flags.dnd5e.originalActor", "flags.dnd5e.previousActorIds", "api:pentaryn-portals.teleportToken", "api:pentaryn-prompts.place"] });
+    reads: ["flags.dnd5e.originalActor", "flags.dnd5e.previousActorIds", "api:pentaryn-portals.teleportToken", "api:pentaryn-prompts.place",
+      "hook:pentaryn-portals.prePull"] });
 });
 
 test("pin / unpin: NOT_GM, dryRun writes nothing, a GM user is BAD_ARGS, bad refs are refusals", async () => {
@@ -209,32 +213,88 @@ test("teleport: refusals; UNSUPPORTED without portals; a portals fail passes thr
   portalsAnswer = null;
 });
 
-test("teleport: calls portals teleportToken with { x, y, scene, level, dryRun }; viewFollows; VIEW_UNCHANGED while off", async () => {
+test("teleport: pull [the player] when on and online, [] off/offline; viewFollows from portals' pulled; VIEW_UNCHANGED online and not pulled", async () => {
   installPortals();   // its own stub: the test passes alone (--test-name-pattern), not only after "refusals"
   portalsCalls.length = 0;
-  const off = await api.teleport(IDS.taloUser, { x: 100, y: 200, scene: IDS.sceneC });
-  assert.deepEqual(portalsCalls, [[`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`, { x: 100, y: 200, scene: IDS.sceneC, level: undefined, dryRun: false }]]);
-  assert.deepEqual([off.ok, off.viewFollows, off.online, off.warning, off.user.id], [true, false, true, "VIEW_UNCHANGED", IDS.taloUser]);
-  const same = await api.teleport(IDS.taloUser, { x: 100, y: 200 });
-  assert.equal(same.warning, undefined, "same scene: nothing to warn");
-  await setPinning(true);
-  const on = await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC, dryRun: true });
-  assert.deepEqual([on.ok, on.dryRun, on.viewFollows, on.warning], [true, true, true, undefined]);
-  assert.equal(on.online, true);
-  game.users.get(IDS.taloUser).active = false;
-  assert.equal((await api.teleport(IDS.taloUser, { x: 1, y: 2 })).viewFollows, false, "a logged-out player's view cannot follow now");
-  const offline = await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC });
-  assert.deepEqual([offline.ok, offline.viewFollows, offline.online, offline.warning], [true, false, false, undefined],
-    "switch on, player offline, another scene: their login draw lands on the token's scene, so no VIEW_UNCHANGED");
-  game.users.get(IDS.taloUser).active = true;
-  // a wild-shaped PC: its form token is the one moved
-  const tok = B.tokens.get(IDS.taloTok);
-  Object.assign(tok, { actorId: IDS.wolf, flags: { dnd5e: { originalActor: IDS.talo } } });
-  portalsCalls.length = 0;
-  assert.equal((await api.teleport(IDS.taloUser, { x: 5, y: 5 })).ok, true);
-  assert.equal(portalsCalls[0][0], tok.uuid);
-  Object.assign(tok, { actorId: IDS.talo, flags: {} });
-  await setPinning(false);
+  const uuid = `Scene.${IDS.sceneB}.Token.${IDS.taloTok}`;
+  try {
+    // switch off: no pull asked; a cross-scene move the rule did not pull for → VIEW_UNCHANGED
+    portalsPulled = [];
+    const off = await api.teleport(IDS.taloUser, { x: 100, y: 200, scene: IDS.sceneC });
+    assert.deepEqual(portalsCalls, [[uuid, { x: 100, y: 200, scene: IDS.sceneC, level: undefined, pull: [], dryRun: false }]]);
+    assert.deepEqual([off.ok, off.viewFollows, off.online, off.warning, off.user.id], [true, false, true, "VIEW_UNCHANGED", IDS.taloUser]);
+    const same = await api.teleport(IDS.taloUser, { x: 100, y: 200 });
+    assert.deepEqual([same.viewFollows, same.warning], [false, undefined], "same scene: nothing to warn");
+    // switch off, but core's Teleport Token rule pulled them anyway (they watched the token): the view follows
+    portalsPulled = [{ id: IDS.taloUser, name: "Talo's player" }];
+    const ruled = await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC });
+    assert.deepEqual([ruled.viewFollows, ruled.warning], [true, undefined]);
+    portalsPulled = null;
+    await setPinning(true);
+    portalsCalls.length = 0;
+    const on = await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC });
+    assert.deepEqual(portalsCalls[0][1].pull, [IDS.taloUser], "switch on, online: portals pulls the player");
+    assert.deepEqual([on.ok, on.viewFollows, on.warning, on.pulled], [true, true, undefined, [{ id: IDS.taloUser, name: "Talo's player" }]]);
+    const dry = await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC, dryRun: true });
+    assert.deepEqual([dry.ok, dry.dryRun, dry.viewFollows, dry.warning], [true, true, true, undefined], "a dryRun predicts the pull");
+    // an older portals (no `pull` support): it pulled nobody → the view did not follow, and the GM is told
+    portalsPulled = [];
+    const old = await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC });
+    assert.deepEqual([old.viewFollows, old.warning], [false, "VIEW_UNCHANGED"]);
+    portalsPulled = null;
+    // same scene, the player watching it: core's level switch or the gap-filler follows; no pull
+    const talo = game.users.get(IDS.taloUser);
+    F.pulls.length = 0;
+    talo.viewedScene = IDS.sceneB;
+    const onSame = await api.teleport(IDS.taloUser, { x: 1, y: 2 });
+    // CR2: never skipped on the GM's lagging copy of viewedScene; core's view of what is drawn draws nothing
+    assert.deepEqual([onSame.viewFollows, onSame.warning, onSame.pulled], [true, undefined, []]);
+    assert.deepEqual(F.pulls, [[IDS.sceneB, [IDS.taloUser], { level: IDS.levelB2, controlledTokens: [IDS.taloTok] }]],
+      "same scene, apparently watched: pulled anyway (CR2)");
+    F.pulls.length = 0;
+    // same scene, the player peeking at another map: portals never pulls there, so pins pulls them back (review F1)
+    talo.viewedScene = IDS.sceneA;
+    const peek = await api.teleport(IDS.taloUser, { x: 1, y: 2 });
+    assert.deepEqual(F.pulls, [[IDS.sceneB, [IDS.taloUser], { level: IDS.levelB2, controlledTokens: [IDS.taloTok] }]],
+      "pulled back to the token's scene and level, the token controlled");
+    assert.deepEqual([peek.ok, peek.viewFollows, peek.warning], [true, true, undefined]);
+    F.pulls.length = 0;
+    assert.equal((await api.teleport(IDS.taloUser, { x: 1, y: 2, dryRun: true })).viewFollows, true, "a dryRun pulls nobody");
+    assert.deepEqual(F.pulls, []);
+    // a pull that throws: the move stands, the view does not follow
+    B.pullUsers = () => { throw new Error("socket closed"); };
+    try {
+      const failed = await api.teleport(IDS.taloUser, { x: 1, y: 2 });
+      assert.deepEqual([failed.ok, failed.viewFollows], [true, false]);
+    } finally {
+      delete B.pullUsers;
+    }
+    // switch off: a peeking player is not pulled (stock)
+    await setPinning(false);
+    assert.equal((await api.teleport(IDS.taloUser, { x: 1, y: 2 })).viewFollows, false);
+    assert.deepEqual(F.pulls, []);
+    await setPinning(true);
+    delete talo.viewedScene;
+    game.users.get(IDS.taloUser).active = false;
+    portalsCalls.length = 0;
+    assert.equal((await api.teleport(IDS.taloUser, { x: 1, y: 2 })).viewFollows, false, "a logged-out player's view cannot follow now");
+    const offline = await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC });
+    assert.deepEqual(portalsCalls.map(c => c[1].pull), [[], []], "offline: no pull asked");
+    assert.deepEqual([offline.ok, offline.viewFollows, offline.online, offline.warning], [true, false, false, undefined],
+      "switch on, player offline, another scene: resume lands them on the token's scene at login, so no VIEW_UNCHANGED");
+    game.users.get(IDS.taloUser).active = true;
+    // a wild-shaped PC: its form token is the one moved
+    const tok = B.tokens.get(IDS.taloTok);
+    Object.assign(tok, { actorId: IDS.wolf, flags: { dnd5e: { originalActor: IDS.talo } } });
+    portalsCalls.length = 0;
+    assert.equal((await api.teleport(IDS.taloUser, { x: 5, y: 5 })).ok, true);
+    assert.equal(portalsCalls[0][0], tok.uuid);
+    Object.assign(tok, { actorId: IDS.talo, flags: {} });
+  } finally {
+    portalsPulled = null;
+    game.users.get(IDS.taloUser).active = true;
+    await setPinning(false);
+  }
 });
 
 test("inspect: a user or an actor ref; plain JSON, depth ≤ 4; coded throws", async () => {
@@ -317,6 +377,117 @@ test("pin: a vetoed or failed write is REFUSED/INTERNAL and puts the cleared pin
     assert.equal(pinFlag(IDS.taloUser), IDS.talo, "rolled back after a thrown write too");
   } finally {
     mira.update = update;
+  }
+});
+
+test("pin: switch on, an online player is pulled to their token's scene and level (core pullUsers), even 'there'; not off / offline / dryRun / a re-pin (CR9)", async () => {
+  F.become({ userId: gm.id });
+  const talo = game.users.get(IDS.taloUser);
+  Object.assign(talo, { viewedScene: IDS.sceneA, viewedLevel: null });
+  F.pulls.length = 0;
+  const fresh = async () => { await api.unpin(IDS.taloUser); return api.pin(IDS.taloUser, { actor: IDS.talo }); };
+  try {
+    assert.equal((await fresh()).ok, true);
+    assert.deepEqual(F.pulls, [], "switch off: no pull");
+    await setPinning(true);
+    await api.unpin(IDS.taloUser);
+    assert.equal((await api.pin(IDS.taloUser, { actor: IDS.talo, dryRun: true })).ok, true);
+    assert.deepEqual(F.pulls, [], "dryRun: no pull");
+    assert.equal((await api.pin(IDS.taloUser, { actor: IDS.talo })).ok, true);
+    assert.deepEqual(F.pulls, [[IDS.sceneB, [IDS.taloUser], { level: IDS.levelB2, controlledTokens: [IDS.taloTok] }]]);
+    // CR9: re-pinning the actor the player already has changes nothing, so it pulls nobody
+    F.pulls.length = 0;
+    const again = await api.pin(IDS.taloUser, { actor: IDS.talo });
+    assert.deepEqual([again.ok, again.previous, F.pulls], [true, IDS.talo, []], "a re-pin of the same actor: no pull");
+    Object.assign(talo, { viewedScene: IDS.sceneB, viewedLevel: IDS.levelB2 });
+    await fresh();
+    // the GM's copy of the view lags a draw in progress (review F1): pulled anyway; core draws nothing if so
+    assert.deepEqual(F.pulls, [[IDS.sceneB, [IDS.taloUser], { level: IDS.levelB2, controlledTokens: [IDS.taloTok] }]],
+      "pulled even when the GM sees them on the token's scene and level");
+    F.pulls.length = 0;
+    Object.assign(talo, { viewedScene: IDS.sceneA, viewedLevel: null, active: false });
+    await fresh();
+    assert.deepEqual(F.pulls, [], "offline: resume puts them there at login");
+    // a pullUsers that throws is logged; the pin itself stands
+    talo.active = true;
+    B.pullUsers = () => { throw new Error("socket closed"); };
+    try {
+      const r = await fresh();
+      assert.equal(r.ok, true);
+    } finally {
+      delete B.pullUsers;   // the prototype's again
+    }
+  } finally {
+    delete talo.viewedScene;
+    delete talo.viewedLevel;
+    talo.active = true;
+    if (game.users.get(IDS.taloUser).flags?.[MODULE]?.actor !== IDS.talo) await api.pin(IDS.taloUser, { actor: IDS.talo });
+    await setPinning(false);
+  }
+});
+
+test("pinnedTokens (CR3): every pinned player's pinnedToken in one token walk; {} while off; GMs and unresolved pins absent", async () => {
+  assert.deepEqual(api.pinnedTokens(), {}, "switch off");
+  await setPinning(true);
+  try {
+    const all = api.pinnedTokens();
+    assert.deepEqual(Object.keys(all), [IDS.taloUser], "only Talo's player is pinned in the fixture");
+    assert.deepEqual(all[IDS.taloUser], api.pinnedToken(IDS.taloUser), "the same shape as pinnedToken");
+    // one walk: tokensByRoots reads each scene's token collection once, whatever the number of pins
+    await api.pin(IDS.miraUser, { actor: IDS.mira });
+    let walks = 0;
+    const scenes = game.scenes.contents;
+    for (const sc of scenes) {
+      Object.defineProperty(sc.tokens, "contents", { get() { walks += 1; return [...this.values()]; }, configurable: true });
+    }
+    let both, one;
+    try {
+      api.pinnedToken(IDS.taloUser);
+      one = walks;
+      walks = 0;
+      both = api.pinnedTokens();
+    } finally {
+      for (const sc of scenes) delete sc.tokens.contents;   // the prototype's getter again
+    }
+    assert.deepEqual(Object.keys(both).sort(), [IDS.miraUser, IDS.taloUser].sort());
+    assert.ok(one > 0);
+    assert.equal(walks, one, "two pins cost what one pinnedToken costs: one pass over every scene");
+    assert.equal(both[IDS.miraUser].scene, IDS.sceneA);
+    // a second token for Talo: ambiguous, absent
+    const extra = F.createToken(IDS.sceneC, { id: "taloExtra0000003", name: "Talo", actorId: IDS.talo });
+    try {
+      assert.deepEqual(Object.keys(api.pinnedTokens()), [IDS.miraUser]);
+    } finally {
+      C.tokens.delete(extra.id);
+    }
+  } finally {
+    await api.unpin(IDS.miraUser);
+    await setPinning(false);
+  }
+});
+
+test("prePull (CR7): a pinned player whose character is on another scene is spliced out of portals' pull; never a veto; off → stock", async () => {
+  const { dropPinnedElsewhere, install, PRE_PULL } = await import("../prepull.mjs");
+  const { hookRegistry } = await import("../lib/hooks.mjs");
+  const talo = game.users.get(IDS.taloUser), mira = game.users.get(IDS.miraUser), bot = game.users.get(IDS.bot);
+  // the pure part: Talo's token is on B
+  assert.deepEqual(dropPinnedElsewhere([talo, mira], { scene: C }, { enabled: false }), [], "switch off: stock");
+  const list = [talo, mira, bot];
+  assert.deepEqual(dropPinnedElsewhere(list, { scene: C }, { enabled: true }), [IDS.taloUser]);
+  assert.deepEqual(list.map(u => u.id), [IDS.miraUser, IDS.bot], "spliced in place; unpinned and GMs stay");
+  const here = [talo, mira];
+  assert.deepEqual(dropPinnedElsewhere(here, { scene: IDS.sceneB }, { enabled: true }), [], "a scene id; their token is there");
+  assert.equal(here.length, 2);
+  // the wired listener, through core's Hooks.call: never false (no veto), the list mutated
+  const reg = hookRegistry(MODULE, null);
+  install(reg, { setting: k => k === "pinning", log: { debug() {} } });
+  try {
+    const users = [talo, mira];
+    const res = Hooks.call(PRE_PULL, users, { scene: C, level: null, token: null, reason: "teleportParty" });
+    assert.notEqual(res, false, "never vetoes the whole pull");
+    assert.deepEqual(users.map(u => u.id), [IDS.miraUser]);
+  } finally {
+    reg.offAll();
   }
 });
 

@@ -220,6 +220,8 @@ test("teleportParty, one token: singular toast; confirm on by default asks first
   assert.equal(ops(n)[2].message, "1 party token moved to Great Hall.");
 });
 
+// [declared] pins rebuild 2026-10-17 §2.2 / §7.7 (portals 0.7.0): the pull and the GM's own view now
+// carry `{ level }` — the floor the party landed on, when it landed on one (here the pit's only level).
 test("teleportParty, another scene: carry, pull the active players, view it, toast; returns { moved, cancelled } [declared D-P5]", async () => {
   const H = hall();
   F.canvas.scene = H.s;
@@ -231,6 +233,8 @@ test("teleportParty, another scene: carry, pull the active players, view it, toa
   const seen = ops(n);
   assert.deepEqual(seen.map(c => c.op), ["createEmbedded", "deleteEmbedded", "pullUsers", "scene.view", "notify"]);
   assert.deepEqual(seen[2].users, [P1]);
+  assert.deepEqual(seen[2].options, { level: `${H.pit.id}Lvl0` }, "the party's one floor");
+  assert.deepEqual(seen[3].options, { level: `${H.pit.id}Lvl0` }, "the GM's own view too");
   assert.equal(seen[4].message, "5 party tokens moved to The Fighting Pit.");
   assert.equal(F.canvas.scene, H.pit);
 });
@@ -251,11 +255,71 @@ test("teleportParty, another scene: a token deleted while the confirm is open is
   assert.deepEqual(out, { moved: 4, cancelled: false });
   const seen = ops(n);
   assert.deepEqual(seen.map(c => c.op), ["DialogV2.confirm", "createEmbedded", "deleteEmbedded", "pullUsers", "scene.view", "notify"]);
+  assert.deepEqual([seen[3].options, seen[4].options], [{ level: `${H.pit.id}Lvl0` }, { level: `${H.pit.id}Lvl0` }]);
   const ids = ["tCav", "tMar", "tEye", "tSteed"].map(i => `${i}${H.k}`);
   assert.deepEqual(seen[1].ids, ids);
   assert.deepEqual(seen[2].ids, ids);
   assert.equal(H.pit.tokens.get(`tSkel${H.k}`), undefined);
   assert.equal(seen[5].message, "4 party tokens moved to The Fighting Pit.");
+});
+
+/* ── pins rebuild 2026-10-17 (portals 0.7.0): §2.2 { level }, §2.5 / review R2 ─── */
+
+test("teleportParty, another scene, the party lands on two floors: pull and view carry {} (no one floor to name)", async () => {
+  const H = hall({ tokens: k => [{ id: `tCav${k}`, name: "Caven", actorId: "CAV", actorLink: true, x: 100, y: 200, level: "sharedLevel00001" },
+    { id: `tMar${k}`, name: "Marrith", actorId: "MAR", actorLink: true, x: 200, y: 200 }] });
+  // the pit has Caven's own level id too (single-level pairs share core's defaultLevel0000), so Caven keeps it and Marrith takes the initial one
+  H.pit.levels.set("sharedLevel00001", { id: "sharedLevel00001", name: "Shared" });
+  F.canvas.scene = H.s;
+  const n = F.calls.length;
+  await S.teleportParty(H.pitGate, { confirm: false });
+  const seen = ops(n);
+  assert.deepEqual([H.pit.tokens.get(`tCav${H.k}`).level, H.pit.tokens.get(`tMar${H.k}`).level], ["sharedLevel00001", `${H.pit.id}Lvl0`]);
+  assert.deepEqual(seen.filter(c => c.op === "pullUsers" || c.op === "scene.view").map(c => c.options), [{}, {}]);
+});
+
+/**
+ * A `pentaryn-portals.prePull` listener for the length of `fn` (code review 2026-10-17 CR7: portals
+ * fires a filter hook before every pull it sends; pentaryn-pins registers one to leave out a player
+ * pinned elsewhere — portals no longer reads pins' API). `listener` undefined = none registered.
+ */
+async function withPrePull(listener, fn) {
+  if (listener === undefined) return fn();
+  const id = Hooks.on("pentaryn-portals.prePull", listener);
+  try { return await fn(); } finally { Hooks.off("pentaryn-portals.prePull", id); }
+}
+
+test("CR7: Teleport party fires pentaryn-portals.prePull ONCE with the active players and { scene, level, token: null, reason, pull: [] }; a listener drops users in place", async () => {
+  const H = hall();
+  F.canvas.scene = H.s;
+  const n = F.calls.length;
+  const seen = [];
+  // Ana's pinned character is on another scene (a split party): the listener leaves her out
+  await withPrePull((users, ctx) => {
+    seen.push({ users: users.map(u => u.id), scene: ctx.scene?.id, level: ctx.level, token: ctx.token, reason: ctx.reason, pull: ctx.pull });
+    users.splice(users.findIndex(u => u.id === P1), 1);
+  }, () => S.teleportParty(H.pitGate, { confirm: false }));
+  assert.deepEqual(seen, [{ users: [P1, P2], scene: H.pit.id, level: `${H.pit.id}Lvl0`, token: null, reason: "party", pull: [] }]);
+  const [pull] = ops(n).filter(c => c.op === "pullUsers");
+  assert.deepEqual(pull.users, [P2]);
+  assert.equal(F.calls.slice(n).filter(c => c.op === "Hooks.call" && c.name === "pentaryn-portals.prePull").length, 1, "one hook call per pull site");
+});
+
+test("CR7: Teleport party — no listener, or one that drops nobody, pulls every active player; a throwing listener is caught by Hooks (stock pull); a veto pulls nobody but the GM's view still goes", async () => {
+  for (const [name, listener] of [["no listener", undefined], ["drops nobody", () => {}], ["throws", () => { throw new Error("boom"); }]]) {
+    const H = hall();
+    F.canvas.scene = H.s;
+    const n = F.calls.length;
+    await withPrePull(listener, () => S.teleportParty(H.pitGate, { confirm: false }));
+    const [pull] = ops(n).filter(c => c.op === "pullUsers");
+    assert.deepEqual(pull.users, [P1, P2], name);
+  }
+  const H = hall();
+  F.canvas.scene = H.s;
+  const n = F.calls.length;
+  const out = await withPrePull(() => false, () => S.teleportParty(H.pitGate, { confirm: false }));
+  assert.equal(out.cancelled, false);
+  assert.deepEqual(ops(n).filter(c => c.op === "pullUsers" || c.op === "scene.view").map(c => c.op), ["scene.view"], "vetoed: no pull, the view goes");
 });
 
 test("teleportParty, same scene: a token deleted mid-dialog is left out; nobody left → warn, { moved: 0, cancelled: true } [declared] (ROB-2)", async () => {

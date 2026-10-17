@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { IDS, pinsWorld } from "./fixtures/actors.mjs";
 import { makeToken } from "./kit/foundry-stub.mjs";
 import { MODULE } from "../pins-core.mjs";
-import { auditWorld, rootOfToken, tokenRecord, tokensByRoots, tokensOfRoot } from "../world-adapter.mjs";
+import { auditWorld, pinTargets, rootOfToken, tokenPermits, tokenRecord, tokensByRoots, tokensOfRoot } from "../world-adapter.mjs";
 
 await pinsWorld(MODULE);
 const B = game.scenes.get(IDS.sceneB), C = game.scenes.get(IDS.sceneC);
@@ -71,4 +71,26 @@ test("rootOfActor and tokensOfRoot share rootOfToken's flag reader: a form maps 
   assert.deepEqual(tokensOfRoot(null), []);
   assert.deepEqual(tokensOfRoot("noSuchActor00001"), []);
   assert.deepEqual(tokensOfRoot(IDS.talo).map(t => t.id).sort(), tokensByRoots([IDS.talo])[IDS.talo].map(t => t.id).sort());
+});
+
+test("tokenPermits (CR4): the token's own testUserPermission only, never token.actor", () => {
+  const player = game.users.get(IDS.taloUser);
+  const tok = counted({ id: "permTok000000001", name: "Wolf", actorId: IDS.wolf, actorLink: false }, C);
+  const asked = [];
+  Object.defineProperty(tok, "testUserPermission", { value: (u, level) => { asked.push([u.id, level]); return level === "OBSERVER"; },
+    configurable: true });
+  assert.equal(tokenPermits(tok, player, "OWNER"), false, "the token says no: no fallback to its actor");
+  assert.equal(tokenPermits(tok, player, "OBSERVER"), true);
+  assert.deepEqual(asked, [[IDS.taloUser, "OWNER"], [IDS.taloUser, "OBSERVER"]]);
+  assert.equal(tokenPermits(null, player), false);
+  assert.equal(tokenPermits(tok, null), false);
+  assert.equal(tok.reads, 0, "no synthetic actor built");
+  C.tokens.delete(tok.id);
+});
+
+test("pinTargets (CR3): one token walk; non-GM pins with one resolved token only", () => {
+  const before = reads();
+  const t = pinTargets();
+  assert.deepEqual(Object.keys(t), [], "Talo has three tokens here (ambiguous); nobody else is pinned");
+  assert.equal(reads(), before, "no synthetic actor built");
 });

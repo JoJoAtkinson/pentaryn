@@ -52,9 +52,11 @@ Joe), and log into Foundry as **PinTest Mac** with an empty password. This is th
 ## Checks — record pass/fail and a screenshot for each
 
 1. **Player lands on the token's scene.** The player window shows PinTest Mac North, not the active scene.
-2. **Activation ignored.** In the GM tab, view PinTest Mac South (do NOT activate any real scene;
-   "View" only). Then use **Pull users to scene** on South for PinTest Mac only. The player window stays on North,
-   with at most one "Your view follows…" note.
+2. **A pull moves a pinned player (0.2.0).** In the GM tab, view PinTest Mac South (do NOT activate
+   any real scene; "View" only). Then use **Pull users to scene** on South for PinTest Mac only. The
+   player window switches to South: since pins 0.2.0 a pull is the move primitive and moves pinned
+   players too (rebuild plan §7.1); there is no "Your view follows" note any more. Pull PinTest Mac
+   back to North the same way before step 3.
 3. **Sheet badge.** The Hero's sheet shows "Pinned to PinTest Mac", in both windows.
 4. **Menu, real mouse.** In the GM tab on PinTest Mac South: right-click empty canvas, and a menu
    opens with **Prompt note** and **Teleport pinned character ▸**. The submenu lists PinTest Mac (and

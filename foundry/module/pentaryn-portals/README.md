@@ -34,7 +34,9 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
   piles, Markers, crowd, or pentaryn-aoe area handles. They land spread out from the region's
   centre, skipping squares a wall cuts off or someone stands on — a Large or bigger token's whole
   footprint must be clear, of standers and of the rest of the party — each follower beside its PC; on
-  another scene the active players are pulled there and the GM's view follows. A token deleted
+  another scene the active players are pulled there — onto the party's floor when it landed on one —
+  and the GM's view follows; a `pentaryn-portals.prePull` listener may leave players out
+  (pentaryn-pins: a pinned player whose character stayed on another scene). A token deleted
   while the confirm is open is left behind, not recreated; if none are left it warns and moves nobody.
 - **Summons follow their PC.** When a player walks their PC through a link to **another scene**,
   the active GM's client carries the PC's summons and the tokens only that player owns, and lands
@@ -78,10 +80,10 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 | `redraw()` | anyone | redraws this client's badges |
 | `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved image path, or `null` (no background, or the upload failed — warns, card image unchanged) |
 | `lookAt(region)` | GM | pans **your** view; nobody moves. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
-| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged). Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change. A destination region on one floor puts the party on that floor, on the same scene too (elevation mapped). A destination scene that already holds a mover's token id (a duplicated scene keeps ids) → a GM warning naming them and `{ moved: 0, cancelled: true }`, nothing written |
+| `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged). Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change. A destination region on one floor puts the party on that floor, on the same scene too (elevation mapped). Another scene: every active player is pulled and the GM's view follows, with `{ level }` when the party landed on one floor; the `pentaryn-portals.prePull` listeners may leave players out (pentaryn-pins: a pinned player whose character is on another scene; see Events). A destination scene that already holds a mover's token id (a duplicated scene keeps ids) → a GM warning naming them and `{ moved: 0, cancelled: true }`, nothing written |
 | `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination. A `to` with any behavior other than Teleport Token is not a landing spot (the card does not list it): `fail("BAD_ARGS", "not a landing spot: …")`, dryRun too |
 | `unlink(ref, { to, dryRun })` | GM | `ok({ from, to, removed })` / `fail(…)` |
-| `teleportToken(ref, { x, y, scene, level, dryRun, sceneId })` | GM | `ok({ token, from, to: { scene, x, y, level }, followers, moved })` / `fail(…)`. `ref` is a **token** ref. Moves that token so its centre lands on (x, y) of `scene` (Scene, id, uuid or exact name, through the kit's `resolveRef`; another kind → `BAD_ARGS`; default its own scene) and, when it is a PC (character or polymorphed), its company — the same follower rule as portal travel (its summons, tokens only its players own), **without** the portal check. Same scene: one update with displace waypoints that carry the level. Another scene: keepId create + plain delete (no `replacements`, so the follow hook does not run again; combatants are not remapped). `level` defaults to the token's own on the same scene (the initial level when the scene no longer has it), the destination's initial level on another — never the source level id. Onto another floor (another level, or another scene) each token keeps its height above the floor's base, clamped into the new floor (core's paste rule); landing counts only that floor's tokens and walls. A wild-shaped PC brings its summons too (they name the original actor). No confirm, nobody pulled, no view change. `to.scene`/`to.level`/`from` are id strings. `NOT_GM` · `NOT_FOUND` (ref, scene) · `BAD_ARGS` (`x`/`y` not finite, a level the destination lacks) · `REFUSED` (a mover's token id is already on the destination — a duplicated scene keeps token ids; dryRun too) · `CONFLICT` (another session's create landed first) |
+| `teleportToken(ref, { x, y, scene, level, pull, dryRun, sceneId })` | GM | `ok({ token, from, to: { scene, x, y, level }, followers, moved, pulled })` / `fail(…)`. `ref` is a **token** ref. Moves that token so its centre lands on (x, y) of `scene` (Scene, id, uuid or exact name, through the kit's `resolveRef`; another kind → `BAD_ARGS`; default its own scene) and, when it is a PC (character or polymorphed), its company — the same follower rule as portal travel (its summons, tokens only its players own), **without** the portal check. Same scene: one update with displace waypoints that carry the level. Another scene: keepId create + plain delete (no `replacements`, so the follow hook does not run again; combatants are not remapped). `level` defaults to the token's own on the same scene (the initial level when the scene no longer has it), the destination's initial level on another — never the source level id. Onto another floor (another level, or another scene) each token keeps its height above the floor's base, clamped into the new floor (core's paste rule); landing counts only that floor's tokens and walls. A wild-shaped PC brings its summons too (they name the original actor). No confirm; the calling GM's view does not change. **The pull (0.7.0):** another scene ends with one `pullUsers` to the destination with `{ level, controlledTokens: [token] }` (`level` = where the token landed) — the users core's own Teleport Token region would pull (a copy of its private rule: active players viewing the token's scene and level who observe it and own no other non-hidden sighted token there; nobody for a hidden token; the rule is the kit's `lib/pull-rule.mjs`, shared with pentaryn-pins), as the `pentaryn-portals.prePull` listeners leave them (see Events), plus `pull` (users or user ids, pulled whatever the rule says; inactive ones dropped). `pulled: [{ id, name }]` lists them; the same scene pulls nobody (`pulled: []`); dryRun / `REFUSED` / `CONFLICT` pull nobody. `to.scene`/`to.level`/`from` are id strings. `NOT_GM` · `NOT_FOUND` (ref, scene) · `BAD_ARGS` (`x`/`y` not finite, a level the destination lacks, `pull` not an array of users / user ids) · `REFUSED` (a mover's token id is already on the destination — a duplicated scene keeps token ids; dryRun too) · `CONFLICT` (another session's create landed first) |
 | `open(region, { edit })` | GM | the Portal card window. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
 | `spreadArrival(tokenDoc)` | GM | the token, moved off an occupied square if it was on one. `tokenDoc`: `TokenDocument\|uuid` (a uuid naming no token → `undefined`, logged) |
 
@@ -106,12 +108,20 @@ on Tiles (travel glyphs), `flags.pentaryn-aoe.handle` (token) and `flags.pentary
 (actor) — pentaryn-aoe's area handles, through `isAoeHandle`, a tested copy of aoe's
 `isHandleTarget` — and dnd5e's `flags.dnd5e.summon.origin` / `isPolymorphed`.
 
-**API consumer:** pentaryn-pins calls `teleportToken` (its GM canvas menu and `pins.teleport`); it
-reads no portals flag.
+**API consumer:** pentaryn-pins calls `teleportToken` (its GM canvas menu and `pins.teleport`, with
+`pull: [the pinned player]`); it reads no portals flag.
+
+**Reads:** no other module's API. Who a pull leaves out is the business of `pentaryn-portals.prePull`
+listeners (Events; code review 2026-10-17 CR7 — 0.7.0's per-user `apiOf("pentaryn-pins").pinnedToken`
+read is gone).
 
 ## Events
 
-n/a — portals emits only the kit's `pentaryn-portals.ready` / `pentaryn.ready`.
+Besides the kit's `pentaryn-portals.ready` / `pentaryn.ready`:
+
+| Event | Pre | Args | When |
+|---|---|---|---|
+| `pentaryn-portals.prePull` | yes (`Hooks.call`) | `(users, { scene, level, token, reason, pull })` | once at each pull site, before `scene.pullUsers`: teleportToken onto another scene (`reason: "token"`, `token` = the carried TokenDocument, already on `scene`; `users` = core's rule's users; `pull` = `opts.pull`, pulled whatever a listener does) and Teleport party onto another scene (`reason: "party"`, `token: null`, `users` = every active player, `pull: []`). `scene` = the destination Scene, `level` = the landed level id or null. Fired only when `users` is not empty. A listener **removes Users from `users` in place** (`splice`) to leave them behind; returning `false` leaves all of `users` behind. A throwing listener is caught by Foundry's `Hooks.call` (logged; the others still run). pentaryn-pins listens, to leave out a player pinned to a token on another scene (one token walk per call). |
 
 ## Patches and adjustments
 
@@ -121,7 +131,9 @@ core 14.368), `core-teleport-default-and-spread` (DialogV2's yes/no buttons, the
 `core-teleport-dialog-cards` (the dialog id `dialog-<behaviorUuid>-<tokenId>`, `.dialog-content`,
 `select[name="destination"]`), `core-teleport-replacements-follow` (`options.replacements` on
 `deleteToken`), `core-region-config-portal-card` (the Appearance tab), `itempiles-portals-pile-pc`
-(`isValidItemPile`, so a pile-PC is never left behind). All six rows are in `foundry/adjustments.yml`.
+(`isValidItemPile`, so a pile-PC is never left behind), `core-portals-pull-rule` (teleportToken's
+pull: a copy of core's private Teleport Token `#getUsersToPull`, `usersToPull` / `pullCandidates`;
+0.7.0). All seven rows are in `foundry/adjustments.yml`.
 
 ## Two sessions / who writes
 

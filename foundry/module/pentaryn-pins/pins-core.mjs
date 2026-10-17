@@ -2,7 +2,8 @@
  * Pentaryn Pins — PURE core: constants, the HOOKS table, and the rules.
  *
  * No Foundry global at runtime, so every rule here runs in node on plain fixtures. Glue files
- * import from here; nothing here imports glue. Design: context/plans/pin-2026-10.md §3.
+ * import from here; nothing here imports glue. Design: context/plans/pin-2026-10.md §3, rebuilt on
+ * core's own pull in 0.2.0 (context/plans/pin-2026-10-rebuild.md).
  *
  * Not `foundry/lib/pins.mjs` (journal Note pins): this module pins a CHARACTER to a PLAYER.
  */
@@ -10,7 +11,7 @@
 export const MODULE = "pentaryn-pins";
 export const SHORT = "pins";
 export const NS = "pins";
-export const VERSION = "0.1.0";                       // === module.json version (core.test pins it)
+export const VERSION = "0.2.0";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-pins/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_PINS";
 export const CSS = "ppi-";
@@ -25,17 +26,20 @@ export const PIN_FLAG = "actor";
  * so a press core does not pan always opens the menu and one it pans never does.
  */
 export const MENU_SLOP = 10;
-/** "Your view follows …" at most once per this many ms. */
-export const TOAST_EVERY_MS = 10000;
-/** The view queue polls canvas.loading this often (ms) … */
-export const SETTLE_MS = 100;
-/** … and gives up after this long (ms); the next canvasReady reconciles again. */
-export const SETTLE_GIVE_UP_MS = 120000;
+/**
+ * The safety net waits this long (ms) after a delete of the pinned token on the viewed scene before
+ * it looks: the mover's pull (portals, core's region) arrives after the delete broadcast.
+ */
+export const NET_GRACE_MS = 1500;
+/** While the canvas is loading, pins re-checks this often (ms); no cap: every draw clears `loading`. */
+export const NET_POLL_MS = 250;
+/** core's #handleMovementOperation: a self move by one of these methods switches the view regardless. */
+const SELF_SWITCH_METHODS = Object.freeze(["config", "hud", "dragging", "keyboard"]);
 
 /** Events this module emits. */
 export const HOOKS = Object.freeze({
   followed: Object.freeze({ name: "pentaryn-pins.followed", pre: false,
-    args: "({ scene, level, reason: login|pull|move|reconcile|switch })" }),
+    args: "({ scene, level, reason: cut|level|retry })" }),
   audited: Object.freeze({ name: "pentaryn-pins.audited", pre: false, args: "(result)" }),
 });
 
@@ -57,20 +61,16 @@ export function pinOf(flags) {
 
 /**
  * Which of a pin's tokens a client follows.
- *   0 → null · 1 → it · several → the one created last this session (`latestUuid`: the transient
- *   state of a cross-scene move, matched by uuid because one token id can live on two scenes),
- *   else the only one on the viewed scene, else null (ambiguous: stock behaviour).
+ *   0 → null · 1 → it · several → the only one on the viewed scene, else null (ambiguous: stock
+ *   behaviour). One token id can live on two scenes for a moment (a keepId carry): the viewed
+ *   scene decides then too.
  * @param {{ uuid: string, scene: string }[]} cands
- * @param {{ latestUuid?: string|null, viewedSceneId?: string|null }} [opts]
+ * @param {{ viewedSceneId?: string|null }} [opts]
  */
-export function pickToken(cands, { latestUuid = null, viewedSceneId = null } = {}) {
+export function pickToken(cands, { viewedSceneId = null } = {}) {
   const list = Array.isArray(cands) ? cands : [];
   if (list.length === 0) return null;
   if (list.length === 1) return list[0];
-  if (latestUuid) {
-    const latest = list.find(c => c.uuid === latestUuid);
-    if (latest) return latest;
-  }
   if (viewedSceneId) {
     const here = list.filter(c => c.scene === viewedSceneId);
     if (here.length === 1) return here[0];
@@ -79,60 +79,72 @@ export function pickToken(cands, { latestUuid = null, viewedSceneId = null } = {
 }
 
 /**
- * The `Scene#view` decision for this client. A pinned player follows the token's scene AND level;
- * the one exception is another level of that scene the player picked themselves (`chosen`: a nav
- * click, a level key, controlling a familiar). A level a GM pull, an activation or the login draw
- * asks for is not the player's choice: the token's level wins (code review 2026-10-17 #1).
- *   `stock`    — switch off, a GM, no pin or no single token: call core exactly as asked;
- *   `pass`     — the view is of the token's scene: call core at `level` (the asked level when
- *                `chosen`, else the token's; the asked one when the token has none);
- *   `redirect` — another scene: view `{ scene, level }` (the token's) instead.
- * @param {{ enabled: boolean, isGM: boolean, target: {scene: string, level: string|null}|null,
- *   sceneId: string, level?: string|null, chosen?: boolean }} input
- */
-export function viewDecision({ enabled, isGM, target, sceneId, level = null, chosen = false }) {
-  if (!enabled || isGM || !target) return { action: "stock" };
-  if (target.scene === sceneId) {
-    return { action: "pass", scene: sceneId, level: (chosen ? level : null) ?? target.level ?? level ?? null };
-  }
-  return { action: "redirect", scene: target.scene, level: target.level ?? null };
-}
-
-/** `draw` (a scene and level) already gives `want`: same scene, and the same level unless want names none. */
-const covers = (draw, want) => draw.scene === want.scene && (want.level == null || want.level === (draw.level ?? null));
-
-/**
- * The view queue: what to do with a wanted `{ scene, level }`.
- *   `none`  — already there, or a draw of it that pins started is under way;
- *   `view`  — call Scene#view now;
- *   `defer` — the canvas is loading: hold it until loading clears, then recompute.
- * A want with no level matches any level of its scene. `inflight` (a view pins let through that
- * has not resolved) counts whether or not `loading` is set yet: core sets `canvas.loading` only
- * inside its queued #draw, after an await, so a second view in the same tick would draw twice.
- * A draw pins did not start (a `canvas.draw`) is always waited out: pins does not know its scene
- * or level, and `viewed` is stale while it loads — core sets `canvas.loading` before it assigns
- * `canvas.scene` and `canvas.level` (board.mjs #draw; code review 2026-10-17 #2).
- * @param {{ loading: boolean, inflight: object|null, viewed: object|null, want: {scene: string, level?: string|null} }} input
- */
-export function queueDecision({ loading, inflight = null, viewed = null, want }) {
-  if (inflight) return covers(inflight, want) ? "none" : "defer";
-  if (loading) return "defer";
-  return viewed && covers(viewed, want) ? "none" : "view";
-}
-
-/**
- * Must this client's view move to the token (`canvasReady` and the settled queue)? Yes when the
- * viewed scene is not the token's, or the viewed level is not the token's and is not the level the
- * player chose themselves (`choice`, the `{ scene, level }` of their own last pass). A token with
- * no level is followed by scene only.
+ * The safety net's decision, after the grace window (rebuild plan §5.1): `none` (no target: off, a
+ * GM, no pin, 0 or several tokens; or already on the token's scene and level), `wait` (a draw is
+ * loading: check again when it ends) or `view` (the token is on another scene, or on another level
+ * of the viewed scene: a GM copy-paste onto another floor, code review A1-3). A target with no
+ * level (none, or an orphan id: levelOn) is matched by scene only.
  * @param {{ target: {scene: string, level?: string|null}|null, viewed: {scene: string|null, level: string|null},
- *   choice?: {scene: string, level: string}|null }} input
+ *   loading: boolean }} input
+ * @returns {"none"|"wait"|"view"}
  */
-export function followNeeded({ target, viewed, choice = null }) {
-  if (!target) return false;
-  if (target.scene !== viewed?.scene) return true;
-  if (target.level == null || viewed.level === target.level) return false;
-  return !(choice && choice.scene === viewed.scene && choice.level === viewed.level);
+export function netDecision({ target, viewed, loading = false }) {
+  if (!target) return "none";
+  if (loading) return "wait";
+  if (target.scene !== (viewed?.scene ?? null)) return "view";
+  if (target.level && target.level !== (viewed?.level ?? null)) return "view";
+  return "none";
+}
+
+/**
+ * Will core's own level switch move this (non-GM) client's view with one moved token? A copy of the
+ * per-token test in TokenDocument.#handleMovementOperation (client/documents/token.mjs:2927-2946,
+ * v14.369; adjustments core-pins-level-switch-rule): the client viewed the origin level, the token is
+ * observable (not hidden, OBSERVER), and the user owns no other non-hidden token with sight on the
+ * origin level — or moved it themselves by config, HUD, drag or keyboard.
+ * @param {{ viewedLevel: string|null, origin: string|null, observes: boolean, ownsOtherSighted: boolean,
+ *   selfMove?: boolean, method?: string|null }} input
+ */
+export function coreSwitchesLevel({ viewedLevel, origin, observes, ownsOtherSighted, selfMove = false, method = null }) {
+  if (!viewedLevel || origin !== viewedLevel) return false;
+  if (!observes) return false;
+  return !ownsOtherSighted || (selfMove && SELF_SWITCH_METHODS.includes(method));
+}
+
+/**
+ * Does pins move the view to the pinned token's new level (rebuild plan §5.2)? Only when core will
+ * not (`core` from coreSwitchesLevel), so the two never both view: the moved token is the pin's
+ * target, `to` is the target's (existing) level, and it is not the level already viewed.
+ * @param {{ target: {token: {uuid: string}, level?: string|null}|null, tokenUuid: string, to: string|null,
+ *   viewedLevel: string|null, core: boolean }} input
+ */
+export function levelFollow({ target, tokenUuid, to, viewedLevel = null, core = false }) {
+  if (!target || core || !to) return false;
+  if (target.token?.uuid !== tokenUuid || target.level !== to) return false;
+  return viewedLevel !== to;
+}
+
+/**
+ * Replay a `pullToScene` on this client (rebuild plan §5.3)? Only for a pinned player (switch on)
+ * whose canvas is loading when it arrives: core's Scene#view drops that pull with its "cannot switch
+ * Scenes" toast (scene.mjs:264-266). Not loading → core honours it, pins adds nothing.
+ * @param {{ pinned: boolean, loading: boolean }} input
+ */
+export function replayDecision({ pinned, loading }) {
+  return !!pinned && !!loading;
+}
+
+/**
+ * The GM toast for a pinned character's token count (rebuild plan §6), de-duplicated against the
+ * count last toasted for that root (`last`, null for none): 0 → `STRANDED`, more than 1 → `PAUSED`,
+ * 1 → no toast and forget. The same count twice in a row toasts once.
+ * @param {{ n: number, last?: number|null }} input
+ * @returns {{ notice: "STRANDED"|"PAUSED"|null, last: number|null }}
+ */
+export function tokenNotice({ n, last = null }) {
+  if (n === 1) return { notice: null, last: null };
+  if (n === last) return { notice: null, last };
+  return { notice: n === 0 ? "STRANDED" : "PAUSED", last: n };
 }
 
 /**

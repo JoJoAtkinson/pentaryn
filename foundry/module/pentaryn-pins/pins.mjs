@@ -7,14 +7,18 @@
  *   api-manifest.mjs       PURE API rows (describe() reads them)
  *   world-adapter.mjs      Foundry → plain data: pins, root actors, tokens across scenes, the audit
  *   api.mjs                implementations, inspect(), selftest()
- *   follow.mjs             a pinned player's view follows their token (Scene#view / _onActivate patches)
+ *   follow.mjs             a pinned player ignores activation (Scene#_onActivate patch); the safety net,
+ *                          the level gap-filler and the dropped-pull replay (core's own pull moves them)
  *   sheet.mjs              "Pinned to {player}" on the actor sheet
  *   canvas-menu.mjs        the GM right-click canvas menu (menu-ui.mjs builds its DOM)
- *   switch.mjs             switching pinning on audits the pins on the GM client that did it
+ *   switch.mjs             switching pinning on audits the pins and pulls the online pinned players
+ *   watch.mjs              GM toasts when a pinned character has no token left, or a second one; the
+ *                          active GM pulls the player when it is placed again (0 → 1 token)
+ *   prepull.mjs            pentaryn-portals.prePull listener: a player pinned elsewhere is left out of a pull
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
- * Lifecycle: init → settings · setup → features install (follow.mjs patches Scene#view before the
- * first canvas draw) · ready → build the API first (a drift throw stops here with a clear line),
+ * Lifecycle: init → settings · setup → features install (follow.mjs patches Scene#_onActivate and
+ * listens to core's pullToScene before the first canvas draw) · ready → build the API first (a drift throw stops here with a clear line),
  * publish. `ready` is registered here, at import, so the API is published before any listener a
  * module adds during `setup` (pentaryn-resume's `ready: resume` reads `pinnedToken`).
  *
@@ -39,9 +43,11 @@ import * as follow from "./follow.mjs";
 import * as sheet from "./sheet.mjs";
 import * as canvasMenu from "./canvas-menu.mjs";
 import * as switchAudit from "./switch.mjs";
+import * as watch from "./watch.mjs";
+import * as prePull from "./prepull.mjs";
 
 /** Features in load order. */
-const FEATURES = [follow, sheet, canvasMenu, switchAudit];
+const FEATURES = [follow, sheet, canvasMenu, switchAudit, watch, prePull];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

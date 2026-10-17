@@ -1,8 +1,8 @@
 {
   "id": "pentaryn-pins",
   "title": "Pentaryn Pins",
-  "description": "Pin a character to a player: with the world switch on, that player's view follows the scene their character's token is on and ignores GM scene activation; the sheet says 'Pinned to {player}'. GM right-click on empty canvas: Prompt note, Teleport pinned character (with its summons and pets). Exposes game.pentaryn.pins.",
-  "version": "0.1.0",
+  "description": "Pin a character to a player: with the world switch on, that player sees the scene their character's token is on (moving the token moves them, with core's own pull) and ignores GM scene activation; the sheet says 'Pinned to {player}'. GM right-click on empty canvas: Prompt note, Teleport pinned character (with its summons and pets). Exposes game.pentaryn.pins.",
+  "version": "0.2.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14.369"
@@ -27,7 +27,12 @@
       {
         "id": "lib-wrapper",
         "type": "module",
-        "reason": "Wraps Scene#view and Scene#_onActivate for pinned players (MIXED); without it both are wrapped by hand."
+        "reason": "Wraps Scene#_onActivate for pinned players (MIXED); without it it is wrapped by hand."
+      },
+      {
+        "id": "pentaryn-resume",
+        "type": "module",
+        "reason": "Puts a pinned player on their character's scene and level at login (it reads pinnedToken); without it a pinned player logs in on the active scene until the next pull."
       },
       {
         "id": "pentaryn-portals",

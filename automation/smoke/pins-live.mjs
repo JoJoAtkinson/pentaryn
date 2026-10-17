@@ -1620,14 +1620,14 @@ export const SCENARIOS = {
     },
   },
   S07: {
-    title: "'Pull users to scene' is ignored for pinned users (C is pulled)",
+    title: "'Pull users to scene' moves pinned users too (it is the move primitive)",
     needs: { players: ["A", "B", "C"] },
     async setup(x) { await quietSetup(x, { layout: LAYOUT.allNorth, active: "north", pinning: true, views: { A: "north", B: "north" } }); },
     async act(x) { await x.mark("C"); return x.world(opPull, { scene: "south", users: ["A", "B", "C"] }); },
     async assert(x) {
       return [
-        x.check("A ignores the pull", await x.stays("A", "north")),
-        x.check("B ignores the pull", await x.stays("B", "north", 0)),
+        x.check("A is pulled to South", await x.viewOf("A", "south")),
+        x.check("B is pulled to South", await x.viewOf("B", "south")),
         x.check("C (unpinned) is pulled", await x.cSaw("south")),
       ];
     },

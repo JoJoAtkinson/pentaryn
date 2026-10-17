@@ -1,5 +1,55 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
+## 0.2.0 — 2026-10-17
+
+Rebuilt on Foundry's own pull (plan `context/plans/pin-2026-10-rebuild.md`, review
+`context/plans/pin-2026-10-design-review.md` Simplify 1, 2, 4 and Risks). A token's move reaches the
+pinned player the way core moves anyone: whoever moves it pulls them.
+
+- **Removed** the `Scene#view` patch (adjustments `pins-scene-view`) and the client view queue
+  (`viewDecision`, `queueDecision`, `followNeeded`, the settle loop, the `onAny` pull mark, the
+  "latest token" map, the login/`canvasReady`/`updateToken`/`updateUser`/`deleteLevel` follows,
+  `TOAST_EVERY_MS`/`SETTLE_*`). The "Your view follows" note is gone.
+- **Kept** the `Scene#_onActivate` patch (activation of another scene still ignored). New: activating
+  the token's own scene while the player looks elsewhere views the token's level with the token
+  controlled.
+- **Added**, on the pinned player's client: a `deleteToken` safety net (1.5 s after a delete of the
+  pinned token on the viewed scene, view where it went if nobody pulled them: a GM cut-and-paste; a
+  loading canvas is waited out), a `moveToken` level gap-filler (only where core's own level switch
+  will not follow; adjustments `core-pins-level-switch-rule`), and a replay of a `pullToScene` core
+  dropped while loading (adjustments `core-pins-pull-replay`). `followed` reasons are now
+  `cut|level|retry`.
+- **GM side**: `pin()` with the switch on pulls an online player to their token; switching pinning on
+  pulls every online pinned player (same GM client that audits); `teleport` passes `pull: [user]` to
+  portals `teleportToken` (portals ≥ 0.7.0) and reads `viewFollows` from its `pulled`; a same-scene
+  `teleport` pulls back an online player who is looking at another scene (review F1). `pin()` and the
+  switch-on pull without an "already there" check: the GM's copy of the player's view lags a draw in
+  progress, and a pull to what is drawn draws nothing (review F1).
+- **New** `watch.mjs`: a GM toast when a pinned character loses its only token (Stranded) or gains a
+  second one (Paused); debounced, so a move never toasts.
+- **Behaviour changes** (declared, Joe 2026-10-17): a GM "Pull to Scene" moves pinned players too; a
+  pinned player may click the scene nav to look at another map; login is resume's (pentaryn-resume
+  0.2.0: one extra draw when the active scene is not the token's); a level the player picked is not
+  remembered; an uncontrolled token moved off-screen no longer pans their camera.
+- **Code review 2026-10-17** (resolve-all pass, `context/plans/pin-2026-10-rebuild.md`):
+  - one GM pull helper, `world-adapter.mjs` `pullToPin`, used by `pin()`, a same-scene `teleport`,
+    the switch-on and the placed-again pull; never skipped on the GM's lagging `viewedScene` (CR2, CR8).
+    Re-pinning the same actor pulls nobody (CR9).
+  - `tokenPermits` asks `TokenDocument#testUserPermission` only, never `doc.actor` (CR4); the level
+    gap-filler's "owns another sighted token" clause is the kit's `lib/pull-rule.mjs` (CR8, shared
+    with portals; adjustments `core-kit-pull-rule`).
+  - **New** `prepull.mjs`: listens to `pentaryn-portals.prePull` and drops a player pinned to a token
+    on another scene, in one token walk (`pinTargets`); portals no longer calls pins (CR3, CR7).
+    **New** API `pinnedTokens()` (every pin in one walk).
+  - the pull replay: a pull core honours clears a held dropped one, so a stale pull is never replayed
+    over a newer one (CR1); its socket listener is attached at `ready`, after core's own (RF3).
+  - the safety net keeps a floor the player chose when the token is deleted and replaced on the same
+    level (CR5).
+  - a pinned character placed again after its last token went (0 → 1 token): the active GM pulls its
+    online player to it (RF1); the Stranded toast says so (RF4).
+  - `module.json` recommends pentaryn-resume (login) (RF2).
+- `module.json` changed (version, description, recommends): restart Foundry after a sync.
+
 ## 0.1.0 — 2026-10-17
 
 First version (design `context/plans/pin-2026-10.md`). Generated from the addon blueprint (tier

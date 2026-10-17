@@ -24,9 +24,11 @@ viewing lives only in server memory and is lost on logout or restart. With this 
 3. **Unless the GM has moved the table on.** Each save also records the active scene at that time.
    If the active scene is different at login, the player stays on the new active scene, as in stock
    Foundry. That view is then saved.
-4. **With pinning on, a pinned player ignores activation and pulls** (pentaryn-pins,
-   [`pins.md`](pins.md)): they log in on their pinned token's scene, and resume restores only pan
-   and zoom, and only when the saved view is of that scene.
+4. **With pinning on, resume puts a pinned player on their token** (pentaryn-pins,
+   [`pins.md`](pins.md)): they log in on their pinned token's scene and level, the token selected,
+   whatever the active scene did. The saved pan and zoom are restored only when the saved view is of
+   that scene. Since resume 0.2.0 this draw is resume's (pins has no login path): Foundry draws the
+   active scene first, so a pinned player whose token is elsewhere sees one extra draw.
 
 ## After the 03:00 nightly
 
@@ -41,8 +43,8 @@ scene are saved by Foundry itself.
 - To bring everyone to one map, **activate** it. That moves all players to it, and players who are
   offline follow it at their next login. To pull players to a map without activating it, use
   "Pull users to scene"; this is saved as their view.
-- With pinning on, a pinned player ignores activation and pulls; resume restores only pan and zoom
-  on the pinned scene. Move a pinned player by moving their token.
+- With pinning on, a pinned player ignores activation of another scene but follows a pull; at login
+  they land on their token's scene. Move a pinned player by moving their token.
 
 ## Settings that matter
 

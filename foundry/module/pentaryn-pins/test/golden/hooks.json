@@ -13,30 +13,14 @@
   },
   {
     "kind": "on",
-    "name": "createToken"
-  },
-  {
-    "kind": "on",
     "name": "deleteToken"
   },
   {
     "kind": "on",
-    "name": "updateToken"
+    "name": "moveToken"
   },
   {
-    "kind": "on",
-    "name": "updateUser"
-  },
-  {
-    "kind": "on",
-    "name": "deleteLevel"
-  },
-  {
-    "kind": "on",
-    "name": "canvasReady"
-  },
-  {
-    "kind": "on",
+    "kind": "once",
     "name": "ready"
   },
   {
@@ -62,5 +46,17 @@
   {
     "kind": "on",
     "name": "canvasPan"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "pentaryn-portals.prePull"
   }
 ]

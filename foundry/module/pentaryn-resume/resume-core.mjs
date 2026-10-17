@@ -9,7 +9,7 @@
 export const MODULE = "pentaryn-resume";
 export const SHORT = "resume";
 export const NS = "resume";
-export const VERSION = "0.1.1";                       // === module.json version (core.test pins it)
+export const VERSION = "0.2.0";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-resume/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_RESUME";
 export const CSS = "pre-";
@@ -69,24 +69,29 @@ export function sameView(a, b) {
  *  - otherwise the saved view: `{ scene, level, position }`, position null when none was stored.
  *    It is returned even when the saved scene is the one already showing, for the position.
  *
- * With pentaryn-pins' pinning on, `pinnedScene` is the scene id of this user's pinned token, and
- * the pin wins at login (pins plan D7): a saved view of another scene → null; a saved view of the
- * pinned scene → `{ scene, level: null, position }` whatever the active scene did (the "table
- * moved on" rule does not apply, and `level: null` keeps the token's level). `pinnedScene` null →
- * the rules above, unchanged.
+ * With pentaryn-pins' pinning on, `pinned` is this user's pinned token `{ scene, level, token }`
+ * (pins `pinnedToken`) and resume owns "which scene at login" for it (pins 0.2.0 has no login path;
+ * rebuild plan context/plans/pin-2026-10-rebuild.md §3): the token's scene and level whatever was
+ * saved and whatever the active scene did — `{ scene, level, token, position }`, position the saved
+ * pan/zoom only when the saved view is of that scene, else null; no saved view → still the token's
+ * scene; the token's scene gone → null. `pinned` null → the rules above, byte for byte.
  *
  * @param {*} saved              the raw flag value
- * @param {{activeId: string|null, sceneExists: (id: string) => boolean, pinnedScene?: string|null}} world
+ * @param {{activeId: string|null, sceneExists: (id: string) => boolean,
+ *   pinned?: {scene: string, level?: string|null, token?: string|null}|null}} world
  */
-export function resumeTarget(saved, { activeId = null, sceneExists = () => false, pinnedScene = null } = {}) {
+export function resumeTarget(saved, { activeId = null, sceneExists = () => false, pinned = null } = {}) {
   const view = viewRecord(saved);
-  if (!view) return null;
-  const position = "x" in view ? { x: view.x, y: view.y, scale: view.scale } : null;
-  if (pinnedScene !== null && pinnedScene !== undefined) {
-    if (view.scene !== pinnedScene || !sceneExists(view.scene)) return null;
-    return { scene: view.scene, level: null, position };
+  const positionOf = v => ("x" in v ? { x: v.x, y: v.y, scale: v.scale } : null);
+  if (pinned && typeof pinned.scene === "string" && pinned.scene) {
+    if (!sceneExists(pinned.scene)) return null;
+    return {
+      scene: pinned.scene, level: idOrNull(pinned.level), token: idOrNull(pinned.token),
+      position: view && view.scene === pinned.scene ? positionOf(view) : null,
+    };
   }
+  if (!view) return null;
   if (view.active !== (activeId ?? null)) return null;
   if (!sceneExists(view.scene)) return null;
-  return { scene: view.scene, level: view.level, position };
+  return { scene: view.scene, level: view.level, position: positionOf(view) };
 }

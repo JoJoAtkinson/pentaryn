@@ -8,9 +8,12 @@ Each player logs back in on the map they last had open, at the same spot and zoo
 
 Logging in puts them back on the map, level, spot and zoom they last had, instead of the active
 scene. This holds unless the GM has made a different scene active since then; in that case they
-land on the new one, as in stock Foundry. With pentaryn-pins' pinning on, a pinned player ignores
-activation and pulls; resume restores only pan and zoom on the pinned scene (no restore at all when
-the saved view is of another scene). A GM resumes as stock even if it carries a pin flag. There is no UI. Table-side guide: `context/foundry/resume.md`.
+land on the new one, as in stock Foundry. With pentaryn-pins' pinning on, resume decides where a
+**pinned** player lands (pins 0.2.0 has no login path of its own): their character's token's scene
+and level, the token controlled when they own it, whatever was saved and whatever the active scene
+did; the saved pan and zoom are restored only when the saved view was of that scene. Foundry
+draws the active scene first, so a pinned player whose token is elsewhere sees one extra draw. A GM
+resumes as stock even if it carries a pin flag. There is no UI. Table-side guide: `context/foundry/resume.md`.
 
 ## Settings
 
@@ -36,7 +39,7 @@ No other module reads this module's flag. This module reads one foreign API:
 
 | API | Owner | Read for |
 |---|---|---|
-| `api:pentaryn-pins.pinnedToken` (`game.user`) → `{ scene: id string, … } \| null` | pentaryn-pins | the pinned scene at login (`pinnedScene`); declared in `describe().flags.reads`. Both sides pin the shape: pins' describe golden, and resume's glue test (including a non-string `scene`, which is logged and read as no pin) |
+| `api:pentaryn-pins.pinnedToken` (`game.user`) → `{ scene: id string, level, token: uuid, … } \| null` | pentaryn-pins | where a pinned player lands at login (`pinned`: scene, level, and the token to control); declared in `describe().flags.reads`. Both sides pin the shape: pins' describe golden, and resume's glue test (including a non-string `scene`, which is logged and read as no pin) |
 
 pins publishes at its own `ready`, registered when its entry evaluates — before this module's
 `ready: resume` listener (registered in `setup`) — so the call sees the API at login.
@@ -69,6 +72,7 @@ login resumes.
 ## Pitfalls
 
 - `canvasReady` for the first draw fires **before** `ready`: saving stays off until `resume()` has run, or that draw would overwrite the view about to be restored.
+- A pinned player with no active scene gets a blank draw: `canvas.initialized` is true but `canvas.ready` stays false, so the pinned branch gates on `initialized` (the unpinned one keeps `ready`).
 
 - `lib/` and `test/kit/` are vendored copies: edit `foundry/lib/`, then `vendor.py sync`.
 - `module.json` is read at Foundry startup: any change to it needs a restart, not a reload.

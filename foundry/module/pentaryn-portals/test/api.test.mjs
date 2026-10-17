@@ -49,12 +49,13 @@ test("drift fails at build: a row without an implementation, or a contribution r
   assert.equal(BADGE_ROWS.length + PARTY_ROWS.length + MANIFEST.rows.length, 13);
 });
 
-test("describe(): flags written and read, the three settings, no events, no patches", () => {
+test("describe(): flags written and read, the three settings, one event (prePull, CR7), no patches", () => {
   const d = buildApiFor(offline()).describe();
   assert.deepEqual(d.flags.writes, ["flags.pentaryn-portals.title", "flags.pentaryn-portals.img", "flags.pentaryn-portals.description"]);
   assert.ok(d.flags.reads.includes("flags.pentaryn-aoe.handleActor"));
   assert.deepEqual(d.settings.map(s => s.key), ["teleportDefault", "spreadArrivals", "confirmPartyTeleport"]);
-  assert.deepEqual([d.events, d.patches, d.flagScope], [[], [], MODULE]);
+  assert.deepEqual([d.patches, d.flagScope], [[], MODULE]);
+  assert.deepEqual(d.events.map(e => [e.key, e.name, e.pre]), [["prePull", "pentaryn-portals.prePull", true]]);
 });
 
 /* ── the published API (D-P1) ─────────────────────────────────────────── */

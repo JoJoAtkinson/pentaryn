@@ -12,6 +12,7 @@
     "queries",
     "election",
     "flags",
-    "root-actor"
+    "root-actor",
+    "pull-rule"
   ]
 }

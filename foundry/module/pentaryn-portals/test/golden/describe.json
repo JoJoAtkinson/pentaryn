@@ -68,10 +68,10 @@
       "sideEffects": [
         "Token: update (same scene) or create + delete (another scene)",
         "Token: level — the destination region's one floor (same scene too), else a level the scene has; elevation mapped onto it",
-        "pulls active players to the destination"
+        "pullToScene (another scene): every active player the pentaryn-portals.prePull listeners leave in (pentaryn-pins drops one whose pinned character is on another scene) — with { level } when the party landed on one floor; the GM's own view goes there too"
       ],
       "legacy": true,
-      "doc": "Move the party on canvas.scene (PCs, their summons, player-owned tokens) to the region. Opens a confirm dialog first unless the setting confirmPartyTeleport is off — a console or bridge caller passes { confirm: false }."
+      "doc": "Move the party on canvas.scene (PCs, their summons, player-owned tokens) to the region. Opens a confirm dialog first unless the setting confirmPartyTeleport is off — a console or bridge caller passes { confirm: false }. On another scene it pulls every active player, with { level } when the party landed on one floor (0.7.0)."
     },
     {
       "path": "lookAt",
@@ -202,11 +202,11 @@
         },
         {
           "name": "opts",
-          "type": "{ x, y, scene?, level?, dryRun = false, sceneId? }",
-          "doc": "x, y: canvas point on the destination where the token's centre should land; scene: destination Scene|id|uuid|exact name (kit resolveRef), default the token's own scene; level: destination level id (v14), default the token's level on the same scene (the initial level when the scene no longer has it), the destination's initial level (else its first) on another"
+          "type": "{ x, y, scene?, level?, pull?: (User|id)[], dryRun = false, sceneId? }",
+          "doc": "x, y: canvas point on the destination where the token's centre should land; scene: destination Scene|id|uuid|exact name (kit resolveRef), default the token's own scene; level: destination level id (v14), default the token's level on the same scene (the initial level when the scene no longer has it), the destination's initial level (else its first) on another; pull (0.7.0): users pulled on a cross-scene move whatever core's rule says (not an array of Users / user ids → BAD_ARGS)"
         }
       ],
-      "returns": "{ ok: true, token: { documentName, id, uuid, name }, from: sceneId, to: { scene: sceneId, x, y, level: levelId|null }, followers: [{ id, name }], moved, dryRun? } | { ok: false, code, reason }",
+      "returns": "{ ok: true, token: { documentName, id, uuid, name }, from: sceneId, to: { scene: sceneId, x, y, level: levelId|null }, followers: [{ id, name }], moved, pulled: [{ id, name }] (another scene only; [] on the same scene; absent on dryRun), dryRun? } | { ok: false, code, reason }",
       "gm": true,
       "writes": true,
       "query": false,
@@ -214,10 +214,11 @@
       "sideEffects": [
         "Token: x, y, level — same scene, one update with displace waypoints that carry the level, no animation",
         "Token: create keepId on the destination + plain delete on the source — another scene (no replacements; combatants are not remapped)",
-        "Token: elevation — onto another floor (another level or scene), the same height above its base, clamped into it unless it was outside its own floor (flying, burrowing)"
+        "Token: elevation — onto another floor (another level or scene), the same height above its base, clamped into it unless it was outside its own floor (flying, burrowing)",
+        "pullToScene (another scene only): the users core's Teleport Token rule picks (#getUsersToPull for a GM mover — the kit's lib/pull-rule.mjs — as the pentaryn-portals.prePull listeners leave them), plus `pull`, with { level: the token's landed level, controlledTokens: [token] }"
       ],
       "since": "0.6.0",
-      "doc": "Move one token and, when it is a PC (character or polymorphed), its company (its summons — a wild-shaped PC's too, by its original actor — and tokens only its players own) to a point, on its own scene or another. Same follower rule as portal travel, without the portal check. No confirm; nobody is pulled; no view changes. Each follower lands beside the PC; landing counts only the destination floor's tokens and walls. REFUSED (dryRun too) when a mover's token id is already on the destination scene (a duplicated scene keeps token ids); CONFLICT when another session's create of it landed first."
+      "doc": "Move one token and, when it is a PC (character or polymorphed), its company (its summons — a wild-shaped PC's too, by its original actor — and tokens only its players own) to a point, on its own scene or another. Same follower rule as portal travel, without the portal check. No confirm; the calling GM's view does not change. On another scene the move ends with one pull, as core's own Teleport Token region does: the players who were watching the token there (core's rule) plus `pull` (0.7.0); the same scene pulls nobody. Each follower lands beside the PC; landing counts only the destination floor's tokens and walls. REFUSED (dryRun too) when a mover's token id is already on the destination scene (a duplicated scene keeps token ids); CONFLICT when another session's create of it landed first."
     },
     {
       "path": "spreadArrival",
@@ -306,7 +307,15 @@
       "doc": "teleportParty asks first, listing who moves; an API caller passes { confirm: false } to skip the dialog."
     }
   ],
-  "events": [],
+  "events": [
+    {
+      "key": "prePull",
+      "name": "pentaryn-portals.prePull",
+      "legacyName": null,
+      "pre": true,
+      "args": "(users: User[] — mutable: splice out a user to leave them behind, { scene: the destination Scene, level: landed level id|null, token: the carried TokenDocument (on scene) | null for Teleport party, reason: \"token\" (teleportToken) | \"party\" (Teleport party), pull: User[] — teleportToken's opts.pull, pulled whatever a listener does }) — fired only when users is not empty; false = pull none of users"
+    }
+  ],
   "hooks": [
     {
       "name": "deleteToken",

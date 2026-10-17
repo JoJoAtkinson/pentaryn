@@ -23,8 +23,10 @@ export const MANIFEST = Object.freeze({
         doc: "actor: the character (a wild-shaped form is stored as its original); replace: take the actor from the user it is pinned to" }],
       returns: "{ ok: true, user, actor, previous, cleared, audit, warning?: NOT_OWNER, dryRun? } | { ok: false, code, reason, restored? }",
       gm: true, writes: true, dryRun: true,
-      sideEffects: ["flags.pentaryn-pins.actor on the User (the root actor id)", "with replace: that flag deleted on the user who had the actor"],
-      doc: "Pin a character to a player: with the pinning switch on, that player's view follows the character's token. "
+      sideEffects: ["flags.pentaryn-pins.actor on the User (the root actor id)", "with replace: that flag deleted on the user who had the actor",
+        "switch on and the player online: pullToScene to the token's scene and level (core Scene#pullUsers; a view of what is drawn draws nothing); not when re-pinning the actor they already have"],
+      doc: "Pin a character to a player: with the pinning switch on, that player's view follows the character's token, "
+        + "and an online player is pulled to the token's scene and level at once. "
         + "BAD_ARGS for a GM user or no actor; CONFLICT when the actor is pinned to another user (unless replace). "
         + "warning NOT_OWNER when the player cannot observe the actor (pinned anyway: their view follows a token they get no vision from). "
         + "A write that throws (INTERNAL) or that a preUpdateUser hook vetoes (REFUSED) changes no pin: the cleared pins are put back (restored: their user ids).",
@@ -51,7 +53,16 @@ export const MANIFEST = Object.freeze({
       gm: false, writes: false,
       nullWhen: "the pinning switch is off, the user is a GM (even with a pin flag), the user is unpinned, or the pin has no token or more than one",
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
-      doc: "The token a pinned player's view follows. scene and level are id strings (pentaryn-resume reads scene).",
+      doc: "The token a pinned player's view follows. scene and level are id strings (pentaryn-resume reads it at login).",
+    },
+    {
+      path: "pinnedTokens",
+      params: [],
+      returns: "{ [userId]: { token: uuid, actor: uuid, scene: id string, level: id string | null, x, y } }",
+      gm: false, writes: false,
+      since: "0.2.0",
+      doc: "Every pinned player's pinnedToken in ONE walk over the world's tokens, keyed by user id: {} while the switch is off; "
+        + "a GM, an unpinned user and a pin with no single token are absent. For a caller asking about several users at once.",
     },
     {
       path: "audit",
@@ -65,13 +76,16 @@ export const MANIFEST = Object.freeze({
       path: "teleport",
       params: [USER, { name: "opts", type: "{ x, y, scene?, level?, dryRun = false }",
         doc: "x, y: canvas point on the destination; scene: id|uuid (default the token's own); level: the destination level id" }],
-      returns: "the pentaryn-portals teleportToken result + { user, viewFollows, online, warning? } | { ok: false, code, reason }",
+      returns: "the pentaryn-portals teleportToken result (pulled included) + { user, viewFollows, online, warning?: VIEW_UNCHANGED } | { ok: false, code, reason }",
       gm: true, writes: true, dryRun: true,
-      sideEffects: ["through pentaryn-portals teleportToken: the pinned token and its company (summons, pets) moved"],
+      sideEffects: ["through pentaryn-portals teleportToken: the pinned token and its company (summons, pets) moved",
+        "switch on and the player online: teleportToken's pull names the player, so a cross-scene move pulls them (pullToScene)",
+        "switch on and the player online: a same-scene move pulls them to the token's scene and level (pullToScene; a view of what is drawn draws nothing)"],
       doc: "Teleport a player's pinned character, with its summons and pets, to a point (portals teleportToken). "
-        + "BAD_ARGS unpinned, NOT_FOUND no token, AMBIGUOUS several, UNSUPPORTED without pentaryn-portals (teleportToken). With the switch off the "
-        + "player's view does not follow (viewFollows false; a cross-scene move adds warning VIEW_UNCHANGED). With it on, viewFollows "
-        + "is true while the player is online; an offline player (online false) lands on the token's scene at login, so no warning.",
+        + "BAD_ARGS unpinned, NOT_FOUND no token, AMBIGUOUS several, UNSUPPORTED without pentaryn-portals (teleportToken). With the switch on "
+        + "and the player online, portals pulls them on a cross-scene move (pull: [user]). viewFollows: cross-scene, portals' pulled names "
+        + "the player; same scene, switch on, online and the pull sent; a dryRun, switch on and online. warning VIEW_UNCHANGED: a cross-scene move that did not "
+        + "pull the player while they are online or the switch is off; an offline player with the switch on lands on the token's scene at login (resume).",
     },
     {
       path: "inspect",
@@ -87,12 +101,13 @@ export const MANIFEST = Object.freeze({
       params: [],
       returns: "{ ok, checks: [{ label, ok, detail }] }",
       gm: false, writes: false,
-      doc: "Live smoke checks after a sync: patches installed, setting readable, portals teleportToken present.",
+      doc: "Live smoke checks after a sync: the Scene#_onActivate patch installed, setting readable, portals teleportToken present.",
     },
   ],
   flags: {
     writes: ["flags.pentaryn-pins.actor"],
-    reads: ["flags.dnd5e.originalActor", "flags.dnd5e.previousActorIds", "api:pentaryn-portals.teleportToken", "api:pentaryn-prompts.place"],
+    reads: ["flags.dnd5e.originalActor", "flags.dnd5e.previousActorIds", "api:pentaryn-portals.teleportToken", "api:pentaryn-prompts.place",
+      "hook:pentaryn-portals.prePull"],
   },
   unlisted: [],
 });

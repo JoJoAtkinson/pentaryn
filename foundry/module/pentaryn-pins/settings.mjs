@@ -39,8 +39,9 @@ export const SETTINGS = Object.freeze([
     onChange: pinningChanged,
     name: "PENTARYN_PINS.Setting.pinning.Name",
     hint: "PENTARYN_PINS.Setting.pinning.Hint",
-    doc: "The world switch. On: a pinned player sees the scene their pinned token is on and ignores GM activation and pulls; "
-      + "the sheet shows 'Pinned to'; the GM gets the right-click canvas menu. Off: everything in pins is inert.",
+    doc: "The world switch. On: a pinned player sees the scene their pinned token is on and ignores GM scene activation; "
+      + "moving the token moves the player (core's own pull); the sheet shows 'Pinned to'; the GM gets the right-click canvas menu "
+      + "and a toast when a pinned character has no token or a second one. Off: everything in pins is inert.",
   },
 ]);
 

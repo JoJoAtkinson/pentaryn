@@ -24,10 +24,13 @@ test("core loads with no Foundry globals present", () => {
 // [declared] Wave 7 batch (Joe 2026-10-12): flipped from "as shipped (0.4.4)" — the batch bumps portals
 // to 0.5.0 (the blueprint migration's API additions, lang/en.json, D-P1…D-P6) with VERSION.
 // [declared] 0.6.0 (pins plan 2026-10, D5): the additive teleportToken row; CONTRACT major unchanged.
-test("module.json: id and version as shipped (0.6.0)", () => {
+// [declared] 0.7.0 (pins rebuild 2026-10-17, §2): teleportToken pulls by core's Teleport Token rule
+// plus `pull`, and returns `pulled`; teleportParty pulls with `{ level }`. Additive: CONTRACT unchanged.
+test("module.json: id and version as shipped (0.7.0)", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, "pentaryn-portals");
-  assert.equal(manifest.version, "0.6.0");
+  assert.equal(manifest.version, "0.7.0");
+  assert.equal(core.CONTRACT, "pentaryn-portals/api@1");
 });
 
 test("VERSION === module.json version (C41; live since S2 moved VERSION/MODULE into core)", () => {
@@ -312,4 +315,15 @@ test("EXT-7: boxCentre / tokenCentre in core; scene-adapter and party no longer 
     const src = readFileSync(new URL(file, ROOT), "utf8").replace(/export (const|function) (boxCentre|tokenCentre)[^\n]*\n/g, "");
     assert.doesNotMatch(src, /\.width\s*(\*\s*[\w$.]+\s*)?\/\s*2/, `${file} still computes a centre by hand`);
   }
+});
+
+/* ── usersToPull moved to the kit (code review 2026-10-17 CR8) ────────────── */
+
+// core's Teleport Token pull rule (teleport-token.mjs:212-236) is foundry/lib/pull-rule.mjs now,
+// vendored into portals and pins; its row-per-clause table moved with it (foundry/lib/test/pull-rule.test.mjs).
+test("usersToPull: the vendored kit rule (lib/pull-rule.mjs) is pure: records in, ids out", async () => {
+  const { usersToPull } = await import("../lib/pull-rule.mjs");
+  assert.deepEqual(usersToPull([{ id: "x", active: true, isGM: false, viewedScene: "S", viewedLevel: "L", observes: true, ownsOtherSighted: false }],
+    { hidden: false, scene: "S", level: "L" }), ["x"]);
+  assert.equal("usersToPull" in core, false);
 });

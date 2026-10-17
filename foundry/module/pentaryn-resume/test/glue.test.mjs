@@ -42,15 +42,19 @@ const userWrites = () => F.calls.filter(c => c.op === "update" && c.documentName
 const flag = () => game.user.getFlag(MODULE, VIEW_FLAG);
 let loads = 0;
 
-/** One browser load. `canvasReady: false` is a client with the canvas disabled. */
-async function login({ saved, active = IDS.town, canvasReady = true, drawn = null } = {}) {
+/**
+ * One browser load. `canvasReady: false` is a client with the canvas disabled; with `initialized`
+ * it is a blank draw (no active scene: `canvas.draw(null)`, board.mjs — initialized, never ready).
+ */
+async function login({ saved, active = IDS.town, canvasReady = true, initialized = canvasReady, drawn = null, drawnLevel = null } = {}) {
   game.modules.get(MODULE).api?.uninstall();
   game.ready = false;
   if (saved === null) delete game.user.flags[MODULE];
   else if (saved) game.user.flags[MODULE] = { [VIEW_FLAG]: structuredClone(saved) };
   for (const s of [town, cave]) s.active = s.id === active;
-  // `drawn`: the scene Foundry's first draw showed (pentaryn-pins redirects a pinned player's)
-  Object.assign(canvas, { ready: canvasReady, scene: canvasReady ? (drawn ? game.scenes.get(drawn) : game.scenes.active ?? town) : null, level: null });
+  // `drawn`: the scene Foundry's first draw showed (the active scene unless a test says otherwise)
+  Object.assign(canvas, { ready: canvasReady, initialized, scene: canvasReady ? (drawn ? game.scenes.get(drawn) : game.scenes.active ?? town) : null,
+    level: drawnLevel ? { id: drawnLevel } : null });
   views.length = 0;
   pans.length = 0;
   F.calls.length = 0;
@@ -174,22 +178,69 @@ test("pins absent: no pentaryn-pins module, the rules above apply unchanged", as
   assert.deepEqual(views, [[IDS.cave, {}]]);
 });
 
-test("pinned and the saved scene is the pinned one: no scene.view (pins drew it), pans, level null — even after the table moved on", async () => {
-  pinsPublishing({ token: "Scene.x.Token.y", actor: "Actor.z", scene: IDS.cave, level: null, x: 0, y: 0 });
-  const seen = await resumedDuring(() => login({ saved: { scene: IDS.cave, level: IDS.caveLower, active: IDS.cave, x: 300, y: 400, scale: 0.75 },
-    active: IDS.town, drawn: IDS.cave }));
-  assert.deepEqual(views, []);
+const PINNED_CAVE = { token: `Scene.${IDS.cave}.Token.caveTalo0000001`, actor: "Actor.z", scene: IDS.cave, level: IDS.caveLower, x: 0, y: 0 };
+
+test("pinned, saved view of the pinned scene: views it at the token's level with the token controlled, then pans — even after the table moved on", async () => {
+  pinsPublishing(PINNED_CAVE);
+  const seen = await resumedDuring(() => login({ saved: { scene: IDS.cave, level: null, active: IDS.cave, x: 300, y: 400, scale: 0.75 }, active: IDS.town }));
+  assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower, controlledTokens: ["caveTalo0000001"] }]]);
   assert.deepEqual(pans.at(-1), { x: 300, y: 400, scale: 0.75 });
-  assert.deepEqual(seen, [{ scene: IDS.cave, level: null, position: { x: 300, y: 400, scale: 0.75 } }]);
+  assert.deepEqual(seen, [{ scene: IDS.cave, level: IDS.caveLower, position: { x: 300, y: 400, scale: 0.75 } }]);
 });
 
-test("pinned and the saved scene is another: no view, no pan, no resumed event", async () => {
-  pinsPublishing({ token: "Scene.x.Token.y", actor: "Actor.z", scene: IDS.cave, level: null, x: 0, y: 0 });
-  const seen = await resumedDuring(() => login({ saved: { scene: IDS.town, active: IDS.town, x: 50, y: 60, scale: 2 }, drawn: IDS.cave }));
+test("pinned token on another level of the active scene: view({ level }) only; already on its level: no view, just the pan", async () => {
+  pinsPublishing(PINNED_CAVE);
+  await resumedDuring(() => login({ saved: { scene: IDS.cave, active: IDS.cave, x: 30, y: 40, scale: 1 }, active: IDS.cave }));
+  assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower, controlledTokens: ["caveTalo0000001"] }]], "same scene, the token's level");
+  pinsPublishing(PINNED_CAVE);
+  await resumedDuring(() => login({ saved: { scene: IDS.cave, active: IDS.cave, x: 30, y: 40, scale: 1 }, active: IDS.cave, drawnLevel: IDS.caveLower }));
   assert.deepEqual(views, []);
+  assert.deepEqual(pans.at(-1), { x: 30, y: 40, scale: 1 });
+});
+
+test("pinned, saved view of another scene: views the pinned scene, no pan, resumed fires", async () => {
+  pinsPublishing(PINNED_CAVE);
+  const seen = await resumedDuring(() => login({ saved: { scene: IDS.town, active: IDS.town, x: 50, y: 60, scale: 2 } }));
+  assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower, controlledTokens: ["caveTalo0000001"] }]]);
   assert.deepEqual(pans, [{ x: 1000, y: 1000, scale: 1 }], "only Foundry's first draw");
-  assert.deepEqual(seen, []);
+  assert.deepEqual(seen, [{ scene: IDS.cave, level: IDS.caveLower, position: null }]);
   assert.equal(canvas.scene.id, IDS.cave);
+});
+
+test("pinned token this user does not own (observer only): views its scene and level, no controlledTokens, so core's own fallback pans", async () => {
+  pinsPublishing({ ...PINNED_CAVE, token: `Scene.${IDS.cave}.Token.${IDS.caveObserved}` });
+  await resumedDuring(() => login({ saved: null }));
+  assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower }]]);
+});
+
+test("pinned token missing from its scene: views its scene and level, no controlledTokens", async () => {
+  pinsPublishing({ ...PINNED_CAVE, token: `Scene.${IDS.cave}.Token.goneToken0000001` });
+  await resumedDuring(() => login({ saved: null }));
+  assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower }]]);
+});
+
+test("pinned, no saved view: still lands on the token's scene", async () => {
+  pinsPublishing(PINNED_CAVE);
+  await resumedDuring(() => login({ saved: null }));
+  assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower, controlledTokens: ["caveTalo0000001"] }]]);
+});
+
+test("pinned, no active scene (a blank draw: canvas initialized, not ready): still lands on the token's scene", async () => {
+  pinsPublishing(PINNED_CAVE);
+  await resumedDuring(() => login({ saved: null, active: null, canvasReady: false, initialized: true }));
+  assert.deepEqual(views, [[IDS.cave, { level: IDS.caveLower, controlledTokens: ["caveTalo0000001"] }]]);
+  assert.equal(canvas.scene.id, IDS.cave);
+});
+
+test("pinned, the token's scene is gone: no restore", async () => {
+  pinsPublishing({ ...PINNED_CAVE, scene: "gone000000000001" });
+  const seen = await resumedDuring(() => login({ saved: { scene: IDS.cave, active: IDS.town, x: 1, y: 2, scale: 1 } }));
+  assert.deepEqual([views, seen], [[], []]);
+});
+
+test("unpinned with no active scene (canvas not ready): nothing restored, as before", async () => {
+  await login({ saved: { scene: IDS.cave, active: null }, active: null, canvasReady: false, initialized: true });
+  assert.deepEqual(views, []);
 });
 
 test("contract: a pinnedToken whose scene is not an id string reads as no pin, and says so", async () => {

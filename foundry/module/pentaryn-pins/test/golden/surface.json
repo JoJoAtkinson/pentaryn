@@ -5,6 +5,7 @@
   "inspect": "inspect",
   "pin": "pin",
   "pinnedToken": "pinnedToken",
+  "pinnedTokens": "pinnedTokens",
   "pins": "pins",
   "selftest": "selftest",
   "settings": "settings",

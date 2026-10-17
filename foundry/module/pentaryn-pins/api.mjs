@@ -1,15 +1,16 @@
 /**
  * Pentaryn Pins — the API: implementations for the manifest rows, inspect(), selftest().
  *
- * GLUE. May import core, adapters, settings and lib — never a feature file. Feature state reaches
- * this file through `ctx.exposed` (follow.mjs exposes `latestOf`, the session's newest token of a
- * root actor, which only matters on the pinned player's own client).
+ * GLUE. May import core, adapters, settings and lib — never a feature file. Since 0.2.0 no feature
+ * exposes state here: the GM moves a pinned player with core's own pull (`pin`, `teleport` through
+ * portals' `pull`), so nothing on the player's client is read by the API.
  */
 
 import { HOOKS, MODULE, NS, pickToken } from "./pins-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
-import { PIN_PATH, auditWorld, listOf, observes, pinOfUser, pinnedUsers, resolvePin, rootOfActor, tokensByRoots, tokensOfRoot } from "./world-adapter.mjs";
+import { PIN_PATH, auditWorld, listOf, observes, pinOfUser, pinTargets, pinnedUsers, pullToPin, resolvePin, rootOfActor,
+  tokensByRoots, tokensOfRoot } from "./world-adapter.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { codedError, errorCode, fail, ok, toFail } from "./lib/errors.mjs";
 import { patches } from "./lib/patch.mjs";
@@ -17,7 +18,7 @@ import { apiOf, publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
 
 const PORTALS = "pentaryn-portals";
-const PATCH_IDS = ["pins-scene-view", "pins-scene-activate"];
+const PATCH_IDS = ["pins-scene-activate"];
 
 /** A uuid (the kit's resolve.mjs shape): a world `Type.<16-char id>…` or any Compendium path. */
 const UUID = /^(?:Compendium\.|[A-Z][A-Za-z]+\.[A-Za-z0-9]{16}(?:\.|$))/;
@@ -81,6 +82,9 @@ async function pin(user, ctx, { actor: actorRefIn, replace = false, dryRun = fal
     return { ...failure, restored };
   }
   ctx.log.info("pin", { uuid: user.uuid, ids: [user.id, root, ...others.map(u => u.id)], by: game.user.id });
+  // the switch on and the player online: pull them to their token (replaces 0.1.0's player-side follow).
+  // Re-pinning the actor they already have changes nothing, so it pulls nobody (code review CR9).
+  if (ctx.setting("pinning") && user.active && previous !== root) pullToPin(user, ctx.log);
   return ok({ ...out, audit: audit(ctx) });
 }
 
@@ -109,20 +113,14 @@ function pins() {
   })));
 }
 
-/** The token a user's view follows (the latest/viewed tie-breaks apply only to this client's own user). */
-function followedToken(user, ctx) {
+/** The token a user's view follows (the viewed-scene tie-break applies only to this client's own user). */
+function followedToken(user) {
   const self = user.id === game.user?.id;
-  const root = pinOfUser(user);
-  return resolvePin(user, self ? {
-    latestUuid: root ? ctx.exposed.latestOf?.(root) ?? null : null,
-    viewedSceneId: globalThis.canvas?.scene?.id ?? null,
-  } : {});
+  return resolvePin(user, self ? { viewedSceneId: globalThis.canvas?.scene?.id ?? null } : {});
 }
 
-function pinnedToken(user, ctx) {
-  if (!ctx.setting("pinning") || user.isGM) return null;   // a GM is never followed (follow.mjs target)
-  const { root, token } = followedToken(user, ctx);
-  if (!root || !token) return null;
+/** The published shape of a followed token (pinnedToken, pinnedTokens). */
+function targetOut(root, token) {
   return {
     token: token.uuid,
     actor: game.actors.get(root)?.uuid ?? `Actor.${root}`,
@@ -130,6 +128,20 @@ function pinnedToken(user, ctx) {
     level: token.level ? String(token.level) : null,
     x: token.x, y: token.y,
   };
+}
+
+function pinnedToken(user, ctx) {
+  if (!ctx.setting("pinning") || user.isGM) return null;   // a GM is never followed (follow.mjs target)
+  const { root, token } = followedToken(user);
+  if (!root || !token) return null;
+  return targetOut(root, token);
+}
+
+/** Every pinned player's pinnedToken in one token walk (code review CR3): `{ [userId]: … }`; {} while off. */
+function pinnedTokens(ctx) {
+  if (!ctx.setting("pinning")) return {};
+  const targets = pinTargets({ selfViewedSceneId: globalThis.canvas?.scene?.id ?? null });
+  return Object.fromEntries(Object.entries(targets).map(([id, { root, token }]) => [id, targetOut(root, token)]));
 }
 
 /** No depth cap: the token records sit at depth 4 and the cap's "[max depth]" ate them (M1/E1). */
@@ -148,19 +160,30 @@ async function teleport(user, ctx, { x, y, scene, level, dryRun = false } = {}) 
   if (typeof portals?.teleportToken !== "function") return fail("UNSUPPORTED", "pentaryn-portals (teleportToken) is not active");
   const token = cands[0];
   const enabled = !!ctx.setting("pinning");
-  const viewFollows = enabled && !!user.active;
+  const online = !!user.active;
   let res;
   try {
-    res = await portals.teleportToken(token.doc, { x, y, scene, level, dryRun });
+    // the switch on and the player online: portals pulls them on a cross-scene move, whatever core's
+    // Teleport Token rule says (pentaryn-portals ≥ 0.7.0 `pull`; an older portals ignores it)
+    res = await portals.teleportToken(token.doc, { x, y, scene, level, pull: enabled && online ? [user.id] : [], dryRun });
   } catch (err) {
     ctx.log.error("teleport failed", err);
     return toFail(err);
   }
   if (!res?.ok) return res ?? fail("INTERNAL", "teleportToken returned nothing");
   const crossScene = !!res.to?.scene && res.to.scene !== token.scene;
-  const out = { ...res, user: userRef(user), viewFollows, online: !!user.active };
-  // switch on, player offline: their login draw goes to the token's scene (follow.mjs), so no warning
-  if (!enabled && crossScene) out.warning = "VIEW_UNCHANGED";
+  // cross-scene: the view follows only if portals pulled the player (`pulled`). Same scene: portals
+  // never pulls there, so pins always pulls them to the token's scene and level — never skipped on
+  // the GM's copy of `viewedScene`, which lags a draw in progress (review F1, code review CR2); core's
+  // Scene#view of the scene and level already drawn draws nothing. A dryRun predicts it: on and online.
+  let viewFollows;
+  if (dryRun) viewFollows = enabled && online;
+  else if (crossScene) viewFollows = Array.isArray(res.pulled) && res.pulled.some(p => (p?.id ?? p) === user.id);
+  else if (!enabled || !online) viewFollows = false;
+  else viewFollows = pullToPin(user, ctx.log);
+  const out = { ...res, user: userRef(user), viewFollows, online };
+  // an offline player with the switch on lands on the token's scene at login (resume): no warning
+  if (crossScene && !viewFollows && (online || !enabled)) out.warning = "VIEW_UNCHANGED";
   if (!dryRun) ctx.log.info("teleport", { uuid: user.uuid, ids: [user.id, root, token.id], by: game.user.id });
   return out;
 }
@@ -198,7 +221,7 @@ function inspect(ref, ctx) {
   }
   if (!user && !root) throw codedError("NOT_FOUND", String(ref));
   const cands = root ? tokensOfRoot(root) : [];
-  const token = user ? followedToken(user, ctx).token : pickToken(cands);
+  const token = user ? followedToken(user).token : pickToken(cands);
   return toPlain({
     user: refOf(user),
     actor: refOf(root ? game.actors.get(root) : null),
@@ -215,7 +238,7 @@ function selftest(ctx) {
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
     { label: "pinning setting readable", ok: typeof ctx.setting("pinning") === "boolean" },
-    { label: "Scene#view and Scene#_onActivate patched", ok: PATCH_IDS.every(id => mine.includes(id)), detail: mine.join(", ") },
+    { label: "Scene#_onActivate patched", ok: PATCH_IDS.every(id => mine.includes(id)), detail: mine.join(", ") },
     { label: "pentaryn-portals teleportToken present", ok: typeof apiOf(PORTALS)?.teleportToken === "function" },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
@@ -229,6 +252,7 @@ export function buildApiFor(ctx) {
     unpin: (user, opts = {}) => unpin(user, ctx, opts ?? {}),
     pins: () => pins(),
     pinnedToken: user => pinnedToken(user, ctx),
+    pinnedTokens: () => pinnedTokens(ctx),
     audit: () => audit(ctx),
     teleport: (user, opts = {}) => teleport(user, ctx, opts ?? {}),
     inspect: ref => inspect(ref, ctx),

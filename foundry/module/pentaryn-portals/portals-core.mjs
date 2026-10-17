@@ -21,13 +21,24 @@
 export const MODULE = "pentaryn-portals";
 export const SHORT = "portals";
 export const NS = "portals";
-export const VERSION = "0.6.0";                        // === module.json version (core.test pins it)
+export const VERSION = "0.7.0";                        // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-portals/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_PORTALS";
 export const CSS = "ppt-";                             // every class this module puts in the DOM starts ppt- (S7)
 export const FLAG_SCOPE = MODULE;
-/** Events this module emits: none. */
-export const HOOKS = Object.freeze({});
+/**
+ * Events this module emits (kit emitter). prePull (code review 2026-10-17 CR7): fired with
+ * `Hooks.call` once at each pull site — teleportToken and Teleport party onto another scene —
+ * before `scene.pullUsers`, so another module (pentaryn-pins: a player pinned to a token elsewhere)
+ * can leave users out without portals knowing it exists. A listener removes Users from `users` IN
+ * PLACE; returning false vetoes: every user in `users` stays behind.
+ */
+export const HOOKS = Object.freeze({
+  prePull: Object.freeze({ name: "pentaryn-portals.prePull", pre: true,
+    args: "(users: User[] — mutable: splice out a user to leave them behind, { scene: the destination Scene, level: landed level id|null, "
+      + "token: the carried TokenDocument (on scene) | null for Teleport party, reason: \"token\" (teleportToken) | \"party\" (Teleport party), "
+      + "pull: User[] — teleportToken's opts.pull, pulled whatever a listener does }) — fired only when users is not empty; false = pull none of users" }),
+});
 /** Where Snapshot saves its crops (Data). */
 export const SNAP_DIR = "assets/tokens/custom/portals";
 /** The core RegionBehavior type every link rides on (Teleport Token). */

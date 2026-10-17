@@ -77,23 +77,31 @@ test("resumeTarget: back to the saved view only while the active scene is unchan
       { scene: "cave", level: null, position: null }],
   ];
   for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, world), want, why);
-  // pinnedScene null (pins absent, off, unpinned) is exactly the table above
-  for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, { ...world, pinnedScene: null }), want, `${why} (pinnedScene null)`);
+  // pinned null (pins absent, off, unpinned, a GM, no single token) is exactly the table above
+  for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, { ...world, pinned: null }), want, `${why} (pinned null)`);
+  // a pinned token whose scene is not an id string is no pin (memory.mjs logs it)
+  for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, { ...world, pinned: { scene: { id: "cave" } } }), want, `${why} (bad pinned)`);
 });
 
-test("resumeTarget with a pinned scene (pentaryn-pins): the pin wins; pan and zoom only on the pinned scene", () => {
+test("resumeTarget with a pinned token (pentaryn-pins, resume 0.2.0): the token's scene and level; the saved pan/zoom only on that scene", () => {
   const saved = { scene: "cave", level: "l2", active: "town", x: 500, y: 600, scale: 0.5 };
   const exists = id => ["town", "cave"].includes(id);
+  const pinned = { scene: "cave", level: "l1", token: "Scene.cave.Token.t1" };
+  const pos = { x: 500, y: 600, scale: 0.5 };
   const table = [
-    ["pinned on the saved scene, the active scene changed since: position, level null", saved,
-      { activeId: "keep", sceneExists: exists, pinnedScene: "cave" }, { scene: "cave", level: null, position: { x: 500, y: 600, scale: 0.5 } }],
-    ["pinned on the saved scene, active unchanged: level still null (the token's level)", saved,
-      { activeId: "town", sceneExists: exists, pinnedScene: "cave" }, { scene: "cave", level: null, position: { x: 500, y: 600, scale: 0.5 } }],
-    ["pinned on another scene: the pin wins", saved, { activeId: "town", sceneExists: exists, pinnedScene: "town" }, null],
-    ["pinned, no saved view", undefined, { activeId: "town", sceneExists: exists, pinnedScene: "cave" }, null],
-    ["pinned, the saved scene was deleted", saved, { activeId: "town", sceneExists: () => false, pinnedScene: "cave" }, null],
-    ["pinned, no position stored", { scene: "cave", active: "town" }, { activeId: "x", sceneExists: exists, pinnedScene: "cave" },
-      { scene: "cave", level: null, position: null }],
+    ["saved view of the pinned scene: the token's level (not the saved one), the saved position", saved,
+      { activeId: "town", sceneExists: exists, pinned }, { scene: "cave", level: "l1", token: pinned.token, position: pos }],
+    ["the active scene changed since the save: the table moving on does not apply", saved,
+      { activeId: "keep", sceneExists: exists, pinned }, { scene: "cave", level: "l1", token: pinned.token, position: pos }],
+    ["saved view of another scene: the pinned scene, no position", { ...saved, scene: "town" },
+      { activeId: "town", sceneExists: exists, pinned }, { scene: "cave", level: "l1", token: pinned.token, position: null }],
+    ["no saved view: still the pinned scene (pins 0.1.0's patch did this draw)", undefined,
+      { activeId: "town", sceneExists: exists, pinned }, { scene: "cave", level: "l1", token: pinned.token, position: null }],
+    ["saved view of the pinned scene with no position", { scene: "cave", active: "town" },
+      { activeId: "x", sceneExists: exists, pinned }, { scene: "cave", level: "l1", token: pinned.token, position: null }],
+    ["a token with no level", saved, { activeId: "town", sceneExists: exists, pinned: { scene: "cave", token: pinned.token } },
+      { scene: "cave", level: null, token: pinned.token, position: pos }],
+    ["the pinned token's scene is gone", saved, { activeId: "town", sceneExists: id => id === "town", pinned }, null],
   ];
   for (const [why, input, world, want] of table) assert.deepEqual(core.resumeTarget(input, world), want, why);
 });

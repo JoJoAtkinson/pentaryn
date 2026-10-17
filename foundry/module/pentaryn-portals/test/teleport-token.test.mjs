@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { makeDoc } from "./kit/foundry-stub.mjs";
-import { boot, P1, P2, GM } from "./fixtures/world.mjs";
+import { boot, console$, P1, P2, GM } from "./fixtures/world.mjs";
 import { displaceOptions } from "../portals-core.mjs";
 import { heldIds } from "../party.mjs";
 
@@ -110,6 +110,7 @@ test("same scene: the PC, its summon and a pet only its player owns move in ONE 
     from: H.s.id, to: { scene: H.s.id, x: 1550, y: 750, level: H.lvl },
     followers: [{ id: `tSkel${H.k}`, name: "Skeleton" }, { id: `tOwl${H.k}`, name: "Owl" }],
     moved: 3,
+    pulled: [],
   });
 });
 
@@ -220,18 +221,38 @@ test("level not given, same scene: the token's own level", async () => {
 
 /* ── another scene ────────────────────────────────────────────────────── */
 
-test("another scene: one keepId create of PC + company on the destination, one delete on the source WITHOUT replacements; no follow pass, no pull, no view", async () => {
+/**
+ * Who is looking at the hall (pins rebuild §2.1): `users` view `H.s` on `level` (default its own
+ * level), everyone else another scene; token vision on, so only a SIGHTED other token keeps its
+ * owner (core: `!scene.tokenVision || t.sight.enabled`).
+ */
+function watching(H, users, { level = H.lvl, tokenVision = true } = {}) {
+  for (const u of game.users) Object.assign(u, { viewedScene: "ElsewhereScene01", viewedLevel: null, active: true });
+  for (const id of users) Object.assign(game.users.get(id), { viewedScene: H.s.id, viewedLevel: level });
+  H.s.tokenVision = tokenVision;
+}
+
+// [declared] pins rebuild 2026-10-17 §2.2 (portals 0.7.0): was "no follow pass, no pull, no view". A
+// cross-scene teleportToken now ends with dest.pullUsers(core's Teleport Token rule ∪ pull, { level,
+// controlledTokens }) — the mover pulls the owner. Still no follow pass, still no replacements, the
+// calling GM's own view still unchanged.
+test("another scene: one keepId create of PC + company on the destination, one delete on the source WITHOUT replacements, then ONE pull by core's rule; no follow pass, no GM view", async () => {
   const H = hall();
   F.canvas.scene = H.s;
+  watching(H, [P1, P2]);
   const n = F.calls.length;
   const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
   await W.tick();                                    // the follow hook's setTimeout, if it were ever scheduled
   const seen = ops(n);
   const ids = ["tCav", "tSkel", "tOwl"].map(i => `${i}${H.k}`);
-  assert.deepEqual(seen.map(c => [c.op, c.parent, c.ids, c.options]), [
+  assert.deepEqual(seen.map(c => c.op), ["createEmbedded", "deleteEmbedded", "pullUsers"],
+    "bringFollowers never ran (it would create again and toast 'Followed'); no scene.view");
+  assert.deepEqual(seen.slice(0, 2).map(c => [c.op, c.parent, c.ids, c.options]), [
     ["createEmbedded", H.far.uuid, ids, { keepId: true }],
     ["deleteEmbedded", H.s.uuid, ids, {}],
-  ], "bringFollowers never ran (it would create again and toast 'Followed')");
+  ]);
+  // Ana observes (owns) Caven and has no other sighted token on the level; Bo does not observe Caven
+  assert.deepEqual(seen[2], { op: "pullUsers", scene: H.far.id, users: [P1], options: { level: `${H.far.id}Lvl0`, controlledTokens: [`tCav${H.k}`] } });
   assert.equal(F.canvas.scene, H.s, "the calling GM's view did not change");
   const cav = H.far.tokens.get(`tCav${H.k}`);
   assert.deepEqual([cav.x, cav.y], [1500, 700]);
@@ -242,6 +263,249 @@ test("another scene: one keepId create of PC + company on the destination, one d
   assert.equal(out.from, H.s.id);
   assert.equal(out.token.uuid, `Scene.${H.far.id}.Token.tCav${H.k}`, "the token as it now is, on the destination");
   assert.equal(out.moved, 3);
+  assert.deepEqual(out.pulled, [{ id: P1, name: "Ana" }]);
+});
+
+/* ── the pull (pins rebuild 2026-10-17 §2, portals 0.7.0) ──────────────── */
+
+test("pull: opts.pull adds a user the rule skips (Bo does not observe Caven); ids and documents, de-duplicated", async () => {
+  const H = hall();
+  watching(H, [P1, P2]);
+  const n = F.calls.length;
+  const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id, pull: [P2, game.users.get(P1), P1] });
+  const pulls = ops(n).filter(c => c.op === "pullUsers");
+  assert.equal(pulls.length, 1, "one pull");
+  assert.deepEqual(pulls[0].users.slice().sort(), [P1, P2].sort());
+  assert.deepEqual(out.pulled.map(u => u.id).sort(), [P1, P2].sort());
+});
+
+test("pull: a user in opts.pull is pulled whatever they view (another scene); an inactive one is dropped", async () => {
+  const H = hall();
+  watching(H, []);
+  game.users.get(P1).active = false;
+  try {
+    const n = F.calls.length;
+    const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id, pull: [P2, P1] });
+    const [pull] = ops(n).filter(c => c.op === "pullUsers");
+    assert.deepEqual(pull.users, [P2]);
+    assert.deepEqual(out.pulled, [{ id: P2, name: "Bo" }]);
+  } finally { game.users.get(P1).active = true; }
+});
+
+test("pull: a hidden token pulls by the rule nobody (core: hidden → []); only opts.pull, and with none no pullUsers at all", async () => {
+  const H = hall();
+  watching(H, [P1, P2]);
+  H.t("tCav").hidden = true;
+  let n = F.calls.length;
+  let out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.deepEqual(ops(n).map(c => c.op), ["createEmbedded", "deleteEmbedded"], "nobody to pull: no emit");
+  assert.deepEqual(out.pulled, []);
+  const H2 = hall();
+  watching(H2, [P1, P2]);
+  H2.t("tCav").hidden = true;
+  n = F.calls.length;
+  out = await api().teleportToken(H2.t("tCav"), { x: 1550, y: 750, scene: H2.far.id, pull: [P2] });
+  assert.deepEqual(ops(n).filter(c => c.op === "pullUsers").map(c => c.users), [[P2]], "only pull");
+});
+
+test("pull: a player viewing another scene, or another level of the source scene, is not pulled by the rule", async () => {
+  const H = hall();
+  watching(H, []);                                   // Ana looks at another scene
+  let n = F.calls.length;
+  let out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.deepEqual(ops(n).filter(c => c.op === "pullUsers"), []);
+  assert.deepEqual(out.pulled, []);
+  const H2 = hall();
+  addLevel(H2.s, `Up${H2.k}`);
+  watching(H2, [P1], { level: `Up${H2.k}` });        // Ana looks at the hall's upper floor; Caven is downstairs
+  n = F.calls.length;
+  out = await api().teleportToken(H2.t("tCav"), { x: 1550, y: 750, scene: H2.far.id });
+  assert.deepEqual(ops(n).filter(c => c.op === "pullUsers"), []);
+  assert.deepEqual(out.pulled, []);
+});
+
+test("pull: core's 'owns another sighted token on that level' clause — tokenVision off counts every owned token; on, only a sighted one; another floor's never; the carried company never (R6)", async () => {
+  // tokenVision off: Ana's steed (co-owned), pile, marker, handle stay behind and keep her
+  let H = hall();
+  watching(H, [P1], { tokenVision: false });
+  let out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.deepEqual(out.pulled, [], "tokenVision off: any other owned non-hidden token keeps her");
+  // tokenVision on, the steed sighted: kept
+  H = hall();
+  watching(H, [P1]);
+  H.t("tSteed").sight = { enabled: true };
+  out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.deepEqual(out.pulled, [], "a sighted steed on the level keeps her");
+  // … the sighted steed hidden: pulled
+  H = hall();
+  watching(H, [P1]);
+  Object.assign(H.t("tSteed"), { sight: { enabled: true }, hidden: true });
+  out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.deepEqual(out.pulled.map(u => u.id), [P1], "a hidden token does not keep her");
+  // … the sighted steed on another floor: pulled
+  H = hall();
+  addLevel(H.s, `Up${H.k}`);
+  watching(H, [P1]);
+  Object.assign(H.t("tSteed"), { sight: { enabled: true }, level: `Up${H.k}` });
+  out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.deepEqual(out.pulled.map(u => u.id), [P1], "another floor's token does not keep her");
+  // the carried company is off the source scene when the rule runs: a sighted familiar that came along never keeps her
+  H = hall();
+  watching(H, [P1]);
+  for (const id of ["tSkel", "tOwl"]) H.t(id).sight = { enabled: true };
+  out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.deepEqual(out.followers.map(f => f.name), ["Skeleton", "Owl"]);
+  assert.deepEqual(out.pulled.map(u => u.id), [P1], "R6: the company travelled first, so it does not block the pull");
+});
+
+test("pull: the view level is the carried token's landed level (given, or the destination's initial level)", async () => {
+  const H = hall();
+  addLevel(H.far, `FarUp${H.k}`);
+  watching(H, [P1]);
+  let n = F.calls.length;
+  await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id, level: `FarUp${H.k}` });
+  let [pull] = ops(n).filter(c => c.op === "pullUsers");
+  assert.equal(pull.options.level, `FarUp${H.k}`);
+  assert.equal(pull.options.level, H.far.tokens.get(`tCav${H.k}`).level, "what landed");
+  const H2 = hall();
+  addLevel(H2.far, `FarUp${H2.k}`);
+  watching(H2, [P1]);
+  n = F.calls.length;
+  await api().teleportToken(H2.t("tCav"), { x: 1550, y: 750, scene: H2.far.id });
+  [pull] = ops(n).filter(c => c.op === "pullUsers");
+  assert.equal(pull.options.level, H2.far.initialLevel.id);
+  assert.equal(pull.options.level, H2.far.tokens.get(`tCav${H2.k}`).level);
+});
+
+test("pull: the same scene never pulls, not even opts.pull (core's same-scene rule pulls only a non-self mover; the mover is a GM)", async () => {
+  const H = hall();
+  addLevel(H.s, `Up${H.k}`);
+  watching(H, [P1, P2]);
+  const n = F.calls.length;
+  const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, level: `Up${H.k}`, pull: [P1, P2] });
+  assert.deepEqual(ops(n).map(c => c.op), ["updateEmbedded"]);
+  assert.deepEqual(out.pulled, []);
+});
+
+test("pull: dryRun, REFUSED and CONFLICT never pull; dryRun has no `pulled`", async () => {
+  const H = hall();
+  watching(H, [P1]);
+  let n = F.calls.length;
+  const dry = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id, dryRun: true, pull: [P2] });
+  assert.equal(dry.ok, true);
+  assert.equal("pulled" in dry, false);
+  assert.deepEqual(ops(n), []);
+  // REFUSED: a mover's id is already on the destination
+  W.token(H.far, { id: `tSkel${H.k}`, name: "Skeleton (copy)", actorId: "SKEL", x: 0, y: 0 });
+  n = F.calls.length;
+  const refused = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id, pull: [P2] });
+  assert.equal(refused.code, "REFUSED");
+  assert.deepEqual(ops(n), []);
+  // CONFLICT: another session's keepId create landed first
+  const H2 = hall();
+  watching(H2, [P1]);
+  const create = H2.far.createEmbeddedDocuments;
+  H2.far.createEmbeddedDocuments = function (type, data, options) {
+    W.token(H2.far, { id: `tCav${H2.k}`, name: "Caven", actorId: "CAV", actorLink: true, x: 0, y: 0 });
+    return create.call(this, type, data, options);
+  };
+  n = F.calls.length;
+  const conflict = await api().teleportToken(H2.t("tCav"), { x: 1550, y: 750, scene: H2.far.id, pull: [P2] });
+  H2.far.createEmbeddedDocuments = create;
+  assert.equal(conflict.code, "CONFLICT");
+  assert.deepEqual(ops(n).map(c => c.op), ["createEmbedded"], "no pull");
+});
+
+test("pull: not an array, or an entry that is not a User or a user id → BAD_ARGS; nothing written", async () => {
+  const H = hall();
+  const n = F.calls.length;
+  for (const pull of [P1, { id: P1 }, [42], ["noSuchUser000001"], [null], [H.t("tMar")]]) {
+    const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id, pull });
+    assert.equal(out.code, "BAD_ARGS", JSON.stringify(pull));
+  }
+  assert.deepEqual(ops(n), []);
+  assert.equal(H.s.tokens.has(`tCav${H.k}`), true);
+});
+
+test("pull: a pull that throws after the carry is warned; the move stands (ok, pulled [])", async () => {
+  const H = hall();
+  watching(H, [P1]);
+  const c = console$.length;
+  H.far.pullUsers = () => { throw new Error("socket down"); };
+  const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+  assert.equal(out.ok, true);
+  assert.deepEqual(out.pulled, []);
+  assert.equal(H.far.tokens.has(`tCav${H.k}`), true);
+  assert.ok(console$.slice(c).some(([level, text]) => level === "warn" && /the pull failed \(the move stands\)/.test(text)));
+});
+
+/** A `pentaryn-portals.prePull` listener for the length of `fn` (code review 2026-10-17 CR7). */
+function withPrePull(listener, fn) {
+  const id = Hooks.on("pentaryn-portals.prePull", listener);
+  return Promise.resolve().then(fn).finally(() => Hooks.off("pentaryn-portals.prePull", id));
+}
+
+test("CR7: teleportToken fires pentaryn-portals.prePull ONCE, after the carry, with the RULE's users and { scene, level, token, reason, pull }; a listener's drop never touches opts.pull", async () => {
+  const H = hall();
+  watching(H, [P1]);
+  const seen = [];
+  // Ana is pinned to a token on another scene: the listener leaves her out of the rule's list
+  const drop = (users, ctx) => {
+    seen.push({ users: users.map(u => u.id), scene: ctx.scene?.id, level: ctx.level, token: ctx.token?.id, onDest: ctx.scene?.tokens?.has(ctx.token?.id),
+      reason: ctx.reason, pull: ctx.pull.map(u => u.id) });
+    const i = users.findIndex(u => u.id === P1);
+    if (i >= 0) users.splice(i, 1);
+  };
+  await withPrePull(drop, async () => {
+    const n = F.calls.length;
+    let out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
+    assert.deepEqual(out.pulled, [], "the rule's pull leaves her out");
+    assert.deepEqual(seen, [{ users: [P1], scene: H.far.id, level: `${H.far.id}Lvl0`, token: `tCav${H.k}`, onDest: true, reason: "token", pull: [] }]);
+    assert.equal(F.calls.slice(n).filter(c => c.op === "Hooks.call" && c.name === "pentaryn-portals.prePull").length, 1, "one hook call per pull site");
+    assert.deepEqual(ops(n).filter(c => c.op === "pullUsers"), [], "nobody left: no emit");
+    const H2 = hall();
+    watching(H2, [P1]);
+    out = await api().teleportToken(H2.t("tCav"), { x: 1550, y: 750, scene: H2.far.id, pull: [P1] });
+    assert.deepEqual(out.pulled.map(u => u.id), [P1], "opts.pull is the caller's word");
+    assert.deepEqual(seen[1].pull, [P1], "the listener is told who is pulled regardless");
+  });
+});
+
+test("CR7: teleportToken — a listener that drops nobody or throws (caught by Hooks) pulls by the rule; a veto pulls only opts.pull; nobody picked by the rule → no hook call", async () => {
+  for (const [name, listener] of [["drops nobody", () => {}], ["throws", () => { throw new Error("boom"); }]]) {
+    const H = hall();
+    watching(H, [P1]);
+    const out = await withPrePull(listener, () => api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id }));
+    assert.deepEqual(out.pulled.map(u => u.id), [P1], name);
+  }
+  const H = hall();
+  watching(H, [P1]);
+  let out = await withPrePull(() => false, () => api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id, pull: [P2] }));
+  assert.deepEqual(out.pulled.map(u => u.id), [P2], "vetoed: the rule's users are out, opts.pull stays");
+  const H2 = hall();
+  watching(H2, []);
+  const n = F.calls.length;
+  out = await withPrePull(() => assert.fail("called with nobody to drop"), () => api().teleportToken(H2.t("tCav"), { x: 1550, y: 750, scene: H2.far.id, pull: [P2] }));
+  assert.deepEqual(out.pulled.map(u => u.id), [P2]);
+  assert.equal(F.calls.slice(n).filter(c => c.op === "Hooks.call" && c.name === "pentaryn-portals.prePull").length, 0);
+});
+
+test("CR7/CR3: portals reads no pentaryn-pins API (no apiOf/pinnedToken: one hook per pull site instead of a per-user API call)", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const root = new URL("../", import.meta.url);
+  for (const f of readdirSync(root).filter(f => f.endsWith(".mjs"))) {
+    const src = readFileSync(new URL(f, root), "utf8");
+    assert.doesNotMatch(src, /apiOf\(\s*["']pentaryn-pins["']|pinnedToken\s*\?*\.?\s*\(/, f);
+  }
+});
+
+test("CR8: the pull rule is the kit's (lib/pull-rule.mjs, shared with pentaryn-pins), not a portals copy", async () => {
+  const { readFileSync } = await import("node:fs");
+  const core = await import("../portals-core.mjs");
+  assert.equal("usersToPull" in core, false, "portals-core keeps no copy");
+  const src = readFileSync(new URL("../scene-adapter.mjs", import.meta.url), "utf8");
+  assert.match(src, /from "\.\/lib\/pull-rule\.mjs"/);
+  assert.doesNotMatch(src, /export function pullCandidates|testUserPermission\(u, "OBSERVER"\)/, "no local copy of the rule");
 });
 
 test("another scene by uuid, with no teleport region anywhere: the company still comes (cameThroughPortal is not consulted)", async () => {

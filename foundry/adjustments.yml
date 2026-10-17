@@ -1369,28 +1369,62 @@ adjustments:
     retire_class: never
     check: make foundry-portals-check
 
-  # pentaryn-pins (2026-10-17; design context/plans/pin-2026-10.md §3).
-  - id: pins-scene-view
-    packages: [lib-wrapper, core]
-    modules: [pentaryn-pins]
-    files: [foundry/module/pentaryn-pins/follow.mjs]
-    markers: ["__pentarynPinsView", "view"]
-    what: wraps CONFIG.Scene.documentClass.prototype.view through wrapMethod (libWrapper MIXED when lib-wrapper is active, else a direct wrap marked __pentarynPinsView) so that, with the pinning switch on, a pinned player always draws the scene of their pinned token (a view of another scene is redirected) and never sends core a second view of the scene already being drawn (no "cannot switch Scenes" toast); GMs, unpinned users and the switch off call the original with the same this and arguments
-    why: core has no hook that vetoes or redirects a scene draw (updateScene fires before the activation draw), and every way a client changes scene (login draw, activation, pullToScene, nav clicks, TeleportToken) ends in Scene#view
-    native_when: core lets a client veto or redirect a scene view
-    retire_class: guarded
-    check: make foundry-pins-check
-
+  # pentaryn-pins (2026-10-17; design context/plans/pin-2026-10.md §3, rebuilt in 0.2.0 on core's own pull:
+  # context/plans/pin-2026-10-rebuild.md §9 — the Scene#view patch row pins-scene-view was removed).
   - id: pins-scene-activate
     packages: [lib-wrapper, core]
     modules: [pentaryn-pins]
     files: [foundry/module/pentaryn-pins/follow.mjs]
     markers: ["__pentarynPinsActivate", "_onActivate"]
-    what: wraps the protected Scene#_onActivate (CONFIG.Scene.documentClass.prototype._onActivate, marker __pentarynPinsActivate) so that, for a pinned player with the switch on, activating another scene does nothing and deactivating the viewed scene that holds the pinned token does not blank the canvas; unview itself is not patched (scene and level deletion still blank it)
+    what: wraps the protected Scene#_onActivate (CONFIG.Scene.documentClass.prototype._onActivate, marker __pentarynPinsActivate) so that, for a pinned player with the switch on, activating another scene does nothing and deactivating the viewed scene that holds the pinned token does not blank the canvas; unview itself is not patched (scene and level deletion still blank it); and an activation of the token's own scene, while the player views another, is passed to core with viewOptions.level set to the token's level and controlledTokens to the token
     why: core has no hook that vetoes or redirects a scene draw; activation calls _onActivate(true) on the activated scene only, so skipping it is the whole change
     native_when: core lets a client veto or redirect a scene view
     retire_class: guarded
     check: make foundry-pins-check
+
+  - id: core-pins-level-switch-rule
+    packages: [core]
+    modules: [pentaryn-pins]
+    files: [foundry/module/pentaryn-pins/pins-core.mjs, foundry/module/pentaryn-pins/follow.mjs]
+    markers: ["coreSwitchesLevel", "ownsOtherSighted"]
+    what: a pinned player's view follows their token to another level of the same scene only when core's own level switch will not (a copy of the per-token test in TokenDocument.#handleMovementOperation, token.mjs:2927-2946; its "owns another sighted token" clause is the kit's ownsOtherSighted, row core-kit-pull-rule), so the two never both view
+    why: the test is private; doing it unconditionally would race core's own view
+    native_when: core switches an owner's view to their token's new level unconditionally, or exposes its decision
+    retire_class: guarded
+    check: make foundry-pins-check
+
+  - id: core-pins-pull-replay
+    packages: [core]
+    modules: [pentaryn-pins]
+    files: [foundry/module/pentaryn-pins/pins-core.mjs, foundry/module/pentaryn-pins/follow.mjs]
+    markers: ["replayDecision", "pullToScene"]
+    what: on a pinned player's client (switch on) a second game.socket listener on core's "pullToScene" event records a pull that arrives while canvas.loading — which Scene#view drops with a toast (scene.mjs:264-266) — and views it, as sent, once loading clears; no patch, unpinned users and GMs untouched
+    why: a pull is how a token's move reaches a pinned player, and core drops one that lands during any draw (slow Cloudflare loads); with the Scene#view patch gone nothing else re-asks
+    native_when: core queues a view requested while loading instead of dropping it
+    retire_class: guarded
+    check: make foundry-pins-check
+
+  - id: core-kit-pull-rule
+    packages: [core]
+    modules: [pentaryn-portals, pentaryn-pins]
+    files: [foundry/lib/pull-rule.mjs, foundry/module/pentaryn-portals/lib/pull-rule.mjs, foundry/module/pentaryn-pins/lib/pull-rule.mjs]
+    markers: ["usersToPull", "pullCandidates", "ownsOtherSighted"]
+    what: the kit's one copy of "who core pulls" (code review 2026-10-17 CR8) — usersToPull/pullCandidates copy the private TeleportTokenRegionBehaviorType#getUsersToPull (teleport-token.mjs:212-236) for a GM mover, and ownsOtherSighted the clause it shares with TokenDocument#handleMovementOperation (token.mjs:2943-2944); ownership via TokenDocument#testUserPermission only (never doc.actor). Vendored into pentaryn-portals (teleportToken's pull) and pentaryn-pins (the level gap-filler)
+    why: both are private; a GM-driven move has no region behaviour to call, and the level switch exposes no decision
+    native_when: core exposes the pull rule, or a "teleport token and pull" API
+    retire_class: guarded
+    check: make foundry-lib-check foundry-portals-check foundry-pins-check
+
+  - id: core-portals-pull-rule
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/scene-adapter.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
+    markers: ["usersToPull", "pullCandidates", "prePull"]
+    what: teleportToken pulls, on a cross-scene move, the users core's Teleport Token behaviour would pull (the kit's pull rule, row core-kit-pull-rule) as the pentaryn-portals.prePull listeners leave them (pentaryn-pins drops a player pinned elsewhere; CR7, portals reads no pins API), plus the caller's `pull` list, with { level, controlledTokens }
+    why: the rule is a private method; a GM-driven move has no region behaviour to call it
+    native_when: core exposes the pull rule, or a "teleport token and pull" API
+    retire_class: guarded
+    check: make foundry-portals-check
 
   - id: dnd5e-pins-transform-root
     packages: [dnd5e]

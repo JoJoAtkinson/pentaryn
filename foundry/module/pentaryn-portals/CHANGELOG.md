@@ -1,5 +1,62 @@
 # Changelog — pentaryn-portals
 
+## 0.7.0 — 2026-10-17 (pins rebuild, `context/plans/pin-2026-10-rebuild.md` §2, owner A)
+
+Needs a Foundry restart (`module.json` version). Additive API: CONTRACT stays `pentaryn-portals/api@1`.
+
+- **teleportToken pulls, as core's own Teleport Token region does — [declared].** A cross-scene
+  move now ends with one `dest.pullUsers(users, { level, controlledTokens: [token] })`: the users
+  core's rule picks (`usersToPull` in `portals-core.mjs`, a line-for-line copy of the private
+  `#getUsersToPull`, `client/data/region-behaviors/teleport-token.mjs:212-236`, v14.369, for a GM
+  mover: active players viewing the token's scene and source level who observe it and own no other
+  non-hidden sighted token there; nobody for a hidden token), plus the new **`opts.pull`** (users or
+  user ids, pulled whatever the rule says; not an array of those → `BAD_ARGS`). `level` is the
+  carried token's landed level. The rule's records are built after the carry (`pullCandidates`), so
+  a company that came along never keeps its owner behind (review R6; core's own hop carries the
+  company a tick later and does). The result adds **`pulled: [{ id, name }]`** (`[]` on the same
+  scene; absent on dryRun). The same scene never pulls (core's same-scene rule pulls only a
+  non-self mover; this mover is a GM). dryRun, `REFUSED` and `CONFLICT` pull nobody. A pull that
+  throws after the carry is warned (`teleportToken: the pull failed (the move stands)`), `pulled: []`. Before:
+  "nobody pulled". For pentaryn-pins 0.2.0, whose pinned players now follow their token through
+  core's pull (the mover pulls the owner) instead of a `Scene#view` patch.
+- **Teleport party pulls with the party's floor — [declared].** On another scene the pull and the
+  GM's own view carry `{ level }` when the party landed on one floor (`carryTo` now returns that
+  floor, else null), `{}` otherwise. Before: no level, so each player landed on core's
+  `_determineInitialLevel` floor, not necessarily the party's.
+- **A pinned player whose character stayed behind is not pulled — [declared] (review R2; superseded
+  by the prePull hook below, CR7).** Both
+  pull sites (Teleport party's every-active-player list, and teleportToken's rule list — never
+  `opts.pull`) leave out a user whose pentaryn-pins `pinnedToken(user).scene` is another scene than
+  the destination. Portals makes the one API read pentaryn-resume already makes (`apiOf`); pins
+  absent, its switch off, a GM or an unpinned user → `null` → pulled as stock; a throw is warned
+  (`pentaryn-pins pinnedToken() failed; pulling as stock`) and pulled as stock.
+- **Who a pull leaves out is a hook, not a pins read — [declared] (code review 2026-10-17 CR7, CR3).**
+  Portals fires `pentaryn-portals.prePull` (`Hooks.call`, HOOKS.prePull, the module's first own
+  event) ONCE at each pull site with `(users, { scene, level, token, reason: "token"|"party", pull })`;
+  a listener splices users out in place, `false` leaves them all behind. pentaryn-pins registers it
+  to drop a player pinned to a token on another scene, with one token walk per call — before, portals
+  called `apiOf("pentaryn-pins").pinnedToken(user)` once per user, each a full token walk. Portals
+  no longer imports `apiOf` or calls any pins API; the old throw-warning
+  (`pinnedToken() failed`) is gone — a throwing listener is caught by `Hooks.call`. `opts.pull`
+  still bypasses the filter (the listener sees it as `pull`). Teleport party with every player left
+  out sends no `pullUsers`; the GM's view still goes.
+- **The pull rule is the kit's — [declared] (CR8).** `usersToPull` left `portals-core.mjs` and
+  `pullCandidates` left `scene-adapter.mjs` for the new kit file `lib/pull-rule.mjs` (`sourceLevel`,
+  `ownsOtherSighted`, `pullCandidates`, `usersToPull`; kit 1.2.0, additive), which pentaryn-pins
+  vendors too for its level gap-filler, so the two cannot disagree. Ownership is
+  `TokenDocument#testUserPermission` only (core delegates to the actor). The row-per-clause table
+  moved to `foundry/lib/test/pull-rule.test.mjs`.
+- Portal-hop follow (`party.mjs`) is unchanged: no pull added; core's region still pulls the
+  PC's player.
+- Not in this release: the combat-tracker remap (`replacements` on carryTo's delete) — it needs a
+  carry marker and a guard in `party.mjs` `onDeleteToken` (plan §2.4, follow-up F1).
+- Tests: `usersToPull` table (`core.test.mjs`); teleport-token's cross-scene test rewritten (ops
+  `createEmbedded, deleteEmbedded, pullUsers`, still without `replacements`) plus the pull,
+  hidden, viewing-elsewhere, sighted-token, landed-level, same-scene, dryRun/REFUSED/CONFLICT,
+  BAD_ARGS and R2 rows; party's two cross-scene tests pin `{ level }`, plus the two-floor and R2
+  rows. The world fixture records view options when given and answers a token's
+  `testUserPermission` by its actor, as core does.
+
 ## 0.6.0 — 2026-10-17 (pins plan, `context/plans/pin-2026-10.md` §1)
 
 Needs a Foundry restart (`module.json` version).

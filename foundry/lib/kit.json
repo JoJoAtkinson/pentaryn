@@ -16,6 +16,7 @@
     "perf":     { "deps": [] },
     "pins":     { "deps": [] },
     "root-actor": { "deps": [] },
+    "pull-rule": { "deps": [] },
     "argon-kit": { "deps": [], "packages": ["enhancedcombathud"] },
     "argon-tooltip": { "deps": [], "ext": "css", "packages": ["enhancedcombathud"] }
   },
