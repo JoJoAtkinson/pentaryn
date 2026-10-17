@@ -1,0 +1,178 @@
+[
+ {
+  "id": "worlds-01",
+  "kind": "direct",
+  "prompt": "which modules are actually on in the pentaryn world rn and which ones did we leave off and why",
+  "expected": [
+   "pentaryn-world"
+  ]
+ },
+ {
+  "id": "worlds-02",
+  "kind": "indirect",
+  "prompt": "caven's player says he cant see marrith across the corridor at all, the cell bars eat the whole view of her glow",
+  "expected": [
+   "pentaryn-world"
+  ]
+ },
+ {
+  "id": "worlds-03",
+  "kind": "indirect",
+  "prompt": "talo's player forgot his login password for the underdark game, what did we set it to",
+  "expected": [
+   "pentaryn-world"
+  ]
+ },
+ {
+  "id": "worlds-04",
+  "kind": "confusable",
+  "prompt": "want to spin up a brand new world for the next campaign, same modules and settings as pentaryn. how do i make it",
+  "expected": [
+   "foundry-ops"
+  ]
+ },
+ {
+  "id": "worlds-05",
+  "kind": "direct",
+  "prompt": "for ardenford, which of the candidate maps did we pull for the harbour tier? want to cull some",
+  "expected": [
+   "ardenford"
+  ]
+ },
+ {
+  "id": "worlds-06",
+  "kind": "indirect",
+  "prompt": "the summer market night map is lit like noon, the torches do nothing and stealth is pointless. whats up with that",
+  "expected": [
+   "ardenford"
+  ]
+ },
+ {
+  "id": "worlds-07",
+  "kind": "indirect",
+  "prompt": "warden krole down in the brennick hall gaol still has a pistol on him, swap it for something without wrecking his multiattack",
+  "expected": [
+   "ardenford"
+  ]
+ },
+ {
+  "id": "worlds-08",
+  "kind": "confusable",
+  "prompt": "nothing we have really fits the greystone granaries in ardenford, dig through the whole map collection for something better",
+  "expected": [
+   "map-library"
+  ]
+ },
+ {
+  "id": "worlds-09",
+  "kind": "direct",
+  "prompt": "whats the scene id for the parley again, prepping scene 8 of the one-shot",
+  "expected": [
+   "space-journey"
+  ]
+ },
+ {
+  "id": "worlds-10",
+  "kind": "indirect",
+  "prompt": "i renumbered the scenes after cutting one but the actor folders in the sidebar still say the old numbers",
+  "expected": [
+   "space-journey"
+  ]
+ },
+ {
+  "id": "worlds-11",
+  "kind": "indirect",
+  "prompt": "kyle wants pip to go knock on doors in the dragonsfall guest wing at night, whos in those beds",
+  "expected": [
+   "space-journey"
+  ]
+ },
+ {
+  "id": "worlds-12",
+  "kind": "confusable",
+  "prompt": "kris might try planar binding on the demon in the archmage's quarters, what does the spell actually do rules wise",
+  "expected": [
+   "rules-lookup"
+  ]
+ },
+ {
+  "id": "worlds-13",
+  "kind": "direct",
+  "prompt": "regenerate the npcs from actors.json and load them into ardenford",
+  "expected": [
+   "importer"
+  ]
+ },
+ {
+  "id": "worlds-14",
+  "kind": "indirect",
+  "prompt": "tried to load the generated monsters and it threw an abort with code NOT_FOUND, nothing got written",
+  "expected": [
+   "importer"
+  ]
+ },
+ {
+  "id": "worlds-15",
+  "kind": "indirect",
+  "prompt": "after loading the monster batch theres a toast that wont go away saying delete Data/something",
+  "expected": [
+   "importer"
+  ]
+ },
+ {
+  "id": "worlds-16",
+  "kind": "confusable",
+  "prompt": "writing up a new bandit boss who needs real attack rows in foundry, where does all that go in the vault",
+  "expected": [
+   "world-authoring"
+  ]
+ },
+ {
+  "id": "worlds-17",
+  "kind": "direct",
+  "prompt": "need to write up a new quest hook, gimme the skeleton to fill in",
+  "expected": [
+   "templates"
+  ]
+ },
+ {
+  "id": "worlds-18",
+  "kind": "indirect",
+  "prompt": "start me a recap doc for last nights game, the usual format",
+  "expected": [
+   "templates"
+  ]
+ },
+ {
+  "id": "worlds-19",
+  "kind": "indirect",
+  "prompt": "one of the players wants a write-up of their character's abilities, whats the standard layout",
+  "expected": [
+   "templates"
+  ]
+ },
+ {
+  "id": "worlds-20",
+  "kind": "confusable",
+  "prompt": "where should a new tavern file live under world/ and what do i call it",
+  "expected": [
+   "world-authoring"
+  ]
+ },
+ {
+  "id": "worlds-21",
+  "kind": "negative",
+  "prompt": "remind me how journal page ownership works in foundry, observer vs limited on a page",
+  "expected": [
+   "none"
+  ]
+ },
+ {
+  "id": "worlds-22",
+  "kind": "negative",
+  "prompt": "whats the difference between a scene's nav name and its actual name in foundry",
+  "expected": [
+   "none"
+  ]
+ }
+]

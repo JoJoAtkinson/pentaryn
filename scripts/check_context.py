@@ -5,7 +5,9 @@
 2. A routing table that points at a file which no longer exists is worse than no table.
 3. A context file with no "Read this when:" line can't be aborted early by a reader who
    arrived by grep rather than through the index.
-4. The generated Module APIs table (context/foundry/README.md) lags the modules it lists
+4. A use-doc with no skill stub is invisible to routing; a stub pointing at a moved doc
+   routes to nothing (context/skills.md).
+5. The generated Module APIs table (context/foundry/README.md) lags the modules it lists
    (python-tooling-36; scripts/foundry/ops/index.py).
 
 Run: make check-context
@@ -69,6 +71,34 @@ def check_read_this_when(warnings: list[str]) -> None:
             )
 
 
+STUB_LINK_RE = re.compile(r"\]\(\.\./\.\./\.\./([^)]+)\)")
+# Docs that need no skill: the Foundry root is @-imported by CLAUDE.md.
+NO_SKILL = {"context/foundry/README.md"}
+
+
+def check_skills(errors: list[str]) -> None:
+    """Every stub points at a doc that exists; every use-doc has a stub."""
+    routed = set()
+    for stub in sorted((ROOT / ".claude/skills").glob("*/SKILL.md")):
+        rel = stub.relative_to(ROOT)
+        text = stub.read_text(encoding="utf-8")
+        if not re.search(rf"^name: {re.escape(stub.parent.name)}$", text, re.M):
+            errors.append(f"{rel}: 'name:' must match its folder ({stub.parent.name})")
+        if not re.search(r'^description: ".+"$', text, re.M):
+            errors.append(f"{rel}: 'description:' missing or not double-quoted")
+        m = STUB_LINK_RE.search(text)
+        if not m or not (ROOT / m.group(1)).exists():
+            errors.append(f"{rel}: points at no existing doc — was the doc moved?")
+        else:
+            routed.add(m.group(1))
+    docs = [p for p in (ROOT / "context").rglob("*.md") if "plans" not in p.parts]
+    docs.append(ROOT / "templates/README.md")
+    for doc in sorted(docs):
+        rel = str(doc.relative_to(ROOT))
+        if rel not in routed and rel not in NO_SKILL:
+            errors.append(f"{rel}: no skill routes to it — add .claude/skills/<name>/SKILL.md")
+
+
 def check_module_index(errors: list[str]) -> None:
     """The generated Module APIs table in context/foundry/README.md matches the modules."""
     if str(ROOT) not in sys.path:
@@ -88,6 +118,7 @@ def main() -> int:
     check_claude_md_length(errors)
     check_links(errors)
     check_read_this_when(warnings)
+    check_skills(errors)
     check_module_index(errors)
 
     for w in warnings:

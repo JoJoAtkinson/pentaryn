@@ -1,0 +1,216 @@
+[
+ {
+  "id": "r01",
+  "prompt": "okay, so what do i need to do setup the tunnel with cloudflare?",
+  "expected": [
+   "foundry-ops",
+   "cloudflare-access"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r02",
+  "prompt": "i want boot up the foundry with the tunnle and start the game pentaryn",
+  "expected": [
+   "foundry-ops"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r03",
+  "prompt": "something bugged out with my zones, they have big ? on those previews, did something not back up",
+  "expected": [
+   "scene-links",
+   "foundry-ops",
+   "pentaryn-world"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r04",
+  "prompt": "I've been moving to having only once character per login, so to move them around i should be pinning them to their scene right?",
+  "expected": [
+   "pins",
+   "pentaryn-world"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r05",
+  "prompt": "i put a bunch of tokens to find props for that are of things that the dragon murder allready",
+  "expected": [
+   "props",
+   "prompt-markers"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r06",
+  "prompt": "for the reclaimed ruins, and the wayward compass, can we put those in a subfolder called that so they are easier to find",
+  "expected": [
+   "ardenford",
+   "pentaryn-world"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r07",
+  "prompt": "for the underdark candidates, there were three maps used, idnetify the ones that were decided, put the rest away",
+  "expected": [
+   "pentaryn-world",
+   "map-library"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r08",
+  "prompt": "is there a addon for dndbeyond and making is so someone can log into that and use that character sheet",
+  "expected": [
+   "none",
+   "importer"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r09",
+  "prompt": "did you add the cahracter to the map i have, i created three prompt, also create those three login characters",
+  "expected": [
+   "prompt-markers"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r10",
+  "prompt": "here is a download url https://r2.foundryvtt.com/releases/14.369/FoundryVTT-Linux-14.369.zip install it",
+  "expected": [
+   "foundry-ops",
+   "automated-updates"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r11",
+  "prompt": "i have some spare tokens this week, do i have open items i need to code review, debug, or build?",
+  "expected": [
+   "pentaryn-world",
+   "ardenford",
+   "space-journey",
+   "feedback"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r12",
+  "prompt": "i have a lot of maps, adn i recall some of those were buidlling blocks where i can put them together",
+  "expected": [
+   "map-library"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r13",
+  "prompt": "find me a great map to use for a demo spot, night time, camp fire, ideally with a house in the distance",
+  "expected": [
+   "map-library"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r14",
+  "prompt": "on the reboot, please have it boot players, not prevent it if player on -- no player will ever be on at 3am",
+  "expected": [
+   "foundry-ops",
+   "automated-updates",
+   "resume"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r15",
+  "prompt": "the travel cards, those can be party or single person, is that correct?",
+  "expected": [
+   "scene-links"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r16",
+  "prompt": "do you ahve a way to make store owners where the player can shope for wares and buy things?",
+  "expected": [
+   "none",
+   "pentaryn-world",
+   "prompt-markers"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r17",
+  "prompt": "ensure all three charcaters have a fair amount of gold for there level.",
+  "expected": [
+   "rules-lookup"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r18",
+  "prompt": "when it reboots, i want the world to come back without being paused, I want people to be able to log in and play",
+  "expected": [
+   "headless-gm",
+   "foundry-ops",
+   "resume"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r19",
+  "prompt": "the update should happen on a Monday, that avoids weekend games",
+  "expected": [
+   "automated-updates"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r20",
+  "prompt": "call make vtt-update-uninstall on the mac, thats just clean up",
+  "expected": [
+   "automated-updates",
+   "foundry-ops"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r21",
+  "prompt": "set a workflow to see if you can find good free resources to download things for a dnd world to fill out rooms",
+  "expected": [
+   "props",
+   "map-library"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r22",
+  "prompt": "i added some prompts with \"this is a store, and I want to put things along the wall that make it feel like a shop\"",
+  "expected": [
+   "prompt-markers"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r23",
+  "prompt": "oh, the mcp failed to reconnect",
+  "expected": [
+   "mcp-fork",
+   "headless-gm",
+   "none"
+  ],
+  "kind": "real"
+ },
+ {
+  "id": "r24",
+  "prompt": "is this fully tested with multiple logins? did you test edge cases on the headless bot",
+  "expected": [
+   "headless-gm"
+  ],
+  "kind": "real"
+ }
+]

@@ -1,0 +1,146 @@
+[
+ {
+  "id": "lore-01",
+  "kind": "direct",
+  "prompt": "vess grew up in the undercity under greyharbour and ran with the ashfall company, set that up so players can figure it out by inspecting her",
+  "expected": [
+   "attributes"
+  ]
+ },
+ {
+  "id": "lore-02",
+  "kind": "indirect",
+  "prompt": "talo botched the inspect on the jailer and now he can never work out house barrabin even on other guys. how do i undo that, it was a test roll",
+  "expected": [
+   "attributes"
+  ]
+ },
+ {
+  "id": "lore-03",
+  "kind": "indirect",
+  "prompt": "player studied the dragon, rolled like a 12 and got literally nothing. can i make a bad roll give them some wrong info instead, like a lie",
+  "expected": [
+   "attributes"
+  ]
+ },
+ {
+  "id": "lore-04",
+  "kind": "confusable",
+  "prompt": "whats the actual 2024 rule for a knowledge check to recall info about a monster, like what DC and which skill",
+  "expected": [
+   "rules-lookup"
+  ]
+ },
+ {
+  "id": "lore-05",
+  "kind": "direct",
+  "prompt": "what have i got ticked in the review panel rn",
+  "expected": [
+   "attribute-review"
+  ]
+ },
+ {
+  "id": "lore-06",
+  "kind": "indirect",
+  "prompt": "i was typing in the reveal box for forge lung and it came up 'changed by claude click to reload' and wouldnt save. what did you do",
+  "expected": [
+   "attribute-review"
+  ]
+ },
+ {
+  "id": "lore-07",
+  "kind": "indirect",
+  "prompt": "what did you change on the witches stuff since i last signed it off? just show me the new bits",
+  "expected": [
+   "attribute-review"
+  ]
+ },
+ {
+  "id": "lore-08",
+  "kind": "confusable",
+  "prompt": "go over the elderholt witches attribute tree, i think the dcs are way too high and players will never get to the bottom",
+  "expected": [
+   "attributes"
+  ]
+ },
+ {
+  "id": "lore-09",
+  "kind": "direct",
+  "prompt": "need a new npc, a blacksmith in ardenford named oren. where does the file go and what goes at the top",
+  "expected": [
+   "world-authoring"
+  ]
+ },
+ {
+  "id": "lore-10",
+  "kind": "indirect",
+  "prompt": "my new npc note doesnt show up in the obsidian tag pane or tag: search at all, the others do",
+  "expected": [
+   "world-authoring"
+  ]
+ },
+ {
+  "id": "lore-11",
+  "kind": "indirect",
+  "prompt": "the bandit captain in my notes needs to actually fight in foundry with his multiattack, what do i add to his md",
+  "expected": [
+   "world-authoring"
+  ]
+ },
+ {
+  "id": "lore-12",
+  "kind": "confusable",
+  "prompt": "spin me up a new faction from the skeleton file for the salt dogs",
+  "expected": [
+   "templates"
+  ]
+ },
+ {
+  "id": "lore-13",
+  "kind": "direct",
+  "prompt": "add the ashfall accord to ardenhaven history, it was signed 4185 month 7 day 12",
+  "expected": [
+   "timelines"
+  ]
+ },
+ {
+  "id": "lore-14",
+  "kind": "indirect",
+  "prompt": "obsidian keeps flagging the date on my event as invalid, its 4327/02/30 which is a real day in our calendar",
+  "expected": [
+   "timelines"
+  ]
+ },
+ {
+  "id": "lore-15",
+  "kind": "indirect",
+  "prompt": "the merrowgate side tells the siege totally differently from everyone else, do i make a second file or what",
+  "expected": [
+   "timelines"
+  ]
+ },
+ {
+  "id": "lore-16",
+  "kind": "confusable",
+  "prompt": "how many days between 4327/02/12 and 4328/01/05 in campaign time",
+  "expected": [
+   "vault-tools"
+  ]
+ },
+ {
+  "id": "lore-17",
+  "kind": "negative",
+  "prompt": "give me like 5 names for a dwarven tavern, just ideas, dont make any files",
+  "expected": [
+   "none"
+  ]
+ },
+ {
+  "id": "lore-18",
+  "kind": "negative",
+  "prompt": "party trusts vess way too much, help me think up a twist for next session",
+  "expected": [
+   "none"
+  ]
+ }
+]

@@ -7,7 +7,7 @@ tags: [context, mcp, srd, tools]
 
 # dnd-scripts MCP tools — semantics and quirks
 
-**Read this when:** doing SRD lookups, searching the vault, or calling any
+**Read this when:** searching the vault, campaign-time math, or calling any
 `mcp__dnd-scripts__*` tool and wanting the right one on the first try.
 **Not this file:** Foundry's own tools (`mcp__foundry__*`) → [`foundry/README.md`](foundry/README.md)
 

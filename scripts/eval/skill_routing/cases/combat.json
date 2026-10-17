@@ -1,0 +1,210 @@
+[
+ {
+  "id": "combat-01",
+  "kind": "direct",
+  "prompt": "my fighter's lvl 5 now, how does he do both his attacks in one click on the hud instead of clicking the sword twice",
+  "expected": [
+   "melee"
+  ]
+ },
+ {
+  "id": "combat-02",
+  "kind": "indirect",
+  "prompt": "the monk player says her quarterstaff keeps rolling str not dex, shes a monk, what gives",
+  "expected": [
+   "melee"
+  ]
+ },
+ {
+  "id": "combat-03",
+  "kind": "indirect",
+  "prompt": "can i turn off the thing where hide auto rolls stealth at dc 15? i want to set the dc myself",
+  "expected": [
+   "melee"
+  ]
+ },
+ {
+  "id": "combat-04",
+  "kind": "confusable",
+  "prompt": "full attack button is showing up twice on the action bar for the paladin, two identical ones",
+  "expected": [
+   "argon"
+  ]
+ },
+ {
+  "id": "combat-05",
+  "kind": "direct",
+  "prompt": "pip's player keeps rolling damage then going 'oh wait sneak attack'. can we make the dagger just have an attack-with-sneak option that rolls it all at once",
+  "expected": [
+   "attack-activities"
+  ]
+ },
+ {
+  "id": "combat-06",
+  "kind": "indirect",
+  "prompt": "rogue spent her sneak attack once last session and its never come back, still shows 0 uses even in a new fight",
+  "expected": [
+   "attack-activities"
+  ]
+ },
+ {
+  "id": "combat-07",
+  "kind": "indirect",
+  "prompt": "trying to add a second attack to a weapon via eval-js and it throws 'Activity is not a valid embedded Document'",
+  "expected": [
+   "attack-activities"
+  ]
+ },
+ {
+  "id": "combat-08",
+  "kind": "confusable",
+  "prompt": "player says the + sneak attack button never showed up on his attack card this turn even though he had advantage",
+  "expected": [
+   "melee"
+  ]
+ },
+ {
+  "id": "combat-09",
+  "kind": "direct",
+  "prompt": "the combat hud is stuck showing the goblin even tho i selected the cleric now",
+  "expected": [
+   "argon"
+  ]
+ },
+ {
+  "id": "combat-10",
+  "kind": "indirect",
+  "prompt": "i want to add a new hook on renderItemButtonArgonComponent, will mine fire before or after the riders one? dont want them fighting",
+  "expected": [
+   "argon"
+  ]
+ },
+ {
+  "id": "combat-11",
+  "kind": "indirect",
+  "prompt": "theres an argon update out, is it gonna break all our stuff that hangs off it? what do i check first",
+  "expected": [
+   "argon"
+  ]
+ },
+ {
+  "id": "combat-12",
+  "kind": "confusable",
+  "prompt": "the off-hand shortsword is adding +4 dex to damage and it shouldnt, guy doesnt have the fighting style",
+  "expected": [
+   "attack-activities"
+  ]
+ },
+ {
+  "id": "combat-13",
+  "kind": "direct",
+  "prompt": "wizard dropped a fireball and now the circle is stuck on the map, cant drag it or delete it",
+  "expected": [
+   "aoe"
+  ]
+ },
+ {
+  "id": "combat-14",
+  "kind": "indirect",
+  "prompt": "sorcerer is using careful spell on her fireball, how do i make sure the fighter and bard dont get hit",
+  "expected": [
+   "aoe"
+  ]
+ },
+ {
+  "id": "combat-15",
+  "kind": "indirect",
+  "prompt": "player hit escape while placing burning hands and swears they lost the spell slot anyway",
+  "expected": [
+   "aoe"
+  ]
+ },
+ {
+  "id": "combat-16",
+  "kind": "confusable",
+  "prompt": "does evasion in 2024 still mean zero damage on a made dex save or did they change it",
+  "expected": [
+   "rules-lookup"
+  ]
+ },
+ {
+  "id": "combat-17",
+  "kind": "direct",
+  "prompt": "whats the actual rule for half cover again, +2 to ac and dex saves?",
+  "expected": [
+   "rules-lookup"
+  ]
+ },
+ {
+  "id": "combat-18",
+  "kind": "indirect",
+  "prompt": "need a large construct somewhere cr 5 to 8 for the vault guardian, give me a few options from the monster manual",
+  "expected": [
+   "rules-lookup"
+  ]
+ },
+ {
+  "id": "combat-19",
+  "kind": "indirect",
+  "prompt": "i edited a spear's damage parts with eval-js and now its rolling 2d6, wtf",
+  "expected": [
+   "rules-lookup"
+  ]
+ },
+ {
+  "id": "combat-20",
+  "kind": "confusable",
+  "prompt": "which of my npcs have anything written about the silver writ? search the notes",
+  "expected": [
+   "vault-tools"
+  ]
+ },
+ {
+  "id": "combat-21",
+  "kind": "direct",
+  "prompt": "search the vault for anything that mentions the drowned bell",
+  "expected": [
+   "vault-tools"
+  ]
+ },
+ {
+  "id": "combat-22",
+  "kind": "indirect",
+  "prompt": "get_spell_details keeps coming back not found when i pass it 'fireball' from get_spell_list",
+  "expected": [
+   "vault-tools"
+  ]
+ },
+ {
+  "id": "combat-23",
+  "kind": "indirect",
+  "prompt": "add a bite attack 2d6 piercing to the wolf's actions so build_actors picks it up next run",
+  "expected": [
+   "vault-tools"
+  ]
+ },
+ {
+  "id": "combat-24",
+  "kind": "confusable",
+  "prompt": "build_timeline_svg is erroring out when i try to redo the history chart for the old war",
+  "expected": [
+   "timelines"
+  ]
+ },
+ {
+  "id": "combat-25",
+  "kind": "negative",
+  "prompt": "roll initiative for everybody in the current combat and start round 1",
+  "expected": [
+   "none"
+  ]
+ },
+ {
+  "id": "combat-26",
+  "kind": "negative",
+  "prompt": "how should i run the ogre so the fight feels scarier, any tactics ideas",
+  "expected": [
+   "none"
+  ]
+ }
+]

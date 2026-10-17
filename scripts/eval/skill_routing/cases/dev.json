@@ -1,0 +1,130 @@
+[
+ {
+  "id": "dev-01",
+  "kind": "direct",
+  "prompt": "i want a new pentaryn module that tracks exhaustion levels per actor, with its own settings and an api. how do i scaffold it so it passes the gates",
+  "expected": [
+   "addon-blueprint"
+  ]
+ },
+ {
+  "id": "dev-02",
+  "kind": "indirect",
+  "prompt": "my preUpdateActor hook returns false but the update goes thru anyway?? the listener is async because it awaits a check",
+  "expected": [
+   "addon-blueprint"
+  ]
+ },
+ {
+  "id": "dev-03",
+  "kind": "indirect",
+  "prompt": "make foundry-ties-check is failing on conformance now, says a STALE exception and C61. what do i do with that",
+  "expected": [
+   "addon-blueprint"
+  ]
+ },
+ {
+  "id": "dev-04",
+  "kind": "confusable",
+  "prompt": "add a new mcp__foundry tool that calls game.pentaryn.ties.inspect so i can ask about a character's ties from here",
+  "expected": [
+   "mcp-fork"
+  ]
+ },
+ {
+  "id": "dev-05",
+  "kind": "direct",
+  "prompt": "actually i miss the wall autocomplete thing, can we bring it back",
+  "expected": [
+   "retired-addons"
+  ]
+ },
+ {
+  "id": "dev-06",
+  "kind": "indirect",
+  "prompt": "alt+w doesnt do anything anymore and game.pentaryn.walls is undefined, where did that go",
+  "expected": [
+   "retired-addons"
+  ]
+ },
+ {
+  "id": "dev-07",
+  "kind": "indirect",
+  "prompt": "i reverted the walls removal commit but now make test has a bunch of failing *_walls_retire tests, and it still wont sync",
+  "expected": [
+   "retired-addons"
+  ]
+ },
+ {
+  "id": "dev-08",
+  "kind": "confusable",
+  "prompt": "which pentaryn modules are switched off in the pentaryn world right now and why",
+  "expected": [
+   "pentaryn-world"
+  ]
+ },
+ {
+  "id": "dev-09",
+  "kind": "direct",
+  "prompt": "did the players file any bug reports last session? go thru them oldest first",
+  "expected": [
+   "feedback"
+  ]
+ },
+ {
+  "id": "dev-10",
+  "kind": "indirect",
+  "prompt": "a player says the little bug icon on the left is greyed out and does nothing when she clicks it",
+  "expected": [
+   "feedback"
+  ]
+ },
+ {
+  "id": "dev-11",
+  "kind": "indirect",
+  "prompt": "the reports caven's player sends cut off before the actual error happened, can we keep more of their history",
+  "expected": [
+   "feedback"
+  ]
+ },
+ {
+  "id": "dev-12",
+  "kind": "confusable",
+  "prompt": "a player says the attack button on the combat hud shows up twice on his turn",
+  "expected": [
+   "argon"
+  ]
+ },
+ {
+  "id": "dev-13",
+  "kind": "negative",
+  "prompt": "list all the scenes in the world we're in right now",
+  "expected": [
+   "none"
+  ]
+ },
+ {
+  "id": "dev-14",
+  "kind": "negative",
+  "prompt": "whats the hotkey in foundry to ping a spot on the map for everyone",
+  "expected": [
+   "none"
+  ]
+ },
+ {
+  "id": "dev-15",
+  "prompt": "i wrote a new doc in context/foundry for the weather module, does claude need anything else to find it",
+  "expected": [
+   "skill-routing"
+  ],
+  "kind": "direct"
+ },
+ {
+  "id": "dev-16",
+  "prompt": "claude keeps loading the wrong doc whenever i ask about portals, can you tighten that up",
+  "expected": [
+   "skill-routing"
+  ],
+  "kind": "indirect"
+ }
+]

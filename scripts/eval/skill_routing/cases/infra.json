@@ -1,0 +1,210 @@
+[
+ {
+  "id": "infra-01",
+  "kind": "direct",
+  "prompt": "start foundry and the tunnel so the guys can get on tonight, then shut it all down after",
+  "expected": [
+   "foundry-ops"
+  ]
+ },
+ {
+  "id": "infra-02",
+  "kind": "indirect",
+  "prompt": "made a new scene with Scene.create and set background.src to the map jpg, says success but the scene is just blank",
+  "expected": [
+   "foundry-ops"
+  ]
+ },
+ {
+  "id": "infra-03",
+  "kind": "indirect",
+  "prompt": "ran vtt-up on boss and its asking me 'cloud has a newer world snapshot... diverged' boot from latest or keep local?? which one do i want",
+  "expected": [
+   "foundry-ops"
+  ]
+ },
+ {
+  "id": "infra-04",
+  "kind": "confusable",
+  "prompt": "tunnel's up but my buddy gets a google page saying 'access blocked, has not completed the google verification process'",
+  "expected": [
+   "cloudflare-access"
+  ]
+ },
+ {
+  "id": "infra-05",
+  "kind": "direct",
+  "prompt": "all the foundry tools say module not connected again on boss and nobody has a browser open",
+  "expected": [
+   "headless-gm"
+  ]
+ },
+ {
+  "id": "infra-06",
+  "kind": "indirect",
+  "prompt": "world was still paused this morning after the nightly restart, players sat there waiting. whats supposed to unpause it",
+  "expected": [
+   "headless-gm"
+  ]
+ },
+ {
+  "id": "infra-07",
+  "kind": "indirect",
+  "prompt": "a player says theres a user called Claude in the join dropdown, can they just pick it and log in as that?",
+  "expected": [
+   "headless-gm"
+  ]
+ },
+ {
+  "id": "infra-08",
+  "kind": "confusable",
+  "prompt": "added a new tool to the bridge server and rebuilt it but my session still doesnt see it / old code runs",
+  "expected": [
+   "mcp-fork"
+  ]
+ },
+ {
+  "id": "infra-09",
+  "kind": "direct",
+  "prompt": "mondays update held a bunch of modules again, why does it keep holding stuff and where do i change that",
+  "expected": [
+   "automated-updates"
+  ]
+ },
+ {
+  "id": "infra-10",
+  "kind": "indirect",
+  "prompt": "weekly run rolled back node and the bots chrome, why did it do that and what decides it",
+  "expected": [
+   "automated-updates"
+  ]
+ },
+ {
+  "id": "infra-11",
+  "kind": "indirect",
+  "prompt": "that held major keeps getting an opus analysis, how much is the llm review costing per run and can it stop redoing it every patch",
+  "expected": [
+   "automated-updates"
+  ]
+ },
+ {
+  "id": "infra-12",
+  "kind": "confusable",
+  "prompt": "the 3am backup didnt seem to run last night, how do i check the nightly log and see if it fired",
+  "expected": [
+   "foundry-ops"
+  ]
+ },
+ {
+  "id": "infra-13",
+  "kind": "direct",
+  "prompt": "add jess.m@gmail.com so she can get into the game saturday",
+  "expected": [
+   "cloudflare-access"
+  ]
+ },
+ {
+  "id": "infra-14",
+  "kind": "indirect",
+  "prompt": "booted dave from the group and took him off the list but he can still get in, wtf",
+  "expected": [
+   "cloudflare-access"
+  ]
+ },
+ {
+  "id": "infra-15",
+  "kind": "indirect",
+  "prompt": "kyle signs in with google fine but then just gets a blank page / 403 from the site",
+  "expected": [
+   "cloudflare-access"
+  ]
+ },
+ {
+  "id": "infra-16",
+  "kind": "confusable",
+  "prompt": "nobody can reach vtt.atjoseph.com at all tonight, cloudflare shows a tunnel error page",
+  "expected": [
+   "foundry-ops"
+  ]
+ },
+ {
+  "id": "infra-17",
+  "kind": "direct",
+  "prompt": "talo logged back in and was on the old tavern map instead of where he left off",
+  "expected": [
+   "resume"
+  ]
+ },
+ {
+  "id": "infra-18",
+  "kind": "indirect",
+  "prompt": "how do i make kristine just land on whatever scene is active next time she logs in, forget where she was",
+  "expected": [
+   "resume"
+  ]
+ },
+ {
+  "id": "infra-19",
+  "kind": "indirect",
+  "prompt": "a player says after reconnecting the map came back but all their open sheets and journals were gone",
+  "expected": [
+   "resume"
+  ]
+ },
+ {
+  "id": "infra-20",
+  "kind": "confusable",
+  "prompt": "activating the dungeon scene yanked my player off the map their character is on, i want their view to follow the token",
+  "expected": [
+   "pins"
+  ]
+ },
+ {
+  "id": "infra-21",
+  "kind": "direct",
+  "prompt": "want an mcp tool that lists every wall on a scene so i dont have to eval-js it each time, set it up in the bridge",
+  "expected": [
+   "mcp-fork"
+  ]
+ },
+ {
+  "id": "infra-22",
+  "kind": "indirect",
+  "prompt": "toggle-token-condition keeps saying token not found but i copied the id straight off the token",
+  "expected": [
+   "mcp-fork"
+  ]
+ },
+ {
+  "id": "infra-23",
+  "kind": "indirect",
+  "prompt": "where can i see the scripts claude ran through eval-js last week, want to review what should become a real tool",
+  "expected": [
+   "mcp-fork"
+  ]
+ },
+ {
+  "id": "infra-24",
+  "kind": "confusable",
+  "prompt": "building a new pentaryn-lanterns module, how do i lay out its api manifest so pentaryn-read can call it",
+  "expected": [
+   "addon-blueprint"
+  ]
+ },
+ {
+  "id": "infra-25",
+  "kind": "negative",
+  "prompt": "every foundry tool just hangs, theres like three backend.js processes running",
+  "expected": [
+   "none"
+  ]
+ },
+ {
+  "id": "infra-26",
+  "kind": "negative",
+  "prompt": "whats the foundry shortcut to ping a spot on the map so the players look there",
+  "expected": [
+   "none"
+  ]
+ }
+]

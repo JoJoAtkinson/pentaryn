@@ -1,4 +1,4 @@
-# CLAUDE.md — routing only
+# CLAUDE.md — always-on rules + routing
 
 D&D 5.5e campaign vault plus the Foundry VTT automation that runs it. The tooling is
 world-agnostic — it runs **any dnd5e world** in this setup. Ask the live client which one you
@@ -8,7 +8,7 @@ are in (`game.world.id`) rather than assuming; current campaign state lives in
 [`context/pentaryn.md`](context/pentaryn.md).
 
 This file is auto-loaded into every session, so it stays short. Anything longer than two
-lines belongs in `context/`, and this table is how you find it.
+lines belongs in `context/`, and the skills are how you find it.
 
 ## Always
 
@@ -22,29 +22,22 @@ lines belongs in `context/`, and this table is how you find it.
   `.cache/` `.output/` `.state/` `.history/` `.venv/` `__pycache__/`
   `world/**/_history.*.svg` `world/**/_timeline.*.svg`
 
-## Route by task
+## Route by task — skills
 
-Open the entry point, then only what it points to. Every context file opens with a
-"**Read this when**" line — if it doesn't match your task, close it.
+Every use-doc under `context/` has a skill stub in `.claude/skills/<name>/SKILL.md`. The stub's
+`description` is the trigger; the doc it points to is the content. When a task matches a skill,
+invoke it and read the doc it names. Joe can also force one with `/<name>`.
+**Route before you search:** when a prompt names a module, a feature or a make target, check the
+skills first. The doc is faster and carries the gotchas; grepping the source is the fallback.
 
-| Doing… | Read first |
-|---|---|
-| Anything in Foundry — scenes, actors, tokens, server, tunnel, updater, assets | [`context/foundry/README.md`](context/foundry/README.md) |
-| Building a new Foundry module, or migrating one to the blueprint (kit, tiers, conformance) | [`context/foundry/addon-blueprint.md`](context/foundry/addon-blueprint.md) |
-| The MCP bridge itself — adding a `mcp__foundry__*` tool, the fork repo, build/restart, its logs | [`context/foundry/mcp-fork.md`](context/foundry/mcp-fork.md) |
-| The current one-shot — scene state, cast, IDs, what's still unbuilt | [`context/space-journey.md`](context/space-journey.md) |
-| The Ardenford campaign — world state, the map-candidate `Suggestions` folders | [`context/ardenford.md`](context/ardenford.md) |
-| The Pentaryn world (main build) — modules, splash, marker/crowd actors, what's still unbuilt | [`context/pentaryn.md`](context/pentaryn.md) |
-| Letting a friend into vtt.atjoseph.com — Gmail whitelist is **two lists** (Google test users + Cloudflare policy) | [`context/foundry/cloudflare-access.md`](context/foundry/cloudflare-access.md) |
-| World & lore authoring — where files go, naming, frontmatter, combat NPCs | [`context/world/README.md`](context/world/README.md) |
-| Building a scene out from typed prompt markers (`Prompt · <size>` tokens) | [`context/foundry/prompt-markers.md`](context/foundry/prompt-markers.md) |
-| A player's bug / defect / feature report — list, read one, resolve (`feedback_next`) | [`context/foundry/feedback.md`](context/foundry/feedback.md) |
-| Timeline events and the history SVGs | [`context/world/timelines.md`](context/world/timelines.md) |
-| A rule, spell, feat, item or monster — **the owned PHB/DMG/MM, not the SRD API** | [`context/foundry/rules-lookup.md`](context/foundry/rules-lookup.md) |
-| Attributes, monster study text, turning a backstory into things players can discover | [`context/foundry/attributes.md`](context/foundry/attributes.md) |
-| Vault search, campaign-time math, MCP tool semantics and quirks | [`context/tools.md`](context/tools.md) |
-| Creating content from a skeleton | [`templates/README.md`](templates/README.md) |
-| How something was designed or migrated (history, not instructions) | [`context/plans/`](context/plans/) |
+The Foundry domain root is always loaded (below), and it survives compaction.
+History, not instructions: `context/plans/` (no skills; never load one to operate a system).
+
+**New use-doc → add its skill stub in the same change.** Copy any existing `SKILL.md`, then
+write the `description` in the words Joe would use, not the doc's title. How, and the eval:
+[`context/skills.md`](context/skills.md).
+
+@context/foundry/README.md
 
 ## The two trees under `context/`
 

@@ -1,0 +1,242 @@
+[
+ {
+  "id": "map-01",
+  "kind": "direct",
+  "prompt": "dropped marker 1 and 2 on the tavern map. 1 is a chest with a potion of healing in it, 2 is a book on the bar. go",
+  "expected": [
+   "markers"
+  ]
+ },
+ {
+  "id": "map-02",
+  "kind": "indirect",
+  "prompt": "a player says they opened the locked strongbox just by clicking it in the actors list on the side, didnt even have to find it on the map",
+  "expected": [
+   "markers"
+  ]
+ },
+ {
+  "id": "map-03",
+  "kind": "indirect",
+  "prompt": "kyle read the warden's letter from all the way across the prison, through two walls. that eye should only work if he can actually see it",
+  "expected": [
+   "markers"
+  ]
+ },
+ {
+  "id": "map-04",
+  "kind": "confusable",
+  "prompt": "theres a prompt token on the chapel i typed 'goblin shaman w/ two wolves' into, build it",
+  "expected": [
+   "prompt-markers"
+  ]
+ },
+ {
+  "id": "map-05",
+  "kind": "direct",
+  "prompt": "ok i scattered a bunch of notes on the crypt and the barracks with what i want there, go build them all",
+  "expected": [
+   "prompt-markers"
+  ]
+ },
+ {
+  "id": "map-06",
+  "kind": "indirect",
+  "prompt": "need a lvl 5 human paladin, oath of devotion, soldier background, with real starting gear. stand him where i put the mid note in the chapel",
+  "expected": [
+   "prompt-markers"
+  ]
+ },
+ {
+  "id": "map-07",
+  "kind": "indirect",
+  "prompt": "the ogres you placed last time are drawn twice the size of their squares, no name on hover, and the sheet still has the monster manual picture",
+  "expected": [
+   "prompt-markers"
+  ]
+ },
+ {
+  "id": "map-08",
+  "kind": "confusable",
+  "prompt": "right clicking the empty map doesnt give me the prompt note option anymore, just nothing happens",
+  "expected": [
+   "pins"
+  ]
+ },
+ {
+  "id": "map-09",
+  "kind": "direct",
+  "prompt": "the opera house is gonna catch fire mid session. set the flames up ahead of time so i can make it go up when it takes",
+  "expected": [
+   "fire"
+  ]
+ },
+ {
+  "id": "map-10",
+  "kind": "indirect",
+  "prompt": "the burning tiles look totally frozen, not animating at all. are they broken?",
+  "expected": [
+   "fire"
+  ]
+ },
+ {
+  "id": "map-11",
+  "kind": "indirect",
+  "prompt": "when i paint across the room some squares come out as smoke and scorch marks instead of flames, wtf",
+  "expected": [
+   "fire"
+  ]
+ },
+ {
+  "id": "map-12",
+  "kind": "confusable",
+  "prompt": "the fireball circle is stuck on the map, cant move it or delete it",
+  "expected": [
+   "aoe"
+  ]
+ },
+ {
+  "id": "map-13",
+  "kind": "direct",
+  "prompt": "furnish the wizard's study on the top floor - desk, bookshelves, a rug, some clutter",
+  "expected": [
+   "props"
+  ]
+ },
+ {
+  "id": "map-14",
+  "kind": "indirect",
+  "prompt": "the bones and blood you put around the dragon wont budge when i try to drag them around",
+  "expected": [
+   "props"
+  ]
+ },
+ {
+  "id": "map-15",
+  "kind": "indirect",
+  "prompt": "players looted the lute off the music shop table and the item shows some generic icon, i want it to look like the thing they clicked",
+  "expected": [
+   "props"
+  ]
+ },
+ {
+  "id": "map-16",
+  "kind": "confusable",
+  "prompt": "marker 3 is on the shop table, make it a chest the players can loot, a few gold and a ring",
+  "expected": [
+   "markers"
+  ]
+ },
+ {
+  "id": "map-17",
+  "kind": "direct",
+  "prompt": "party needs to be able to climb down the well into the sewer map",
+  "expected": [
+   "scene-links"
+  ]
+ },
+ {
+  "id": "map-18",
+  "kind": "indirect",
+  "prompt": "players say the stairs up to the inn rooms dont do anything when i'm not logged in",
+  "expected": [
+   "scene-links"
+  ]
+ },
+ {
+  "id": "map-19",
+  "kind": "indirect",
+  "prompt": "pip went upstairs and suddenly ballad's player got yanked up too, and the combat tracker went blank",
+  "expected": [
+   "scene-links"
+  ]
+ },
+ {
+  "id": "map-20",
+  "kind": "confusable",
+  "prompt": "move talo's guy to that spot over there on the other map, his player should go with him",
+  "expected": [
+   "pins"
+  ]
+ },
+ {
+  "id": "map-21",
+  "kind": "direct",
+  "prompt": "do i own a gallows map anywhere? need one for next session",
+  "expected": [
+   "map-library"
+  ]
+ },
+ {
+  "id": "map-22",
+  "kind": "indirect",
+  "prompt": "all those castle maps are just numbered files, i have no idea whats in them. can we get them described so i can search",
+  "expected": [
+   "map-library"
+  ]
+ },
+ {
+  "id": "map-23",
+  "kind": "indirect",
+  "prompt": "can i just uninstall the drivethrurpg app now or will i lose stuff",
+  "expected": [
+   "map-library"
+  ]
+ },
+ {
+  "id": "map-24",
+  "kind": "confusable",
+  "prompt": "found the map i want, its a packed scene from a module. get it into the world",
+  "expected": [
+   "foundry-ops"
+  ]
+ },
+ {
+  "id": "map-25",
+  "kind": "direct",
+  "prompt": "pin talo to mira's player so her view stays on him",
+  "expected": [
+   "pins"
+  ]
+ },
+ {
+  "id": "map-26",
+  "kind": "indirect",
+  "prompt": "used the right-click teleport on pip during the fight and now she's gone from initiative",
+  "expected": [
+   "pins"
+  ]
+ },
+ {
+  "id": "map-27",
+  "kind": "indirect",
+  "prompt": "mira's still down in the dungeon with her character but she's hearing the tavern music i switched to",
+  "expected": [
+   "pins"
+  ]
+ },
+ {
+  "id": "map-28",
+  "kind": "confusable",
+  "prompt": "player logged back in this morning and was on the wrong map after the overnight restart",
+  "expected": [
+   "resume"
+  ]
+ },
+ {
+  "id": "map-29",
+  "kind": "negative",
+  "prompt": "the grid on this new map doesnt line up with the squares in the art, fix the grid size",
+  "expected": [
+   "none"
+  ]
+ },
+ {
+  "id": "map-30",
+  "kind": "negative",
+  "prompt": "how do i make a scene not show up in the players nav bar",
+  "expected": [
+   "none"
+  ]
+ }
+]
