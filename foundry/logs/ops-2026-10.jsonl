@@ -204,3 +204,7 @@
 {"ts": "2026-10-16T00:54:06Z", "cmd": "boot", "host": "boss", "action": "restore", "snapshot": "world-2026-10-16-001414-fvtt14.369-mac.tar.gz", "why": "FROM=latest", "from": "latest", "interactive": false}
 {"ts": "2026-10-16T01:00:24Z", "cmd": "cloud-upload", "host": "boss", "state": "uploading", "snapshot": "world-2026-10-16-010024-fvtt14.369-boss.safety.tar.gz", "reason": "pre-restore safety copy (boot)", "bytes": 850}
 {"ts": "2026-10-16T01:01:19Z", "cmd": "cloud-upload", "host": "boss", "state": "done", "snapshot": "world-2026-10-16-010024-fvtt14.369-boss.safety.tar.gz", "reason": "pre-restore safety copy (boot)", "bytes": 850, "seconds": 55.3}
+{"ts": "2026-10-17T00:10:43Z", "cmd": "module-sync", "module": "pentaryn-resume", "version": "0.1.0", "digest": "sha256:a3fc14850479c0d0ea5fc512922fb097ec8e841e6d49ea663680f566643c8e31", "git": "4996942b", "dirty": true, "dst": "/home/joe/foundry/data/Data/modules/pentaryn-resume"}
+{"ts": "2026-10-17T07:00:39Z", "cmd": "cloud-upload", "host": "boss", "state": "uploading", "snapshot": "world-2026-10-17-070036-fvtt14.369-boss.tar.gz", "reason": "shutdown", "bytes": 80152300}
+{"ts": "2026-10-17T07:04:24Z", "cmd": "cloud-upload", "host": "boss", "state": "done", "snapshot": "world-2026-10-17-070036-fvtt14.369-boss.tar.gz", "reason": "shutdown", "bytes": 80152300, "seconds": 225.7}
+{"ts": "2026-10-17T07:04:30Z", "cmd": "boot", "host": "boss", "action": "local", "snapshot": null, "why": "FROM=local", "from": "local", "interactive": false}
