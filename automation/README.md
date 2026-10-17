@@ -23,8 +23,9 @@ Design: [`context/plans/monday-updater-2026-10.md`](../context/plans/monday-upda
 
 **Where:** the primary host only. `vtt-update.sh` checks `python -m scripts.foundry.host
 require-primary` first and `apply.gate()` aborts off it (`PENTARYN_ROLE_OVERRIDE=primary` passes
-both). The Mac's Saturday 04:06 launchd jobs below are history: unloaded since 2026-10, and the
-gate would refuse them anyway.
+both). The Mac's Saturday 04:06 launchd jobs below are history: uninstalled from the Mac on
+2026-10-17 (`make vtt-update-uninstall`; `make vtt-update-install` puts them back), and the gate
+would refuse them anyway.
 
 **Host dependencies** (`scripts/foundry/update/hostdeps.py`) are planned beside the packages,
 applied after the packages and their smoke test, and rolled back one by one:

@@ -122,8 +122,8 @@ python  python  python    claude       claude×0–n   python  python   python  
 the notification still fires. That split was a hard requirement, not a nicety.
 Escalation (2026-10-10) is described in [its own section](#escalation-tiered-llm-review-v1-2026-10-10).
 
-Jobs: `com.pentaryn.vtt-update` (Sat 04:06) · `com.pentaryn.vtt-update-watchdog` (Sat 06:12).
-Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
+Jobs (Mac, history): `com.pentaryn.vtt-update` (Sat 04:06) · `com.pentaryn.vtt-update-watchdog` (Sat 06:12).
+Both **uninstalled 2026-10-17** — the updater runs on BOSS on Mondays now. `launchctl list | grep pentaryn.vtt`.
 
 ---
 
