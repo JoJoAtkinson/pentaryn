@@ -127,7 +127,8 @@ settings were copied on disk with classic-level while both worlds were closed.
   stay), Teleport pinned character. A companion several players co-own (a shared steed) now comes on
   a single move only from within 10 ft of the moving character, and always on a Gather. What is
   live: `game.pentaryn.pins.describe().version`. Details: [`foundry/pins.md`](foundry/pins.md).
-- **The lobby: keep "Pentaryn — Entry" active** (scene `cCHpAUuiR4zGXusB`). With Pinning on,
+- **The lobby: keep "Pentaryn — Entry" active** (scene `cCHpAUuiR4zGXusB`; its background is the world splash art,
+  `assets/splash/pentaryn-splash.webp`, set on its level). With Pinning on,
   activating a play map does **not** move the pinned players: it only sets what they see for a moment
   at login, before their token's scene is drawn. Unpinned players and the playlist do follow it.
   Move people by moving their tokens (portals, Teleport, Gather), and **re-activate Entry before
