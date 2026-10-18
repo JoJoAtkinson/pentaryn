@@ -238,5 +238,14 @@
   "expected": [
    "none"
   ]
+ },
+ {
+  "id": "map-31",
+  "kind": "indirect",
+  "prompt": "session's starting and the whole group is scattered across different maps — I want every player who's online pulled onto the tavern map with me, pets and summons too",
+  "expected": [
+   "pins",
+   "scene-links"
+  ]
  }
 ]

@@ -46,12 +46,12 @@ A stub is three lines of body and never grows. Content goes in the doc. Docs sta
 | File | Does |
 |---|---|
 | `run.py` | Runs each case in a fresh sandboxed `claude -p` (read-only tools, no MCP, not persisted) and grades the first skill/doc it reaches for. Results → `.output/skill-routing/results.json`. |
-| `cases/<cluster>.json` | 138 blind cases written from the doc bodies: direct, indirect, confusable (belongs to a neighbour), negative (`["none"]`). Clusters group skills that get confused with each other. |
+| `cases/<cluster>.json` | 139 blind cases written from the doc bodies: direct, indirect, confusable (belongs to a neighbour), negative (`["none"]`). Clusters group skills that get confused with each other. |
 | `cases/real.json` | 24 of Joe's real prompts from past sessions. The best signal — generated cases flatter the descriptions. |
 | `mine.py` | Pulls new prompt → doc-read pairs from the transcripts into `.output/skill-routing/mined.json` for hand-curation into `real.json`. |
 
 ```bash
-python3 scripts/eval/skill_routing/run.py -p 12                 # all 162, ~10 min
+python3 scripts/eval/skill_routing/run.py -p 12                 # all 163, ~10 min
 python3 scripts/eval/skill_routing/run.py cases/map.json        # one cluster
 python3 scripts/eval/skill_routing/run.py --ids r03,map-07 --repeat 3
 ```
