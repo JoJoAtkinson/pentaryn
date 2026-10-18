@@ -206,8 +206,15 @@ The watchdog ticks every 10 s, and the decision is `state.mjs nextAction()`.
   `state.test.mjs` only. **Seen again 2026-10-17 22:15, and here the page was not the fault:**
   `BRIDGE-RESTART` and a full `make foundry-headless-restart` (fresh login) both left the probe
   failing. A `kill -9` of the `backend.js` broker (pid from `make foundry-bridge-status`) fixed it
-  at once. When a fresh login does not clear `BRIDGE_STALE`, kill the broker; the watchdog cannot
-  do that itself, because the broker belongs to a Claude session.
+  at once. **Cause, found 2026-10-18:** every `BRIDGE_STALE` came 8–14 s after the **Gamemaster**
+  account logged in (Foundry's `debug.<date>.log`, `authentication successful for user
+  Gamemaster`). An https GM tab signals the broker over WebRTC (`:31416`; whether Joe's tab reached
+  it through `wslrelay` from Windows or a forwarded port from the Mac was not pinned down), and the
+  upstream broker then trusted WebRTC for good; when that
+  peer went, the bot's open websocket was ignored. Fixed in the fork (`3ce3336`, `transport()` in
+  `foundry-connector.ts`: an open websocket always wins). Proven live by signalling a throwaway
+  WebRTC peer and dropping it; the bridge kept answering. A `BRIDGE_STALE` that a fresh login does
+  not clear on a broker built before that commit still needs the `kill -9`.
 - **A broker that goes away and comes back (the normal case).** This happens naturally when Claude sessions end
   and start. Look in the log for `BRIDGE_DOWN … no MCP broker`, then `✓ BRIDGE-RESTART`, then
   `CONNECTED`.
