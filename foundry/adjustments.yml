@@ -1347,6 +1347,17 @@ adjustments:
     retire_class: guarded
     check: make foundry-portals-check
 
+  - id: core-region-polygon-tree-warm
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/scene-adapter.mjs, foundry/module/pentaryn-portals/party.mjs]
+    markers: ["warmRegionTrees"]
+    what: before a displace (teleport-waypoint) Token update — teleportToken's same-scene move (pins' gather and Teleport onto the scene the character is on) and spreadArrival's step — every region of the scene has its lazy `polygonTree` getter read once
+    why: v14.369's RegionDocument#testSamples (the teleport branch of segmentizeMovementPath, region.mjs:603) reads the private #polygonTree without the getter; on a scene no client has drawn, or after _clearPolygonTree, the whole update throws "reading 'testPoint'" and nothing moves (live S20, 2026-10-17)
+    native_when: core's teleport segmentizer reads `this.polygonTree` (the getter), as its other branches do
+    retire_class: safe
+    check: make foundry-portals-check
+
   - id: core-region-config-portal-card
     packages: [core]
     modules: [pentaryn-portals]
@@ -1387,7 +1398,7 @@ adjustments:
     modules: [pentaryn-pins]
     files: [foundry/module/pentaryn-pins/pins-core.mjs, foundry/module/pentaryn-pins/follow.mjs]
     markers: ["coreSwitchesLevel", "ownsOtherSighted"]
-    what: a pinned player's view follows their token to another level of the same scene only when core's own level switch will not (a copy of the per-token test in TokenDocument.#handleMovementOperation, token.mjs:2927-2946; its "owns another sighted token" clause is the kit's ownsOtherSighted, row core-kit-pull-rule), so the two never both view
+    what: a pinned player's view follows their token to another level of the same scene only when core's own level switch will not (a copy of the per-token test in TokenDocument.#handleMovementOperation, token.mjs:2927-2946; its "owns another sighted token" clause is the kit's ownsOtherSighted, row core-kit-pull-rule), so the two never both view; the test runs on the player's own client only (pins 0.3.0 code review G1 — never on the GM's lagging copy of the player's view)
     why: the test is private; doing it unconditionally would race core's own view
     native_when: core switches an owner's view to their token's new level unconditionally, or exposes its decision
     retire_class: guarded
@@ -1397,8 +1408,8 @@ adjustments:
     packages: [core]
     modules: [pentaryn-pins]
     files: [foundry/module/pentaryn-pins/pins-core.mjs, foundry/module/pentaryn-pins/follow.mjs]
-    markers: ["replayDecision", "pullToScene"]
-    what: on a pinned player's client (switch on) a second game.socket listener on core's "pullToScene" event records a pull that arrives while canvas.loading — which Scene#view drops with a toast (scene.mjs:264-266) — and views it, as sent, once loading clears; no patch, unpinned users and GMs untouched
+    markers: ["replayDecision", "pullToScene", "showing"]
+    what: on a pinned player's client (switch on) a second game.socket listener on core's "pullToScene" event records a pull that arrives while canvas.loading — which Scene#view drops with a toast (scene.mjs:264-266) — and views it, as sent, once loading clears, unless the canvas then already shows that scene and level (Scene#view would draw nothing, scene.mjs:273-287 — core's own level switch beside a same-scene pull); pins' own views (safety net, level gap-filler) drop an OLDER held pull and are themselves dropped by a newer one (one sequence counter, pins 0.3.0 code review G4); no patch, unpinned users and GMs untouched
     why: a pull is how a token's move reaches a pinned player, and core drops one that lands during any draw (slow Cloudflare loads); with the Scene#view patch gone nothing else re-asks
     native_when: core queues a view requested while loading instead of dropping it
     retire_class: guarded

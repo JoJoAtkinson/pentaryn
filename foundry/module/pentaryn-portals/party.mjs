@@ -12,8 +12,8 @@
  * also deletes with `replacements`, and does not drag anything along.
  */
 
-import { MODULE, FLAG_SCOPE, crowded, displaceOptions, followersOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
-import { carryTo, clashNotice, destinationsOf, docOf, gmUserIds, landingPlaces, recordOf } from "./scene-adapter.mjs";
+import { MODULE, FLAG_SCOPE, crowded, displaceOptions, companionsOf, isAoeHandle, tokenBox, tokenCentre } from "./portals-core.mjs";
+import { carryTo, clashNotice, destinationsOf, docOf, gmUserIds, landingPlaces, reachTest, recordOf, warmRegionTrees } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { PARTY_ROWS } from "./api-manifest.mjs";
 import { claimDocument } from "./lib/election.mjs";
@@ -74,6 +74,7 @@ export async function spreadArrival(tokenOrUuid) {
     changes[flagPath(FLAG_SCOPE, others ? "claims.spread" : "claims")] = _del;
   }
   if (!Object.keys(changes).length) return arrived;
+  if (place) warmRegionTrees(arrived.parent);   // a displace step: core's teleport segmentizer needs the trees built
   await arrived.update(changes, place ? displaceOptions([{ _id: arrived.id, ...place }]) : {});
   return arrived;
 }
@@ -112,13 +113,13 @@ export async function bringFollowers(scene, deleted, replacements, { held = new 
   if (!leaders.length) return;
   const gone = new Set(deleted.map(t => t.id));
   const remaining = scene.tokens.filter(t => !gone.has(t.id)).map(t => recordOf(t, { gmIds }));
-  // Each PC's own company lands around that PC. Then, if several PCs went through together to
-  // one scene, whatever they co-own (a shared steed) lands around the first of them.
-  const passes = leaders.map(l => ({ group: [l.record], arrived: l.arrived }));
-  const sameDest = leaders.filter(l => l.arrived.parent === leaders[0].arrived.parent);
-  if (sameDest.length > 1) passes.push({ group: sameDest.map(l => l.record), arrived: sameDest[0].arrived });
-  for (const { group, arrived } of passes) {
-    let followers = followersOf(group, remaining.filter(x => scene.tokens.has(x.id))).map(x => x.doc);
+  // Each PC's own company lands around that PC. A companion several characters' players co-own (a
+  // shared steed) comes only within 10 ft of a PC that went through, measured where that PC stood;
+  // of several within reach, the last of them takes it (pin-2026-10-gather.md §11; before 0.8.0 it
+  // came when all its owners went together, beside the first).
+  const company = companionsOf(leaders.map(l => l.record), remaining, { near: reachTest(scene) });
+  for (const { record, arrived } of leaders) {
+    let followers = company.filter(c => c.leader === record.id && scene.tokens.has(c.record.id)).map(c => c.record.doc);
     const dest = arrived.parent;
     const taken = held.get(dest.id);
     const stuck = taken ? followers.filter(f => taken.has(f.id)) : [];

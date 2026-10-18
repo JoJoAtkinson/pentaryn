@@ -80,12 +80,31 @@ export const MANIFEST = Object.freeze({
       gm: true, writes: true, dryRun: true,
       sideEffects: ["through pentaryn-portals teleportToken: the pinned token and its company (summons, pets) moved",
         "switch on and the player online: teleportToken's pull names the player, so a cross-scene move pulls them (pullToScene)",
-        "switch on and the player online: a same-scene move pulls them to the token's scene and level (pullToScene; a view of what is drawn draws nothing)"],
+        "switch on and the player online: a same-scene move pulls them to the token's scene and level (pullToScene; a view of what is drawn draws nothing; "
+          + "onto another floor core's own level switch may also run on their client: the second view is then a no-op or dropped, never replayed when it changes nothing)"],
       doc: "Teleport a player's pinned character, with its summons and pets, to a point (portals teleportToken). "
         + "BAD_ARGS unpinned, NOT_FOUND no token, AMBIGUOUS several, UNSUPPORTED without pentaryn-portals (teleportToken). With the switch on "
         + "and the player online, portals pulls them on a cross-scene move (pull: [user]). viewFollows: cross-scene, portals' pulled names "
         + "the player; same scene, switch on, online and the pull sent; a dryRun, switch on and online. warning VIEW_UNCHANGED: a cross-scene move that did not "
         + "pull the player while they are online or the switch is off; an offline player with the switch on lands on the token's scene at login (resume).",
+    },
+    {
+      path: "gather",
+      params: [{ name: "opts", type: "{ x, y, scene?, level?, dryRun = false }",
+        doc: "x, y: canvas point on the destination; scene: Scene|id|uuid|exact name (default game.scenes.current: the canvas scene in a browser, the table's scene on the headless bot; bridge callers should pass it); level: a level id on it (default: the canvas level there, else its initial level)" }],
+      returns: "{ ok: true, to: { scene, x, y, level }, moved: [{ user, actor, token, form, from, followers, pulled, viewFollows, warnings }], "
+        + "skipped: [{ user, actor, code, detail }], offline: [{ user, actor }], failed: [{ user, actor, code, reason }], warning?: PARTIAL|NOBODY, dryRun? } | { ok: false, code, reason }",
+      gm: true, writes: true, dryRun: true, since: "0.3.0",
+      sideEffects: ["per logged-in pinned player, in order: pins.teleport's move → pentaryn-portals teleportToken (the pinned token and its company moved to the point, one level); one token walk for the whole gather",
+        "cross-scene: portals pulls the player (pull: [user]); same scene: pullToScene to the token's scene and level",
+        "portals teleportToken gather: { later } (the members still to move): a companion several gathered players co-own comes with the last of them; "
+          + "one portals held for a later member whose move then failed is carried alone beside the last owner that moved (in that member's followers; its own failure in failed[])",
+        "a member's carry (marked by its gather option in portals' prePull) pulls only its own player; any other pull meanwhile keeps today's rule",
+        "offline, unpinned, GM users and pins with no single token: nothing"],
+      doc: "Gather every logged-in player's pinned character, with its summons and pets, at one point (cross-scene or same scene); their views follow. "
+        + "No picking: every active non-GM user with a pin that has exactly one token. NOT_GM; REFUSED while pinning is off; BAD_ARGS bad x/y, scene or level, "
+        + "or no scene given and no current scene; UNSUPPORTED without portals teleportToken; CONFLICT while another gather runs. One member failing does not stop the others "
+        + "(failed[], warning PARTIAL). warnings per member: UNLINKED, NOT_OWNER, COMBAT (a cross-scene move drops combatants from the tracker), VIEW_UNCHANGED (the view did not follow).",
     },
     {
       path: "inspect",
@@ -101,7 +120,7 @@ export const MANIFEST = Object.freeze({
       params: [],
       returns: "{ ok, checks: [{ label, ok, detail }] }",
       gm: false, writes: false,
-      doc: "Live smoke checks after a sync: the Scene#_onActivate patch installed, setting readable, portals teleportToken present.",
+      doc: "Live smoke checks after a sync: the Scene#_onActivate patch installed, setting readable, portals teleportToken present, the prePull listener registered (gather depends on it).",
     },
   ],
   flags: {

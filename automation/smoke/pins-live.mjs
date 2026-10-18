@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Live multi-login scenario runner for pentaryn-pins (with pentaryn-portals 0.6.0 teleportToken,
- * pentaryn-prompts 0.4.6 placeAt and pentaryn-resume 0.1.1) against the LOCAL Foundry.
- * Design and go-live checklist: context/plans/pin-2026-10.md. Use-doc: context/foundry/pins.md.
+ * Live multi-login scenario runner for pentaryn-pins 0.3.0 (with pentaryn-portals 0.8.0 teleportToken and
+ * its co-owned companion rule, pentaryn-prompts 0.4.6 placeAt and pentaryn-resume 0.2.0) against the
+ * LOCAL Foundry. Design and go-live checklist: context/plans/pin-2026-10.md; Gather (S20-S23) and the
+ * co-owned steed rule (S24-S27): context/plans/pin-2026-10-gather.md. Use-doc: context/foundry/pins.md.
  *
  *   node automation/smoke/pins-live.mjs --seed             create the PinTest fixture (idempotent; a stopped
  *                                                          run's leftovers are cleared first: see seedMode)
@@ -84,6 +85,7 @@ export const CONTROL_PORT = 31414;
 export const VIEWPORT = Object.freeze({ width: 800, height: 600 });
 export const TEXT = Object.freeze({
   promptNote: "Prompt note",
+  gather: "Gather logged-in players here",
   teleport: "Teleport pinned character",
   follows: /Your view follows/i,
   cannotSwitch: /cannot switch Scenes/i,
@@ -105,6 +107,11 @@ export const FIX = Object.freeze({
     pet: { name: "PinTest Alpha Pet", type: "npc", owner: "A", link: true, disposition: "FRIENDLY" },
     beta: { name: "PinTest Beta", type: "character", owner: "B", link: true },
     gamma: { name: "PinTest Gamma", type: "character", owner: "C", link: true },
+    // a steed A and B co-own (no summon flag): the co-owned companion rule (gather plan §11). A gather
+    // always brings it, beside the last-moved of its gathered owners; a single move only when it stands
+    // within 10 ft (5e distance: one empty square between at most; same level) of the moving owner. Only S24-S27 place it: every older
+    // layout leaves it off the map, so no older scenario's company changes.
+    steed: { name: "PinTest Steed", type: "npc", owners: ["A", "B"], link: true, disposition: "FRIENDLY" },
     // S16's polymorph target, never placed
     wolf: { name: "PinTest Wolf", type: "npc", owner: null, link: false },
   },
@@ -128,11 +135,23 @@ export const POS = Object.freeze({
   betaN: { scene: "north", x: 500, y: 200 }, gammaN: { scene: "north", x: 700, y: 200 },
   alphaS: { scene: "south", x: 900, y: 200 }, summonS: { scene: "south", x: 1000, y: 200 }, petS: { scene: "south", x: 900, y: 300 },
   betaS: { scene: "south", x: 600, y: 200 }, gammaS: { scene: "south", x: 700, y: 700 },
+  // the co-owned steed (S24-S27), in 5e distance (adjacent 5 ft, one empty square between 10 ft; code review G3):
+  // 10 ft below Alpha (the pet's square between: within reach), 15 ft below it (two squares between: beyond, though
+  // the old raw-gap measure took it), and touching both Alpha and Beta (Beta moved beside the summon); a pet across the map (S26)
+  steedNear: { scene: "north", x: 200, y: 400 }, steedFar: { scene: "north", x: 200, y: 500 },
+  steedTie: { scene: "north", x: 300, y: 300 }, betaTie: { scene: "north", x: 400, y: 200 },
+  petFar: { scene: "north", x: 1000, y: 800 },
 });
+const HOME = { alpha: POS.alphaN, summon: POS.summonN, pet: POS.petN, beta: POS.betaS, gamma: POS.gammaN, steed: null };
+const ALL_NORTH = { ...HOME, beta: POS.betaN };
 export const LAYOUT = Object.freeze({
-  home: { alpha: POS.alphaN, summon: POS.summonN, pet: POS.petN, beta: POS.betaS, gamma: POS.gammaN },
-  allNorth: { alpha: POS.alphaN, summon: POS.summonN, pet: POS.petN, beta: POS.betaN, gamma: POS.gammaN },
-  allSouth: { alpha: POS.alphaS, summon: POS.summonS, pet: POS.petS, beta: POS.betaS, gamma: POS.gammaS },
+  home: HOME,
+  allNorth: ALL_NORTH,
+  allSouth: { alpha: POS.alphaS, summon: POS.summonS, pet: POS.petS, beta: POS.betaS, gamma: POS.gammaS, steed: null },
+  steedGather: { ...ALL_NORTH, steed: POS.steedFar },                // S24: beyond 10 ft of both owners
+  steedNear: { ...HOME, steed: POS.steedNear },                      // S25
+  steedFar: { ...HOME, pet: POS.petFar, steed: POS.steedFar },       // S26
+  steedTie: { ...ALL_NORTH, beta: POS.betaTie, steed: POS.steedTie }, // S27
 });
 export const SPOTS = Object.freeze({
   portalWalk: { x: 1150, y: 450 },                       // top-left: the token's centre lands mid-region
@@ -140,6 +159,9 @@ export const SPOTS = Object.freeze({
   crossScene: { scene: "south", x: 1000, y: 750 },
   copy: { scene: "south", x: 1100, y: 800 },
   emptyNorth: { x: 1000, y: 850 },
+  gatherSouth: { scene: "south", x: 1050, y: 750 },       // canvas points (a square's centre)
+  gatherNorth: { scene: "north", x: 650, y: 750 },
+  tieB: { scene: "south", x: 450, y: 850 },               // S27: B's own landing, far from Alpha's
 });
 
 /* ── pure helpers (unit-tested in pins-live.test.mjs) ───────────────────── */
@@ -281,6 +303,37 @@ export function offFloor(layout, ids) {
 export const tokensOn = (layout, key, sceneId) => (layout?.[key] ?? []).filter(t => t.scene === sceneId);
 export const centreOf = (t, g = GRID) => ({ x: t.x + (t.w ?? 1) * g / 2, y: t.y + (t.h ?? 1) * g / 2 });
 export const chebyshev = (p, q) => Math.max(Math.abs(p.x - q.x), Math.abs(p.y - q.y));
+
+/**
+ * The 5e distance between two tokens in feet (code review G3, portals' `reachFeet` over `edgeGap`):
+ * the squares counted to reach the other, its square included — adjacent (touching) 5 ft, one empty
+ * square between 10 ft; the larger axis gap, so a diagonal square counts as one. `w`/`h` in squares.
+ */
+export function distanceFt(a, b, { grid = GRID, ftPerSquare = 5 } = {}) {
+  const gap = (a0, aw, b0, bw) => Math.max(0, Math.max(a0, b0) - Math.min(a0 + aw * grid, b0 + bw * grid));
+  return (Math.max(gap(a.x, a.w ?? 1, b.x, b.w ?? 1), gap(a.y, a.h ?? 1, b.y, b.h ?? 1)) / grid + 1) * ftPerSquare;
+}
+
+/** Pairs of tokens ({ name, scene, x, y, w, h }) on one scene whose boxes share area (touching edges do not). */
+export function overlapping(toks, g = GRID) {
+  const out = [];
+  const list = toks ?? [];
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], b = list[j];
+      if (a.scene !== b.scene) continue;
+      const ox = Math.min(a.x + (a.w ?? 1) * g, b.x + (b.w ?? 1) * g) - Math.max(a.x, b.x);
+      const oy = Math.min(a.y + (a.h ?? 1) * g, b.y + (b.h ?? 1) * g) - Math.max(a.y, b.y);
+      if (ox > 0 && oy > 0) out.push([a.name, b.name]);
+    }
+  }
+  return out;
+}
+
+/** A gather row's user name (`{ user: { id, name } }`, or a bare name). */
+export const userNames = rows => (rows ?? []).map(r => r?.user?.name ?? (typeof r?.user === "string" ? r.user : null));
+/** The rows about PinTest users: real pinned players are offline during a run and show up in `offline`. */
+export const testRows = (rows, prefix = PREFIX) => (rows ?? []).filter(r => isTestName(userNames([r])[0], prefix));
 
 /** C has no canvas, so Scene#view only toasts INFO.SceneViewCanvasDisabled naming the scene. */
 export const sawCanvasDisabled = (toasts, sceneName) =>
@@ -554,9 +607,12 @@ export function installBridgeGuard(ports, w = globalThis) {
 }
 
 /**
- * Every page: records each ui.notifications toast (raw key, format name, text, seq) in
- * window.__pinsLive, and on the GM page counts the right-click events that reach #board.
- * `noCanvas` sets Foundry's own client switch (localStorage core.noCanvas) before the game loads.
+ * Every page: records each ui.notifications toast (raw key, format name, text, seq) and each
+ * `pullToScene` socket event core delivers to this client (`pulls`, `pullSeq`: a second listener on
+ * game.socket, attached once the socket exists; S23 counts them) in window.__pinsLive, and on the GM
+ * page counts the right-click events that reach #board. `poll` attaches what is not attached yet (it
+ * runs every 50 ms). `noCanvas` sets Foundry's own client switch (localStorage core.noCanvas) before
+ * the game loads.
  */
 export function installPageProbes(opts = {}, w = globalThis) {
   try {
@@ -575,7 +631,7 @@ export function installPageProbes(opts = {}, w = globalThis) {
       w.document.head?.append(st);
     });
   }
-  const store = { seq: 0, toasts: [], board: { down: 0, up: 0, contextmenu: 0 } };
+  const store = { seq: 0, toasts: [], pullSeq: 0, pulls: [], board: { down: 0, up: 0, contextmenu: 0 } };
   w.__pinsLive = store;
   const wrap = () => {
     const n = w.ui?.notifications;
@@ -592,8 +648,20 @@ export function installPageProbes(opts = {}, w = globalThis) {
     };
     n.__pinsLiveWrapped = true;
   };
-  wrap();
-  if (typeof w.setInterval === "function") w.setInterval(wrap, 50);
+  // core's own pull reaches this client as the "pullToScene" socket event (sceneId, viewOptions);
+  // a listener of our own counts each arrival, whether core then draws it, drops it or it is a no-op
+  let pullsOn = false;
+  const listenPulls = () => {
+    const sock = w.game?.socket;
+    if (pullsOn || !sock || typeof sock.on !== "function") return;
+    sock.on("pullToScene", (sceneId, viewOptions) => {
+      store.pulls.push({ seq: ++store.pullSeq, t: Date.now(), scene: sceneId ?? null, level: viewOptions?.level ?? null });
+    });
+    pullsOn = true;
+  };
+  store.poll = () => { wrap(); listenPulls(); };
+  store.poll();
+  if (typeof w.setInterval === "function") w.setInterval(store.poll, 50);
   if (opts.board && typeof w.addEventListener === "function") {
     const count = k => ev => { if (ev?.target?.id === "board") store.board[k] += 1; };
     w.addEventListener("pointerdown", count("down"), true);
@@ -663,7 +731,17 @@ function clientHelpers(FIX) {
     return s;
   };
   const plain = v => JSON.parse(JSON.stringify(v ?? null));
-  return { FIX, P, isTest, sleep, scene, actor, user, region, tokensOf, levelId, info, displace, waitFor, layoutState, viewScene, plain };
+  // the fixture's ownership of an actor: OWNER for each of its owners (`owners`, or the one `owner`), nobody else
+  const ownershipOf = spec => {
+    const out = { default: 0 };
+    for (const k of spec.owners ?? (spec.owner ? [spec.owner] : [])) {
+      const u = user(k);
+      if (!u) throw new Error(`no user ${FIX.users[k]}`);
+      out[u.id] = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+    }
+    return out;
+  };
+  return { FIX, P, isTest, sleep, scene, actor, user, region, tokensOf, levelId, info, displace, waitFor, layoutState, viewScene, plain, ownershipOf };
 }
 
 /** One expression that runs `fn(H, args)` in the client and resolves to its JSON string. */
@@ -725,15 +803,16 @@ async function opState(H) {
 async function opSeed(H) {
   const F = H.FIX;
   const notes = [];
-  const OWNER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
   for (const [key, spec] of Object.entries(F.actors)) {
-    const owner = spec.owner ? H.user(spec.owner) : null;
-    if (spec.owner && !owner) throw new Error(`no user ${F.users[spec.owner]}`);
-    const ownership = { default: 0, ...(owner ? { [owner.id]: OWNER } : {}) };
+    const ownership = H.ownershipOf(spec);
     const disp = spec.disposition ? { disposition: CONST.TOKEN_DISPOSITIONS[spec.disposition] } : {};
     const a = H.actor(key);
     if (!a) await Actor.create({ name: spec.name, type: spec.type, ownership, prototypeToken: { name: spec.name, actorLink: !!spec.link, ...disp } });
-    else await a.update({ ownership, "prototypeToken.actorLink": !!spec.link, ...(spec.disposition ? { "prototypeToken.disposition": disp.disposition } : {}) });
+    else {
+      await a.update({ "prototypeToken.actorLink": !!spec.link, ...(spec.disposition ? { "prototypeToken.disposition": disp.disposition } : {}) });
+      // replaced, not merged: an OBSERVER grant a stopped S23 left must not survive a reseed
+      await a.update({ ownership }, { diff: false, recursive: false });
+    }
   }
   for (const [key, spec] of Object.entries(F.actors)) {
     if (!spec.summonOf) continue;
@@ -901,6 +980,37 @@ async function opTeleportParty(H, a) {
 
 async function opAudit(H) {
   return H.plain(game.pentaryn.pins.audit());
+}
+
+/** pins.gather at a canvas point (a level by name; none: pins picks it). `unsupported` when pins has no gather. */
+async function opGather(H, a) {
+  const api = game.pentaryn?.pins;
+  if (typeof api?.gather !== "function") return { unsupported: "pentaryn-pins gather() is not available (pins < 0.3.0?)" };
+  const s = H.scene(a.scene);
+  const res = await api.gather({ x: a.x, y: a.y, scene: s.id, ...(a.level ? { level: H.levelId(s, a.level) } : {}),
+    ...(a.dryRun ? { dryRun: true } : {}) });
+  await H.sleep(600);
+  return { res: H.plain(res), layout: H.layoutState() };
+}
+
+/** S23: grant a user a level on a fixture actor (`grants: [{ actor, user, level: "OBSERVER" }]`); opResetOwnership undoes it. */
+async function opSetOwnership(H, a) {
+  for (const g of a.grants ?? []) {
+    await H.actor(g.actor).update({ [`ownership.${H.user(g.user).id}`]: CONST.DOCUMENT_OWNERSHIP_LEVELS[g.level] });
+  }
+  return true;
+}
+
+/** Each listed fixture actor's ownership back to the fixture's (replaced, not merged). */
+async function opResetOwnership(H, a) {
+  for (const key of a.actors ?? []) {
+    await H.actor(key).update({ ownership: H.ownershipOf(H.FIX.actors[key]) }, { diff: false, recursive: false });
+  }
+  return true;
+}
+
+async function opSelftest(H) {
+  return H.plain(await game.pentaryn.pins.selftest());
 }
 
 async function opInspect(H, a) {
@@ -1121,10 +1231,12 @@ async function opMenuState() {
   const nav = document.querySelector("nav.ppi-menu");
   if (!nav) return { open: false };
   const label = a => a?.querySelector(".ppi-label")?.textContent?.trim() ?? null;
-  const top = [...nav.children].map(ch => (ch.matches("a") ? ch : ch.querySelector(":scope > a"))).filter(Boolean).map(label);
-  const sub = [...nav.querySelectorAll(".ppi-sub a.ppi-item")].map(a => ({ label: label(a),
-    disabled: a.classList.contains("ppi-disabled"), note: a.querySelector(".ppi-note")?.textContent?.trim() ?? null }));
-  return { open: true, top, sub };
+  const row = a => ({ label: label(a), disabled: a.classList.contains("ppi-disabled"),
+    note: a.querySelector(":scope > .ppi-note")?.textContent?.trim() ?? null });
+  const tops = [...nav.children].map(ch => (ch.matches("a") ? ch : ch.querySelector(":scope > a"))).filter(Boolean);
+  const top = tops.map(label);
+  const sub = [...nav.querySelectorAll(".ppi-sub a.ppi-item")].map(row);
+  return { open: true, top, items: tops.map(row), sub };
 }
 
 async function opBoardCounters() {
@@ -1244,7 +1356,8 @@ async function opResumeRestore(H, a) {
 }
 
 export const OPS = Object.freeze({ opPreflight, opState, opSeed, opPin, opArrange, opLayout, opCopyToken, opDeleteToken,
-  opSetPinning, opActivate, opPull, opWalk, opWaitOn, opPinsTeleport, opTeleportParty, opAudit, opInspect, opActiveUsers,
+  opSetPinning, opActivate, opPull, opWalk, opWaitOn, opPinsTeleport, opTeleportParty, opAudit, opGather, opSetOwnership,
+  opResetOwnership, opSelftest, opInspect, opActiveUsers,
   opRealOnline, opStash, opRestore, opCleanup, opSeedSnapshot, opPrune, opUserActive, opBoardPoint, opMenuState, opBoardCounters, opCloseHud,
   opLastRight, opClientOf, opMousePosition, opTokenIds, opNewTokens, opClosePromptDialogs, opDeleteTokenIds, opSheetBadge,
   opTransform, opRevert, opResumeRead, opResumeRestore });
@@ -1271,8 +1384,10 @@ const probeFn = () => {
   const g = globalThis.game, c = globalThis.canvas;
   let noCanvas = null;
   try { noCanvas = !!g?.settings?.get("core", "noCanvas"); } catch { /* not ready */ }
+  let controlled = [];
+  try { controlled = c?.ready ? (c.tokens?.controlled ?? []).map(t => t.id) : []; } catch { /* no token layer */ }
   return { ready: !!g?.ready, user: g?.user?.name ?? null, scene: c?.scene?.id ?? null, level: c?.level?.id ?? null,
-    loading: !!c?.loading, canvasReady: !!c?.ready, viewedScene: g?.user?.viewedScene ?? null,
+    loading: !!c?.loading, canvasReady: !!c?.ready, viewedScene: g?.user?.viewedScene ?? null, controlled,
     active: g?.scenes?.active?.id ?? null, activeGM: g?.users?.activeGM?.name ?? null, noCanvas,
     seq: globalThis.__pinsLive?.seq ?? 0 };
 };
@@ -1353,6 +1468,7 @@ class Ctx {
     this.mode = exec.mode;
     this.evidence = {};
     this.marks = {};
+    this.pullMarks = {};
     this.acted = null;
   }
   get ids() { return this.env.ids; }
@@ -1398,6 +1514,32 @@ class Ctx {
     for (const k of keys) this.marks[k] = await this.env.toastSeq(k);
   }
   toasts(key) { return this.env.toastsSince(key, this.marks[key] ?? 0); }
+  /** Start counting the `pullToScene` events each player's client receives (the page probe). */
+  async markPulls(...keys) {
+    for (const k of keys) this.pullMarks[k] = await this.env.pullSeq(k);
+  }
+  pulls(key) { return this.env.pullsSince(key, this.pullMarks[key] ?? 0); }
+  /** A level id of a fixture scene, by name. */
+  levelOf(scene, name) { return (this.ids.levels?.[scene] ?? []).find(l => l.name === name)?.id ?? null; }
+  /**
+   * Wait until `key`'s settled view is `scene` at `levelId` (null: any) with `tokenId` (null: none
+   * asked) among its controlled tokens. → a check: { ok, got: { scene, level, controlled }, want }.
+   */
+  async viewAt(key, scene, levelId = null, tokenId = null, ms = 45000) {
+    const sid = this.sid(scene);
+    const good = p => !!p && !p.loading && p.scene === sid && (!levelId || p.level === levelId)
+      && (!tokenId || (p.controlled ?? []).includes(tokenId));
+    const end = Date.now() + ms;
+    let p = null;
+    while (Date.now() < end) {
+      this.live();
+      p = await this.env.probe(key).catch(() => null);
+      if (good(p)) break;
+      await this.sleep(250);
+    }
+    return { ok: good(p), got: p ? { scene: sceneKeyOf(this.ids, p.scene), level: p.level, controlled: p.controlled ?? [] } : null,
+      want: { scene, level: levelId, controlled: tokenId } };
+  }
   async viewOf(key, scene, ms = 30000) {
     this.live();
     const r = await this.env.waitView(key, this.sid(scene), ms, { signal: this.signal });
@@ -1488,6 +1630,30 @@ function companyOn(x, layout, sceneId) {
 function floorCheck(x, layout) {
   const bad = offFloor(layout, x.ids);
   return x.is("every PinTest token stands on a level of its scene", bad.length === 0, bad, []);
+}
+
+/* gather (S20-S23) and the co-owned steed (S24-S27) */
+
+/** The row about fixture user `k` in a gather list (moved, skipped, offline, failed). */
+const rowFor = (list, k) => (list ?? []).find(r => userNames([r])[0] === FIX.users[k]) ?? null;
+/** `k` has exactly one token, and it is on `sceneId`. */
+const onlyOn = (layout, k, sceneId) => (layout?.[k] ?? []).length === 1 && tokensOn(layout, k, sceneId).length === 1;
+const followerNames = res => (res?.followers ?? []).map(f => f?.name ?? f);
+const spotText = t => (t ? `${t.scene} ${t.x},${t.y} ${t.level}` : null);
+
+/** pins.gather through the world executor. A pins without `gather` fails the scenario: it is what is tested. */
+async function gatherAt(x, spot, extra = {}) {
+  const { scene, ...pt } = spot;
+  const g = await x.world(opGather, { scene, ...pt, ...extra }, `gather ${scene}`);
+  if (g?.unsupported) throw new Error(g.unsupported);
+  return g;
+}
+
+/** A follower stands beside its leader: centres at most `squares` apart (Chebyshev). */
+function besideCheck(x, name, layout, k, leaderKey, sceneId, squares = 2) {
+  const t = tokensOn(layout, k, sceneId)[0], l = tokensOn(layout, leaderKey, sceneId)[0];
+  const d = t && l ? chebyshev(centreOf(t), centreOf(l)) / GRID : null;
+  return x.is(name, d !== null && d <= squares && t.level === l.level, { squares: d, [k]: spotText(t), [leaderKey]: spotText(l) }, `<= ${squares}, same level`);
 }
 
 /* ── the scenario table ─────────────────────────────────────────────────── */
@@ -1781,7 +1947,7 @@ export const SCENARIOS = {
     },
   },
   S14: {
-    title: "GM right-click menu: empty canvas opens it (both items, logged-in players only); a token right-click and a right-drag do not",
+    title: "GM right-click menu: empty canvas opens it (all three items, logged-in players only); a token right-click and a right-drag do not",
     needs: { gmPage: true, players: ["A", "B", "C"] },
     async setup(x) { await quietSetup(x, { layout: LAYOUT.home, active: "north", pinning: true, views: { A: "north", B: "south" } }); },
     async act(x) {
@@ -1814,6 +1980,10 @@ export const SCENARIOS = {
       const listed = subs.map(s => s.user);
       const c = subs.find(s => s.user === FIX.users.C);
       const listed2 = submenuUsers(a.afterLogout.menu.sub).map(s => s.user);
+      const top = m1.top ?? [];
+      const at = label => top.indexOf(label);
+      const gather = (m1.items ?? []).find(i => i.label === TEXT.gather) ?? null;
+      const gather2 = (a.afterLogout.menu.items ?? []).find(i => i.label === TEXT.gather) ?? null;
       x.evidence.menu = m1;
       x.evidence.boardEvents = { empty: a.empty.events, afterLogout: a.afterLogout.events, token: a.token.events };
       x.evidence.afterLogout = { at: a.afterLogout.at, menu: a.afterLogout.menu };
@@ -1822,11 +1992,17 @@ export const SCENARIOS = {
         x.is("right-click on empty canvas opens the menu", m1.open, m1.open, true),
         x.is("menu has 'Prompt note'", (m1.top ?? []).includes(TEXT.promptNote), m1.top, TEXT.promptNote),
         x.is("menu has 'Teleport pinned character'", (m1.top ?? []).includes(TEXT.teleport), m1.top, TEXT.teleport),
+        x.is("menu has 'Gather logged-in players here'", top.includes(TEXT.gather), top, TEXT.gather),
+        x.is("Gather sits between Prompt note and Teleport", at(TEXT.gather) > at(TEXT.promptNote) && at(TEXT.gather) < at(TEXT.teleport),
+          top, [TEXT.promptNote, TEXT.gather, TEXT.teleport]),
+        x.is("Gather is enabled and counts the two logged-in pinned players", !!gather && !gather.disabled && gather.note === "2",
+          gather, { label: TEXT.gather, disabled: false, note: "2" }),
         x.is("enabled rows are the logged-in pinned players", JSON.stringify(enabled) === JSON.stringify([FIX.users.A, FIX.users.B]), enabled, [FIX.users.A, FIX.users.B]),
         x.is("every listed player is logged in", listed.every(n => a.activeUsers.includes(n)), listed, a.activeUsers),
         x.is("an unpinned logged-in player is greyed out", !!c && !c.enabled, c ?? null, { user: FIX.users.C, enabled: false }),
         x.is("Escape closes the menu", a.escapeCloses, a.escapeCloses, true),
         x.is("after B logs out, B is no longer listed", a.afterLogout.menu.open && !listed2.includes(FIX.users.B), listed2, `without ${FIX.users.B}`),
+        x.is("after B logs out, Gather counts one", !!gather2 && !gather2.disabled && gather2.note === "1", gather2, { disabled: false, note: "1" }),
         x.is("right-click on a token opens no menu", a.tokenPoint.ok && !a.token.menu.open, { pointOk: a.tokenPoint.ok, open: a.token.menu.open }, { pointOk: true, open: false }),
         x.is("a right-drag opens no menu", !a.drag.menu.open, a.drag.menu.open, false),
       ];
@@ -1976,6 +2152,258 @@ export const SCENARIOS = {
     title: "bot offline",
     skip: "not tested: with no GM client connected nothing runs portal follow or the bridge; out of scope for this harness",
   },
+  S20: {
+    title: "gather to South Upper: B (already on South) then A (cross-scene, with summon and pet); C unpinned is skipped; each view follows to Upper",
+    needs: { players: ["A", "B", "C"] },
+    async setup(x) { await quietSetup(x, { layout: LAYOUT.home, active: "north", pinning: true, views: { A: "north", B: "south" } }); },
+    async act(x) {
+      await x.mark("A", "B");
+      // B's pulls are counted from here: setup's own (the North activation, the switch-on pull) are not the gather's
+      await x.markPulls("B");
+      return gatherAt(x, SPOTS.gatherSouth, { level: "Upper" });
+    },
+    async assert(x) {
+      const { res, layout } = x.acted;
+      const south = x.sid("south"), upper = x.levelOf("south", "Upper");
+      const alpha = tokensOn(layout, "alpha", south)[0] ?? null, beta = tokensOn(layout, "beta", south)[0] ?? null;
+      const keys = ["alpha", "summon", "pet", "beta"];
+      const boxes = keys.map(k => tokensOn(layout, k, south)[0]).filter(Boolean);
+      const skipped = testRows(res?.skipped).map(r => `${userNames([r])[0]} ${r.code}`);
+      const rowA = rowFor(res?.moved, "A");
+      x.evidence.res = { ok: res?.ok, code: res?.code ?? null, moved: userNames(res?.moved), skipped, warning: res?.warning ?? null,
+        followersA: followerNames(rowA), failed: res?.failed ?? [] };
+      x.evidence.layout = compactLayout(layout, x.ids);
+      const viewA = await x.viewAt("A", "south", upper, alpha?.id);
+      const viewB = await x.viewAt("B", "south", upper, beta?.id);
+      const pullsB = await x.pulls("B");
+      x.evidence.pullsB = pullsB.map(p => p.scene === south ? `south ${p.level}` : p.scene);
+      return [
+        x.is("gather ok", res?.ok === true, res?.code ?? res?.ok, true),
+        x.is("moved in plan order: B (already on South) first, then A", JSON.stringify(userNames(res?.moved)) === JSON.stringify([FIX.users.B, FIX.users.A]),
+          userNames(res?.moved), [FIX.users.B, FIX.users.A]),
+        x.is("skipped: C (no pin)", JSON.stringify(skipped) === JSON.stringify([`${FIX.users.C} NO_PIN`]), skipped, [`${FIX.users.C} NO_PIN`]),
+        ...keys.map(k => x.is(`${k} is on South Upper exactly once`, onlyOn(layout, k, south) && tokensOn(layout, k, south)[0].level === upper,
+          compactLayout(layout, x.ids)[k], `south (Upper ${upper})`)),
+        x.is("no two gathered tokens overlap", overlapping(boxes).length === 0, overlapping(boxes), []),
+        x.is("Gamma is still on North", onlyOn(layout, "gamma", x.sid("north")), compactLayout(layout, x.ids).gamma, ["north"]),
+        x.is("A's row names the summon and the pet (not '[max depth]')",
+          [FIX.actors.summon.name, FIX.actors.pet.name].every(n => followerNames(rowA).includes(n)), followerNames(rowA), [FIX.actors.summon.name, FIX.actors.pet.name]),
+        x.check("A (cross-scene) views South Upper, Alpha controlled", viewA),
+        x.check("A got no 'cannot switch Scenes' toast", await x.noCannotSwitch("A")),
+        // a same-scene level change runs core's own level switch on B's client AND pins' pull (code review G1: never
+        // predicted on the GM's lagging copy of B's view); the second view is a no-op or dropped, so a loading toast is allowed
+        x.check("B (same scene, new level) ends on South Upper, Beta controlled", viewB),
+        x.is("B got exactly one pull (pins'), to South Upper", pullsB.length === 1 && pullsB[0].scene === south && pullsB[0].level === upper,
+          x.evidence.pullsB, [`south ${upper}`]),
+        floorCheck(x, layout),
+      ];
+    },
+  },
+  S21: {
+    title: "gather skips an offline pinned player: B logged out, Beta untouched; A's company gathered on North",
+    needs: { players: ["A"] },
+    async setup(x) {
+      await quietSetup(x, { layout: LAYOUT.home, active: "north", pinning: true, views: { A: "north" } });
+      await x.env.logoutPlayer("B");
+      const b = await x.world(opUserActive, { user: "B" });
+      if (b.active) throw new Error(`setup: ${FIX.users.B} is still logged in`);
+      x.before = await x.world(opLayout);
+    },
+    async act(x) { return gatherAt(x, SPOTS.gatherNorth); },
+    async assert(x) {
+      const { res, layout } = x.acted;
+      const north = x.sid("north");
+      const alpha = tokensOn(layout, "alpha", north)[0] ?? null;
+      const was = (x.before?.beta ?? []).map(spotText), now = (layout.beta ?? []).map(spotText);
+      const offline = userNames(testRows(res?.offline));
+      x.evidence.res = { ok: res?.ok, code: res?.code ?? null, moved: userNames(res?.moved), offline, skipped: testRows(res?.skipped).map(r => r.code) };
+      x.evidence.layout = compactLayout(layout, x.ids);
+      return [
+        x.is("gather ok", res?.ok === true, res?.code ?? res?.ok, true),
+        x.is("A is moved, B is not", !!rowFor(res?.moved, "A") && !rowFor(res?.moved, "B") && !rowFor(res?.skipped, "B"), userNames(res?.moved), [FIX.users.A]),
+        x.is("offline: B (the only PinTest player listed)", JSON.stringify(offline) === JSON.stringify([FIX.users.B]), offline, [FIX.users.B]),
+        x.is("Alpha lands on the point", !!alpha && chebyshev(centreOf(alpha), SPOTS.gatherNorth) <= GRID,
+          alpha && centreOf(alpha), { x: SPOTS.gatherNorth.x, y: SPOTS.gatherNorth.y }),
+        besideCheck(x, "the summon stands beside Alpha", layout, "summon", "alpha", north),
+        besideCheck(x, "the pet stands beside Alpha", layout, "pet", "alpha", north),
+        ...companyOn(x, layout, north),
+        x.is("Beta's token is unchanged (scene, x, y, level)", was.length === 1 && JSON.stringify(was) === JSON.stringify(now), now, was),
+        x.check("A stays on North", await x.stays("A", "north", 1500)),
+      ];
+    },
+  },
+  S22: {
+    title: "gather skips a pin with two tokens (MANY_TOKENS): both Beta tokens untouched; A's company gathered to South",
+    needs: { players: ["A", "B"] },
+    async setup(x) { await quietSetup(x, { layout: LAYOUT.allNorth, active: "north", pinning: true, views: { A: "north", B: "north" } }); },
+    async act(x) {
+      const copy = await x.world(opCopyToken, { actor: "beta", ...SPOTS.copy });
+      try {
+        const before = await x.world(opLayout);
+        await x.mark("A");
+        const g = await gatherAt(x, SPOTS.gatherSouth);
+        const viewA = await x.viewOf("A", "south");
+        return { copy, before, viewA, ...g };
+      } finally {
+        await x.world(opDeleteToken, { scene: copy.scene, id: copy.id }, "delete the Beta copy");
+      }
+    },
+    async assert(x) {
+      const { res, layout, before, viewA } = x.acted;
+      const skipB = rowFor(res?.skipped, "B");
+      const was = (before?.beta ?? []).map(spotText).sort(), now = (layout?.beta ?? []).map(spotText).sort();
+      x.evidence.res = { ok: res?.ok, code: res?.code ?? null, moved: userNames(res?.moved), skipped: testRows(res?.skipped).map(r => `${userNames([r])[0]} ${r.code}`) };
+      x.evidence.layout = compactLayout(layout, x.ids);
+      return [
+        x.is("gather ok", res?.ok === true, res?.code ?? res?.ok, true),
+        x.is("B is skipped as MANY_TOKENS", skipB?.code === "MANY_TOKENS", skipB, { user: FIX.users.B, code: "MANY_TOKENS" }),
+        x.is("B is not moved, A is", !rowFor(res?.moved, "B") && !!rowFor(res?.moved, "A"), userNames(res?.moved), [FIX.users.A]),
+        x.is("both Beta tokens are unchanged", was.length === 2 && JSON.stringify(was) === JSON.stringify(now), now, was),
+        ...companyOn(x, layout, x.sid("south")),
+        x.check("A's view follows to South", viewA),
+        x.check("A got no 'cannot switch Scenes' toast", await x.noCannotSwitch("A")),
+      ];
+    },
+  },
+  S23: {
+    title: "gather pulls each member exactly once (the gather-scoped prePull clause), though each observes the other's character",
+    needs: { players: ["A", "B"] },
+    async setup(x) { await quietSetup(x, { layout: LAYOUT.allNorth, active: "north", pinning: true, views: { A: "north", B: "north" } }); },
+    async act(x) {
+      // core's rule would pick A for B's carry: A observes Beta and has no sighted token left on North
+      await x.world(opSetOwnership, { grants: [{ actor: "alpha", user: "B", level: "OBSERVER" }, { actor: "beta", user: "A", level: "OBSERVER" }] });
+      try {
+        await x.mark("A", "B");
+        await x.markPulls("A", "B");
+        const g = await gatherAt(x, SPOTS.gatherSouth);
+        const viewA = await x.viewOf("A", "south"), viewB = await x.viewOf("B", "south");
+        await x.sleep(3000);   // a second pull would land in this window
+        const pulls = { A: await x.pulls("A"), B: await x.pulls("B") };
+        return { ...g, viewA, viewB, pulls, selftest: await x.world(opSelftest) };
+      } finally {
+        await x.world(opResetOwnership, { actors: ["alpha", "beta"] }, "ownership back");
+      }
+    },
+    async assert(x) {
+      const { res, viewA, viewB, pulls, selftest } = x.acted;
+      const south = x.sid("south");
+      const pre = (selftest?.checks ?? []).find(c => /prePull/i.test(c.label ?? "")) ?? null;
+      const where = list => list.map(p => sceneKeyOf(x.ids, p.scene));
+      x.evidence.res = { ok: res?.ok, moved: userNames(res?.moved) };
+      x.evidence.pulls = { A: where(pulls.A), B: where(pulls.B) };
+      return [
+        x.is("gather ok", res?.ok === true, res?.code ?? res?.ok, true),
+        x.is("moved by name: A, then B", JSON.stringify(userNames(res?.moved)) === JSON.stringify([FIX.users.A, FIX.users.B]), userNames(res?.moved), [FIX.users.A, FIX.users.B]),
+        x.is("A received exactly one pull, to South", pulls.A.length === 1 && pulls.A[0].scene === south, where(pulls.A), ["south"]),
+        x.is("B received exactly one pull, to South", pulls.B.length === 1 && pulls.B[0].scene === south, where(pulls.B), ["south"]),
+        x.check("A's view is on South", viewA),
+        x.check("B's view is on South", viewB),
+        x.is("selftest: the prePull listener is registered", pre?.ok === true, pre, { label: "prePull listener registered", ok: true }),
+      ];
+    },
+  },
+  S24: {
+    title: "co-owned steed (A and B), 15 ft from both: a gather brings it, beside the last-moved of its gathered owners",
+    needs: { players: ["A", "B"] },
+    async setup(x) { await quietSetup(x, { layout: LAYOUT.steedGather, active: "north", pinning: true, views: { A: "north", B: "north" } }); },
+    async act(x) { return gatherAt(x, SPOTS.gatherSouth, { level: "Ground" }); },
+    async assert(x) {
+      const { res, layout } = x.acted;
+      const south = x.sid("south");
+      // the last of its gathered owners to move, by the result's own order (A then B: both cross-scene, by name)
+      const order = userNames(res?.moved).filter(n => n === FIX.users.A || n === FIX.users.B);
+      const lastKey = order.at(-1) === FIX.users.A ? "alpha" : "beta", otherKey = lastKey === "alpha" ? "beta" : "alpha";
+      const steed = tokensOn(layout, "steed", south)[0] ?? null;
+      const d = k => { const t = tokensOn(layout, k, south)[0]; return steed && t ? chebyshev(centreOf(steed), centreOf(t)) : Infinity; };
+      x.evidence.res = { ok: res?.ok, moved: userNames(res?.moved), followers: Object.fromEntries((res?.moved ?? []).map(m => [userNames([m])[0], followerNames(m)])) };
+      x.evidence.layout = compactLayout(layout, x.ids);
+      return [
+        x.is("gather ok", res?.ok === true, res?.code ?? res?.ok, true),
+        x.is("A and B were both gathered", order.length === 2, order, [FIX.users.A, FIX.users.B]),
+        x.is("the steed is on South exactly once (none left on North)", onlyOn(layout, "steed", south), compactLayout(layout, x.ids).steed, ["south"]),
+        besideCheck(x, `the steed stands beside ${lastKey} (the last-moved owner)`, layout, "steed", lastKey, south),
+        x.is(`the steed is no nearer ${otherKey} than ${lastKey}`, d(lastKey) <= d(otherKey), { [lastKey]: d(lastKey), [otherKey]: d(otherKey) }, `${lastKey} <= ${otherKey}`),
+        ...companyOn(x, layout, south),
+      ];
+    },
+  },
+  S25: {
+    title: "co-owned steed 10 ft from Alpha (one square between): pins.teleport(A) to South brings it beside Alpha (a single move, within 10 ft)",
+    needs: { players: ["A"] },
+    async setup(x) { await quietSetup(x, { layout: LAYOUT.steedNear, active: "north", pinning: true, views: { A: "north" } }); },
+    async act(x) {
+      const { scene, ...pt } = SPOTS.crossScene;
+      return x.world(opPinsTeleport, { user: "A", scene, ...pt });
+    },
+    async assert(x) {
+      const { res, layout } = x.acted;
+      const south = x.sid("south");
+      x.evidence.res = { ok: res?.ok, code: res?.code ?? null, followers: followerNames(res) };
+      x.evidence.layout = compactLayout(layout, x.ids);
+      return [
+        x.is("teleport ok", res?.ok === true, res?.code ?? res?.ok, true),
+        x.is("the steed is among the followers", followerNames(res).includes(FIX.actors.steed.name), followerNames(res), FIX.actors.steed.name),
+        x.is("the steed is on South exactly once (none left on North)", onlyOn(layout, "steed", south), compactLayout(layout, x.ids).steed, ["south"]),
+        besideCheck(x, "the steed stands beside Alpha", layout, "steed", "alpha", south, 2.5),
+        ...companyOn(x, layout, south),
+      ];
+    },
+  },
+  S26: {
+    title: "co-owned steed 15 ft from Alpha (two squares between) stays on North when A is teleported; Alpha's own pet comes from across the map",
+    needs: { players: ["A"] },
+    async setup(x) { await quietSetup(x, { layout: LAYOUT.steedFar, active: "north", pinning: true, views: { A: "north" } }); },
+    async act(x) {
+      const { scene, ...pt } = SPOTS.crossScene;
+      return x.world(opPinsTeleport, { user: "A", scene, ...pt });
+    },
+    async assert(x) {
+      const { res, layout } = x.acted;
+      const north = x.sid("north"), south = x.sid("south");
+      const steed = (layout.steed ?? [])[0] ?? null;
+      x.evidence.res = { ok: res?.ok, code: res?.code ?? null, followers: followerNames(res) };
+      x.evidence.layout = compactLayout(layout, x.ids);
+      return [
+        x.is("teleport ok", res?.ok === true, res?.code ?? res?.ok, true),
+        x.is("the steed is not among the followers", !followerNames(res).includes(FIX.actors.steed.name), followerNames(res), `without ${FIX.actors.steed.name}`),
+        x.is("the steed stays where it stood on North", onlyOn(layout, "steed", north) && steed.x === POS.steedFar.x && steed.y === POS.steedFar.y,
+          compactLayout(layout, x.ids).steed, [`north ${POS.steedFar.x},${POS.steedFar.y}`]),
+        x.is("the pet (one owner) came from across the map", followerNames(res).includes(FIX.actors.pet.name), followerNames(res), FIX.actors.pet.name),
+        besideCheck(x, "the pet stands beside Alpha", layout, "pet", "alpha", south, 2.5),
+        ...companyOn(x, layout, south),
+      ];
+    },
+  },
+  S27: {
+    title: "co-owned steed touching both Alpha and Beta: it goes with the last moved (A), and stays with Alpha when B moves after",
+    needs: { players: ["A", "B"] },
+    async setup(x) { await quietSetup(x, { layout: LAYOUT.steedTie, active: "north", pinning: true, views: { A: "north", B: "north" } }); },
+    async act(x) {
+      const { scene, ...pt } = SPOTS.crossScene;
+      const first = await x.world(opPinsTeleport, { user: "A", scene, ...pt }, "teleport A");
+      const { scene: s2, ...pt2 } = SPOTS.tieB;
+      const second = await x.world(opPinsTeleport, { user: "B", scene: s2, ...pt2 }, "teleport B");
+      return { first, second };
+    },
+    async assert(x) {
+      const { first, second } = x.acted;
+      const south = x.sid("south");
+      const s1 = tokensOn(first.layout, "steed", south)[0] ?? null, s2 = tokensOn(second.layout, "steed", south)[0] ?? null;
+      const beta = tokensOn(second.layout, "beta", south)[0] ?? null;
+      x.evidence.first = { ok: first.res?.ok, followers: followerNames(first.res), layout: compactLayout(first.layout, x.ids) };
+      x.evidence.second = { ok: second.res?.ok, followers: followerNames(second.res), layout: compactLayout(second.layout, x.ids) };
+      return [
+        x.is("both teleports ok", first.res?.ok === true && second.res?.ok === true, [first.res?.code ?? first.res?.ok, second.res?.code ?? second.res?.ok], [true, true]),
+        x.is("A's move takes the steed (Beta stood as close)", followerNames(first.res).includes(FIX.actors.steed.name), followerNames(first.res), FIX.actors.steed.name),
+        x.is("after A's move the steed is on South only", onlyOn(first.layout, "steed", south), compactLayout(first.layout, x.ids).steed, ["south"]),
+        besideCheck(x, "the steed stands beside Alpha", first.layout, "steed", "alpha", south, 2.5),
+        x.is("B's move leaves it (not among B's followers)", !followerNames(second.res).includes(FIX.actors.steed.name), followerNames(second.res), `without ${FIX.actors.steed.name}`),
+        x.is("the steed has not moved since A's teleport", !!s1 && !!s2 && s1.x === s2.x && s1.y === s2.y && onlyOn(second.layout, "steed", south),
+          spotText(s2), spotText(s1)),
+        x.is("Beta landed at its own point", !!beta && chebyshev(centreOf(beta), SPOTS.tieB) <= GRID, beta && centreOf(beta), { x: SPOTS.tieB.x, y: SPOTS.tieB.y }),
+      ];
+    },
+  },
 };
 
 /* ── the environment: browser, GM page, players ─────────────────────────── */
@@ -2095,11 +2523,17 @@ class Env {
   attach(rec) {
     rec.errors = [];
     rec.page.on("pageerror", e => rec.errors.push(String(e?.message ?? e).slice(0, 300)));
-    rec.page.on("console", m => {
+    rec.page.on("console", async m => {
       if (m.type() !== "error") return;
       const t = m.text();
       if (/pins-live: the MCP bridge/.test(t)) return;   // our own guard, on the GM page
-      rec.errors.push(t.slice(0, 300));
+      // an Error argument's own stack (where it was thrown), not just its message: a page error is diagnosable from the evidence
+      let stack = null;
+      for (const a of m.args?.() ?? []) {
+        try { stack = await a.evaluate(v => (v instanceof Error ? String(v.stack ?? "") : null)); } catch { stack = null; }
+        if (stack) break;
+      }
+      rec.errors.push(stack ? `${t.slice(0, 300)} | stack: ${stack.split("\n").slice(1, 9).map(s => s.trim()).join(" < ").slice(0, 900)}` : t.slice(0, 300));
     });
   }
 
@@ -2273,6 +2707,17 @@ class Env {
   async toastsSince(key, seq) {
     const page = this.pageFor(key);
     return page ? page.evaluate(m => (globalThis.__pinsLive?.toasts ?? []).filter(t => t.seq > m), seq).catch(() => []) : [];
+  }
+
+  async pullSeq(key) {
+    const page = this.pageFor(key);
+    return page ? page.evaluate(() => globalThis.__pinsLive?.pullSeq ?? 0).catch(() => 0) : 0;
+  }
+
+  /** The `pullToScene` events `key`'s client received after `seq` ({ seq, t, scene, level }). */
+  async pullsSince(key, seq) {
+    const page = this.pageFor(key);
+    return page ? page.evaluate(m => (globalThis.__pinsLive?.pulls ?? []).filter(p => p.seq > m), seq).catch(() => []) : [];
   }
 
   /** Poll a player's view until it shows `sceneId` (settled), or until `ms`. `settleOnly`: just wait out loading. */

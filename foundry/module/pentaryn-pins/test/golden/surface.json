@@ -2,6 +2,7 @@
   "audit": "audit",
   "contract": "string",
   "describe": "function",
+  "gather": "gather",
   "inspect": "inspect",
   "pin": "pin",
   "pinnedToken": "pinnedToken",

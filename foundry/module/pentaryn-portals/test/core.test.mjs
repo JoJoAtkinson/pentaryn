@@ -15,7 +15,7 @@ test("core loads with no Foundry globals present", () => {
     assert.equal(name in globalThis, false, `${name} is defined in a bare node process`);
   }
   for (const name of ["absoluteDestinations", "assignSpots", "crowded", "followersOf", "hasDestination", "isPC", "isScenery",
-    "leaderOf", "partyPreview", "partySelection", "playerOwners", "ringSpots", "summonerActorId", "wallBlocker", "withoutDestination"]) {
+    "leaderOf", "companionsOf", "heldCompanions", "edgeGap", "feetPerSquare", "reachFeet", "partyPreview", "partySelection", "playerOwners", "ringSpots", "summonerActorId", "wallBlocker", "withoutDestination"]) {
     assert.equal(typeof core[name], "function", name);
   }
   assert.equal(core.OWNER, 3);
@@ -26,10 +26,12 @@ test("core loads with no Foundry globals present", () => {
 // [declared] 0.6.0 (pins plan 2026-10, D5): the additive teleportToken row; CONTRACT major unchanged.
 // [declared] 0.7.0 (pins rebuild 2026-10-17, §2): teleportToken pulls by core's Teleport Token rule
 // plus `pull`, and returns `pulled`; teleportParty pulls with `{ level }`. Additive: CONTRACT unchanged.
-test("module.json: id and version as shipped (0.7.0)", () => {
+// [declared] 0.8.0 (pin-2026-10-gather.md §11, Joe 2026-10-17): the co-owned companion rule (followersOf /
+// leaderOf, every move) and teleportToken opts.gather. Behaviour change, no published-shape change: CONTRACT unchanged.
+test("module.json: id and version as shipped (0.8.0)", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, "pentaryn-portals");
-  assert.equal(manifest.version, "0.7.0");
+  assert.equal(manifest.version, "0.8.0");
   assert.equal(core.CONTRACT, "pentaryn-portals/api@1");
 });
 
@@ -94,10 +96,93 @@ test("party selection", () => {
 test("followersOf (native teleport)", () => {
   assert.deepEqual(ids(followersOf([caven], all)), ["skel1", "skel2"]);
   assert.deepEqual(ids(followersOf([marrith], all)), ["eye"]);
-  assert.deepEqual(ids(followersOf([caven, marrith], all)), ["skel1", "skel2", "eye", "steed"]);
+  // §11 (Joe 2026-10-17): a shared steed no longer comes because all its owners go; with no reach test it stays
+  assert.deepEqual(ids(followersOf([caven, marrith], all)), ["skel1", "skel2", "eye"]);
   assert.deepEqual(ids(followersOf([caven], [rec("fam", { owners: ["p1"], summoner: "MAR" })])), []);
   assert.deepEqual(ids(followersOf([caven], [rec("pc2", { type: "character", linked: true, owners: ["p1"] })])), []);
   assert.deepEqual(ids(followersOf([caven, marrith], [handleTok])), []);
+});
+
+/* ── §11 co-owned companions (Joe 2026-10-17, pin-2026-10-gather.md §11) ───────────── */
+
+test("edgeGap: 0 touching or overlapping, else the larger axis gap (a diagonal square counts as one)", () => {
+  const sq = (x, y, s = 100) => ({ x, y, w: s, h: s });
+  assert.equal(core.edgeGap(sq(0, 0), sq(100, 0)), 0, "edges touch");
+  assert.equal(core.edgeGap(sq(0, 0), sq(50, 50)), 0, "overlap");
+  assert.equal(core.edgeGap(sq(0, 0), sq(300, 0)), 200, "two squares between");
+  assert.equal(core.edgeGap(sq(0, 0), sq(300, 300)), 200, "diagonal: the larger axis");
+  assert.equal(core.edgeGap(sq(300, 100), sq(0, 0)), 200, "symmetric");
+  assert.equal(core.edgeGap(sq(0, 0), { x: 200, y: 0, w: 200, h: 200 }), 100, "a Large token: its near edge");
+  assert.equal(core.SHARED_REACH_FT, 10);
+});
+
+test("reachFeet / feetPerSquare (code review G3): 5e distance — adjacent 5 ft, one square between 10 ft — in the grid's units", () => {
+  assert.equal(core.reachFeet(0, 100), 5, "touching: adjacent");
+  assert.equal(core.reachFeet(100, 100), 10, "one empty square between");
+  assert.equal(core.reachFeet(200, 100), 15, "two between: beyond 10 ft");
+  assert.equal(core.reachFeet(100, 100, 10), 20, "a 10-ft grid");
+  for (const [d, u, want] of [[5, "ft", 5], [5, "ft.", 5], [10, "feet", 10], [5, "", 5], [5, undefined, 5], [1.5, "m", 5], [3, "m", 10],
+    [1, "mi", 5], [NaN, "ft", 5], [0, "ft", 5]]) {
+    assert.equal(core.feetPerSquare(d, u), want, `${d} ${u}`);
+  }
+});
+
+test("companionsOf: own companions always follow their PC; summons their summoner (unchanged)", () => {
+  const out = core.companionsOf([caven], all, { near: () => false });
+  assert.deepEqual(out.map(c => [c.record.id, c.leader]), [["skel1", "caven"], ["skel2", "caven"]]);
+  // a PC both players co-own: the steed is its own companion (every owner owns it) → always, any distance
+  const both = rec("both", { type: "character", linked: true, owners: ["p1", "p2"], actorId: "BOTH" });
+  assert.deepEqual(ids(followersOf([both], [steed], { near: () => false })), ["steed"]);
+  // two leaders, one single-owner pet: the FIRST leader its owner owns takes it (unchanged)
+  const cav2 = rec("cav2", { type: "character", linked: true, owners: ["p1"], actorId: "CAV2" });
+  assert.deepEqual(core.companionsOf([caven, cav2], [skel2]).map(c => c.leader), ["caven"]);
+});
+
+test("companionsOf, single move: a shared steed comes only within reach of the moving owner", () => {
+  const near = new Set();
+  const opts = { near: (t, l) => near.has(`${t.id}>${l.id}`) };
+  assert.deepEqual(ids(followersOf([caven], [steed], opts)), [], "beyond 10 ft: stays");
+  near.add("steed>caven");
+  assert.deepEqual(ids(followersOf([caven], [steed], opts)), ["steed"], "within 10 ft: comes");
+  assert.deepEqual(ids(followersOf([caven], [rec("stranger", { owners: ["p3"] })], { near: () => true })), [], "not an owner: never");
+  // a shared summon still follows only its summoner
+  assert.deepEqual(ids(followersOf([caven], [rec("sum", { owners: ["p1", "p2"], summoner: "MAR" })], { near: () => true })), []);
+  // a shared non-carriable token (pile, handle, scenery) never comes
+  assert.deepEqual(ids(followersOf([caven], [rec("p", { owners: ["p1", "p2"], pile: true }), handleTok], { near: () => true })), []);
+});
+
+test("companionsOf, several leaders in one move: the LAST owner within reach takes the shared steed; a tie → last", () => {
+  const within = ids => ({ near: (t, l) => ids.includes(l.id) });
+  assert.deepEqual(core.companionsOf([caven, marrith], [steed], within(["caven", "marrith"])).map(c => c.leader), ["marrith"], "tie → last moved");
+  assert.deepEqual(core.companionsOf([marrith, caven], [steed], within(["caven", "marrith"])).map(c => c.leader), ["caven"], "tie → last moved");
+  assert.deepEqual(core.companionsOf([caven, marrith], [steed], within(["caven"])).map(c => c.leader), ["caven"], "only Caven within reach");
+  assert.deepEqual(core.companionsOf([caven, marrith], [steed], within([])), [], "nobody within reach: stays");
+});
+
+test("companionsOf, gather: a shared steed always comes, with the last-moved gathered owner on its scene", () => {
+  const records = [marrith, steed];                       // Marrith (p2) still stands on this scene
+  // Caven moves first, Marrith (a later member, here) co-owns the steed → it waits for her
+  assert.deepEqual(ids(followersOf([caven], records, { gather: { later: [{ user: "p2", token: "marrith" }] } })), []);
+  // Marrith is the last of its gathered owners: it comes, at any distance
+  assert.deepEqual(ids(followersOf([marrith], [steed], { near: () => false, gather: { later: [] } })), ["steed"]);
+  // the later co-owner stands on ANOTHER scene (its token is not here): it cannot carry it, so this owner does
+  assert.deepEqual(ids(followersOf([caven], [steed], { gather: { later: [{ user: "p2", token: "elsewhere" }] } })), ["steed"]);
+  // a later member who does not own it does not hold it back
+  assert.deepEqual(ids(followersOf([caven], [steed, rec("talo", { type: "character", linked: true, owners: ["p3"] })],
+    { gather: { later: [{ user: "p3", token: "talo" }] } })), ["steed"]);
+  // offline co-owners are never in `later` (pins lists only gathered members): they do not count
+  assert.deepEqual(ids(followersOf([caven], [steed], { gather: { later: [] } })), ["steed"]);
+  // own companions are never deferred, even when a later member also owns them
+  assert.deepEqual(ids(followersOf([caven], [skel2, marrith], { gather: { later: [{ user: "p1", token: "marrith" }] } })), ["skel2"]);
+});
+
+test("heldCompanions (code review G5): the shared companions a gather call leaves for a later co-owner, so the gather can carry them if that move fails", () => {
+  const later = [{ user: "p2", token: "marrith" }];
+  assert.deepEqual(ids(core.heldCompanions([caven], [marrith, steed], { gather: { later } })), ["steed"], "waits for Marrith");
+  assert.deepEqual(ids(core.heldCompanions([marrith], [steed], { gather: { later: [] } })), [], "the last co-owner takes it: nothing held");
+  assert.deepEqual(ids(core.heldCompanions([caven], [steed], { gather: { later: [{ user: "p2", token: "elsewhere" }] } })), [], "a later co-owner elsewhere: comes now");
+  assert.deepEqual(ids(core.heldCompanions([caven], [marrith, steed])), [], "a single move holds nothing");
+  assert.deepEqual(ids(core.heldCompanions([caven], [skel2, marrith], { gather: { later: [{ user: "p1", token: "marrith" }] } })), [], "own companions never wait");
 });
 
 test("teleportToken helpers: a wild-shaped lead's root actor, elevation onto another floor", () => {
@@ -137,8 +222,14 @@ test("carriedLevel: preferred, else own when the destination has it, else initia
 test("leaderOf", () => {
   assert.equal(leaderOf(eye, [caven, marrith]), "marrith");
   assert.equal(leaderOf(skel2, [caven, marrith]), "caven");
-  assert.equal(leaderOf(steed, [caven, marrith]), "caven");
+  // §11: a shared companion lands beside the LAST of its owners' PCs (last-moved wins)
+  assert.equal(leaderOf(steed, [caven, marrith]), "marrith");
+  assert.equal(leaderOf(steed, [marrith, caven]), "caven");
   assert.equal(leaderOf(rec("x", { owners: ["p9"] }), [caven, marrith]), null);
+  // its own PC (every owner owns it) still wins over a later sharer: a PC both players co-own
+  const both = rec("both", { type: "character", linked: true, owners: ["p1", "p2"], actorId: "BOTH" });
+  assert.equal(leaderOf(steed, [both, marrith]), "both");
+  assert.equal(leaderOf(skel2, [caven, rec("cav2", { type: "character", linked: true, owners: ["p1"] })]), "caven", "single owner: first, unchanged");
 });
 
 // review R1 (earlier pass): the rootActorId branch, alone. The familiar has no owners, so only its
@@ -176,7 +267,7 @@ test("assignSpots: fewer spots than party → the rest copy spots[0]; no spots �
 });
 
 test("partyPreview", () => {
-  assert.deepEqual(partyPreview(partySelection(all)).map(r => r.leaderName ?? "-"), ["-", "-", "caven", "caven", "marrith", "caven"]);
+  assert.deepEqual(partyPreview(partySelection(all)).map(r => r.leaderName ?? "-"), ["-", "-", "caven", "caven", "marrith", "marrith"]);
   assert.deepEqual(partyPreview([caven, rec("nameless", { owners: ["p9"], name: undefined })]), [
     { id: "caven", name: "caven", follower: false, leaderName: null },
     { id: "nameless", name: "nameless", follower: true, leaderName: null },

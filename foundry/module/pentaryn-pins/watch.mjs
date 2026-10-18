@@ -2,8 +2,10 @@
  * Pentaryn Pins — FEATURE: GM toasts when a pinned character's token count leaves one (rebuild plan
  * context/plans/pin-2026-10-rebuild.md §6, the design review's "Risks").
  *
- *   0 tokens   Stranded: the player's view stays where it is; placing the character again brings
- *              them to it (below), or pentaryn-resume does at their next login.
+ *   0 tokens   Stranded: nothing moves the player's view now, but with no single token the pin
+ *              has no target, so a scene activation moves them as stock (follow.mjs activateDecision:
+ *              "no target" → call; review minor (b)); placing the character again brings them to it
+ *              (below), or pentaryn-resume does at their next login.
  *   2+ tokens  Paused: the view follows only the copy on the scene the player is viewing.
  *
  * Placed again (0 → 1, review RF1): a createToken that leaves the pin with exactly one token — the

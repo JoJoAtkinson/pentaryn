@@ -1,5 +1,55 @@
 # Changelog — pentaryn-portals
 
+## 0.8.0 — 2026-10-17 (pins gather, `context/plans/pin-2026-10-gather.md` §11, Joe's answer Q1)
+
+Needs a Foundry restart (`module.json` version). Behaviour change, no published-shape change:
+CONTRACT stays `pentaryn-portals/api@1`.
+
+- **Co-owned companions: one new rule for every move — [declared].** Replaces "a co-owned steed
+  comes when all its owners go together" (`followersOf`, bringFollowers' "several PCs together"
+  pass). The rule is the new pure `companionsOf(leaders, records, { near, gather })` in
+  `portals-core.mjs`; `followersOf` returns its records. A summon still goes with the PC it names; a
+  companion whose players all own the moving PC still always follows it, at any distance. A
+  companion **shared** with other players' characters (a steed two players co-own):
+  - **single move** (portal hop, `teleportToken`, so pins' Teleport): comes only within **10 ft** of
+    the moving PC in 5e distance — adjacent is 5 ft, one empty square between is 10 ft, so an
+    `edgeGap` between the token boxes (a diagonal square counts as one) of at most one square on a
+    5-ft grid (`reachFeet`, code review G3) — in the scene's grid units (`feetPerSquare`: feet as
+    given, metres at 1.5 m = 5 ft, any other unit 5 ft a square), on the same level (`reachTest` in
+    `scene-adapter.mjs`; a portal hop measures where the PC stood). Several owners moving in one
+    operation and within reach: the **last** takes it. Otherwise it stays.
+  - **gather** (`teleportToken` `opts.gather`, below): always comes, with the last-moved of its
+    gathered owners on its scene.
+  - **Teleport party** (everyone moves): it comes as before, but `leaderOf` now lands it beside the
+    **last** of its owners' PCs (was the first); a PC whose players own all of it still wins. The
+    confirm's "lands beside" says so.
+  - Limit: a companion only comes from its leader's own scene.
+- **`teleportToken` `opts.gather` (new).** `{ later: [{ user: userId, token: tokenId }] }`, set by
+  pentaryn-pins' gather on each member's call: the members that move after this one. A shared
+  companion waits while a later member owns it and stands on this scene; the result then lists it
+  in `held: [{ id, name }]` (present with `gather` only; pure `heldCompanions`), so pins can carry it
+  if that later move fails (code review G5). The call's `pentaryn-portals.prePull` carries the
+  `gather` (Teleport party's and a single move's: `gather: null`), a per-call mark for a listener
+  (code review G6). Any other shape → `BAD_ARGS`. dryRun honours it.
+- **Fix: a same-scene `teleportToken` (and `spreadArrival`'s step) no longer fails on a scene no
+  client has drawn.** Foundry v14.369's teleport branch of `RegionDocument#segmentizeMovementPath`
+  reads the region's private polygon tree without its lazy getter, so a `displace` update threw
+  "Cannot read properties of undefined (reading 'testPoint')" in `_preUpdate` and nothing moved
+  (live S20: pins' gather of a player already on the target scene, from a GM page drawing another
+  scene; reproduced on the bot with `_clearPolygonTree()`). New `warmRegionTrees(scene)` in
+  `scene-adapter.mjs` reads every region's `polygonTree` once before the update (adjustments
+  `core-region-polygon-tree-warm`). Tests: `teleport-token.test.mjs` (a lazy-tree scene that throws
+  like core unless every tree was built; a region whose tree cannot build is logged and the move
+  still goes), `party.test.mjs` (spreadArrival builds the trees before its displace step).
+- Tests: `core.test.mjs` (edgeGap, companionsOf: own, single move, several leaders and the tie,
+  gather), `legacy-core.mjs` (the guard flipped: the shared steed only within reach; leaderOf → the
+  last owner), `party.test.mjs` (bringFollowers at 5 / 10 / 15 / 20 ft (5e distance), another level, the tie, the first
+  only within reach), `teleport-token.test.mjs` (the same on both paths, grid distance and units,
+  gather waits / comes / `held` / BAD_ARGS, the prePull's `gather`, and owner T's sequential-spread
+  case: two calls to one point never overlap). Goldens re-pinned one file at a time: `landing-party.json`, `confirm-party.json`,
+  `teleport-same-scene.json` (the steed now lands by Marrith, the last owner), `describe.json` (the
+  teleportToken row).
+
 ## 0.7.0 — 2026-10-17 (pins rebuild, `context/plans/pin-2026-10-rebuild.md` §2, owner A)
 
 Needs a Foundry restart (`module.json` version). Additive API: CONTRACT stays `pentaryn-portals/api@1`.

@@ -1,8 +1,8 @@
 {
   "id": "pentaryn-pins",
   "title": "Pentaryn Pins",
-  "description": "Pin a character to a player: with the world switch on, that player sees the scene their character's token is on (moving the token moves them, with core's own pull) and ignores GM scene activation; the sheet says 'Pinned to {player}'. GM right-click on empty canvas: Prompt note, Teleport pinned character (with its summons and pets). Exposes game.pentaryn.pins.",
-  "version": "0.2.0",
+  "description": "Pin a character to a player: with the world switch on, that player sees the scene their character's token is on (moving the token moves them, with core's own pull) and ignores GM scene activation; the sheet says 'Pinned to {player}'. GM right-click on empty canvas: Prompt note, Gather logged-in players here, Teleport pinned character (with its summons and pets). Exposes game.pentaryn.pins.",
+  "version": "0.3.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14.369"

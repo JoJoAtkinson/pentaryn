@@ -5,10 +5,14 @@
  *   scenes  A (active) · B (Talo's token, two levels) · C
  *   users   the GM (stub default, role 4) · Claude the bot GM (role 3) · Talo's player · Mira's player
  *   actors  Talo (character) · Mira (character) · Wolf (Talo's wild-shape form) · Spirit (Talo's summon)
+ *
+ * The gather tests add a party on top (gatherParty): Ash's player (online, Ash on A), Olga (offline,
+ * Olga on C) and Ned (online, unpinned), and pin Mira's player to Mira (on A). `F.startCombat` adds a
+ * Combat to game.combats.
  */
 
 import { readFileSync } from "node:fs";
-import { installFoundry, makeToken } from "../kit/foundry-stub.mjs";
+import { installFoundry, makeDoc, makeToken, makeUser } from "../kit/foundry-stub.mjs";
 
 export const IDS = Object.freeze({
   gm: "gmUser0000000001",
@@ -199,6 +203,19 @@ export async function pinsWorld(moduleId, extra = {}) {
     tok.parent.tokens.delete(tok.id);
     F.fire("deleteToken", tok, options, userId);
   };
+  /**
+   * A Combat in game.combats with core's `started` (round > 0, client/documents/combat.mjs) and
+   * `combatants` keyed by id, each `{ id, sceneId, tokenId }` (common/documents/combatant.mjs fields).
+   * `scene` null: an unlinked combat. → the combat; `F.endCombats()` empties the collection.
+   */
+  F.startCombat = ({ id = null, round = 1, scene = null, combatants = [] } = {}) => {
+    const combat = makeDoc("Combat", { ...(id ? { id } : {}), round, scene,
+      combatants: new Map(combatants.map((c, i) => [c.id ?? `cbt${String(i).padStart(13, "0")}`, { id: c.id ?? `cbt${String(i).padStart(13, "0")}`, ...c }])) });
+    Object.defineProperty(combat, "started", { get() { return this.round > 0; }, enumerable: false });
+    game.combats.set(combat.id, combat);
+    return combat;
+  };
+  F.endCombats = () => { for (const id of [...game.combats.keys()]) game.combats.delete(id); };
   /** Core's update: apply then fire updateToken. */
   F.updateToken = (tok, changes, { userId = IDS.gm } = {}) => {
     Object.assign(tok, changes);
@@ -208,3 +225,54 @@ export async function pinsWorld(moduleId, extra = {}) {
 }
 
 export const flush = () => new Promise(r => setImmediate(r));
+
+export const GATHER_IDS = Object.freeze({
+  ashUser: "ashUser000000001",
+  olgaUser: "olgaUser00000001",
+  nedUser: "nedUser000000001",
+  ash: "ashActor00000001",
+  olga: "olgaActor0000001",
+  ashTok: "ashTok0000000001",
+  olgaTok: "olgaTok000000001",
+});
+
+/**
+ * The gather party (gather plan §5.2 G1), added to a pinsWorld: three online pinned players — Mira's
+ * player (Mira on A), Ash's player (Ash on A) and Talo's player (Talo on B, the fixture's own pin) —
+ * plus Olga (offline, pinned, Olga on C) and Ned (online, no pin). → `restore()` takes it all back
+ * out (users, actors, tokens and Mira's pin).
+ */
+export function gatherParty() {
+  const G = GATHER_IDS;
+  const A = game.scenes.get(IDS.sceneA), C = game.scenes.get(IDS.sceneC);
+  const users = [
+    makeUser({ id: G.ashUser, name: "Ash's player", flags: { "pentaryn-pins": { actor: G.ash } } }),
+    makeUser({ id: G.olgaUser, name: "Olga", active: false, flags: { "pentaryn-pins": { actor: G.olga } } }),
+    makeUser({ id: G.nedUser, name: "Ned" }),
+  ];
+  for (const u of users) game.users.set(u.id, u);
+  const actors = [
+    makeDoc("Actor", { id: G.ash, name: "Ash", type: "character", ownership: { default: 0, [G.ashUser]: 3 } }),
+    makeDoc("Actor", { id: G.olga, name: "Olga's PC", type: "character", ownership: { default: 0, [G.olgaUser]: 3 } }),
+  ];
+  for (const a of actors) game.actors.set(a.id, a);
+  const place = (scene, data) => {
+    const tok = makeToken({ actorLink: true, ...data }, scene);
+    tok.collection = scene.tokens;
+    scene.tokens.set(tok.id, tok);
+    return tok;
+  };
+  const tokens = [place(A, { id: G.ashTok, name: "Ash", actorId: G.ash, x: 300, y: 300 }),
+    place(C, { id: G.olgaTok, name: "Olga's PC", actorId: G.olga, x: 0, y: 0 })];
+  const mira = game.users.get(IDS.miraUser);
+  const miraFlags = structuredClone(mira.flags ?? {});
+  mira.flags = { ...mira.flags, "pentaryn-pins": { actor: IDS.mira } };
+  return {
+    restore() {
+      for (const t of tokens) t.parent.tokens.delete(t.id);
+      for (const a of actors) game.actors.delete(a.id);
+      for (const u of users) game.users.delete(u.id);
+      mira.flags = miraFlags;
+    },
+  };
+}

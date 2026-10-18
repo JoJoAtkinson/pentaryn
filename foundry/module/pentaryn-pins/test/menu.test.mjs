@@ -1,6 +1,7 @@
 // Glue for the GM-side features (plan §3 "Pins tests", glue cases 16–19): the "Pinned to" sheet
 // badge, and the GM right-click canvas menu (event order on Windows and macOS, every gate, Prompt
-// note through pentaryn-prompts' `place`, Teleport through pentaryn-portals' `teleportToken`).
+// note through pentaryn-prompts' `place`, Teleport through pentaryn-portals' `teleportToken`,
+// Gather through pins' own `gather`: gather plan §4.3 / §5.2 "Menu").
 // The DOM is the small stand-in in fixtures/dom.mjs; prompts and portals are stubs of their
 // published shapes (portals' is pinned by its describe golden: teleportToken's row).
 import { test } from "node:test";
@@ -8,8 +9,9 @@ import { existsSync, readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { IDS, flush, pinsWorld } from "./fixtures/actors.mjs";
 import { FakeElement, dispatch, installDom } from "./fixtures/dom.mjs";
-import { makeUser } from "./kit/foundry-stub.mjs";
+import { makeToken, makeUser } from "./kit/foundry-stub.mjs";
 import { MODULE } from "../pins-core.mjs";
+import { tokensByRoots } from "../world-adapter.mjs";
 
 const F = await pinsWorld(MODULE, { settings: { [`${MODULE}.pinning`]: true } });
 const consoleLines = [];
@@ -441,6 +443,262 @@ test("19 wild-shaped the dnd5e 6.0.6 linked way (token → form actor, actorLink
   await flush();
   assert.equal(teleported[0]?.[0], tok.uuid);
   tok.actorId = IDS.talo;
+});
+
+/* ── Gather logged-in players here (gather plan §4.3, §5.2 "Menu") ───── */
+
+const topItems = () => items().filter(a => a.dataset.j === undefined);
+const gatherItem = () => topItems().find(a => labelOf(a) === "Gather logged-in players here");
+const noteOf = a => a.querySelector("span.ppi-note")?.textContent ?? null;
+const settle = async () => {
+  for (let i = 0; i < 6; i++) await flush();
+};
+const dialogs = [];
+let dialogAnswer = false;
+foundry.applications.api.DialogV2 = { confirm: async opts => { dialogs.push(opts); return dialogAnswer; } };
+/** A started (or not) combat whose combatant stands for `tokenId` on `sceneId`; `scene` null like an unlinked combat. */
+function addCombat({ sceneId, tokenId, started = true }) {
+  const id = "combatGather0001";
+  game.combats.set(id, { id, documentName: "Combat", scene: null, started, round: started ? 1 : 0, active: true,
+    combatants: new Map([["combatantGath001", { id: "combatantGath001", sceneId, tokenId }]]) });
+  return () => game.combats.delete(id);
+}
+/** View another scene on the GM canvas (a cross-scene gather: Talo's token is on Lighthouse). */
+function viewScene(id, level = null) {
+  Object.assign(canvas, { scene: game.scenes.get(id), level: level ? { id: level } : null });
+}
+const viewLighthouse = () => viewScene(IDS.sceneB, IDS.levelB2);
+
+test("gather: the item sits between Prompt note and Teleport ▸; without prompts it comes first", () => {
+  rightClick();
+  assert.deepEqual(topItems().map(labelOf), ["Prompt note", "Gather logged-in players here", "Teleport pinned character"]);
+  assert.ok(gatherItem().querySelector("i.fa-people-group"), "fa-people-group icon");
+  close();
+  const prompts = game.modules.get("pentaryn-prompts");
+  game.modules.delete("pentaryn-prompts");
+  try {
+    rightClick();
+    assert.deepEqual(topItems().map(labelOf), ["Gather logged-in players here", "Teleport pinned character"]);
+    close();
+  } finally {
+    game.modules.set("pentaryn-prompts", prompts);
+  }
+});
+
+test("gather: enabled with the member count as its note; disabled with \"no one to gather\" when nobody qualifies", async () => {
+  rightClick();
+  assert.equal(gatherItem().classList.contains("ppi-disabled"), false);
+  assert.equal(noteOf(gatherItem()), "1", "Talo's player is the one member (Mira's player has no pin)");
+  close();
+  const talo = game.users.get(IDS.taloUser);
+  talo.active = false;
+  try {
+    teleported.length = 0;
+    rightClick();
+    const item = gatherItem();
+    assert.equal(item.classList.contains("ppi-disabled"), true);
+    assert.equal(item.getAttribute("aria-disabled"), "true");
+    assert.equal(noteOf(item), "no one to gather");
+    click(item);
+    assert.ok(menuEl(), "a disabled Gather does nothing");
+    await settle();
+    assert.deepEqual(teleported, []);
+    close();
+  } finally {
+    talo.active = true;
+  }
+});
+
+test("gather: one read of the pin world per menu open (code review G9) — one tokensByRoots walk, each pin flag read once — shared by Gather's count and the Teleport ▸ rows", () => {
+  const tokens = game.scenes.get(IDS.sceneC).tokens;
+  let reads = 0;
+  Object.defineProperty(tokens, "contents", { configurable: true, get() { reads++; return [...this.values()]; } });
+  const talo = game.users.get(IDS.taloUser);
+  const flags = talo.flags;
+  let flagReads = 0;
+  Object.defineProperty(talo, "flags", { configurable: true, get() { flagReads++; return flags; } });
+  try {
+    tokensByRoots([IDS.talo]);
+    const perWalk = reads;
+    assert.ok(perWalk > 0, "a walk reads every scene's tokens");
+    reads = 0;
+    flagReads = 0;
+    rightClick();
+    assert.ok(menuEl());
+    assert.equal(reads, perWalk, "one walk");
+    assert.equal(flagReads, 1, "Talo's pin read once (no second builder for the Gather count)");
+    close();
+  } finally {
+    delete tokens.contents;
+    delete talo.flags;
+    talo.flags = flags;
+  }
+});
+
+test("gather: a click calls pins.gather with the clicked CANVAS point, the canvas scene and level; no dialog; toasts who moved and who did not", async () => {
+  teleported.length = 0;
+  dialogs.length = 0;
+  canvas.offset = { x: 100, y: 50 };
+  try {
+    rightClick({ x: 640, y: 360 });
+    click(gatherItem());
+    assert.equal(menuEl(), null, "closed before the action runs");
+    await settle();
+  } finally {
+    canvas.offset = { x: 0, y: 0 };
+  }
+  assert.deepEqual(teleported, [[`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`,
+    { x: 740, y: 410, scene: IDS.sceneB, level: IDS.levelB2, pull: [IDS.taloUser], dryRun: false, gather: { later: [] } }]],
+  "the same-scene member, onto the level the GM views");
+  assert.deepEqual(dialogs, [], "one click: no confirm outside combat");
+  const last = toasts().slice(-2);
+  assert.deepEqual(last, [["info", "Gathered Talo → Lighthouse"], ["warn", "Not gathered: Mira's player: no pin"]]);
+  assert.equal(toasts().some(([, m]) => /did not follow/.test(m)), false, "a same-scene member's view follows (pullToPin)");
+  consoleLines.length = 0;                           // the expected warn toast, logged
+});
+
+test("gather: a cross-scene member in a started combat asks first (names escaped); Cancel moves nothing, Gather goes ahead", async () => {
+  viewScene(IDS.sceneA);
+  const removeCombat = addCombat({ sceneId: IDS.sceneB, tokenId: IDS.taloTok });
+  const talo = game.actors.get(IDS.talo);
+  const name = talo.name;
+  talo.name = "<b>X</b>";
+  try {
+    teleported.length = 0;
+    dialogs.length = 0;
+    dialogAnswer = false;
+    const before = toasts().length;
+    rightClick({ x: 200, y: 220 });
+    click(gatherItem());
+    await settle();
+    assert.equal(dialogs.length, 1, "the combat confirm");
+    const [d] = dialogs;
+    assert.equal(d.window.title, "Gather during combat?");
+    assert.deepEqual([d.yes.label, d.no.label], ["Gather", "Cancel"]);
+    assert.match(d.content, /&lt;b&gt;X&lt;\/b&gt; will leave the combat tracker \(moved to another scene\)\./);
+    assert.equal(d.content.includes("<b>X</b>"), false, "never the raw name in the dialog's HTML");
+    assert.ok(teleported.length > 0 && teleported.every(([, o]) => o.dryRun === true), "Cancel: only the dry run reached portals");
+    assert.equal(toasts().length, before, "Cancel: no toast");
+
+    teleported.length = 0;
+    dialogAnswer = true;
+    rightClick({ x: 200, y: 220 });
+    click(gatherItem());
+    await settle();
+    assert.equal(dialogs.length, 2);
+    const moves = teleported.filter(([, o]) => o.dryRun === false);
+    assert.deepEqual(moves, [[`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`,
+      { x: 200, y: 220, scene: IDS.sceneA, level: null, pull: [IDS.taloUser], dryRun: false, gather: { later: [] } }]]);
+    assert.ok(toasts().some(t => t[0] === "info" && t[1] === "Gathered <b>X</b> → Harbour"), "a toast is text, not HTML");
+    // the portals stub reports no `pulled`: the cross-scene view did not follow
+    assert.deepEqual(toasts().at(-1), ["warn", "Gathered, but the view did not follow for: Talo's player"]);
+  } finally {
+    talo.name = name;
+    removeCombat();
+    viewLighthouse();
+    dialogAnswer = false;
+    consoleLines.length = 0;
+  }
+});
+
+test("gather: no dialog for a combat that has not started, nor for a same-scene member in combat", async () => {
+  const cases = [
+    () => { viewScene(IDS.sceneA); return addCombat({ sceneId: IDS.sceneB, tokenId: IDS.taloTok, started: false }); },
+    () => { viewLighthouse(); return addCombat({ sceneId: IDS.sceneB, tokenId: IDS.taloTok }); },
+  ];
+  for (const setup of cases) {
+    const remove = setup();
+    try {
+      teleported.length = 0;
+      dialogs.length = 0;
+      rightClick();
+      click(gatherItem());
+      await settle();
+      assert.deepEqual(dialogs, []);
+      assert.deepEqual(teleported.map(([, o]) => o.dryRun), [false], "no dry run either: the cheap gate said no");
+    } finally {
+      remove();
+      viewLighthouse();
+    }
+  }
+  consoleLines.length = 0;
+});
+
+test("gather: an ok:false result toasts GatherFailed; a member portals refuses is listed as not moved", async () => {
+  const portals = game.modules.get("pentaryn-portals");
+  game.modules.delete("pentaryn-portals");
+  try {
+    rightClick();
+    click(gatherItem());
+    await settle();
+  } finally {
+    game.modules.set("pentaryn-portals", portals);
+  }
+  const [level, message] = toasts().at(-1);
+  assert.equal(level, "warn");
+  assert.match(message, /^Gather failed: \S/, "the refusal's reason (or its code)");
+
+  portalsAnswer = { ok: false, code: "CONFLICT", reason: "another session moved it first" };
+  try {
+    const before = toasts().length;
+    rightClick();
+    click(gatherItem());
+    await settle();
+    assert.deepEqual(toasts().slice(before), [["warn", "Not gathered: Mira's player: no pin · Talo not moved: another session moved it first"]],
+      "nobody moved: no Gathered toast");
+  } finally {
+    portalsAnswer = null;
+    consoleLines.length = 0;
+  }
+});
+
+test("gather: an audit-code skip is worded as the switch-on audit words it (MANY_TOKENS names the scenes)", async () => {
+  const mira = game.users.get(IDS.miraUser);
+  const cave = game.scenes.get(IDS.sceneC);
+  const copy = makeToken({ id: "taloTok000000002", name: "Talo", actorId: IDS.talo, actorLink: true }, cave);
+  cave.tokens.set(copy.id, copy);
+  mira.flags = { ...mira.flags, [MODULE]: { actor: IDS.mira } };
+  try {
+    teleported.length = 0;
+    rightClick();
+    assert.equal(noteOf(gatherItem()), "1", "Mira's player only: Talo has two tokens");
+    click(gatherItem());
+    await settle();
+    assert.deepEqual(teleported.map(([uuid]) => uuid), [`Scene.${IDS.sceneA}.Token.${IDS.miraTok}`]);
+    const recent = toasts().slice(-3);
+    assert.deepEqual(recent, [
+      ["info", "Gathered Mira → Lighthouse"],
+      ["warn", "Not gathered: Talo (Talo's player) has several tokens: Lighthouse, Cave"],
+      ["warn", "Gathered, but the view did not follow for: Mira's player"],
+    ]);
+  } finally {
+    cave.tokens.delete(copy.id);
+    delete mira.flags[MODULE];
+    consoleLines.length = 0;
+  }
+});
+
+test("gather (code review G2): SHARED_ACTOR is printed ONCE per actor, naming every co-pinned player — an offline one too", async () => {
+  const mira = game.users.get(IDS.miraUser);
+  const ned = makeUser({ id: "nedShared0000001", name: "Ned", flags: { [MODULE]: { actor: IDS.talo } } });
+  const olga = makeUser({ id: "olgaShared000001", name: "Olga", active: false, flags: { [MODULE]: { actor: IDS.talo } } });
+  game.users.set(ned.id, ned);
+  game.users.set(olga.id, olga);
+  mira.flags = { ...mira.flags, [MODULE]: { actor: IDS.mira } };
+  try {
+    rightClick();
+    assert.equal(noteOf(gatherItem()), "1", "Mira's player only: Talo is pinned to three players");
+    click(gatherItem());
+    await settle();
+    const skipped = toasts().filter(([, m]) => m.startsWith("Not gathered:"));
+    assert.deepEqual(skipped.at(-1), ["warn", "Not gathered: Talo is pinned to several players: Talo's player, Ned, Olga"],
+      "one line for the actor (not one per online sharer), with the audit's own list (Olga is offline)");
+  } finally {
+    game.users.delete(ned.id);
+    game.users.delete(olga.id);
+    delete mira.flags[MODULE];
+    consoleLines.length = 0;
+  }
 });
 
 test("canvasTearDown closes the menu; no errors on the way", () => {

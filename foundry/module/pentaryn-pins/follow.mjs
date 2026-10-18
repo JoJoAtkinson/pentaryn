@@ -17,7 +17,11 @@
  *                        scene and core's own level switch will not follow (a sighted pet left behind).
  *   "pullToScene"        a second listener on core's socket event (§5.3), attached at "ready" after
  *                        core's own: a pull that lands while the canvas is loading (core drops it with
- *                        a toast) is viewed, as sent, once it clears; a newer pull drops the held one.
+ *                        a toast) is viewed, as sent, once it clears — unless the canvas then already
+ *                        shows that scene and level (core's own level switch got there: no second
+ *                        draw). A newer pull, or a NEWER view pins itself asks for (cut, level), drops
+ *                        the held one; a pins view asked for before a pull arrived never does, and
+ *                        is itself dropped (code review G4: `seq` orders them).
  *
  * Nothing here remembers a player's choice: a nav click on another scene is never redirected. With
  * the switch off, for a GM, an unpinned user or a pin with no single token, the wrapper calls core
@@ -43,6 +47,12 @@ let netSeenLevel = null;
 let pendingPull = null;
 /** A replay poll is running (it reads whatever `pendingPull` holds when loading clears). */
 let replayArmed = false;
+/** One counter orders every pull this client receives and every view pins queues (code review G4). */
+let seq = 0;
+/** The seq of the latest pull received (honoured by core or held), 0 for none. */
+let lastPull = 0;
+/** The seq of the delete that (re)armed the safety net. */
+let netSince = 0;
 let pullListener = null;
 
 const enabled = () => C?.setting("pinning") === true;
@@ -86,12 +96,22 @@ function guarded(fn, where) {
   }
 }
 
-/** View `sceneId` with `options`, emitting `followed`. */
-function viewTo(sceneId, options, reason) {
+/**
+ * View `sceneId` with `options`, emitting `followed`, for a request pins queued at `since` (the seq
+ * of the event that asked: the safety net's delete, the gap-filler's move, the replayed pull). A pull
+ * that arrived AFTER it — held for a replay or already honoured by core — is the GM's newer word:
+ * this older view is dropped and the held pull kept (code review G4). Otherwise the view goes ahead
+ * and drops any older held pull, so a stale replay never lands over it (review minor (c); a pull core
+ * honours clears it the same way, onPull). → true when the view was asked for.
+ */
+function viewTo(sceneId, options, reason, since) {
   const scene = game.scenes.get(sceneId);
-  if (!scene) return;
+  if (!scene) return false;
+  if (lastPull > since) return false;
+  pendingPull = null;
   C.emit("followed", { scene: sceneId, level: options?.level ?? null, reason });
   Promise.resolve(scene.view(options)).catch(err => C.log.error("view failed", err));
+  return true;
 }
 
 /** Run `fn` now when the canvas is not loading, else once it stops (poll every NET_POLL_MS, no cap). */
@@ -154,7 +174,7 @@ function checkNet() {
   if (d !== "view") return;
   const opts = followOptions(found);
   if (found.level) opts.level = found.level;
-  viewTo(found.scene, opts, "cut");
+  viewTo(found.scene, opts, "cut", netSince);
 }
 
 function onDeleteToken(doc) {
@@ -164,6 +184,7 @@ function onDeleteToken(doc) {
   // the first delete of a window records where the token stood before the whole shuffle
   if (netTimer === null) netSeenLevel = levelOn(doc.parent.id, doc._source?.level ?? doc.level ?? null);
   clearTimeout(netTimer);
+  netSince = ++seq;
   netTimer = setTimeout(() => guarded(checkNet, "the safety net"), NET_GRACE_MS);
 }
 
@@ -175,6 +196,7 @@ async function onMoveToken(doc, movement, user) {
   if (!root || !scene || scene.id !== canvas?.scene?.id || rootOfToken(doc) !== root) return;
   const from = movement?.origin?.level ?? null, to = movement?.destination?.level ?? null;
   if (!to || from === to) return;
+  const since = ++seq;                                       // a pull after this move supersedes it (G4)
   const viewedLevel = canvas.level ?? null;                  // captured now, as core does (token.mjs:2909)
   await movement.animation?.ended;                           // core's own waits (token.mjs:2915-2918)
   await canvas.initializing;
@@ -191,20 +213,28 @@ async function onMoveToken(doc, movement, user) {
   if (!levelFollow({ target: t, tokenUuid: doc.uuid, to, viewedLevel: canvas.level?.id ?? null, core })) return;
   whenSettled(() => {
     if (canvas.level?.id === to || canvas.scene?.id !== scene.id) return;
-    viewTo(scene.id, { level: to, ...followOptions(t) }, "level");
+    viewTo(scene.id, { level: to, ...followOptions(t) }, "level", since);
   }, "the level gap-filler");
 }
 
 /* ── §5.3 a pull core dropped while loading is replayed ────────────────── */
 
+/** Does the canvas already show what `viewOptions` on `sceneId` asks for (core's Scene#view would draw nothing)? */
+function showing(sceneId, viewOptions) {
+  if (canvas?.scene?.id !== sceneId) return false;
+  return viewOptions?.level === undefined || viewOptions.level === (canvas.level?.id ?? null);
+}
+
 function onPull(sceneId, viewOptions) {
+  const mine = ++seq;
+  lastPull = mine;
   // every pull replaces the one held: a newer pull core honours (not loading) supersedes a dropped
   // one, which must never be replayed over it (code review CR1)
   if (!replayDecision({ pinned: !!myRoot(), loading: !!canvas?.loading })) {
     pendingPull = null;
     return;
   }
-  pendingPull = { sceneId, viewOptions: viewOptions ?? {} };   // the latest wins
+  pendingPull = { sceneId, viewOptions: viewOptions ?? {}, seq: mine };   // the latest wins
   if (replayArmed) return;
   replayArmed = true;
   whenSettled(() => {
@@ -212,7 +242,10 @@ function onPull(sceneId, viewOptions) {
     const p = pendingPull;
     pendingPull = null;
     if (!p || !myRoot()) return;
-    viewTo(p.sceneId, p.viewOptions, "retry");               // the GM's request as sent, never pins' target
+    // the draw that was loading already shows it (core's own level switch beside pins' same-scene
+    // pull, code review G1): a replay would draw nothing new, so none is asked for
+    if (showing(p.sceneId, p.viewOptions)) return;
+    viewTo(p.sceneId, p.viewOptions, "retry", p.seq);        // the GM's request as sent, never pins' target
   }, "the pull replay");
 }
 
@@ -255,4 +288,7 @@ export function uninstall() {
   timers.clear();
   pendingPull = null;
   replayArmed = false;
+  seq = 0;
+  lastPull = 0;
+  netSince = 0;
 }

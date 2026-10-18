@@ -452,7 +452,7 @@ test("CR7: teleportToken fires pentaryn-portals.prePull ONCE, after the carry, w
   // Ana is pinned to a token on another scene: the listener leaves her out of the rule's list
   const drop = (users, ctx) => {
     seen.push({ users: users.map(u => u.id), scene: ctx.scene?.id, level: ctx.level, token: ctx.token?.id, onDest: ctx.scene?.tokens?.has(ctx.token?.id),
-      reason: ctx.reason, pull: ctx.pull.map(u => u.id) });
+      reason: ctx.reason, pull: ctx.pull.map(u => u.id), gather: ctx.gather });
     const i = users.findIndex(u => u.id === P1);
     if (i >= 0) users.splice(i, 1);
   };
@@ -460,7 +460,7 @@ test("CR7: teleportToken fires pentaryn-portals.prePull ONCE, after the carry, w
     const n = F.calls.length;
     let out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, scene: H.far.id });
     assert.deepEqual(out.pulled, [], "the rule's pull leaves her out");
-    assert.deepEqual(seen, [{ users: [P1], scene: H.far.id, level: `${H.far.id}Lvl0`, token: `tCav${H.k}`, onDest: true, reason: "token", pull: [] }]);
+    assert.deepEqual(seen, [{ users: [P1], scene: H.far.id, level: `${H.far.id}Lvl0`, token: `tCav${H.k}`, onDest: true, reason: "token", pull: [], gather: null }]);
     assert.equal(F.calls.slice(n).filter(c => c.op === "Hooks.call" && c.name === "pentaryn-portals.prePull").length, 1, "one hook call per pull site");
     assert.deepEqual(ops(n).filter(c => c.op === "pullUsers"), [], "nobody left: no emit");
     const H2 = hall();
@@ -468,6 +468,13 @@ test("CR7: teleportToken fires pentaryn-portals.prePull ONCE, after the carry, w
     out = await api().teleportToken(H2.t("tCav"), { x: 1550, y: 750, scene: H2.far.id, pull: [P1] });
     assert.deepEqual(out.pulled.map(u => u.id), [P1], "opts.pull is the caller's word");
     assert.deepEqual(seen[1].pull, [P1], "the listener is told who is pulled regardless");
+    // code review G6: a gather member's call (opts.gather) says so in its prePull — a per-call mark, so
+    // a listener can scope a gather rule to that carry alone, never to whatever else pulls meanwhile
+    const H3 = hall();
+    watching(H3, [P1]);
+    const later = [{ user: P2, token: "notOnThisScene01" }];
+    await api().teleportToken(H3.t("tCav"), { x: 1550, y: 750, scene: H3.far.id, gather: { later } });
+    assert.deepEqual(seen[2].gather, { later }, "the call's gather, as validated");
   });
 });
 
@@ -1054,4 +1061,179 @@ test("review C6: a bare token id held by two scenes (a duplicated scene keeps id
   assert.equal(byUuid.from, a.id, "a uuid is never ambiguous");
   const byDoc = await api().teleportToken(b.tokens.get(dup), { x: 1550, y: 750, dryRun: true });
   assert.equal(byDoc.from, b.id, "a document is never ambiguous");
+});
+
+/* ── §11 co-owned companions (pin-2026-10-gather.md §11, Joe 2026-10-17; 0.8.0) ─────────────────── */
+// The Steed is owned by P1 (Caven) AND P2 (Marrith): shared. Owned by one character's players it
+// would always follow (the Owl above); shared, a single move brings it only within 10 ft of the
+// mover (token edges, same level), a gather (opts.gather) always, with the last-moved gathered owner.
+
+/** Every pair of landed boxes on `s` that share area (touching edges do not count). */
+const overlapsOn = (s, ids) => {
+  const b = ids.map(id => s.tokens.get(id)).map(t => ({ id: t.id, x: t.x, y: t.y, w: (t.width ?? 1) * 100, h: (t.height ?? 1) * 100 }));
+  return b.flatMap((a, i) => b.slice(i + 1).filter(o => a.x < o.x + o.w && o.x < a.x + a.w && a.y < o.y + o.h && o.y < a.y + a.h).map(o => [a.id, o.id]));
+};
+/** Edge gap in squares between two tokens on a 100 px grid (0 = touching). */
+const gapSq = (a, b) => {
+  const ax2 = a.x + (a.width ?? 1) * 100, ay2 = a.y + (a.height ?? 1) * 100, bx2 = b.x + (b.width ?? 1) * 100, by2 = b.y + (b.height ?? 1) * 100;
+  return Math.max(0, b.x - ax2, a.x - bx2, b.y - ay2, a.y - by2) / 100;
+};
+
+// 5e distance (code review G3): adjacent = 5 ft, one empty square between = 10 ft, so "within 10 ft"
+// is an edge gap of at most 10 ft minus one square, in the scene's grid units read as feet.
+test("§11 single move: a shared steed adjacent (5 ft) or one square away (10 ft) comes; two squares away (15 ft) stays (same scene)", async () => {
+  // Caven spans 100-200: steed at 200/300/400/500 → edge gaps 0/1/2/3 squares = 5/10/15/20 ft
+  for (const [x, comes] of [[200, true], [300, true], [400, false], [500, false]]) {
+    const H = hall();
+    Object.assign(H.t("tSteed"), { x });
+    const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750 });
+    assert.equal(out.followers.some(f => f.name === "Steed"), comes, `steed at x ${x}`);
+    assert.equal(H.t("tSteed").x !== x, comes, `steed moved at x ${x}`);
+    if (comes) assert.equal(gapSq(H.t("tSteed"), H.t("tCav")), 0, "it lands touching the mover");
+  }
+});
+
+test("§11 single move: reach is in the scene's grid units — a 10-ft square: adjacent (10 ft) comes, one square away (20 ft) stays", async () => {
+  for (const [x, comes] of [[200, true], [300, false]]) {
+    const H = hall();
+    H.s.grid.distance = 10;
+    H.s.grid.units = "ft";
+    Object.assign(H.t("tSteed"), { x });
+    const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, dryRun: true });
+    assert.equal(out.followers.some(f => f.name === "Steed"), comes, `10-ft grid, steed at x ${x}`);
+  }
+});
+
+test("§11 single move: metres are converted (1.5 m = 5 ft, dnd5e's rule); an unknown unit counts 5 ft a square", async () => {
+  for (const [units, distance, x, comes] of [["m", 1.5, 300, true], ["m", 1.5, 400, false], ["m", 3, 300, false], ["mi", 1, 300, true], ["", 5, 400, false]]) {
+    const H = hall();
+    Object.assign(H.s.grid, { units, distance });
+    Object.assign(H.t("tSteed"), { x });
+    const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, dryRun: true });
+    assert.equal(out.followers.some(f => f.name === "Steed"), comes, `${distance} ${units}, steed at x ${x}`);
+  }
+});
+
+test("§11 single move: a shared steed within 10 ft but on ANOTHER level stays", async () => {
+  const H = hall();
+  addLevel(H.s, `Up${H.k}`);
+  Object.assign(H.t("tSteed"), { x: 300, level: `Up${H.k}` });
+  const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, dryRun: true });
+  assert.deepEqual(out.followers.map(f => f.name), ["Skeleton", "Owl"]);
+});
+
+test("§11 single move to another scene: a shared steed within reach is carried in the company and lands beside the mover", async () => {
+  const H = hall();
+  Object.assign(H.t("tSteed"), { x: 300, y: 300 });
+  const out = await api().teleportToken(H.t("tCav"), { x: 1050, y: 550, scene: H.far.id });
+  assert.deepEqual(out.followers.map(f => f.name), ["Skeleton", "Owl", "Steed"]);
+  const steed = H.far.tokens.get(`tSteed${H.k}`), cav = H.far.tokens.get(`tCav${H.k}`);
+  assert.ok(steed && !H.s.tokens.has(steed.id), "carried, not copied");
+  assert.equal(gapSq(steed, cav), 0, "beside Caven");
+  assert.deepEqual(overlapsOn(H.far, [`tCav${H.k}`, `tSkel${H.k}`, `tOwl${H.k}`, `tSteed${H.k}`]), []);
+});
+
+test("§11 gather (opts.gather): the shared steed waits for a later gathered co-owner on its scene, then comes with her, at any distance", async () => {
+  const H = hall();                                              // steed at x 600: 25 ft from Caven, 20 ft from Marrith (5e distance)
+  const later = [{ user: P2, token: `tMar${H.k}` }];
+  const dry = await api().teleportToken(H.t("tCav"), { x: 1050, y: 550, scene: H.far.id, gather: { later }, dryRun: true });
+  assert.deepEqual(dry.followers.map(f => f.name), ["Skeleton", "Owl"], "dryRun honours the flag");
+  assert.deepEqual(dry.held, [{ id: `tSteed${H.k}`, name: "Steed" }], "dryRun reports what it holds");
+  const first = await api().teleportToken(H.t("tCav"), { x: 1050, y: 550, scene: H.far.id, gather: { later } });
+  assert.deepEqual(first.followers.map(f => f.name), ["Skeleton", "Owl"], "Marrith moves later: the steed waits");
+  // code review G5: what it holds is reported, so the gather can carry it if Marrith's own move fails
+  assert.deepEqual(first.held, [{ id: `tSteed${H.k}`, name: "Steed" }]);
+  assert.ok(H.s.tokens.has(`tSteed${H.k}`));
+  const second = await api().teleportToken(H.t("tMar"), { x: 1050, y: 550, scene: H.far.id, gather: { later: [] } });
+  assert.deepEqual(second.followers.map(f => f.name), ["Arcane Eye", "Steed"], "the last-moved owner takes it, beyond 10 ft");
+  assert.deepEqual(second.held, [], "nothing held on the last call");
+  const at = id => H.far.tokens.get(`${id}${H.k}`);
+  assert.ok(gapSq(at("tSteed"), at("tMar")) <= 1, "it lands beside Marrith (a 2×2: within a square)");
+  assert.deepEqual(overlapsOn(H.far, ["tCav", "tSkel", "tOwl", "tMar", "tEye", "tSteed"].map(i => `${i}${H.k}`)), []);
+});
+
+test("§11 gather: a later co-owner whose token is on ANOTHER scene does not hold the steed back; a later non-owner neither", async () => {
+  const H = hall();
+  const elsewhere = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, gather: { later: [{ user: P2, token: "notOnThisScene01" }] }, dryRun: true });
+  assert.ok(elsewhere.followers.some(f => f.name === "Steed"));
+  assert.deepEqual(elsewhere.held, []);
+  const single = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, dryRun: true });
+  assert.equal("held" in single, false, "a single move (no gather) reports no `held`");
+  const nonOwner = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, gather: { later: [{ user: GM, token: `tGuard${H.k}` }] }, dryRun: true });
+  assert.ok(nonOwner.followers.some(f => f.name === "Steed"));
+});
+
+test("§11 gather: opts.gather not { later: [{ user, token }] } → BAD_ARGS; nothing written", async () => {
+  const H = hall();
+  const n = F.calls.length;
+  for (const gather of ["yes", true, { later: "x" }, { later: [{ user: P2 }] }, { later: [{ user: 1, token: "t" }] }, { later: [null] }]) {
+    const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, gather });
+    assert.equal(out.code, "BAD_ARGS", JSON.stringify(gather));
+  }
+  assert.deepEqual(ops(n), []);
+  // null / undefined: a single move
+  assert.equal((await api().teleportToken(H.t("tCav"), { x: 1550, y: 750, gather: null, dryRun: true })).ok, true);
+});
+
+// Owner T (pin-2026-10-gather.md §5.2 "Portals, test only"): pins' gather is one teleportToken per member.
+test("sequential spread: two teleportToken calls to one point never overlap — the second leader takes a ring square, its company lands beside it", async () => {
+  const H = hall();
+  await api().teleportToken(H.t("tCav"), { x: 1050, y: 550, scene: H.far.id });
+  await api().teleportToken(H.t("tMar"), { x: 1050, y: 550, scene: H.far.id });
+  const at = id => H.far.tokens.get(`${id}${H.k}`);
+  assert.deepEqual([at("tCav").x, at("tCav").y], [1000, 500], "the first leader takes the centre");
+  assert.notDeepEqual([at("tMar").x, at("tMar").y], [1000, 500], "the second leader takes a ring square");
+  assert.ok(near(at("tMar"), at("tCav")) <= 200, "the ring square is near the point");
+  assert.equal(gapSq(at("tEye"), at("tMar")), 0, "Marrith's summon lands beside her");
+  assert.deepEqual(overlapsOn(H.far, ["tCav", "tSkel", "tOwl", "tMar", "tEye"].map(i => `${i}${H.k}`)), []);
+  // same scene: the same, on the hall
+  const S2 = hall();
+  await api().teleportToken(S2.t("tCav"), { x: 1550, y: 750 });
+  await api().teleportToken(S2.t("tMar"), { x: 1550, y: 750 });
+  assert.deepEqual([S2.t("tCav").x, S2.t("tCav").y], [1500, 700]);
+  assert.notDeepEqual([S2.t("tMar").x, S2.t("tMar").y], [1500, 700]);
+  assert.equal(gapSq(S2.t("tEye"), S2.t("tMar")), 0);
+  assert.deepEqual(overlapsOn(S2.s, ["tCav", "tSkel", "tOwl", "tMar", "tEye"].map(i => `${i}${S2.k}`)), []);
+});
+
+/* ── core v14.369: a displace move needs every region's polygon tree built (adjustments core-region-polygon-tree-warm) ── */
+
+/**
+ * Core's rule on `s`, as live S20 met it: each region's polygon tree is built lazily by its
+ * `polygonTree` getter, and a `displace` (teleport) waypoint's segmentizer reads the private field
+ * without the getter, so a Token update with a displace waypoint throws while any tree is unbuilt.
+ * → `{ built }`: the region ids whose getter ran.
+ */
+function lazyTrees(s) {
+  const built = new Set();
+  for (const r of s.regions) Object.defineProperty(r, "polygonTree", { configurable: true, get() { built.add(r.id); return { testPoint: () => false }; } });
+  const real = s.updateEmbeddedDocuments;
+  s.updateEmbeddedDocuments = function (type, updates, options = {}) {
+    const displace = Object.values(options?.movement ?? {}).some(m => m.waypoints?.some(w => w.action === "displace"));
+    if (type === "Token" && displace && s.regions.some(r => !built.has(r.id))) {
+      return Promise.reject(new TypeError("Cannot read properties of undefined (reading 'testPoint')"));
+    }
+    return real.call(this, type, updates, options);
+  };
+  return { built };
+}
+
+test("same scene: every region's polygon tree is built before the displace update, so core's teleport segmentizer cannot throw (live S20)", async () => {
+  const H = hall();
+  W.region(H.s, { id: `Second${H.k}`, name: "Second", bounds: { x: 1300, y: 600, width: 100, height: 100 } });
+  const { built } = lazyTrees(H.s);
+  const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750 });
+  assert.equal(out.ok, true, out.reason);
+  assert.equal(out.moved, 3);
+  assert.deepEqual([...built].sort(), [`Gate${H.k}`, `Second${H.k}`].sort(), "both regions' trees were built");
+  assert.deepEqual([H.t("tCav").x, H.t("tCav").y], [1500, 700]);
+});
+
+test("same scene: a region whose tree cannot be built is logged and left alone; the move still goes", async () => {
+  const H = hall();
+  const gate = H.s.regions.get(`Gate${H.k}`);
+  Object.defineProperty(gate, "polygonTree", { configurable: true, get() { throw new Error("no shapes yet"); } });
+  const out = await api().teleportToken(H.t("tCav"), { x: 1550, y: 750 });
+  assert.equal(out.ok, true, out.reason);
+  assert.deepEqual([H.t("tCav").x, H.t("tCav").y], [1500, 700]);
 });

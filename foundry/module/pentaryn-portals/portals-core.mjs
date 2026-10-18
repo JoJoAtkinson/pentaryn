@@ -21,7 +21,7 @@
 export const MODULE = "pentaryn-portals";
 export const SHORT = "portals";
 export const NS = "portals";
-export const VERSION = "0.7.0";                        // === module.json version (core.test pins it)
+export const VERSION = "0.8.0";                        // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-portals/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_PORTALS";
 export const CSS = "ppt-";                             // every class this module puts in the DOM starts ppt- (S7)
@@ -37,7 +37,9 @@ export const HOOKS = Object.freeze({
   prePull: Object.freeze({ name: "pentaryn-portals.prePull", pre: true,
     args: "(users: User[] — mutable: splice out a user to leave them behind, { scene: the destination Scene, level: landed level id|null, "
       + "token: the carried TokenDocument (on scene) | null for Teleport party, reason: \"token\" (teleportToken) | \"party\" (Teleport party), "
-      + "pull: User[] — teleportToken's opts.pull, pulled whatever a listener does }) — fired only when users is not empty; false = pull none of users" }),
+      + "pull: User[] — teleportToken's opts.pull, pulled whatever a listener does, "
+      + "gather: { later } — teleportToken's opts.gather when this carry is one member's move of a pentaryn-pins gather | null }) "
+      + "— fired only when users is not empty; false = pull none of users" }),
 });
 /** Where Snapshot saves its crops (Data). */
 export const SNAP_DIR = "assets/tokens/custom/portals";
@@ -177,8 +179,11 @@ export function partySelection(records) {
 }
 
 /**
- * The PC a follower should land beside: the PC who summoned it, else the first PC that one of its
- * owners also owns. Null when none (it lands wherever there is room).
+ * The PC a follower should land beside: the PC who summoned it; else its own PC (the first PC whose
+ * players own all of it, as before); else, for a companion SHARED by several characters' players
+ * (a co-owned steed), the LAST PC in `pcs` one of its owners owns — the last-moved owner takes it
+ * (pin-2026-10-gather.md §11, Joe 2026-10-17; it was the first before 0.8.0). Null when none (it
+ * lands wherever there is room).
  * @param {object} follower  @param {object[]} pcs  records, in party order
  * @returns {string|null} the PC record's id
  */
@@ -187,8 +192,9 @@ export function leaderOf(follower, pcs) {
     const pc = pcs.find(p => p.actorId === follower.summoner || (p.rootActorId && p.rootActorId === follower.summoner));
     if (pc) return pc.id;
   }
-  const owners = new Set(follower.owners ?? []);
-  return pcs.find(p => (p.owners ?? []).some(u => owners.has(u)))?.id ?? null;
+  const own = pcs.find(p => ownsAll(follower, p));
+  if (own) return own.id;
+  return pcs.findLast(p => shares(follower, p))?.id ?? null;
 }
 
 /**
@@ -252,25 +258,127 @@ export function partyPreview(party) {
     leaderName: isPC(t) ? null : nameOf(leaderOf(t, pcs)) }));
 }
 
+/** pin-2026-10-gather.md §11: how close a SHARED companion must be to a moving owner in a single move. */
+export const SHARED_REACH_FT = 10;
+
 /**
- * Native teleport: the tokens that come along when `leaders` walk through a link.
- * A token follows if one of the leaders summoned it, or (with no summon flag) every player who
- * owns it also owns a leader. So a familiar follows its wizard, but a steed the whole party
- * co-owns stays put unless everyone goes.
+ * The gap between two boxes `{ x, y, w, h }` in px: 0 when they touch or overlap, else the larger of the
+ * two axis gaps (the 5e grid: a diagonal square counts as one). reachFeet turns it into 5e distance.
+ */
+export function edgeGap(a, b) {
+  const gx = Math.max(0, b.x - (a.x + a.w), a.x - (b.x + b.w));
+  const gy = Math.max(0, b.y - (a.y + a.h), a.y - (b.y + b.h));
+  return Math.max(gx, gy);
+}
+
+/**
+ * Feet per grid square from a scene's grid `distance` and `units` (code review G3): feet as given
+ * ("ft", "feet", "'", or no unit: dnd5e's default); metres at dnd5e's 1.5 m = 5 ft; any other unit
+ * (a travel map's miles) or no usable distance → 5, one 5e square.
+ */
+export function feetPerSquare(distance, units) {
+  const d = Number(distance);
+  if (!Number.isFinite(d) || d <= 0) return 5;
+  const u = String(units ?? "").trim().toLowerCase().replace(/\.$/, "");
+  if (["", "ft", "feet", "foot", "'"].includes(u)) return d;
+  if (["m", "meter", "meters", "metre", "metres"].includes(u)) return d * 5 / 1.5;
+  return 5;
+}
+
+/**
+ * 5e distance in feet between two tokens whose edges are `gapPx` apart on a `gridPx` grid (code review
+ * G3): the squares counted to reach the other, its square included — adjacent (touching) is one square
+ * (5 ft), one empty square between is 10 ft. So "within 10 ft" is an edge gap of at most 10 ft minus
+ * one square.
+ */
+export function reachFeet(gapPx, gridPx, ftPerSquare = 5) {
+  const g = Number(gridPx) > 0 ? Number(gridPx) : 100;
+  return (Math.max(0, Number(gapPx) || 0) / g + 1) * ftPerSquare;
+}
+
+/** Every player who owns `t` owns `leader` too: it is that character's own companion. */
+const ownsAll = (t, leader) => (t.owners ?? []).length > 0 && t.owners.every(u => (leader.owners ?? []).includes(u));
+/** Some player who owns `t` owns `leader`. */
+const shares = (t, leader) => (t.owners ?? []).some(u => (leader.owners ?? []).includes(u));
+
+/**
+ * Who comes along when `leaders` move, and with which of them (portal hop, teleportToken, a pins
+ * gather). One rule for every move (pin-2026-10-gather.md §11, Joe 2026-10-17):
+ *
+ * - a summon goes with the leader it names as its origin (`summoner`; a wild-shaped leader's
+ *   `rootActorId` counts) — the first such leader;
+ * - its OWN companion (every player who owns it owns the leader) goes with the first such leader,
+ *   at any distance — unchanged;
+ * - a SHARED companion (one owner of it owns a leader, but no one leader is owned by all of them —
+ *   a steed two players co-own):
+ *     - single move (`gather` null): only when `near(t, leader)` — within SHARED_REACH_FT of it,
+ *       token edges, same level (the adapter's test). Of several leaders within reach, the LAST
+ *       (the last-moved owner) takes it. None within reach → it stays and the GM drags it;
+ *     - gather (`gather: { later }`, from pentaryn-pins through teleportToken opts.gather): always,
+ *       with the last-moved of its gathered owners: it waits while a `later` entry's user owns it
+ *       and that entry's token is among `leaders`/`records` (it stands on this scene and moves later);
+ *       otherwise the last leader that shares it takes it, at any distance. Offline co-owners are
+ *       never in `later`, so they do not count.
+ *
+ * Never: piles, scenery, area handles, other PCs (carriable), a token no player owns that no leader summoned.
+ * This replaces "a co-owned steed comes when all its owners go together" (before 0.8.0).
+ * @param {object[]} leaders  records of the tokens that move, in move order
+ * @param {object[]} records  every other token on their (origin) scene
+ * @param {{near?: (t: object, leader: object) => boolean, gather?: {later: {user: string, token: string}[]}|null}} [opts]
+ * @returns {{record: object, leader: string}[]} in `records` order
+ */
+export function companionsOf(leaders, records, opts = {}) {
+  return companionPlan(leaders, records, opts).come;
+}
+
+/**
+ * The shared companions a gather call leaves where they stand for a later gathered co-owner on their
+ * scene (companionsOf's "it waits" case; code review G5): teleportToken reports them as `held`, so a
+ * gather whose later member then fails can still carry them with the last owner that moved. [] for a
+ * single move. Same arguments as companionsOf.
+ * @returns {object[]} records, in `records` order
+ */
+export function heldCompanions(leaders, records, opts = {}) {
+  return companionPlan(leaders, records, opts).held;
+}
+
+/** companionsOf's one pass: `come` ({ record, leader }) and, in a gather, `held` (records waiting for a later co-owner). */
+function companionPlan(leaders, records, { near = () => false, gather = null } = {}) {
+  const leaderIds = new Set(leaders.map(t => t.id));
+  const here = new Set([...leaders, ...records].map(t => t.id));
+  const laterOwners = new Set((gather?.later ?? []).filter(e => here.has(e.token)).map(e => e.user));
+  const come = [], held = [];
+  for (const t of records) {
+    if (leaderIds.has(t.id) || !carriable(t)) continue;
+    let leader = null;
+    if (t.summoner) {
+      // a leader's `rootActorId` (recordOf: the original of a wild-shaped PC) also counts,
+      // since dnd5e names the ORIGINAL actor as a summon's origin
+      leader = leaders.find(l => l.actorId === t.summoner || (l.rootActorId && l.rootActorId === t.summoner)) ?? null;
+    } else if ((t.owners ?? []).length) {
+      leader = leaders.find(l => ownsAll(t, l)) ?? null;
+      if (!leader) {
+        const sharers = leaders.filter(l => shares(t, l));
+        if (gather && sharers.length && t.owners.some(u => laterOwners.has(u))) held.push(t);
+        else if (gather) leader = sharers.at(-1) ?? null;
+        else leader = sharers.filter(l => near(t, l)).at(-1) ?? null;
+      }
+    }
+    if (leader) come.push({ record: t, leader: leader.id });
+  }
+  return { come, held };
+}
+
+/**
+ * The tokens that come along when `leaders` move: companionsOf's records (its rule, its options).
+ * So a familiar follows its wizard and a pet its only player's PC; a steed two players co-own comes
+ * with a single mover only within 10 ft, in a gather always.
  * @param {object[]} leaders  records of the tokens that just teleported
  * @param {object[]} records  every token still on the origin scene
+ * @param {Parameters<typeof companionsOf>[2]} [opts]
  */
-export function followersOf(leaders, records) {
-  const leaderIds = new Set(leaders.map(t => t.id));
-  // a leader's `rootActorId` (recordOf: the original of a wild-shaped PC) also counts,
-  // since dnd5e names the ORIGINAL actor as a summon's origin
-  const leaderActors = new Set(leaders.flatMap(t => [t.actorId, t.rootActorId]).filter(Boolean));
-  const leaderOwners = new Set(leaders.flatMap(t => t.owners));
-  return records.filter(t => {
-    if (leaderIds.has(t.id) || !carriable(t)) return false;
-    if (t.summoner) return leaderActors.has(t.summoner);
-    return t.owners.length > 0 && t.owners.every(u => leaderOwners.has(u));
-  });
+export function followersOf(leaders, records, opts = {}) {
+  return companionsOf(leaders, records, opts).map(c => c.record);
 }
 
 /** Grid cells outward from (cx, cy): the centre, then each ring around it, skipping cells a wall cuts off. */

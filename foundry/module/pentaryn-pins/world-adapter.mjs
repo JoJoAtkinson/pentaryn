@@ -7,8 +7,13 @@
  */
 
 import { FLAG_SCOPE, PIN_FLAG, auditPins, pickToken, pinOf } from "./pins-core.mjs";
+import { errorCode, fail } from "./lib/errors.mjs";
 import { readFlag } from "./lib/flags.mjs";
+import { resolveRef } from "./lib/resolve.mjs";
 import { rootActorId } from "./lib/root-actor.mjs";
+
+/** A uuid (the kit's resolve.mjs shape): a world `Type.<16-char id>…` or any Compendium path. */
+const UUID = /^(?:Compendium\.|[A-Z][A-Za-z]+\.[A-Za-z0-9]{16}(?:\.|$))/;
 
 /** A Foundry collection (or Map, or array) as an array; [] for none. The one copy pins uses. */
 export function listOf(coll) {
@@ -140,10 +145,11 @@ export function tokenPermits(doc, user, level = "OWNER") {
  * Scene#view of the scene and level already drawn draws nothing (scene.mjs:274-280), and a pull that
  * lands while loading is replayed (follow.mjs §5.3), so the pull is always safe.
  * `controlledTokens` only when the user owns the token (else core's own fallback picks what to pan
- * to). Plain data: the caller does `game.scenes.get(scene).pullUsers([user], options)`.
+ * to). `token`: a token record the caller already resolved (pullToPin's). Plain data: the caller does
+ * `game.scenes.get(scene).pullUsers([user], options)`.
  */
-export function pullTargetOf(user) {
-  const { token } = resolvePin(user, { viewedSceneId: user?.viewedScene ?? null });
+export function pullTargetOf(user, { token: given = undefined } = {}) {
+  const token = given === undefined ? resolvePin(user, { viewedSceneId: user?.viewedScene ?? null }).token : given;
   if (!token?.scene) return null;
   const level = levelOn(token.scene, token.level);
   const options = {};
@@ -156,11 +162,13 @@ export function pullTargetOf(user) {
  * THE pull to a pin (code review CR8: `pin()`, a same-scene `teleport()` and the switch-on all call
  * this one): the GM's core Scene#pullUsers of `user` to pullTargetOf's scene and options. Nothing
  * when the pin has no single token. A failure is logged on `log` (warn), never thrown: the pin or
- * the move itself has landed. → true when the pull was sent.
+ * the move itself has landed. `token`: the pin's token record, already resolved (a teleport or a
+ * gather just moved it: no second walk, code review G7); left out, the pin is resolved here.
+ * → true when the pull was sent.
  */
-export function pullToPin(user, log = null) {
+export function pullToPin(user, log = null, { token = undefined } = {}) {
   try {
-    const p = pullTargetOf(user);
+    const p = pullTargetOf(user, { token: token ?? undefined });
     const scene = p ? game.scenes.get(p.scene) : null;
     if (!scene) return false;
     scene.pullUsers([user], p.options);
@@ -198,18 +206,128 @@ export function observes(user, actor) {
   return actor.testUserPermission(user, "OBSERVER") === true;
 }
 
-/** The audit over the live world (plain result; see core auditPins). */
-export function auditWorld() {
-  const pinned = pinnedUsers();
-  const users = Object.fromEntries(listOf(game.users).map(u => [u.id, { id: u.id, name: u.name, isGM: !!u.isGM }]));
+/**
+ * THE plain pin world (code review G8: the one builder auditWorld and gatherInputs share): every user
+ * `{ id, name, active, isGM }`; the pins `{ user, actor, observes }` (auditPins' input) — every
+ * pinned user's with `gms` (the audit reports a GM's flag as GM_USER), else the NON-GM ones only (a
+ * GM's flag must never make a player SHARED_ACTOR: gather plan §1.1); `pinsByUser` for the non-GM
+ * users (root|null); `actors` for the pinned roots that exist; and `tokensByRoot` — the caller's
+ * `byRoot` where it has a root, any root it lacks walked here, else one tokensByRoots walk.
+ */
+export function pinInputs({ gms = false, byRoot = null } = {}) {
+  const all = listOf(game.users);
+  const rootOf = new Map(all.map(u => [u.id, pinOfUser(u)]));
+  const pinned = all.filter(u => rootOf.get(u.id) && (gms || !u.isGM));
+  const roots = [...new Set(pinned.map(u => rootOf.get(u.id)))];
   const actors = {};
-  for (const { root } of pinned) {
+  for (const root of roots) {
     const a = game.actors.get(root);
     if (a) actors[root] = { id: a.id, name: a.name };
   }
-  return auditPins({
-    pins: pinned.map(p => ({ user: p.user.id, actor: p.root, observes: observes(p.user, game.actors.get(p.root)) })),
-    users, actors,
-    tokensByRoot: tokensByRoots(pinned.map(p => p.root)),
-  });
+  const given = byRoot ?? {};
+  const missing = roots.filter(r => !Array.isArray(given[r]));
+  const walked = missing.length ? tokensByRoots(missing) : {};
+  return {
+    users: all.map(u => ({ id: u.id, name: u.name, active: !!u.active, isGM: !!u.isGM })),
+    pins: pinned.map(u => ({ user: u.id, actor: rootOf.get(u.id), observes: observes(u, game.actors.get(rootOf.get(u.id))) })),
+    pinsByUser: Object.fromEntries(all.filter(u => !u.isGM).map(u => [u.id, rootOf.get(u.id) ?? null])),
+    actors,
+    tokensByRoot: Object.fromEntries(roots.map(r => [r, Array.isArray(given[r]) ? given[r] : walked[r] ?? []])),
+  };
+}
+
+/** The audit over the live world (plain result; see core auditPins): pinInputs with the GMs' flags. */
+export function auditWorld() {
+  const { users, ...rest } = pinInputs({ gms: true });
+  return auditPins({ ...rest, users: Object.fromEntries(users.map(u => [u.id, u])) });
+}
+
+/**
+ * The plain world a gather is planned from (gather plan §4.1; core gatherPlan's `inputs`): pinInputs
+ * without GM pins. `byRoot`: a walk the caller already made.
+ */
+export function gatherInputs({ byRoot = null } = {}) {
+  return pinInputs({ gms: false, byRoot });
+}
+
+/**
+ * A token record read earlier (a gather plan's one walk), as it stands NOW (code review G7: no second
+ * world walk per member): the same id on its scene, else on another scene (an earlier member's carry
+ * keeps ids, gather plan §3.3), its root unchanged; null when it is gone or now belongs to another
+ * root. A scene lookup by id per scene, never a walk over every token.
+ */
+export function liveToken(record, root) {
+  if (!record?.id) return null;
+  const home = globalThis.game?.scenes?.get?.(record.scene);
+  const scenes = [home, ...listOf(game.scenes).filter(s => s !== home)].filter(Boolean);
+  for (const scene of scenes) {
+    const doc = scene.tokens?.get?.(record.id);
+    if (doc) return rootOfToken(doc) === root ? tokenRecord(doc, root) : null;
+  }
+  return null;
+}
+
+/**
+ * Every token in a STARTED combat (core Combat#started: round > 0), as `Map<sceneId, Set<tokenId>>`,
+ * keyed on each combatant's own `sceneId` / `tokenId` — never `combat.scene`, which is null for an
+ * unlinked combat that still loses combatants when their token is carried away (gather plan §1.3).
+ * Read once before a gather moves anything: core deletes a deleted token's combatants without
+ * awaiting it, so a read after a move would race that.
+ */
+export function startedCombatTokens() {
+  const out = new Map();
+  for (const combat of listOf(game.combats)) {
+    if (!combat?.started) continue;
+    for (const c of listOf(combat.combatants)) {
+      if (!c?.sceneId || !c?.tokenId) continue;
+      if (!out.has(c.sceneId)) out.set(c.sceneId, new Set());
+      out.get(c.sceneId).add(c.tokenId);
+    }
+  }
+  return out;
+}
+
+/** A user or an actor ref (api inspect): a Document by its type; an id or a name as a user first, then an actor. */
+export function userOrActor(ref) {
+  if (ref && typeof ref === "object") {
+    const doc = ref.documentName ? ref : ref.document;
+    if (doc?.documentName === "User") return { user: doc };
+    return { actor: resolveRef(ref, "actor") };
+  }
+  // only a uuid goes straight to its kind: a name may hold a period ("Mr. Talo") and is a user first (D4)
+  if (typeof ref === "string" && UUID.test(ref)) return /^User\./.test(ref) ? { user: resolveRef(ref, "user") } : { actor: resolveRef(ref, "actor") };
+  try {
+    return { user: resolveRef(ref, "user") };
+  } catch (err) {
+    if (errorCode(err) !== "NOT_FOUND") throw err;
+  }
+  return { actor: resolveRef(ref, "actor") };
+}
+
+const given = v => v !== undefined && v !== null && v !== "";
+
+/**
+ * Where a gather lands (gather plan §2.3–§2.4): `{ ok: true, dest, level }`, or a BAD_ARGS fail().
+ * The scene: the given one (Scene|id|uuid|exact name), else game.scenes.current (the canvas scene in
+ * a browser; the watchdog's viewed ?? active on the headless bot). The ONE level every member lands
+ * on: the given one (it must be on the destination), else the canvas level when the destination is
+ * on this client's canvas, else the destination's initial (then first) level, else null (no levels).
+ */
+export function gatherTarget({ scene, level } = {}) {
+  let dest;
+  if (!given(scene)) {
+    dest = game.scenes?.current ?? null;
+    if (!dest) return fail("BAD_ARGS", "no scene given and no current scene");
+  } else {
+    try {
+      dest = resolveRef(scene, "scene");
+    } catch (err) {
+      return fail("BAD_ARGS", `scene ${typeof scene === "string" ? scene : scene?.id ?? "?"}: ${err?.message ?? err}`);
+    }
+  }
+  if (given(level)) {
+    return dest.levels?.has?.(level) ? { ok: true, dest, level } : fail("BAD_ARGS", `level ${level} is not on ${dest.name}`);
+  }
+  if (globalThis.canvas?.scene?.id === dest.id) return { ok: true, dest, level: globalThis.canvas.level?.id ?? null };
+  return { ok: true, dest, level: dest.initialLevel?.id ?? dest.firstLevel?.id ?? null };
 }

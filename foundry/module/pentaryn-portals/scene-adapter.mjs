@@ -9,7 +9,7 @@
 
 import { MODULE, FLAG_SCOPE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox, boxCentre,
   occupiedBy, crowded, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
-  partyPreview, hasDestination, withoutDestination, displaceOptions, followersOf, elevationOnLevel, carriedLevel,
+  partyPreview, hasDestination, withoutDestination, displaceOptions, followersOf, heldCompanions, elevationOnLevel, carriedLevel, edgeGap, feetPerSquare, reachFeet, SHARED_REACH_FT,
   TELEPORT_TYPE, NEW_TELEPORT_BEHAVIOR } from "./portals-core.mjs";
 import { fail } from "./lib/errors.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -247,6 +247,24 @@ export function recordOf(t, { gmIds = gmUserIds() } = {}) {
 }
 
 /**
+ * pin-2026-10-gather.md §11: the reach test companionsOf asks for a SHARED companion in a single move —
+ * `(t, leader) => boolean`, both records of tokens on `scene` (a leader may be its deleted source token:
+ * its x, y and level are where it stood). True when they stand on the same level and their 5e distance
+ * (reachFeet: adjacent = 5 ft, one empty square between = 10 ft; a diagonal square counts as one) is at
+ * most SHARED_REACH_FT, in the scene's grid units (feetPerSquare: feet, metres converted; code review G3).
+ */
+export function reachTest(scene) {
+  const g = scene.grid?.size ?? 100;
+  const ft = feetPerSquare(scene.grid?.distance, scene.grid?.units);
+  const levelOf = d => d?._source?.level ?? d?.level ?? initialOf(scene);
+  return (t, leader) => {
+    const a = t.doc, b = leader.doc;
+    if (!a || !b || levelOf(a) !== levelOf(b)) return false;
+    return reachFeet(edgeGap(tokenBox(a, g), tokenBox(b, g)), g, ft) <= SHARED_REACH_FT + 1e-6;
+  };
+}
+
+/**
  * Everyone who travels when the GM moves the party: linked PCs, plus every token a player owns
  * or a PC summoned (skeletons, familiars, Arcane Eye, steeds, transformed forms). Never item
  * piles, Markers or crowd.
@@ -420,22 +438,46 @@ function filterPull(users, info) {
 }
 
 /**
- * GM, after a cross-scene carry: pull core's rule's users (as the prePull listeners leave them) plus `pull` (the
+ * GM, after a cross-scene carry: pull core's rule's users (as the prePull listeners leave them; the hook is told
+ * the call's `gather`, null outside a gather) plus `pull` (the
  * caller's own, whatever the rule says) to `dest`, with core's view options `{ level,
  * controlledTokens }` — `level` the carried token's LANDED level (what core passes:
  * destinationToken._source.level), not the requested one. De-duplicated, inactive dropped (core's
  * pullUsers drops them too); no emit when nobody is left. → `[{ id, name }]` of the users pulled.
  */
-function pullAfterCarry(token, from, dest, { hidden, srcLevel, pull = [] }) {
+function pullAfterCarry(token, from, dest, { hidden, srcLevel, pull = [], gather = null }) {
   const landed = sourceLevel(dest.tokens.get(token.id));
   const byRule = usersToPull(pullCandidates(token, from, game.users, srcLevel), { hidden, scene: from.id, level: srcLevel })
     .map(id => game.users.get(id)).filter(u => u?.active);
+  // `gather`: this call's own opts.gather, a per-call mark (code review G6) — never a module-wide flag
   const kept = filterPull(byRule, { scene: dest, level: typeof landed === "string" ? landed : null,
-    token: dest.tokens.get(token.id) ?? token, reason: "token", pull: [...pull] });
+    token: dest.tokens.get(token.id) ?? token, reason: "token", pull: [...pull], gather });
   const users = [...new Set([...kept, ...pull])].filter(u => u?.active);
   if (!users.length) return [];
   dest.pullUsers(users, { ...(typeof landed === "string" ? { level: landed } : {}), controlledTokens: [token.id] });
   return users.map(u => ({ id: u.id, name: u.name }));
+}
+
+/**
+ * Build every region's polygon tree on `scene` before a `displace` move of its tokens (adjustments
+ * core-region-polygon-tree-warm). Foundry v14.369: a displace waypoint is a teleport, and core's
+ * teleport branch of RegionDocument#segmentizeMovementPath (#getTeleportationSegments → #testSamples,
+ * client/documents/region.mjs:603) reads the private #polygonTree field directly, never through the
+ * lazy `polygonTree` getter (region.mjs:71-72). Until something has read the getter — a canvas draw
+ * of that scene does; a scene that is not drawn, or one whose grid-affected regions were just cleared
+ * (_clearPolygonTree), has none — the whole update throws in TokenDocument#_preUpdate ("Cannot read
+ * properties of undefined (reading 'testPoint')") and nothing moves: pins' gather of a player already
+ * on the target scene failed so (live S20, on a GM page drawing another scene). Reading the getter
+ * builds the tree core would have built; a region that cannot build one is logged and left alone.
+ */
+export function warmRegionTrees(scene) {
+  for (const r of scene?.regions ?? []) {
+    try {
+      void r.polygonTree;
+    } catch (err) {
+      deps.log?.debug(`region ${r?.id}: polygonTree failed to build`, err);
+    }
+  }
 }
 
 /** GM: move `toks` on their own scene around (cx, cy) in ONE displace update, no animation: carryTo's
@@ -445,6 +487,7 @@ async function moveOnScene(toks, cx, cy, party, { level, preferLevel = null } = 
   const { onFloor, patch } = arrivals(toks, scene, { level, preferLevel });
   const places = landingPlaces(scene, toks, cx, cy, party, onFloor);
   const updates = toks.map((t, i) => ({ _id: t.id, ...places[i], ...patch(i) }));
+  warmRegionTrees(scene);   // core's displace (teleport) segmentizer needs every region's tree built
   await scene.updateEmbeddedDocuments("Token", updates, displaceOptions(updates));
 }
 
@@ -452,41 +495,48 @@ async function moveOnScene(toks, cx, cy, party, { level, preferLevel = null } = 
  * GM (teleportToken): move one token and, when it is a PC (a character, or polymorphed — the same
  * leader rule as party.mjs bringFollowers), its company to (x, y) on `dest`, its own scene or
  * another. The company is followersOf the PC, gathered before anything moves, exactly as portal
- * travel picks it, but with no portal check: this is a deliberate GM move, not a hop. A non-PC
+ * travel picks it (a shared companion within 10 ft of it, or with `gather` always), but with no portal check: this is a deliberate GM move, not a hop. A non-PC
  * moves alone. No canvas and no GM view (the bot calls this too, and has no canvas). On another
  * scene the move ends with ONE pull (pullAfterCarry): the users core's Teleport Token rule picks,
  * plus `pull` — the mover pulls the owner (pins rebuild 2026-10-17 §2). The same scene never pulls:
  * core's same-scene rule pulls only a non-self mover, and this mover is a GM.
- * → `{ followers: [{ id, name }], moved, pulled: [{ id, name }] }` (`pulled` [] on the same scene;
- * absent on dryRun), `fail("REFUSED")` when a mover's id is already on the
+ * → `{ followers: [{ id, name }], moved, pulled: [{ id, name }], held? }` (`pulled` [] on the same scene;
+ * absent on dryRun; `held` with `gather` only: the shared companions left for a later gathered
+ * co-owner, heldCompanions — code review G5), `fail("REFUSED")` when a mover's id is already on the
  * destination (dryRun too), or `fail("CONFLICT")` when another session's keepId create won (the same
  * election bringFollowers relies on). Any other error rethrows. A move to another floor maps each
  * token's elevation onto it; landing counts only that floor's tokens and walls.
  * @param {TokenDocument} token  @param {Scene} dest
  * @param {{x: number, y: number, level: string|null}} to  the centre point and the resolved level
- * @param {{dryRun?: boolean, pull?: User[]}} [opts]  pull: resolved User documents (api.mjs validates)
+ * @param {{dryRun?: boolean, pull?: User[], gather?: {later: {user: string, token: string}[]}|null}} [opts]
+ *   pull: resolved User documents (api.mjs validates); gather: teleportToken's opts.gather (api.mjs
+ *   validates) — this move is one member of a pins gather (portals-core companionsOf, §11)
  */
-export async function moveCompany(token, dest, { x, y, level }, { dryRun = false, pull = [] } = {}) {
+export async function moveCompany(token, dest, { x, y, level }, { dryRun = false, pull = [], gather = null } = {}) {
   const from = token.parent;
   const gmIds = gmUserIds();
   const record = recordOf(token, { gmIds });
   const leads = record.type === "character" || record.polymorphed;
   // `leader`: assignSpots groups its company beside it even when it is not isPC (review #5)
   const lead = leads ? { ...record, leader: true } : record;
-  const company = leads ? followersOf([lead], from.tokens.filter(t => t.id !== token.id).map(t => recordOf(t, { gmIds }))) : [];
+  // §11: a shared companion comes within 10 ft of the mover (reachTest), or in a gather with the last-moved owner
+  const others = leads ? from.tokens.filter(t => t.id !== token.id).map(t => recordOf(t, { gmIds })) : [];
+  const company = leads ? followersOf([lead], others, { near: reachTest(from), gather }) : [];
   const party = [lead, ...company];
   const toks = party.map(r => r.doc);
   const followers = company.map(r => ({ id: r.id, name: r.name }));
+  // a gather: what waits for a later co-owner, so pins can still carry it if that move fails (G5)
+  const held = gather ? { held: (leads ? heldCompanions([lead], others, { gather }) : []).map(r => ({ id: r.id, name: r.name })) } : {};
   // an id already on the destination (a duplicated scene) fails keepId every time: no race, so not CONFLICT
   const clash = idClash(toks, dest);
   if (clash.length) {
     return fail("REFUSED", `token id${clash.length > 1 ? "s" : ""} already on ${dest.name}: `
       + `${clash.map(t => `${t.name} (${t.id})`).join(", ")} (a duplicated scene keeps token ids: delete or re-create those)`);
   }
-  if (dryRun) return { followers, moved: 0 };
+  if (dryRun) return { followers, moved: 0, ...held };
   if (dest === from) {
     await moveOnScene(toks, x, y, party, { level });
-    return { followers, moved: toks.length, pulled: [] };
+    return { followers, moved: toks.length, pulled: [], ...held };
   }
   // read before the carry: core evaluates its rule against the token's SOURCE level and visibility
   const hidden = !!token.hidden, srcLevel = sourceLevel(token);
@@ -499,8 +549,8 @@ export async function moveCompany(token, dest, { x, y, level }, { dryRun = false
   }
   // the tokens have moved: a failing pull is warned, never reported as a failed move
   let pulled = [];
-  try { pulled = pullAfterCarry(token, from, dest, { hidden, srcLevel, pull }); } catch (err) { deps.log?.warn("teleportToken: the pull failed (the move stands)", err); }
-  return { followers, moved: toks.length, pulled };
+  try { pulled = pullAfterCarry(token, from, dest, { hidden, srcLevel, pull, gather }); } catch (err) { deps.log?.warn("teleportToken: the pull failed (the move stands)", err); }
+  return { followers, moved: toks.length, pulled, ...held };
 }
 
 /**
@@ -572,7 +622,7 @@ export async function teleportParty(regionOrUuid, { confirm = true } = {}) {
     // may leave players out (pentaryn-pins: one whose character stayed on another scene, review R2)
     const floor = await carryTo(toks, dest, cx, cy, party, { preferLevel: onLevels });
     const view = floor ? { level: floor } : {};
-    const users = filterPull(game.users.filter(u => !u.isGM && u.active), { scene: dest, level: floor ?? null, token: null, reason: "party", pull: [] });
+    const users = filterPull(game.users.filter(u => !u.isGM && u.active), { scene: dest, level: floor ?? null, token: null, reason: "party", pull: [], gather: null });
     if (users.length) dest.pullUsers(users, view);
     await dest.view(view);
   }

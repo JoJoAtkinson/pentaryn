@@ -55,7 +55,8 @@ check("pile PC character is not a PC", ids(partySelection([rec("x", { type: "cha
 check("Caven alone: his skeletons, not the shared steed or Marrith's eye",
   ids(followersOf([caven], all)), ["skel1", "skel2"]);
 check("Marrith alone: her eye", ids(followersOf([marrith], all)), ["eye"]);
-check("both: skeletons, eye, steed", ids(followersOf([caven, marrith], all)), ["skel1", "skel2", "eye", "steed"]);
+// §11 (Joe 2026-10-17): the shared steed no longer comes because every owner goes; with no reach test it stays
+check("both: skeletons, eye; the shared steed only within reach", ids(followersOf([caven, marrith], all)), ["skel1", "skel2", "eye"]);
 check("summon of another PC never follows by ownership",
   ids(followersOf([caven], [rec("fam", { owners: ["p1"], summoner: "MAR" })])), []);
 check("other PCs never follow", ids(followersOf([caven], [rec("pc2", { type: "character", linked: true, owners: ["p1"] })])), []);
@@ -69,7 +70,7 @@ check("an area handle never follows", ids(followersOf([caven, marrith], [handleT
 const party = partySelection(all);
 check("leader: summoner wins", leaderOf(eye, [caven, marrith]), "marrith");
 check("leader: by owner", leaderOf(skel2, [caven, marrith]), "caven");
-check("leader: shared steed → first owner's PC", leaderOf(steed, [caven, marrith]), "caven");
+check("leader: shared steed → the LAST owner's PC (§11)", leaderOf(steed, [caven, marrith]), "marrith");
 check("leader: nobody", leaderOf(rec("x", { owners: ["p9"] }), [caven, marrith]), null);
 {
   // 3x3 ring around (0,0), grid 1, centre-first like ringSpots
@@ -90,7 +91,7 @@ check("leader: nobody", leaderOf(rec("x", { owners: ["p9"] }), [caven, marrith])
 check("assign: a centre copy is used last", assignSpots([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 1, y: 0 }], [caven, skel1, skel2]),
   [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 0 }]);
 check("preview names the PC each follower lands by", partyPreview(party).map(r => r.leaderName ?? "-"),
-  ["-", "-", "caven", "caven", "marrith", "caven"]);
+  ["-", "-", "caven", "caven", "marrith", "marrith"]);
 
 /* ringSpots */
 check("centre first", ringSpots(0, 0, 100, 1), [{ x: 0, y: 0 }]);

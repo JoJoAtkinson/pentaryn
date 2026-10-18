@@ -1,5 +1,60 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
+## 0.3.0 — 2026-10-17
+
+"Gather logged-in players here" (plan `context/plans/pin-2026-10-gather.md`, with Joe's answers in
+its §11). Needs a Foundry restart (`module.json` version). Additive: `CONTRACT` stays
+`pentaryn-pins/api@1`.
+
+- **Added** API row `gather({ x, y, scene?, level?, dryRun })`: every logged-in non-GM player whose
+  pin has exactly one token is moved, with the character's summons, pets and connected tokens, to
+  one point (another scene or the same one) at one level, by calling `teleport` once per member in
+  plan order (destination-scene members nearest the point first, then the rest by name). No
+  picking. Skipped and reported: `NO_PIN`, `NO_ACTOR`, `SHARED_ACTOR`, `NO_TOKEN`, `MANY_TOKENS`;
+  offline players listed in `offline` and left where they are; `UNLINKED` / `NOT_OWNER` pins moved
+  with a warning; `COMBAT` marked from one snapshot of started combats taken before any move;
+  `VIEW_UNCHANGED` folded from `teleport`. One member failing does not stop the others (`failed[]`,
+  `warning: "PARTIAL"`). Refused while pinning is off (no `User#character` fallback), and while
+  another gather runs (`CONFLICT`). The result keeps follower and pull names at any depth. Each
+  `skipped` row carries the audit violation's own `detail` (code review G2). One token walk for the
+  whole gather: the plan's records are re-read by id (`liveToken`) and moved through `teleport`'s
+  own move, `moveTo` (G7). A shared companion portals held for a later member whose move then fails
+  is carried alone beside the last owner that moved (G5).
+- **Added** canvas-menu item **Gather logged-in players here** (`fa-people-group`) between Prompt
+  note and Teleport pinned character: its note is the member count ("no one to gather" disables it);
+  one click, with a confirm only when a cross-scene member is in a started combat; toasts for the
+  result, the players not gathered (with the reason; SHARED_ACTOR once per actor, naming every
+  co-pinned player, G2) and the views that did not follow. The menu reads the pin world once per
+  open (`gatherInputs`: one token walk, each pin once) for both Gather's count and Teleport ▸ (G9).
+- **Added** the gather clause in `prepull.mjs`: a gather member's own carry (portals ≥ 0.8.0 hands
+  that call's `opts.gather` to the hook as `data.gather`, a per-call mark: code review G6) drops
+  every non-GM user (each member is pulled once, by their own move; an unpinned or skipped player
+  watching it is not pulled along). Any other pull, even one of a member's token while a gather
+  runs, keeps the listener's old rule.
+- **Added** `selftest` check "prePull listener registered" (gather depends on it).
+- **Uses** pentaryn-portals 0.8.0 `teleportToken` `gather: { later }`, so a companion several
+  gathered players co-own always comes, beside the last-moved of them; on any single move it comes
+  only from within 10 ft of the moving owner (portals' co-owned companion rule, Joe 2026-10-17).
+- A same-scene `teleport` (and so a same-scene gather member) always pulls the player, onto
+  another floor too (CR2, kept; code review G1 removed a GM-side prediction of core's level switch
+  that read the GM's lagging copy of the player's view). Core's own level switch may run beside it:
+  the second view is a no-op or dropped and is replayed only when it still changes the view.
+- **Changed** on the player's client, one sequence orders every pull and every view pins asks for
+  itself (the safety net's cut, the level gap-filler): such a view drops an OLDER pull core dropped
+  while loading, so that stale pull is never replayed over it, and is itself dropped when a pull
+  arrived after it was queued (code review G4). A dropped pull whose scene and level the canvas
+  already shows once loading clears is not replayed (G1).
+- **Changed** the Stranded toast (a pinned character with no token left) now says what happens: until
+  it is placed again, scene activation moves that player as stock (the pin has no target). It said
+  the view stays where it is.
+- The published `teleport` takes no `gather` option; only `gather` passes it to portals.
+- `world-adapter.mjs` `pinInputs` is the one builder of the plain pin world: `auditWorld` reads it
+  with the GMs' pins, `gatherInputs` without (code review G8).
+- Docs: the module README notes the `pullToScene` replay is attached at `ready` (it said `setup`).
+- Live runner `automation/smoke/pins-live.mjs`: S20-S23 (Gather), S24-S27 (the co-owned steed:
+  fixture actor `PinTest Steed`, owned by A and B), S14 checks all three menu items; a page probe
+  counts each player's `pullToScene` arrivals.
+
 ## 0.2.0 — 2026-10-17
 
 Rebuilt on Foundry's own pull (plan `context/plans/pin-2026-10-rebuild.md`, review

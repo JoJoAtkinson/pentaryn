@@ -19,14 +19,15 @@ import {
   offFloor, parseEvalReply, realPlayersOnline, runHelper, stalePlan, sawCanvasDisabled, sceneKeyOf, submenuUsers, summarize,
   tokensOn, violationsFor, withDeadline, sleepFor, acquireLock, restoreSucceeded, MAX_TIMEOUT_S, bridgeGuardSource, probesSource,
   STOP_SIGNALS, PUPPETEER_SIGNAL_OPTIONS, installStopHandlers, exitCodeFor, openRunLog, main, pinningLeftMessage,
+  POS, distanceFt, overlapping, userNames, testRows,
 } from "./pins-live.mjs";
 
 const IDS = Object.keys(SCENARIOS);
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const VENV_PY = path.join(REPO, ".venv/bin/python");
 
-test("the scenario table is S01..S19, each with a title and either a skip or act + assert", () => {
-  assert.deepEqual(IDS, Array.from({ length: 19 }, (_, i) => `S${String(i + 1).padStart(2, "0")}`));
+test("the scenario table is S01..S27, each with a title and either a skip or act + assert", () => {
+  assert.deepEqual(IDS, Array.from({ length: 27 }, (_, i) => `S${String(i + 1).padStart(2, "0")}`));
   for (const [id, s] of Object.entries(SCENARIOS)) {
     assert.ok(s.title, id);
     if (s.skip) continue;
@@ -773,5 +774,131 @@ test("main: a run refused as busy leaves the live run's lines file alone", async
       if (v === undefined) delete process.env[k]; else process.env[k] = v;
     }
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/* ── Gather (pins 0.3.0, plan pin-2026-10-gather.md §5.4) and the §11 co-owned steed rule ── */
+
+test("--list prints S01..S27 in table order, with titles (the gather and steed scenarios included)", async () => {
+  const out = process.stdout.write;
+  const printed = [];
+  try {
+    process.stdout.write = chunk => { printed.push(String(chunk)); return true; };
+    assert.equal(await main(["--list"]), 0);
+  } finally {
+    process.stdout.write = out;
+  }
+  const rows = printed.join("").trim().split("\n").map(l => JSON.parse(l));
+  assert.deepEqual(rows.map(r => r.id), IDS);
+  for (const id of ["S20", "S21", "S22", "S23"]) assert.match(rows.find(r => r.id === id).title, /gather/i, id);
+  for (const id of ["S24", "S25", "S26", "S27"]) assert.match(rows.find(r => r.id === id).title, /steed/i, id);
+});
+
+test("S14 checks all three menu items, Gather between Prompt note and Teleport, with its member count", () => {
+  assert.match(SCENARIOS.S14.title, /all three items/);
+  const src = SCENARIOS.S14.assert.toString();
+  assert.match(src, /TEXT\.gather/);
+  assert.match(src, /TEXT\.promptNote/);
+  assert.match(src, /TEXT\.teleport/);
+  assert.match(src, /"2"/, "the count note when A and B are online");
+  assert.equal(TEXT.gather, "Gather logged-in players here");
+});
+
+test("fixture: the steed is co-owned by A and B, and no older layout puts it on a map", () => {
+  assert.deepEqual(FIX.actors.steed.owners, ["A", "B"]);
+  assert.ok(FIX.actors.steed.name.startsWith(PREFIX));
+  assert.equal(FIX.actors.steed.disposition, "FRIENDLY");
+  for (const k of ["home", "allNorth", "allSouth"]) assert.equal(LAYOUT[k].steed, null, k);
+});
+
+test("distanceFt (code review G3): 5e distance — adjacent 5 ft, one square between 10 ft; the larger axis gap (a diagonal counts as one)", () => {
+  const at = (x, y) => ({ x, y });
+  assert.equal(distanceFt(at(0, 0), at(100, 0)), 5, "adjacent");
+  assert.equal(distanceFt(at(0, 0), at(100, 100)), 5, "diagonal neighbour");
+  assert.equal(distanceFt(at(0, 0), at(200, 0)), 10, "one square between");
+  assert.equal(distanceFt(at(0, 0), at(300, 300)), 15);
+  assert.equal(distanceFt(at(400, 0), at(0, 0)), 20);
+  assert.equal(distanceFt({ x: 0, y: 0, w: 2, h: 2 }, at(300, 0)), 10, "a Large token: from its near edge");
+});
+
+test("steed geometry (5e distance): near is 10 ft from Alpha (comes), far 15 ft from Alpha and Beta (stays; the old raw-gap rule took it), tie touches both", () => {
+  const box = p => ({ x: p.x, y: p.y });
+  assert.equal(distanceFt(box(POS.steedNear), box(POS.alphaN)), 10, "one square between: the edge of the reach");
+  assert.equal(distanceFt(box(POS.steedFar), box(POS.alphaN)), 15, "two squares between: just beyond");
+  assert.ok(distanceFt(box(POS.steedFar), box(POS.betaN)) > 10);
+  assert.ok(distanceFt(box(POS.petFar), box(POS.alphaN)) > 10, "the far pet tests 'single owner: any distance'");
+  assert.equal(distanceFt(box(POS.steedTie), box(POS.alphaN)), distanceFt(box(POS.steedTie), box(POS.betaTie)));
+  assert.equal(distanceFt(box(POS.steedTie), box(POS.alphaN)), 5, "touching both");
+  assert.equal(LAYOUT.steedGather.steed, POS.steedFar);
+  assert.equal(LAYOUT.steedNear.steed, POS.steedNear);
+  assert.deepEqual([LAYOUT.steedFar.steed, LAYOUT.steedFar.pet], [POS.steedFar, POS.petFar]);
+  assert.deepEqual([LAYOUT.steedTie.steed, LAYOUT.steedTie.beta], [POS.steedTie, POS.betaTie]);
+  // no two tokens of one layout share a square
+  for (const [name, layout] of Object.entries(LAYOUT)) {
+    const toks = Object.entries(layout).filter(([, p]) => p).map(([k, p]) => ({ name: k, scene: p.scene, x: p.x, y: p.y, w: 1, h: 1 }));
+    assert.deepEqual(overlapping(toks), [], name);
+  }
+  const inRect = (p, r) => p.x >= r.x && p.x < r.x + r.width && p.y >= r.y && p.y < r.y + r.height;
+  for (const k of ["gatherSouth", "gatherNorth", "tieB"]) assert.ok(!inRect(SPOTS[k], FIX.portal[SPOTS[k].scene].rect), k);
+});
+
+test("overlapping: boxes on one scene that share area; edges touching or another scene do not count", () => {
+  const t = (name, x, y, scene = "S", w = 1) => ({ name, scene, x, y, w, h: w });
+  assert.deepEqual(overlapping([t("a", 0, 0), t("b", 100, 0), t("c", 0, 100, "N")]), []);
+  assert.deepEqual(overlapping([t("a", 0, 0), t("b", 50, 50), t("c", 300, 0)]), [["a", "b"]]);
+  assert.deepEqual(overlapping([t("big", 0, 0, "S", 2), t("x", 100, 100)]), [["big", "x"]]);
+});
+
+test("userNames and testRows read gather rows ({ user: { id, name } }) and keep only PinTest users", () => {
+  const rows = [{ user: { id: "1", name: "PinTest-B" }, code: "MANY_TOKENS" }, { user: { id: "2", name: "Talo" } }, { user: "PinTest-C" }, {}];
+  assert.deepEqual(userNames(rows), ["PinTest-B", "Talo", "PinTest-C", null]);
+  assert.deepEqual(testRows(rows).map(r => r.code ?? null), ["MANY_TOKENS", null]);
+  assert.deepEqual(testRows(null), []);
+});
+
+test("installPageProbes counts core's pullToScene arrivals once the game socket exists (S23)", () => {
+  const handlers = {};
+  const w = { game: null };
+  const probes = installPageProbes({}, w);
+  assert.deepEqual(probes.pulls, []);
+  w.game = { socket: { on: (ev, fn) => { (handlers[ev] ??= []).push(fn); } } };
+  // attached by the probe's poll; here the poll is called by hand
+  probes.poll();
+  probes.poll();
+  assert.equal(handlers.pullToScene?.length, 1, "attached once");
+  handlers.pullToScene[0]("S1", { level: "U1", controlledTokens: ["t"] });
+  handlers.pullToScene[0]("S2", undefined);
+  assert.deepEqual(probes.pulls.map(p => [p.seq, p.scene, p.level]), [[1, "S1", "U1"], [2, "S2", null]]);
+  assert.equal(probes.pullSeq, 2);
+});
+
+test("opResetOwnership puts each actor back to the fixture's owners, replacing (not merging) a grant", async () => {
+  const updates = [];
+  const users = [{ id: "uA", name: "PinTest-A" }, { id: "uB", name: "PinTest-B" }, { id: "uC", name: "PinTest-C" }];
+  const actors = Object.entries(FIX.actors).map(([k, a]) => ({ id: `a-${k}`, name: a.name,
+    update: async (data, opts) => { updates.push({ k, data, opts }); } }));
+  const g = { users: { find: f => users.find(f) }, actors: { find: f => actors.find(f) } };
+  Object.assign(globalThis, { game: g, CONST: { DOCUMENT_OWNERSHIP_LEVELS: { NONE: 0, OBSERVER: 2, OWNER: 3 } } });
+  try {
+    await (0, eval)(composeExpression(OPS.opResetOwnership, { actors: ["alpha", "steed", "wolf"] }));
+    assert.deepEqual(updates.map(u => [u.k, u.data.ownership]), [
+      ["alpha", { default: 0, uA: 3 }], ["steed", { default: 0, uA: 3, uB: 3 }], ["wolf", { default: 0 }]]);
+    for (const u of updates) assert.deepEqual(u.opts, { diff: false, recursive: false }, u.k);
+    updates.length = 0;
+    await (0, eval)(composeExpression(OPS.opSetOwnership, { grants: [{ actor: "alpha", user: "B", level: "OBSERVER" }] }));
+    assert.deepEqual(updates.map(u => [u.k, u.data]), [["alpha", { "ownership.uB": 2 }]]);
+  } finally {
+    for (const k of ["game", "CONST"]) delete globalThis[k];
+  }
+});
+
+test("every scenario that counts a player's pulls marks them in its act first (S20: setup's own pulls were counted)", () => {
+  for (const [id, s] of Object.entries(SCENARIOS)) {
+    const src = ["setup", "act", "assert"].map(k => (typeof s[k] === "function" ? s[k].toString() : "")).join("\n");
+    const counted = [...src.matchAll(/x\.pulls\("([A-Z])"\)/g)].map(m => m[1]);
+    if (!counted.length) continue;
+    const act = typeof s.act === "function" ? s.act.toString() : "";
+    const marked = new Set([...act.matchAll(/x\.markPulls\(([^)]*)\)/g)].flatMap(m => [...m[1].matchAll(/"([A-Z])"/g)].map(k => k[1])));
+    for (const k of counted) assert.ok(marked.has(k), `${id} counts ${k}'s pulls without x.markPulls("${k}") in its act`);
   }
 });

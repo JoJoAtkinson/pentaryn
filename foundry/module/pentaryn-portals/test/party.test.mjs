@@ -296,10 +296,10 @@ test("CR7: Teleport party fires pentaryn-portals.prePull ONCE with the active pl
   const seen = [];
   // Ana's pinned character is on another scene (a split party): the listener leaves her out
   await withPrePull((users, ctx) => {
-    seen.push({ users: users.map(u => u.id), scene: ctx.scene?.id, level: ctx.level, token: ctx.token, reason: ctx.reason, pull: ctx.pull });
+    seen.push({ users: users.map(u => u.id), scene: ctx.scene?.id, level: ctx.level, token: ctx.token, reason: ctx.reason, pull: ctx.pull, gather: ctx.gather });
     users.splice(users.findIndex(u => u.id === P1), 1);
   }, () => S.teleportParty(H.pitGate, { confirm: false }));
-  assert.deepEqual(seen, [{ users: [P1, P2], scene: H.pit.id, level: `${H.pit.id}Lvl0`, token: null, reason: "party", pull: [] }]);
+  assert.deepEqual(seen, [{ users: [P1, P2], scene: H.pit.id, level: `${H.pit.id}Lvl0`, token: null, reason: "party", pull: [], gather: null }]);
   const [pull] = ops(n).filter(c => c.op === "pullUsers");
   assert.deepEqual(pull.users, [P2]);
   assert.equal(F.calls.slice(n).filter(c => c.op === "Hooks.call" && c.name === "pentaryn-portals.prePull").length, 1, "one hook call per pull site");
@@ -426,6 +426,22 @@ test("spreadArrival: on an occupied square → one teleport update to the first 
   assert.ok(!("claims" in (arrived.flags[MODULE] ?? {})), "no empty claims {} on the arrived token");
 });
 
+test("spreadArrival: the arrival scene's region trees are built before the displace step (core v14.369's teleport segmentizer, live S20)", async () => {
+  const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
+  const s = arrived.parent;
+  W.region(s, { id: `Lazy${s.id}`, name: "Lazy", bounds: { x: 0, y: 0, width: 100, height: 100 } });
+  let built = false, early = null;
+  Object.defineProperty(s.regions.get(`Lazy${s.id}`), "polygonTree", { configurable: true, get() { built = true; return {}; } });
+  const real = arrived.update;
+  arrived.update = function (changes, opts) {
+    if (opts?.movement && early === null) early = built;   // the displace step: the tree must already be built
+    return real.call(this, changes, opts);
+  };
+  assert.equal(await settle(S.spreadArrival(arrived)), arrived);
+  assert.equal(early, true, "built before the displace update");
+  assert.deepEqual([arrived.x, arrived.y], [500, 900]);
+});
+
 test("spreadArrival: another claim on the token stays; only spread leaves (claims is removed only when it empties) [declared] (portals-w3-2)", async () => {
   const arrived = arrivalScene({ name: "Guard", actorId: "GUARD" });
   await arrived.update({ [`flags.${MODULE}.claims.other`]: "socket-x" });
@@ -488,15 +504,57 @@ test("bringFollowers: Caven's summon and his own tokens follow him; one toast", 
   ]);
 });
 
-test("bringFollowers: two PCs to one scene → each PC's own, then the co-owned steed beside the first", async () => {
-  const H = hall();
+// [declared] §11 (pin-2026-10-gather.md, Joe 2026-10-17; portals 0.8.0): replaces "a co-owned steed comes when all
+// its owners go together (beside the first)". A shared steed comes only within 10 ft (token edges, same level) of a
+// PC that hops; when several of its owners hop in one operation, the LAST of them within reach takes it.
+test("bringFollowers §11: two PCs to one scene, the shared steed 20 ft away → each PC's own; the steed stays", async () => {
+  const H = hall();                                             // the steed at x 500: 300 px (three squares between: 20 ft) from the gate square
   const { deleted, replacements } = await walkThrough(H, ["tCav", "tMar"]);
   const n = F.calls.length;
   await settle(S.bringFollowers(H.s, deleted, replacements));   // Marrith lands on Caven: a claimed spread
   assert.deepEqual(ops(n).filter(c => c.op === "notify").map(c => c.message), [
     "Caven brought Skeleton to Fighting Pit.",
     "Marrith brought Arcane Eye to Fighting Pit.",
-    "Caven brought Steed to Fighting Pit.",
+  ]);
+  assert.ok(H.s.tokens.has(`tSteed${H.k}`), "the steed stays");
+});
+
+test("bringFollowers §11: two PCs to one scene, the shared steed within 10 ft of both → the last of them (a tie) takes it", async () => {
+  const H = hall();
+  Object.assign(H.t("tSteed"), { x: 300 });                     // 100 px (one square between: 10 ft) from the gate square
+  const { deleted, replacements } = await walkThrough(H, ["tCav", "tMar"]);
+  const n = F.calls.length;
+  await settle(S.bringFollowers(H.s, deleted, replacements));
+  assert.deepEqual(ops(n).filter(c => c.op === "notify").map(c => c.message), [
+    "Caven brought Skeleton to Fighting Pit.",
+    "Marrith brought Arcane Eye, Steed to Fighting Pit.",
+  ]);
+});
+
+test("bringFollowers §11: one PC hops with the shared steed within 10 ft (5e: adjacent 5 ft, one square between 10 ft) → it comes; 15 ft or on another level it stays", async () => {
+  for (const [x, level, comes] of [[200, null, true], [300, null, true], [400, null, false], [500, null, false], [300, "Upper", false]]) {
+    const H = hall();
+    Object.assign(H.t("tSteed"), { x }, level ? { level } : {});
+    const { deleted, replacements } = await walkThrough(H);
+    const n = F.calls.length;
+    await S.bringFollowers(H.s, deleted, replacements);
+    assert.deepEqual(ops(n).filter(c => c.op === "notify").map(c => c.message),
+      [`Caven brought Skeleton${comes ? ", Steed" : ""} to Fighting Pit.`], `steed at x ${x}${level ? ` on ${level}` : ""}`);
+  }
+});
+
+test("bringFollowers §11: two PCs in one operation, only the FIRST within reach of the steed → the first takes it", async () => {
+  const H = hall();
+  Object.assign(H.t("tSteed"), { x: 300 });
+  // Marrith steps onto the gate from far away: core's teleport deletes her from where she stood (x 1500)
+  const { deleted, replacements } = await walkThrough(H, ["tCav", "tMar"]);
+  Object.assign(deleted[1], { x: 1500, y: 800 });
+  H.gate.testPoint = () => true;                                // both still "came through the portal"
+  const n = F.calls.length;
+  await settle(S.bringFollowers(H.s, deleted, replacements));
+  assert.deepEqual(ops(n).filter(c => c.op === "notify").map(c => c.message), [
+    "Caven brought Skeleton, Steed to Fighting Pit.",
+    "Marrith brought Arcane Eye to Fighting Pit.",
   ]);
 });
 
@@ -532,7 +590,8 @@ test("bringFollowers: a polymorphed form leads too; its region's testPoint throw
   const H = hall({ tokens: k => [
     { id: `tForm${k}`, name: "Wolf", actorId: "FORM", x: 100, y: 200 },
     { id: `tSkel${k}`, name: "Skeleton", actorId: "SKEL", x: 300, y: 200 },
-    { id: `tPet${k}`, name: "Pet", actorId: "STEED", x: 400, y: 200 },
+    // shared by P1 and P2, 20 ft from the gate (5e distance): it stays (§11; within 10 ft it would come)
+    { id: `tPet${k}`, name: "Pet", actorId: "STEED", x: 500, y: 200 },
   ] });
   H.gate.testPoint = () => { throw new Error("no shapes yet"); };
   const { deleted, replacements } = await walkThrough(H, ["tForm"]);
@@ -558,6 +617,7 @@ test("bringFollowers: a failed arrival spread warns 'arrival spread skipped' and
 
 test("deleteToken hook: needs replacements and the active GM; one delete operation is one pass; a failure warns", async () => {
   const H = hall();
+  Object.assign(H.t("tSteed"), { x: 300 });                     // within 10 ft of the gate: §11
   const { deleted, replacements } = await walkThrough(H, ["tCav", "tMar"]);
   const options = { replacements };
   let n = F.calls.length;
@@ -573,7 +633,8 @@ test("deleteToken hook: needs replacements and the active GM; one delete operati
   assert.deepEqual(ops(n), [], "deferred a tick");
   await W.tick(12);
   for (let i = 0; i < 6; i++) { mock.timers.tick(750); await W.flush(); }   // Marrith's spread claim settles
-  assert.equal(ops(n).filter(c => c.op === "notify").length, 3, "both PCs in one pass: own summons + the shared steed");
+  assert.deepEqual(ops(n).filter(c => c.op === "notify").map(c => c.message), ["Caven brought Skeleton to Fighting Pit.",
+    "Marrith brought Arcane Eye, Steed to Fighting Pit."], "both PCs in one pass: own summons; the shared steed with the last within reach (§11)");
   const H2 = hall();
   const w2 = await walkThrough(H2);
   // D-P4: "already exists" is now the other tab winning; any other failure still warns
@@ -643,7 +704,12 @@ test("portals-edge-2: landing tests each token's footprint, so a Large token nev
   const H = hall();
   const party = S.partyRecords(H.s);
   const ptoks = party.map(r => r.doc);
-  assert.deepEqual(overlaps(landedBoxes(ptoks, S.landingPlaces(H.pit, ptoks, 1050, 550, party))), []);
+  const landed = landedBoxes(ptoks, S.landingPlaces(H.pit, ptoks, 1050, 550, party));
+  assert.deepEqual(overlaps(landed), []);
+  // §11: everyone goes, so the shared Steed comes, beside the LAST of its owners' PCs in party order (Marrith)
+  const box = id => landed.find(b => b.id === `${id}${H.k}`);
+  const gap = (a, b) => Math.max(0, b.x - (a.x + a.w), a.x - (b.x + b.w), b.y - (a.y + a.h), a.y - (b.y + b.h));
+  assert.ok(gap(box("tSteed"), box("tMar")) <= 100, "the Steed lands beside Marrith (a 2×2 cannot always touch: within a square)");
 });
 
 /* ── two GM tabs (portals-async-1) ───────────────────────────────────── */

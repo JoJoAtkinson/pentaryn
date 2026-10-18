@@ -9,10 +9,14 @@
     "Notify": {
       "AuditOk": "Pinning on: all {n} pins have one token.",
       "AuditProblems": "Pinning on: {k} problem(s) — {list}",
-      "Stranded": "{actor} ({user}) has no token left: {user}'s view stays where it is. Place {actor} again and {user} is brought to it (at their next login if offline).",
+      "Stranded": "{actor} ({user}) has no token left: until it is placed again, {user} follows scene activation like an unpinned player. Place {actor} again and {user} is brought to it (at their next login if offline).",
       "Paused": "{actor} ({user}) now has {n} tokens ({scenes}): the view follows only the copy on the scene {user} is viewing. Delete the extra one.",
       "Teleported": "{actor}{more} → {scene}",
-      "TeleportFailed": "{actor} not moved: {reason}"
+      "TeleportFailed": "{actor} not moved: {reason}",
+      "Gathered": "Gathered {names} → {scene}",
+      "GatherSkipped": "Not gathered: {list}",
+      "GatherFailed": "Gather failed: {reason}",
+      "GatherViewUnchanged": "Gathered, but the view did not follow for: {users}"
     },
     "Audit": {
       "NoToken": "{actor} ({user}) has no token",
@@ -31,7 +35,17 @@
       "Teleport": "Teleport pinned character",
       "NoPlayers": "No players logged in",
       "NoPin": "no pin",
-      "NoToken": "no token"
+      "NoToken": "no token",
+      "Gather": "Gather logged-in players here",
+      "GatherCount": "{n}",
+      "GatherNone": "no one to gather"
+    },
+    "Gather": {
+      "NoPin": "{user}: no pin",
+      "CombatTitle": "Gather during combat?",
+      "CombatBody": "{names} will leave the combat tracker (moved to another scene).",
+      "Yes": "Gather",
+      "No": "Cancel"
     }
   }
 }

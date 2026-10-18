@@ -1,13 +1,13 @@
 # Pentaryn Pins (`pentaryn-pins`)
 
-**Read this when:** you are changing or calling `pentaryn-pins`. **Not this file:** use-doc → `context/foundry/pins.md` · design → `context/plans/pin-2026-10.md`, rebuilt in 0.2.0 → `context/plans/pin-2026-10-rebuild.md` · how every addon is built → `context/foundry/addon-blueprint.md`
+**Read this when:** you are changing or calling `pentaryn-pins`. **Not this file:** use-doc → `context/foundry/pins.md` · design → `context/plans/pin-2026-10.md`, rebuilt in 0.2.0 → `context/plans/pin-2026-10-rebuild.md`, Gather (0.3.0) → `context/plans/pin-2026-10-gather.md` · how every addon is built → `context/foundry/addon-blueprint.md`
 
 Pins a **character to a player** — not `foundry/lib/pins.mjs`, which is about journal Note pins
 (grep `pentaryn-pins` or `game.pentaryn.pins`, never bare `pins`). With the world switch on, a
 pinned player's client shows whatever scene their pinned token is on and ignores GM scene
 activation; the sheet says "Pinned to {player}"; the GM gets a right-click canvas menu with Prompt
-note and Teleport pinned character (the character's summons and pets come along, through
-pentaryn-portals). Exposes `game.pentaryn.pins`.
+note, Gather logged-in players here and Teleport pinned character (the character's summons and pets
+come along, through pentaryn-portals). Exposes `game.pentaryn.pins`.
 
 ## What the player sees
 
@@ -25,8 +25,11 @@ sheet of the pinned actor (and of its wild-shape form) shows "Pinned to {player}
 Unpinned players and GMs: stock. Switch off: everything is inert.
 
 The GM: right-click on **empty** canvas, token layer → **Prompt note** (pentaryn-prompts `place`
-at that point, hidden without prompts) and **Teleport pinned character ▸ {logged-in player}**.
-Right-drag still pans; token right-click opens the HUD; a portal badge keeps its own menu.
+at that point, hidden without prompts), **Gather logged-in players here** (`gather` at that point:
+every logged-in player whose pin has one token, each with its company; note = how many; a confirm
+only when a cross-scene member is in a started combat) and **Teleport pinned character ▸
+{logged-in player}**. Right-drag still pans; token right-click opens the HUD; a portal badge keeps
+its own menu.
 
 ## Settings
 
@@ -48,21 +51,40 @@ Ask it what it offers: `game.pentaryn.pins.describe()` (offline: `test/golden/de
 | `pinnedTokens()` | — | — | `{ [userId]: pinnedToken }` for every pinned player in ONE token walk; `{}` while off; GMs and unresolved pins absent |
 | `audit()` | — | — | `{ enabled, ok, pins, violations: [{ code, level, user, actor, tokens, detail }] }` — problems `GM_USER` `NO_ACTOR` `SHARED_ACTOR` `NO_TOKEN` `MANY_TOKENS`, warnings `UNLINKED` `NOT_OWNER` |
 | `teleport(user, { x, y, scene?, level?, dryRun })` | yes | through portals (`pull: [user]` when on and online) | portals' `teleportToken` result (with `pulled`) + `{ user, viewFollows, online, warning? }` · `BAD_ARGS` unpinned · `NOT_FOUND` no token · `AMBIGUOUS` several · `UNSUPPORTED` no portals |
+| `gather({ x, y, scene?, level?, dryRun })` (0.3.0) | yes | per member, in order, `teleport` (→ portals `teleportToken` with `gather: { later }`) | `{ ok, to: { scene, x, y, level }, moved: [{ user, actor, token, form, from, followers, pulled, viewFollows, warnings }], skipped: [{ user, actor, code, detail }], offline: [{ user, actor }], failed: [{ user, actor, code, reason }], warning?: PARTIAL\|NOBODY, dryRun? }`. Members: every active non-GM user whose pin has exactly one token; destination-scene members first (nearest the point), then the rest by name; one level for all (`level`, else the caller's canvas level on that scene, else its initial level). `skipped` codes `NO_PIN` `NO_ACTOR` `SHARED_ACTOR` `NO_TOKEN` `MANY_TOKENS`, each with the audit violation's own `detail` (SHARED_ACTOR: every co-pinned player, offline too; MANY_TOKENS: the scenes); `warnings` `UNLINKED` `NOT_OWNER` (moved anyway), `COMBAT` (a cross-scene member in a started combat: drops off the tracker; from one snapshot taken before any move), `VIEW_UNCHANGED`. `scene` defaults to `game.scenes.current` (bridge callers pass it). `NOT_GM` · `REFUSED` switch off · `BAD_ARGS` x/y, scene, level, or no scene · `UNSUPPORTED` no portals · `CONFLICT` a gather already running |
 | `inspect(userOrActor)` | — | — | `{ user, actor, root, enabled, token, ok }` (a uuid goes to its kind — `User.*` a user, anything else an actor; an id or a name, dots included, is tried as a user first, then as an actor; options are ignored, so the root `game.pentaryn.inspect(ref, { kind })` works) |
-| `selftest()` | — | — | `{ ok, checks }`: the `_onActivate` patch, setting, portals `teleportToken` |
+| `selftest()` | — | — | `{ ok, checks }`: the `_onActivate` patch, setting, portals `teleportToken`, the `prePull` listener registered (gather depends on it) |
 
 `user` refs: a User, uuid, 16-character id or exact name — never a substring. Every write takes
 `dryRun` and logs one audit line `{ uuid, ids, by }`. No queries, no module socket. A form actor
 (wild shape, polymorph) given to `pin` is stored as its root. `teleport` passes `pull: [user]` to
 portals when the switch is on and the player online; `viewFollows` is then "portals' `pulled` names
 the player" on a cross-scene move (a dryRun predicts it: "on and online"). On the same scene a
-player who is on and online follows: core's level switch if they watch that scene, else `teleport`
-pulls them back to the token (portals never pulls on the same scene). `pin` and the switch-on pull
+player who is on and online follows: `teleport` pulls them to the token (portals never pulls on the
+same scene), always: never skipped on the GM's copy of their view, which lags their draw (code
+review G1). Onto another floor core's own level switch may also run on their client; the second of
+the two views is then a no-op or dropped and, once loading clears, replayed only when it still
+changes the view (follow.mjs). `pin` and the switch-on pull
 an online pinned player every time, even when the GM sees them there already (that view lags a draw
 in progress; a pull to what is drawn draws nothing).
 `warning: "VIEW_UNCHANGED"`: a cross-scene move that did not pull the player while they are online,
 or with the switch off. An offline player with the switch on lands on the token's scene at their
 next login (resume), so there is no warning.
+
+`gather` makes ONE token walk (`gatherInputs`) and moves each member from that plan, one after
+another, through `teleport`'s own move (`moveTo`; the plan's record is re-read by id, `liveToken`,
+so a token an earlier member's company carried is found where it went). Each member's company lands
+beside it on the nearest free squares around the point (portals counts the earlier members as
+standers), one member failing never stops the others (`failed[]`, `warning: "PARTIAL"`), and each
+player is pulled only by their own move. It passes portals `gather: { later }` (the members still to
+move, as `{ user, token }`), so a companion several gathered players co-own comes with the last of
+them on its scene, at any distance (portals 0.8.0). Portals reports what such a call left for a
+later member (`held`); when that later member's move then fails, the gather carries the companion
+alone beside the last owner that moved (listed in that member's `followers`; a failure of that carry
+is a `failed[]` row under that owner). Portals also hands each member call's `gather` to its
+`prePull`, the per-call mark of the gather clause (Events). A module-scope `busy` flag refuses a
+second gather (`CONFLICT`), cleared in `finally`. The result goes through `toPlain(…, { maxDepth:
+Infinity })`: `moved[i].followers[j]` sits at depth 4, where the default cap writes `"[max depth]"`.
 
 ## Data written
 
@@ -77,13 +99,14 @@ world settings beyond the switch.
 |---|---|---|
 | `flags.dnd5e.originalActor` (token, then actor) | dnd5e 6.0.6 `transformInto` (`dnd5e.mjs` ~45653-45665) | the root actor of a wild-shaped or polymorphed token |
 | `flags.dnd5e.previousActorIds` (actor; `[0]` is the first original) | dnd5e 6.0.6 `transformInto` (~45572) | the same, when `originalActor` is missing |
-| `api:pentaryn-portals.teleportToken` | pentaryn-portals ≥ 0.7.0 (`pull`, `pulled`; 0.6.0 works, without the pull) | Teleport pinned character (company follows, the player is pulled) |
+| `api:pentaryn-portals.teleportToken` | pentaryn-portals ≥ 0.7.0 (`pull`, `pulled`; 0.6.0 works, without the pull); ≥ 0.8.0 for `gather` (an older portals rejects or ignores it, and a co-owned steed then follows the old rule) | Teleport pinned character and Gather (company follows, the player is pulled) |
+| `hook:pentaryn-portals.prePull` | pentaryn-portals ≥ 0.7.0 (≥ 0.8.0 for `data.gather`) | leave a pinned-elsewhere player out of portals' pull; a gather member's carry (`data.gather` set): every non-GM user |
 | `api:pentaryn-prompts.place` (`{ at }`) | pentaryn-prompts ≥ 0.4.6 | Prompt note at the clicked point |
 
 pins' own flag is read by no other module. Who reads my API: pentaryn-resume calls `pinnedToken`
 at login (`scene`, `level`, `token`; `scene` is an id string, both sides pin that shape in their
-tests), and pentaryn-portals ≥ 0.7.0 calls it to leave a pinned player whose character stayed on
-another scene out of Teleport party's pull.
+tests). pentaryn-portals reads no pins API (code review CR7): it fires `pentaryn-portals.prePull`
+before each pull it sends, and pins' `prepull.mjs` answers it.
 
 ## Events
 
@@ -94,8 +117,16 @@ another scene out of Teleport party's pull.
 | `pentaryn-pins.ready` | `(api)` | the API is published |
 
 Listens to: `deleteToken`, `moveToken`, `createToken`, `renderBaseActorSheet`, `updateUser`, `deleteUser`,
-`canvasReady`, `canvasTearDown`, `canvasPan` (pinned in `test/golden/hooks.json`), and core's own
-`pullToScene` socket event (`game.socket.on`, installed at `setup`; never emitted by pins).
+`canvasReady`, `canvasTearDown`, `canvasPan`, `ready` and `pentaryn-portals.prePull` (pinned in
+`test/golden/hooks.json`), and core's own `pullToScene` socket event (`game.socket.on`, attached at
+`ready`, after core's `Game#activateSocketListeners`; never emitted by pins).
+
+`pentaryn-portals.prePull` (`prepull.mjs`): with the switch on it drops from portals' pull a player
+whose pinned token is on another scene. **A gather member's carry** (0.3.0: portals passes that
+call's `opts.gather` on as `data.gather`) drops every non-GM user instead: that member's own pull is
+added by portals after the listeners. The mark is per call (code review G6), so any other pull while
+a gather runs — a portal hop, even of a member's token, a party pull, a single teleport — keeps the
+first rule, unchanged. It never returns false (that would veto the whole pull).
 
 ## Patches and adjustments
 
@@ -103,7 +134,7 @@ Listens to: `deleteToken`, `moveToken`, `createToken`, `renderBaseActorSheet`, `
 |---|---|---|
 | `pins-scene-activate` | `Scene#_onActivate` (MIXED, libWrapper else direct, marker `__pentarynPinsActivate`) | activating another scene, or deactivating the viewed token scene, does nothing for a pinned player; activating the token's scene while they view another passes core `viewOptions.level` = the token's level and `controlledTokens` = the token |
 | `core-pins-level-switch-rule` | — (a copy of core's rule) | the level gap-filler views a new level only when core's own switch (`TokenDocument.#handleMovementOperation`, `token.mjs:2927-2946`) will not |
-| `core-pins-pull-replay` | — (a socket listener) | a `pullToScene` that lands while `canvas.loading` (core drops it) is viewed as sent once loading clears |
+| `core-pins-pull-replay` | — (a socket listener) | a `pullToScene` that lands while `canvas.loading` (core drops it) is viewed as sent once loading clears, unless the canvas then shows that scene and level already; one sequence orders pulls and pins' own views (a newer one wins) |
 | `dnd5e-pins-transform-root` | — | the dnd5e transform flags above |
 
 The patch is installed at `setup`, before the first canvas draw, and is a pass-through (same
@@ -118,7 +149,9 @@ pulls them on a move. The player's own client writes nothing; it runs only the a
 the safety net, the level gap-filler and the pull replay. `pin`/`unpin` write from the calling GM
 client. `teleport` runs on the GM client that called it (Joe's tab for the menu, the bot for
 `pentaryn-write`); portals' `teleportToken` does the writes and two simultaneous calls give one
-`CONFLICT`. The switch-on audit and pull run only where `userId === game.user.id`. The watch toasts
+`CONFLICT`. `gather` runs the same way, on the calling GM client only (not a query: the bot and a
+browser GM never share one gather), and a second `gather` on that client while one runs is refused
+with `CONFLICT`. The switch-on audit and pull run only where `userId === game.user.id`. The watch toasts
 (no token left / a second token) show on every GM client; nothing is written, so no election. The
 one pull `watch.mjs` sends (a pinned character placed again, 0 → 1 token) is the **active GM's**
 only (`game.users.activeGM.isSelf`, normally the bot). Every GM-side pull goes through one helper,
@@ -142,6 +175,20 @@ only (`game.users.activeGM.isSelf`, normally the bot). Every GM-side pull goes t
   mover's pull that reaches the player later than that, while the net's own draw is loading, shows
   core's toast once and is replayed (same scene and level: no second draw).
 - The net never yanks a peek: it only arms when the deleted token was on the scene the player views.
+- **The GM's copy of `User#viewedScene` lags** a player's draw: it changes only when the draw ends
+  (`board.mjs` `#initializeUserActivity`). During a gather, an earlier member may still be "on" the
+  source scene in the GM's eyes, so core's rule would pull them again for a later member's carry;
+  the gather clause in `prepull.mjs` is what stops it. Never skip a pull on that copy either (CR2).
+- **A same-scene level change also triggers core's own level switch** on the player's client
+  (`TokenDocument#handleMovementOperation`), beside the pull a same-scene `teleport` or gather always
+  sends. They coexist: whichever lands second is a no-op (that scene and level are drawn) or is
+  dropped by core while the first draws, so **the player may see one "cannot switch Scenes" toast**;
+  the dropped pull is then replayed only if the canvas does not already show its scene and level.
+  Never predict core's switch on the GM side: the GM's copy of the player's view lags (code review G1).
+- **Order on the player's client** (code review G4): every pull and every view pins queues itself
+  (the safety net's delete, the level gap-filler's move) takes a number from one counter. A pins
+  view drops an OLDER held pull; a pull that arrived after the view was queued wins, and the view is
+  dropped.
 - A token **id** is not stable across scenes (keepId, core's region teleport): key on the root
   actor id.
 - The canvas menu's right-press snapshot must be taken on **window** capture: PIXI's own capture
@@ -155,16 +202,16 @@ only (`game.users.activeGM.isSelf`, normally the bot). Every GM-side pull goes t
 | File | Role |
 |---|---|
 | `pins.mjs` | entry (esmodules[0]): wiring, load order |
-| `pins-core.mjs` | pure: `pinOf`, `pickToken`, `activateDecision`, `netDecision`, `coreSwitchesLevel`, `levelFollow`, `replayDecision`, `tokenNotice`, `auditPins`, `menuTrigger`, `menuAllowed`, `menuPlacement`, `teleportChoices`, `pinnedName` |
+| `pins-core.mjs` | pure: `pinOf`, `pickToken`, `activateDecision`, `netDecision`, `coreSwitchesLevel`, `levelFollow`, `replayDecision`, `tokenNotice`, `auditPins`, `gatherPlan` (who a gather moves, skips, leaves offline; the order), `menuTrigger`, `menuAllowed`, `menuPlacement`, `teleportChoices`, `pinnedName` |
 | `settings.mjs` | `pinning` and its onChange fan-out |
-| `world-adapter.mjs` | Foundry → plain data: pins, root actors (kit `lib/root-actor.mjs`, the rule portals uses), tokens across scenes, the audit, `pullTargetOf` (where the GM pulls a player), `listOf` (no canvas) |
+| `world-adapter.mjs` | Foundry → plain data: pins, root actors (kit `lib/root-actor.mjs`, the rule portals uses), tokens across scenes, the audit, `pinInputs` (the one builder of the plain pin world: `auditWorld` with the GMs' pins, `gatherInputs` without; one token walk), `liveToken` (a walked record as it stands now, by id), `startedCombatTokens` (the COMBAT snapshot), `pullTargetOf` / `pullToPin` (where and how the GM pulls a player; a resolved token is reused), `listOf` (no canvas) |
 | `api-manifest.mjs` / `api.mjs` | API rows / implementations |
 | `follow.mjs` | the `_onActivate` patch, the deleteToken safety net, the moveToken level gap-filler (core's clause: kit `lib/pull-rule.mjs` `ownsOtherSighted`), the `pullToScene` replay attached at `ready` (player client) |
 | `sheet.mjs` | the "Pinned to" badge |
-| `canvas-menu.mjs` / `menu-ui.mjs` | the GM right-click menu: event gating / DOM |
+| `canvas-menu.mjs` / `menu-ui.mjs` | the GM right-click menu (Prompt note, Gather with its count, combat confirm and toasts, Teleport ▸; one `gatherInputs` read per open feeds the count and the rows): event gating / DOM |
 | `switch.mjs` | the switch-on audit toast and pull |
 | `watch.mjs` | GM toasts: a pinned character with no token left (Stranded) or a second one (Paused); the active GM pulls the online player when it is placed again (0 → 1) |
-| `prepull.mjs` | the `pentaryn-portals.prePull` listener: drops a player pinned to a token on another scene from portals' pull (one token walk, `pinTargets`) |
+| `prepull.mjs` | the `pentaryn-portals.prePull` listener: drops a player pinned to a token on another scene from portals' pull (one token walk, `pinTargets`); from a gather member's carry (`data.gather`), every non-GM user |
 | `lib/` | vendored kit (`lib/kit.lock.json`; `patch-libwrapper` names lib-wrapper; `root-actor` is the shared original-actor rule; `pull-rule` is core's "who is pulled" rule shared with portals) |
 | `test/` | node:test suites, goldens, fixtures (a small fake DOM), vendored test kit |
 

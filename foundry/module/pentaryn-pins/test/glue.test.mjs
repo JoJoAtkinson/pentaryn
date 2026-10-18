@@ -392,7 +392,7 @@ test("N8 the net's target on an orphan level (an id its scene no longer has): vi
   }
 });
 
-test("8 the token is deleted with nothing left: no view, the player stays", async t => {
+test("8 the token is deleted with nothing left: no view, the player stays; an activation then moves them as stock (the Stranded toast says so, minor (b))", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   try {
     reset();
@@ -404,6 +404,12 @@ test("8 the token is deleted with nothing left: no view, the player stays", asyn
     assert.equal(canvas.scene, B);
     await C.view({});                               // no token: stock
     assert.deepEqual(F.views, [[IDS.sceneC, {}]]);
+    at(B, IDS.levelB2);
+    F.views.length = 0;
+    F.activations.length = 0;
+    A._onActivate(true, { viewOptions: {} });       // Stranded: no target, so the activation is core's
+    await flush();
+    assert.deepEqual([F.activations, F.views.map(v => v[0])], [[[IDS.sceneA, true]], [IDS.sceneA]], "stock activation");
   } finally {
     restoreTalo();
     at(B, IDS.levelB2);
@@ -595,6 +601,81 @@ test("N10b (CR1) a dropped pull, then a newer pull core honours before the repla
   at(B, IDS.levelB2);
 });
 
+test("N10c (code review G4) a level view queued BEFORE a GM pull core dropped never wipes that newer pull: the pull is replayed, the older view dropped", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    reset();
+    at(B, IDS.levelB2);
+    addPet(IDS.levelB2);                            // core keeps the view on B2: the gap-filler follows
+    let end;
+    moveLevel(taloTok()[0], IDS.levelB1, { ended: new Promise(r => { end = r; }) });
+    await flush();
+    canvas.loading = true;
+    end();
+    await flush();                                  // the gap-filler waits for the draw (queued first)
+    F.socketFire("pullToScene", IDS.sceneC, {});    // the GM's NEWER pull, dropped by core while loading: held
+    t.mock.timers.tick(NET_POLL_MS * 2);
+    await flush();
+    canvas.loading = false;
+    t.mock.timers.tick(NET_POLL_MS);
+    await flush();
+    t.mock.timers.tick(NET_POLL_MS * 4);
+    await flush();
+    assert.deepEqual(F.views, [[IDS.sceneC, {}], [IDS.sceneC, {}]], "core's dropped try, then the replay of the newer pull; no level view over it");
+    assert.deepEqual(followed.map(f => f.reason), ["retry"]);
+  } finally {
+    B.tokens.delete("spiritPetB000001");
+    restoreTalo();
+    at(B, IDS.levelB2);
+  }
+});
+
+test("N10d (minor (c)) a pull core dropped while loading, then pins' own NEWER level view: the older held pull is cleared, never replayed over it", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    reset();
+    at(B, IDS.levelB2);
+    addPet(IDS.levelB2);
+    canvas.loading = true;
+    F.socketFire("pullToScene", IDS.sceneC, {});    // dropped by core while loading: pins holds it
+    canvas.loading = false;                         // the draw ends before the replay's poll looks
+    moveLevel(taloTok()[0], IDS.levelB1);           // a newer move: the gap-filler views at once
+    await flush();
+    t.mock.timers.tick(NET_POLL_MS * 4);
+    await flush();
+    assert.deepEqual(F.views, [[IDS.sceneC, {}], [IDS.sceneB, ctl(IDS.levelB1)]], "core's dropped try, then pins' level view; no replay");
+    assert.deepEqual(followed.map(f => f.reason), ["level"]);
+  } finally {
+    B.tokens.delete("spiritPetB000001");
+    restoreTalo();
+    at(B, IDS.levelB2);
+  }
+});
+
+test("N10e (code review G1) a dropped pull to the scene and level the canvas shows once loading clears (core's own level switch got there) → no replay view", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  reset();
+  at(B, IDS.levelB2);
+  canvas.loading = true;                            // core's level switch to B1 is drawing
+  F.socketFire("pullToScene", IDS.sceneB, { level: IDS.levelB1, controlledTokens: [IDS.taloTok] });   // pins' pull: dropped
+  at(B, IDS.levelB1);                               // the switch's draw ends on B1
+  t.mock.timers.tick(NET_POLL_MS * 4);
+  await flush();
+  assert.deepEqual(F.views, [[IDS.sceneB, { level: IDS.levelB1, controlledTokens: [IDS.taloTok] }]], "core's dropped try only");
+  assert.deepEqual(followed, []);
+  // the same pull, but the draw ended elsewhere: replayed as sent
+  reset();
+  at(B, IDS.levelB2);
+  canvas.loading = true;
+  F.socketFire("pullToScene", IDS.sceneB, { level: IDS.levelB1 });
+  at(B, IDS.levelB2);
+  t.mock.timers.tick(NET_POLL_MS * 4);
+  await flush();
+  assert.deepEqual(F.views.at(-1), [IDS.sceneB, { level: IDS.levelB1 }]);
+  assert.deepEqual(followed.map(f => f.reason), ["retry"]);
+  at(B, IDS.levelB2);
+});
+
 test("N10 an unpinned player, a GM or the switch off: core's drop stands (nothing replayed)", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const runs = [
@@ -781,7 +862,7 @@ test("N9 watch (GM): a copy → one Paused toast after the window; a carry → n
     // the only token deleted → Stranded; deleted again after a re-place inside the window → no second toast
     F.deleteToken(taloTok()[0]);
     t.mock.timers.tick(NET_GRACE_MS);
-    assert.deepEqual(toasts(), ["Talo (Talo's player) has no token left: Talo's player's view stays where it is. Place Talo again and Talo's player is brought to it (at their next login if offline)."]);
+    assert.deepEqual(toasts(), ["Talo (Talo's player) has no token left: until it is placed again, Talo's player follows scene activation like an unpinned player. Place Talo again and Talo's player is brought to it (at their next login if offline)."]);
     reset();
     const again = F.createToken(IDS.sceneB, { id: "taloAgainB000001", name: "Talo", actorId: IDS.talo, level: IDS.levelB2 });
     F.deleteToken(again);

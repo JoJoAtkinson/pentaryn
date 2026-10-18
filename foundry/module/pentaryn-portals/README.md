@@ -33,15 +33,36 @@ migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-por
   is every linked character token plus every token a player owns or a PC summoned — never item
   piles, Markers, crowd, or pentaryn-aoe area handles. They land spread out from the region's
   centre, skipping squares a wall cuts off or someone stands on — a Large or bigger token's whole
-  footprint must be clear, of standers and of the rest of the party — each follower beside its PC; on
+  footprint must be clear, of standers and of the rest of the party — each follower beside its PC (a
+  co-owned steed beside the last of its owners' PCs); on
   another scene the active players are pulled there — onto the party's floor when it landed on one —
   and the GM's view follows; a `pentaryn-portals.prePull` listener may leave players out
   (pentaryn-pins: a pinned player whose character stayed on another scene). A token deleted
   while the confirm is open is left behind, not recreated; if none are left it warns and moves nobody.
 - **Summons follow their PC.** When a player walks their PC through a link to **another scene**,
   the active GM's client carries the PC's summons and the tokens only that player owns, and lands
-  them around the PC (a co-owned steed comes when all its owners go together). Only a real portal
-  hop counts: a GM cut-and-paste drags nothing. Needs a GM logged in.
+  them around the PC. A companion several players co-own (a shared steed) comes only when it stands
+  **within 10 ft** of the PC (see *Co-owned companions*). Only a real portal hop counts: a GM
+  cut-and-paste drags nothing. Needs a GM logged in.
+- **Co-owned companions (0.8.0, every move).** One rule in `followersOf` (portals-core
+  `companionsOf`), shared by portal-hop follow, Teleport party and `teleportToken` (so pentaryn-pins'
+  Teleport and Gather too):
+  - a **summon** goes with the PC it names as its origin (a wild-shaped PC's original counts), at any
+    distance;
+  - a companion whose players **all own that PC** (a pet only its player owns) always follows it, at
+    any distance;
+  - a companion **shared** with other players' characters (a steed Caven's and Marrith's players
+    co-own): in a **single move** it comes only if it is within **10 ft** of the moving PC in 5e
+    distance — adjacent is 5 ft, one empty square between is 10 ft (a diagonal square counts as
+    one), measured in the scene's grid units (feet; metres at 1.5 m = 5 ft; any other unit 5 ft a
+    square), on the same level. When several of its owners move in one operation (two PCs through a portal
+    together) and more than one is within reach, the **last** of them takes it. Otherwise it stays
+    and the GM drags it. In a **gather** (pentaryn-pins, `teleportToken` `opts.gather`) it always
+    comes, with the last-moved of its gathered owners on its scene; offline co-owners do not count.
+    **Teleport party** moves everyone, so it comes, landing beside the **last** of its owners' PCs.
+  - Before 0.8.0: a co-owned steed came only when all its owners went together, beside the first.
+  - Limit: a companion only ever comes from its leader's own scene. A shared steed on a scene where
+    none of its gathered owners stands stays put.
 - **Arrivals step off an occupied square.** A PC who comes through overlapping anyone (even off the
   grid, or a Large token) is moved by the GM's client to the nearest square its whole footprint fits
   before its company follows.
@@ -83,7 +104,7 @@ or an exact name (`opts.sceneId` scopes an id or a name) — never a substring.
 | `teleportParty(region, { confirm = true })` | GM | `{ moved, cancelled }`. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged). Moves the party on **`canvas.scene`** (the calling client's view); no scene on the canvas → `undefined`, nothing moves. It **opens a confirm dialog** unless `confirmPartyTeleport` is off — a console or bridge caller passes `{ confirm: false }`, or it waits on a click. Nobody counting as party is always the warn and `{ moved: 0, cancelled: true }`, confirm or not: no players pulled, no view change. A destination region on one floor puts the party on that floor, on the same scene too (elevation mapped). Another scene: every active player is pulled and the GM's view follows, with `{ level }` when the party landed on one floor; the `pentaryn-portals.prePull` listeners may leave players out (pentaryn-pins: a pinned player whose character is on another scene; see Events). A destination scene that already holds a mover's token id (a duplicated scene keeps ids) → a GM warning naming them and `{ moved: 0, cancelled: true }`, nothing written |
 | `link(ref, { to, twoWay, dryRun })` | GM | `ok({ from, to, twoWay })` / `fail(code, reason)`; the same writes as the card's Add a destination. A `to` with any behavior other than Teleport Token is not a landing spot (the card does not list it): `fail("BAD_ARGS", "not a landing spot: …")`, dryRun too |
 | `unlink(ref, { to, dryRun })` | GM | `ok({ from, to, removed })` / `fail(…)` |
-| `teleportToken(ref, { x, y, scene, level, pull, dryRun, sceneId })` | GM | `ok({ token, from, to: { scene, x, y, level }, followers, moved, pulled })` / `fail(…)`. `ref` is a **token** ref. Moves that token so its centre lands on (x, y) of `scene` (Scene, id, uuid or exact name, through the kit's `resolveRef`; another kind → `BAD_ARGS`; default its own scene) and, when it is a PC (character or polymorphed), its company — the same follower rule as portal travel (its summons, tokens only its players own), **without** the portal check. Same scene: one update with displace waypoints that carry the level. Another scene: keepId create + plain delete (no `replacements`, so the follow hook does not run again; combatants are not remapped). `level` defaults to the token's own on the same scene (the initial level when the scene no longer has it), the destination's initial level on another — never the source level id. Onto another floor (another level, or another scene) each token keeps its height above the floor's base, clamped into the new floor (core's paste rule); landing counts only that floor's tokens and walls. A wild-shaped PC brings its summons too (they name the original actor). No confirm; the calling GM's view does not change. **The pull (0.7.0):** another scene ends with one `pullUsers` to the destination with `{ level, controlledTokens: [token] }` (`level` = where the token landed) — the users core's own Teleport Token region would pull (a copy of its private rule: active players viewing the token's scene and level who observe it and own no other non-hidden sighted token there; nobody for a hidden token; the rule is the kit's `lib/pull-rule.mjs`, shared with pentaryn-pins), as the `pentaryn-portals.prePull` listeners leave them (see Events), plus `pull` (users or user ids, pulled whatever the rule says; inactive ones dropped). `pulled: [{ id, name }]` lists them; the same scene pulls nobody (`pulled: []`); dryRun / `REFUSED` / `CONFLICT` pull nobody. `to.scene`/`to.level`/`from` are id strings. `NOT_GM` · `NOT_FOUND` (ref, scene) · `BAD_ARGS` (`x`/`y` not finite, a level the destination lacks, `pull` not an array of users / user ids) · `REFUSED` (a mover's token id is already on the destination — a duplicated scene keeps token ids; dryRun too) · `CONFLICT` (another session's create landed first) |
+| `teleportToken(ref, { x, y, scene, level, pull, gather, dryRun, sceneId })` | GM | `ok({ token, from, to: { scene, x, y, level }, followers, moved, pulled, held? })` / `fail(…)`. `ref` is a **token** ref. Moves that token so its centre lands on (x, y) of `scene` (Scene, id, uuid or exact name, through the kit's `resolveRef`; another kind → `BAD_ARGS`; default its own scene) and, when it is a PC (character or polymorphed), its company — the same follower rule as portal travel (its summons, tokens only its players own, a companion it shares with other players when that stands within 10 ft of it), **without** the portal check. **`gather` (0.8.0)** — `{ later: [{ user: userId, token: tokenId }] }`, set by pentaryn-pins' gather on each member's call: the members that move after this one (`[]` on the last). A shared companion then comes at any distance unless a `later` member owns it and that member's token stands on this scene (it waits for them, and the result lists it in `held: [{ id, name }]`, so pins can still carry it if that member's move fails); the call's `pentaryn-portals.prePull` carries this `gather`; left out or `null`, a single move (no `held`). Same scene: one update with displace waypoints that carry the level. Another scene: keepId create + plain delete (no `replacements`, so the follow hook does not run again; combatants are not remapped). `level` defaults to the token's own on the same scene (the initial level when the scene no longer has it), the destination's initial level on another — never the source level id. Onto another floor (another level, or another scene) each token keeps its height above the floor's base, clamped into the new floor (core's paste rule); landing counts only that floor's tokens and walls. A wild-shaped PC brings its summons too (they name the original actor). No confirm; the calling GM's view does not change. **The pull (0.7.0):** another scene ends with one `pullUsers` to the destination with `{ level, controlledTokens: [token] }` (`level` = where the token landed) — the users core's own Teleport Token region would pull (a copy of its private rule: active players viewing the token's scene and level who observe it and own no other non-hidden sighted token there; nobody for a hidden token; the rule is the kit's `lib/pull-rule.mjs`, shared with pentaryn-pins), as the `pentaryn-portals.prePull` listeners leave them (see Events), plus `pull` (users or user ids, pulled whatever the rule says; inactive ones dropped). `pulled: [{ id, name }]` lists them; the same scene pulls nobody (`pulled: []`); dryRun / `REFUSED` / `CONFLICT` pull nobody. `to.scene`/`to.level`/`from` are id strings. `NOT_GM` · `NOT_FOUND` (ref, scene) · `BAD_ARGS` (`x`/`y` not finite, a level the destination lacks, `pull` not an array of users / user ids, `gather` not `{ later: [{ user, token }] }`) · `REFUSED` (a mover's token id is already on the destination — a duplicated scene keeps token ids; dryRun too) · `CONFLICT` (another session's create landed first) |
 | `open(region, { edit })` | GM | the Portal card window. `region`: `RegionDocument\|uuid` (a uuid naming no region → `undefined`, logged) |
 | `spreadArrival(tokenDoc)` | GM | the token, moved off an occupied square if it was on one. `tokenDoc`: `TokenDocument\|uuid` (a uuid naming no token → `undefined`, logged) |
 
@@ -121,7 +142,7 @@ Besides the kit's `pentaryn-portals.ready` / `pentaryn.ready`:
 
 | Event | Pre | Args | When |
 |---|---|---|---|
-| `pentaryn-portals.prePull` | yes (`Hooks.call`) | `(users, { scene, level, token, reason, pull })` | once at each pull site, before `scene.pullUsers`: teleportToken onto another scene (`reason: "token"`, `token` = the carried TokenDocument, already on `scene`; `users` = core's rule's users; `pull` = `opts.pull`, pulled whatever a listener does) and Teleport party onto another scene (`reason: "party"`, `token: null`, `users` = every active player, `pull: []`). `scene` = the destination Scene, `level` = the landed level id or null. Fired only when `users` is not empty. A listener **removes Users from `users` in place** (`splice`) to leave them behind; returning `false` leaves all of `users` behind. A throwing listener is caught by Foundry's `Hooks.call` (logged; the others still run). pentaryn-pins listens, to leave out a player pinned to a token on another scene (one token walk per call). |
+| `pentaryn-portals.prePull` | yes (`Hooks.call`) | `(users, { scene, level, token, reason, pull, gather })` | once at each pull site, before `scene.pullUsers`: teleportToken onto another scene (`reason: "token"`, `token` = the carried TokenDocument, already on `scene`; `users` = core's rule's users; `pull` = `opts.pull`, pulled whatever a listener does) and Teleport party onto another scene (`reason: "party"`, `token: null`, `users` = every active player, `pull: []`). `scene` = the destination Scene, `level` = the landed level id or null; `gather` = teleportToken's `opts.gather` when this carry is one member's move of a pentaryn-pins gather, else `null` (a per-call mark: pins drops every non-GM rule user from that carry only). Fired only when `users` is not empty. A listener **removes Users from `users` in place** (`splice`) to leave them behind; returning `false` leaves all of `users` behind. A throwing listener is caught by Foundry's `Hooks.call` (logged; the others still run). pentaryn-pins listens, to leave out a player pinned to a token on another scene (one token walk per call). |
 
 ## Patches and adjustments
 
@@ -182,8 +203,8 @@ pull: a copy of core's private Teleport Token `#getUsersToPull`, `usersToPull` /
   of a transformed token carries `rootActorId` (the kit's `rootActorId`, shared with pentaryn-pins),
   so portal travel, Teleport party and teleportToken all bring them.
 - `teleportToken` is not portal-hop follow: `party.mjs` (`bringFollowers`, `onDeleteToken`,
-  `cameThroughPortal`) is not involved. They share `recordOf`, `followersOf`, `landingPlaces` and
-  `carryTo`; `carryTo`'s `{ level }` is teleportToken's only. Every mover's level and elevation come
+  `cameThroughPortal`) is not involved. They share `recordOf`, `followersOf` (with its 10-ft
+  `reachTest`), `landingPlaces` and `carryTo`; `carryTo`'s `{ level }` is teleportToken's only. Every mover's level and elevation come
   from one rule (`arrivals` in scene-adapter), same scene or another, and one builder
   (`displaceOptions`) puts a move's level and elevation in its waypoint (a move with neither gets
   `{ x, y, action }`, as before).
@@ -204,7 +225,7 @@ pull: a copy of core's private Teleport Token `#getUsersToPull`, `usersToPull` /
 | File | Role |
 |---|---|
 | `portals.mjs` | entry: wiring, lifecycle, publish |
-| `portals-core.mjs` | pure: constants, party and landing rules, card HTML, dialog-id parse, geometry, `isAoeHandle` |
+| `portals-core.mjs` | pure: constants, party and landing rules (`companionsOf`: who comes with whom, the 10-ft co-owned rule), card HTML, dialog-id parse, geometry, `isAoeHandle` |
 | `settings.mjs` | the `SETTINGS` table, `setting()` |
 | `scene-adapter.mjs` | adapter: records, snapshot, region move, Teleport party, `moveCompany` (teleportToken), link/unlink |
 | `card-app.mjs` | ui: the Portal card window |

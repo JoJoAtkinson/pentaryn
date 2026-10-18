@@ -121,16 +121,35 @@ function pullUsersOf(pull) {
 }
 
 /**
+ * opts.gather (0.8.0, pin-2026-10-gather.md §11): pentaryn-pins' gather sets it on each member's call —
+ * `{ later: [{ user: userId, token: tokenId }] }`, the members that move AFTER this one (their user and
+ * pinned token ids; [] on the last). It turns on companionsOf's gather rule: a companion this mover
+ * shares with other players comes at any distance unless a later member owns it and stands on this
+ * scene. undefined / null → a single move (the 10-ft rule) → null; any other shape → false (BAD_ARGS).
+ */
+function gatherOf(gather) {
+  if (gather === undefined || gather === null) return null;
+  const entry = e => !!e && typeof e === "object" && typeof e.user === "string" && typeof e.token === "string";
+  if (typeof gather !== "object" || !Array.isArray(gather.later) || !gather.later.every(entry)) return false;
+  return { later: gather.later.map(e => ({ user: e.user, token: e.token })) };
+}
+
+/**
  * teleportToken (0.6.0): one token, and a PC's company, to a point on its own scene or another.
  * Runs on the calling GM client (no query: a User#query runs in every socket of the recipient).
  * The moving is scene-adapter moveCompany, which reuses the follower code; party.mjs (portal-hop
  * follow) is not involved and not changed. 0.7.0: on another scene the move ends with one pull —
  * core's Teleport Token rule plus `pull` (pins rebuild 2026-10-17 §2) — reported as `pulled`.
+ * 0.8.0: a shared companion comes within 10 ft, or always in a gather (`gather`, gatherOf; §11); a
+ * gather call reports what it left for a later co-owner (`held`, code review G5) and marks its prePull
+ * with that `gather` (code review G6).
  */
-async function teleportToken(token, ctx, { x, y, scene, level: wanted, pull, dryRun = false } = {}) {
+async function teleportToken(token, ctx, { x, y, scene, level: wanted, pull, gather: gatherOpt, dryRun = false } = {}) {
   if (!game.user?.isGM) return fail("NOT_GM", "only a GM teleports tokens");
   const extra = pullUsersOf(pull);
   if (!extra) return fail("BAD_ARGS", "pull must be an array of users or user ids");
+  const gather = gatherOf(gatherOpt);
+  if (gather === false) return fail("BAD_ARGS", "gather must be { later: [{ user: userId, token: tokenId }] }");
   const from = token.parent;
   let dest;
   // the kit's one resolver (review R1): a Scene, id, uuid or exact name; another kind → BAD_ARGS
@@ -145,13 +164,15 @@ async function teleportToken(token, ctx, { x, y, scene, level: wanted, pull, dry
   const to = { scene: dest.id, x, y, level };
   let moved;
   try {
-    moved = await moveCompany(token, dest, { x, y, level }, { dryRun, pull: extra });
+    moved = await moveCompany(token, dest, { x, y, level }, { dryRun, pull: extra, gather });
   } catch (err) {
     ctx.log.error("teleportToken failed", err);
     return toFail(err);
   }
   if (moved.ok === false) return moved;
   const out = { token: refOf(dest.tokens.get(token.id) ?? token), from: from.id, to, followers: moved.followers, moved: moved.moved };
+  // a gather member's call: the shared companions left for a later co-owner (code review G5)
+  if (gather) out.held = moved.held ?? [];
   if (dryRun) return ok({ dryRun: true, ...out });
   out.pulled = moved.pulled ?? [];
   ctx.log.info("teleportToken", { uuid: token.uuid, ids: [token.id, ...moved.followers.map(f => f.id)], pulled: out.pulled.map(u => u.id), by: game.user.id });

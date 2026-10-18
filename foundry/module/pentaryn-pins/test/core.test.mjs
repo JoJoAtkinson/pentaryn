@@ -19,7 +19,7 @@ test("core loads with no Foundry globals present", () => {
     assert.equal(name in globalThis, false, `${name} is defined in a bare node process`);
   }
   for (const fn of ["pinOf", "pickToken", "activateDecision", "netDecision", "coreSwitchesLevel", "levelFollow", "replayDecision",
-    "tokenNotice", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "pinnedName"]) assert.equal(typeof core[fn], "function", fn);
+    "tokenNotice", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "pinnedName", "gatherPlan", "gatherRow", "gatherResult"]) assert.equal(typeof core[fn], "function", fn);
   for (const gone of ["viewDecision", "queueDecision", "followNeeded", "TOAST_EVERY_MS", "SETTLE_MS", "SETTLE_GIVE_UP_MS"]) {
     assert.equal(gone in core, false, `${gone} was deleted in 0.2.0 (core's own pull moves the player)`);
   }
@@ -290,4 +290,109 @@ test("menuPlacement: inside the window; the submenu flips left / up near an edge
   assert.deepEqual(core.menuPlacement({ ...base, x: 1600, y: 300 }), { left: 1600, top: 300, flipX: true, flipY: false }, "the submenu would cross the right edge");
   assert.deepEqual(core.menuPlacement({ ...base, x: 300, y: 950 }), { left: 300, top: 950, flipX: false, flipY: true }, "the submenu would cross the bottom");
   assert.equal(core.menuPlacement({ ...base, x: 0, y: 0 }).left, 4, "never off the left edge");
+});
+
+test("gatherPlan (gather plan §5.1): who is gathered, who is skipped, who is offline, in what order", () => {
+  const DEST = "sceneD000000000d", SRC = "sceneS000000000s";
+  const BEAR_A = "bearActor0000001", GONE = "goneActor0000001", SHARED = "sharedActor00001", NPC = "npcActor00000001";
+  const U = (id, name, extra = {}) => ({ id, name, active: true, isGM: false, ...extra });
+  const users = [
+    U("uOff", "Offline Olga", { active: false }),
+    U("uNoPin", "Nopin Ned"),
+    U("gm1", "Gamemaster", { isGM: true }),
+    U("gm2", "Promoted GM", { isGM: true }),
+    U("uZero", "Zero Zed"),
+    U("uMany", "Many Mo"),
+    U("uGone", "Gone Gus"),
+    U("uSh1", "Share One"),
+    U("uSh2", "Share Two"),
+    U("uUnl", "Unlinked Ula"),
+    U("uObs", "Npc Nia"),
+    U("uWolf", "Wolf Wes"),
+    U("uFar", "Far Fay"),
+    U("uNear", "Near Nan"),
+    U("uMid", "Mid Max"),
+  ];
+  const tok = (id, scene, x, y, extra = {}) => ({ id, scene, sceneName: scene === DEST ? "Dest" : "Src", level: null, x, y, linked: true, form: null, ...extra });
+  const A = id => ({ id, name: id.slice(0, 4) });
+  const roots = { uOff: "offActor00000001", uZero: "zeroActor0000001", uMany: "manyActor0000001", uGone: GONE, uSh1: SHARED, uSh2: SHARED,
+    uUnl: "unlActor00000001", uObs: NPC, uWolf: TALO, uFar: "farActor00000001", uNear: "nearActor0000001", uMid: "midActor00000001" };
+  const pinsByUser = { uNoPin: null, ...roots };
+  const pins = Object.entries(roots).map(([user, actor]) => ({ user, actor, observes: user !== "uObs" }));
+  const actors = Object.fromEntries(Object.values(roots).filter(r => r !== GONE).map(r => [r, A(r)]));
+  // the GM's pin on Mira is never in `pins` (gatherInputs leaves GM pins out): Mira's player stays a member
+  const tokensByRoot = {
+    offActor00000001: [tok("tOff", SRC, 0, 0)],
+    zeroActor0000001: [],
+    manyActor0000001: [tok("tMany1", SRC, 0, 0), tok("tMany2", DEST, 0, 0)],
+    [SHARED]: [tok("tShared", SRC, 0, 0)],
+    unlActor00000001: [tok("tUnl", SRC, 0, 0, { linked: false })],
+    [NPC]: [tok("tNpc", SRC, 0, 0)],
+    [TALO]: [tok("tWolf", SRC, 0, 0, { form: "Wolf" })],
+    farActor00000001: [tok("tFar", DEST, 900, 900)],
+    nearActor0000001: [tok("tNear", DEST, 450, 450, { level: "lvlUpper00000001" })],
+    midActor00000001: [tok("tMid", DEST, 100, 600)],
+  };
+  const plan = core.gatherPlan({ users, pins, pinsByUser, actors, tokensByRoot }, { destSceneId: DEST, point: { x: 500, y: 500 }, grid: 100 });
+  // 11. order: destination-scene members nearest the click first (token centre), then the rest by user name
+  assert.deepEqual(plan.members.map(m => m.user.name), ["Near Nan", "Mid Max", "Far Fay", "Npc Nia", "Unlinked Ula", "Wolf Wes"]);
+  assert.deepEqual(plan.members.map(m => m.sameScene), [true, true, true, false, false, false]);
+  const near = plan.members[0];
+  assert.deepEqual(near, { user: { id: "uNear", name: "Near Nan" }, actor: { id: "nearActor0000001", name: actors.nearActor0000001.name },
+    root: "nearActor0000001", token: { id: "tNear", scene: DEST, sceneName: "Dest", level: "lvlUpper00000001", x: 450, y: 450, form: null },
+    sameScene: true, warnings: [] });
+  const by = name => plan.members.find(m => m.user.name === name);
+  assert.deepEqual(by("Unlinked Ula").warnings, ["UNLINKED"], "8. unlinked: a member, with a warning");
+  assert.deepEqual(by("Npc Nia").warnings, ["NOT_OWNER"], "9. not observing: a member, with a warning");
+  assert.equal(by("Wolf Wes").token.form, "Wolf", "10. a wild-shaped form token: a member");
+  assert.equal(by("Wolf Wes").token.id, "tWolf");
+  // 2, 5, 6, 7: skipped with a code, in user order
+  assert.deepEqual(plan.skipped.map(s => [s.user.name, s.code]), [
+    ["Nopin Ned", "NO_PIN"], ["Zero Zed", "NO_TOKEN"], ["Many Mo", "MANY_TOKENS"], ["Gone Gus", "NO_ACTOR"],
+    ["Share One", "SHARED_ACTOR"], ["Share Two", "SHARED_ACTOR"],
+  ]);
+  assert.deepEqual(plan.skipped[0], { user: { id: "uNoPin", name: "Nopin Ned" }, actor: null, code: "NO_PIN", detail: null });
+  // code review G2: each skip carries the audit violation's own detail
+  assert.deepEqual(plan.skipped.map(s => s.detail), [null, null, "Src, Dest", null, "Share One, Share Two", "Share One, Share Two"]);
+  assert.equal(plan.skipped.find(s => s.code === "NO_ACTOR").actor, null, "a deleted actor: no actor ref");
+  assert.deepEqual(plan.skipped.find(s => s.code === "MANY_TOKENS").actor, { id: "manyActor0000001", name: actors.manyActor0000001.name });
+  // 1. offline pinned → offline; 3. GMs (with or without a flag) absent everywhere
+  assert.deepEqual(plan.offline, [{ user: { id: "uOff", name: "Offline Olga" }, actor: { id: "offActor00000001", name: actors.offActor00000001.name } }]);
+  const everyone = [...plan.members, ...plan.skipped, ...plan.offline].map(r => r.user.id);
+  assert.equal(everyone.includes("gm1") || everyone.includes("gm2"), false);
+  // an offline UNPINNED player is nobody's business
+  const off2 = core.gatherPlan({ users: [U("u9", "Gone", { active: false })], pins: [], pinsByUser: { u9: null }, actors: {}, tokensByRoot: {} },
+    { destSceneId: DEST, point: { x: 0, y: 0 }, grid: 100 });
+  assert.deepEqual([off2.members, off2.skipped, off2.offline], [[], [], []]);
+});
+
+test("gatherPlan (code review G2): SHARED_ACTOR's detail names every co-pinned player, an OFFLINE one too", () => {
+  const users = [{ id: "u1", name: "Ana", active: true, isGM: false }, { id: "u2", name: "Bo", active: false, isGM: false }];
+  const plan = core.gatherPlan({ users, pins: [{ user: "u1", actor: TALO, observes: true }, { user: "u2", actor: TALO, observes: true }],
+    pinsByUser: { u1: TALO, u2: TALO }, actors: { [TALO]: { id: TALO, name: "Talo" } },
+    tokensByRoot: { [TALO]: [{ id: "t", scene: "s", sceneName: "S", level: null, x: 0, y: 0, linked: true, form: null }] } },
+  { destSceneId: "s", point: { x: 0, y: 0 } });
+  assert.deepEqual(plan.skipped, [{ user: { id: "u1", name: "Ana" }, actor: { id: TALO, name: "Talo" }, code: "SHARED_ACTOR", detail: "Ana, Bo" }]);
+  assert.deepEqual(plan.offline.map(o => o.user.name), ["Bo"]);
+});
+
+test("gatherPlan: a GM flag on a player's actor never makes the player SHARED_ACTOR (the GM pin is not an input)", () => {
+  const users = [{ id: "gm", name: "GM", active: true, isGM: true }, { id: "u1", name: "Talo's player", active: true, isGM: false }];
+  // gatherInputs passes non-GM pins only; pinsByUser holds non-GM users only
+  const plan = core.gatherPlan({ users, pins: [{ user: "u1", actor: TALO, observes: true }], pinsByUser: { u1: TALO },
+    actors: { [TALO]: { id: TALO, name: "Talo" } }, tokensByRoot: { [TALO]: [{ id: "t1", scene: "S", sceneName: "S", level: null, x: 0, y: 0, linked: true, form: null }] } },
+  { destSceneId: "D", point: { x: 0, y: 0 }, grid: 100 });
+  assert.deepEqual([plan.members.map(m => m.user.id), plan.skipped], [["u1"], []]);
+  // with the GM's pin in `pins`, auditPins would count it and mark the player SHARED_ACTOR: the adapter filters it out
+});
+
+test("gatherPlan: nobody → empty lists; ties on distance break by user name; a grid object works too", () => {
+  const empty = core.gatherPlan({}, { destSceneId: "D", point: { x: 0, y: 0 }, grid: 100 });
+  assert.deepEqual(empty, { members: [], skipped: [], offline: [] });
+  const users = [{ id: "u2", name: "Bea", active: true, isGM: false }, { id: "u1", name: "Abe", active: true, isGM: false }];
+  const tk = (id, x) => ({ id, scene: "D", sceneName: "D", level: null, x, y: 0, linked: true, form: null });
+  const plan = core.gatherPlan({ users, pins: [{ user: "u1", actor: TALO }, { user: "u2", actor: MIRA }], pinsByUser: { u1: TALO, u2: MIRA },
+    actors: { [TALO]: { id: TALO, name: "Talo" }, [MIRA]: { id: MIRA, name: "Mira" } },
+    tokensByRoot: { [TALO]: [tk("t1", 400)], [MIRA]: [tk("t2", 0)] } }, { destSceneId: "D", point: { x: 250, y: 50 }, grid: { size: 100 } });
+  assert.deepEqual(plan.members.map(m => m.user.name), ["Abe", "Bea"], "both centres 200 px from the click: by name");
 });

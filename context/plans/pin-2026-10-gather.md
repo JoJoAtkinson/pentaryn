@@ -1,6 +1,6 @@
 ---
 title: Pentaryn Pins — "Gather logged-in players here" (pins 0.3.0)
-status: ready (answers from Joe 2026-10-17 below)
+status: built 2026-10-17 (pins 0.3.0, portals 0.8.0; Joe's answers in §11; live run S14, S20-S27 per Q6; see §12)
 last_modified: 2026-10-17
 tags: [foundry, module, plan, pentaryn-pins, pentaryn-portals]
 ---
@@ -710,3 +710,81 @@ No blocker remains, so the status is `ready`.
 | Q4 pinning off | Default: gather is REFUSED ("pinning is off"); nothing moves. |
 | Q5 bystander pulls | Default: during a gather, each character's move pulls only its own player; the wider rule is not adopted. |
 | Q6 live testing | **Run it live.** Run S20–S23 plus S14, and add scenarios for the co-owned steed rule (gather brings it; a single move within 10 ft brings it; beyond 10 ft it stays; a tie goes to the last moved). Joe's earlier "no play test" only meant the previous version. Include the Mac real-browser acceptance once Joe allows Chrome on the Mac. |
+
+## 12. Build record (2026-10-17)
+
+Built in one parallel workflow: P (pins core, API, prePull), M (menu, strings), S (portals 0.8.0:
+the §11 co-owned companion rule in `companionsOf` / `followersOf` / `leaderOf`, `teleportToken`
+`opts.gather = { later: [{ user, token }] }`, and the §5.2 portals spread test), T (live runner,
+docs), then one integrator. Differences from the plan above, all from §11:
+
+- **Q1 changed §3.1's "co-owned companion stays".** A gather passes portals `gather: { later }` on
+  each member's call, so a companion several gathered players co-own waits for the last of them on
+  its scene and comes at any distance. On every single move it comes only from within 10 ft of the
+  moving owner (portals' `edgeGap`, same level); Teleport party lands it beside the last of its
+  owners' PCs. pins.md "Who comes along" is the use-doc; the "steed stays behind" Known gap of §6 is
+  replaced by "a shared steed on a single move comes only from within 10 ft".
+- **Q6 changed §5.4's "don't run".** The runner has 27 scenarios (`--list` shows S01-S27, not
+  S01-S23): S20-S23 as in §5.4, and S24-S27 for the steed rule with a new fixture actor
+  `PinTest Steed` (owned by A and B, `owners: ["A", "B"]`; every older layout leaves it off the map):
+  S24 a gather brings it from 15 ft (beside the last-moved owner, read from the result's order),
+  S25 `pins.teleport(A)` brings it from 5 ft, S26 leaves it at 15 ft while A's own pet comes from
+  across the map, S27 it touches both Alpha and Beta and goes with the one moved (A), then stays
+  with Alpha when B moves. A "tie" between several owners moving in ONE operation (two PCs through a
+  portal together) is covered by portals' unit tests only; the live runner cannot make two hops one
+  delete operation.
+- Runner details: `--seed` now REPLACES each fixture actor's ownership (`recursive: false`), so an
+  OBSERVER grant left by a stopped S23 does not survive a reseed; S23 puts it back itself in a
+  `finally`. A page probe counts each player's `pullToScene` arrivals (`__pinsLive.pulls`); a
+  probe of the view also reads the level and the controlled token ids. S14 also checks Gather's
+  position and its count (2, then 1 after B logs out).
+- Lobby habit (Joe): the Pentaryn active scene stays "Pentaryn — Entry"; activating a play map moves
+  no pinned player, it only sets the login flash. Recorded in pins.md "For the GM" and
+  `context/pentaryn.md`.
+- The routing case "bring everyone who's logged in to this spot" → pins went to
+  `scripts/eval/skill_routing/cases/map.json` (`map-31`), beside the other pins cases, not `dev.json`.
+- Integrator: pins `gather` passes each member's call `gather: { later }` through `teleport` to
+  portals; the published `teleport` row drops a caller's `gather` (it is gather's own option). The
+  review's minors were folded in:
+  - (a) a same-scene `teleport` (so a same-scene gather member) onto another floor sent no pull
+    when the GM's copy of the player's `viewedScene` / `viewedLevel` predicted core's own level
+    switch (`coreSwitchesFor`). **Withdrawn by Joe's code review G1 (below):** §1.2 stands again;
+  - (b) the Stranded toast now says activation moves that player as stock until the character is
+    placed again (the behaviour, `activateDecision` "no target" → call, is unchanged);
+  - (c) `follow.mjs` `viewTo` (the net's cut, the level gap-filler, the replay) drops a held pull;
+  - (d) README and pins.md already said the `pullToScene` replay is attached at `ready`.
+
+**Joe's `/code-review high` on the gather build (19:05), fixed the same day** (each checked against
+the tree and Foundry v14.369; a failing test first for every bug):
+
+- **G1** `coreSwitchesFor` skipped the same-scene pull on the GM's lagging copy of the player's view,
+  which `pullTargetOf`'s F1/CR2 note forbids. Removed: a same-scene move always pulls (§1.2, CR2), and
+  the two views coexist (core's `Scene#view` of the drawn scene and level draws nothing,
+  scene.mjs:273-287). Dedupe is on the player's client: follow.mjs replays a pull core dropped while
+  loading only when the canvas does not already show its scene and level. S20 now checks B gets
+  exactly one pull. The adjustments row `core-pins-level-switch-rule` no longer lists world-adapter.
+- **G2** the menu rebuilt SHARED_ACTOR's detail from the online-only skipped list (missed an offline
+  co-pinner, one line per sharer). `gatherPlan` now carries the audit violation's `detail` in each
+  `skipped` row; the toast prints SHARED_ACTOR once per actor.
+- **G3** "within 10 ft" now is 5e distance (adjacent 5 ft, one empty square between 10 ft: edge gap
+  ≤ 10 ft minus one square), in the scene's grid units (`feetPerSquare`, `reachFeet` in portals-core).
+  The runner's steed positions and labels follow: near = one square between (10 ft, comes), far = two
+  squares between (15 ft, stays: the old measure took it).
+- **G4** a pins view queued before a GM pull wiped that newer held pull. One counter now orders pulls
+  and pins' own views: an older held pull is cleared by a newer view; a pull newer than a queued view
+  wins and the view is dropped.
+- **G5** a companion held for a later co-owner whose move failed was left behind. Portals reports
+  what a gather call holds (`held`, pure `heldCompanions`); pins carries any still left after the
+  loop alone beside the last owner that moved (in that row's `followers`; a failure in `failed[]`).
+- **G6** the gather clause read a module-wide `ctx.gather` across awaits, so an unrelated prePull of a
+  member's token lost its users. Portals now passes each call's `opts.gather` to `prePull` as
+  `data.gather`; the clause keys on that per-call mark. `ctx.gather` is gone.
+- **G7** gather re-resolved each member through `teleport()` (a walk per member, more on the combat
+  path). It now makes one walk (`gatherInputs`) and moves each member through `teleport`'s own move
+  (`moveTo`) with the plan's record re-read by id (`liveToken`), and `pullToPin` reuses that token.
+  §3.1's "each call re-resolves the pin" is replaced: a token copied mid-gather is no longer caught
+  as AMBIGUOUS (a deleted one still fails `NOT_FOUND`; one an earlier carry took is found by id).
+- **G8** `pinInputs` is the one builder; `auditWorld` (with GM pins) and `gatherInputs` (without) read it.
+- **G9** the menu reads the pin world once per open (`gatherInputs`), shared by Gather's count and
+  Teleport ▸.
+

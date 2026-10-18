@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-pins";
 export const SHORT = "pins";
 export const NS = "pins";
-export const VERSION = "0.2.0";                       // === module.json version (core.test pins it)
+export const VERSION = "0.3.0";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-pins/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_PINS";
 export const CSS = "ppi-";
@@ -42,6 +42,9 @@ export const HOOKS = Object.freeze({
     args: "({ scene, level, reason: cut|level|retry })" }),
   audited: Object.freeze({ name: "pentaryn-pins.audited", pre: false, args: "(result)" }),
 });
+
+/** pentaryn-portals' pre-pull event (portals-core HOOKS.prePull): pins' prepull.mjs listens; selftest checks it. */
+export const PRE_PULL_HOOK = "pentaryn-portals.prePull";
 
 /** Audit codes, in the order a pin is checked. `UNLINKED` and `NOT_OWNER` are warnings; the rest are problems. */
 export const AUDIT_CODES = Object.freeze(["GM_USER", "NO_ACTOR", "SHARED_ACTOR", "NO_TOKEN", "MANY_TOKENS", "UNLINKED", "NOT_OWNER"]);
@@ -269,4 +272,95 @@ export function teleportChoices(users = [], pinsByUser = {}, tokenInfo = {}) {
 export function pinnedName(users = [], rootId = null) {
   if (!rootId) return null;
   return users.find(u => u.pin === rootId && !u.isGM)?.name ?? null;
+}
+
+/** The audit codes that keep a member from a gather (errors; GM_USER never reaches gatherPlan). */
+const GATHER_SKIP = Object.freeze(["NO_ACTOR", "SHARED_ACTOR", "NO_TOKEN", "MANY_TOKENS"]);
+/** The audit warnings a gathered member carries along. */
+const GATHER_WARN = Object.freeze(["UNLINKED", "NOT_OWNER"]);
+const byName = (a, b) => String(a.user.name).localeCompare(String(b.user.name));
+
+/**
+ * Who a "Gather logged-in players here" moves, and in what order (gather plan §1.1, §2.2). Every
+ * active non-GM user with a pin whose audit shows no error is a member; the audit's UNLINKED and
+ * NOT_OWNER ride along as `warnings`. Members on the destination go first, nearest the click first
+ * (token top-left + half a grid square; ordering only), then the rest by user name; ties by name.
+ * An online player without a pin is skipped `NO_PIN`; one whose pin fails the audit is skipped with
+ * the audit's code (NO_ACTOR, SHARED_ACTOR, NO_TOKEN, MANY_TOKENS) and that violation's `detail` (the
+ * co-pinned players, the scenes; null when it has none, and for NO_PIN); an offline pinned player is
+ * `offline`; GMs (pin flag or not) and offline unpinned players appear nowhere. `inputs` is
+ * gatherInputs' shape: `pins` holds NON-GM pins only, so a GM's flag never makes a player SHARED_ACTOR.
+ * @param {{ users?: {id, name, active, isGM}[], pins?: {user, actor, observes?}[], pinsByUser?: Record<string, string|null>,
+ *   actors?: Record<string, {id, name}>, tokensByRoot?: Record<string, {id, scene, sceneName, level, x, y, linked, form}[]> }} inputs
+ * @param {{ destSceneId: string, point: {x: number, y: number}, grid?: number|{size: number} }} opts
+ */
+export function gatherPlan(inputs = {}, { destSceneId = null, point = { x: 0, y: 0 }, grid = 100 } = {}) {
+  const { users = [], pins = [], pinsByUser = {}, actors = {}, tokensByRoot = {} } = inputs ?? {};
+  const audit = auditPins({ pins, users: Object.fromEntries(users.map(u => [u.id, u])), actors, tokensByRoot });
+  const codesOf = new Map(), detailOf = new Map();
+  for (const v of audit.violations) {
+    codesOf.set(v.user.id, [...(codesOf.get(v.user.id) ?? []), v.code]);
+    detailOf.set(`${v.user.id}|${v.code}`, v.detail ?? null);
+  }
+  const half = (typeof grid === "number" ? grid : Number(grid?.size) || 100) / 2;
+  const dist = t => Math.hypot(t.x + half - point.x, t.y + half - point.y);
+  const here = [], elsewhere = [], skipped = [], offline = [];
+  for (const u of users) {
+    if (u.isGM) continue;
+    const user = { id: u.id, name: u.name ?? null };
+    const root = pinsByUser[u.id] ?? null;
+    const actor = root && actors[root] ? { id: root, name: actors[root].name ?? null } : null;
+    if (!u.active) {
+      if (root) offline.push({ user, actor });
+      continue;
+    }
+    if (!root) {
+      skipped.push({ user, actor: null, code: "NO_PIN", detail: null });
+      continue;
+    }
+    const codes = codesOf.get(u.id) ?? [];
+    const error = GATHER_SKIP.find(c => codes.includes(c));
+    if (error) {
+      // the audit's own detail (code review G2): SHARED_ACTOR names EVERY co-pinned player, offline too
+      skipped.push({ user, actor, code: error, detail: detailOf.get(`${u.id}|${error}`) ?? null });
+      continue;
+    }
+    const t = tokensByRoot[root][0];
+    const sameScene = t.scene === destSceneId;
+    const member = { user, actor, root,
+      token: { id: t.id, scene: t.scene, sceneName: t.sceneName ?? null, level: t.level ?? null, x: t.x, y: t.y, form: t.form ?? null },
+      sameScene, warnings: GATHER_WARN.filter(c => codes.includes(c)) };
+    (sameScene ? here : elsewhere).push(member);
+  }
+  here.sort((a, b) => dist(a.token) - dist(b.token) || byName(a, b));
+  elsewhere.sort(byName);
+  return { members: [...here, ...elsewhere], skipped, offline };
+}
+
+/**
+ * One member's line in the gather result (gather plan §3.2): `{ moved }` for an ok teleport result —
+ * the plan's warnings, then teleport's own `warning` (VIEW_UNCHANGED), then COMBAT when the member
+ * left its scene and its token or a follower is in `fought` (the pre-loop snapshot's Set of token
+ * ids in started combats on the member's source scene, §1.3) — else `{ failed }`.
+ * @param {object} member  a gatherPlan member
+ * @param {object|null} res  pins' teleport result
+ * @param {Set<string>|undefined} fought
+ */
+export function gatherRow(member, res, fought) {
+  const m = member;
+  if (!res?.ok) return { failed: { user: m.user, actor: m.actor, code: res?.code ?? "INTERNAL", reason: res?.reason ?? "teleport returned nothing" } };
+  const followers = Array.isArray(res.followers) ? res.followers : [];
+  const warnings = [...m.warnings, ...(res.warning ? [res.warning] : [])];
+  if (!m.sameScene && fought && [m.token.id, ...followers.map(f => f?.id)].some(id => fought.has(id))) warnings.push("COMBAT");
+  return { moved: { user: m.user, actor: m.actor, token: res.token ?? null, form: m.token.form, from: res.from ?? m.token.scene,
+    followers, pulled: Array.isArray(res.pulled) ? res.pulled : [], viewFollows: !!res.viewFollows, warnings } };
+}
+
+/** The gather result from its rows: warning PARTIAL when a member failed, NOBODY when there was no member. */
+export function gatherResult({ to, plan, rows = [], dryRun = false }) {
+  const moved = rows.filter(r => r.moved).map(r => r.moved);
+  const failed = rows.filter(r => r.failed).map(r => r.failed);
+  const warning = failed.length ? "PARTIAL" : plan.members.length ? null : "NOBODY";
+  return { ok: true, to, moved, skipped: plan.skipped, offline: plan.offline, failed,
+    ...(warning ? { warning } : {}), ...(dryRun ? { dryRun: true } : {}) };
 }

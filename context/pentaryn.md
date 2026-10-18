@@ -2,7 +2,7 @@
 title: "Pentaryn — campaign state"
 status: active
 created: 2026-10-04
-last_modified: 2026-10-10
+last_modified: 2026-10-17
 tags: [context, campaign, pentaryn, campaign-state]
 ---
 
@@ -121,6 +121,18 @@ settings were copied on disk with classic-level while both worlds were closed.
   (Bazgar, Caven, Marrith, Marwen, Sabriel, Talo; one token each, on camp-site and the Wayward
   Compass). Keep both as they are. Using it and the live scenarios
   (`automation/smoke/pins-live.mjs`, `PinTest*` documents only): [`foundry/pins.md`](foundry/pins.md).
+- **Pins 0.3.0 + portals 0.8.0 (built 2026-10-17, branch `feat/pentaryn-pins`).** The GM right-click
+  canvas menu is now Prompt note, **Gather logged-in players here** (every logged-in player's pinned
+  character, with its summons and pets, to the clicked point; their views follow; offline players
+  stay), Teleport pinned character. A companion several players co-own (a shared steed) now comes on
+  a single move only from within 10 ft of the moving character, and always on a Gather. What is
+  live: `game.pentaryn.pins.describe().version`. Details: [`foundry/pins.md`](foundry/pins.md).
+- **The lobby: keep "Pentaryn — Entry" active** (scene `cCHpAUuiR4zGXusB`). With Pinning on,
+  activating a play map does **not** move the pinned players: it only sets what they see for a moment
+  at login, before their token's scene is drawn. Unpinned players and the playlist do follow it.
+  Move people by moving their tokens (portals, Teleport, Gather), and **re-activate Entry before
+  players log in** (and after any session where you activated a map), so the login flash is the
+  lobby. The live runner puts the active scene back to what it found (Entry) when it ends.
 
 **Left out**
 

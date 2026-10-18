@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { maxDepth, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { makeDoc, makeToken, makeUser } from "./kit/foundry-stub.mjs";
-import { IDS, pinsWorld } from "./fixtures/actors.mjs";
+import { GATHER_IDS, IDS, gatherParty, pinsWorld } from "./fixtures/actors.mjs";
 import { MODULE } from "../pins-core.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { SETTINGS } from "../settings.mjs";
@@ -297,6 +297,46 @@ test("teleport: pull [the player] when on and online, [] off/offline; viewFollow
   }
 });
 
+test("teleport onto another floor of the same scene: pins ALWAYS pulls, whatever the GM's lagging copy of the player's view says (code review G1)", async () => {
+  installPortals();
+  const talo = game.users.get(IDS.taloUser);
+  const tok = B.tokens.get(IDS.taloTok);   // on Lighthouse, level B2
+  const to = { x: 1, y: 2, level: IDS.levelB1 };
+  const want = [IDS.sceneB, [IDS.taloUser], { level: IDS.levelB2, controlledTokens: [IDS.taloTok] }];   // the stub leaves the token on B2
+  await setPinning(true);
+  try {
+    // the GM's copy says they view the token's origin floor, observe it and own nothing else sighted
+    // there — core's level switch MAY move them, but that copy lags their draw (F1/CR2): never skip
+    // the pull on it. Core's switch and this pull coexist: a view of what is drawn draws nothing, and
+    // a pull dropped while loading is replayed only when it changes the view (follow.mjs).
+    for (const [why, view] of [
+      ["origin floor (core would switch)", { viewedScene: IDS.sceneB, viewedLevel: IDS.levelB2 }],
+      ["another floor", { viewedScene: IDS.sceneB, viewedLevel: IDS.levelB1 }],
+      ["peeking at another scene (N2b)", { viewedScene: IDS.sceneA, viewedLevel: null }],
+      ["nothing known", { viewedScene: null, viewedLevel: null }],
+    ]) {
+      Object.assign(talo, view);
+      F.pulls.length = 0;
+      const r = await api.teleport(IDS.taloUser, to);
+      assert.deepEqual([r.ok, r.viewFollows, r.warning], [true, true, undefined], why);
+      assert.deepEqual(F.pulls, [want], `${why}: one pull, pins'`);
+    }
+  } finally {
+    delete talo.viewedScene;
+    delete talo.viewedLevel;
+    tok.hidden = false;
+    await setPinning(false);
+  }
+});
+
+test("teleport's published row takes no `gather`: it is gather()'s own option for portals", async () => {
+  installPortals();
+  portalsCalls.length = 0;
+  await api.teleport(IDS.taloUser, { x: 1, y: 2, scene: IDS.sceneC, gather: { later: [] } });
+  assert.equal("gather" in portalsCalls[0][1], false, "a single move: portals' 10-ft rule");
+  assert.equal((await api.teleport(IDS.taloUser, null)).ok, true, "null opts still work");
+});
+
 test("inspect: a user or an actor ref; plain JSON, depth ≤ 4; coded throws", async () => {
   const byUser = api.inspect("Talo's player");
   assert.deepEqual(byUser, {
@@ -502,4 +542,470 @@ test("selftest passes on a healthy load (portals present)", () => {
   assert.equal(out.ok, true, JSON.stringify(out.checks));
   game.modules.delete("pentaryn-portals");
   assert.equal(api.selftest().checks.find(c => c.label.includes("teleportToken")).ok, false);
+});
+
+/* ---------------------------------------------------------------------------------------------- */
+/* gather (0.3.0, context/plans/pin-2026-10-gather.md §5.1 prePull rows, §5.2 G1–G11)              */
+/* ---------------------------------------------------------------------------------------------- */
+
+const G = GATHER_IDS;
+const A = game.scenes.get(IDS.sceneA);
+
+test("prePull gather clause (§3.4, code review G6): a carry made FOR a gather (portals passes the call's opts.gather on) drops every non-GM user; anything else keeps today's rule", async () => {
+  const { install, PRE_PULL } = await import("../prepull.mjs");
+  const { hookRegistry } = await import("../lib/hooks.mjs");
+  const party = gatherParty();
+  const ctx = { setting: k => k === "pinning" && on, log: { debug() {} } };
+  let on = true;
+  const reg = hookRegistry(MODULE, null);
+  install(reg, ctx);
+  const U = id => game.users.get(id);
+  // Talo's token is on B (the destination below); Mira's on A (elsewhere); Ned unpinned; Claude a GM
+  const everyone = () => [U(IDS.taloUser), U(IDS.miraUser), U(G.nedUser), U(IDS.bot)];
+  const L = G.ashTok;
+  const pull = (token, gather = null, scene = IDS.sceneB) => {
+    const users = everyone();
+    assert.notEqual(Hooks.call(PRE_PULL, users, { scene, level: null, token, reason: token ? "token" : "party", pull: [], gather }), false, "never a veto");
+    return users.map(u => u.id);
+  };
+  const mark = { later: [] };
+  try {
+    assert.deepEqual(pull({ id: L }, mark), [IDS.bot], "a gather's carry: pinned-here, pinned-elsewhere and unpinned players all dropped; GMs stay");
+    const doc = makeToken({ id: L, name: "Ash", actorId: G.ash }, B);   // the destination TokenDocument
+    assert.deepEqual(pull(doc, { later: [{ user: IDS.miraUser, token: IDS.miraTok }] }), [IDS.bot], "any member's call (later not empty)");
+    assert.deepEqual(pull({ id: L }), [IDS.taloUser, G.nedUser, IDS.bot], "the same token carried WITHOUT the gather mark (a portal hop meanwhile): today's rule");
+    assert.deepEqual(pull(null), [IDS.taloUser, G.nedUser, IDS.bot], "a party pull (token null): today's rule");
+    on = false;
+    assert.deepEqual(pull({ id: L }, mark), [IDS.taloUser, IDS.miraUser, G.nedUser, IDS.bot], "switch off: nothing dropped");
+  } finally {
+    reg.offAll();
+    party.restore();
+  }
+});
+
+/** Every token's place, to put the world back after a gather the portals stub carried out. */
+function snapshotTokens() {
+  const where = [];
+  for (const sc of game.scenes.contents) for (const t of sc.tokens.values()) where.push([t, sc, t.x, t.y, t.level]);
+  return () => {
+    for (const sc of game.scenes.contents) sc.tokens.clear();
+    for (const [t, sc, x, y, level] of where) {
+      Object.assign(t, { x, y, level });
+      t.parent = sc;
+      sc.tokens.set(t.id, t);
+    }
+  };
+}
+
+/**
+ * A pentaryn-portals teleportToken stub that carries tokens out (keepId: a cross-scene move re-homes
+ * the same object on the destination) and answers in teleportToken's shape. `plan[tokenId]` may give
+ * `{ followers: [token…], held: [token…], pulled: [...], answer, throws, before, after }` for that leader's call
+ * (`held`: shared companions portals left for a later gathered co-owner, reported on a gather call).
+ */
+const gcalls = [];
+let gplan = {};
+function installGatherPortals() {
+  gcalls.length = 0;
+  gplan = {};
+  game.modules.set("pentaryn-portals", { id: "pentaryn-portals", active: true, api: {
+    teleportToken: async (token, opts) => {
+      gcalls.push([token.id, structuredClone(opts)]);
+      const p = gplan[token.id] ?? {};
+      await p.before?.(token, opts);
+      if (p.throws) throw new Error(p.throws);
+      if (p.answer) return p.answer;
+      const from = token.parent.id;
+      const dest = game.scenes.get(opts.scene ?? from);
+      const cross = dest.id !== from;
+      const company = [token, ...(p.followers ?? [])];
+      if (!opts.dryRun) {
+        for (const t of company) {
+          if (t.parent !== dest) {
+            t.parent.tokens.delete(t.id);
+            t.parent = dest;
+            dest.tokens.set(t.id, t);
+          }
+          Object.assign(t, { x: opts.x, y: opts.y, level: opts.level ?? null });
+        }
+      }
+      await p.after?.(token, opts);
+      const pulled = p.pulled ?? (opts.pull ?? []).map(id => ({ id, name: game.users.get(id)?.name ?? null }));
+      return { ok: true, token: { documentName: "Token", id: token.id, uuid: token.uuid, name: token.name }, from,
+        to: { scene: dest.id, x: opts.x, y: opts.y, level: opts.level ?? null },
+        followers: (p.followers ?? []).map(t => ({ id: t.id, name: t.name })), moved: company.length,
+        ...(opts.gather ? { held: (p.held ?? []).map(t => ({ id: t.id, name: t.name })) } : {}),
+        ...(opts.dryRun ? { dryRun: true } : { pulled: cross ? pulled : [] }) };
+    },
+  } });
+}
+
+/** One gather test: the party, the switch on, the stub; everything put back after. */
+async function withParty(fn) {
+  const restoreTokens = snapshotTokens();
+  const party = gatherParty();
+  installGatherPortals();
+  await setPinning(true);
+  F.pulls.length = 0;
+  try {
+    await fn();
+  } finally {
+    await setPinning(false);
+    F.endCombats();
+    restoreTokens();
+    party.restore();
+    game.modules.delete("pentaryn-portals");
+    F.become({ userId: gm.id });
+  }
+}
+const TO = { x: 500, y: 500, scene: IDS.sceneB, level: IDS.levelB1 };
+
+test("G1 gather: members in plan order, one teleport each at the same point and level; offline untouched; exact report; names survive toPlain", async () => {
+  await withParty(async () => {
+    const spirit = makeToken({ id: "spiritTok0000001", name: "Spirit", actorId: IDS.spirit, actorLink: false }, A);
+    A.tokens.set(spirit.id, spirit);
+    gplan[G.ashTok] = { followers: [spirit] };
+    const olga = game.scenes.get(IDS.sceneC).tokens.get(G.olgaTok);
+    audit.length = 0;
+    const r = await api.gather(TO);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.deepEqual(gcalls, [
+      [IDS.taloTok, { ...TO, pull: [IDS.taloUser], dryRun: false,
+        gather: { later: [{ user: G.ashUser, token: G.ashTok }, { user: IDS.miraUser, token: IDS.miraTok }] } }],
+      [G.ashTok, { ...TO, pull: [G.ashUser], dryRun: false, gather: { later: [{ user: IDS.miraUser, token: IDS.miraTok }] } }],
+      [IDS.miraTok, { ...TO, pull: [IDS.miraUser], dryRun: false, gather: { later: [] } }],
+    ], "same-scene member first, then by name; the same-scene one gets the gather's level, not its own; "
+      + "each call names the members still to move (portals' shared-companion gather mode, §11)");
+    assert.deepEqual(r.to, { scene: IDS.sceneB, x: 500, y: 500, level: IDS.levelB1 });
+    assert.deepEqual(r.moved.map(m => [m.user.id, m.actor.name, m.token.id, m.from, m.viewFollows, m.warnings]), [
+      [IDS.taloUser, "Talo", IDS.taloTok, IDS.sceneB, true, []],
+      [G.ashUser, "Ash", G.ashTok, IDS.sceneA, true, []],
+      [IDS.miraUser, "Mira", IDS.miraTok, IDS.sceneA, true, []],
+    ]);
+    assert.deepEqual(Object.keys(r.moved[0]).sort(), ["actor", "followers", "form", "from", "pulled", "token", "user", "viewFollows", "warnings"]);
+    assert.deepEqual(r.skipped, [{ user: { id: G.nedUser, name: "Ned" }, actor: null, code: "NO_PIN", detail: null }]);
+    assert.deepEqual(r.offline, [{ user: { id: G.olgaUser, name: "Olga" }, actor: { id: G.olga, name: "Olga's PC" } }]);
+    assert.deepEqual(r.failed, []);
+    assert.equal(r.warning, undefined);
+    assert.equal(typeof r.moved[1].followers[0].name, "string", "toPlain kept the follower (depth 4)");
+    assert.equal(r.moved[1].followers[0].name, "Spirit");
+    assert.equal(typeof r.moved[1].pulled[0].id, "string", "toPlain kept the pulled user (depth 4)");
+    assert.equal(r.moved[1].pulled[0].id, G.ashUser);
+    assert.deepEqual([olga.parent.id, olga.x, olga.y], [IDS.sceneC, 0, 0], "the offline player's token is untouched");
+    assert.deepEqual(F.pulls, [[IDS.sceneB, [IDS.taloUser], { level: IDS.levelB1, controlledTokens: [IDS.taloTok] }]],
+      "the same-scene member pulled once by pins (pullToPin), to the gather's level; portals pulls the others");
+    assert.deepEqual(JSON.parse(JSON.stringify(r)), r, "plain JSON");
+    const lines = audit.filter(([l]) => l.startsWith(`${MODULE} |`)).map(([l, f]) => [l, f]);
+    assert.deepEqual(lines.map(([l]) => l), [`${MODULE} | teleport`, `${MODULE} | teleport`, `${MODULE} | teleport`, `${MODULE} | gather`]);
+    assert.deepEqual(lines[3][1], { uuid: `Scene.${IDS.sceneB}`, ids: [IDS.taloUser, G.ashUser, IDS.miraUser], by: gm.id });
+  });
+});
+
+test("G2/G3 gather: a member REFUSED or throwing lands in failed; the rest still move; ok with warning PARTIAL", async () => {
+  await withParty(async () => {
+    gplan[G.ashTok] = { answer: { ok: false, code: "REFUSED", reason: "token id already on Lighthouse" } };
+    const r = await api.gather(TO);
+    assert.deepEqual([r.ok, r.warning], [true, "PARTIAL"]);
+    assert.deepEqual(r.failed, [{ user: { id: G.ashUser, name: "Ash's player" }, actor: { id: G.ash, name: "Ash" }, code: "REFUSED",
+      reason: "token id already on Lighthouse" }]);
+    assert.deepEqual(r.moved.map(m => m.user.id), [IDS.taloUser, IDS.miraUser], "the third still moves");
+  });
+  await withParty(async () => {
+    gplan[G.ashTok] = { throws: "socket closed" };
+    const r = await api.gather(TO);
+    assert.deepEqual([r.ok, r.warning, r.failed.map(f => [f.user.id, f.code])], [true, "PARTIAL", [[G.ashUser, "INTERNAL"]]]);
+    assert.deepEqual(r.moved.map(m => m.user.id), [IDS.taloUser, IDS.miraUser], "the loop goes on after a throw");
+  });
+});
+
+test("G4 gather dryRun: every call dryRun, nothing pulled or moved, result dryRun; no audit line", async () => {
+  await withParty(async () => {
+    audit.length = 0;
+    const r = await api.gather({ ...TO, dryRun: true });
+    assert.deepEqual([r.ok, r.dryRun], [true, true]);
+    assert.ok(gcalls.length === 3 && gcalls.every(([, o]) => o.dryRun === true));
+    assert.deepEqual(F.pulls, [], "no pullUsers");
+    assert.equal(A.tokens.get(G.ashTok)?.parent?.id, IDS.sceneA, "nothing moved");
+    assert.deepEqual(audit.filter(([l]) => l.startsWith(`${MODULE} |`)), [], "a dry run writes no audit line");
+  });
+});
+
+test("G5 gather refusals: NOT_GM, REFUSED while off, BAD_ARGS, UNSUPPORTED; nothing moves", async () => {
+  await withParty(async () => {
+    F.become({ userId: IDS.taloUser });
+    assert.equal((await api.gather(TO)).code, "NOT_GM");
+    F.become({ userId: gm.id });
+    await setPinning(false);
+    const off = await api.gather(TO);
+    assert.deepEqual([off.ok, off.code, off.reason], [false, "REFUSED", "pinning is off"]);
+    await setPinning(true);
+    assert.equal((await api.gather({ ...TO, x: Number.NaN })).code, "BAD_ARGS");
+    assert.equal((await api.gather({ ...TO, y: "5" })).code, "BAD_ARGS");
+    assert.equal((await api.gather({ ...TO, scene: "No Such Scene" })).code, "BAD_ARGS", "an unknown scene");
+    assert.equal((await api.gather({ ...TO, level: "notALevel0000001" })).code, "BAD_ARGS", "a level not on the scene");
+    Object.defineProperty(game.scenes, "current", { get: () => null, configurable: true });
+    try {
+      const none = await api.gather({ x: 1, y: 1 });
+      assert.deepEqual([none.code, none.reason], ["BAD_ARGS", "no scene given and no current scene"]);
+    } finally {
+      delete game.scenes.current;
+    }
+    game.modules.delete("pentaryn-portals");
+    assert.equal((await api.gather(TO)).code, "UNSUPPORTED");
+    assert.deepEqual(gcalls, [], "no refusal moved anyone");
+  });
+});
+
+test("G6 gather: level and scene resolution", async () => {
+  await withParty(async () => {
+    const levels = () => gcalls.map(([, o]) => [o.scene, o.level]);
+    await api.gather(TO);
+    assert.deepEqual(levels()[0], [IDS.sceneB, IDS.levelB1], "an explicit level, the same-scene member included");
+    // the canvas scene: canvas.level
+    gcalls.length = 0;
+    Object.assign(canvas, { scene: B, level: F.level(IDS.levelB2) });
+    await api.gather({ x: 1, y: 1, scene: IDS.sceneB });
+    assert.ok(gcalls.length && gcalls.every(([, o]) => o.level === IDS.levelB2), "the canvas level on the canvas scene");
+    // another scene: initialLevel, then firstLevel, then null
+    Object.assign(canvas, { scene: null, level: null });
+    const C = game.scenes.get(IDS.sceneC);
+    const lastLevel = async () => { gcalls.length = 0; await api.gather({ x: 1, y: 1, scene: IDS.sceneC }); return gcalls.at(-1)[1].level; };
+    C.initialLevel = { id: "lvlInitial000001" };
+    C.firstLevel = { id: "lvlFirst00000001" };
+    assert.equal(await lastLevel(), "lvlInitial000001");
+    delete C.initialLevel;
+    assert.equal(await lastLevel(), "lvlFirst00000001");
+    delete C.firstLevel;
+    assert.equal(await lastLevel(), null, "no levels: null");
+    // scene omitted → game.scenes.current; by name too
+    Object.defineProperty(game.scenes, "current", { get: () => C, configurable: true });
+    try {
+      gcalls.length = 0;
+      const r = await api.gather({ x: 2, y: 3 });
+      assert.equal(r.to.scene, IDS.sceneC);
+      assert.ok(gcalls.every(([, o]) => o.scene === IDS.sceneC));
+    } finally {
+      delete game.scenes.current;
+    }
+    gcalls.length = 0;
+    assert.equal((await api.gather({ x: 2, y: 3, scene: "Cave" })).to.scene, IDS.sceneC, "an exact scene name");
+  });
+});
+
+test("G7 gather: a second gather while one runs is CONFLICT; busy is cleared after a throw", async () => {
+  const { PRE_PULL } = await import("../prepull.mjs");
+  await withParty(async () => {
+    let release = () => {}, held = false;
+    // the first call only is held (a second gather that wrongly ran must not hang the suite)
+    gplan[IDS.taloTok] = { before: () => (held ? null : (held = true, new Promise(r => { release = r; }))) };
+    const first = api.gather(TO);
+    await new Promise(r => setImmediate(r));
+    const second = await api.gather(TO);
+    assert.deepEqual([second.ok, second.code, second.reason], [false, "CONFLICT", "a gather is already running"]);
+    release();
+    assert.equal((await first).ok, true);
+    gplan = {};   // no more held calls: a regression below fails instead of hanging
+    // a throw before the loop (the combat read): INTERNAL, and the next gather runs
+    const combats = Object.getOwnPropertyDescriptor(game, "combats");
+    Object.defineProperty(game, "combats", { get() { throw new Error("combats unreadable"); }, configurable: true });
+    try {
+      const r = await api.gather(TO);
+      assert.deepEqual([r.ok, r.code], [false, "INTERNAL"]);
+    } finally {
+      Object.defineProperty(game, "combats", combats);
+    }
+    // a throw INSIDE the loop: busy still cleared
+    const realGet = game.users.get.bind(game.users);
+    let boom = true;
+    game.users.get = id => { if (boom && id === G.ashUser) throw new Error("users unreadable"); return realGet(id); };
+    try {
+      const r = await api.gather(TO);
+      assert.equal(r.ok, true, "a member whose user cannot be read fails alone");
+      assert.equal(r.failed.find(f => f.user.id === G.ashUser)?.code, "INTERNAL");
+    } finally {
+      boom = false;
+      delete game.users.get;
+    }
+    gcalls.length = 0;
+    const again = await api.gather(TO);
+    assert.equal(again.ok, true, "not stuck on busy");
+    // no gather state outlives a gather: a carry of a member's token keeps today's rule (the unpinned observer stays)
+    const users = [game.users.get(G.nedUser)];
+    Hooks.call(PRE_PULL, users, { scene: IDS.sceneB, level: null, token: { id: IDS.taloTok }, reason: "token", pull: [] });
+    assert.deepEqual(users.map(u => u.id), [G.nedUser], "nothing left behind");
+  });
+});
+
+test("G8 gather: a later member's carry does not pull an earlier member or an unpinned observer; after the gather, it would", async () => {
+  const { PRE_PULL } = await import("../prepull.mjs");
+  await withParty(async () => {
+    let seen = null;
+    // portals' prePull carries the call's opts.gather (code review G6): the stub fires it as portals does
+    const fire = (token, gather = null) => {
+      const users = [game.users.get(G.ashUser), game.users.get(G.nedUser), game.users.get(IDS.bot)];
+      Hooks.call(PRE_PULL, users, { scene: IDS.sceneB, level: IDS.levelB1, token, reason: "token", pull: [IDS.miraUser], gather });
+      return users.map(u => u.id);
+    };
+    // Mira's carry, after Ash's: core's rule would pick Ash (watching Mira) and Ned (unpinned, watching)
+    gplan[IDS.miraTok] = { after: (token, opts) => { seen = fire(B.tokens.get(token.id), opts.gather); } };
+    const r = await api.gather(TO);
+    assert.equal(r.ok, true);
+    assert.deepEqual(seen, [IDS.bot], "Ash (already gathered) and Ned (unpinned) dropped; the GM stays");
+    assert.deepEqual(fire(B.tokens.get(IDS.miraTok)), [G.ashUser, G.nedUser, IDS.bot], "after the gather: today's rule (Ash's token is on B)");
+  });
+});
+
+test("G6 (code review) the gather clause is scoped to the gather's own carries: an unrelated prePull on a member's token DURING a gather keeps today's rule", async () => {
+  const { PRE_PULL } = await import("../prepull.mjs");
+  await withParty(async () => {
+    let seen = null;
+    // while Mira's move is in flight (the gather still running), another carry of Ash's token (a portal
+    // hop: no opts.gather) fires prePull: Ned, unpinned and watching, is core's rule's pick — he stays
+    gplan[IDS.miraTok] = { before: () => {
+      const users = [game.users.get(G.nedUser), game.users.get(IDS.bot)];
+      Hooks.call(PRE_PULL, users, { scene: IDS.sceneB, level: null, token: B.tokens.get(G.ashTok) ?? { id: G.ashTok }, reason: "token", pull: [] });
+      seen = users.map(u => u.id);
+    } };
+    const r = await api.gather(TO);
+    assert.equal(r.ok, true);
+    assert.deepEqual(seen, [G.nedUser, IDS.bot], "not the gather's carry: nothing dropped");
+  });
+});
+
+test("G5 (code review) a shared companion held for a later co-owner whose move FAILS is carried with the last owner that moved; one that moved with the later owner is not carried twice", async () => {
+  // a steed Ash's and Mira's players co-own, on A: Ash moves first and portals holds it for Mira
+  const steedOn = () => {
+    const steed = makeToken({ id: "steedTok00000001", name: "Steed", actorId: IDS.spirit, actorLink: false }, A);
+    A.tokens.set(steed.id, steed);
+    return steed;
+  };
+  await withParty(async () => {
+    const steed = steedOn();
+    gplan[G.ashTok] = { held: [steed] };
+    gplan[IDS.miraTok] = { answer: { ok: false, code: "REFUSED", reason: "token id already on Lighthouse" } };
+    const r = await api.gather(TO);
+    assert.deepEqual([r.ok, r.warning], [true, "PARTIAL"]);
+    assert.deepEqual(r.failed.map(f => f.user.id), [IDS.miraUser], "Mira's move failed");
+    const ash = B.tokens.get(G.ashTok);
+    assert.deepEqual(gcalls.map(([id]) => id), [IDS.taloTok, G.ashTok, IDS.miraTok, steed.id], "then the held steed alone");
+    const [, o] = gcalls[3];
+    assert.deepEqual(o, { x: ash.x + 50, y: ash.y + 50, scene: IDS.sceneB, level: IDS.levelB1, pull: [], dryRun: false, gather: { later: [] } },
+      "beside Ash (the centre of Ash's landed token), the gather's level; pulls nobody");
+    assert.equal(steed.parent.id, IDS.sceneB, "the steed came");
+    assert.deepEqual(r.moved.find(m => m.user.id === G.ashUser).followers.map(f => f.name), ["Steed"], "reported with Ash, its last owner that moved");
+  });
+  await withParty(async () => {
+    const steed = steedOn();
+    gplan[G.ashTok] = { held: [steed] };
+    gplan[IDS.miraTok] = { followers: [steed] };   // Mira's move takes it, as portals does for the last co-owner
+    const r = await api.gather(TO);
+    assert.deepEqual([r.ok, r.warning], [true, undefined]);
+    assert.deepEqual(gcalls.map(([id]) => id), [IDS.taloTok, G.ashTok, IDS.miraTok], "no extra carry");
+    assert.deepEqual(r.moved.find(m => m.user.id === IDS.miraUser).followers.map(f => f.name), ["Steed"]);
+  });
+  await withParty(async () => {
+    const steed = steedOn();
+    gplan[G.ashTok] = { held: [steed] };
+    gplan[IDS.miraTok] = { throws: "socket closed" };
+    gplan[steed.id] = { answer: { ok: false, code: "CONFLICT", reason: "another session moved it first" } };
+    const r = await api.gather(TO);
+    assert.deepEqual(r.failed.map(f => [f.user.id, f.actor?.name, f.code]), [[IDS.miraUser, "Mira", "INTERNAL"], [G.ashUser, "Steed", "CONFLICT"]],
+      "the held companion's own carry failing is reported, under the owner it waited with");
+    assert.equal(steed.parent.id, IDS.sceneA, "it stays");
+  });
+});
+
+test("G7 (code review) a gather makes ONE token walk, whatever the number of members (a same-scene member's pull included)", async () => {
+  const walks = () => {
+    let n = 0;
+    const scenes = game.scenes.contents;
+    for (const sc of scenes) Object.defineProperty(sc.tokens, "contents", { get() { n += 1; return [...this.values()]; }, configurable: true });
+    return { count: () => n, done: () => { for (const sc of scenes) delete sc.tokens.contents; } };
+  };
+  await withParty(async () => {
+    const w = walks();
+    let one;
+    try {
+      tokensWalk();
+      one = w.count();
+      const r = await api.gather(TO);
+      assert.equal(r.moved.length, 3);
+      assert.equal(w.count() - one, one, "one pass over every scene for three members");
+    } finally {
+      w.done();
+    }
+  });
+  function tokensWalk() { api.pins(); }
+});
+
+test("G9 gather: COMBAT from the pre-loop snapshot, even when the move deletes the combatants; a same-scene member never", async () => {
+  await withParty(async () => {
+    const pet = makeToken({ id: "ashPetTok0000001", name: "Pet", actorId: IDS.spirit, actorLink: false }, A);
+    A.tokens.set(pet.id, pet);
+    F.startCombat({ round: 1, scene: null, combatants: [{ sceneId: IDS.sceneA, tokenId: pet.id }, { sceneId: IDS.sceneB, tokenId: IDS.taloTok }] });
+    // core deletes the carried tokens' combatants inside the move (unawaited on the GM's client)
+    gplan[G.ashTok] = { followers: [pet], after: () => F.endCombats() };
+    const dry = await api.gather({ ...TO, dryRun: true });
+    assert.deepEqual(dry.moved.map(m => [m.user.id, m.warnings]), [[IDS.taloUser, []], [G.ashUser, ["COMBAT"]], [IDS.miraUser, []]],
+      "a dry run reads the same snapshot (nothing deleted: the stub does not move on a dry run)");
+    F.startCombat({ round: 1, scene: null, combatants: [{ sceneId: IDS.sceneA, tokenId: pet.id }, { sceneId: IDS.sceneB, tokenId: IDS.taloTok }] });
+    const r = await api.gather(TO);
+    assert.deepEqual(r.moved.map(m => [m.user.id, m.warnings]), [[IDS.taloUser, []], [G.ashUser, ["COMBAT"]], [IDS.miraUser, []]],
+      "Ash's pet was in a started combat on A: marked; Talo is in combat but moved on his own scene: not marked");
+  });
+});
+
+test("G10 gather: a member's token carried in an earlier member's company is moved again same-scene, from = D, pulled once", async () => {
+  await withParty(async () => {
+    // Mira's token is carriable (not isPC) and every owner owns Ash: it rides in Ash's company
+    gplan[G.ashTok] = { followers: [A.tokens.get(IDS.miraTok)] };
+    const r = await api.gather(TO);
+    assert.equal(r.ok, true);
+    const mira = r.moved.find(m => m.user.id === IDS.miraUser);
+    assert.equal(mira.from, IDS.sceneB, "Mira's own call found her token already on the destination");
+    assert.deepEqual(gcalls.map(([id]) => id), [IDS.taloTok, G.ashTok, IDS.miraTok]);
+    const miraPulls = F.pulls.filter(([, ids]) => ids.includes(IDS.miraUser));
+    assert.equal(miraPulls.length, 1, "Mira pulled once (pins' same-scene pull); Ash's carry pulled only Ash");
+    assert.deepEqual(r.moved.find(m => m.user.id === G.ashUser).pulled.map(u => u.id), [G.ashUser]);
+  });
+});
+
+test("G11 gather: teleport's VIEW_UNCHANGED folds into that member's warnings; UNLINKED / NOT_OWNER ride along", async () => {
+  await withParty(async () => {
+    gplan[G.ashTok] = { pulled: [] };            // portals pulled nobody for Ash
+    const miraTok = A.tokens.get(IDS.miraTok);
+    miraTok.actorLink = false;                   // an unlinked pinned token: moved, with a warning
+    const ash = game.actors.get(G.ash);
+    ash.ownership = { default: 0 };              // Ash's player cannot observe Ash: NOT_OWNER
+    try {
+      const r = await api.gather(TO);
+      assert.deepEqual(r.moved.map(m => [m.user.id, m.warnings]), [
+        [IDS.taloUser, []], [G.ashUser, ["NOT_OWNER", "VIEW_UNCHANGED"]], [IDS.miraUser, ["UNLINKED"]]]);
+    } finally {
+      miraTok.actorLink = true;
+    }
+  });
+});
+
+test("gather: nobody to gather → ok with warning NOBODY and no teleport", async () => {
+  await withParty(async () => {
+    for (const id of [IDS.taloUser, IDS.miraUser, G.ashUser]) game.users.get(id).active = false;
+    try {
+      const r = await api.gather(TO);
+      assert.deepEqual([r.ok, r.warning, r.moved, gcalls.length], [true, "NOBODY", [], 0]);
+      assert.equal(r.offline.length, 4);
+    } finally {
+      for (const id of [IDS.taloUser, IDS.miraUser, G.ashUser]) game.users.get(id).active = true;
+    }
+  });
+});
+
+test("selftest: 'prePull listener registered' (gather depends on it)", () => {
+  installPortals();
+  try {
+    const check = api.selftest().checks.find(c => c.label === "prePull listener registered");
+    assert.equal(check?.ok, true, JSON.stringify(api.selftest().checks));
+  } finally {
+    game.modules.delete("pentaryn-portals");
+  }
 });

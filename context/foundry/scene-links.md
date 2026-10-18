@@ -236,12 +236,22 @@ name).
 | `badges()` · `redraw()` | anyone | this client's badges · redraws them |
 | `snapshot(regionOrUuid, { squaresWide, squaresHigh })` | GM | the saved card image path, or `null` |
 | `lookAt(region)` | GM | pans your view; nobody moves |
-| `teleportParty(region, { confirm: false })` | GM | `{ moved, cancelled }` — the party on `canvas.scene`; without `confirm: false` it waits on a dialog click |
+| `teleportParty(region, { confirm: false })` | GM | `{ moved, cancelled }` — the party on `canvas.scene`; without `confirm: false` it waits on a dialog click. Every logged-in player's character to a clicked point instead (no region, any scene) → pentaryn-pins **Gather** ([`pins.md`](pins.md)) |
 | `link(ref, { to, twoWay, dryRun })` · `unlink(ref, { to, dryRun })` | GM | `ok({…})` / `fail(code, reason)`, never a throw |
 | `open(region, { edit })` | GM | the Portal card window |
 
 `cardFor`, `lookAt`, `teleportParty` and `open` still take a RegionDocument, not a ref. Full table
 and the data written: the module README.
+
+**Who comes along (portals 0.8.0).** A PC's summons follow it at any distance, and so does anything
+only its own player owns (a familiar, a pet). A companion **several players co-own** (a shared steed)
+comes on a portal hop, a GM Teleport or `teleportToken` only when it stands **within 10 ft** of the
+moving PC (5e distance: adjacent 5 ft, one empty square between 10 ft, in the scene's grid units; same
+level; of several owners moving together and in reach, the last one takes it); otherwise it stays and
+you drag it. Teleport party always takes it (beside the
+last of its owners' PCs), and so does pentaryn-pins' Gather (beside the last gathered owner). Until
+0.8.0 it came only when all its owners went together. Details: the module README *Co-owned
+companions* and [`pins.md`](pins.md) *Who comes along*.
 
 ## Behavior fields
 
