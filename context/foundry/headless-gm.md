@@ -203,7 +203,11 @@ The watchdog ticks every 10 s, and the decision is `state.mjs nextAction()`.
   then the watchdog asks the broker itself (`BRIDGE_STALE`). Live, a `kill -9` of the broker with
   the new watchdog recovered on its own (the page reconnected to the respawned broker, and the
   probe answered `ok: true`). The stale branch itself (restart, then reload) is covered by
-  `state.test.mjs` only.
+  `state.test.mjs` only. **Seen again 2026-10-17 22:15, and here the page was not the fault:**
+  `BRIDGE-RESTART` and a full `make foundry-headless-restart` (fresh login) both left the probe
+  failing. A `kill -9` of the `backend.js` broker (pid from `make foundry-bridge-status`) fixed it
+  at once. When a fresh login does not clear `BRIDGE_STALE`, kill the broker; the watchdog cannot
+  do that itself, because the broker belongs to a Claude session.
 - **A broker that goes away and comes back (the normal case).** This happens naturally when Claude sessions end
   and start. Look in the log for `BRIDGE_DOWN … no MCP broker`, then `✓ BRIDGE-RESTART`, then
   `CONNECTED`.
