@@ -161,6 +161,16 @@
   },
   {
     "ns": "pentaryn-aoe",
+    "key": "stationaryInstantAreas",
+    "name": "PENTARYN_AOE.Setting.stationaryInstantAreas.Name",
+    "hint": "PENTARYN_AOE.Setting.stationaryInstantAreas.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
     "key": "npcSaveRollMode",
     "name": "PENTARYN_AOE.Setting.npcSaveRollMode.Name",
     "hint": "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",
@@ -172,6 +182,21 @@
       "gm": "PENTARYN_AOE.Setting.npcSaveRollMode.gm",
       "blind": "PENTARYN_AOE.Setting.npcSaveRollMode.blind",
       "public": "PENTARYN_AOE.Setting.npcSaveRollMode.public"
+    }
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "areaWalls",
+    "name": "PENTARYN_AOE.Setting.areaWalls.Name",
+    "hint": "PENTARYN_AOE.Setting.areaWalls.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "default": "cover",
+    "choices": {
+      "cover": "PENTARYN_AOE.Setting.areaWalls.cover",
+      "move": "PENTARYN_AOE.Setting.areaWalls.move",
+      "none": "PENTARYN_AOE.Setting.areaWalls.none"
     }
   }
 ]

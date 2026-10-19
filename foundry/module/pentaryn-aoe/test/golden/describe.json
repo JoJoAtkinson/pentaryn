@@ -653,11 +653,25 @@
       "doc": "Part G: a Self-range cone or line keeps its point on the caster and turns toward the mouse."
     },
     {
+      "key": "stationaryInstantAreas",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part A: an instantaneous spell's emanation (Thunder Step) stays where it was cast, with a handle, instead of following its caster."
+    },
+    {
       "key": "npcSaveRollMode",
       "scope": "world",
       "type": "String",
       "default": "gm",
       "doc": "Part B: the message mode of the saves the GM's client rolls for monsters (gm, blind or public)."
+    },
+    {
+      "key": "areaWalls",
+      "scope": "world",
+      "type": "String",
+      "default": "cover",
+      "doc": "Part H: which walls clip a spell area: cover (walls that block movement and sight; a cube from its centre), move (dnd5e: every movement wall) or none."
     }
   ],
   "events": [],
@@ -697,6 +711,14 @@
     {
       "name": "canvasReady",
       "label": "canvasReady"
+    },
+    {
+      "name": "dnd5e.createMeasuredTemplate",
+      "label": "createMeasuredTemplate(instant)"
+    },
+    {
+      "name": "renderTokenHUD",
+      "label": "renderTokenHUD(remove)"
     },
     {
       "name": "dnd5e.postUseActivity",
@@ -755,6 +777,10 @@
     {
       "label": "RegionLayer#placeRegions",
       "adjustments": "aoe-self-area-aim"
+    },
+    {
+      "label": "RegionDocument#_computeShapeConstraint",
+      "adjustments": "aoe-area-walls"
     }
   ],
   "flags": {

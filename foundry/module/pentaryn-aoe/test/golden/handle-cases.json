@@ -3,8 +3,8 @@
     "returned": "regionRect000001",
     "calls": [
       {
-        "x": 275,
-        "y": 275,
+        "x": 300,
+        "y": 300,
         "elevation": 0,
         "level": null,
         "hidden": false,
@@ -22,8 +22,8 @@
     "returned": "regionOld0000001",
     "calls": [
       {
-        "x": -25,
-        "y": -25,
+        "x": 0,
+        "y": 0,
         "elevation": 5,
         "level": null,
         "hidden": false,
@@ -41,8 +41,8 @@
     "returned": "regionHidden0001",
     "calls": [
       {
-        "x": 475,
-        "y": 475,
+        "x": 500,
+        "y": 500,
         "elevation": 0,
         "level": null,
         "hidden": true,
@@ -60,8 +60,8 @@
     "returned": "regionAnon000001",
     "calls": [
       {
-        "x": 475,
-        "y": 475,
+        "x": 500,
+        "y": 500,
         "elevation": 0,
         "level": null,
         "hidden": false,
