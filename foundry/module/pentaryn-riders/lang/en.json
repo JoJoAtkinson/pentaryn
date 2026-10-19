@@ -50,6 +50,10 @@
       "arcaneRecovery": {
         "name": "Arcane Recovery picks its slots",
         "hint": "After a wizard uses Arcane Recovery, a small window shows their slots of level 1 to 5, how many are left of each, and a box per spent slot to tick; it opens with the highest ones that fit the PHB budget ticked (half the Wizard level, rounded up; +1 with an Arcane Grimoire). Recover restores them. A D&D Beyond import's own Arcane Recovery window is skipped while this is on. Turn off to restore slots on the sheet (or with the D&D Beyond macro) instead."
+      },
+      "projectiles": {
+        "name": "One button per ray or dart",
+        "hint": "Scorching Ray and Magic Missile make several rolls, each at a creature of the caster's choice. Their chat card gets one button per ray or dart (3, plus one for each slot level above the spell's, or each extra wand charge). Target a creature, then click the next button. Turn off to roll from the card's own button only."
       }
     },
     "rituals": {
@@ -77,6 +81,19 @@
       "done": "{name} recovers spell slots by studying the spellbook: {slots}.",
       "none": "Arcane Recovery: no spent slots of level 1 to 5 to recover.",
       "changed": "Arcane Recovery: the spell slots changed while the window was open, so nothing was recovered."
+    },
+    "projectiles": {
+      "ray": {
+        "slot": "Ray {n}",
+        "status": "Scorching Ray at level {level}: {done} of {count} rays rolled. Target one creature, then click the next ray.",
+        "oneTarget": "Each ray strikes one creature: target just one, then click the ray."
+      },
+      "dart": {
+        "slot": "Dart {n}",
+        "status": "Magic Missile at level {level}: {done} of {count} darts rolled. Target one creature, then click the next dart.",
+        "oneTarget": "Each dart strikes one creature: target just one, then click the dart."
+      },
+      "noTarget": "No creature targeted: the roll goes ahead untargeted."
     }
   }
 }

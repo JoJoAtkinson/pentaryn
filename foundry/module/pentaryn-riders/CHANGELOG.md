@@ -1,5 +1,27 @@
 # Changelog — pentaryn-riders
 
+## 0.4.0 — 2026-10-19 (player feedback JbnAbX, ixcdvA)
+
+- **[declared] One button per ray / dart** (new feature `projectiles.mjs`, setting `projectiles`,
+  default on; row `dnd5e-riders-projectile-buttons`). Scorching Ray fired "one beam" and Magic
+  Missile "one dart": dnd5e 6 and the PHB items give each spell one activity that rolls once, and
+  Magic Missile's card Damage button re-uses the cast-time targets, so rays and darts could not be
+  split. Their usage card now carries one button per ray / dart — 3, plus one per slot level above
+  the spell's (a wand's extra charges count, via the card's `system.scaling`). Target one creature
+  and click the next button: that ray's attack (Scorching Ray) or that dart's damage (Magic
+  Missile) is rolled at it and threaded under the card, so Elemental Affinity's once-per-casting
+  guard and pentaryn-aoe's damage on hit work per ray as before. dnd5e's automatic first roll and its
+  own card button fill a slot too; a rolled slot names its target; more than one target refuses the
+  click. To see it: cast Scorching Ray at 3rd level — four Ray buttons under the card, the first
+  already named.
+- Pure core: `PROJECTILES`, `projectileRule`, `castLevelOf`, `projectileCount`, `projectileSlots`
+  (also on `game.pentaryn.riders.core`).
+- Item data, not code: Marwen's Wand of Magic Missiles could not cast ("No uses on Magic Missile
+  available to spend") because its Cast activity points at a DDB-imported spell whose own damage
+  activity spends the spell's (nonexistent) uses with the slot off, which also makes dnd5e ignore the
+  wand's charges. `scripts/foundry/fixes/2026-10-19-wand-cast-spell.mjs` (dry run by default)
+  repoints such Cast activities at the PHB spell, as the DMG's own wand does.
+
 ## 0.3.1 — 2026-10-19 (feedback LdPm43)
 
 - [declared] Arcane Recovery prompts once and restores once. A D&D Beyond import's Arcane Recovery

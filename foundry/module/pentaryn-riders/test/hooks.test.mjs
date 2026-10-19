@@ -26,7 +26,7 @@ test("registration manifest (non-lifecycle) equals golden/hooks.json", () => {
   pinJSON("hooks", atLoad.filter(h => !LIFECYCLE.has(h.name)), import.meta.url);
 });
 
-test("the 23 non-lifecycle registrations, in order (guide S1 list)", () => {
+test("the 26 non-lifecycle registrations, in order (guide S1 list)", () => {
   assert.deepEqual(atLoad.filter(h => !LIFECYCLE.has(h.name)).map(h => h.name), [
     "dnd5e.preUseActivity",                 // rituals: slot unticked
     "dnd5e.summonToken",                    // concentration: stamp
@@ -51,6 +51,9 @@ test("the 23 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.preUseActivity",                 // riders: Battle Medic veto
     "dnd5e.postUseActivity",                // riders: Battle Medic
     "renderCharacterActorSheet",            // riders: Hit Dice −/+
+    "dnd5e.renderChatMessage",              // projectiles: one button per ray / dart
+    "createChatMessage",                    // projectiles: card refresh
+    "deleteChatMessage",                    // projectiles: card refresh
   ]);
   assert.ok(atLoad.filter(h => !LIFECYCLE.has(h.name)).every(h => h.kind === "on"));
 });
@@ -115,8 +118,8 @@ test("before init: the try/catch readers give false, the direct readers throw in
 test("the shared hooks run their listeners in manifest order (rituals → cast-flow ×2 → Battle Medic)", () => {
   const { init: _i, ready: _r, ...counts } = F.listeners();
   assert.deepEqual(counts, {
-    "dnd5e.preUseActivity": 4, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 3,
-    createChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
+    "dnd5e.preUseActivity": 4, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
+    createChatMessage: 2, deleteChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
     renderItemButtonArgonComponent: 1, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
     "dnd5e.postUseActivity": 2, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
     renderCharacterActorSheet: 1,

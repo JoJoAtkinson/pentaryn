@@ -90,5 +90,17 @@
   {
     "kind": "on",
     "name": "renderCharacterActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "createChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "deleteChatMessage"
   }
 ]
