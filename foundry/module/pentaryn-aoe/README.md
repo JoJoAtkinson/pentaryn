@@ -21,8 +21,8 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   core's half-square snapping can return it (`core.handleTopLeft`): an area centred on a grid corner
   gets its handle in the square below-right of it, so a drag can put the area back on the grid. An
   emanation dnd5e attached to its caster gets no handle; the caster's Token HUD gets an eraser,
-  "Remove the spell areas on this token". An instantaneous activity's emanation (Thunder Step) is
-  created unattached (`dnd5e.createMeasuredTemplate`, setting `stationaryInstantAreas`), so it stays
+  "Remove the spell areas on this token". An instantaneous spell's emanation (Thunder Step) is
+  created unattached (a monster feature's "inst" aura, a ghast's Stench, is not: `core.instantSpellArea`) (`dnd5e.createMeasuredTemplate`, setting `stationaryInstantAreas`), so it stays
   where it was cast and gets a handle. A handle is named "<Spell> (<caster's token name>)" — the author's user name
   when no caster token is found, never an actor name — and gives a faint dim light of half a
   square, so it and the area's outline show in darkness to anyone who can see that spot. Handles
@@ -66,7 +66,11 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
   including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
   sight clips an area (PHB 2024: only total cover blocks an area), and a cube is clipped from its
-  centre, not its corner (`core.edgeClipsArea`, `core.areaClipOrigin`).
+  centre, not its corner (`core.edgeClipsArea`, `core.areaClipOrigin`). A rotated or resized cube is
+  clipped from its new centre: a second wrap, of `_computeShapeConstraints`, hands the update's new
+  shapes to the first. Changing `areaWalls` asks core to recompute the `move` constraints on the
+  levels each client views (`Level#updateRegionShapeConstraints`; core's designated user writes).
+  Once uninstalled, a wrapper that could not be removed passes straight through to core.
 
 ## Settings
 
@@ -91,7 +95,7 @@ live through `setting()`, so a change applies without a reload).
 | `untargetedSelf` | on | D | a touch spell cast at nobody goes on the caster |
 | `noSpellStacking` | on | D | the same spell's effect replaces instead of stacking |
 | `aimSelfAreas` | on | G | Self cones and lines start at the caster |
-| `stationaryInstantAreas` | on | A | an instantaneous emanation stays where it was cast, with a handle |
+| `stationaryInstantAreas` | on | A | an instantaneous spell's emanation stays where it was cast, with a handle (a monster's aura still follows it) |
 | `npcSaveRollMode` | `gm` | B | message mode of monster saves: `gm`, `blind` or `public` (a stored legacy `gmroll` is rewritten once by the active GM) |
 | `areaWalls` | `cover` | H | which walls clip an area: `cover` (block movement and sight), `move` (dnd5e: every movement wall), `none` |
 
@@ -170,7 +174,8 @@ Patches (kit `wrapMethod`, listed by `describe().patches`, undone by `uninstall(
 handle) and `RegionLayer.prototype.placeRegions` (marker `Symbol.for("pentaryn-aoe.aimWrapped")`,
 row `aoe-self-area-aim`: Part G's `onMove`) and `RegionDocument.prototype._computeShapeConstraint`
 (marker `Symbol.for("pentaryn-aoe.wallsWrapped")`, row `aoe-area-walls`: Part H, template regions
-with a `move` restriction only). Non-patch rows: `core-region-placement-escape`,
+with a `move` restriction only) with `RegionDocument.prototype._computeShapeConstraints` (marker
+`Symbol.for("pentaryn-aoe.wallsShapesWrapped")`, same row: holds `changes.shapes` for the call). Non-patch rows: `core-region-placement-escape`,
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,

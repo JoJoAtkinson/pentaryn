@@ -671,7 +671,7 @@
       "scope": "world",
       "type": "String",
       "default": "cover",
-      "doc": "Part H: which walls clip a spell area: cover (walls that block movement and sight; a cube from its centre), move (dnd5e: every movement wall) or none."
+      "doc": "Part H: which walls clip a spell area: cover (walls that block movement and sight; a cube from its centre), move (dnd5e: every movement wall) or none. A change re-clips the areas on the levels being viewed."
     }
   ],
   "events": [],
@@ -780,6 +780,10 @@
     },
     {
       "label": "RegionDocument#_computeShapeConstraint",
+      "adjustments": "aoe-area-walls"
+    },
+    {
+      "label": "RegionDocument#_computeShapeConstraints",
       "adjustments": "aoe-area-walls"
     }
   ],

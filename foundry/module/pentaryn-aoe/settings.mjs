@@ -17,6 +17,18 @@ import { defineSettings, settingReader, settingsSnapshot as snapshot } from "./l
 
 const log = makeLog(MODULE);
 
+/** key → the feature's change handler (a world setting's onChange runs on every client). */
+const handlers = {};
+
+/** Route a setting's onChange to `fn` (one handler per key; a later call replaces it, null clears it). */
+export function onSettingChange(key, fn) {
+  if (typeof fn === "function") handlers[key] = fn;
+  else delete handlers[key];
+}
+
+/** A row's onChange: calls the handler registered for `key` at change time, if any. */
+const routed = key => value => handlers[key]?.(value);
+
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = Object.freeze([
   { key: "handleTokens", scope: "world", config: true, type: Boolean, default: true,
@@ -87,7 +99,9 @@ export const SETTINGS = Object.freeze([
       move: "PENTARYN_AOE.Setting.areaWalls.move",
       none: "PENTARYN_AOE.Setting.areaWalls.none",
     },
-    doc: "Part H: which walls clip a spell area: cover (walls that block movement and sight; a cube from its centre), move (dnd5e: every movement wall) or none." },
+    // walls.mjs re-clips the template areas on the levels each client views (core picks one writer).
+    onChange: routed("areaWalls"),
+    doc: "Part H: which walls clip a spell area: cover (walls that block movement and sight; a cube from its centre), move (dnd5e: every movement wall) or none. A change re-clips the areas on the levels being viewed." },
 ]);
 
 /** Every row's default, by key (kept exported: the old DEFAULTS object). */

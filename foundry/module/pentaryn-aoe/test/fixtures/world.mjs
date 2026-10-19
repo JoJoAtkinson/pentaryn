@@ -374,6 +374,12 @@ export async function boot({ user = null, users = [], settings = {}, entry = fal
     _testEdgeInclusion(edge) { return (edge.move ?? 0) !== 0; }
   }
   class RegionDocument {
+    // core: changes.shapes (the update's NEW shapes) when given, else this.shapes; one constraint per origin.
+    // Returns the polygons (core returns their points) so a test can read each one's origin.
+    _computeShapeConstraints(changes = {}) {
+      const shapes = changes.shapes !== undefined ? changes.shapes : this.shapes;
+      return shapes.map(s => this._computeShapeConstraint({ x: Math.round(s.x), y: Math.round(s.y) }, { type: "move", edgeTypes: {} }));
+    }
     _computeShapeConstraint(origin, config) {
       F.calls.push({ op: "coreConstraint", origin: F.plain(origin) });
       return MovePolygon.create(origin, config);

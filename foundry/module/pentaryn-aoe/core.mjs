@@ -8,7 +8,7 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.5.0";                          // === module.json version (core.test pins it)
+export const VERSION = "0.5.1";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";
@@ -16,7 +16,8 @@ export const FLAG_SCOPE = MODULE;
 /** aoe emits no events of its own. */
 export const HOOKS = Object.freeze({});
 
-// Area geometry: centreOf, handleTopLeft, AREA_WALL_RULES, edgeClipsArea, areaClipOrigin, instantaneous.
+// Area geometry: centreOf, handleTopLeft, AREA_WALL_RULES, edgeClipsArea, areaClipOrigin, instantaneous,
+// instantSpellArea.
 export * from "./core/areas.mjs";
 
 /** Read this module's flags without getFlag(): getFlag throws while the module is inactive (hot-patch). */

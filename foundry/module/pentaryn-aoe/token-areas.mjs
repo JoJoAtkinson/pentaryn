@@ -10,7 +10,7 @@
  *     eraser that removes the areas on that token ([declared] aoe-token-hud-remove).
  */
 
-import { MODULE, attachedTokenId, instantaneous, isHandle, isTemplateRegion } from "./core.mjs";
+import { MODULE, attachedTokenId, instantSpellArea, isHandle, isTemplateRegion } from "./core.mjs";
 import { removeArea } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -27,11 +27,13 @@ const listenerGuard = (label, fn) => (hooks ? hooks.guardSwallowAsync(label, fn)
  * so instantCleanup never ran either: nothing a player could find removed it.
  * `dnd5e.createMeasuredTemplate` hands us the region data before it is created: an instantaneous
  * activity's area is left unattached, where it was cast. areas.mjs then gives it a handle (drag it,
- * delete it), and it goes once its tray is applied. Setting stationaryInstantAreas (row
- * dnd5e-instant-area-stationary). Returns how many regions it changed (tests).
+ * delete it), and it goes once its tray is applied. Only a spell's area: a monster feature dnd5e
+ * marks "inst" can be a passive aura (a ghast's Stench) and keeps following its creature
+ * (core.instantSpellArea). Setting stationaryInstantAreas (row dnd5e-instant-area-stationary).
+ * Returns how many regions it changed (tests).
  */
 function onCreateTemplate(activity, regionData) {
-  if (!setting("stationaryInstantAreas") || !instantaneous(activity) || !Array.isArray(regionData)) return 0;
+  if (!setting("stationaryInstantAreas") || !instantSpellArea(activity) || !Array.isArray(regionData)) return 0;
   let n = 0;
   for (const data of regionData) {
     if (!data?.attachment?.token) continue;

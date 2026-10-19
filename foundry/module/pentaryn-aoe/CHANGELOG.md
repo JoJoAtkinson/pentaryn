@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- **0.5.1. Code review of 0.5.0's Part H and instantaneous areas** (declared, aoe-area-walls,
+  dnd5e-instant-area-stationary; pinned by `test/area-walls-review.test.mjs`).
+  - **A rotated or resized cube is clipped from its new centre.** During an update core passes the
+    NEW shapes to `RegionDocument#_computeShapeConstraints(changes)` (a ShapeConfig resize; a handle
+    Shift/Ctrl-scrolled, where `TokenDocument#rotateMany` rotates the attached region), while
+    `this.shapes` is still the old data, and Part H built the cube's centre from `this.shapes`. A second
+    wrap, of `_computeShapeConstraints`, holds `changes.shapes` for the length of the call (restored in
+    `finally`); `core.areaClipOrigin` uses the shape whose origin core passes and reads its fields one
+    by one. Adjustments row `aoe-area-walls` gains the marker `wallsShapesWrapped`. Golden `describe`
+    gains the patch and the setting's new doc line.
+  - **A monster's aura keeps following it.** `dnd5e.createMeasuredTemplate` detached every "inst"
+    emanation, also a passive monster aura such as a ghast's Stench (Matron Forgotten, the Starved
+    Prisoner). Only a spell item's area is left where it was cast now (`core.instantSpellArea`).
+  - **Changing *Walls that stop a spell area* re-clips placed areas.** The setting's `onChange` (every
+    client) asks core's `Level#updateRegionShapeConstraints(["move"])` for each level that client
+    views, on a scene with a template area; core's designated user writes, as when a wall changes. Not
+    the active GM alone: a constraint computed for a level nobody views comes back `null` (unclipped),
+    and core prefers a user who views the level. An area on a scene nobody views keeps its old outline.
+  - **An uninstalled copy stops acting** even when its wrapper cannot be removed because another module
+    wrapped on top: both Part H wrappers pass straight through to core once `patch` is null.
+  - **The rule is read once per constraint**, then handed to the polygon in its config, not read per
+    edge.
+
 - **0.5.0. Only total cover stops a spell area** (declared, aoe-area-walls, feedback 7v8jPs, RpnWw3,
   3arqpV). dnd5e 6 clips every template region with the core `move` restriction, so every wall
   that stops a token clipped every area. That included the invisible (move-only) walls that drew the camp-site's
