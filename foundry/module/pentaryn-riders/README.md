@@ -96,7 +96,7 @@ R.inspect("Marrith Ashcroft").rows;                  // the same rows, plain, by
 | Item flag `flags.pentaryn-riders.damageType` | a typed feature's type (string or array), by `setType` / `retireManual` |
 | Damage / healing ChatMessage `flags.pentaryn-riders` | `{ applied, ignoreResistance, origin, detail }` (`riderFlag`): the once-per-casting guard, the card note, the tray preset |
 | Battle Medic roll message `flags.pentaryn-riders` | `{ flow: "battle-medic", target, faces }` |
-| ActiveEffect flag `flags.pentaryn-riders.choice` | `{ group, max }` on a pick-one benefit (authored by a fix script, read here); `max` a number or a roll-data formula |
+| ActiveEffect flag `flags.pentaryn-riders.choice` | `{ group, max }` on a pick-one benefit (authored by pentaryn-importer's DDB corrections — the Transmuter's Stone — or a fix script; read here); `max` a number or a roll-data formula |
 | Activity flag `flags.pentaryn-riders.flow` | `"battle-medic"` on the activity `installBattleMedic` builds |
 | Token flag `flags.pentaryn-riders.concentration` | the uuid of the concentration effect that keeps a summon |
 | Summoned token `flags.pentaryn-riders.claims.summonCleanup` | the socket id of the one tab that deletes that scene's summons (the kit's `claimDocument`, riders-async-3); it goes with the token |
@@ -189,7 +189,8 @@ or `"damage"`, the activity type), `base` at `baseLevel`, one more per level abo
 benefit on the feature item, each with `flags.pentaryn-riders.choice = { group: "<name>", max }`;
 `max` is a number or a formula such as `"min(2, 1 + floor(@classes.wizard.levels / 10))"`. An
 always-on part of the feature is its own unflagged effect. Write it as a fix script with a dry run
-(`scripts/foundry/fixes/`), not by hand.
+(`scripts/foundry/fixes/`), not by hand — or, for a D&D Beyond character, as a pentaryn-importer DDB
+correction rule, so a re-sync does not lose it (`context/foundry/importer.md`).
 
 **A new behaviour**: a feature file with `install(reg, ctx)` / `uninstall()`, listed in `FEATURES`
 in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` with a marker and a

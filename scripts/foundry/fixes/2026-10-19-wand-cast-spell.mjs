@@ -1,4 +1,12 @@
 // Fix: a magic item's Cast activity that cannot cast (feedback ixcdvA, 2026-10-19).
+//
+// SUPERSEDED BY THE MODULE (pentaryn-importer 1.2.0, DDB corrections): rule `cast-self-uses` now does this
+// by itself after every ddb-importer sync, for every D&D Beyond character. Use the API instead:
+//   await game.pentaryn.importer.ddbCorrections.plan("<actor>")    // dry run
+//   await game.pentaryn.importer.ddbCorrections.apply("<actor>")   // write
+// This script stays as the fallback while the module is not live (still dry-run by default).
+// Context: context/foundry/importer.md, "Player characters from D&D Beyond".
+//
 // ===================================================================================
 //
 // Run as the GM, as the BODY of an async function: paste into mcp__foundry__eval-js (or the GM

@@ -75,7 +75,7 @@ The table is generated from each `module.json`, the module's code and its
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
 | `dropbin` | `pentaryn-dropbin` | 0.2.3 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
 | `feedback` | `pentaryn-feedback` | 0.1.2 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
-| `importer` | `pentaryn-importer` | 1.1.1 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
+| `importer` | `pentaryn-importer` | 1.2.0 | full tier | `import`, `ddbCorrections.plan`, `ddbCorrections.apply`, `ddbCorrections.rules` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | `personal`, `add`, `status`, `open`, `shouldShowBar`, `ensure`, `ensureAll`, `report` … (+3) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | `search`, `page`, `monster`, `monsters`, `names`, `packs`, `onList`, `spellList` … (+1) | [README](../../foundry/module/pentaryn-lookup/README.md) |
 | `movement` | `pentaryn-movement` | 0.1.2 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens` | [README](../../foundry/module/pentaryn-movement/README.md) |
@@ -129,7 +129,7 @@ The table is generated from each `module.json`, the module's code and its
 | Finding a battlemap in the OneDrive library (1,371 maps, via rclone), which maps tile/stack/are variants, filing a new pack | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
 | Running the updater as an operator — commands, setup, retention | [`../../automation/README.md`](../../automation/README.md) |
-| Importing the generated NPCs — `make foundry-import`, Gate 2, "the import refused" — `pentaryn-importer` | [`importer.md`](importer.md) · internals: [`../../foundry/module/pentaryn-importer/README.md`](../../foundry/module/pentaryn-importer/README.md) |
+| Importing the generated NPCs — `make foundry-import`, Gate 2, "the import refused" — and the DDB corrections that re-fix D&D Beyond characters after every ddb-importer sync (freezing an item) — `pentaryn-importer` | [`importer.md`](importer.md) · internals: [`../../foundry/module/pentaryn-importer/README.md`](../../foundry/module/pentaryn-importer/README.md) |
 | The `actors.json` generator ⇄ importer contract | [`../../foundry/CONTRACT.md`](../../foundry/CONTRACT.md) |
 | **Changing** how any of this was built — design docs, migration records | [`../plans/`](../plans/) |
 

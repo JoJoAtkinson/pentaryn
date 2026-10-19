@@ -164,6 +164,17 @@ adjustments:
     retire_class: never
     check: pytest scripts/tests/
 
+  - id: ddb-importer-sync-corrections
+    packages: [ddb-importer]
+    modules: [pentaryn-importer]
+    files: [foundry/module/pentaryn-importer/ddb-corrections.mjs, foundry/module/pentaryn-importer/ddb-core.mjs, foundry/module/pentaryn-importer/ddb-adapter.mjs]
+    markers: ["ddb-importer.characterProcessDataComplete", "ignoreItemUpdate", "importId"]
+    what: the DDB corrections listen on ddb-importer's `ddb-importer.characterProcessDataComplete` ({actor, ddbCharacter}; Hooks.callAll on the syncing client, after the import is written) and re-apply the table's rules; they read `flags.ddbimporter.importId` (a fresh randomID per import — ddb-importer stores no sync timestamp) to find actors synced since their last correction, and skip items carrying ddb-importer's `ignoreItemUpdate` / `ignoreItemImport` freeze flags
+    why: ddb-importer puts its own shapes back on every re-sync (apparel as consumables, 1/day feat casts as At-Will, self-spending Cast spells, the Transmuter's Stone baked into base data); the hook cannot change data in flight, so the module corrects right after it (checked in ddb-importer 7.5.8 dist/main.mjs, 2026-10-19)
+    native_when: ddb-importer imports these shapes correctly itself (item types for custom gear, innate method for feat free casts, PHB spells on item Cast activities), or renames / drops the hook or the importId flag
+    retire_class: guarded
+    check: make foundry-importer-check
+
   - id: dnd5e-legacy-roll-modes
     packages: [dnd5e, core]
     modules: [pentaryn-aoe, pentaryn-ties]

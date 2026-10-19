@@ -1,5 +1,13 @@
 // Transmuter's Stone as pick-one passive effects (feedback tNdOEx, tiDvFa — Marwen Ashcroft).
 //
+// SUPERSEDED BY THE MODULE (pentaryn-importer 1.2.0, DDB corrections): rule `transmuters-stone` now does this
+// by itself after every ddb-importer sync, for every D&D Beyond character. Use the API instead:
+//   await game.pentaryn.importer.ddbCorrections.plan("<actor>")    // dry run
+//   await game.pentaryn.importer.ddbCorrections.apply("<actor>")   // write
+// This script stays as the fallback while the module is not live (still dry-run by default).
+// Context: context/foundry/importer.md, "Player characters from D&D Beyond".
+//
+//
 // HOW TO RUN: this file is an eval-js BODY (the body of an async function; top-level `await` and
 // `return` work). Paste it into mcp__foundry__eval-js, or into a GM browser console wrapped in
 // `(async () => { … })()`. It is a DRY RUN unless APPLY is true: it returns the plan and writes

@@ -8,7 +8,8 @@ tags: [context, foundry, dnd5e, module, importer]
 # Importing generated NPCs — `pentaryn-importer`
 
 **Read this when:** you are importing (or re-importing) the generated NPC Actors from
-`actors.json` into a world, checking a fresh build at the table (Gate 2), or an import refused.
+`actors.json` into a world, checking a fresh build at the table (Gate 2), or an import refused; or a
+D&D Beyond character came in wrong, or lost a fix on a re-sync (DDB corrections, freezing an item).
 **Not this file:** module internals and the API → [`../../foundry/module/pentaryn-importer/README.md`](../../foundry/module/pentaryn-importer/README.md) ·
 the data contract → [`../../foundry/CONTRACT.md`](../../foundry/CONTRACT.md) · why the pipeline
 looks like this → [`../plans/foundry-content-pipeline.md`](../plans/foundry-content-pipeline.md) ·
@@ -71,7 +72,8 @@ make foundry-backup
 
 ## Settings that matter
 
-None. What gates an import is `module.json` → `flags.pentaryn` (`contract`, `targetSystem`,
+`ddbCorrections` (world, default on): the automatic DDB corrections, below. Nothing else: what gates
+an NPC import is `module.json` → `flags.pentaryn` (`contract`, `targetSystem`,
 `targetSystemVersion`, `generation`): the JSON, these flags and the live game must all agree. After
 a dnd5e minor upgrade, rebuild with `make foundry-actors` before importing.
 
@@ -102,18 +104,72 @@ import, which deletes it), `NOT_GM`, `BAD_ARGS`, `CONFLICT` (already running), `
 
 PCs are **not** built by this module or by `build_actors.py`. A PC linked to D&D Beyond (the actor
 carries `flags.ddbimporter`) is transferred by the third-party **ddb-importer** module, whose code we
-do not own. Never re-import a PC that is in play to fix its data; after a transfer, run the
-clean-up script through `eval-js` (dry run by default, idempotent; set `ACTOR`, then `APPLY = true`):
+do not own. Never re-import a PC that is in play to fix its data. ddb-importer gets a few shapes wrong
+for us, and **every re-sync from D&D Beyond puts them back** — so the fixes live in this module as
+**DDB corrections** (1.2.0) and re-apply themselves.
 
-    scripts/foundry/fixes/2026-10-19-ddb-pc-cleanup.js
+### How the corrections run
 
-It fixes what ddb-importer gets wrong for us (feedback tiDvFa, Marwen):
+- **After every sync**, on the client that ran it: ddb-importer fires
+  `ddb-importer.characterProcessDataComplete` once the import is written (it cannot be changed in
+  flight; we correct right after). That client applies the corrections if it owns the actor (the
+  player, or the GM); otherwise it relays to the active GM.
+- **At GM login**, the active GM sweeps every DDB character synced since its last correction: each
+  import gets a fresh `flags.ddbimporter.importId` (ddb-importer stores no timestamp), and a clean run
+  stamps `flags.pentaryn-importer.ddbCorrections.importId`. A mismatch means "synced since". So a sync
+  made while nobody had the module running is caught at the next GM login. **The first GM login after
+  1.2.0 ships corrects every DDB character once.**
+- The GMs get **one whispered chat line** per run that changed something ("DDB corrections — <name>: N
+  change(s) — …"), and one console line. Nothing when nothing changed.
+- **Off switch:** world setting *Correct D&D Beyond characters after a sync* (`ddbCorrections`,
+  default on). It stops the automatic runs; `apply` by hand still works.
 
-- **Robes, clothes and notebooks as consumables.** Custom D&D Beyond "Adventuring Gear" arrives as a
-  consumable trinket; apparel becomes equipment (clothing), notes and journals equipment (trinket).
-- **A feat's 1/day free cast listed as At-Will.** Shadow Touched, Magic Initiate and the like arrive
-  with spellcasting method `atwill` plus 1 use per long rest; they become `innate` (the "Innate
-  Spellcasting" section, with the 1/day uses). Their slot-cast copies stay under their level.
-- **"My backpack didn't come across."** It did: ddb-importer keeps container contents, and dnd5e 6
-  shows them only inside the container. Open the Backpack or Component Pouch on the Inventory tab.
-  The script lists each container's contents and scrolls.
+```js
+await game.pentaryn.importer.ddbCorrections.plan("Marwen Ashcroft")    // dry run: changes, notes, frozen
+await game.pentaryn.importer.ddbCorrections.apply("Marwen Ashcroft")   // write now
+game.pentaryn.importer.inspect("Marwen Ashcroft")                       // stamp, needsCorrection, frozen items
+game.pentaryn.importer.ddbCorrections.rules()                           // what the rules are
+```
+
+### The rules (feedback tiDvFa, ixcdvA, tNdOEx)
+
+| Rule | Fixes |
+|---|---|
+| `apparel-as-equipment` | Custom D&D Beyond "Adventuring Gear" arrives as a consumable trinket: robes, clothes, cloaks become equipment (clothing), notes and journals equipment (trinket). Quantity, weight, description, container and equipped state are kept, and the item id. |
+| `freecast-innate` | A feat's 1/day free cast (Shadow Touched, Magic Initiate) arrives as method `atwill` with 1 use per long rest, so dnd5e lists it under At-Will. It becomes `innate` (Innate Spellcasting, 1/day kept). Its slot-cast copy stays under its level. |
+| `cast-self-uses` | A wand's Cast activity points at a DDB copy of the spell that spends its *own* (absent) uses: "No uses on Magic Missile available", and the wand's charges are never spent. It is repointed at the PHB spell of the same name, slot on — what the DMG's own wands do. No PHB spell of that name → reported in `notes`, not changed: freeze it (below). |
+| `transmuters-stone` | The Transmuter's Stone feat arrives with no effects and its benefit baked into base data (darkvision 60, CON save). The feat gets an always-on CON-save effect and one pick-one effect per benefit (`flags.pentaryn-riders.choice`, one at a time below Wizard 10); the baked base values are reset. The baked benefit starts on. |
+
+**"My backpack didn't come across."** It did: ddb-importer keeps container contents, and dnd5e 6
+shows them only inside the container. Open the Backpack or Component Pouch on the Inventory tab. The
+old clean-up script lists each container's contents (`scripts/foundry/fixes/2026-10-19-ddb-pc-cleanup.js`,
+dry run).
+
+### Freeze or rule
+
+- **A rule** when the flaw is a *shape* ddb-importer produces for any character. Rules match by item
+  type, name, identifier and data shape — never by an actor or item id — so Bazgar's and Sabriel's
+  syncs get the same treatment as Marwen's.
+- **Freeze** when the item is a *one-off*: a homebrew magic item with no generic fix (Bazgar's *Axe
+  of Resonant Provocation* — its Menacing Provocation spends its own uses and has no PHB spell), or
+  any item fixed by hand that a sync must not overwrite. Fix it by hand, then freeze it with
+  `scripts/foundry/fixes/2026-10-19-ddb-freeze-items.js` (eval-js body, dry run by default; set
+  `ACTOR`, `ITEMS`, then `APPLY = true`). It sets `flags.ddbimporter.ignoreItemUpdate`, which
+  ddb-importer honours on a sync **and** on its dynamic sync back to D&D Beyond. The rules skip a frozen
+  item too. Cost: later changes to that item on D&D Beyond never arrive — unfreeze (`UNFREEZE = true`),
+  re-sync, fix, freeze again.
+
+### Adding a rule
+
+1. A row in `foundry/module/pentaryn-importer/ddb-core.mjs` `RULES`: `{ id, label, doc, match(actor,
+   item), plan(actor, item, lookups) → { changes, notes } }`. Pure, generic, idempotent: an item that
+   is already correct must not match or must plan nothing. Ops: `retype`, `updateItem`,
+   `createEffects` (deterministic `_id`s via `stableId`), `updateActor`. A rule that needs a document
+   lookup adds it in `ddb-adapter.mjs` `lookupsFor`.
+2. A fixture in `test/fixtures/ddb.mjs` and a table in `test/ddb-core.test.mjs`, including the
+   idempotence case (the corrected snapshot plans nothing). Then `make foundry-importer-check`.
+3. A row in the table above, a CHANGELOG line, the module's version bump.
+
+The 2026-10-19 fix scripts (`2026-10-19-ddb-pc-cleanup.js`, `-wand-cast-spell.mjs`,
+`-transmuters-stone.js`) are superseded by the rules and kept as a fallback while the module is not
+live; they are dry run by default.

@@ -1,4 +1,13 @@
 // Fix — a D&D Beyond PC after a ddb-importer transfer (feedback tiDvFa, Marwen Ashcroft).
+//
+// SUPERSEDED BY THE MODULE (pentaryn-importer 1.2.0, DDB corrections): rules `apparel-as-equipment` and `freecast-innate` now do this
+// by itself after every ddb-importer sync, for every D&D Beyond character. Use the API instead:
+//   await game.pentaryn.importer.ddbCorrections.plan("<actor>")    // dry run
+//   await game.pentaryn.importer.ddbCorrections.apply("<actor>")   // write
+// This script stays as the fallback while the module is not live (still dry-run by default).
+// Its container report (3. below, read-only) is not in the module: run the script for that.
+// Context: context/foundry/importer.md, "Player characters from D&D Beyond".
+//
 // Body of an async function for the foundry `eval-js` MCP tool (paste the file as `script`). GM only.
 // DRY RUN by default: it returns the plan and writes nothing. Set APPLY = true to write.
 // Idempotent: a second run (dry or not) finds nothing left to change.
