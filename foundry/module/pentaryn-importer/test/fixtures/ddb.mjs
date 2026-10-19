@@ -157,9 +157,26 @@ export function liveActor(snap, { isOwner = true, failRetype = false, writes = [
         const it = actor.items.get(u._id);
         for (const [k, v] of Object.entries(u)) if (k !== "_id") setPath(it._source, k, v);
       }
+      // dnd5e 6.0.6's onUpdateActivities: a Cast activity whose spell changed loses its cached copy
+      const gone = [];
+      for (const u of updates) {
+        for (const k of Object.keys(u)) {
+          const m = /^system\.activities\.([^.]+)\.spell\.uuid$/.exec(k);
+          if (!m) continue;
+          for (const it of actor.items.values()) {
+            if (it._source.flags?.dnd5e?.cachedFor === `.Item.${u._id}.Activity.${m[1]}`) gone.push(it.id);
+          }
+        }
+      }
+      if (gone.length) {
+        writes.push(["dnd5e.cache.delete", gone]);
+        for (const id of gone) actor.items.delete(id);
+      }
     },
     async deleteEmbeddedDocuments(kind, ids) {
       writes.push(["items.delete", ids]);
+      const missing = ids.find(id => !actor.items.has(id));
+      if (missing) throw new Error(`Item "${missing}" does not exist!`);
       for (const id of ids) actor.items.delete(id);
     },
     async createEmbeddedDocuments(kind, docs, opts) {

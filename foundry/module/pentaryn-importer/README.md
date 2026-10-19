@@ -131,10 +131,12 @@ and a wounded token must not heal mid-session). Nothing goes to world settings.
 DDB corrections (on a D&D Beyond character only, items frozen with `flags.ddbimporter.ignoreItemImport`
 untouched — `ignoreItemUpdate` alone is not a freeze): Item type and system (retype, core's
 `ForcedReplacement` operator; recreated under the same id if Foundry refuses), deletion of a stale
-cached spell copy (`flags.dnd5e.cachedFor`) whose Cast activity now casts another spell, Item fields (`system.method`, a Cast activity's `spell.uuid/level` and
+cached spell copy (`flags.dnd5e.cachedFor`) whose Cast activity now casts another spell (a repoint
+in the same run is left to dnd5e, which deletes the old copy itself), Item fields (`system.method`, a Cast activity's `spell.uuid/level` and
 `consumption.spellSlot`), ActiveEffects on the Transmuter's Stone (deterministic ids,
 `flags.pentaryn-riders.stone` / `.choice` — pentaryn-riders reads `choice`), the actor's base
-darkvision / CON-save proficiency while they are still the stone's, and the stamp
+darkvision / CON-save proficiency while they are still the stone's (darkvision left, with a note,
+when another feature evidently grants it), and the stamp
 `flags.pentaryn-importer.ddbCorrections = { importId, at, version, changes }` (written only by a run
 with no errors). A whispered ChatMessage to the GMs when something changed.
 

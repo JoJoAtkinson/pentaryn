@@ -17,8 +17,10 @@
  *
  * Snapshot (all `_source` data, plain JSON):
  *   actor   { id, name, ddb: boolean, importId, stamp, system, items: [item] }
- *   item    { _id, name, type, system, flags, source, effects: [{ _id, name, disabled, flags }] }
- *           (`source` is `_stats.compendiumSource`, or null)
+ *   item    { _id, name, type, system, flags, source, sourceKey?, castKeys?, effects: [{ _id, name, disabled, flags, keys? }] }
+ *           (`source` is `_stats.compendiumSource`, or null; `sourceKey` the same uuid normalised by
+ *           Foundry's parseUuid, `castKeys` each Cast activity's spell uuid normalised, by activity id —
+ *           both optional, the raw uuid stands in; an effect's `keys` are its changes' keys)
  *   lookups { spells: { [uuid]: { name, system } | null }, phbSpells: [{ _id, name }] | null }
  *
  * Ops (one per change; the adapter batches them):
@@ -287,22 +289,33 @@ function castTargetOf(parent, act, lookups) {
   return repointFor(act, lookups).uuid ?? uuid;
 }
 
+/** A uuid as the snapshot compares it: the adapter's normalised key (core's parseUuid), else as written. */
+const keyOf = (raw, key) => (typeof key === "string" && key ? key : raw ?? null);
+
 const staleCastCache = {
   id: "stale-cast-cache",
   label: "Cached spell copies a repointed Cast activity left behind",
   doc: "dnd5e keeps a copy of a Cast activity's spell on the actor (flags.dnd5e.cachedFor). When "
-    + "cast-self-uses repoints the activity at the PHB spell, the copy of the old DDB spell stays and "
-    + "the spellbook lists the spell twice. A cached copy whose compendium source is not the spell its "
-    + "activity now casts is deleted; dnd5e caches the right one again on the next cast. A copy with no "
-    + "recorded source, or whose activity is gone, is left alone.",
+    + "an activity is repointed, dnd5e deletes the old copy itself (preUpdateActivities / "
+    + "onUpdateActivities), so a repoint cast-self-uses plans in the same run is left to dnd5e. A copy "
+    + "that survived anyway (an earlier run, or a repoint dnd5e did not see) and whose compendium "
+    + "source is not the spell its activity casts now is deleted; dnd5e caches the right one again on "
+    + "the next cast. Uuids compare normalised (a legacy compendium uuid is the same spell). A copy with "
+    + "no recorded source, or whose activity is gone, is left alone.",
   match: (actor, item) => item.type === "spell" && !!cachedForRef(get(item, "flags.dnd5e.cachedFor")),
   plan(actor, item, lookups) {
+    const none = { changes: [], notes: [] };
     const ref = cachedForRef(get(item, "flags.dnd5e.cachedFor"));
     const parent = (actor.items ?? []).find(i => i._id === ref.itemId);
     const act = get(parent, `system.activities.${ref.activityId}`);
-    if (!parent || act?.type !== "cast" || blank(item.source)) return { changes: [], notes: [] };
+    const current = act?.spell?.uuid ?? null;
+    if (!parent || act?.type !== "cast" || blank(item.source) || !current) return none;
+    const source = keyOf(item.source, item.sourceKey);
+    // the activity's own spell: current, or (repointed this run) dnd5e's to remove on the update — a
+    // delete of ours would race dnd5e's
+    if (source === keyOf(current, parent.castKeys?.[ref.activityId])) return none;
     const target = castTargetOf(parent, act, lookups);
-    if (!target || target === item.source) return { changes: [], notes: [] };
+    if (target && target !== current && source === target) return none;   // already the new spell's copy
     return {
       changes: [{ op: "deleteItem", itemId: item._id,
         summary: `${item.name}: stale cached copy for ${parent.name} removed (it now casts another spell)` }],
@@ -372,22 +385,54 @@ export function otherConSave(actor, stone) {
   });
 }
 
+const DARK_PATH = "system.attributes.senses.ranges.darkvision";
+const DARK_RE = /\bdarkvision\b/i;
+const DARK_TYPES = new Set(["feat", "subclass", "class", "equipment"]);
+
+/**
+ * Items other than the species and the stone that evidently grant darkvision (the import may have
+ * baked theirs into the base too): a feature, subclass, class or equipment whose name or description
+ * says darkvision, whose own senses carry a darkvision range, or whose effects change it.
+ */
+export function otherDarkvision(actor, stone) {
+  return (actor.items ?? []).filter(item => {
+    if (item._id === stone?._id || isStone(item) || !DARK_TYPES.has(item.type)) return false;
+    if (DARK_RE.test(item.name ?? "") || DARK_RE.test(String(get(item, "system.description.value") ?? ""))) return true;
+    if (Number(get(item, "system.senses.ranges.darkvision")) > 0) return true;
+    return (item.effects ?? []).some(e => (e.keys ?? []).includes(DARK_PATH));
+  }).map(i => i.name);
+}
+
 /**
  * What the import baked into the actor's base data that the stone's effects now grant: darkvision
- * at the species' range + 60 (60 with no species darkvision) goes back to the species' range, and a
- * CON save proficiency nothing else grants goes back to none.
+ * at the species' range + 60 (60 with no species darkvision) goes back to the species' range — only
+ * when nothing else evidently grants darkvision (else noted, left as is) — and a CON save proficiency
+ * nothing else grants goes back to none (a multiclass without `originalClass` is noted: every class's
+ * primary saves were counted, the safe side).
  */
 function stoneBaked(actor, stone) {
   const species = (actor.items ?? []).find(i => i.type === "race");
   const speciesDark = Number(get(species, "system.senses.ranges.darkvision")) || 0;
   const update = {};
-  if (Number(get(actor, "system.attributes.senses.ranges.darkvision")) === speciesDark + 60) {
-    update["system.attributes.senses.ranges.darkvision"] = speciesDark;
+  const notes = [];
+  const base = Number(get(actor, DARK_PATH));
+  if (base === speciesDark + 60) {
+    const others = otherDarkvision(actor, stone);
+    if (!others.length) update[DARK_PATH] = speciesDark;
+    else {
+      notes.push({ item: stone.name, note: `base darkvision ${base} left as is: ${others.join(", ")} may grant darkvision too — `
+        + "reset it by hand if the stone's +60 is baked in" });
+    }
   }
-  if (Number(get(actor, "system.abilities.con.proficient")) === 1 && !otherConSave(actor, stone)) {
-    update["system.abilities.con.proficient"] = 0;
+  if (Number(get(actor, "system.abilities.con.proficient")) === 1) {
+    if (!otherConSave(actor, stone)) update["system.abilities.con.proficient"] = 0;
+    const classes = (actor.items ?? []).filter(i => i.type === "class");
+    if (classes.length > 1 && !get(actor, "system.details.originalClass")) {
+      notes.push({ item: stone.name, note: "no starting class recorded (system.details.originalClass): every class's "
+        + "primary saving throws counted for the CON save check — the base proficiency may be kept when only a later class grants it" });
+    }
   }
-  return update;
+  return { update, notes };
 }
 
 const transmutersStone = {
@@ -397,13 +442,14 @@ const transmutersStone = {
     + "actor's base data (darkvision 60, or the species' + 60; CON save proficiency). The feat gets one "
     + "always-on effect (CON saves) and one pick-one effect per benefit (flags.pentaryn-riders.choice, one "
     + "at a time below Wizard 10); the baked base values are reset while they are still the stone's "
-    + "(darkvision back to the species' range; CON saves kept when a class or Resilient grants them). A re-sync bakes "
+    + "(darkvision back to the species' range unless another feature evidently grants darkvision, then noted; "
+    + "CON saves kept when a class or Resilient grants them). A re-sync bakes "
     + "them again, so this re-applies after every sync. The benefit that was baked (darkvision) starts "
     + "on; otherwise all start off and the player picks.",
   match: (actor, item) => isStone(item),
   plan(actor, item) {
     const have = new Set((item.effects ?? []).map(e => get(e, `flags.${RIDERS}.stone`)).filter(Boolean));
-    const baked = stoneBaked(actor, item);
+    const { update: baked, notes: bakedNotes } = stoneBaked(actor, item);
     const anyChoice = STONE_EFFECTS.some(w => w.choice && have.has(w.key));
     const startOn = anyChoice ? null : ("system.attributes.senses.ranges.darkvision" in baked ? "darkvision" : null);
     const create = STONE_EFFECTS.filter(w => !have.has(w.key)).map(w => ({
@@ -415,7 +461,7 @@ const transmutersStone = {
       flags: { [RIDERS]: { stone: w.key, ...(w.choice ? { choice: { group: STONE_GROUP, max: STONE_MAX } } : {}) } },
     }));
     const changes = [];
-    const notes = [];
+    const notes = [...bakedNotes];
     if (create.length) {
       changes.push({ op: "createEffects", itemId: item._id, data: create,
         summary: `${item.name}: ${create.length} effect(s) (${create.filter(c => !c.disabled).map(c => c.name).join(", ") || "none on"})` });

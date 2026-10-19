@@ -18,6 +18,28 @@ const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)))
 const sourceOf = doc => doc?._source ?? (typeof doc?.toObject === "function" ? doc.toObject() : doc);
 const listOf = coll => (coll ? (Array.isArray(coll) ? coll : (coll.contents ?? [...coll])) : []);
 
+/**
+ * A uuid as core compares it: Foundry's parseUuid form (a legacy compendium uuid gains its document
+ * type, a redirected pack its new name), else the uuid as written.
+ */
+export function uuidKey(uuid, { g = globalThis } = {}) {
+  if (typeof uuid !== "string" || !uuid) return null;
+  try {
+    return g.foundry?.utils?.parseUuid?.(uuid)?.uuid ?? uuid;
+  } catch {
+    return uuid;
+  }
+}
+
+/** Each Cast activity's spell uuid, normalised, by activity id (core's stale-cast-cache). */
+function castKeysOf(activities) {
+  const out = {};
+  for (const [id, a] of Object.entries(activities ?? {})) {
+    if (a?.type === "cast" && a.spell?.uuid) out[id] = uuidKey(a.spell.uuid);
+  }
+  return out;
+}
+
 /** True when the actor came from D&D Beyond through ddb-importer. */
 export function isDdbActor(actor) {
   return !!actor?.flags?.ddbimporter;
@@ -45,7 +67,13 @@ export function snapshotOf(actor) {
         system: clone(s.system ?? {}),
         flags: clone(s.flags ?? {}),
         source: s._stats?.compendiumSource ?? null,
-        effects: listOf(item.effects).map(e => ({ _id: e.id, name: e.name, disabled: !!e.disabled, flags: clone(sourceOf(e)?.flags ?? {}) })),
+        sourceKey: uuidKey(s._stats?.compendiumSource),
+        castKeys: castKeysOf(s.system?.activities),
+        effects: listOf(item.effects).map(e => {
+          const es = sourceOf(e) ?? {};
+          const keys = (es.system?.changes ?? es.changes ?? []).map(c => c?.key).filter(Boolean);
+          return { _id: e.id, name: e.name, disabled: !!e.disabled, flags: clone(es.flags ?? {}), keys };
+        }),
       };
     }),
   };
@@ -136,7 +164,7 @@ export async function applyPlan(actor, plan, stamp) {
   const deletes = plan.changes.filter(c => c.op === "deleteItem" && actor.items.get(c.itemId));
   if (deletes.length) {
     try {
-      await actor.deleteEmbeddedDocuments("Item", [...new Set(deletes.map(c => c.itemId))]);
+      await deleteItems(actor, [...new Set(deletes.map(c => c.itemId))]);
       applied.push(...deletes.map(say));
     } catch (err) {
       errors.push(`item deletes: ${err?.message ?? err}`);
@@ -157,6 +185,27 @@ export async function applyPlan(actor, plan, stamp) {
     }
   }
   return { applied, errors, stamped };
+}
+
+const isMissing = err => /does not exist/i.test(String(err?.message ?? err));
+
+/**
+ * Delete items that may already be gone: dnd5e removes a Cast activity's cached spell copy itself, and
+ * another tab may run the same plan. Each id is re-checked just before the call, and a "does not
+ * exist" refusal (the item went between the check and the server) counts as done: what is left is
+ * tried once more, and a second "does not exist" is success too. Any other error is thrown.
+ */
+async function deleteItems(actor, ids) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const live = ids.filter(id => actor.items.get(id));
+    if (!live.length) return;
+    try {
+      await actor.deleteEmbeddedDocuments("Item", live);
+      return;
+    } catch (err) {
+      if (!isMissing(err)) throw err;
+    }
+  }
 }
 
 /**

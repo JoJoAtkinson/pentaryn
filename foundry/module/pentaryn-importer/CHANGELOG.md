@@ -15,16 +15,24 @@
   `notes` and left a consumable.
 - **[declared] New rule `stale-cast-cache`.** The cached copy of the old DDB spell that a repointed Cast
   activity leaves behind (`flags.dnd5e.cachedFor`; Marwen's duplicate *Detect Magic* from the
-  Prism-Silt Lens) is deleted, in the same run as the repoint or by the next sweep. New op
-  `deleteItem` (one batched `deleteEmbeddedDocuments`). At the table: Marwen's spellbook shows one
-  Detect Magic after the first GM login.
+  Prism-Silt Lens) is deleted. New op `deleteItem` (one batched `deleteEmbeddedDocuments`). At the
+  table: Marwen's spellbook shows one Detect Magic after the first GM login. **Second review:** a
+  repoint planned in the same run is left to dnd5e, whose `preUpdateActivities`/`onUpdateActivities`
+  deletes the old cached copy itself (ours raced it); only a copy whose source is not the activity's
+  current spell (nor the new one) is deleted. Uuids compare normalised (the adapter keys them through
+  `foundry.utils.parseUuid`: `sourceKey`, `castKeys`), so a legacy compendium uuid is not "stale". The
+  adapter re-checks each delete target just before the call and counts "does not exist" as done.
 - **[declared] The relay checks ownership.** The active GM applies a relayed `ddbCorrections.apply`
   only when the sender owns the actor (`testUserPermission(user, "OWNER")`), else `REFUSED`.
 - **`transmuters-stone` heuristics.** A Resilient feat counts as a CON-save source only when it chose
   Constitution (its Trait `saves:con`, else its ASI assignment) — `/con/` matched "configuration" in
   every Resilient. A CON save from the starting class (a `primary` Trait) keeps the base proficiency.
   Baked darkvision is the species' range + 60 and resets to the species' range (no 180 ft doubling
-  for a 120 ft species).
+  for a 120 ft species). **Second review:** the reset is skipped, and noted, when another feature,
+  subclass, class or equipment evidently grants darkvision (its name or description says so, its own
+  senses, or an effect changing it: core `otherDarkvision`). A multiclass with no
+  `system.details.originalClass` keeps the safe behaviour (every class's primary saves count) and
+  gets a note.
 - **[declared] A stamp from another module version is due.** `needsCorrection` is also true when the
   stamp's `version` differs from the running one, so a release that adds or changes a rule reaches
   characters already stamped for their current import. **The first GM login on 1.2.1 re-runs the

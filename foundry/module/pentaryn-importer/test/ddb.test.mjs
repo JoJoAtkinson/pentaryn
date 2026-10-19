@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
 import { manifestOf } from "./kit/harness.mjs";
 import { DDB_DM, DDB_HB, DDB_MM, PHB_INDEX, SPELLS, fighter, liveActor, wizard } from "./fixtures/ddb.mjs";
-import { applyPlan, lookupsFor, replacedSystem, snapshotOf } from "../ddb-adapter.mjs";
+import { applyPlan, lookupsFor, replacedSystem, snapshotOf, uuidKey } from "../ddb-adapter.mjs";
 import { planCorrections } from "../ddb-core.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
@@ -82,9 +82,10 @@ test("applyPlan batches the item updates into one call and stamps with the actor
   assert.deepEqual(out.errors, []);
   assert.equal(out.stamped, true);
   const ops = a.writes.map(w => w[0]);
-  assert.deepEqual(ops, ["items.update", "item.update", "item.update", "item.update", "item.update", "effects.create", "items.delete", "actor.update"]);
+  assert.deepEqual(ops, ["items.update", "dnd5e.cache.delete", "item.update", "item.update", "item.update", "item.update", "effects.create", "actor.update"]);
   assert.deepEqual(a.writes[0][1].map(u => u._id), ["fl1", "inv", "swa", "wand", "lens"]);
-  assert.deepEqual(a.writes.find(w => w[0] === "items.delete")[1], ["dmCache"], "the lens's stale cached Detect Magic");
+  assert.deepEqual(a.writes[1][1], ["dmCache"], "dnd5e removes the lens's old cached Detect Magic itself");
+  assert.equal(ops.includes("items.delete"), false, "no delete of ours to race dnd5e's");
   assert.equal(a.items.has("dmCache"), false);
   const actorUpdate = a.writes.at(-1)[1];
   assert.equal(actorUpdate["system.attributes.senses.ranges.darkvision"], 0);
@@ -93,6 +94,45 @@ test("applyPlan batches the item updates into one call and stamps with the actor
   // and nothing is left to do
   const again = snapshotOf(a);
   assert.deepEqual(planCorrections(again, await lookupsFor(again)).changes, []);
+});
+
+test("review 2: a planned delete whose item another writer removed first is success, and the rest still go", async () => {
+  const a = liveActor(wizard());
+  const plan = { changes: [
+    { op: "deleteItem", itemId: "notes", summary: "notes gone" },
+    { op: "deleteItem", itemId: "oil", summary: "oil gone" },
+  ] };
+  const real = a.deleteEmbeddedDocuments;
+  let first = true;
+  a.deleteEmbeddedDocuments = async (kind, ids) => {
+    if (first) {             // dnd5e (or another tab) deletes "notes" between our check and the server
+      first = false;
+      a.items.delete("notes");
+    }
+    return real(kind, ids);
+  };
+  const out = await applyPlan(a, plan, null);
+  assert.deepEqual(out.errors, []);
+  assert.deepEqual(out.applied, ["notes gone", "oil gone"]);
+  assert.deepEqual(a.writes.filter(w => w[0] === "items.delete").map(w => w[1]), [["notes", "oil"], ["oil"]]);
+  assert.equal(a.items.has("oil"), false);
+  // any other refusal is still an error
+  const b = liveActor(wizard());
+  b.deleteEmbeddedDocuments = async () => { throw new Error("permission denied"); };
+  const bad = await applyPlan(b, { changes: [{ op: "deleteItem", itemId: "oil", summary: "oil gone" }] }, null);
+  assert.deepEqual(bad.errors, ["item deletes: permission denied"]);
+});
+
+test("review 2: snapshotOf keys uuids through Foundry's parseUuid (uuidKey), the raw uuid when it cannot", () => {
+  const g = { foundry: { utils: { parseUuid: u => ({ uuid: u.replace("spells.phb", "spells.Item.phb") }) } } };
+  assert.equal(uuidKey("Compendium.p.spells.phbX", { g }), "Compendium.p.spells.Item.phbX");
+  assert.equal(uuidKey("Compendium.p.spells.phbX", { g: {} }), "Compendium.p.spells.phbX");
+  assert.equal(uuidKey("x", { g: { foundry: { utils: { parseUuid: () => { throw new Error("no"); } } } } }), "x");
+  assert.equal(uuidKey(null), null);
+  const s = snapshotOf(liveActor(wizard()));
+  const lens = s.items.find(i => i._id === "lens");
+  assert.deepEqual(Object.keys(lens.castKeys), ["castDeMa"]);
+  assert.equal(typeof s.items.find(i => i._id === "dmCache").sourceKey, "string");
 });
 
 test("a type change replaces system with core's ForcedReplacement operator, not the deprecated ==system", async () => {

@@ -7,10 +7,11 @@ import assert from "node:assert/strict";
 import * as core from "../ddb-core.mjs";
 import { DDB_DM, DDB_HB, PHB_INDEX, fighter, lookups, wizard } from "./fixtures/ddb.mjs";
 
-const { RULES, planCorrections, needsCorrection, stableId, spellKey, spellUuidsNeeded, summaryLine, STONE_EFFECTS } = core;
+const { RULES, otherDarkvision, planCorrections, needsCorrection, stableId, spellKey, spellUuidsNeeded, summaryLine, STONE_EFFECTS } = core;
+const DARK = "system.attributes.senses.ranges.darkvision";
 const byRule = (plan, id) => plan.changes.filter(c => c.rule === id);
 
-/** Apply a plan to a snapshot the way the adapter does, so idempotence can be checked purely. */
+/** Apply a plan to a snapshot the way the adapter (and dnd5e's cached-spell clean-up) does, so idempotence can be checked purely. */
 function applyToSnapshot(snap, plan) {
   const s = structuredClone(snap);
   const set = (obj, path, v) => {
@@ -22,7 +23,14 @@ function applyToSnapshot(snap, plan) {
   for (const c of plan.changes) {
     const it = s.items.find(i => i._id === c.itemId);
     if (c.op === "retype") Object.assign(it, { type: c.data.type, system: structuredClone(c.data.system) });
-    if (c.op === "updateItem") for (const [k, v] of Object.entries(c.data)) set(it, k, v);
+    if (c.op === "updateItem") {
+      for (const [k, v] of Object.entries(c.data)) set(it, k, v);
+      // dnd5e's onUpdateActivities: a Cast activity whose spell changed loses its old cached copy
+      for (const k of Object.keys(c.data)) {
+        const m = /^system\.activities\.([^.]+)\.spell\.uuid$/.exec(k);
+        if (m) s.items = s.items.filter(i => i.flags?.dnd5e?.cachedFor !== `.Item.${c.itemId}.Activity.${m[1]}`);
+      }
+    }
     if (c.op === "createEffects") it.effects.push(...c.data.map(e => ({ _id: e._id, name: e.name, disabled: e.disabled, flags: e.flags })));
     if (c.op === "updateActor") for (const [k, v] of Object.entries(c.data)) set(s, k, v);
     if (c.op === "deleteItem") s.items = s.items.filter(i => i._id !== c.itemId);
@@ -168,11 +176,35 @@ test("a spell with uses of its own, or with the slot on, is not self-spending", 
 
 /* stale-cast-cache — Marwen's Prism-Silt Lens, 2026-10-19 */
 
-test("the cached copy of the old DDB spell goes when its Cast activity is repointed in the same run", () => {
+test("a repoint in the same run leaves the old cached copy to dnd5e (its onUpdateActivities deletes it; ours would race)", () => {
   const plan = planCorrections(wizard(), lookups());
-  const got = byRule(plan, "stale-cast-cache");
-  assert.deepEqual(got.map(c => [c.op, c.itemId]), [["deleteItem", "dmCache"]]);
+  assert.deepEqual(byRule(plan, "cast-self-uses").map(c => c.itemId), ["wand", "lens"], "the lens is repointed this run");
+  assert.deepEqual(byRule(plan, "stale-cast-cache"), []);
+});
+
+test("a true orphan (neither the current spell nor the new one) goes even in a repoint run; the new spell's copy stays", () => {
+  const snap = wizard();
+  snap.items.push(
+    { _id: "oldCache", name: "Detect Magic", type: "spell", system: { level: 1 }, effects: [],
+      flags: { dnd5e: { cachedFor: ".Item.lens.Activity.castDeMa" } }, source: "Compendium.world.ddb-spells.Item.ddbDetectMagic14" },
+    { _id: "newCache", name: "Detect Magic", type: "spell", system: { level: 1 }, effects: [],
+      flags: { dnd5e: { cachedFor: ".Item.lens.Activity.castDeMa" } }, source: "Compendium.dnd-players-handbook.spells.Item.phbsplDetectMagi" });
+  const got = byRule(planCorrections(snap, lookups()), "stale-cast-cache");
+  assert.deepEqual(got.map(c => [c.op, c.itemId]), [["deleteItem", "oldCache"]]);
   assert.match(got[0].summary, /Detect Magic: stale cached copy for Prism-Silt Lens removed/);
+});
+
+test("uuids compare normalised: a legacy compendium uuid for the activity's spell is not stale", () => {
+  const snap = wizard();
+  const lens = snap.items.find(i => i._id === "lens");
+  const phb = "Compendium.dnd-players-handbook.spells.Item.phbsplDetectMagi";
+  lens.system.activities.castDeMa.spell.uuid = phb;
+  const cache = snap.items.find(i => i._id === "dmCache");
+  cache.source = "Compendium.dnd-players-handbook.spells.phbsplDetectMagi";   // legacy form, no ".Item."
+  assert.deepEqual(byRule(planCorrections(snap, {}), "stale-cast-cache").map(c => c.itemId), ["dmCache"], "raw strings differ");
+  cache.sourceKey = phb;                                                        // the adapter's parseUuid form
+  lens.castKeys = { castDeMa: phb };
+  assert.deepEqual(byRule(planCorrections(snap, {}), "stale-cast-cache"), [], "the same spell, normalised");
 });
 
 test("after the release: activity already on the PHB spell, the DDB copy is stale, the PHB copy stays", () => {
@@ -355,4 +387,38 @@ test("summaryLine: one line, change summaries joined, errors counted", () => {
 
 test("PHB index rows are matched by name only", () => {
   assert.ok(PHB_INDEX.every(e => /^[A-Za-z0-9]{16}$/.test(e._id)));
+});
+
+/* transmuters-stone — second review: other darkvision sources, no originalClass */
+
+test("another evident darkvision source keeps the base darkvision and says so", () => {
+  const snap = wizard();
+  snap.items.push({ _id: "umbral", name: "Umbral Sight", type: "feat", flags: {}, effects: [],
+    system: { description: { value: "<p>You gain Darkvision with a range of 60 feet.</p>" } } });
+  const plan = planCorrections(snap, lookups());
+  const update = byRule(plan, "transmuters-stone").find(c => c.op === "updateActor");
+  assert.equal(DARK in (update?.data ?? {}), false, "base darkvision left as is");
+  assert.match(plan.notes.find(n => /base darkvision 60 left as is: Umbral Sight/.test(n.note))?.note ?? "", /reset it by hand/);
+  const effects = byRule(plan, "transmuters-stone").find(c => c.op === "createEffects").data;
+  assert.equal(effects.find(e => e.flags["pentaryn-riders"].stone === "darkvision").disabled, true, "not started on: nothing was reset");
+  // other evidence: an effect changing darkvision, an item's own senses; a spell never counts
+  assert.deepEqual(otherDarkvision({ items: [
+    { _id: "a", name: "Goggles", type: "equipment", system: {}, effects: [{ keys: [DARK] }] },
+    { _id: "b", name: "Gift", type: "feat", system: { senses: { ranges: { darkvision: 60 } } } },
+    { _id: "c", name: "Darkvision", type: "spell", system: {} },
+    { _id: "d", name: "Alert", type: "feat", system: { description: { value: "initiative" } } },
+  ] }, null), ["Goggles", "Gift"]);
+});
+
+test("a multiclass without originalClass: CON kept on the safe side, with a note", () => {
+  const snap = wizard();
+  const conClass = (id, name) => ({ _id: id, name, type: "class", flags: {}, effects: [], system: { advancement: {
+    t: { type: "Trait", classRestriction: "primary", configuration: { grants: ["saves:con", "saves:str"] }, value: {} } } } });
+  snap.items.push(conClass("wiz", "Wizard"), conClass("ftr", "Fighter"));
+  const plan = planCorrections(snap, lookups());
+  const update = byRule(plan, "transmuters-stone").find(c => c.op === "updateActor");
+  assert.equal("system.abilities.con.proficient" in (update?.data ?? {}), false);
+  assert.ok(plan.notes.some(n => /no starting class recorded/.test(n.note)));
+  snap.system.details = { originalClass: "wiz" };
+  assert.ok(!planCorrections(snap, lookups()).notes.some(n => /no starting class recorded/.test(n.note)), "recorded: no note");
 });
