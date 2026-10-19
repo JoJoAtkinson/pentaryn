@@ -53,10 +53,10 @@ const reset = (...ids) => {
 const ROWS = [
   "on:createToken", "on:updateToken", "on:updateActor", "on:createUser", "on:updateUser", "on:deleteUser",
   "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
-  "on:controlToken", "once:init", "once:setup", "once:ready", "once:ready",
+  "on:controlToken", "once:init", "once:setup", "once:setup", "once:ready", "once:ready",   // [declared] 0.2.0: the 2nd setup wraps Actor5e.fetchExisting
 ];
 
-test("registration manifest: 17 rows in source order (golden/hooks.json)", () => {
+test("registration manifest: 18 rows in source order (golden/hooks.json)", () => {
   pinJSON("hooks", F.hooks, import.meta.url);
   assert.deepEqual(F.hooks.map(h => `${h.kind}:${h.name}`), ROWS);
 });
@@ -70,9 +70,10 @@ test("import alone: no settings, no writes, no patch, no namespace, no DOM", () 
   assert.deepEqual(W.lines(), []);
 });
 
-test("init registers lightRadius, ownerSees, floatOverHud, showStrip — option objects key by key", () => {
+test("init registers lightRadius, ownerSees, floatOverHud, showStrip, summonLibrary — option objects key by key", () => {
   F.fire("init");
-  assert.deepEqual(F.calls, ["lightRadius", "ownerSees", "floatOverHud", "showStrip"].map(k => ({ op: "settings.register", id: `${MODULE}.${k}` })));
+  // [declared] 0.2.0 (feedback Swrl5M): summonLibrary, the summon library's world switch
+  assert.deepEqual(F.calls, ["lightRadius", "ownerSees", "floatOverHud", "showStrip", "summonLibrary"].map(k => ({ op: "settings.register", id: `${MODULE}.${k}` })));
   const opts = key => {
     const { namespace, key: _k, ...rest } = F.game.settings.settings.get(`${MODULE}.${key}`);
     assert.equal(namespace, MODULE);
@@ -103,6 +104,11 @@ test("init registers lightRadius, ownerSees, floatOverHud, showStrip — option 
   assert.deepEqual(Object.keys(showStrip), ["name", "hint", "scope", "config", "type", "default", "onChange"]);
   const { onChange: _c, ...ss } = showStrip;
   assert.deepEqual(ss, { ...label("showStrip"), scope: "client", config: true, type: Boolean, default: true });
+
+  const summonLibrary = opts("summonLibrary");
+  assert.deepEqual(Object.keys(summonLibrary), ["name", "hint", "scope", "config", "type", "default", "onChange"]);
+  const { onChange: _e, ...sl } = summonLibrary;
+  assert.deepEqual(sl, { ...label("summonLibrary"), scope: "world", config: true, type: Boolean, default: true });
   assert.equal(F.game.pentaryn, undefined, "nothing published at init");
 });
 
@@ -112,7 +118,7 @@ test("every registered name/hint and the strip's two keys resolve in lang/en.jso
     for (const k of [s.name, s.hint]) assert.ok(F.game.i18n.has(k), k);
   }
   for (const k of ["PENTARYN_CREATURES.label", "PENTARYN_CREATURES.hint"]) assert.ok(F.game.i18n.has(k), k);
-  assert.deepEqual(Object.keys(LANG.PENTARYN_CREATURES.settings).sort(), ["floatOverHud", "lightRadius", "ownerSees", "showStrip"]);
+  assert.deepEqual(Object.keys(LANG.PENTARYN_CREATURES.settings).sort(), ["floatOverHud", "lightRadius", "ownerSees", "showStrip", "summonLibrary"]);
 });
 
 test("setup: lib-wrapper active without its global → Token#isVisible replaced directly; the GM is never overridden", () => {
@@ -180,7 +186,8 @@ test("legacy surface ⊇ golden/legacy-surface.json; core is the module namespac
   const LEGACY = ["list", "render", "syncScene", "syncAll", "isCreature", "ownerSees", "patchedWith", "core"];
   assert.deepEqual(keys.filter(k => LEGACY.includes(k)), LEGACY, "the legacy keys, in their old order");
   // [declared] C-D2: the kit members follow; C-D3 (transform-creatures-31): status() and inspect() are new rows
-  assert.deepEqual(keys.filter(k => !LEGACY.includes(k)), ["status", "inspect", "version", "contract", "settings", "trace", "uninstall", "describe"]);
+  // [declared] 0.2.0 (feedback Swrl5M): summonActor and library are new rows
+  assert.deepEqual(keys.filter(k => !LEGACY.includes(k)), ["status", "inspect", "summonActor", "library", "version", "contract", "settings", "trace", "uninstall", "describe"]);
   for (const k of LEGACY.filter(k => k !== "core")) assert.equal(typeof api()[k], "function", k);
   assert.equal(api().core.lightUpdate, core.lightUpdate);
   assert.equal(Object.isFrozen(api()), true, "[declared] C-D2: frozen");

@@ -24,7 +24,7 @@ test("lang/en.json is nested under one root", () => {
 });
 
 test("every SETTINGS row has literal name and hint keys that exist", () => {
-  assert.deepEqual(SETTINGS.map(r => r.key), ["lightRadius", "ownerSees", "floatOverHud", "showStrip"]);
+  assert.deepEqual(SETTINGS.map(r => r.key), ["lightRadius", "ownerSees", "floatOverHud", "showStrip", "summonLibrary"]);
   for (const row of SETTINGS) {
     for (const field of ["name", "hint"]) {
       assert.equal(row[field], `${I18N}.settings.${row.key}.${field}`, `${row.key}.${field} keeps its key`);

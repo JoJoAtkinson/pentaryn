@@ -61,6 +61,10 @@
   },
   {
     "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "once",
     "name": "ready"
   },
   {

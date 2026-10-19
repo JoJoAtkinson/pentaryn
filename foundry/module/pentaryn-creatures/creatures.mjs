@@ -13,13 +13,16 @@
  *   strip.mjs            UI: the strip's DOM, the Combat HUD dock
  *   creature-strip.mjs   feature: when the strip redraws
  *   owner-sees.mjs       feature: the Token#isVisible wrap
+ *   summons-adapter.mjs  dnd5e summon activity / source actor → plain data, the library copy's create data
+ *   summons.mjs          feature: the summon library (Actor5e.fetchExisting wrap + the GM relay)
  *   api-manifest.mjs     PURE API rows (describe() reads them)
  *   api.mjs              implementations over ctx.exposed, buildApiFor(ctx)
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the light and strip features install synchronously in this body (where their
  * module-scope Hooks.on calls always ran, so listener order is unchanged) · init → settings ·
- * setup → owner-sees wraps Token#isVisible · ready → the active GM syncs every light, the strip
+ * setup → owner-sees wraps Token#isVisible, summons wraps Actor5e.fetchExisting · the relay query
+ * (manifest row summonActor) is registered at load on every client (a player's queryGM needs it) · ready → the active GM syncs every light, the strip
  * draws, then the API is built (a drift throw stops there) and published synchronously as
  * game.modules.get("pentaryn-creatures").api and game.pentaryn.creatures.
  *
@@ -31,15 +34,18 @@
 import { MODULE, NS } from "./creatures-core.mjs";
 import { clearSettingHandlers, onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
+import { registerQueries } from "./lib/queries.mjs";
 import * as light from "./light.mjs";
 import * as creatureStrip from "./creature-strip.mjs";
 import * as ownerSees from "./owner-sees.mjs";
+import * as summons from "./summons.mjs";
 
 /** Features, in install order (uninstall runs them in reverse). */
-const FEATURES = [light, creatureStrip, ownerSees];
+const FEATURES = [light, creatureStrip, ownerSees, summons];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -51,6 +57,8 @@ const ctx = {
   onSettingChange,
   /** true on a hot re-import after `ready`: the lifecycle hooks have already fired. */
   late: !!globalThis.game?.ready,
+  /** the published API (the relay query's handler calls it), set at ready */
+  api: null,
   exposed: {},
   expose(accessors) {
     Object.assign(ctx.exposed, accessors);
@@ -84,11 +92,15 @@ function onReadyPublish() {
     log.error("API manifest drift — not published", err);
     return;
   }
+  ctx.api = api;
   publishNamespace(NS, api, { moduleId: MODULE });
 }
 
+// The manifest's query rows (summonActor's relay), on every client: a player's queryGM needs the name too.
+registerQueries(MANIFEST, () => ctx.api, { log });
+
 // Registration order is the module's historic one (golden/hooks.json): the light's and the strip's
-// hooks, init, owner-sees' setup, then the two ready handlers.
+// hooks, init, owner-sees' setup, the summon library's setup, then the two ready handlers.
 if (ctx.late) {
   onInit();
   for (const feature of FEATURES) feature.install(reg, ctx);
@@ -99,6 +111,7 @@ if (ctx.late) {
   creatureStrip.install(reg, ctx);
   Hooks.once("init", onInit);
   ownerSees.install(reg, ctx);
+  summons.install(reg, ctx);
   Hooks.once("ready", onReadyStartup);
   Hooks.once("ready", onReadyPublish);
 }

@@ -1,5 +1,5 @@
 // The hook manifest (guide step 7): what this module registers, in order, pinned against
-// golden/hooks.json (the same 17 rows the glue test pins), the registry labels, the feature
+// golden/hooks.json (the same 18 rows the glue test pins), the registry labels, the feature
 // contract (install/uninstall), and uninstall() leaving nothing behind. A player client.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -48,12 +48,13 @@ test("registry labels (describe().hooks), in order; the lifecycle hooks are the 
     { name: "updateUser", label: "updateUser: redraw strip" },
     { name: "controlToken", label: "controlToken: mark strip" },
     { name: "setup", label: "setup: wrap Token#isVisible" },
+    { name: "setup", label: "setup: wrap Actor5e.fetchExisting" },   // [declared] 0.2.0 summon library
   ]);
 });
 
 test("every feature file exports install and uninstall", async () => {
   const files = featureFiles();
-  assert.deepEqual(files, ["light.mjs", "creature-strip.mjs", "owner-sees.mjs"]);
+  assert.deepEqual(files, ["light.mjs", "creature-strip.mjs", "owner-sees.mjs", "summons.mjs"]);
   for (const f of files) {
     const mod = await import(new URL(f, ROOT));
     assert.equal(typeof mod.install, "function", `${f}: install`);

@@ -60,6 +60,14 @@ export const SETTINGS = Object.freeze([
     onChange: routed("showStrip"),
     doc: "This client draws the \"Your creatures\" strip (players only, from two owned tokens on the scene). Client scope.",
   },
+  {
+    key: "summonLibrary", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_CREATURES.settings.summonLibrary.name",
+    hint: "PENTARYN_CREATURES.settings.summonLibrary.hint",
+    onChange: routed("summonLibrary"),
+    doc: "A player without Create New Actors who summons from a compendium gets a copy made by the active GM, owned by "
+      + "them, in PC Summons & Forms/<First name> — summons & forms; dnd5e reuses it next time. Off: dnd5e's own refusal.",
+  },
 ]);
 
 /** Called from the entry's `init` handler (rows already registered are skipped). */

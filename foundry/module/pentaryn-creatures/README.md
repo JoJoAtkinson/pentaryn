@@ -1,11 +1,13 @@
 # Pentaryn Creatures
 
 **Read this when:** a player can't find a creature they control (a summon, familiar, skeleton,
-Arcane Eye, steed), a creature glows when it shouldn't (or doesn't when it should), or the
-"Your creatures" strip is missing or wrong.
+Arcane Eye, steed), a creature glows when it shouldn't (or doesn't when it should), the
+"Your creatures" strip is missing or wrong, or a player can't summon ("You must have 'Create New
+Actors' permission in order to summon directly from a compendium").
 
-Table feedback 2026-10-08, item C3. Three parts, one module: a creature light, owners always see
-their own tokens, and the "Your creatures" strip.
+Table feedback 2026-10-08, item C3. Four parts, one module: a creature light, owners always see
+their own tokens, the "Your creatures" strip, and (0.2.0, feedback Swrl5M/UQSJ0v/dkt5PG,
+2026-10-19) the summon library.
 
 ## What the player sees
 
@@ -81,6 +83,30 @@ they are looking at.
   when the HUD closes. It looks twice a second, only while the strip is up, `floatOverHud` is on
   and Argon is enabled.
 
+### Summon library
+
+A player whose role may not create actors (core **Create New Actors**; at this table the Player
+role, while Trusted has it) can still summon from a compendium: Mage Hand, Minor Illusion, a DDB
+summon, Animate Dead's skeleton, a Find Familiar pick from the Compendium Browser.
+
+- **Before:** dnd5e has to copy a compendium summon into the world before placing it, and refused a
+  Player outright: "You must have 'Create New Actors' permission in order to summon directly from a
+  compendium." A Trusted player (Marrith) imported it herself, which is why her summons worked and
+  Marwen's did not.
+- **Now:** the cast goes on as usual (the usage dialog, the Compendium Browser for a CR summon, the
+  placement). The first time a character summons a creature, the GM's client makes the copy for
+  them, and the summon is placed as if they had imported it.
+- **The library:** each copy is owned by the player (and the character's other owners) and filed
+  in `PC Summons & Forms/<First name> — summons & forms` (both folders are made if missing). dnd5e
+  finds that copy itself on every later summon, so the library fills up as the player plays and
+  the GM is needed only the first time. A Find Familiar pick that was summoned before is reused.
+- **What the GM will copy:** only for the owner of the summoning character, and only a creature
+  that item's summon activities can summon: one of its profiles, or for a CR summon (Find Familiar)
+  a compendium NPC within the CR and creature types. Anything else is refused with the reason.
+- **Needs a GM online** the first time a creature is summoned (the headless GM on BOSS always is).
+  Without one the player reads "Could not summon: a GM must be logged in…".
+- A GM, and a player whose role may create actors, are untouched: dnd5e imports as it always did.
+
 ## Settings
 
 | Setting | Key | Scope | Default | What |
@@ -89,6 +115,7 @@ they are looking at.
 | Players always see their own tokens | `ownerSees` | world | on | the owner override |
 | Strip floats above the Combat HUD | `floatOverHud` | world | on | float over Argon's HUD while it is open; off: stays above the hotbar |
 | Show the "Your creatures" strip | `showStrip` | client | on | this client's strip |
+| Summon library for players | `summonLibrary` | world | on | the GM makes compendium summons for players without Create New Actors; off: dnd5e's refusal |
 
 Every read is live: a change applies without a reload. Labels: `PENTARYN_CREATURES.settings.<key>.name/hint`.
 
@@ -113,16 +140,27 @@ Also `game.modules.get("pentaryn-creatures").api`; published at `ready`, frozen,
 - `ownerSees(token)` → boolean: would the override show this token to me? A placeable or its
   TokenDocument (a document with no placeable on the viewed scene: `false`).
 - `patchedWith()` → `"libWrapper"`, `"direct"` or `null` (the getter was not found; see the console).
-- `status()` → `{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, writer, lit, version }`:
-  one read of this client's state — `writer` is whether this client writes the lights (the active
-  GM), `lit` how many tokens on every scene carry our light flag.
+- `status()` → `{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, summonLibrary,
+  summonPatched, writer, lit, version }`: one read of this client's state — `summonPatched` is how
+  `Actor5e.fetchExisting` is wrapped (`"libWrapper"`, `"direct"` or `null`: dnd5e not found),
+  `writer` is whether this client writes the lights (the active GM), `lit` how many tokens on every
+  scene carry our light flag.
 - `inspect(ref, { sceneId?, as? })` → `{ token, actorType, qualifies, light, ourLight, switchedOff,
   ownerSees, inStrip }`: one token (a document, placeable, uuid, id or exact name; a miss throws
   `NOT_FOUND`), read-only. `as` (a user ref) picks whose strip `inStrip` answers for; `ownerSees` is
   always this client's answer.
+- `summonActor({ uuid, item, dryRun? })` → `{ ok, actorId, name, created, folderId? }` or
+  `{ ok: false, code, reason }`: the summon library's write, and the relay query
+  `pentaryn-creatures.summonActor`. `uuid` is the creature, `item` the summoning item's uuid. On a
+  player's client it asks the active GM (`NO_GM` when none); on the GM it checks and creates.
+  `REFUSED` when the sender does not own the item's actor or the item cannot summon that creature.
+  Idempotent: the copy's id is fixed per character and creature.
+- `library(ref)` → `{ actor, folder, summons: [{ id, name, source }] }`: a character's library (the
+  copies made for it and everything in its `— summons & forms` folder), as this client sees it.
 - `core`: a frozen copy of the pure module.
 
-Nothing in the API is GM-only to read; the two writers do nothing off the active GM's client.
+Nothing in the API is GM-only to read; the light writers do nothing off the active GM's client, and
+`summonActor` runs its write only there.
 
 ## Data written
 
@@ -130,9 +168,11 @@ Nothing in the API is GM-only to read; the two writers do nothing off the active
 |---|---|
 | token `light.bright`, `light.dim` | the creature light (bright = dim = `lightRadius`), or 0 when we take ours away |
 | token `flags.pentaryn-creatures.light` | `{bright, dim}` — the light we set · `false` — switched off by hand, never relit · `null` — not ours |
+| Actor (the library copy) | made by the active GM: the compendium (or world) creature's data, `ownership` = `default: 0` + the character's owners + the summoning player, `folder`, `_stats.compendiumSource` (or `duplicateSource`), `flags.dnd5e.isAutoImported: true`, `flags.pentaryn-creatures.library` = the character's actor id |
+| Folder `PC Summons & Forms`, `<First name> — summons & forms` | made only when missing (an existing folder of that name is used) |
 
-Our writes carry the update option `{ pentarynCreatures: true }`, so our own `updateToken` hook
-skips them.
+Our token writes carry the update option `{ pentarynCreatures: true }`, so our own `updateToken`
+hook skips them.
 
 ## Flags other modules read
 
@@ -156,12 +196,14 @@ Emits none of its own. The kit fires two hooks at publish: `pentaryn-creatures.r
 Listens to (pinned in `test/golden/hooks.json`, in this order): `createToken`, `updateToken`,
 `updateActor`, `createUser`, `updateUser`, `deleteUser` (the light); `canvasReady`, `createToken`,
 `deleteToken`, `updateToken`, `updateActor`, `updateUser`, `controlToken` (the strip); `init`,
-`setup`, `ready`, `ready` (once each).
+`setup` (owner-sees), `setup` (summon library), `ready`, `ready` (once each). Registers one query
+on every client: `pentaryn-creatures.summonActor` (relay: any sender, the active GM answers).
 
 ## Patches and adjustments
 
 | Patch (`describe().patches`) | Adjustments row | What |
 |---|---|---|
+| `Actor5e.fetchExisting` (dnd5e, static) | `creatures-summon-library` | libWrapper `WRAPPER` on `dnd5e.documents.Actor5e.fetchExisting`, else direct; marker `__pentarynCreaturesSummon`. dnd5e runs first; only its failure on a player without ACTOR_CREATE, during a summon, goes to the GM |
 | `Token#isVisible` (getter) | `creatures-libwrapper` | libWrapper `WRAPPER` on `foundry.canvas.placeables.Token.prototype.isVisible` when lib-wrapper is active, else the getter is replaced on the prototype; marker `__pentarynCreaturesVisible`. Reads private `_preview._previewType`, `isFilteredOut`, `_testCulled()` |
 
 Not patches, but registry rows too: the Argon DOM read in `strip.mjs` (`.extended-combat-hud
@@ -173,7 +215,12 @@ Not patches, but registry rows too: the Argon DOM read in `strip.mjs` (`.extende
   connects). Players never write anything. Two tabs on the GM account both pass and may send the
   same update; that is harmless, because lightUpdate is idempotent (a re-run writes nothing).
 - **Visibility and the strip:** every client patches `Token#isVisible` and draws its own strip; no
-  writes. `floatOverHud` is a world setting, so a change re-places the strip on every client.
+  writes.
+- **The summon library:** the player's client asks; the active GM's client writes. The query
+  reaches every tab of the GM account (the bridge and a browser tab), so both may create: the copy
+  and its folders have deterministic ids (`core.libraryActorId`, `libraryFolderId`,
+  `libraryRootId`) and identical data, and a `keepId` create of an existing id replaces it — one
+  actor remains. A later call finds the copy and only adds the sender to its ownership. `floatOverHud` is a world setting, so a change re-places the strip on every client.
 
 ## Extending
 
@@ -196,6 +243,10 @@ Not patches, but registry rows too: the Argon DOM read in `strip.mjs` (`.extende
   light over it, so we let go of our flag; senses later restores the prior 5/5 unflagged. Nobody
   owns that 5/5 now: if the summon stops qualifying, it keeps burning. Pinned as today in
   `test/golden/senses-handoff.json`; arbitration is a decision, not a bug fix.
+- **A library copy is a snapshot.** It is made from the compendium once; a later change to the
+  compendium entry does not reach it. Delete the copy and the next summon makes a fresh one.
+- **Players see their library in the Actors sidebar** (they own the copies). Deleting one there is
+  harmless: the next summon makes it again.
 - An owner-override failure (a core rename of a private field) answers `false` and warns once per
   session: `pentaryn-creatures | owner override failed`.
 - **Turning it off:** set *Creature light (ft)* to **0** first, with the GM logged in, and only then
@@ -215,6 +266,8 @@ Not patches, but registry rows too: the Argon DOM read in `strip.mjs` (`.extende
 | `tokens-adapter.mjs` | TokenDocument → plain summary (the foreign flag reads) |
 | `light.mjs` | feature: the light queue and writer |
 | `owner-sees.mjs` | feature: the `Token#isVisible` wrap |
+| `summons.mjs` | feature: the summon library (the `Actor5e.fetchExisting` wrap, the GM relay, `library`) |
+| `summons-adapter.mjs` | dnd5e summon activities / source actor → plain data; the copy's create data |
 | `creature-strip.mjs` | feature: when the strip redraws |
 | `strip.mjs` | UI: the strip's DOM and the Combat HUD dock |
 | `api-manifest.mjs`, `api.mjs` | the published API |
@@ -233,6 +286,10 @@ scope. Fixtures are synthetic, because `test/` is published with the module. One
 
 **Verify live (as a player with two owned tokens):** the strip shows; an Invisible owned token
 stays drawn; `game.pentaryn.creatures.status().patchedWith` is `"libWrapper"` or `"direct"`.
+**Summon library (as a Player-role user, a GM online):** cast Mage Hand or Find Familiar: it is
+placed, and the copy appears in `PC Summons & Forms/<name> — summons & forms`; cast it again: no
+new actor. `status().summonPatched` is not `null`. As the GM, before a player tries:
+`await game.pentaryn.creatures.summonActor({ uuid, item, dryRun: true })`.
 
 ## Sync
 
