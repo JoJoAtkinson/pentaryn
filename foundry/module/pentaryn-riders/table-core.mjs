@@ -191,10 +191,13 @@ export const ARCANE_RECOVERY_MAX_LEVEL = 5;
 
 /**
  * Does this item raise Arcane Recovery's budget by 1? An Arcane Grimoire (by name, so "+1 Arcane
- * Grimoire" too), attuned when it needs attunement (dnd5e `system.attunement === "required"`).
+ * Grimoire" too), held: equipped and not inside a container (dnd5e `system.container` is the
+ * container's id), and attuned when it needs attunement (`system.attunement === "required"`).
+ * A grimoire in a backpack does not count (riders review 2026-10-19, finding 4).
  */
-export function isArcaneGrimoire({ name = "", attunement = "", attuned = false } = {}) {
+export function isArcaneGrimoire({ name = "", attunement = "", attuned = false, equipped = false, container = null } = {}) {
   if (!String(name).toLowerCase().includes("arcane grimoire")) return false;
+  if (!equipped || container) return false;
   return attunement !== "required" || !!attuned;
 }
 

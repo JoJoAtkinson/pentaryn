@@ -11,11 +11,14 @@
 
 /**
  * What `usageConfig.concentration.end` should be, given the concentration effects the actor has
- * NOW. Returns `undefined` to leave it, `null` to drop it (no replacement needed), or an id.
+ * NOW. Returns `undefined` to leave it, `null` to drop it (no replacement needed), or `false` to
+ * refuse the cast (the caller says why and vetoes it).
  *  - not stale (no end, or the named effect still exists) → undefined
  *  - stale and the actor is below its limit → null (nothing has to end; dnd5e then just begins)
- *  - stale, at the limit, exactly one effect → that effect's id (the only one the cast can replace)
- *  - stale with several to choose from → undefined (dnd5e refuses, as before: we will not guess)
+ *  - stale at (or over) the limit → false. The effect held now was never the player's pick: the
+ *    dialog opened naming Fly, Fly dropped, Hold Person was cast elsewhere. Ending Hold Person in
+ *    Fly's place would end a concentration the player never chose, so the player reopens the
+ *    dialog, which names what is held now (riders review 2026-10-19, finding 1).
  * @param {string|null|undefined} end  the effect id the dialog chose to end
  * @param {string[]} ids               ids of the actor's concentration effects now
  * @param {number} limit               the actor's concentration limit
@@ -26,8 +29,26 @@ export function staleConcentrationEnd(end, ids, limit = 1) {
   if (now.includes(end)) return undefined;
   const max = Number.isFinite(Number(limit)) ? Number(limit) : 1;
   if (now.length < max) return null;
-  if (now.length === 1) return now[0];
-  return undefined;
+  return false;
+}
+
+/**
+ * How many other packages' listeners run before the last of `vetoIds` (riders review 2026-10-19,
+ * finding 2). A `false` from a `Hooks.call` listener stops only the listeners after it, so a veto
+ * protects nothing from a listener ahead of it. `order` is the hook's listener ids in call order
+ * (`Hooks.events[name]`), `own` this module's ids for that hook. Returns -1 when a veto is not
+ * registered at all.
+ * @param {number[]} order
+ * @param {Iterable<number>} own
+ * @param {number[]} vetoIds
+ */
+export function listenersAheadOf(order, own, vetoIds) {
+  const ids = [...(order ?? [])];
+  const mine = new Set(own ?? []);
+  const at = (vetoIds ?? []).map(id => ids.indexOf(id));
+  if (!at.length || at.some(i => i < 0)) return -1;
+  const last = Math.max(...at);
+  return ids.slice(0, last).filter(id => !mine.has(id)).length;
 }
 
 /**

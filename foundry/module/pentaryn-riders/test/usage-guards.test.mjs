@@ -6,17 +6,29 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { setupWorld } from "./fixtures/world.mjs";
 
-const { staleConcentrationEnd, openUsageDialogFor, firstChoiceDialogFor } = await import("../core/usage.mjs");
+const { staleConcentrationEnd, openUsageDialogFor, firstChoiceDialogFor, listenersAheadOf } = await import("../core/usage.mjs");
 
 /* ── pure ─────────────────────────────────────────────────────────────────── */
 
-test("staleConcentrationEnd: not stale → leave; below the limit → drop; one at the limit → that one; several → leave", () => {
+test("staleConcentrationEnd: not stale → leave; below the limit → drop; stale at the limit → refuse (false)", () => {
   assert.equal(staleConcentrationEnd(null, ["a"], 1), undefined, "no replacement asked");
   assert.equal(staleConcentrationEnd("a", ["a"], 1), undefined, "still there");
   assert.equal(staleConcentrationEnd("fly", [], 1), null, "Fly already ended: nothing to replace");
-  assert.equal(staleConcentrationEnd("old", ["new"], 1), "new", "the report: E/R re-cast from the second dialog");
-  assert.equal(staleConcentrationEnd("old", ["a", "b"], 2), undefined, "several: dnd5e decides");
+  // Review finding 1: the dialog named Fly; Fly dropped; Hold Person was cast elsewhere. Ending Hold
+  // Person in Fly's place would end a concentration the player never picked: refuse instead.
+  assert.equal(staleConcentrationEnd("fly", ["holdPerson"], 1), false, "one held at the limit, not the one picked: refuse");
+  assert.equal(staleConcentrationEnd("old", ["a", "b"], 2), false, "several at the limit: refuse");
   assert.equal(staleConcentrationEnd("old", ["a"], 2), null, "limit 2, one held: no replacement needed");
+  assert.equal(staleConcentrationEnd("old", ["a"], "x"), false, "a non-numeric limit reads as 1");
+});
+
+test("listenersAheadOf: foreign listeners before the last veto; own ones and later ones don't count; -1 when a veto is missing", () => {
+  assert.equal(listenersAheadOf([1, 2, 3, 4, 50, 60], [1, 2, 3, 4], [3, 4]), 0, "riders first (the live order)");
+  assert.equal(listenersAheadOf([50, 1, 2, 3, 4], [1, 2, 3, 4], [3, 4]), 1, "another module got ahead");
+  assert.equal(listenersAheadOf([1, 2, 3, 50, 4], [1, 2, 3, 4], [3, 4]), 1, "one between the two vetoes");
+  assert.equal(listenersAheadOf([1, 2], [1, 2, 3], [3]), -1, "a veto not registered");
+  assert.equal(listenersAheadOf([1], [1], []), -1);
+  assert.equal(listenersAheadOf(null, null, [1]), -1);
 });
 
 test("openUsageDialogFor: the rendered usage dialog of that activity only", () => {
@@ -135,17 +147,26 @@ test("part 7 (DsekWh): a second choice dialog for an item closes and brings the 
   instances.clear();
 });
 
-test("part 8: a stale replacement is repaired before dnd5e checks it; a valid one is left alone", () => {
+test("part 8: a stale replacement is dropped below the limit, refused at it (never ends what the player did not pick); a valid one is left alone", () => {
   const actor = (ids, limit = 1) => ({ concentration: { effects: new Set(ids.map(id => ({ id }))) }, system: { attributes: { concentration: { limit } } } });
   const use = (a, end) => {
     const usage = { concentration: { begin: true, end } };
-    F.fireCall("dnd5e.preActivityConsumption", { ...enlarge, actor: a }, usage, {});
-    return usage.concentration.end;
+    const out = F.fireCall("dnd5e.preActivityConsumption", { ...enlarge, actor: a }, usage, {});
+    return { end: usage.concentration.end, vetoed: out === false };
   };
-  assert.equal(use(actor(["newER"]), "oldER"), "newER", "the report at -00:20");
-  assert.equal(use(actor([]), "fly"), null, "the report at -03:53: Fly was already gone");
-  assert.equal(use(actor(["fly"]), "fly"), "fly");
-  assert.equal(use(actor(["a", "b"], 2), "gone"), "gone", "several: left for dnd5e to refuse");
+  const before = F.calls.length;
+  // Review finding 1: the dialog named Fly; Fly dropped; Hold Person was cast elsewhere. Cast from
+  // the first dialog must not end Hold Person: refused, with a notice to reopen the dialog.
+  assert.deepEqual(use(actor(["holdPerson"]), "fly"), { end: "fly", vetoed: true }, "at the limit: refused, nothing rewritten");
+  assert.deepEqual(use(actor(["a", "b"], 2), "gone"), { end: "gone", vetoed: true }, "several at the limit: refused too");
+  const notes = F.calls.slice(before).filter(c => c.op === "notify").map(c => [c.level, c.message]);
+  assert.deepEqual(notes, [
+    ["warn", "Your concentration changed while this window was open, so nothing was cast. Close it and use the spell again to choose which concentration it ends."],
+    ["warn", "Your concentration changed while this window was open, so nothing was cast. Close it and use the spell again to choose which concentration it ends."],
+  ]);
+  assert.deepEqual(use(actor([]), "fly"), { end: null, vetoed: false }, "the report at -03:53: Fly was already gone");
+  assert.deepEqual(use(actor(["a"], 2), "gone"), { end: null, vetoed: false }, "limit 2, one held: no replacement needed");
+  assert.deepEqual(use(actor(["fly"]), "fly"), { end: "fly", vetoed: false });
   const noBegin = { concentration: { begin: false, end: "gone" } };
   F.fireCall("dnd5e.preActivityConsumption", { ...enlarge, actor: actor(["x"]) }, noBegin, {});
   assert.equal(noBegin.concentration.end, "gone");

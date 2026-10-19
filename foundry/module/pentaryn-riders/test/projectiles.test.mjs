@@ -168,24 +168,31 @@ test("no buttons: another spell, a roll card, the setting off, or a viewer who d
   W.take();
 });
 
-test("a roll made under (or deleted from) a projectile card re-renders that card; other rolls do nothing", () => {
+test("review finding 5: a roll made under (or deleted from) a card is dnd5e's to re-render (ChatMessage5e#refreshOrigin); riders adds no second re-render", () => {
   const ray = sorc.items.get("scorch0000000001").system.activities.contents[0];
-  const fireball = sorc.items.get("fireball00000001").system.activities.contents[0];
   const { message: card } = usageCard(ray, { id: "usecard000000009" });
-  const { message: other } = usageCard(fireball, { id: "usecard000000010" });
   F.game.messages.set(card.id, card);
-  F.game.messages.set(other.id, other);
   const updated = [];
   F.ui.chat = { updateMessage: async m => { updated.push(m.id); } };
   F.fire("createChatMessage", { type: "attack", _source: { system: { origin: card.id } } }, {}, IDS.gm);
   F.fire("deleteChatMessage", { type: "damage", _source: { system: { origin: card.id } } }, {}, IDS.gm);
-  F.fire("createChatMessage", { type: "attack", _source: { system: { origin: other.id } } }, {}, IDS.gm);
-  F.fire("createChatMessage", { type: "usage", _source: { system: { origin: card.id } } }, {}, IDS.gm);
-  F.fire("createChatMessage", { type: "attack", _source: { system: {} } }, {}, IDS.gm);
-  assert.deepEqual(updated, [card.id, card.id]);
+  assert.deepEqual(updated, []);
   F.game.messages.delete(card.id);
-  F.game.messages.delete(other.id);
   delete F.ui.chat;
+});
+
+test("review finding 6: uninstall removes the drawn ray / dart buttons from every rendered card; other card content stays", async () => {
+  const ray = sorc.items.get("scorch0000000001").system.activities.contents[0];
+  const { message } = usageCard(ray, { id: "usecard000000011" });
+  const el = cardEl(message.id);
+  document.body.append(el);
+  F.fire("dnd5e.renderChatMessage", message, el);
+  assert.equal(document.querySelectorAll(".pr-shots").length, 1);
+  const projectiles = await import("../projectiles.mjs");
+  projectiles.uninstall();
+  assert.equal(document.querySelectorAll(".pr-shots").length, 0, "gone from the chat log");
+  assert.equal(el.querySelectorAll(".card-buttons button").length, 1, "dnd5e's own button stays");
+  el.remove();
 });
 
 test("a broken card root is warned as 'projectile buttons skipped'; non-usage roots are never touched", () => {

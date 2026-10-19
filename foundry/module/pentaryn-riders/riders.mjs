@@ -3,7 +3,9 @@
  *
  * Files, in load order (features install in FEATURES order, which is the order every shared hook
  * runs its listeners: dnd5e.preUseActivity = rituals' slot untick, cast-flow's restore-slot default
- * and stale-target drop, then the Battle Medic veto; dnd5e.renderChatMessage = the break label and
+ * and stale-target drop, the one-usage-dialog and Arcane Recovery second-use vetoes, then the Battle
+ * Medic veto (other modules' listeners come after ours: core loads module scripts in id order;
+ * selftest() checks it); dnd5e.renderChatMessage = the break label and
  * the concentration line before the card note; dnd5e.postUseActivity = Arcane Recovery before
  * Battle Medic — test/golden/hooks.json pins it):
  *   riders-core.mjs        PURE: constants, the RULES table and the rider planning

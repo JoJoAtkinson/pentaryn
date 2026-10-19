@@ -1,5 +1,29 @@
 # Changelog — pentaryn-riders
 
+## 0.5.1 — 2026-10-19 (code review of 0.5.0, low severity)
+
+Hooks: 31 non-lifecycle registrations (+1 preUseActivity veto, −2 projectile chat hooks). One new
+lang key (`usage.staleConcentration`); selftest gains "usage vetoes run first".
+
+- [declared] A stale concentration replacement at the limit is refused, not retargeted. 0.5.0 ended
+  the one effect held in place of the vanished one: a dialog opened naming Fly, Fly dropped, Hold
+  Person was cast elsewhere, and Cast in the first dialog silently ended Hold Person. Now, at the
+  limit, nothing is cast and a warning asks the player to reopen the dialog (which names what is held
+  now). Below the limit the stale replacement is still dropped and the cast goes through.
+  `core/usage.mjs staleConcentrationEnd` returns `false` for "refuse".
+- [declared] A second Arcane Recovery use while that wizard's picker is open is vetoed in
+  `dnd5e.preUseActivity`, before dnd5e spends a use (0.5.0 spent the use and only showed the notice).
+- [declared] The Arcane Grimoire +1 counts only a held grimoire: equipped, attuned when it needs it,
+  not inside a container. One in a backpack no longer raises the budget.
+- Projectile buttons: the `createChatMessage` / `deleteChatMessage` listeners are gone. dnd5e 6.0.6
+  re-renders the origin card itself on a roll's create and delete (`ChatMessage5e#refreshOrigin`),
+  so each roll re-rendered the card twice. Uninstall now removes drawn ray / dart buttons from
+  rendered cards.
+- The preUseActivity vetoes only stop listeners after them. Checked: core loads module scripts in
+  module-id order, so riders runs ahead of pentaryn-senses and pentaryn-transform (live order
+  confirmed). `selftest()` now fails ("usage vetoes run first") if another package's listener ever
+  gets ahead. No change in pentaryn-transform.
+
 ## 0.5.0 — 2026-10-19 (player feedback LdPm43, JbnAbX, ixcdvA, tNdOEx, tiDvFa, EBGqNA, DsekWh)
 
 One release for four fixes built in parallel (they had each taken 0.3.1 or 0.4.0, never released).

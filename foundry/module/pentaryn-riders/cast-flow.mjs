@@ -73,9 +73,17 @@
  * 8. A stale concentration replacement is repaired. A dialog left open while the concentration it
  *    named ended (cast from the other dialog, dropped by hand) made dnd5e refuse the cast with "The
  *    effect that is concentrated on and to be replaced does not exist." `dnd5e.preActivityConsumption`
- *    re-reads the actor: below its limit the replacement is dropped; at the limit with one effect it
- *    names that one (the only one the cast can end); otherwise dnd5e refuses as before.
- *    Row dnd5e-usage-dialog-single.
+ *    re-reads the actor: below its limit the replacement is dropped; at the limit the cast is
+ *    refused with a notice to reopen the dialog (the effect held now is not the one the player
+ *    picked, so it is never ended in its place). Row dnd5e-usage-dialog-single.
+ *
+ * Listener order (part 7's veto, part 6's second-use veto): a `false` from a dnd5e.preUseActivity
+ * listener stops only the listeners after it, so the vetoes must run before other modules'
+ * listeners that have side effects. Core puts module scripts on the page in module-id order
+ * (`View._getStaticContent`), so pentaryn-riders registers before pentaryn-senses and
+ * pentaryn-transform (seen live 2026-10-19): transform's Wild Shape revert, which re-calls use(),
+ * never runs ahead of the veto. selftest() checks it ("usage vetoes run first") and fails if
+ * another package's listener ever gets ahead.
  */
 
 import { restoreSlotScaling, slotsFrom, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
@@ -191,15 +199,21 @@ const ordinal = n => game.i18n.localize(`DND5E.SpellLevel${n}`);
 /** Actors whose picker is open on this client: a second use while one is open opens no second window. */
 const recovering = new Set();
 
-/** The grimoire that adds +1 to the budget, if the actor carries one (DMG Arcane Grimoire). */
+/**
+ * The grimoire that adds +1 to the budget, if the actor holds one (DMG Arcane Grimoire): equipped,
+ * attuned when it needs attunement, not inside a container. One in a backpack does not count.
+ */
 function grimoireOf(actor) {
   return [...(actor?.items ?? [])].find(i => isArcaneGrimoire({
-    name: i?.name, attunement: i?.system?.attunement, attuned: i?.system?.attuned
+    name: i?.name, attunement: i?.system?.attunement, attuned: i?.system?.attuned,
+    equipped: i?.system?.equipped, container: i?.system?.container
   })) ?? null;
 }
 
+const recoveryKey = actor => actor?.uuid ?? actor?.id ?? actor;
+
 async function arcaneRecoveryDialog(actor) {
-  const key = actor?.uuid ?? actor?.id ?? actor;
+  const key = recoveryKey(actor);
   if (key && recovering.has(key)) {
     ui.notifications.info(_loc("PENTARYN_RIDERS.arcaneRecovery.open"));
     return null;
@@ -306,6 +320,23 @@ function arcaneRecoveryPicker(activity, usage) {
   } catch (err) { log.warn("Arcane Recovery picker skipped", err); }
 }
 
+/**
+ * dnd5e.preUseActivity: a second Arcane Recovery use while that actor's picker is open on this
+ * client is stopped before dnd5e spends the use; the notice says the picker is open. Synchronous,
+ * a literal `false`. (The postUseActivity check in arcaneRecoveryDialog stays for a use that got
+ * past this one, e.g. from another module's call with the hook bypassed.)
+ */
+function oneRecovery(activity) {
+  try {
+    if (!on("arcaneRecovery")) return;
+    const item = activity?.item;
+    const actor = item?.actor;
+    if (!actor || !recovering.has(recoveryKey(actor)) || !isArcaneRecovery(itemInfo(item))) return;
+    ui.notifications.info(_loc("PENTARYN_RIDERS.arcaneRecovery.open"));
+    return false;
+  } catch (err) { log.warn("Arcane Recovery second-use check skipped", err); }
+}
+
 /* ── 7. one usage dialog per activity ────────────────────────────────────── */
 
 function isUsageDialog(app) {
@@ -353,6 +384,13 @@ function staleConcentration(activity, usageConfig) {
     const ids = [...effects].map(e => e.id);
     const next = staleConcentrationEnd(conc.end, ids, actor.system?.attributes?.concentration?.limit ?? 1);
     if (next === undefined) return;
+    if (next === false) {
+      // At the limit: what is held now is not what the player picked to end. Refuse; the reopened
+      // dialog names it (dnd5e.preActivityConsumption is a Hooks.call: a literal false cancels).
+      log.debug(`stale concentration replacement ${conc.end}: refused at the limit`);
+      ui.notifications.warn(_loc("PENTARYN_RIDERS.usage.staleConcentration"));
+      return false;
+    }
     log.debug(`stale concentration replacement ${conc.end} → ${next}`);
     conc.end = next;
   } catch (err) { log.warn("stale concentration check skipped", err); }
@@ -371,6 +409,7 @@ export function install(reg, ctx) {
   reg.on("dnd5e.preUseActivity", dropStaleTargets, { guard: false, label: "cast defaults" });
   reg.on("renderActivityUsageDialog", firstClick, { guard: false, label: "usage dialog first click" });
   reg.on("dnd5e.preUseActivity", oneDialog, { guard: false, label: "one usage dialog" });
+  reg.on("dnd5e.preUseActivity", oneRecovery, { guard: false, label: "one Arcane Recovery picker" });
   reg.on("renderActivityChoiceDialog", oneChoiceDialog, { guard: false, label: "one choice dialog" });
   reg.on("dnd5e.preActivityConsumption", staleConcentration, { guard: false, label: "stale concentration" });
   reg.on("dnd5e.postUseActivity", arcaneRecoveryPicker, { guard: false, label: "Arcane Recovery picker" });

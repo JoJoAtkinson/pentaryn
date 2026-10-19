@@ -20,6 +20,7 @@ import { flagPath } from "./lib/flags.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 import { refOf, resolveRef } from "./lib/resolve.mjs";
+import { listenersAheadOf } from "./core/usage.mjs";
 
 /**
  * Set the damage type a typed feature (Elemental Adept, Elemental Affinity) stands for.
@@ -148,6 +149,22 @@ export function patchRecords() {
 
 const LIFECYCLE = new Set(["init", "setup", "ready"]);
 
+/** cast-flow's dnd5e.preUseActivity vetoes (one usage dialog, one Arcane Recovery picker), by label. */
+const VETO_LABELS = new Set(["one usage dialog", "one Arcane Recovery picker"]);
+
+/**
+ * The vetoes run before every other package's dnd5e.preUseActivity listener (finding 2: a veto
+ * stops only the listeners after it). Detail: how many foreign listeners are ahead (-1: a veto is
+ * not registered).
+ */
+function vetoOrderCheck(ctx) {
+  const mine = ctx.reg.ids().filter(h => h.name === "dnd5e.preUseActivity");
+  const vetoIds = mine.filter(h => VETO_LABELS.has(h.label)).map(h => h.id);
+  const order = (globalThis.Hooks?.events?.["dnd5e.preUseActivity"] ?? []).map(e => e.id);
+  const ahead = vetoIds.length === VETO_LABELS.size ? listenersAheadOf(order, mine.map(h => h.id), vetoIds) : -1;
+  return { label: "usage vetoes run first", ok: ahead === 0, detail: ahead };
+}
+
 function selftest(ctx) {
   const hooks = ctx.reg.ids().filter(h => !LIFECYCLE.has(h.name));
   const checks = [
@@ -157,6 +174,7 @@ function selftest(ctx) {
     { label: "hooks registered", ok: hooks.length > 0, detail: hooks.length },
     { label: "Battle Medic relay registered", ok: typeof CONFIG.queries?.[RELAY_QUERY] === "function" },
     { label: "patches installed", ok: true, detail: patchRecords().map(p => p.adjustments) },
+    vetoOrderCheck(ctx),
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }

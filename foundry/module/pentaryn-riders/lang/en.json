@@ -106,6 +106,9 @@
       "preparedTip": "Spells you can cast today: prepared and always-prepared spells, cantrips, at-will, innate and pact spells, and spells cast from an item.",
       "allTip": "Every spell on this sheet, including the {n} you have not prepared. Prepare or unprepare them here.",
       "hiddenNote": "{n} unprepared hidden"
+    },
+    "usage": {
+      "staleConcentration": "Your concentration changed while this window was open, so nothing was cast. Close it and use the spell again to choose which concentration it ends."
     }
   }
 }

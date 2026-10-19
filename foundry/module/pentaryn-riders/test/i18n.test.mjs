@@ -19,7 +19,7 @@ const flat = (node, prefix = "", out = []) => {
 const KEYS = flat(lang);
 
 test("lang/en.json: the key list (golden/lang-keys.json), every value a non-empty string", () => {
-  assert.equal(KEYS.length, 63);   // LdPm43: + arcaneRecovery.left, have, grimoire, open; projectiles +9; spellView +8
+  assert.equal(KEYS.length, 64);   // LdPm43: + arcaneRecovery.left, have, grimoire, open; projectiles +9; spellView +8; 0.5.1: usage.staleConcentration
   pinJSON("lang-keys", KEYS, import.meta.url);
   for (const k of KEYS) assert.ok(typeof k === "string" && String(k.split(".").reduce((o, p) => o[p], lang)).trim(), k);
 });

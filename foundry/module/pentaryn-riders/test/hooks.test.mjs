@@ -45,6 +45,7 @@ test("the 31 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.preUseActivity",                 // cast-flow: stale target drop
     "renderActivityUsageDialog",            // cast-flow: first click
     "dnd5e.preUseActivity",                 // cast-flow: one usage dialog per activity (tNdOEx)
+    "dnd5e.preUseActivity",                 // cast-flow: one Arcane Recovery picker (0.5.1)
     "renderActivityChoiceDialog",           // cast-flow: one choice dialog per item (DsekWh)
     "dnd5e.preActivityConsumption",         // cast-flow: stale concentration replacement (tNdOEx)
     "dnd5e.postUseActivity",                // cast-flow: Arcane Recovery
@@ -54,9 +55,7 @@ test("the 31 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.preUseActivity",                 // riders: Battle Medic veto
     "dnd5e.postUseActivity",                // riders: Battle Medic
     "renderCharacterActorSheet",            // riders: Hit Dice −/+
-    "dnd5e.renderChatMessage",              // projectiles: one button per ray / dart
-    "createChatMessage",                    // projectiles: card refresh
-    "deleteChatMessage",                    // projectiles: card refresh
+    "dnd5e.renderChatMessage",              // projectiles: one button per ray / dart (dnd5e re-renders the card on a roll: no create/delete hook, 0.5.1)
     "updateActiveEffect",                   // effect-choices: pick-one passive effects (tNdOEx)
     "dnd5e.filterItem",                     // spell-view: Prepared view filter
     "renderCharacterActorSheet",            // spell-view: Prepared / All spells switch
@@ -121,11 +120,11 @@ test("before init: the try/catch readers give false, the direct readers throw in
   assert.deepEqual(F.calls.filter(c => c.op !== "Hooks.call"), []);
 });
 
-test("the shared hooks run their listeners in manifest order (rituals → cast-flow ×3 → Battle Medic)", () => {
+test("the shared hooks run their listeners in manifest order (rituals → cast-flow ×4 → Battle Medic)", () => {
   const { init: _i, ready: _r, ...counts } = F.listeners();
   assert.deepEqual(counts, {
-    "dnd5e.preUseActivity": 5, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
-    createChatMessage: 2, deleteChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
+    "dnd5e.preUseActivity": 6, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
+    createChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
     renderItemButtonArgonComponent: 1, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
     renderActivityChoiceDialog: 1, "dnd5e.postUseActivity": 2, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
     renderCharacterActorSheet: 2, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1, "dnd5e.filterItem": 1,
