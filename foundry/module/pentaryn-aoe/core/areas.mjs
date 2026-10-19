@@ -116,19 +116,37 @@ export function edgeClipsArea(edge, rule = "cover") {
  * corner, so a cube was clipped as seen from one corner (it "anchored" to whatever stood there) while
  * a sphere was clipped from its centre. A cube is clipped from its centre instead; every other
  * shape keeps core's origin (a cone's or line's point, a sphere's or emanation's centre).
- * @param {object[]} shapes   the region's shape data (only their type and size are read)
- * @param {{x:number,y:number}} origin  the origin core passes (the rectangle's moved x, y)
+ *
+ * The shapes must be the ones core is constraining: during an update (a drag, a rotation, a resize
+ * in the shape config) that is the NEW shape data, not the document's current shapes (walls.mjs
+ * hands the pending shapes in). The shape whose (rounded) origin is `origin` is used, else the first.
+ * @param {object[]} shapes   the region's shape data or ClientShapeData (type, size, anchor, rotation are read)
+ * @param {{x:number,y:number}} origin  the origin core passes (the rectangle's x, y, rounded)
  * @param {{ gridSize?: number }} [opts]
  * @returns {{x:number,y:number}}
  */
 export function areaClipOrigin(shapes, origin, { gridSize = 100 } = {}) {
   const list = [...(shapes ?? [])].filter(Boolean);
   if (!origin || !list.length || !list.every(s => s.type === "rectangle")) return origin;
-  const c = centreOf({ ...list[0], x: origin.x, y: origin.y }, { gridSize });
+  const s = list.find(r => Math.round(r.x) === origin.x && Math.round(r.y) === origin.y) ?? list[0];
+  // Read the fields one by one: a ClientShapeData instance does not spread into its data.
+  const rect = { type: "rectangle", x: origin.x, y: origin.y, width: s.width, height: s.height,
+    anchorX: s.anchorX, anchorY: s.anchorY, rotation: s.rotation };
+  const c = centreOf(rect, { gridSize });
   return { ...origin, x: Math.round(c.x), y: Math.round(c.y) };
 }
 
 /** Is this activity's area over at once (an instantaneous spell)? dnd5e 6: duration.units "inst". */
 export function instantaneous(activity) {
   return (activity?.duration?.units ?? activity?.item?.system?.duration?.units ?? null) === "inst";
+}
+
+/**
+ * Should this area be left where it was cast instead of following its caster? Only an
+ * instantaneous SPELL (Thunder Step). A monster feature that dnd5e also marks "inst" is often a
+ * passive aura (a ghast's Stench: Matron Forgotten, the Starved Prisoner) and must keep following
+ * its creature, so an area from anything that is not a spell item is never detached.
+ */
+export function instantSpellArea(activity) {
+  return instantaneous(activity) && activity?.item?.type === "spell";
 }

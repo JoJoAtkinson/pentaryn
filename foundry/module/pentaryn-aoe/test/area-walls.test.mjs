@@ -144,8 +144,8 @@ test("aoe-drag-snap: a square-centred area keeps a centred handle; gridless is c
 /* ── Thunder Step (WSMeuV) ────────────────────────────────────────────────────────────────────── */
 
 test("WSMeuV: an instantaneous emanation is created unattached; a lasting one still follows its caster", () => {
-  const inst = { duration: { units: "inst" } };
-  const aura = { duration: { units: "minute" } };
+  const inst = { duration: { units: "inst" }, item: { type: "spell" } };
+  const aura = { duration: { units: "minute" }, item: { type: "spell" } };
   assert.equal(instantaneous(inst), true);
   assert.equal(instantaneous({ item: { system: { duration: { units: "inst" } } } }), true);
   assert.equal(instantaneous(aura), false);
@@ -161,12 +161,12 @@ test("WSMeuV: an instantaneous emanation is created unattached; a lasting one st
 
 test("WSMeuV: the hook runs on dnd5e.createMeasuredTemplate and never vetoes; the setting turns it off", async () => {
   const data = [{ attachment: { token: "marwenToken00001" } }];
-  const vetoed = F.Hooks.call("dnd5e.createMeasuredTemplate", { duration: { units: "inst" } }, data);
+  const vetoed = F.Hooks.call("dnd5e.createMeasuredTemplate", { duration: { units: "inst" }, item: { type: "spell" } }, data);
   assert.notEqual(vetoed, false);
   assert.equal(data[0].attachment.token, null);
   await game.settings.set(MODULE, "stationaryInstantAreas", false);
   const kept = [{ attachment: { token: "marwenToken00001" } }];
-  F.Hooks.call("dnd5e.createMeasuredTemplate", { duration: { units: "inst" } }, kept);
+  F.Hooks.call("dnd5e.createMeasuredTemplate", { duration: { units: "inst" }, item: { type: "spell" } }, kept);
   assert.equal(kept[0].attachment.token, "marwenToken00001");
   await game.settings.set(MODULE, "stationaryInstantAreas", true);
 });

@@ -29,7 +29,9 @@ Everyone owns the handle and the area.
   so it moves with the caster. The caster's **Token HUD** (right-click the token) then has an eraser
   button, *Remove the spell areas on this token*.
 - An **instantaneous** emanation (Thunder Step, Thunderclap, Word of Radiance) stays where it was
-  cast, with a handle like any other area. It does not follow the caster.
+  cast, with a handle like any other area. It does not follow the caster. Only a **spell** is left
+  behind: a monster's aura that dnd5e also marks instantaneous (a ghast's Stench) keeps following
+  its creature.
 - Areas clean themselves up. An instantaneous spell's area (Fireball) is deleted once every ticked
   row has been applied. A concentration spell's areas go when the caster stops concentrating.
 
@@ -40,8 +42,10 @@ sight**: normal walls, closed doors, terrain walls and windows clip an area. **I
 The same rule applies to every spell, physical or not. A cube is measured from its centre, a cone or line
 from its point, and a sphere or emanation from its centre. dnd5e on its own clips every area with
 every wall that blocks movement. The setting *Walls that stop a spell area* can turn that back on
-(`move`) or turn clipping off (`none`). An area placed before a rule change keeps its old outline
-until it is moved.
+(`move`) or turn clipping off (`none`). Changing the setting re-clips the areas on the level each
+connected user is viewing; an area on a scene nobody is viewing keeps its old outline until it is
+moved or its scene is viewed and a wall there changes. A cube that is rotated (Shift- or Ctrl-scroll
+its handle) or resized is clipped from its new centre.
 
 **Cancelling a placement.** While a template follows the mouse, **Escape or right-click** cancels it,
 on the first press even when the sheet you cast from is open. Core's own Escape would close every open

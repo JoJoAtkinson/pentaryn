@@ -302,10 +302,12 @@ check("player status line: waiting, applied, superseded, nothing to say",
 // [declared] Wave 7 batch (W4 version bumps, Joe 2026-10-12): flipped from 0.3.1 — aoe ships 0.4.0 with
 // core.VERSION (the API rows already say since: "0.4.0"). 0.5.0 (2026-10-19, feedback 7v8jPs, RpnWw3,
 // 3arqpV, WSMeuV): Part H walls, snappable handles, instantaneous areas stay put, the Token HUD eraser.
-test("module.json is pentaryn-aoe 0.5.0", () => {
+// 0.5.1 (2026-10-19, code review): a rotated cube clips from its new centre, monster auras stay attached,
+// areaWalls re-clips on change, an uninstalled wrapper passes through.
+test("module.json is pentaryn-aoe 0.5.1", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.5.0");
+  assert.equal(manifest.version, "0.5.1");
 });
 
 test("VERSION === module.json version", () => {
