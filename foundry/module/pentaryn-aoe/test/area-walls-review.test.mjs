@@ -194,3 +194,35 @@ test("R4: uninstalled while something else wraps on top: the left-over wrapper i
   F.edges = [WALL, INVISIBLE];
   assert.deepEqual(web()._computeShapeConstraint({ x: 1000, y: 600 }, { type: "move", edgeTypes: {} }).edges, [WALL], "re-installed: acting again");
 });
+
+/* ── Second review (0.5.1) ────────────────────────────────────────────────────────────────────── */
+
+test("review 2: the held shapes belong to their region; another region's constraint meanwhile reads its own", () => {
+  F.edges = [WALL];
+  const a = web();
+  const b = regionOf(scene, { id: "regionWebRev0003", flags: { dnd5e: { activity: ACT } },
+    shapes: [{ ...CUBE, x: 3000, y: 3000, width: 200, height: 200 }] });
+  let inner = null;
+  H._internals.computeConstraints.call(a, () => {
+    inner = b._computeShapeConstraint({ x: 3000, y: 3000 }, { type: "move", edgeTypes: {} }).origin;
+    return [];
+  }, { shapes: [{ ...CUBE, rotation: 90 }] });
+  assert.deepEqual(inner, { x: 3100, y: 3100 }, "b's own 10 ft cube centre, not a's held rotated shape");
+});
+
+test("review 2: a hot-patched settings copy's handler still receives the change (shared handler table)", async () => {
+  const table = globalThis[Symbol.for("pentaryn-aoe.settingHandlers")];
+  assert.equal(typeof table, "object", "the handler table is on a shared global");
+  const prior = table.areaWalls ?? null;
+  const copy = await import("../settings.mjs?hot-patch=2");
+  const seen = [];
+  copy.onSettingChange("areaWalls", v => seen.push(v));
+  try {
+    // the row registered first (the original copy's onChange) is the one Foundry keeps calling
+    const row = (await import("../settings.mjs")).SETTINGS.find(r => r.key === "areaWalls");
+    row.onChange("none");
+    assert.deepEqual(seen, ["none"]);
+  } finally {
+    copy.onSettingChange("areaWalls", prior);
+  }
+});

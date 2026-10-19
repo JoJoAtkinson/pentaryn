@@ -17,8 +17,13 @@ import { defineSettings, settingReader, settingsSnapshot as snapshot } from "./l
 
 const log = makeLog(MODULE);
 
-/** key → the feature's change handler (a world setting's onChange runs on every client). */
-const handlers = {};
+/**
+ * key → the feature's change handler (a world setting's onChange runs on every client). On a shared
+ * global: a row's onChange is the closure of the copy that registered it (a hot patch skips rows
+ * already registered), so a hot-patched copy's handlers must land in the same table to be called.
+ */
+const HANDLERS = Symbol.for("pentaryn-aoe.settingHandlers");
+const handlers = (globalThis[HANDLERS] ??= {});
 
 /** Route a setting's onChange to `fn` (one handler per key; a later call replaces it, null clears it). */
 export function onSettingChange(key, fn) {

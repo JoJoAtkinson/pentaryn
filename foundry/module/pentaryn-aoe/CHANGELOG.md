@@ -19,11 +19,19 @@
     client) asks core's `Level#updateRegionShapeConstraints(["move"])` for each level that client
     views, on a scene with a template area; core's designated user writes, as when a wall changes. Not
     the active GM alone: a constraint computed for a level nobody views comes back `null` (unclipped),
-    and core prefers a user who views the level. An area on a scene nobody views keeps its old outline.
+    and core prefers a user who views the level. An area is re-clipped only when a user who may edit
+    it is viewing its level; any other keeps its old outline (docs say so now, second review).
   - **An uninstalled copy stops acting** even when its wrapper cannot be removed because another module
     wrapped on top: both Part H wrappers pass straight through to core once `patch` is null.
   - **The rule is read once per constraint**, then handed to the polygon in its config, not read per
     edge.
+  - **Second review.** The held shapes are keyed to their region (`{ doc, shapes }`, read only by that
+    region's constraint), so another region's constraint computed meanwhile reads its own shapes. The
+    settings' `onChange` handler table lives on a shared global
+    (`globalThis[Symbol.for("pentaryn-aoe.settingHandlers")]`): Foundry keeps the onChange of the copy
+    that registered the row, so a hot-patched copy's handler now receives the change. aoe.md documents
+    that a non-spell "inst" aura (a ghast's Stench) follows its creature and is removed with the Token
+    HUD eraser.
 
 - **0.5.0. Only total cover stops a spell area** (declared, aoe-area-walls, feedback 7v8jPs, RpnWw3,
   3arqpV). dnd5e 6 clips every template region with the core `move` restriction, so every wall

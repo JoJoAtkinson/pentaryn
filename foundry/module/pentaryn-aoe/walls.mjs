@@ -44,7 +44,7 @@ let patch = null;          // the _computeShapeConstraint patch; null = not inst
 let shapesPatch = null;    // the _computeShapeConstraints patch
 let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
-/** The shapes of the _computeShapeConstraints call in progress (its `changes.shapes`), else null. */
+/** The _computeShapeConstraints call in progress: `{ doc, shapes }` (its region and `changes.shapes`), else null. */
 let pendingShapes = null;
 
 /** One narrowed subclass per core backend class (core may swap CONFIG.Canvas.polygonBackends.move). */
@@ -80,15 +80,19 @@ function computeConstraint(wrapped, origin, config) {
   const Base = globalThis.CONFIG?.Canvas?.polygonBackends?.move;
   if (rule === "move" || typeof Base?.create !== "function") return wrapped(origin, config);
   const gridSize = this.parent?.grid?.size ?? globalThis.canvas?.grid?.size ?? 100;
-  const at = areaClipOrigin(pendingShapes ?? this.shapes, origin, { gridSize });
+  const pending = pendingShapes?.doc === this ? pendingShapes.shapes : null;
+  const at = areaClipOrigin(pending ?? this.shapes, origin, { gridSize });
   return areaBackend(Base).create(at, { ...config, pentarynAreaWalls: rule });
 }
 
-/** Hold `changes.shapes` (the new shapes, when the call is for an update) for the length of the call. */
+/**
+ * Hold `changes.shapes` (the new shapes, when the call is for an update) for the length of the call,
+ * keyed to this region: a constraint computed for another region meanwhile reads its own shapes.
+ */
 function computeConstraints(wrapped, changes, ...rest) {
   if (shapesPatch === null) return wrapped(changes, ...rest);
   const prior = pendingShapes;
-  pendingShapes = Array.isArray(changes?.shapes) ? changes.shapes : null;
+  pendingShapes = Array.isArray(changes?.shapes) ? { doc: this, shapes: changes.shapes } : null;
   try {
     return wrapped(changes, ...rest);
   } finally {
@@ -120,11 +124,13 @@ function wrapConstraint() {
 }
 
 /**
- * The areaWalls setting changed (its onChange runs on every client): re-clip the template areas on
- * every level this client views. Core's Level#updateRegionShapeConstraints only queues; one designated
- * user writes (a user viewing that level who may update the region, else any who may), the same
- * path core takes when a wall changes. Only a viewed level is asked: a constraint computed for a
- * level nobody views comes back null, which would leave the area unclipped. Returns the levels asked.
+ * The areaWalls setting changed (its onChange runs on every client): ask core to re-clip the template
+ * areas on every level this client views. Core's Level#updateRegionShapeConstraints only queues, and
+ * one designated user writes (a user viewing that level who may update the region), the same path core
+ * takes when a wall changes. So an area is re-clipped only when a user who may edit it is viewing its
+ * level; one nobody (able to edit it) views keeps its old outline. Only a viewed level is asked: a
+ * constraint computed for a level nobody views comes back null, which would leave the area unclipped.
+ * Returns the levels asked.
  */
 function refreshAreaClips(g = globalThis) {
   if (patch === null) return 0;
