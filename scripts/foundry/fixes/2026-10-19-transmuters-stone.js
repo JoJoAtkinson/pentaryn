@@ -3,7 +3,7 @@
 // HOW TO RUN: this file is an eval-js BODY (the body of an async function; top-level `await` and
 // `return` work). Paste it into mcp__foundry__eval-js, or into a GM browser console wrapped in
 // `(async () => { … })()`. It is a DRY RUN unless APPLY is true: it returns the plan and writes
-// nothing. Needs pentaryn-riders 0.4.0 live for the one-at-a-time behaviour (the effects work as
+// nothing. Needs pentaryn-riders 0.5.0 live for the one-at-a-time behaviour (the effects work as
 // plain toggles without it). Idempotent: a second run finds everything in place and plans nothing.
 //
 // WHY: the D&D Beyond import gave the stone's Transmuter's Stone feat no effects at all and baked

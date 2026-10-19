@@ -1,34 +1,27 @@
 # Changelog — pentaryn-riders
 
-## 0.4.0 — 2026-10-19 (feedback EBGqNA: prepared spells first)
+## 0.5.0 — 2026-10-19 (player feedback LdPm43, JbnAbX, ixcdvA, tNdOEx, tiDvFa, EBGqNA)
 
-- New feature `spell-view.mjs`: the character sheet's Spells tab opens on the spells the character
-  can cast today (prepared, always prepared, cantrips, at-will, innate, pact, cast from an item),
-  through dnd5e 6's `dnd5e.filterItem` hook (no wrap). A **Show: Prepared (n) · All spells (n)**
-  switch sits above the spell search with "n unprepared hidden"; a click re-applies dnd5e's list
-  filters in place. The choice is a user flag per character, `flags.pentaryn-riders.spellView.<actorId>`.
-  No switch when nothing would be hidden. Setting `spellView` (world, on) turns it off.
-- Pure `core/spell-view.mjs` (`SPELL_VIEWS`, `inPreparedView`, `spellViewCounts`, `spellViewOf`),
-  re-exported by the riders-core barrel (so also on `api.core`); adapter `spellViewInfo` in `shapes.mjs`.
-- dnd5e's own filter-menu "Prepared" was not enough: it keeps `canPrepare && prepared` only, which
-  hides never-ticked cantrips, at-will / innate spells and spells cast from an item.
-## 0.4.0 — 2026-10-19 (player feedback tNdOEx, tiDvFa)
+One release for four fixes built in parallel (they had each taken 0.3.1 or 0.4.0, never released).
+Settings are now ten: `projectiles` ninth, `spellView` tenth. Hooks: 31 non-lifecycle registrations.
 
-- **Pick-one passive effects** (new feature `effect-choices.mjs`, pure `core/choices.mjs`): effects
-  flagged `flags.pentaryn-riders.choice = { group, max }` are a set where turning one on turns the
-  others of its group off (beyond `max`, a number or a roll-data formula). For the Wizard's
-  Transmuter's Stone, whose Darkvision the DDB import had baked into Marwen's base senses with
-  nothing to toggle. The item data is a fix script, `scripts/foundry/fixes/2026-10-19-transmuters-stone.js`
-  (dry run by default). Hook `updateActiveEffect`; row `dnd5e-riders-effect-choices`. [declared]
-- **One usage dialog per activity** (cast-flow part 7): a second Use while that activity's dialog is
-  open is vetoed and brings the open one forward. A double click had opened two Enlarge/Reduce
-  dialogs. [declared]
-- **Stale concentration replacement repaired** (cast-flow part 8, `dnd5e.preActivityConsumption`):
-  a dialog that named a concentration which ended meanwhile no longer fails with "The effect that
-  is concentrated on and to be replaced does not exist." Below the limit nothing is replaced; at
-  the limit with one effect, that one is. Pure `core/usage.mjs`; row `dnd5e-usage-dialog-single`.
-- `test/golden/hooks.json`: three registrations added (two in cast-flow's place, one at the end).
-## 0.4.0 — 2026-10-19 (player feedback JbnAbX, ixcdvA)
+### Arcane Recovery prompts once (LdPm43)
+
+- [declared] Arcane Recovery prompts once and restores once. A D&D Beyond import's Arcane Recovery
+  is a single `ddbmacro` activity (`ddb.feat.arcaneRecovery`): ddb-importer opened its own picker
+  as the use's subsequent action while the riders picker opened from `dnd5e.postUseActivity`, and
+  each window restored slots (Marwen got two windows and both writes). The riders listener now sets
+  the use's `subsequentActions` to false for that activity (dnd5e reads it right after the hook), so
+  only the riders picker opens. The chat card's macro button still runs ddb's on a click; with the
+  `arcaneRecovery` setting off, ddb's picker runs as imported. To see it: use Arcane Recovery on a
+  D&D Beyond-imported wizard after a short rest; one window, one write, one chat line.
+- [declared] The picker is the layout the player asked for: one row per slot level 1–5 the wizard
+  has, "n of m left", a ticked locked box per slot still there and a box per spent slot to tick,
+  opening with the highest spent slots that fit ticked. Budget +1 with an Arcane Grimoire (attuned
+  when it needs attunement), as ddb-importer's picker had. The result shape and API are unchanged.
+- A second use while the picker is open opens no second window (an info notice instead).
+
+### One button per ray / dart (JbnAbX, ixcdvA)
 
 - **[declared] One button per ray / dart** (new feature `projectiles.mjs`, setting `projectiles`,
   default on; row `dnd5e-riders-projectile-buttons`). Scorching Ray fired "one beam" and Magic
@@ -50,21 +43,35 @@
   wand's charges. `scripts/foundry/fixes/2026-10-19-wand-cast-spell.mjs` (dry run by default)
   repoints such Cast activities at the PHB spell, as the DMG's own wand does.
 
-## 0.3.1 — 2026-10-19 (feedback LdPm43)
+### Transmuter's Stone pick-one effects; one usage dialog per activity (tNdOEx, tiDvFa)
 
-- [declared] Arcane Recovery prompts once and restores once. A D&D Beyond import's Arcane Recovery
-  is a single `ddbmacro` activity (`ddb.feat.arcaneRecovery`): ddb-importer opened its own picker
-  as the use's subsequent action while the riders picker opened from `dnd5e.postUseActivity`, and
-  each window restored slots (Marwen got two windows and both writes). The riders listener now sets
-  the use's `subsequentActions` to false for that activity (dnd5e reads it right after the hook), so
-  only the riders picker opens. The chat card's macro button still runs ddb's on a click; with the
-  `arcaneRecovery` setting off, ddb's picker runs as imported. To see it: use Arcane Recovery on a
-  D&D Beyond-imported wizard after a short rest; one window, one write, one chat line.
-- [declared] The picker is the layout the player asked for: one row per slot level 1–5 the wizard
-  has, "n of m left", a ticked locked box per slot still there and a box per spent slot to tick,
-  opening with the highest spent slots that fit ticked. Budget +1 with an Arcane Grimoire (attuned
-  when it needs attunement), as ddb-importer's picker had. The result shape and API are unchanged.
-- A second use while the picker is open opens no second window (an info notice instead).
+- **Pick-one passive effects** (new feature `effect-choices.mjs`, pure `core/choices.mjs`): effects
+  flagged `flags.pentaryn-riders.choice = { group, max }` are a set where turning one on turns the
+  others of its group off (beyond `max`, a number or a roll-data formula). For the Wizard's
+  Transmuter's Stone, whose Darkvision the DDB import had baked into Marwen's base senses with
+  nothing to toggle. The item data is a fix script, `scripts/foundry/fixes/2026-10-19-transmuters-stone.js`
+  (dry run by default). Hook `updateActiveEffect`; row `dnd5e-riders-effect-choices`. [declared]
+- **One usage dialog per activity** (cast-flow part 7): a second Use while that activity's dialog is
+  open is vetoed and brings the open one forward. A double click had opened two Enlarge/Reduce
+  dialogs. [declared]
+- **Stale concentration replacement repaired** (cast-flow part 8, `dnd5e.preActivityConsumption`):
+  a dialog that named a concentration which ended meanwhile no longer fails with "The effect that
+  is concentrated on and to be replaced does not exist." Below the limit nothing is replaced; at
+  the limit with one effect, that one is. Pure `core/usage.mjs`; row `dnd5e-usage-dialog-single`.
+- `test/golden/hooks.json`: three registrations added (two in cast-flow's place, one at the end).
+
+### Spells tab opens on prepared spells (EBGqNA)
+
+- New feature `spell-view.mjs`: the character sheet's Spells tab opens on the spells the character
+  can cast today (prepared, always prepared, cantrips, at-will, innate, pact, cast from an item),
+  through dnd5e 6's `dnd5e.filterItem` hook (no wrap). A **Show: Prepared (n) · All spells (n)**
+  switch sits above the spell search with "n unprepared hidden"; a click re-applies dnd5e's list
+  filters in place. The choice is a user flag per character, `flags.pentaryn-riders.spellView.<actorId>`.
+  No switch when nothing would be hidden. Setting `spellView` (world, on) turns it off.
+- Pure `core/spell-view.mjs` (`SPELL_VIEWS`, `inPreparedView`, `spellViewCounts`, `spellViewOf`),
+  re-exported by the riders-core barrel (so also on `api.core`); adapter `spellViewInfo` in `shapes.mjs`.
+- dnd5e's own filter-menu "Prepared" was not enough: it keeps `canPrepare && prepared` only, which
+  hides never-ticked cantrips, at-will / innate spells and spells cast from an item.
 
 ## 0.3.0 — 2026-10-12 (addon blueprint migration, wave 4; released by the Wave 7 restart batch)
 
