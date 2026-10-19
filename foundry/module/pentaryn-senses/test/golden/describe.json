@@ -480,6 +480,10 @@
       "label": "light renderTokenHUD"
     },
     {
+      "name": "renderActivityChoiceDialog",
+      "label": "light renderActivityChoiceDialog"
+    },
+    {
       "name": "canvasTearDown",
       "label": "light canvasTearDown"
     },
