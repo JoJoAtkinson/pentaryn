@@ -85,10 +85,11 @@ export const MANIFEST = Object.freeze({
     {
       path: "status",
       params: [],
-      returns: "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, writer, lit, version }",
+      returns: "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, summonLibrary, summonPatched, writer, lit, version }",
       gm: false, writes: false, since: "0.1.1",
-      doc: "One read of this client's state: how Token#isVisible is wrapped (patchedWith), the four settings as "
-        + "this client reads them (showStrip is per client), whether this client writes the lights (writer: the "
+      doc: "One read of this client's state: how Token#isVisible is wrapped (patchedWith), the settings as "
+        + "this client reads them (showStrip is per client), how dnd5e's Actor5e.fetchExisting is wrapped for the summon "
+        + "library (summonPatched: libWrapper, direct or null), whether this client writes the lights (writer: the "
         + "active GM), and how many tokens on every scene carry our light flag (lit).",
     },
     {
@@ -103,9 +104,32 @@ export const MANIFEST = Object.freeze({
         + "light we set (ourLight, null when not ours), whether it was switched off by hand, whether this client's "
         + "owner override would draw it, and whether that user's strip shows it (never for a GM).",
     },
+    {
+      path: "summonActor",
+      params: [{ name: "opts", type: "{ uuid: string, item: string, dryRun?: boolean }",
+        doc: "uuid: the actor to summon (a profile's, or a Compendium Browser pick); item: the summoning item's uuid" }],
+      returns: "Promise<{ ok: true, actorId, name, created, folderId?, dryRun? } | { ok: false, code, reason }>",
+      gm: false, writes: true, query: true, relay: true, since: "0.2.0",
+      sideEffects: ["Actor (the library copy)", "Folder (PC Summons & Forms/<First name> — summons & forms)",
+        "Actor.ownership (adds the sender to an existing copy)", "flags.pentaryn-creatures.library", "flags.dnd5e.isAutoImported"],
+      doc: "The summon library: the active GM makes the world copy dnd5e needs to summon `uuid` from `item` for a player "
+        + "without Create New Actors, owned by the sender and the character's owners. Refused (REFUSED) unless the sender "
+        + "owns the item's actor and the source is one the item's summon activities can summon (a profile's uuid; for a "
+        + "CR summon, a compendium npc within the CR and types). Idempotent: a deterministic id per character and source, "
+        + "so a second call (or a second GM tab) returns the same copy. A player's client asks the active GM (NO_GM when "
+        + "none is connected). Called by the Actor5e.fetchExisting wrap; dryRun reports the id without writing.",
+    },
+    {
+      path: "library",
+      params: [{ name: "ref", kind: "actor", type: "Actor | Token | uuid | id | exact name" }],
+      returns: "{ actor: { id, name }, folder: { id, name } | null, summons: { id, name, source }[] }",
+      gm: false, writes: false, throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"], since: "0.2.0",
+      doc: "A character's summon library as this client sees it: the copies made for it (flags.pentaryn-creatures.library) "
+        + "and every actor in its `<First name> — summons & forms` folder, by name; source is the compendium or world uuid.",
+    },
   ],
   flags: {
-    writes: ["flags.pentaryn-creatures.light"],
+    writes: ["flags.pentaryn-creatures.light", "flags.pentaryn-creatures.library", "flags.dnd5e.isAutoImported"],
     reads: ["flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.item-piles.data.enabled", "flags.dnd5e.originalActor"],
   },
   unlisted: ["core"],

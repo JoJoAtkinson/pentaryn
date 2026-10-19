@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-creatures";
 export const SHORT = "creatures";
 export const NS = "creatures";
-export const VERSION = "0.1.1";
+export const VERSION = "0.2.0";
 export const CONTRACT = "pentaryn-creatures/api@1";
 export const I18N = "PENTARYN_CREATURES";
 export const CSS = "pcr-";
@@ -266,4 +266,134 @@ export function countLit(lightFlags) {
   let n = 0;
   for (const v of lightFlags ?? []) if (v && typeof v === "object" && !Array.isArray(v)) n++;
   return n;
+}
+
+/* -------------------------------------------- */
+/*  Summon library (feedback Swrl5M / UQSJ0v)   */
+/* -------------------------------------------- */
+
+/*
+ * A player without core's Create New Actors permission cannot summon from a compendium: dnd5e's
+ * `Actor5e.fetchExisting` must import the summon into the world first, and throws
+ * "You must have 'Create New Actors' permission…". The summon library asks the active GM to make
+ * that copy instead, owned by the player, in the character's library folder
+ * `<LIBRARY_ROOT>/<First name> — summons & forms`. dnd5e then reuses that copy on every later
+ * summon (it looks for an owned, auto-imported actor from the same source before importing).
+ */
+
+/** The API row (and so the relay query `pentaryn-creatures.summonActor`). */
+export const SUMMON_ROW = "summonActor";
+/** The folder every character's library sits in (the table's existing convention). */
+export const LIBRARY_ROOT = "PC Summons & Forms";
+export const LIBRARY_SUFFIX = " — summons & forms";
+/** dnd5e's summon origin key: placeSummons passes `{ origin: { key, value: item.uuid } }` to fetchExisting. */
+export const SUMMON_ORIGIN_KEY = "flags.dnd5e.summon.origin";
+
+/** `Marwen Ashcroft` → `Marwen — summons & forms`; a nameless actor → `Summons — summons & forms`. */
+export function libraryFolderName(actorName) {
+  const first = String(actorName ?? "").trim().split(/\s+/)[0];
+  return `${first || "Summons"}${LIBRARY_SUFFIX}`;
+}
+
+const ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+/**
+ * A Foundry document id (16 of [A-Za-z0-9]) that is always the same for the same seed. Two GM tabs
+ * answering one relay create the same `_id` with `keepId`, so the second create replaces the first
+ * with identical data instead of making a duplicate (blueprint §5.9.2). Not cryptographic.
+ */
+export function stableId(seed) {
+  const s = String(seed);
+  let h1 = 0xdeadbeef ^ s.length;
+  let h2 = 0x41c6ce57 ^ s.length;
+  let out = "";
+  for (let round = 0; out.length < 16; round++) {
+    for (let i = 0; i < s.length; i++) {
+      const c = s.charCodeAt(i) + round;
+      h1 = Math.imul(h1 ^ c, 2654435761);
+      h2 = Math.imul(h2 ^ c, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    for (const h of [h1, h2]) {
+      let v = h >>> 0;
+      for (let k = 0; k < 4 && out.length < 16; k++) {
+        out += ID_CHARS[v % 62];
+        v = Math.floor(v / 62);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The library copy's id: one per character and source. A linked source (actorLink) also keys on the
+ * summoning item, because dnd5e reuses a linked copy only for the item it came from.
+ */
+export function libraryActorId({ summonerId, sourceUuid, originUuid = null } = {}) {
+  return stableId(`pentaryn-creatures|actor|${summonerId}|${sourceUuid}|${originUuid ?? ""}`);
+}
+
+/** The character's library folder id, when we have to create it. */
+export function libraryFolderId(summonerId) {
+  return stableId(`pentaryn-creatures|folder|${summonerId}`);
+}
+
+/** The root folder's id, when we have to create it. */
+export function libraryRootId() {
+  return stableId(`pentaryn-creatures|folder|${LIBRARY_ROOT}`);
+}
+
+/**
+ * The copy's ownership: nobody by default; every user who owns the character (level 3) and the
+ * player who summoned it own the copy. Keys sorted, so both GM tabs send the same data.
+ */
+export function libraryOwnership(summonerOwnership, senderId) {
+  const out = { default: 0 };
+  const owners = Object.entries(summonerOwnership ?? {})
+    .filter(([k, v]) => k !== "default" && v === 3).map(([k]) => k);
+  if (senderId) owners.push(senderId);
+  for (const k of [...new Set(owners)].sort()) out[k] = 3;
+  return out;
+}
+
+/**
+ * Should a failed `fetchExisting` be retried through the GM? Only for a player (never a GM, never a
+ * user who may create actors: their error is a real one), with the setting on, and only for dnd5e's
+ * own summon call (it names the summoning item as the origin).
+ */
+export function shouldRelaySummon({ isGM, canCreate, enabled, originKey, originValue } = {}) {
+  if (isGM || canCreate || enabled === false) return false;
+  return originKey === SUMMON_ORIGIN_KEY && typeof originValue === "string" && originValue.length > 0;
+}
+
+/**
+ * May the GM copy `target` for a summon from this item? The GM never hands a player an arbitrary
+ * actor: the source must be what one of the item's summon activities can summon.
+ *  - mode "cr" (Find Familiar): a compendium npc whose CR is at most the profile's and whose
+ *    creature type is one of the profile's (no types: any);
+ *  - otherwise: the source uuid is one of the activity's profiles.
+ * @param {{ mode?: string, profiles: { uuid?: string|null, cr?: number|null, types?: string[] }[] }[]} activities
+ * @param {{ uuid: string, inPack: boolean, actorType?: string, cr?: number|null, creatureType?: string|null }} target
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function summonAllowed(activities, target) {
+  const list = Array.isArray(activities) ? activities : [];
+  if (!list.length) return { ok: false, reason: "the item has no summon activity" };
+  if (!target?.uuid) return { ok: false, reason: "no source actor" };
+  for (const a of list) {
+    const profiles = Array.isArray(a?.profiles) ? a.profiles : [];
+    if (a?.mode === "cr") {
+      if (!target.inPack || target.actorType !== "npc") continue;
+      const fits = profiles.some(p => {
+        const crOk = p?.cr == null || !Number.isFinite(p.cr) || (Number.isFinite(target.cr) && target.cr <= p.cr);
+        const types = Array.isArray(p?.types) ? p.types : [];
+        return crOk && (!types.length || types.includes(target.creatureType));
+      });
+      if (fits) return { ok: true };
+    } else if (profiles.some(p => p?.uuid && p.uuid === target.uuid)) {
+      return { ok: true };
+    }
+  }
+  return { ok: false, reason: "that actor is not one this item can summon" };
 }

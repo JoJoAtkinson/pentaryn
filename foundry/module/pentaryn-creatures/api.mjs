@@ -31,6 +31,8 @@ function status(ctx) {
     lightRadius: setting("lightRadius"),
     showStrip: setting("showStrip"),
     floatOverHud: setting("floatOverHud"),
+    summonLibrary: setting("summonLibrary"),
+    summonPatched: ctx.exposed.summonPatched(),
     writer: isActiveGM(),
     lit: litCount(),
     version: VERSION,
@@ -87,6 +89,9 @@ export function buildApiFor(ctx) {
     patchedWith: () => x.patchedWith(),
     status: () => status(ctx),
     inspect: (doc, opts) => inspect(ctx, doc, opts),
+    // the relay row: core's query context (the sender) arrives as the trailing argument
+    summonActor: (opts, qctx) => x.summonActor(opts, qctx),
+    library: (actor) => x.library(actor),
     core,
   }, {
     members: {

@@ -1,5 +1,22 @@
 # Changelog — pentaryn-creatures
 
+## 0.2.0 — 2026-10-19 (feedback Swrl5M, UQSJ0v, dkt5PG)
+
+- **Summon library.** A player whose role may not create actors (the Player role; Trusted may) can
+  summon from a compendium again. dnd5e 6.0.6's `Actor5e.fetchExisting` refused them with "You must
+  have 'Create New Actors' permission in order to summon directly from a compendium" (Marwen's Mage
+  Hand and Find Familiar, 2026-10-19; Marrith, Trusted, was never affected). The wrap lets dnd5e try
+  first; on that refusal the active GM makes the copy through the relay query
+  `pentaryn-creatures.summonActor`: owned by the player and the character's owners, in
+  `PC Summons & Forms/<First name> — summons & forms`, flagged so dnd5e reuses it on every later
+  summon. The GM copies only what the item's summon activities can summon (a profile, or a
+  compendium NPC within a CR summon's CR and types) and only for the character's owner.
+  Deterministic ids keep two GM tabs from making two copies.
+- New setting `summonLibrary` (world, on). New API rows `summonActor` (relay, write, `dryRun`) and
+  `library(ref)`; `status()` adds `summonLibrary` and `summonPatched`. New adjustments row
+  `creatures-summon-library`. `core` exports the pure rules (`summonAllowed`, `shouldRelaySummon`,
+  `libraryActorId`, `libraryOwnership`, `libraryFolderName`, `stableId`, …).
+
 ## Unreleased (addon-blueprint migration, wave 3)
 
 Code layout follows the blueprint (entry, core, settings, tokens adapter, the `light`,

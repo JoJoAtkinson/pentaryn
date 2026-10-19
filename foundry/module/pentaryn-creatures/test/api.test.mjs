@@ -49,7 +49,8 @@ test("surface equals golden/surface.json", () => {
 
 test("flag contract: we write our light flag; we read aoe's handle flags, Item Piles and dnd5e originalActor", () => {
   assert.deepEqual(api.describe().flags, {
-    writes: ["flags.pentaryn-creatures.light"],
+    // [declared] 0.2.0: the summon library's copies carry our library flag and dnd5e's isAutoImported
+    writes: ["flags.pentaryn-creatures.light", "flags.pentaryn-creatures.library", "flags.dnd5e.isAutoImported"],
     reads: ["flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.item-piles.data.enabled", "flags.dnd5e.originalActor"],
   });
 });
@@ -62,12 +63,13 @@ test("the Token#isVisible patch record names its adjustments row", () => {
 
 test("described settings are exactly the SETTINGS table; settings() snapshots them", () => {
   assert.deepEqual(api.describe().settings.map(s => s.key), SETTINGS.map(r => r.key));
-  assert.deepEqual(api.settings(), { lightRadius: 5, ownerSees: true, floatOverHud: true, showStrip: true });
+  assert.deepEqual(api.settings(), { lightRadius: 5, ownerSees: true, floatOverHud: true, showStrip: true, summonLibrary: true });
 });
 
-test("status() (transform-creatures-31): wrap, the four settings, writer, lit tokens, version", async () => {
+test("status() (transform-creatures-31): wrap, the settings, the summon wrap, writer, lit tokens, version", async () => {
   assert.deepEqual(api.status(), {
     patchedWith: "direct", ownerSees: true, lightRadius: 5, showStrip: true, floatOverHud: true,
+    summonLibrary: true, summonPatched: null,   // [declared] 0.2.0; null: the test world has no dnd5e
     writer: true, lit: 4, version: manifestOf(new URL("..", import.meta.url)).version,
   });
   await F.game.settings.set(MODULE, "floatOverHud", false);
