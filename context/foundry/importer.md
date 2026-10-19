@@ -1,7 +1,7 @@
 ---
 title: "Importing generated NPCs (pentaryn-importer)"
 status: active
-last_modified: 2026-10-11
+last_modified: 2026-10-19
 tags: [context, foundry, dnd5e, module, importer]
 ---
 
@@ -11,7 +11,8 @@ tags: [context, foundry, dnd5e, module, importer]
 `actors.json` into a world, checking a fresh build at the table (Gate 2), or an import refused.
 **Not this file:** module internals and the API → [`../../foundry/module/pentaryn-importer/README.md`](../../foundry/module/pentaryn-importer/README.md) ·
 the data contract → [`../../foundry/CONTRACT.md`](../../foundry/CONTRACT.md) · why the pipeline
-looks like this → [`../plans/foundry-content-pipeline.md`](../plans/foundry-content-pipeline.md)
+looks like this → [`../plans/foundry-content-pipeline.md`](../plans/foundry-content-pipeline.md) ·
+player characters from D&D Beyond → [below](#player-characters-from-dd-beyond-ddb-importer)
 
 ## At the table
 
@@ -96,3 +97,23 @@ import, which deletes it), `NOT_GM`, `BAD_ARGS`, `CONFLICT` (already running), `
 - The payloads still use the dnd5e 5.3 shapes (`movement.walk`, `init.bonus`); dnd5e 6 migrates
   them until 7.0. Moving them is the `@2` contract bump.
 - The module cannot delete `actors.json` itself (Foundry has no client file-delete API).
+
+## Player characters from D&D Beyond (ddb-importer)
+
+PCs are **not** built by this module or by `build_actors.py`. A PC linked to D&D Beyond (the actor
+carries `flags.ddbimporter`) is transferred by the third-party **ddb-importer** module, whose code we
+do not own. Never re-import a PC that is in play to fix its data; after a transfer, run the
+clean-up script through `eval-js` (dry run by default, idempotent; set `ACTOR`, then `APPLY = true`):
+
+    scripts/foundry/fixes/2026-10-19-ddb-pc-cleanup.js
+
+It fixes what ddb-importer gets wrong for us (feedback tiDvFa, Marwen):
+
+- **Robes, clothes and notebooks as consumables.** Custom D&D Beyond "Adventuring Gear" arrives as a
+  consumable trinket; apparel becomes equipment (clothing), notes and journals equipment (trinket).
+- **A feat's 1/day free cast listed as At-Will.** Shadow Touched, Magic Initiate and the like arrive
+  with spellcasting method `atwill` plus 1 use per long rest; they become `innate` (the "Innate
+  Spellcasting" section, with the 1/day uses). Their slot-cast copies stay under their level.
+- **"My backpack didn't come across."** It did: ddb-importer keeps container contents, and dnd5e 6
+  shows them only inside the container. Open the Backpack or Component Pouch on the Inventory tab.
+  The script lists each container's contents and scrolls.
