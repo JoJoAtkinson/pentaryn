@@ -1,5 +1,18 @@
 # Changelog — pentaryn-riders
 
+## 0.4.0 — 2026-10-19 (feedback EBGqNA: prepared spells first)
+
+- New feature `spell-view.mjs`: the character sheet's Spells tab opens on the spells the character
+  can cast today (prepared, always prepared, cantrips, at-will, innate, pact, cast from an item),
+  through dnd5e 6's `dnd5e.filterItem` hook (no wrap). A **Show: Prepared (n) · All spells (n)**
+  switch sits above the spell search with "n unprepared hidden"; a click re-applies dnd5e's list
+  filters in place. The choice is a user flag per character, `flags.pentaryn-riders.spellView.<actorId>`.
+  No switch when nothing would be hidden. Setting `spellView` (world, on) turns it off.
+- Pure `core/spell-view.mjs` (`SPELL_VIEWS`, `inPreparedView`, `spellViewCounts`, `spellViewOf`),
+  re-exported by the riders-core barrel (so also on `api.core`); adapter `spellViewInfo` in `shapes.mjs`.
+- dnd5e's own filter-menu "Prepared" was not enough: it keeps `canPrepare && prepared` only, which
+  hides never-ticked cantrips, at-will / innate spells and spells cast from an item.
+
 ## 0.3.0 — 2026-10-12 (addon blueprint migration, wave 4; released by the Wave 7 restart batch)
 
 - Wave 7 batch: `module.json` `flags.pentaryn` blueprint keys (`flagScope` `riders` →

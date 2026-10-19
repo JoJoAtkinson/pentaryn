@@ -79,3 +79,23 @@ test("S6: every object export reachable from api.core is frozen (METAMAGIC kept 
   for (const [name, v] of Object.entries(riders)) if (v && typeof v === "object") assert.ok(Object.isFrozen(v), name);
   assert.equal("METAMAGIC" in riders, false);
 });
+
+test("spell view (EBGqNA): inPreparedView hides only an unprepared levelled spell of a preparing method not cast from an item", () => {
+  const rows = [
+    [{ type: "spell", level: 1, canPrepare: true, prepared: 0 }, false],
+    [{ type: "spell", level: 9, canPrepare: true, prepared: 0 }, false],
+    [{ type: "spell", level: 1, canPrepare: true, prepared: 1 }, true],
+    [{ type: "spell", level: 1, canPrepare: true, prepared: 2 }, true],
+    [{ type: "spell", level: 0, canPrepare: true, prepared: 0 }, true],               // a cantrip
+    [{ type: "spell", level: 3, canPrepare: false, prepared: 0 }, true],              // at-will, innate, ritual method
+    [{ type: "spell", level: 3, canPrepare: true, prepared: 0, linked: true }, true], // cast from a staff
+    [{ type: "weapon", level: 1, canPrepare: true, prepared: 0 }, true],
+    [{}, true],
+    [undefined, true],
+  ];
+  for (const [input, want] of rows) assert.equal(riders.inPreparedView(input), want, JSON.stringify(input));
+  assert.deepEqual(riders.spellViewCounts(rows.map(r => r[0])), { total: 7, shown: 5, hidden: 2 });
+  assert.deepEqual(riders.spellViewCounts(null), { total: 0, shown: 0, hidden: 0 });
+  assert.deepEqual(["all", "prepared", "junk", undefined].map(riders.spellViewOf), ["all", "prepared", "prepared", "prepared"]);
+  assert.ok(Object.isFrozen(riders.SPELL_VIEWS));
+});

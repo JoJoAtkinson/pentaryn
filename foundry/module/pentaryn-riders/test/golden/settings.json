@@ -94,5 +94,17 @@
     "default": true,
     "type": "Boolean",
     "onChange": true
+  },
+  {
+    "id": "pentaryn-riders.spellView",
+    "namespace": "pentaryn-riders",
+    "key": "spellView",
+    "name": "PENTARYN_RIDERS.settings.spellView.name",
+    "hint": "PENTARYN_RIDERS.settings.spellView.hint",
+    "scope": "world",
+    "config": true,
+    "default": true,
+    "type": "Boolean",
+    "onChange": true
   }
 ]

@@ -7,7 +7,7 @@
  *
  * Two readers keep today's per-site failure semantics (guide S4; the kit's settingReader would
  * return the row default `true` instead):
- *   settingOr(key, fallback)  the six feature switches: `false` when the setting cannot be read
+ *   settingOr(key, fallback)  the seven feature switches: `false` when the setting cannot be read
  *                             (before init, a hot-patched client), else `value !== false`
  *   settingRaw(key)           `enabled` and `hdControls`: rethrows; the hook that reads it catches
  *                             and warns (`… | riders skipped`, `… | hit dice controls skipped`)
@@ -16,7 +16,7 @@
 import { I18N, MODULE } from "./riders-core.mjs";
 import { defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 
-/** Re-render every open character sheet (the Hit Dice − / + appear or go). Cheap, idempotent. */
+/** Re-render every open character sheet (the Hit Dice − / +, the spell view toggle appear or go). Cheap, idempotent. */
 function rerenderCharacterSheets() {
   for (const a of foundry.applications.instances.values()) if (a.document?.type === "character" && a.rendered) a.render();
 }
@@ -76,6 +76,13 @@ export const SETTINGS = Object.freeze([
     onChange: rerenderCharacterSheets,
     doc: "Hit Dice − / + on the character sheet outside edit mode; a change re-renders open character sheets.",
   },
+  {
+    key: "spellView", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_RIDERS.settings.spellView.name",
+    hint: "PENTARYN_RIDERS.settings.spellView.hint",
+    onChange: rerenderCharacterSheets,
+    doc: "The character sheet's Spells tab opens on the spells ready to cast, with a Prepared / All spells toggle remembered per user and actor; a change re-renders open character sheets.",
+  },
 ]);
 
 /** Called from the entry's `init` (and again by a hot patch: rows already registered are skipped). */
@@ -96,7 +103,7 @@ export function settingRaw(key) {
 /** The kit reader (row default when unreadable): `ctx.setting`, selftest. */
 export const setting = settingReader(MODULE, SETTINGS);
 
-/** `{ key: value }` for all eight rows (api `settings()`). */
+/** `{ key: value }` for all nine rows (api `settings()`). */
 export function settingsSnapshot() {
   return snapshot(MODULE, SETTINGS);
 }

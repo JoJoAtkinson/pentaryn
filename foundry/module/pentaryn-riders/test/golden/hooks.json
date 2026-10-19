@@ -90,5 +90,13 @@
   {
     "kind": "on",
     "name": "renderCharacterActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.filterItem"
+  },
+  {
+    "kind": "on",
+    "name": "renderCharacterActorSheet"
   }
 ]

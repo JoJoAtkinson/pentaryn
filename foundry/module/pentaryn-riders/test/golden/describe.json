@@ -333,6 +333,13 @@
       "type": "Boolean",
       "default": true,
       "doc": "Hit Dice − / + on the character sheet outside edit mode; a change re-renders open character sheets."
+    },
+    {
+      "key": "spellView",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "The character sheet's Spells tab opens on the spells ready to cast, with a Prepared / All spells toggle remembered per user and actor; a change re-renders open character sheets."
     }
   ],
   "events": [],
@@ -428,6 +435,14 @@
     {
       "name": "renderCharacterActorSheet",
       "label": "Hit Dice − / +"
+    },
+    {
+      "name": "dnd5e.filterItem",
+      "label": "spell view: filter"
+    },
+    {
+      "name": "renderCharacterActorSheet",
+      "label": "spell view: switch"
     }
   ],
   "patches": [

@@ -2,7 +2,8 @@
 
 **Read this when:** Elemental Adept, Elemental Affinity, Potent Spellcasting or the Healer feat
 isn't adding what it should, Battle Medic misbehaves, a Ritual Adept / concentration / Arcane
-Recovery / Argon HUD tidy-up acts oddly, or you are changing or calling `pentaryn-riders`.
+Recovery / Argon HUD tidy-up acts oddly, the Spells tab shows only prepared spells (the Prepared /
+All spells switch), or you are changing or calling `pentaryn-riders`.
 **Not this file:** how every addon is built → `context/foundry/addon-blueprint.md` · the
 migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-riders.md`.
 
@@ -23,6 +24,7 @@ Argon table fixes (rituals, concentration, cast flow, HUD tidy-ups). Requires dn
 | **Healer** | Spell healing dice reroll 1s once (`r1`); temp/max HP rolls are left alone. | `2d8r1`. |
 | **Healer → Battle Medic** | Target one creature and use the activity: dnd5e spends a kit use, the **target** spends its largest Hit Die, the healer rolls it (1s rerolled) + PB, the target regains that. | Chat roll; a toast with HP regained (and Hit Dice left, if the healer could see the sheet). |
 | **Hit Dice − / +** | Beside *Hit Dice* on the character sheet, outside edit mode: spend or regain one die, largest first. | Greyed out when there is nothing to spend or regain. |
+| **Prepared spells first** | The character sheet's Spells tab opens on what the character can cast today: prepared and always-prepared spells, cantrips, at-will, innate and pact spells, and spells cast from an item. A **Show: Prepared (n) · All spells (n)** switch sits above the search bar, with "*n* unprepared hidden"; *All spells* brings back the full list to prepare from. Each user's choice is remembered per character (it follows them to another browser). No switch when nothing would be hidden (a sorcerer, a non-caster). | The switch above the spell search; the hidden spells reappear in place, no re-render. |
 | **Ritual Adept** (wizard) | Unprepared ritual spells get a **"Rituals (no slot)"** group on Argon's Action-bar Cast Spell panel; casting one starts with *Consume Spell Slot* unticked. | HUD accordion group; the unticked box. |
 | **Longer casts** (any caster) | Spells taking a minute or more (Animate Dead) get a **"Longer casts (1 min+)"** group on that panel. | HUD accordion group. |
 | **Concentration summons** | A token summoned by a concentration spell leaves the map when that concentration ends; the *Lost Concentration* card's icon-only button gets its words. | The sphere goes; "Break Concentration" beside ⦸. |
@@ -44,6 +46,7 @@ All world, Boolean, default on, read live (no reload needed), in this order in *
 | `arcaneRecovery` | The Arcane Recovery picker after the feature is used. |
 | `enabled` | The damage and healing riders, the tray preset and Battle Medic. |
 | `hdControls` | The sheet's Hit Dice − / + (a change re-renders open character sheets). |
+| `spellView` | The Spells tab's Prepared / All spells switch and the Prepared default (a change re-renders open character sheets). |
 
 ## API — game.pentaryn.riders
 
@@ -84,6 +87,7 @@ R.inspect("Marrith Ashcroft").rows;                  // the same rows, plain, by
 
 | Where | What |
 |---|---|
+| User flag `flags.pentaryn-riders.spellView.<actorId>` | `"prepared"` or `"all"`: that user's Spells-tab view of that character, set by the switch (the user's own User document, as dnd5e's own `sheetPrefs`) |
 | Item flag `flags.pentaryn-riders.damageType` | a typed feature's type (string or array), by `setType` / `retireManual` |
 | Damage / healing ChatMessage `flags.pentaryn-riders` | `{ applied, ignoreResistance, origin, detail }` (`riderFlag`): the once-per-casting guard, the card note, the tray preset |
 | Battle Medic roll message `flags.pentaryn-riders` | `{ flow: "battle-medic", target, faces }` |
@@ -104,7 +108,8 @@ n/a — emits none. Listens to (in this order, `test/golden/hooks.json`): `dnd5e
 `dnd5e.summonToken`, `deleteActiveEffect`, `dnd5e.renderChatMessage`, `createChatMessage`,
 `updateItem`, `dnd5e.preCreateMeasuredTemplate`, `dnd5e.preSummon`, `renderItemButtonArgonComponent`,
 `changeSidebarTab`, `dnd5e.postSummon`, `renderActivityUsageDialog`, `dnd5e.postUseActivity`,
-`dnd5e.postDamageRollConfiguration`, `dnd5e.preCalculateDamage`, `renderCharacterActorSheet`.
+`dnd5e.postDamageRollConfiguration`, `dnd5e.preCalculateDamage`, `renderCharacterActorSheet` (Hit Dice),
+`dnd5e.filterItem`, `renderCharacterActorSheet` (spell view).
 
 ## Patches and adjustments
 
@@ -119,7 +124,7 @@ Every wrap is in `patches.mjs`, through the kit's `wrapMethod`, listed by `descr
 | Argon dnd5e item button `targets` getter (per prototype, at first render) | `_prTargets` | `riders-argon-metamagic-no-picker` |
 | Argon dnd5e item button `getTooltipData` (per prototype) | `_prTooltip` | `riders-argon-tooltip-item-rolldata` |
 
-Non-patch rows: `argon-shared-uses-badge`, `argon-collapse-on-area-placement`,
+Non-patch rows (the spell view needs none: it uses dnd5e's `dnd5e.filterItem` hook): `argon-shared-uses-badge`, `argon-collapse-on-area-placement`,
 `argon-tooltip-click-through` (CSS on Argon's `#tooltip`), `dnd5e-concentration-summons`,
 `dnd5e-concentration-auto-break`, `dnd5e-summon-keeps-sidebar`, `dnd5e-restore-slot-default`,
 `dnd5e-usage-dialog-first-click`, `dnd5e-chat-message-types`, `argon-riders-long-casts`,
@@ -182,6 +187,12 @@ in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` 
 - **Summon cleanup reacts to concentration effects only**: an effect whose `concentrating` status
   was stripped before it was deleted leaves its summons on the map (dnd5e never does that).
 - `preview()` is a string transform for checking; the live riders edit real roll terms.
+- **The spell view is not dnd5e's own "Prepared" filter.** That one (filter menu → Prepared) keeps
+  only `canPrepare && prepared`, so it also hides cantrips never ticked, at-will / innate spells and
+  spells cast from an item. The two stack: both on shows the intersection. The Argon HUD's spell
+  panels are untouched (Argon already lists prepared spells only).
+- **A wizard's unprepared rituals** are hidden in the Prepared view like any unprepared spell; the
+  Ritual Adept group on the HUD still lists them, and *All spells* shows them on the sheet.
 
 ## Files
 
@@ -193,7 +204,7 @@ concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Rec
 | File | Role |
 |---|---|
 | `riders.mjs` | entry: wiring, `FEATURES`, init (settings, relay), ready (patches, publish) |
-| `riders-core.mjs`, `core/hit-dice.mjs`, `core/relay.mjs` | pure: constants, `RULES`, rider planning, Hit Dice / Battle Medic / report kernels, the relay's claim |
+| `riders-core.mjs`, `core/hit-dice.mjs`, `core/relay.mjs`, `core/spell-view.mjs` | pure: constants, `RULES`, rider planning, Hit Dice / Battle Medic / report kernels, the relay's claim |
 | `rituals-core.mjs`, `table-core.mjs` | pure: Ritual Adept and Longer casts; concentration, Argon and cast-flow helpers |
 | `settings.mjs` | `SETTINGS`, `settingOr` / `settingRaw` |
 | `api-manifest.mjs`, `api.mjs` | the API rows; implementations, `inspect`, `selftest` |
@@ -201,6 +212,7 @@ concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Rec
 | `patches.mjs` | the six wraps |
 | `rituals.mjs`, `concentration.mjs`, `argon-tidy.mjs`, `cast-flow.mjs` | features: table fixes |
 | `damage-riders.mjs`, `card-note.mjs`, `tray-preset.mjs`, `battle-medic.mjs`, `hd-sheet.mjs` | features: the riders, Battle Medic, the sheet − / + |
+| `spell-view.mjs`, `core/spell-view.mjs` | feature: the Spells tab's Prepared / All spells switch (`dnd5e.filterItem`); pure: which spells the Prepared view keeps |
 | `styles/riders.css`, `lang/en.json`, `lib/` | styles (`.pr-*`, and the `#tooltip` click-through rule), strings, the vendored kit (with `lib/argon-tooltip.css`, D7: listed in `styles`, inert for riders alone) |
 
 ## Tests
