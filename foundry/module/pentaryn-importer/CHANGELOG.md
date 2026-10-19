@@ -1,5 +1,40 @@
 # Changelog — Pentaryn Importer (`pentaryn-importer`)
 
+## 1.2.1 — 2026-10-19 — DDB corrections review fixes
+
+- **[declared] Freeze is `flags.ddbimporter.ignoreItemImport` only.** ddb-importer 7.5.8's import
+  (mergeExistingItems, clearItemsByUserSelection) honours that flag alone; `ignoreItemUpdate` only
+  stops the push back to D&D Beyond. An item carrying just `ignoreItemUpdate` (Chris's Premades items)
+  is no longer listed as frozen, and the rules correct it. The freeze script
+  (`scripts/foundry/fixes/2026-10-19-ddb-freeze-items.js`) now sets `ignoreItemImport`. At the table:
+  `game.pentaryn.importer.inspect("<pc>").frozen` lists only `ignoreItemImport` items.
+- **[declared] `apparel-as-equipment` is narrower and keeps more.** The apparel / notes word must end
+  the name ("Cloak Clasp", "Dress Sword" no longer match); properties (incl. `mgc`), attunement,
+  identifier and magical bonus are kept across the retype; an item that is magical, needs attunement,
+  or has uses / activities beyond the DDB consumable default (1 use, one "use" utility) is reported in
+  `notes` and left a consumable.
+- **[declared] New rule `stale-cast-cache`.** The cached copy of the old DDB spell that a repointed Cast
+  activity leaves behind (`flags.dnd5e.cachedFor`; Marwen's duplicate *Detect Magic* from the
+  Prism-Silt Lens) is deleted, in the same run as the repoint or by the next sweep. New op
+  `deleteItem` (one batched `deleteEmbeddedDocuments`). At the table: Marwen's spellbook shows one
+  Detect Magic after the first GM login.
+- **[declared] The relay checks ownership.** The active GM applies a relayed `ddbCorrections.apply`
+  only when the sender owns the actor (`testUserPermission(user, "OWNER")`), else `REFUSED`.
+- **`transmuters-stone` heuristics.** A Resilient feat counts as a CON-save source only when it chose
+  Constitution (its Trait `saves:con`, else its ASI assignment) — `/con/` matched "configuration" in
+  every Resilient. A CON save from the starting class (a `primary` Trait) keeps the base proficiency.
+  Baked darkvision is the species' range + 60 and resets to the species' range (no 180 ft doubling
+  for a 120 ft species).
+- **[declared] A stamp from another module version is due.** `needsCorrection` is also true when the
+  stamp's `version` differs from the running one, so a release that adds or changes a rule reaches
+  characters already stamped for their current import. **The first GM login on 1.2.1 re-runs the
+  corrections on every DDB character once** (that is what removes Marwen's stale Detect Magic).
+- A sync hook and the sweep meeting on one actor: the skipped one logs a console warning instead of
+  dropping silently.
+- A type change replaces `system` with core's `foundry.data.operators.ForcedReplacement`
+  (`ForcedReplacement.create`), not the deprecated `==system` key (kept only for a core without it).
+- Goldens: `describe` re-pinned (inspect doc, apply side effects and doc, `flags.reads`).
+
 ## 1.2.0 — 2026-10-19 — DDB corrections
 
 - **[declared] DDB corrections: the table's fixes to D&D Beyond characters survive a re-sync.** A

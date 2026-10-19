@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as core from "../ddb-core.mjs";
-import { DDB_HB, PHB_INDEX, fighter, lookups, wizard } from "./fixtures/ddb.mjs";
+import { DDB_DM, DDB_HB, PHB_INDEX, fighter, lookups, wizard } from "./fixtures/ddb.mjs";
 
 const { RULES, planCorrections, needsCorrection, stableId, spellKey, spellUuidsNeeded, summaryLine, STONE_EFFECTS } = core;
 const byRule = (plan, id) => plan.changes.filter(c => c.rule === id);
@@ -25,12 +25,13 @@ function applyToSnapshot(snap, plan) {
     if (c.op === "updateItem") for (const [k, v] of Object.entries(c.data)) set(it, k, v);
     if (c.op === "createEffects") it.effects.push(...c.data.map(e => ({ _id: e._id, name: e.name, disabled: e.disabled, flags: e.flags })));
     if (c.op === "updateActor") for (const [k, v] of Object.entries(c.data)) set(s, k, v);
+    if (c.op === "deleteItem") s.items = s.items.filter(i => i._id !== c.itemId);
   }
   return s;
 }
 
 test("the rule table: ids in run order, each with label and doc", () => {
-  assert.deepEqual(RULES.map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "transmuters-stone"]);
+  assert.deepEqual(RULES.map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "stale-cast-cache", "transmuters-stone"]);
   for (const r of RULES) {
     assert.equal(typeof r.match, "function", r.id);
     assert.equal(typeof r.plan, "function", r.id);
@@ -66,6 +67,49 @@ test("a retype keeps the shared fields and drops consumable-only ones", () => {
   const robe = byRule(plan, "apparel-as-equipment").find(c => c.itemId === "robe").data.system;
   assert.equal("uses" in robe, false);
   assert.deepEqual(robe.weight, { value: 4 });
+});
+
+test("the apparel name must END in the apparel word: a clasp, a sword or 'X of Y' is not apparel", () => {
+  const gear = (_id, name) => ({ _id, name, type: "consumable", system: { type: { value: "trinket" }, uses: { max: "1" } }, flags: {}, effects: [] });
+  const snap = { ...wizard(), items: [
+    gear("c1", "Cloak Clasp"), gear("c2", "Dress Sword"), gear("c3", "Robe of Useful Items"), gear("c4", "Notes of the Fallen"),
+    gear("ok1", "Fine Clothes"), gear("ok2", "Cloak (hooded)"), gear("ok3", "Marwen's Field Notes"), gear("ok4", "Travel Journal"),
+  ] };
+  const got = byRule(planCorrections(snap, lookups()), "apparel-as-equipment").map(c => c.itemId);
+  assert.deepEqual(got, ["ok1", "ok2", "ok3", "ok4"]);
+});
+
+test("magical, attunement, real uses or activities: apparel is reported, not retyped", () => {
+  const consumeOwn = { u: { _id: "u", type: "utility", consumption: { targets: [{ type: "itemUses", target: "", value: "1" }] } } };
+  const gear = (_id, name, extra) => ({ _id, name, type: "consumable",
+    system: { type: { value: "trinket" }, uses: { max: "1", recovery: [] }, activities: structuredClone(consumeOwn), ...extra }, flags: {}, effects: [] });
+  const snap = { ...wizard(), items: [
+    gear("mgc", "Elven Cloak", { properties: ["mgc"] }),
+    gear("att", "Witch Robes", { attunement: "required" }),
+    gear("use", "Robe", { uses: { max: "3", recovery: [{ period: "lr" }] } }),
+    gear("act", "Smoke Cloak", { activities: { ...structuredClone(consumeOwn), s: { _id: "s", type: "save", consumption: { targets: [] } } } }),
+    gear("ok", "Plain Robe", { properties: [], identifier: "plain-robe" }),
+  ] };
+  const plan = planCorrections(snap, lookups());
+  assert.deepEqual(byRule(plan, "apparel-as-equipment").map(c => c.itemId), ["ok"],
+    "the DDB default (uses 1, one utility spending its own uses) is still apparel");
+  const notes = plan.notes.filter(n => n.rule === "apparel-as-equipment");
+  assert.deepEqual(notes.map(n => n.item), ["Elven Cloak", "Witch Robes", "Robe", "Smoke Cloak"]);
+  assert.match(notes[0].note, /magical/);
+  assert.match(notes[1].note, /attunement/);
+  assert.match(notes[2].note, /uses/);
+  assert.match(notes[3].note, /activities/);
+});
+
+test("a retype keeps properties, attunement, identifier and magicalBonus", () => {
+  const snap = { ...wizard(), items: [{ _id: "r", name: "Robes", type: "consumable", flags: {}, effects: [],
+    system: { type: { value: "trinket" }, properties: ["fin"], attunement: "", identifier: "robes", magicalBonus: null, uses: { max: "1" } } }] };
+  const sys = byRule(planCorrections(snap, lookups()), "apparel-as-equipment")[0].data.system;
+  assert.deepEqual(sys.properties, ["fin"]);
+  assert.equal(sys.attunement, "");
+  assert.equal(sys.identifier, "robes");
+  assert.equal("magicalBonus" in sys, true);
+  assert.equal("uses" in sys, false, "the consumable's default single use is dropped");
 });
 
 /* freecast-innate */
@@ -122,6 +166,44 @@ test("a spell with uses of its own, or with the slot on, is not self-spending", 
   assert.equal(spellKey(" Detect  Magic (2024) "), "detect magic");
 });
 
+/* stale-cast-cache — Marwen's Prism-Silt Lens, 2026-10-19 */
+
+test("the cached copy of the old DDB spell goes when its Cast activity is repointed in the same run", () => {
+  const plan = planCorrections(wizard(), lookups());
+  const got = byRule(plan, "stale-cast-cache");
+  assert.deepEqual(got.map(c => [c.op, c.itemId]), [["deleteItem", "dmCache"]]);
+  assert.match(got[0].summary, /Detect Magic: stale cached copy for Prism-Silt Lens removed/);
+});
+
+test("after the release: activity already on the PHB spell, the DDB copy is stale, the PHB copy stays", () => {
+  const snap = wizard();
+  const lens = snap.items.find(i => i._id === "lens");
+  lens.system.activities.castDeMa.spell.uuid = "Compendium.dnd-players-handbook.spells.Item.phbsplDetectMagi";
+  snap.items.push({ _id: "dmPhb", name: "Detect Magic", type: "spell", system: { level: 1, method: "spell" },
+    flags: { dnd5e: { cachedFor: ".Item.lens.Activity.castDeMa" } }, effects: [],
+    source: "Compendium.dnd-players-handbook.spells.Item.phbsplDetectMagi" });
+  assert.deepEqual(byRule(planCorrections(snap, lookups()), "stale-cast-cache").map(c => c.itemId), ["dmCache"]);
+  // a sweep without lookups too: the activity names a PHB spell, so no lookup is needed
+  assert.deepEqual(byRule(planCorrections(snap, {}), "stale-cast-cache").map(c => c.itemId), ["dmCache"]);
+});
+
+test("a current cached copy, one with no source, a missing activity, a frozen parent: left alone", () => {
+  const snap = wizard();
+  const cache = snap.items.find(i => i._id === "dmCache");
+  // not looked up: no opinion
+  assert.deepEqual(byRule(planCorrections(snap, {}), "stale-cast-cache"), []);
+  cache.source = null;
+  assert.deepEqual(byRule(planCorrections(snap, lookups()), "stale-cast-cache"), []);
+  cache.source = DDB_DM;
+  cache.flags.dnd5e.cachedFor = ".Item.lens.Activity.gone";
+  assert.deepEqual(byRule(planCorrections(snap, lookups()), "stale-cast-cache"), []);
+  cache.flags.dnd5e.cachedFor = ".Item.lens.Activity.castDeMa";
+  snap.items.find(i => i._id === "lens").flags = { ddbimporter: { ignoreItemImport: true } };
+  assert.deepEqual(byRule(planCorrections(snap, lookups()), "stale-cast-cache"), [], "a frozen lens keeps its DDB spell");
+  assert.deepEqual(core.cachedForRef("Actor.a.Item.b.Activity.c"), { itemId: "b", activityId: "c" });
+  assert.equal(core.cachedForRef("nonsense"), null);
+});
+
 /* transmuters-stone */
 
 test("the stone gets its effects (darkvision on, it was baked) and the baked base values reset", () => {
@@ -151,15 +233,62 @@ test("effect ids are stable per item and key (two tabs collide instead of duplic
   assert.notEqual(stableId("x"), stableId("y"));
 });
 
+/** Resilient as the PHB feat carries it on an actor (dnd5e 6: advancements keyed by id). */
+const resilient = ability => ({ _id: `res${ability}`, name: "Resilient", type: "feat", flags: {}, effects: [], system: { advancement: {
+  asi: { _id: "asi", type: "AbilityScoreImprovement", configuration: { cap: 1, fixed: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 }, locked: [], points: 1 }, value: { type: "asi", assignments: { [ability]: 1 } } },
+  trt: { _id: "trt", type: "Trait", configuration: { allowReplacements: false, choices: [{ count: 1, pool: ["saves:*"] }], grants: [], mode: "default" }, value: { chosen: [`saves:${ability}`] } },
+} } });
+
 test("species darkvision or another CON-save source keeps the base values; nothing baked → all benefits off", () => {
   const snap = wizard();
   snap.items.find(i => i.type === "race").system.senses.ranges.darkvision = 60;
-  snap.items.push({ _id: "res", name: "Resilient", type: "feat", system: { advancement: [{ configuration: { ability: "con" } }] }, flags: {}, effects: [] });
+  snap.items.push(resilient("con"));
   const plan = planCorrections(snap, lookups());
   const got = byRule(plan, "transmuters-stone");
   assert.deepEqual(got.map(c => c.op), ["createEffects"]);
   assert.deepEqual(got[0].data.filter(e => !e.disabled).map(e => e.name), ["Transmuter's Stone"]);
   assert.match(plan.notes.find(n => n.rule === "transmuters-stone").note, /player picks/);
+});
+
+test("Resilient on another ability does not keep the stone's CON save (\"configuration\" is not CON)", () => {
+  const snap = wizard();
+  snap.items.push(resilient("wis"));
+  const got = byRule(planCorrections(snap, lookups()), "transmuters-stone");
+  assert.equal(got.find(c => c.op === "updateActor").data["system.abilities.con.proficient"], 0);
+  // a Resilient whose trait was never chosen falls back to its ASI assignment
+  const bare = resilient("con");
+  bare.system.advancement.trt.value = {};
+  const snap2 = wizard();
+  snap2.items.push(bare);
+  assert.equal(byRule(planCorrections(snap2, lookups()), "transmuters-stone").some(c => c.op === "updateActor"
+    && "system.abilities.con.proficient" in c.data), false);
+});
+
+test("species darkvision + 60 is the baked value: reset to the species' range, never doubled", () => {
+  const snap = wizard();
+  snap.items.find(i => i.type === "race").system.senses.ranges.darkvision = 120;
+  snap.system.attributes.senses.ranges.darkvision = 180;
+  const got = byRule(planCorrections(snap, lookups()), "transmuters-stone");
+  assert.equal(got.find(c => c.op === "updateActor").data["system.attributes.senses.ranges.darkvision"], 120);
+  assert.deepEqual(got[0].data.filter(e => !e.disabled).map(e => e.name), ["Transmuter's Stone", "Transmuter's Stone: Darkvision"]);
+  // the species' own 120 with nothing baked stays
+  snap.system.attributes.senses.ranges.darkvision = 120;
+  const again = byRule(planCorrections(snap, lookups()), "transmuters-stone").find(c => c.op === "updateActor");
+  assert.equal(!!again && "system.attributes.senses.ranges.darkvision" in again.data, false);
+});
+
+test("a CON save from the starting class is kept; a primary-only grant on a multiclass is not", () => {
+  const fighterClass = (_id, restriction) => ({ _id, name: "Fighter", type: "class", flags: {}, effects: [], system: { levels: 1, advancement: {
+    s: { _id: "s", type: "Trait", level: 1, classRestriction: restriction, configuration: { grants: ["saves:str", "saves:con"] }, value: { chosen: ["saves:str", "saves:con"] } } } } });
+  const snap = wizard();
+  snap.items.push(fighterClass("ftr", "primary"));
+  snap.system.details = { originalClass: "ftr" };
+  const keep = byRule(planCorrections(snap, lookups()), "transmuters-stone").find(c => c.op === "updateActor");
+  assert.equal("system.abilities.con.proficient" in keep.data, false);
+  snap.system.details = { originalClass: "wizClass" };    // fighter is a multiclass: primary saves not granted
+  const reset = byRule(planCorrections(snap, lookups()), "transmuters-stone").find(c => c.op === "updateActor");
+  assert.equal(reset.data["system.abilities.con.proficient"], 0);
+  assert.equal(core.otherConSave({ items: [fighterClass("x", null)] }, null), true, "no restriction: always granted");
 });
 
 test("a re-sync that kept the effects but re-baked the base values: only the reset is planned", () => {
@@ -182,14 +311,26 @@ test("idempotent: the corrected snapshot plans nothing", () => {
   }
 });
 
-test("a frozen item is skipped by every rule and listed", () => {
+test("a frozen item (ignoreItemImport) is skipped by every rule and listed", () => {
   const snap = wizard();
-  snap.items.find(i => i._id === "robe").flags = { ddbimporter: { ignoreItemUpdate: true } };
+  snap.items.find(i => i._id === "robe").flags = { ddbimporter: { ignoreItemImport: true } };
   snap.items.find(i => i._id === "wand").flags = { ddbimporter: { ignoreItemImport: true } };
   const plan = planCorrections(snap, lookups());
   assert.deepEqual(plan.frozen, ["Robe", "Wand of Magic Missiles"]);
   assert.equal(plan.changes.some(c => c.itemId === "robe" || c.itemId === "wand"), false);
   assert.equal(planCorrections(fighter({ frozenAxe: true }), lookups()).notes.length, 0);
+});
+
+test("ignoreItemUpdate alone is not a freeze: ddb-importer still overwrites the item, so the rules apply", () => {
+  const snap = wizard();
+  snap.items.find(i => i._id === "robe").flags = { ddbimporter: { ignoreItemUpdate: true } };   // e.g. a Chris's Premades item
+  snap.items.find(i => i._id === "wand").flags = { ddbimporter: { ignoreItemUpdate: true } };
+  const plan = planCorrections(snap, lookups());
+  assert.deepEqual(plan.frozen, []);
+  assert.equal(core.isFrozen(snap.items.find(i => i._id === "robe")), false);
+  assert.ok(plan.changes.some(c => c.itemId === "robe"));
+  assert.ok(plan.changes.some(c => c.itemId === "wand"));
+  assert.deepEqual(core.FREEZE_FLAGS, ["ignoreItemImport"]);
 });
 
 test("needsCorrection: never stamped, or stamped for an earlier import; never for a non-DDB actor", () => {
@@ -198,6 +339,12 @@ test("needsCorrection: never stamped, or stamped for an earlier import; never fo
   assert.equal(needsCorrection(wizard({ importId: "b", stamp: { importId: "a" } })), true);
   assert.equal(needsCorrection({ ...wizard(), ddb: false }), false);
   assert.equal(needsCorrection(wizard({ importId: null, stamp: { importId: null } })), false);
+});
+
+test("needsCorrection: a stamp from another module version is due once (a new rule reaches stamped actors)", () => {
+  assert.equal(needsCorrection(wizard({ importId: "a", stamp: { importId: "a", version: "1.2.0" } }), { version: "1.2.1" }), true);
+  assert.equal(needsCorrection(wizard({ importId: "a", stamp: { importId: "a", version: "1.2.1" } }), { version: "1.2.1" }), false);
+  assert.equal(needsCorrection(wizard({ importId: "a", stamp: { importId: "a", version: "0.0.0" } })), true, "defaults to VERSION");
 });
 
 test("summaryLine: one line, change summaries joined, errors counted", () => {

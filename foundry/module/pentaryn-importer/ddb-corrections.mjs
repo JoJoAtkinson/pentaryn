@@ -61,13 +61,25 @@ function onSynced(payload) {
 async function afterSync(actor) {
   try {
     if (actor.isOwner) {
-      await correct(actor, { reason: "sync" });
+      conflictSeen(actor, await correct(actor, { reason: "sync" }), "sync");
       return;
     }
     const out = await queryGM(APPLY_QUERY, { ref: actor.uuid ?? actor.id });
     if (out?.ok === false) LOG?.warn(`DDB corrections — ${actor.name}: the GM did not apply them (${out.code}: ${out.reason})`);
   } catch (err) {
     LOG?.warn(`DDB corrections — ${actor.name}: failed`, err);
+  }
+}
+
+/**
+ * A second trigger for an actor whose correction is already running on this tab (the sync hook and
+ * the GM-ready sweep overlapping) skips; say so, so a skipped run is not lost without a trace. The
+ * run in flight may have planned on the pre-sync data: its stamp then carries the older importId and
+ * the next GM-ready sweep corrects the actor again.
+ */
+function conflictSeen(actor, out, reason) {
+  if (out?.ok === false && out.code === "CONFLICT") {
+    LOG?.warn(`DDB corrections — ${actor.name}: skipped (${reason}), a correction is already running on this tab`);
   }
 }
 
@@ -103,6 +115,10 @@ async function apply(actor, opts = {}, qctx = undefined) {
   if (!actor.isOwner) {
     if (qctx) return fail("REFUSED", `${actor.name}: this client cannot update the actor`);
     return queryGM(APPLY_QUERY, { ref: actor.uuid ?? actor.id });
+  }
+  // the relay: the active GM writes for the sender only when the sender owns the actor
+  if (qctx?.user && !qctx.user.isGM && actor.testUserPermission?.(qctx.user, "OWNER") !== true) {
+    return fail("REFUSED", `${actor.name}: ${qctx.user.name ?? qctx.user.id} does not own this actor`);
   }
   if (qctx?.user) LOG?.info("ddb corrections relay", { uuid: actor.uuid, by: qctx.user.id });
   return correct(actor, { reason: qctx ? "relay" : "api" });
@@ -166,6 +182,7 @@ async function sweep() {
   for (const actor of due) {
     try {
       const out = await correct(actor, { reason: "sweep" });
+      conflictSeen(actor, out, "sweep");
       if (out?.changes?.length) corrected.push(actor.name);
     } catch (err) {
       LOG?.warn(`DDB corrections — ${actor.name}: the sweep failed`, err);

@@ -6,8 +6,9 @@
  *
  * Reads only `_source` data (never derived data, which dnd5e and active effects change). Writes are
  * batched: one `updateEmbeddedDocuments("Item")` for every plain item update, one Item update per type
- * change (a type change cannot be batched with others), one effect create per item, one actor update
- * that carries the base-data resets and the correction stamp together.
+ * change (a type change cannot be batched with others), one effect create per item, one
+ * `deleteEmbeddedDocuments("Item")` for every stale cached spell copy, one actor update that carries
+ * the base-data resets and the correction stamp together.
  */
 
 import { PHB_SPELLS, STAMP_KEY, STAMP_PATH, spellUuidsNeeded } from "./ddb-core.mjs";
@@ -43,6 +44,7 @@ export function snapshotOf(actor) {
         type: item.type,
         system: clone(s.system ?? {}),
         flags: clone(s.flags ?? {}),
+        source: s._stats?.compendiumSource ?? null,
         effects: listOf(item.effects).map(e => ({ _id: e.id, name: e.name, disabled: !!e.disabled, flags: clone(sourceOf(e)?.flags ?? {}) })),
       };
     }),
@@ -131,6 +133,16 @@ export async function applyPlan(actor, plan, stamp) {
     }
   }
 
+  const deletes = plan.changes.filter(c => c.op === "deleteItem" && actor.items.get(c.itemId));
+  if (deletes.length) {
+    try {
+      await actor.deleteEmbeddedDocuments("Item", [...new Set(deletes.map(c => c.itemId))]);
+      applied.push(...deletes.map(say));
+    } catch (err) {
+      errors.push(`item deletes: ${err?.message ?? err}`);
+    }
+  }
+
   const actorChanges = plan.changes.filter(c => c.op === "updateActor");
   const data = Object.assign({}, ...actorChanges.map(c => c.data));
   const stamped = !!stamp && !errors.length;
@@ -148,15 +160,27 @@ export async function applyPlan(actor, plan, stamp) {
 }
 
 /**
- * A type change replaces the whole system (`==system`). When Foundry refuses that, the item is
- * recreated under the same id (deleted first so keepId is free); a refused create puts the original
+ * The update fields that replace an Item's whole `system`: core's ForcedReplacement operator (v14:
+ * `foundry.data.operators.ForcedReplacement`; core refuses a type change without it), or the
+ * deprecated `==system` key on a core that has no operator.
+ */
+export function replacedSystem(system, { g = globalThis } = {}) {
+  const FR = g.foundry?.data?.operators?.ForcedReplacement;
+  if (typeof FR?.create === "function") return { system: FR.create(system) };
+  if (typeof FR === "function") return { system: new FR(system) };
+  return { "==system": system };
+}
+
+/**
+ * A type change replaces the whole system (a ForcedReplacement). When Foundry refuses that, the item
+ * is recreated under the same id (deleted first so keepId is free); a refused create puts the original
  * back. Throws with both reasons when nothing worked.
  */
 async function retype(actor, change) {
   const item = actor.items.get(change.itemId);
   if (!item) throw new Error("item is gone");
   try {
-    await item.update({ type: change.data.type, "==system": clone(change.data.system) });
+    await item.update({ type: change.data.type, ...replacedSystem(clone(change.data.system)) });
     return;
   } catch (first) {
     const original = item.toObject();

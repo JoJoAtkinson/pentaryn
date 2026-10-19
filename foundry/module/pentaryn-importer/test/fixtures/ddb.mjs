@@ -35,7 +35,7 @@ export const SPELLS = {
   [DDB_HB]: selfSpender("Menacing Provocation", 1),
 };
 
-const item = (_id, name, type, system, flags = {}, effects = []) => ({ _id, name, type, system, flags, effects });
+const item = (_id, name, type, system, flags = {}, effects = [], source = null) => ({ _id, name, type, system, flags, source, effects });
 const cast = (id, uuid) => ({ [id]: { _id: id, type: "cast", spell: { uuid, level: null }, consumption: { spellSlot: false, targets: [] } } });
 
 /** The wizard: apparel, notes, free casts, a wand, a lens, the stone. */
@@ -63,6 +63,9 @@ export function wizard({ importId = "imp1", stamp = null } = {}) {
       item("lens", "Prism-Silt Lens", "equipment", { activities: cast("castDeMa", DDB_DM), uses: { max: "3" } }),
       item("alt", "Wondrous Alteration", "feat", { activities: { castAlt: { _id: "castAlt", type: "cast", spell: { uuid: null } } } }),
       item("stone", "Transmuter's Stone", "feat", { identifier: "transmuters-stone" }),
+      // dnd5e's cached copy of the lens's DDB Detect Magic (flags.dnd5e.cachedFor): stale once repointed
+      item("dmCache", "Detect Magic", "spell", { level: 1, method: "spell", uses: { max: "" } },
+        { dnd5e: { cachedFor: ".Item.lens.Activity.castDeMa" } }, [], DDB_DM),
     ],
   };
 }
@@ -76,7 +79,7 @@ export function fighter({ importId = "imp2", stamp = null, frozenAxe = false } =
       item("race", "Orc", "race", { senses: { ranges: { darkvision: 120 } } }),
       item("rope", "Rope", "consumable", { type: { value: "trinket" } }),
       item("axe", "Axe of Resonant Provocation", "weapon", { activities: cast("castMePr", DDB_HB) },
-        frozenAxe ? { ddbimporter: { ignoreItemUpdate: true } } : {}),
+        frozenAxe ? { ddbimporter: { ignoreItemImport: true } } : {}),
     ],
   };
 }
@@ -101,13 +104,22 @@ const setPath = (obj, path, value) => {
   node[parts.at(-1)] = value;
 };
 
+/** The `system` a type change replaces: a ForcedReplacement operator's value, or the old `==system` key. */
+const replaced = changes => {
+  const FR = globalThis.foundry?.data?.operators?.ForcedReplacement;
+  if (FR && changes.system instanceof FR) return changes.system.value;
+  return changes["==system"];
+};
+
 /**
  * A Document-like actor from a snapshot. `writes` records every write; `failRetype` makes the
- * `==system` type change throw (the recreate fallback then runs).
+ * type change throw (the recreate fallback then runs); `owners` are the user ids that own it
+ * (`testUserPermission`, a GM always does).
  */
-export function liveActor(snap, { isOwner = true, failRetype = false, writes = [] } = {}) {
+export function liveActor(snap, { isOwner = true, failRetype = false, writes = [], owners = [] } = {}) {
   const actor = {
     documentName: "Actor", id: snap.id, name: snap.name, uuid: `Actor.${snap.id}`, isOwner, writes,
+    testUserPermission: (user, level) => level === "OWNER" && (user?.isGM === true || owners.includes(user?.id)),
     flags: { ...(snap.ddb ? { ddbimporter: { importId: snap.importId } } : {}),
       ...(snap.stamp ? { "pentaryn-importer": { ddbCorrections: clone(snap.stamp) } } : {}) },
     items: new Coll(),
@@ -116,14 +128,15 @@ export function liveActor(snap, { isOwner = true, failRetype = false, writes = [
   const mkItem = data => {
     const it = {
       id: data._id, name: data.name, type: data.type, effects: new Coll(),
-      _source: { system: clone(data.system), flags: clone(data.flags ?? {}) },
+      _source: { system: clone(data.system), flags: clone(data.flags ?? {}), _stats: { compendiumSource: data.source ?? null } },
       get flags() { return this._source.flags; },
       toObject() { return clone({ _id: this.id, name: this.name, type: this.type, system: this._source.system, flags: this._source.flags }); },
       async update(changes) {
-        if (failRetype && "==system" in changes) throw new Error("type change refused");
-        writes.push(["item.update", this.id, clone(changes)]);
+        const system = replaced(changes);
+        if (failRetype && changes.type) throw new Error("type change refused");
+        writes.push(["item.update", this.id, clone({ ...changes, ...(system ? { system } : {}) }), Object.keys(changes)]);
         if (changes.type) this.type = changes.type;
-        if (changes["==system"]) this._source.system = clone(changes["==system"]);
+        if (system) this._source.system = clone(system);
       },
       async createEmbeddedDocuments(kind, docs, opts) {
         writes.push(["effects.create", this.id, docs.map(d => [d._id, d.name, d.disabled]), clone(opts)]);

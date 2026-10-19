@@ -14,18 +14,21 @@
 //     uses), or any item fixed by hand that a sync must not overwrite. Fix the item by hand first, then
 //     freeze it. The DDB-corrections rules skip a frozen item too.
 //
-// What freezing does: sets `flags.ddbimporter.ignoreItemUpdate = true` on the item. ddb-importer 7.5.8
-// honours it on a sync (the item is not updated from D&D Beyond) and its dynamic sync (Foundry → D&D
-// Beyond) skips the item as well. So a change made on D&D Beyond to a frozen item never arrives: when
-// the player changes it there, unfreeze, re-sync, fix by hand again, freeze again.
-// (`ignoreItemImport` would also stop it being imported at all; `ignoreIcon` keeps only the icon.)
+// What freezing does: sets `flags.ddbimporter.ignoreItemImport = true` on the item ("Ignore this item
+// when importing the character" in ddb-importer's item flags dialog). ddb-importer 7.5.8's import path
+// (mergeExistingItems, clearItemsByUserSelection) honours ONLY this flag: the item is kept as it is,
+// neither updated from D&D Beyond nor removed. So a change made on D&D Beyond to a frozen item never
+// arrives: when the player changes it there, unfreeze, re-sync, fix by hand again, freeze again.
+// NOT `ignoreItemUpdate`: that one only stops ddb-importer pushing the item back to D&D Beyond (its
+// dynamic sync); a sync from D&D Beyond still overwrites the item, and the DDB-corrections rules still
+// treat it as unfrozen. (`ignoreIcon` keeps only the icon.)
 
 const ACTOR = "Bazgar of the Dakmar'nak";         // id or exact name
 const ITEMS = ["Axe of Resonant Provocation"];    // exact item names on that actor
 const APPLY = false;                              // false = dry run
 const UNFREEZE = false;                           // true = remove the freeze instead
 
-const FLAG = "ignoreItemUpdate";
+const FLAG = "ignoreItemImport";
 const actor = game.actors.get(ACTOR) ?? game.actors.getName?.(ACTOR)
   ?? game.actors.find?.(a => a.name === ACTOR) ?? null;
 if (!actor) return JSON.stringify({ error: `no actor ${ACTOR}` });

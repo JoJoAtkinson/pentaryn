@@ -69,7 +69,7 @@
         "BAD_ARGS"
       ],
       "since": "1.2.0",
-      "doc": "Read-only DDB-correction state of one actor, plain JSON: whether it is a D&D Beyond character, its ddb-importer importId, the stamp of its last correction, whether a sync came since, and the items frozen against syncs (flags.ddbimporter.ignoreItemUpdate / ignoreItemImport)."
+      "doc": "Read-only DDB-correction state of one actor, plain JSON: whether it is a D&D Beyond character, its ddb-importer importId, the stamp of its last correction, whether a sync came since, and the items frozen against syncs (flags.ddbimporter.ignoreItemImport)."
     },
     {
       "path": "ddbCorrections.plan",
@@ -91,7 +91,7 @@
         "BAD_ARGS"
       ],
       "since": "1.2.0",
-      "doc": "Dry run of the DDB corrections on one character: what each rule would change now (empty changes = already correct). needsCorrection is true when the character was synced from D&D Beyond since its last correction. BAD_ARGS for an actor without flags.ddbimporter."
+      "doc": "Dry run of the DDB corrections on one character: what each rule would change now (empty changes = already correct). needsCorrection is true when the character was synced from D&D Beyond since its last correction, or was last corrected by another importer version. BAD_ARGS for an actor without flags.ddbimporter."
     },
     {
       "path": "ddbCorrections.apply",
@@ -116,13 +116,14 @@
       "dryRun": true,
       "sideEffects": [
         "updates/retypes the character's Items",
+        "deletes stale cached spell copies (flags.dnd5e.cachedFor) of repointed Cast activities",
         "creates ActiveEffects (flags.pentaryn-riders.stone, flags.pentaryn-riders.choice)",
         "updates the actor's base data",
         "stamps flags.pentaryn-importer.ddbCorrections",
         "a chat message whispered to the GMs when something changed"
       ],
       "since": "1.2.0",
-      "doc": "Apply the DDB corrections to one character now (what runs by itself after every ddb-importer sync). Idempotent. A client that cannot update the actor relays it to the active GM. Runs whatever the ddbCorrections setting says (the setting governs the automatic runs)."
+      "doc": "Apply the DDB corrections to one character now (what runs by itself after every ddb-importer sync). Idempotent. A client that cannot update the actor relays it to the active GM, which applies it only for a sender who owns the actor (else REFUSED). Runs whatever the ddbCorrections setting says (the setting governs the automatic runs)."
     },
     {
       "path": "ddbCorrections.rules",
@@ -165,8 +166,8 @@
     ],
     "reads": [
       "flags.ddbimporter.importId",
-      "flags.ddbimporter.ignoreItemUpdate",
       "flags.ddbimporter.ignoreItemImport",
+      "flags.dnd5e.cachedFor",
       "flags.pentaryn-riders.stone"
     ]
   },

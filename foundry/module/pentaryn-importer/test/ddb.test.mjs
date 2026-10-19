@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
 import { manifestOf } from "./kit/harness.mjs";
 import { DDB_DM, DDB_HB, DDB_MM, PHB_INDEX, SPELLS, fighter, liveActor, wizard } from "./fixtures/ddb.mjs";
-import { applyPlan, lookupsFor, snapshotOf } from "../ddb-adapter.mjs";
+import { applyPlan, lookupsFor, replacedSystem, snapshotOf } from "../ddb-adapter.mjs";
 import { planCorrections } from "../ddb-core.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
@@ -82,8 +82,10 @@ test("applyPlan batches the item updates into one call and stamps with the actor
   assert.deepEqual(out.errors, []);
   assert.equal(out.stamped, true);
   const ops = a.writes.map(w => w[0]);
-  assert.deepEqual(ops, ["items.update", "item.update", "item.update", "item.update", "item.update", "effects.create", "actor.update"]);
+  assert.deepEqual(ops, ["items.update", "item.update", "item.update", "item.update", "item.update", "effects.create", "items.delete", "actor.update"]);
   assert.deepEqual(a.writes[0][1].map(u => u._id), ["fl1", "inv", "swa", "wand", "lens"]);
+  assert.deepEqual(a.writes.find(w => w[0] === "items.delete")[1], ["dmCache"], "the lens's stale cached Detect Magic");
+  assert.equal(a.items.has("dmCache"), false);
   const actorUpdate = a.writes.at(-1)[1];
   assert.equal(actorUpdate["system.attributes.senses.ranges.darkvision"], 0);
   assert.deepEqual(actorUpdate["flags.pentaryn-importer.ddbCorrections"].importId, "imp1");
@@ -91,6 +93,22 @@ test("applyPlan batches the item updates into one call and stamps with the actor
   // and nothing is left to do
   const again = snapshotOf(a);
   assert.deepEqual(planCorrections(again, await lookupsFor(again)).changes, []);
+});
+
+test("a type change replaces system with core's ForcedReplacement operator, not the deprecated ==system", async () => {
+  const a = liveActor(wizard());
+  const snap = snapshotOf(a);
+  await applyPlan(a, planCorrections(snap, await lookupsFor(snap)), null);
+  const retypes = a.writes.filter(w => w[0] === "item.update");
+  assert.equal(retypes.length, 4);
+  for (const w of retypes) assert.deepEqual(w[3], ["type", "system"]);
+  const FR = foundry.data.operators.ForcedReplacement;
+  assert.ok(replacedSystem({ a: 1 }).system instanceof FR);
+  assert.deepEqual(replacedSystem({ a: 1 }, { g: {} }), { "==system": { a: 1 } }, "a core without the operator");
+  const created = [];
+  class Real { static create(v) { created.push(v); return { real: v }; } }
+  assert.deepEqual(replacedSystem({ b: 2 }, { g: { foundry: { data: { operators: { ForcedReplacement: Real } } } } }), { system: { real: { b: 2 } } });
+  assert.deepEqual(created, [{ b: 2 }], "ForcedReplacement.create is preferred (v14 client: _replace)");
 });
 
 test("a refused type change falls back to recreating the item under the same id", async () => {
@@ -205,12 +223,22 @@ test("api: plan is a dry run; apply writes; apply { dryRun } writes nothing; a n
   assert.equal((await api.ddbCorrections.apply("nobody")).code, "NOT_FOUND");
 });
 
-test("api: the relay handler on the GM applies for a player sender", async () => {
-  const a = liveActor(fighter({ importId: "r1" }));
+test("api: the relay handler on the GM applies for a player sender who owns the actor", async () => {
+  const a = liveActor(fighter({ importId: "r1" }), { owners: ["player1"] });
   seed(a);
   const out = await CONFIG.queries[`${MODULE}.ddbCorrections.apply`]({ ref: a.id }, { user: { id: "player1", isGM: false, name: "P" } });
   assert.equal(out.ok, true);
   assert.equal(out.reason, "relay");
+});
+
+test("api: the relay refuses a player sender who does not own the actor, and writes nothing", async () => {
+  const a = liveActor(wizard({ importId: "r2" }), { owners: ["someoneElse"] });
+  seed(a);
+  const out = await CONFIG.queries[`${MODULE}.ddbCorrections.apply`]({ ref: a.id }, { user: { id: "player2", isGM: false, name: "Mallory" } });
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "REFUSED");
+  assert.match(out.reason ?? out.message ?? "", /Mallory does not own/);
+  assert.deepEqual(a.writes, []);
 });
 
 test("inspect: the stamp, needsCorrection and frozen items; depth ≤ 4", () => {
@@ -225,7 +253,7 @@ test("inspect: the stamp, needsCorrection and frozen items; depth ≤ 4", () => 
 });
 
 test("api.ddbCorrections.rules lists the rule ids", () => {
-  assert.deepEqual(api.ddbCorrections.rules().map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "transmuters-stone"]);
+  assert.deepEqual(api.ddbCorrections.rules().map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "stale-cast-cache", "transmuters-stone"]);
 });
 
 test("the GM-ready sweep corrects only DDB actors synced since their stamp", async () => {
@@ -245,6 +273,32 @@ test("the GM-ready sweep corrects only DDB actors synced since their stamp", asy
   assert.deepEqual(res, { checked: 1, corrected: ["Test Wizard"] });
   assert.ok(due.writes.length > 0);
   assert.deepEqual([current.writes, plain.writes], [[], []]);
+});
+
+test("a sync hook overlapping a correction already running for the actor is logged, not dropped silently", async () => {
+  const a = liveActor(wizard({ importId: "c1" }));
+  seed(a);
+  reset();
+  Hooks.callAll(HOOK, { actor: a });       // the first run is in flight (awaiting its lookups)
+  Hooks.callAll(HOOK, { actor: a });       // the second finds it running: CONFLICT
+  await flush();
+  const warn = lines.filter(l => l[0] === "warn" && /skipped \(sync\), a correction is already running/.test(l[1]));
+  assert.equal(warn.length, 1, JSON.stringify(lines));
+  assert.ok(a.writes.length > 0, "the first run still corrected the actor");
+});
+
+test("the sweep re-corrects an actor stamped by an older module version, then restamps it", async () => {
+  const { VERSION } = await import("../importer-core.mjs");
+  const old = liveActor(fighter({ importId: "same", stamp: { importId: "same", version: "0.0.1" } }));
+  seed(old);
+  const feature = await import("../ddb-corrections.mjs");
+  const { log } = await import("../documents-adapter.mjs");
+  const ctx = { log };
+  feature.install({ on: () => 0 }, ctx);
+  const res = await ctx.exposed.ddb.sweep();
+  assert.equal(res.checked, 1);
+  assert.equal(old.flags["pentaryn-importer"].ddbCorrections.version, VERSION);
+  assert.deepEqual(await ctx.exposed.ddb.sweep(), { checked: 0, corrected: [] }, "restamped: not due again");
 });
 
 test("selftest passes with the feature installed and the setting registered", () => {
