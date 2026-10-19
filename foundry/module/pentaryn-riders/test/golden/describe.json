@@ -420,6 +420,10 @@
       "label": "one usage dialog"
     },
     {
+      "name": "dnd5e.preUseActivity",
+      "label": "one Arcane Recovery picker"
+    },
+    {
       "name": "renderActivityChoiceDialog",
       "label": "one choice dialog"
     },
@@ -457,14 +461,6 @@
     },
     {
       "name": "dnd5e.renderChatMessage",
-      "label": "projectile buttons"
-    },
-    {
-      "name": "createChatMessage",
-      "label": "projectile buttons"
-    },
-    {
-      "name": "deleteChatMessage",
       "label": "projectile buttons"
     },
     {
