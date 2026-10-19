@@ -67,3 +67,6 @@
 /* Arcane Recovery picker (cast-flow.mjs part 6). */
 .pr-ar-total { text-align: right; font-weight: bold; }
 .pr-ar-total.over { color: var(--dnd5e-color-failure, #b0261c); }
+.pr-ar-row .pr-ar-slots { justify-content: flex-start; gap: 0.25rem; }
+.pr-ar-row .pr-ar-slots input[type="checkbox"] { flex: 0 0 auto; margin: 0; }
+.pr-ar-row .pr-ar-slots input.pr-ar-have { opacity: 0.55; }

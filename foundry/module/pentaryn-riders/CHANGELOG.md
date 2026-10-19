@@ -1,5 +1,21 @@
 # Changelog — pentaryn-riders
 
+## 0.3.1 — 2026-10-19 (feedback LdPm43)
+
+- [declared] Arcane Recovery prompts once and restores once. A D&D Beyond import's Arcane Recovery
+  is a single `ddbmacro` activity (`ddb.feat.arcaneRecovery`): ddb-importer opened its own picker
+  as the use's subsequent action while the riders picker opened from `dnd5e.postUseActivity`, and
+  each window restored slots (Marwen got two windows and both writes). The riders listener now sets
+  the use's `subsequentActions` to false for that activity (dnd5e reads it right after the hook), so
+  only the riders picker opens. The chat card's macro button still runs ddb's on a click; with the
+  `arcaneRecovery` setting off, ddb's picker runs as imported. To see it: use Arcane Recovery on a
+  D&D Beyond-imported wizard after a short rest; one window, one write, one chat line.
+- [declared] The picker is the layout the player asked for: one row per slot level 1–5 the wizard
+  has, "n of m left", a ticked locked box per slot still there and a box per spent slot to tick,
+  opening with the highest spent slots that fit ticked. Budget +1 with an Arcane Grimoire (attuned
+  when it needs attunement), as ddb-importer's picker had. The result shape and API are unchanged.
+- A second use while the picker is open opens no second window (an info notice instead).
+
 ## 0.3.0 — 2026-10-12 (addon blueprint migration, wave 4; released by the Wave 7 restart batch)
 
 - Wave 7 batch: `module.json` `flags.pentaryn` blueprint keys (`flagScope` `riders` →

@@ -5,7 +5,8 @@
  */
 
 const { concentrationEffectFor, summonTokenIds, spendsUsesOf, MOD, SUMMON_FLAG, skipsTargetPicker, restoreSlotScaling,
-  placeSummonsDefault, isWildcardPath, concentrationResult, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery } = await import("../table-core.mjs");
+  placeSummonsDefault, isWildcardPath, concentrationResult, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
+  arcaneRecoveryRows, isDdbRecoveryMacro, isArcaneGrimoire } = await import("../table-core.mjs");
 
 let pass = 0;
 const failures = [];
@@ -115,6 +116,18 @@ check("38 checks: ok, over the cap, 6th level, more than spent",
 check("39 Arcane Recovery by identifier or name; a spell named so is not",
   [isArcaneRecovery({ type: "feat", identifier: "arcane-recovery" }), isArcaneRecovery({ type: "feat", name: "Arcane Recovery" }), isArcaneRecovery({ type: "spell", name: "Arcane Recovery" })],
   [true, true, false]);
+check("40 LdPm43 rows: one per level 1–5 with slots, the spent count, the default ticked (capped at spent)",
+  arcaneRecoveryRows(ar, { 1: 1, 5: 9 }),
+  [{ level: 1, value: 1, max: 4, spent: 3, ticked: 1 }, { level: 2, value: 0, max: 3, spent: 3, ticked: 0 }, { level: 3, value: 0, max: 3, spent: 3, ticked: 0 },
+    { level: 4, value: 0, max: 3, spent: 3, ticked: 0 }, { level: 5, value: 1, max: 2, spent: 1, ticked: 1 }]);
+check("41 LdPm43: ddb-importer's Arcane Recovery macro activity, not another macro or activity",
+  [isDdbRecoveryMacro({ type: "ddbmacro", fn: "ddb.feat.arcaneRecovery" }), isDdbRecoveryMacro({ type: "ddbmacro", fn: "ddb.feat.naturalRecovery" }),
+    isDdbRecoveryMacro({ type: "utility", fn: "ddb.feat.arcaneRecovery" }), isDdbRecoveryMacro({ type: "ddbmacro" })],
+  [true, false, false, false]);
+check("42 Arcane Grimoire: +1 to the budget when attuned (or attunement not required)",
+  [arcaneRecoveryCap(6, 1), isArcaneGrimoire({ name: "+1 Arcane Grimoire", attunement: "required", attuned: true }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: false }), isArcaneGrimoire({ name: "Arcane Grimoire" }), isArcaneGrimoire({ name: "Spellbook" })],
+  [4, true, false, true, false]);
 
 /* ── report ──────────────────────────────────────────────────────────────── */
 

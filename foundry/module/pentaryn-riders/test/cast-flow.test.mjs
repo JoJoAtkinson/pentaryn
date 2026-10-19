@@ -309,8 +309,8 @@ test("Arcane Recovery: over the budget or nothing chosen → no write; cancel �
   let over;
   await useRecovery(async d => {
     const form = d.form;
-    form.querySelector('input[name="l3"]').value = "2";
-    await form.fire("input");
+    for (const box of form.querySelectorAll('input[name="l3"]')) box.checked = true;
+    await form.fire("change");
     over = { total: d.element.querySelector(".pr-ar-total").textContent, cls: d.element.querySelector(".pr-ar-total").className, ok: d.element.querySelector('button[data-action="ok"]').disabled };
     return { l3: 2 };
   });
@@ -318,6 +318,98 @@ test("Arcane Recovery: over the budget or nothing chosen → no write; cancel �
   await useRecovery(() => ({ l1: 0, l2: 0, l3: 0 }));
   await useRecovery(() => "cancel");
   assert.equal(F.calls.slice(before).filter(c => c.op === "update").length, 0);
+});
+
+/** Tamsin's slots as the fixture builds them: 1st 1/4, 2nd 1/3, 3rd 0/2. */
+const resetSlots = () => wiz.update({ "system.spells.spell1.value": 1, "system.spells.spell2.value": 1, "system.spells.spell3.value": 0 });
+
+test("LdPm43: one row per slot level with 'n of m left', a locked ticked box per slot still there and a tickable box per spent slot; the default opens ticked", async () => {
+  await resetSlots();
+  let seenRows;
+  await useRecovery(d => {
+    seenRows = d.form.querySelectorAll(".pr-ar-row").map(row => ({
+      label: row.querySelector("label").textContent.replace(/\s+/g, " ").trim(),
+      locked: row.querySelectorAll("input.pr-ar-have").filter(b => b.checked && b.disabled).length,
+      tickable: row.querySelectorAll("input[name^=l]").length,
+      ticked: row.querySelectorAll("input[name^=l]").filter(b => b.checked).length,
+    }));
+    return "cancel";
+  });
+  // Tamsin: 1st 1/4, 2nd 1/3, 3rd 0/2; 4th and 5th max 0 → no row. Budget 3 → one 3rd ticked.
+  assert.deepEqual(seenRows, [
+    { label: "DND5E.SpellLevel1 1 of 4 left", locked: 1, tickable: 3, ticked: 0 },
+    { label: "DND5E.SpellLevel2 1 of 3 left", locked: 1, tickable: 2, ticked: 0 },
+    { label: "DND5E.SpellLevel3 0 of 2 left", locked: 0, tickable: 2, ticked: 1 },
+  ]);
+});
+
+test("LdPm43: a D&D Beyond import's ddbmacro Arcane Recovery → the riders picker only (subsequentActions false, so ddb's own picker never opens), and one write", async () => {
+  await resetSlots();
+  const before = F.calls.length;
+  W.takeLog();
+  const usage = {};
+  const ddb = { ...recovery(), type: "ddbmacro", macro: { function: "ddb.feat.arcaneRecovery", name: "Arcane Recovery" } };
+  W.answer = () => ({ l1: 1, l2: 1, l3: 0 });
+  F.fire("dnd5e.postUseActivity", ddb, usage, {});
+  assert.equal(usage.subsequentActions, false, "set synchronously: dnd5e reads it right after the hook");
+  mock.timers.tick(0);
+  await drain();
+  W.answer = () => "cancel";
+  assert.equal(W.takeLog().filter(l => l.op === "DialogV2.wait").length, 1);
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update").map(c => c.changes), [{ "system.spells.spell1.value": 2, "system.spells.spell2.value": 2 }]);
+  await resetSlots();
+  // Any other activity keeps its subsequent actions; so does every use with the setting off.
+  const plain = {}, otherMacro = {}, off = {};
+  F.fire("dnd5e.postUseActivity", { ...recovery(), type: "utility" }, plain, {});
+  mock.timers.tick(0);
+  await drain();
+  F.fire("dnd5e.postUseActivity", { ...recovery(), type: "ddbmacro", macro: { function: "ddb.feat.somethingElse" } }, otherMacro, {});
+  mock.timers.tick(0);
+  await drain();
+  await F.game.settings.set(MODULE, "arcaneRecovery", false);
+  F.fire("dnd5e.postUseActivity", ddb, off, {});
+  await F.game.settings.set(MODULE, "arcaneRecovery", true);
+  mock.timers.tick(0);
+  await drain();
+  assert.deepEqual([plain, otherMacro, off], [{}, {}, {}]);
+  W.takeLog();
+});
+
+test("LdPm43: a second use while the picker is open opens no second window (a notice instead) and writes once", async () => {
+  await resetSlots();
+  newNotes();
+  W.takeLog();
+  const before = F.calls.length;
+  W.answer = async () => {
+    await null;                               // out of the outer tick: a nested mock tick re-runs its timer
+    F.fire("dnd5e.postUseActivity", recovery(), {}, {});
+    mock.timers.tick(0);
+    await drain();
+    return { l1: 1, l3: 0 };
+  };
+  F.fire("dnd5e.postUseActivity", recovery(), {}, {});
+  mock.timers.tick(0);
+  await drain(200);
+  W.answer = () => "cancel";
+  assert.equal(W.takeLog().filter(l => l.op === "DialogV2.wait").length, 1);
+  assert.deepEqual(newNotes(), [["info", "Arcane Recovery: the slot picker is already open."]]);
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update").map(c => c.changes), [{ "system.spells.spell1.value": 2 }]);
+  await resetSlots();
+});
+
+test("Arcane Recovery: an Arcane Grimoire (attuned when it needs it) adds 1 to the budget", async () => {
+  const { arcaneRecoveryDialog } = await import("../cast-flow.mjs");
+  const mage = grimoire => makeActor({ name: "Grim", ownership: { default: 3 }, system: { spells: { spell1: { level: 1, value: 0, max: 4 }, spell2: { level: 2, value: 0, max: 3 } } }, items: [
+    { id: "grimclass0000001", name: "Wizard", type: "class", system: { identifier: "wizard", levels: 4 } },
+    ...(grimoire ? [{ id: "grimoire00000001", name: "+1 Arcane Grimoire", type: "equipment", system: grimoire }] : []),
+  ] });
+  const totals = [];
+  W.answer = d => { totals.push(d.element.querySelector(".pr-ar-total").textContent); return "cancel"; };
+  await arcaneRecoveryDialog(mage(null));
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true }));
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: false }));
+  W.answer = () => "cancel";
+  assert.deepEqual(totals, ["2 of 2 levels", "3 of 3 levels", "2 of 2 levels"]);
 });
 
 test("Arcane Recovery: no spent slot 1–5 → a notice and no dialog; the setting off, another feature, not owner → nothing", async () => {

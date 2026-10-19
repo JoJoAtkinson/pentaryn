@@ -27,7 +27,7 @@ Argon table fixes (rituals, concentration, cast flow, HUD tidy-ups). Requires dn
 | **Longer casts** (any caster) | Spells taking a minute or more (Animate Dead) get a **"Longer casts (1 min+)"** group on that panel. | HUD accordion group. |
 | **Concentration summons** | A token summoned by a concentration spell leaves the map when that concentration ends; the *Lost Concentration* card's icon-only button gets its words. | The sphere goes; "Break Concentration" beside ⦸. |
 | **Concentration saves** | A failed save ends concentration at once, unless Legendary Resistance, Indomitable, a Mind Sharpener or Bardic Inspiration could still turn it; the card shows "DC n · Failed / Success". | The result line under the roll. |
-| **Cast flow** | A summon keeps the sidebar on its tab and says "Click the map to place X"; summons open with *Place Summons* ticked; a self-only card (Shield) drops stale targets; a typed number counts on the first Use click; a wildcard summon image previews as a real one; restoring a slot (Pearl of Power) opens on the highest spent level; after Arcane Recovery the owner picks the slots (PHB budget enforced). | Dialog defaults, the Arcane Recovery window. |
+| **Cast flow** | A summon keeps the sidebar on its tab and says "Click the map to place X"; summons open with *Place Summons* ticked; a self-only card (Shield) drops stale targets; a typed number counts on the first Use click; a wildcard summon image previews as a real one; restoring a slot (Pearl of Power) opens on the highest spent level; after Arcane Recovery the owner ticks the slots to recover in one window: a row per slot level 1–5, "n of m left", a locked ticked box per slot still there and a box per spent slot, opening with the highest that fit ticked (PHB budget, +1 with an attuned Arcane Grimoire, enforced). A D&D Beyond import's Arcane Recovery (`ddbmacro` activity, `ddb.feat.arcaneRecovery`) no longer opens its own second picker: that use's `subsequentActions` is set false (LdPm43). A second use while the window is open opens no second one. | Dialog defaults, the Arcane Recovery window. |
 | **Argon tidy-ups** | Badges of buttons spending another item's uses (Metamagic → Font of Magic) refresh; open panels collapse before an area or summon placement; Metamagic opens no target picker; spell tooltips use the spell's roll data (Scorching Ray: 3 rays); the hover tooltip lets clicks through. | The HUD behaves. |
 
 ## Settings
@@ -41,7 +41,7 @@ All world, Boolean, default on, read live (no reload needed), in this order in *
 | `concentrationSummons` | Summoned tokens leave with their concentration. |
 | `concentrationAutoBreak` | A failed concentration save ends it; the DC / result line. |
 | `castDefaults` | Place Summons ticked; self-only cards drop stale targets. |
-| `arcaneRecovery` | The Arcane Recovery picker after the feature is used. |
+| `arcaneRecovery` | The Arcane Recovery picker after the feature is used (and ddb-importer's own Arcane Recovery macro skipped for that use; off → ddb's picker runs as imported). |
 | `enabled` | The damage and healing riders, the tray preset and Battle Medic. |
 | `hdControls` | The sheet's Hit Dice − / + (a change re-renders open character sheets). |
 
