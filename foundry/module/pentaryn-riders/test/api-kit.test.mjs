@@ -35,7 +35,7 @@ test("the legacy surface is a subset of the kit-built one (same kinds)", () => {
   const legacy = readJSON(new URL("./golden/surface-legacy.json", import.meta.url));
   for (const [k, kind] of Object.entries(legacy)) assert.equal(typeof api[k], kind, k);
   assert.ok(Object.isFrozen(api));
-  assert.equal(api.version, "0.3.0");   // [declared] W4-R6 (Joe 2026-10-12): the Wave 7 batch bumps 0.2.0 -> 0.3.0
+  assert.equal(api.version, "0.4.0");   // [declared] 0.4.0 (2026-10-19): effect choices, usage-dialog guards (tNdOEx)
   assert.equal(api.contract, "pentaryn-riders/api@1");
 });
 
@@ -57,7 +57,7 @@ test("describe() equals golden/describe.json (version, kit, published and patch 
   assert.deepEqual(d.queries, [`${MODULE}.battleMedic`]);
   assert.deepEqual(d.settings.map(s => s.key), ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls"]);
   assert.deepEqual(d.events, []);
-  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 23);
+  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 26);
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
 });
 

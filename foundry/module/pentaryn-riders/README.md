@@ -2,7 +2,8 @@
 
 **Read this when:** Elemental Adept, Elemental Affinity, Potent Spellcasting or the Healer feat
 isn't adding what it should, Battle Medic misbehaves, a Ritual Adept / concentration / Arcane
-Recovery / Argon HUD tidy-up acts oddly, or you are changing or calling `pentaryn-riders`.
+Recovery / Argon HUD tidy-up acts oddly, the Transmuter's Stone benefit won't switch, a cast fails with
+"the effect that is concentrated on … does not exist", or you are changing or calling `pentaryn-riders`.
 **Not this file:** how every addon is built → `context/foundry/addon-blueprint.md` · the
 migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-riders.md`.
 
@@ -28,6 +29,8 @@ Argon table fixes (rituals, concentration, cast flow, HUD tidy-ups). Requires dn
 | **Concentration summons** | A token summoned by a concentration spell leaves the map when that concentration ends; the *Lost Concentration* card's icon-only button gets its words. | The sphere goes; "Break Concentration" beside ⦸. |
 | **Concentration saves** | A failed save ends concentration at once, unless Legendary Resistance, Indomitable, a Mind Sharpener or Bardic Inspiration could still turn it; the card shows "DC n · Failed / Success". | The result line under the roll. |
 | **Cast flow** | A summon keeps the sidebar on its tab and says "Click the map to place X"; summons open with *Place Summons* ticked; a self-only card (Shield) drops stale targets; a typed number counts on the first Use click; a wildcard summon image previews as a real one; restoring a slot (Pearl of Power) opens on the highest spent level; after Arcane Recovery the owner picks the slots (PHB budget enforced). | Dialog defaults, the Arcane Recovery window. |
+| **One usage dialog per spell** | A quick double click on Use opens one dialog, not two (the second click brings the open one forward). A dialog left open while the concentration it named ended (cast from elsewhere, dropped) no longer fails with "The effect that is concentrated on and to be replaced does not exist.": below the limit nothing is replaced, at the limit the one held concentration is. | The cast goes through. |
+| **Pick-one benefits** (Transmuter's Stone) | A feature's benefits are passive effects in the sheet's **Effects** tab; turning one on turns the others of its group off (two may be on when its `max` allows, e.g. Wizard 10). The data comes from a fix script (`scripts/foundry/fixes/2026-10-19-transmuters-stone.js`). | Effects tab → Passive: one stone benefit lit. |
 | **Argon tidy-ups** | Badges of buttons spending another item's uses (Metamagic → Font of Magic) refresh; open panels collapse before an area or summon placement; Metamagic opens no target picker; spell tooltips use the spell's roll data (Scorching Ray: 3 rays); the hover tooltip lets clicks through. | The HUD behaves. |
 
 ## Settings
@@ -87,12 +90,13 @@ R.inspect("Marrith Ashcroft").rows;                  // the same rows, plain, by
 | Item flag `flags.pentaryn-riders.damageType` | a typed feature's type (string or array), by `setType` / `retireManual` |
 | Damage / healing ChatMessage `flags.pentaryn-riders` | `{ applied, ignoreResistance, origin, detail }` (`riderFlag`): the once-per-casting guard, the card note, the tray preset |
 | Battle Medic roll message `flags.pentaryn-riders` | `{ flow: "battle-medic", target, faces }` |
+| ActiveEffect flag `flags.pentaryn-riders.choice` | `{ group, max }` on a pick-one benefit (authored by a fix script, read here); `max` a number or a roll-data formula |
 | Activity flag `flags.pentaryn-riders.flow` | `"battle-medic"` on the activity `installBattleMedic` builds |
 | Token flag `flags.pentaryn-riders.concentration` | the uuid of the concentration effect that keeps a summon |
 | Summoned token `flags.pentaryn-riders.claims.summonCleanup` | the socket id of the one tab that deletes that scene's summons (the kit's `claimDocument`, riders-async-3); it goes with the token |
 | Concentration save card `flags.pentaryn-riders.claims.autoBreak` | the socket id of the one tab that ends the concentration (the kit's `claimMessage`, riders-async-1) |
 | Patient flag `flags.pentaryn-riders.relay.<requestId>` | the GM tabs' claim stamps (`claims.<socketId>`, removed when answered) and the winner's `{ result \| error, at }`; the last five kept |
-| Documents | class `system.hd.spent` / NPC `system.attributes.hd.spent`; HP via `applyDamage`; `system.spells.spellN.value` (Arcane Recovery); a concentration save card's `system.outcome = "broken"`; summoned tokens deleted |
+| Documents | class `system.hd.spent` / NPC `system.attributes.hd.spent`; HP via `applyDamage`; `system.spells.spellN.value` (Arcane Recovery); a concentration save card's `system.outcome = "broken"`; summoned tokens deleted; a pick-one effect's siblings `disabled: true` |
 
 ## Flags other modules read
 
@@ -104,7 +108,8 @@ n/a — emits none. Listens to (in this order, `test/golden/hooks.json`): `dnd5e
 `dnd5e.summonToken`, `deleteActiveEffect`, `dnd5e.renderChatMessage`, `createChatMessage`,
 `updateItem`, `dnd5e.preCreateMeasuredTemplate`, `dnd5e.preSummon`, `renderItemButtonArgonComponent`,
 `changeSidebarTab`, `dnd5e.postSummon`, `renderActivityUsageDialog`, `dnd5e.postUseActivity`,
-`dnd5e.postDamageRollConfiguration`, `dnd5e.preCalculateDamage`, `renderCharacterActorSheet`.
+`dnd5e.preActivityConsumption`, `dnd5e.postDamageRollConfiguration`, `dnd5e.preCalculateDamage`,
+`renderCharacterActorSheet`, `updateActiveEffect`.
 
 ## Patches and adjustments
 
@@ -124,7 +129,8 @@ Non-patch rows: `argon-shared-uses-badge`, `argon-collapse-on-area-placement`,
 `dnd5e-concentration-auto-break`, `dnd5e-summon-keeps-sidebar`, `dnd5e-restore-slot-default`,
 `dnd5e-usage-dialog-first-click`, `dnd5e-chat-message-types`, `argon-riders-long-casts`,
 `dnd5e-riders-arcane-recovery-picker`, `dnd5e-riders-damage-tray-preset`,
-`dnd5e-riders-roll-term-riders`, `dnd5e-riders-sheet-hit-dice`, `core-riders-query-battle-medic`.
+`dnd5e-riders-roll-term-riders`, `dnd5e-riders-sheet-hit-dice`, `core-riders-query-battle-medic`,
+`dnd5e-usage-dialog-single`, `dnd5e-riders-effect-choices`.
 Nothing in Argon's files is edited.
 
 ## Two sessions / who writes
@@ -143,6 +149,8 @@ Nothing in Argon's files is edited.
   tabs claim it on the patient first: the first to stamp heals and records its result, the others
   wait (up to 7 s) and answer with it; a tab that arrives after the result is recorded answers with
   it too and never heals (combat-riders-41).
+- **Pick-one benefits**: the clients of the user who toggled the effect (`userId === game.user.id`)
+  turn its siblings off. The GM's two tabs may both do it; the write (`disabled: true`) is the same.
 - **Concentration summon cleanup**: the active GM's client (with no GM online, the user who ended
   the concentration) deletes the tokens. Two tabs on that account both qualify, so per scene each
   claims the first stamped token first (the kit's `claimDocument`, key `summonCleanup`): one tab
@@ -165,6 +173,12 @@ Nothing in Argon's files is edited.
 | A turn-flow or Argon action-bar change | `pentaryn-combat` |
 | A dnd5e cast-flow or concentration fix that is not a rider | here, as a feature file (or a new module if it grows) |
 
+**A pick-one benefit** (choose one of N, change it later): one passive (`transfer`) effect per
+benefit on the feature item, each with `flags.pentaryn-riders.choice = { group: "<name>", max }`;
+`max` is a number or a formula such as `"min(2, 1 + floor(@classes.wizard.levels / 10))"`. An
+always-on part of the feature is its own unflagged effect. Write it as a fix script with a dry run
+(`scripts/foundry/fixes/`), not by hand.
+
 **A new behaviour**: a feature file with `install(reg, ctx)` / `uninstall()`, listed in `FEATURES`
 in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` with a marker and a
 `riders-…` adjustments row; a setting is a `SETTINGS` row with literal labels.
@@ -181,19 +195,23 @@ in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` 
 - `battleMedic(healer, token)` wants a Token placeable; an Actor reads as "no Hit Dice".
 - **Summon cleanup reacts to concentration effects only**: an effect whose `concentrating` status
   was stripped before it was deleted leaves its summons on the map (dnd5e never does that).
+- **A pick-one effect's siblings are on the same document**: the stone's effects all live on the
+  feature item. An effect on the actor with the same group is a different parent and is not
+  touched. A player who turns one off leaves none on; nothing turns another on.
 - `preview()` is a string transform for checking; the live riders edit real roll terms.
 
 ## Files
 
 Load order is `FEATURES` in `riders.mjs`, and it decides who runs first on a shared hook:
-`dnd5e.preUseActivity` runs rituals' slot untick, cast-flow's restore-slot default and stale-target
-drop, then the Battle Medic veto; `dnd5e.renderChatMessage` runs the break label and the
+`dnd5e.preUseActivity` runs rituals' slot untick, cast-flow's restore-slot default, stale-target
+drop and one-dialog veto, then the Battle Medic veto; `dnd5e.renderChatMessage` runs the break label and the
 concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Recovery before Battle Medic.
 
 | File | Role |
 |---|---|
 | `riders.mjs` | entry: wiring, `FEATURES`, init (settings, relay), ready (patches, publish) |
 | `riders-core.mjs`, `core/hit-dice.mjs`, `core/relay.mjs` | pure: constants, `RULES`, rider planning, Hit Dice / Battle Medic / report kernels, the relay's claim |
+| `core/choices.mjs`, `core/usage.mjs` | pure: pick-one effect rules; the usage-dialog guards (one dialog, stale concentration) |
 | `rituals-core.mjs`, `table-core.mjs` | pure: Ritual Adept and Longer casts; concentration, Argon and cast-flow helpers |
 | `settings.mjs` | `SETTINGS`, `settingOr` / `settingRaw` |
 | `api-manifest.mjs`, `api.mjs` | the API rows; implementations, `inspect`, `selftest` |
@@ -201,6 +219,7 @@ concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Rec
 | `patches.mjs` | the six wraps |
 | `rituals.mjs`, `concentration.mjs`, `argon-tidy.mjs`, `cast-flow.mjs` | features: table fixes |
 | `damage-riders.mjs`, `card-note.mjs`, `tray-preset.mjs`, `battle-medic.mjs`, `hd-sheet.mjs` | features: the riders, Battle Medic, the sheet − / + |
+| `effect-choices.mjs` | feature: pick-one passive effects (the Transmuter's Stone) |
 | `styles/riders.css`, `lang/en.json`, `lib/` | styles (`.pr-*`, and the `#tooltip` click-through rule), strings, the vendored kit (with `lib/argon-tooltip.css`, D7: listed in `styles`, inert for riders alone) |
 
 ## Tests

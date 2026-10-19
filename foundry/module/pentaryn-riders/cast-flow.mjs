@@ -48,12 +48,28 @@
  *    slots that fit, the PHB budget (half the Wizard level, rounded up; nothing of level 6+) shown
  *    and enforced. Recover writes the slots and posts one line. Setting
  *    pentaryn-riders.arcaneRecovery. Row dnd5e-riders-arcane-recovery-picker.
+ *
+ * Feedback tNdOEx (Marwen, Enlarge/Reduce):
+ *
+ * 7. One usage dialog per activity. A quick double click on Use opened two dialogs for the same
+ *    spell; each named the concentration it would end as it was when it opened. A second Use on an
+ *    activity whose dialog is already open brings that dialog to the front instead (only when a
+ *    dialog would show: `configure: false` callers are never stopped). Pure: core/usage.mjs.
+ *    Row dnd5e-usage-dialog-single.
+ *
+ * 8. A stale concentration replacement is repaired. A dialog left open while the concentration it
+ *    named ended (cast from the other dialog, dropped by hand) made dnd5e refuse the cast with "The
+ *    effect that is concentrated on and to be replaced does not exist." `dnd5e.preActivityConsumption`
+ *    re-reads the actor: below its limit the replacement is dropped; at the limit with one effect it
+ *    names that one (the only one the cast can end); otherwise dnd5e refuses as before.
+ *    Row dnd5e-usage-dialog-single.
  */
 
 import { restoreSlotScaling, slotsFrom, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
   ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { itemInfo, restoreSidebar, sidebarState } from "./shapes.mjs";
+import { openUsageDialogFor, staleConcentrationEnd } from "./core/usage.mjs";
 
 let log = null;
 
@@ -237,6 +253,41 @@ function arcaneRecoveryPicker(activity) {
   } catch (err) { log.warn("Arcane Recovery picker skipped", err); }
 }
 
+/* ── 7. one usage dialog per activity ────────────────────────────────────── */
+
+function isUsageDialog(app) {
+  const cls = globalThis.dnd5e?.applications?.activity?.ActivityUsageDialog;
+  return cls ? app instanceof cls : false;
+}
+
+// Synchronous, a literal `return false` (dnd5e.preUseActivity is a Hooks.call).
+function oneDialog(activity, usageConfig, dialogConfig) {
+  try {
+    if (dialogConfig?.configure === false) return;
+    const open = openUsageDialogFor(foundry.applications.instances?.values?.(), activity?.uuid, isUsageDialog);
+    if (!open) return;
+    try { open.bringToFront?.(); } catch (err) { log.debug("usage dialog to front", err); }
+    return false;
+  } catch (err) { log.warn("one usage dialog check skipped", err); }
+}
+
+/* ── 8. a stale concentration replacement ─────────────────────────────────── */
+
+function staleConcentration(activity, usageConfig) {
+  try {
+    const conc = usageConfig?.concentration;
+    if (!conc?.begin || !conc.end) return;
+    const actor = activity?.actor;
+    const effects = actor?.concentration?.effects;
+    if (!effects) return;
+    const ids = [...effects].map(e => e.id);
+    const next = staleConcentrationEnd(conc.end, ids, actor.system?.attributes?.concentration?.limit ?? 1);
+    if (next === undefined) return;
+    log.debug(`stale concentration replacement ${conc.end} → ${next}`);
+    conc.end = next;
+  } catch (err) { log.warn("stale concentration check skipped", err); }
+}
+
 /* ── wiring ───────────────────────────────────────────────────────────── */
 
 export function install(reg, ctx) {
@@ -249,6 +300,8 @@ export function install(reg, ctx) {
   reg.on("dnd5e.preUseActivity", restoreSlotDefault, { guard: false, label: "restore-slot default" });
   reg.on("dnd5e.preUseActivity", dropStaleTargets, { guard: false, label: "cast defaults" });
   reg.on("renderActivityUsageDialog", firstClick, { guard: false, label: "usage dialog first click" });
+  reg.on("dnd5e.preUseActivity", oneDialog, { guard: false, label: "one usage dialog" });
+  reg.on("dnd5e.preActivityConsumption", staleConcentration, { guard: false, label: "stale concentration" });
   reg.on("dnd5e.postUseActivity", arcaneRecoveryPicker, { guard: false, label: "Arcane Recovery picker" });
   ctx.expose({ arcaneRecoveryDialog });
 }
