@@ -185,10 +185,36 @@
         "Folder (PC Summons & Forms/<First name> — summons & forms)",
         "Actor.ownership (adds the sender to an existing copy)",
         "flags.pentaryn-creatures.library",
-        "flags.dnd5e.isAutoImported"
+        "flags.dnd5e.isAutoImported",
+        "flags.dnd5e.summon.origin (linked sources)"
       ],
       "since": "0.2.0",
-      "doc": "The summon library: the active GM makes the world copy dnd5e needs to summon `uuid` from `item` for a player without Create New Actors, owned by the sender and the character's owners. Refused (REFUSED) unless the sender owns the item's actor and the source is one the item's summon activities can summon (a profile's uuid; for a CR summon, a compendium npc within the CR and types). Idempotent: a deterministic id per character and source, so a second call (or a second GM tab) returns the same copy. A player's client asks the active GM (NO_GM when none is connected). Called by the Actor5e.fetchExisting wrap; dryRun reports the id without writing."
+      "doc": "The summon library: the active GM makes the world copy dnd5e needs to summon `uuid` from `item` for a player without Create New Actors, owned by the sender and the character's owners. Refused (REFUSED) unless the sender owns the item's actor, the source is not a player character and the sender may observe it (a world actor, or its compendium), and it is one the item's summon activities can summon (a profile's uuid; for a CR summon, a compendium npc within the CR and types), judged by the item's compendium original when it has one (0.3.0). Idempotent: a deterministic id per character and source, so a second call (or a second GM tab) returns the same copy. A player's client asks the active GM (NO_GM when none is connected). Called by the Actor5e.fetchExisting wrap; dryRun reports the id without writing."
+    },
+    {
+      "path": "fileLibrary",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ actor?: string, item?: string, summoner?: string, dryRun?: boolean }",
+          "doc": "actor: one copy's id or uuid; item: the summoning item's uuid; summoner: GM only, the character's id or exact name; nothing: GM only, sweep every loose copy"
+        }
+      ],
+      "returns": "Promise<{ ok: true, dryRun, filed: { id, name, summoner, folder, changes }[], already, unresolved: { id, name, reason }[] } | { ok: false, code, reason }>",
+      "gm": false,
+      "writes": true,
+      "query": true,
+      "relay": true,
+      "dryRun": true,
+      "sideEffects": [
+        "Actor.folder",
+        "Actor.ownership (adds the character's owners)",
+        "flags.pentaryn-creatures.library",
+        "flags.dnd5e.summon.origin (linked copies)",
+        "Folder (PC Summons & Forms/<First name> — summons & forms)"
+      ],
+      "since": "0.3.0",
+      "doc": "File dnd5e's own summon copies (flags.dnd5e.isAutoImported, made by a GM or a player who may create actors) into the character's library: its `— summons & forms` folder, the library flag, the character's owners added (never removed). A player files one copy they own for the item that summoned it (asks the active GM; dnd5e.postSummon does this by itself); the GM may name the summoner, or pass nothing to sweep every loose copy, guessing the summoner as the one character sharing an owner with the copy whose items can summon it (else unresolved). Idempotent: a filed copy writes nothing. dryRun lists what would change."
     },
     {
       "path": "library",
@@ -214,7 +240,8 @@
     }
   ],
   "queries": [
-    "pentaryn-creatures.summonActor"
+    "pentaryn-creatures.summonActor",
+    "pentaryn-creatures.fileLibrary"
   ],
   "settings": [
     {
@@ -314,6 +341,10 @@
     {
       "name": "setup",
       "label": "setup: wrap Actor5e.fetchExisting"
+    },
+    {
+      "name": "dnd5e.postSummon",
+      "label": "dnd5e.postSummon: file the copy in the library"
     }
   ],
   "patches": [
@@ -327,7 +358,8 @@
     "writes": [
       "flags.pentaryn-creatures.light",
       "flags.pentaryn-creatures.library",
-      "flags.dnd5e.isAutoImported"
+      "flags.dnd5e.isAutoImported",
+      "flags.dnd5e.summon.origin"
     ],
     "reads": [
       "flags.pentaryn-aoe.handle",

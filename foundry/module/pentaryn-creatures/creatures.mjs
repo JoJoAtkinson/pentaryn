@@ -13,16 +13,17 @@
  *   strip.mjs            UI: the strip's DOM, the Combat HUD dock
  *   creature-strip.mjs   feature: when the strip redraws
  *   owner-sees.mjs       feature: the Token#isVisible wrap
- *   summons-adapter.mjs  dnd5e summon activity / source actor → plain data, the library copy's create data
- *   summons.mjs          feature: the summon library (Actor5e.fetchExisting wrap + the GM relay)
+ *   summons-adapter.mjs  dnd5e summon activity / source / copy → plain data, the library copy's create data
+ *   summons.mjs          feature: the summon library (Actor5e.fetchExisting wrap + the GM relay, dnd5e.postSummon filing)
  *   api-manifest.mjs     PURE API rows (describe() reads them)
  *   api.mjs              implementations over ctx.exposed, buildApiFor(ctx)
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the light and strip features install synchronously in this body (where their
  * module-scope Hooks.on calls always ran, so listener order is unchanged) · init → settings ·
- * setup → owner-sees wraps Token#isVisible, summons wraps Actor5e.fetchExisting · the relay query
- * (manifest row summonActor) is registered at load on every client (a player's queryGM needs it) · ready → the active GM syncs every light, the strip
+ * setup → owner-sees wraps Token#isVisible, summons wraps Actor5e.fetchExisting (its dnd5e.postSummon
+ * listener is registered at load) · the relay queries (manifest rows summonActor, fileLibrary) are
+ * registered at load on every client (a player's queryGM needs them) · ready → the active GM syncs every light, the strip
  * draws, then the API is built (a drift throw stops there) and published synchronously as
  * game.modules.get("pentaryn-creatures").api and game.pentaryn.creatures.
  *
@@ -96,11 +97,11 @@ function onReadyPublish() {
   publishNamespace(NS, api, { moduleId: MODULE });
 }
 
-// The manifest's query rows (summonActor's relay), on every client: a player's queryGM needs the name too.
+// The manifest's query rows (the summonActor and fileLibrary relays), on every client: a player's queryGM needs the name too.
 registerQueries(MANIFEST, () => ctx.api, { log });
 
 // Registration order is the module's historic one (golden/hooks.json): the light's and the strip's
-// hooks, init, owner-sees' setup, the summon library's setup, then the two ready handlers.
+// hooks, init, owner-sees' setup, the summon library's setup and its dnd5e.postSummon, then the two ready handlers.
 if (ctx.late) {
   onInit();
   for (const feature of FEATURES) feature.install(reg, ctx);

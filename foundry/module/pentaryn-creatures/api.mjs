@@ -91,6 +91,7 @@ export function buildApiFor(ctx) {
     inspect: (doc, opts) => inspect(ctx, doc, opts),
     // the relay row: core's query context (the sender) arrives as the trailing argument
     summonActor: (opts, qctx) => x.summonActor(opts, qctx),
+    fileLibrary: (opts, qctx) => x.fileLibrary(opts, qctx),
     library: (actor) => x.library(actor),
     core,
   }, {

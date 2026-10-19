@@ -53,10 +53,10 @@ const reset = (...ids) => {
 const ROWS = [
   "on:createToken", "on:updateToken", "on:updateActor", "on:createUser", "on:updateUser", "on:deleteUser",
   "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
-  "on:controlToken", "once:init", "once:setup", "once:setup", "once:ready", "once:ready",   // [declared] 0.2.0: the 2nd setup wraps Actor5e.fetchExisting
+  "on:controlToken", "once:init", "once:setup", "once:setup", "on:dnd5e.postSummon", "once:ready", "once:ready",   // [declared] 0.2.0: the 2nd setup wraps Actor5e.fetchExisting; 0.3.0: postSummon files dnd5e's own copies
 ];
 
-test("registration manifest: 18 rows in source order (golden/hooks.json)", () => {
+test("registration manifest: 19 rows in source order (golden/hooks.json)", () => {
   pinJSON("hooks", F.hooks, import.meta.url);
   assert.deepEqual(F.hooks.map(h => `${h.kind}:${h.name}`), ROWS);
 });
@@ -187,7 +187,7 @@ test("legacy surface ⊇ golden/legacy-surface.json; core is the module namespac
   assert.deepEqual(keys.filter(k => LEGACY.includes(k)), LEGACY, "the legacy keys, in their old order");
   // [declared] C-D2: the kit members follow; C-D3 (transform-creatures-31): status() and inspect() are new rows
   // [declared] 0.2.0 (feedback Swrl5M): summonActor and library are new rows
-  assert.deepEqual(keys.filter(k => !LEGACY.includes(k)), ["status", "inspect", "summonActor", "library", "version", "contract", "settings", "trace", "uninstall", "describe"]);
+  assert.deepEqual(keys.filter(k => !LEGACY.includes(k)), ["status", "inspect", "summonActor", "fileLibrary", "library", "version", "contract", "settings", "trace", "uninstall", "describe"]);
   for (const k of LEGACY.filter(k => k !== "core")) assert.equal(typeof api()[k], "function", k);
   assert.equal(api().core.lightUpdate, core.lightUpdate);
   assert.equal(Object.isFrozen(api()), true, "[declared] C-D2: frozen");

@@ -21,7 +21,7 @@
       },
       "summonLibrary": {
         "name": "Summon library for players",
-        "hint": "Players whose role may not create actors can still summon from a compendium (Mage Hand, Find Familiar, a steed): the GM's client makes the creature for them, owned by them, in \"PC Summons & Forms / <name> — summons & forms\", and every later summon reuses it. Needs a GM logged in the first time each creature is summoned. Off: such a summon fails with dnd5e's Create New Actors message."
+        "hint": "Players whose role may not create actors can still summon from a compendium (Mage Hand, Find Familiar, a steed): the GM's client makes the creature for them, owned by them, in \"PC Summons & Forms / <name> — summons & forms\", and every later summon reuses it. Needs a GM logged in the first time each creature is summoned. Players who may create actors import their summons themselves; those copies are filed into the same folder after the summon. Off: such a summon fails with dnd5e's Create New Actors message, and nothing is filed."
       }
     },
     "summon": {

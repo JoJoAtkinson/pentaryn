@@ -1,5 +1,5 @@
 // The hook manifest (guide step 7): what this module registers, in order, pinned against
-// golden/hooks.json (the same 18 rows the glue test pins), the registry labels, the feature
+// golden/hooks.json (the same 19 rows the glue test pins), the registry labels, the feature
 // contract (install/uninstall), and uninstall() leaving nothing behind. A player client.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -49,6 +49,7 @@ test("registry labels (describe().hooks), in order; the lifecycle hooks are the 
     { name: "controlToken", label: "controlToken: mark strip" },
     { name: "setup", label: "setup: wrap Token#isVisible" },
     { name: "setup", label: "setup: wrap Actor5e.fetchExisting" },   // [declared] 0.2.0 summon library
+    { name: "dnd5e.postSummon", label: "dnd5e.postSummon: file the copy in the library" },   // [declared] 0.3.0 filing
   ]);
 });
 
@@ -108,7 +109,7 @@ test("hot patch: after uninstall(), re-importing the entry re-wires hooks, the w
   assert.deepEqual(F.hooks.slice(before).map(h => `${h.kind}:${h.name}`), [
     "on:createToken", "on:updateToken", "on:updateActor", "on:createUser", "on:updateUser", "on:deleteUser",
     "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
-    "on:controlToken",
+    "on:controlToken", "on:dnd5e.postSummon",   // [declared] 0.3.0
   ], "the feature hooks again; no lifecycle hooks (they already fired), the wrap is applied at once");
   assert.equal(api2.patchedWith(), "direct");
   assert.notEqual(Object.getOwnPropertyDescriptor(W.TokenClass.prototype, "isVisible").get, W.coreGetter);
