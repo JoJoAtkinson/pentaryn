@@ -81,7 +81,7 @@ export const MANIFEST = Object.freeze({
       since: "1.2.0",
       doc: "Dry run of the DDB corrections on one character: what each rule would change now (empty "
         + "changes = already correct). needsCorrection is true when the character was synced from D&D "
-        + "Beyond since its last correction. BAD_ARGS for an actor without flags.ddbimporter.",
+        + "Beyond since its last correction, or was last corrected by another importer version. BAD_ARGS for an actor without flags.ddbimporter.",
     },
     {
       path: "ddbCorrections.apply",

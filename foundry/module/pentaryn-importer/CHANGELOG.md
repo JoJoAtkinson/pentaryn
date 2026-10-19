@@ -25,6 +25,10 @@
   every Resilient. A CON save from the starting class (a `primary` Trait) keeps the base proficiency.
   Baked darkvision is the species' range + 60 and resets to the species' range (no 180 ft doubling
   for a 120 ft species).
+- **[declared] A stamp from another module version is due.** `needsCorrection` is also true when the
+  stamp's `version` differs from the running one, so a release that adds or changes a rule reaches
+  characters already stamped for their current import. **The first GM login on 1.2.1 re-runs the
+  corrections on every DDB character once** (that is what removes Marwen's stale Detect Magic).
 - A sync hook and the sweep meeting on one actor: the skipped one logs a console warning instead of
   dropping silently.
 - A type change replaces `system` with core's `foundry.data.operators.ForcedReplacement`

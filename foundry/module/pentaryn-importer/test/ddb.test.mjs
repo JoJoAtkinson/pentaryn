@@ -287,6 +287,20 @@ test("a sync hook overlapping a correction already running for the actor is logg
   assert.ok(a.writes.length > 0, "the first run still corrected the actor");
 });
 
+test("the sweep re-corrects an actor stamped by an older module version, then restamps it", async () => {
+  const { VERSION } = await import("../importer-core.mjs");
+  const old = liveActor(fighter({ importId: "same", stamp: { importId: "same", version: "0.0.1" } }));
+  seed(old);
+  const feature = await import("../ddb-corrections.mjs");
+  const { log } = await import("../documents-adapter.mjs");
+  const ctx = { log };
+  feature.install({ on: () => 0 }, ctx);
+  const res = await ctx.exposed.ddb.sweep();
+  assert.equal(res.checked, 1);
+  assert.equal(old.flags["pentaryn-importer"].ddbCorrections.version, VERSION);
+  assert.deepEqual(await ctx.exposed.ddb.sweep(), { checked: 0, corrected: [] }, "restamped: not due again");
+});
+
 test("selftest passes with the feature installed and the setting registered", () => {
   const out = api.selftest();
   assert.equal(out.ok, true, JSON.stringify(out.checks.filter(c => !c.ok)));

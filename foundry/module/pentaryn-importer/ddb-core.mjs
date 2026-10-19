@@ -32,7 +32,7 @@
  * (feedback tiDvFa), 2026-10-19-wand-cast-spell.mjs (ixcdvA), 2026-10-19-transmuters-stone.js (tNdOEx).
  */
 
-import { MODULE } from "./importer-core.mjs";
+import { MODULE, VERSION } from "./importer-core.mjs";
 
 /** The flag key (under this module's scope) of the correction stamp on a corrected actor. */
 export const STAMP_KEY = "ddbCorrections";
@@ -466,12 +466,18 @@ export function planCorrections(actor, lookups = {}, { rules = RULES } = {}) {
  * Whether the GM-ready sweep should correct this actor: a DDB actor never corrected, or corrected
  * for an earlier import. ddb-importer stores no sync timestamp; it gives every import a fresh
  * `flags.ddbimporter.importId` (`foundry.utils.randomID()` in DDBCharacterImporter), so a stamp
- * whose importId differs from the actor's marks a sync since the last correction.
+ * whose importId differs from the actor's marks a sync since the last correction. A stamp written by
+ * another module version is due too (1.2.1): a release that adds or changes a rule re-applies once to
+ * every DDB character at the next GM login (the rules are idempotent; a stamp with no version is left
+ * to the importId test).
+ * @param {object} actor  the snapshot
+ * @param {{version?: string}} [opts]  the running module version (default VERSION)
  */
-export function needsCorrection(actor) {
+export function needsCorrection(actor, { version = VERSION } = {}) {
   if (!actor?.ddb) return false;
   const stamp = actor.stamp;
   if (!stamp || typeof stamp !== "object") return true;
+  if (typeof stamp.version === "string" && version && stamp.version !== version) return true;
   return (stamp.importId ?? null) !== (actor.importId ?? null);
 }
 

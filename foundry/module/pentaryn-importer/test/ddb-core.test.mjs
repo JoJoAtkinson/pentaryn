@@ -341,6 +341,12 @@ test("needsCorrection: never stamped, or stamped for an earlier import; never fo
   assert.equal(needsCorrection(wizard({ importId: null, stamp: { importId: null } })), false);
 });
 
+test("needsCorrection: a stamp from another module version is due once (a new rule reaches stamped actors)", () => {
+  assert.equal(needsCorrection(wizard({ importId: "a", stamp: { importId: "a", version: "1.2.0" } }), { version: "1.2.1" }), true);
+  assert.equal(needsCorrection(wizard({ importId: "a", stamp: { importId: "a", version: "1.2.1" } }), { version: "1.2.1" }), false);
+  assert.equal(needsCorrection(wizard({ importId: "a", stamp: { importId: "a", version: "0.0.0" } })), true, "defaults to VERSION");
+});
+
 test("summaryLine: one line, change summaries joined, errors counted", () => {
   const changes = [{ summary: "a" }, { summary: "b" }];
   assert.equal(summaryLine("X", changes), "DDB corrections — X: 2 change(s) — a; b");

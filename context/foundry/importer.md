@@ -119,8 +119,9 @@ for us, and **every re-sync from D&D Beyond puts them back** — so the fixes li
 - **At GM login**, the active GM sweeps every DDB character synced since its last correction: each
   import gets a fresh `flags.ddbimporter.importId` (ddb-importer stores no timestamp), and a clean run
   stamps `flags.pentaryn-importer.ddbCorrections.importId`. A mismatch means "synced since". So a sync
-  made while nobody had the module running is caught at the next GM login. **The first GM login after
-  1.2.0 ships corrects every DDB character once.**
+  made while nobody had the module running is caught at the next GM login. A stamp written by another
+  module version is due as well, so **the first GM login after any importer release corrects every DDB
+  character once** (that is how a new rule reaches characters already corrected).
 - The GMs get **one whispered chat line** per run that changed something ("DDB corrections — <name>: N
   change(s) — …"), and one console line. Nothing when nothing changed.
 - **Off switch:** world setting *Correct D&D Beyond characters after a sync* (`ddbCorrections`,
