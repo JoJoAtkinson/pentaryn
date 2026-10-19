@@ -1,6 +1,6 @@
 ---
 created: 2026-10-07
-last_modified: 2026-10-19
+last_modified: 2026-10-11
 tags: ["foundry", "vtt", "module", "lights", "dnd5e"]
 status: active
 ---
@@ -8,7 +8,7 @@ status: active
 # Pentaryn Senses (`pentaryn-senses`)
 
 **Read this when:** you are changing or calling `pentaryn-senses` (carried lights, the Light
-cantrip, Produce Flame, torches and lanterns, the broken glow, token chains, the darkvision sight reset). **Not
+cantrip, torches and lanterns, the broken glow, token chains, the darkvision sight reset). **Not
 this file:** why the Light feature is shaped as it is →
 [`context/plans/senses-light-cantrip.md`](../../../context/plans/senses-light-cantrip.md) · how
 every addon is built → [`context/foundry/addon-blueprint.md`](../../../context/foundry/addon-blueprint.md)
@@ -60,22 +60,6 @@ deleted the light ends and the caster gets a whisper; a GM who deletes a Light s
 it, one who drags it moves it. Two casters on one token: the newer wins. The cast notice names the
 token only if you could see its nameplate.
 
-**Produce Flame.** The flame is in the caster's hand, so casting it lights the caster's token on
-the viewed scene at once, with no prompt: bright 20 / dim 40 ft, a warm flickering flame. The
-light is the Light cantrip's (same flag, same GM reconcile, follows the token, ends on **End
-light**, newest caster wins a token); casting it again re-lights you where you stand. Which
-activity makes the light: anything but the attack, so both copies in play work — the PHB's
-**Cast** (Hurl Fire leaves the flame alone) and a D&D Beyond import's **Light Effect** (its
-Attack likewise). The chat card shows **On me · End light** (no Pick: it is your hand). With no
-token on the viewed scene the player is told to cast it where their token stands. Optional tidy-up
-of a D&D Beyond copy (rename to Cast / Hurl Fire, drop its unused token-light ActiveEffect):
-`scripts/foundry/fixes/2026-10-19-produce-flame-ddb.js` (eval-js body, dry run by default).
-
-**One "which activity?" dialog per item.** dnd5e opens a new activity-choice dialog for every click
-on Use, so a double-click on Produce Flame opened two and picking in both cast it twice. For a
-spell light or a lit item, a second dialog for the same item closes at once and the open one comes
-to the front.
-
 **Broken glow (wandering).** A light animation for a broken crystal: size (from the token's own
 square up to the light's Dim radius) and brightness (0.3 to 0.85) ride a wave whose swells never
 repeat, mostly small, now and then swelling. The radius really changes (vision follows). Every
@@ -107,7 +91,7 @@ Also `game.modules.get("pentaryn-senses").api`. Kit members: `describe()`, `vers
 | `inspect(ref, {sceneId?, base?, as?})` | why a token is lit as it is: its light and owner flag, the carried light and every carrier, its chain, the Light cantrips. Read-only; a player without OBSERVER gets no `actor`/`lightSpells`. `opts` optional, null = omitted |
 | `syncLight(actor)` · `syncAll()` · `carriedLight(actor)` | carried lights: sync one actor / the world; what an actor's items give |
 | `resetSight({force})` | rerun the darkvision reset → `{prototypes, tokens}` or null. `opts` optional, null = omitted |
-| `light.cast(item, {token} \| {x, y})` · `.end(item)` · `.onMe(item)` · `.pick()` · `.prompt(item)` | the Light cantrip (and Produce Flame: `onMe` / `end` take its item too) |
+| `light.cast(item, {token} \| {x, y})` · `.end(item)` · `.onMe(item)` · `.pick()` · `.prompt(item)` | the Light cantrip |
 | `light.status(itemRef)` → `{cast, litBy}` · `light.reconcile(uuid)` → summary · `light.recent()` | what a Light does now; force a reconcile; the last 20 summaries |
 | `light.toggle(item)` · `.hood(item)` · `.profileFor(item)` · `.setup()` (= `setupLight()`) · `.sweep()` | lit items; give every Torch its Light activity; the GM ready sweep |
 | `chain.link(chained, anchor)` · `.break(token)` · `.links(scene?)` · `.repaint()` | tokens as documents, placeables, ids on the viewed scene or Token uuids; a scene or its id |
@@ -120,7 +104,7 @@ No `inspect` field is GM-only beyond the `as` rule above.
 |---|---|---|
 | Token, prototype | `flags.pentaryn-senses.itemLight` (+ `itemLightPrior`, the hand-set light it covers) | carried lights (writer client) |
 | Token, AmbientLight | `flags.pentaryn-senses.spellLight` = `{source, prior}` | Light reconcile (active GM) |
-| Light or Produce Flame item | `flags.pentaryn-senses.lightCast` | the caster |
+| Light item | `flags.pentaryn-senses.lightCast` | the caster |
 | Torch, lamp… | `flags.pentaryn-senses.lit`, `.hooded`; activity `psLightToggle000` (`lightToggle`) | the owner; `setupLight` / the GM on create |
 | Token (chained end) | `flags.pentaryn-senses.chain` = `{anchor}` | GM |
 | Token, prototype | `sight.visionMode`/`range` (basic / 0), once | darkvision reset (active GM) |
@@ -139,9 +123,7 @@ n/a — emits none.
 ## Patches and adjustments
 
 No wraps. Adjustments rows: `dnd5e-sense-vision-reset` (`migrate.mjs`), `dnd5e-chat-message-types`
-(the spell card, `light-ui.mjs`), `argon-light-pick-collapse-panels` (`argon.mjs`). dnd5e's
-`ActivityChoiceDialog#item` is read on `renderActivityChoiceDialog` (`light-ui.mjs`
-`oneChoiceDialog`, row pending in the adjustments batch). Private or
+(the spell card, `light-ui.mjs`), `argon-light-pick-collapse-panels` (`argon.mjs`). Private or
 third-party reads (rows pending in the adjustments batch): the light-animation shader classes
 (`glow.mjs`), `Token#_preview` and `PrimaryCanvasGroup.SORT_LAYERS` (`chain.mjs`), dnd5e's
 `create.summons` / `placeSummons` (`light.mjs`, `light-ui.mjs`), core teleport `replacements`

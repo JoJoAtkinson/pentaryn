@@ -14,7 +14,7 @@
 
 import { MODULE } from "./ids.mjs";
 import { readChain } from "./chain.mjs";
-import { carriedLightOf, isSpellLightData, lightEntries, lightingItemId, litByIn, readSpellCast, readSpellLight } from "./light.mjs";
+import { carriedLightOf, isLightSpellData, lightEntries, lightingItemId, litByIn, readSpellCast, readSpellLight } from "./light.mjs";
 
 const copy = v => (v === undefined ? null : JSON.parse(JSON.stringify(v)));
 
@@ -75,7 +75,7 @@ export function inspectShape({ token = null, actor = null, items = [], sceneToke
       chainedHere: [...(sceneTokens ?? [])].filter(t => t && t.id !== token.id && readChain(t)?.anchor === token.id).map(t => t.id),
     } : null,
     // litBy as uuids, not {kind, scene, id} objects: an object there would make the answer 5 deep (cap 4)
-    lightSpells: list.filter(isSpellLightData).map(item => {
+    lightSpells: list.filter(isLightSpellData).map(item => {
       const { cast, litBy } = lightStatus(item, scenes);
       return { item: item.id ?? null, cast, litBy: litBy.map(l => `Scene.${l.scene}.${l.kind === "token" ? "Token" : "AmbientLight"}.${l.id}`) };
     }),

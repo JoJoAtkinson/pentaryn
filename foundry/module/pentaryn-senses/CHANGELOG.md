@@ -1,25 +1,6 @@
 # Changelog — Pentaryn Senses (`pentaryn-senses`)
 
-## 0.6.0 — 2026-10-19
-
-- **[declared DsekWh / JEssbJ] Produce Flame lights its caster** (feedback 2026-10-19): neither
-  copy of the spell lit anyone. The PHB's ("Cast" + "Hurl Fire") carries no light at all; Marwen's
-  D&D Beyond import ("Attack" + "Light Effect") only offered a `token.light.*` ActiveEffect as an
-  apply button on the card, which never lit the token. Produce Flame now rides the Light cantrip's
-  `lightCast` flag and GM reconcile: any non-attack activity (Cast, Light Effect) lights the
-  caster's token at once, no prompt, with a flame (`FLAME_LIGHT`, bright 20 / dim 40, torch
-  animation); Hurl Fire / Attack leave it alone. Its card carries On me · End light. New core
-  helpers `isProduceFlameData`, `spellLightKind`, `isSpellLightData`, `spellLightData`,
-  `isSpellLightCast`; `spellLightUpdate` takes the light to write (Light's by default). The cast
-  notices name the spell (`{spell}: {name} glows.`; Light's text is unchanged). New lang key
-  `Light.FlameNoToken`. `inspect().lightSpells` lists Produce Flame too. Goldens unchanged except
-  the hook manifest below. New `test/produce-flame.test.mjs`. Optional data tidy-up for the D&D
-  Beyond copy: `scripts/foundry/fixes/2026-10-19-produce-flame-ddb.js` (not applied).
-- **[declared DsekWh] One activity-choice dialog per item**: a double-click on Use (two clicks
-  180 ms apart in the report) opened two "Produce Flame" choice dialogs and cast twice. A new
-  `renderActivityChoiceDialog` listener (light-ui `oneChoiceDialog`) closes a second dialog for a
-  spell light or lit item whose dialog is already open, and brings the first to the front. Hook
-  goldens (`hooks.json`, `hooks-uninstall.json`, `describe.json`) gain that one row.
+## Unreleased
 
 - **[declared senses-edge-4, FIX-3 forward fix] normalise() works on a copy** (2026-10-13):
   Foundry's LightData cleans the object it is handed in place, so senses-edge-4's convergence

@@ -15,7 +15,6 @@ import {
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
   planSpellLight, squareId, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
   itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor, summarise, handSquareEdit,
-  FLAME_LIGHT, isProduceFlameData, spellLightKind, isSpellLightData, spellLightData, isSpellLightCast,
 } from "./core/light.mjs";
 import { SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset } from "./core/migrate.mjs";
 import { LIMITS, EPOCH_CACHE, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor, shouldReinit } from "./core/glow.mjs";
@@ -28,14 +27,13 @@ export {
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
   planSpellLight, squareId, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
   itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor, summarise, handSquareEdit, inspectShape, lightStatus,
-  FLAME_LIGHT, isProduceFlameData, spellLightKind, isSpellLightData, spellLightData, isSpellLightCast,
   SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset,
   LIMITS, EPOCH_CACHE, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor, shouldReinit,
 };
 
 export const SHORT = "senses";
 export const NS = "senses";
-export const VERSION = "0.6.0";                       // === module.json version (core.test pins it)
+export const VERSION = "0.5.0";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-senses/api@1";      // bump the major on a published-shape change
 export const I18N = "PENTARYN_SENSES";
 export const CSS = "ps-";

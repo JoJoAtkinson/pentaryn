@@ -12,7 +12,6 @@
     "dnd5e.postUseActivity": 1,
     "dnd5e.renderChatMessage": 1,
     "renderBaseActorSheet": 1,
-    "renderActivityChoiceDialog": 1,
     "createItem": 2,
     "updateItem": 2,
     "deleteItem": 2,

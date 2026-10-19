@@ -57,10 +57,6 @@
   },
   {
     "kind": "on",
-    "name": "renderActivityChoiceDialog"
-  },
-  {
-    "kind": "on",
     "name": "canvasTearDown"
   },
   {
