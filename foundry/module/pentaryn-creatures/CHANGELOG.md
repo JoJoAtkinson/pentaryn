@@ -1,5 +1,33 @@
 # Changelog — pentaryn-creatures
 
+## 0.3.0 — 2026-10-19 (code review of 0.2.0)
+
+- **[declared] The library fills up again for Trusted players.** Every player at this table may
+  create actors, so dnd5e imported their summons itself and 0.2.0's relay never ran: copies landed
+  in "Player Characters" or the root, owned by the caster alone, unflagged. A new `dnd5e.postSummon`
+  listener (the summoning client) files such a copy right after the summon — library folder, the
+  `library` flag, the character's other owners added, a linked copy's summon origin — through the
+  active GM (relay query `pentaryn-creatures.fileLibrary`) or directly on a GM client. New API row
+  `fileLibrary({ actor?, item?, summoner?, dryRun? })`; with no arguments, as the GM, it sweeps
+  every loose copy (one batch, idempotent, `unresolved` for copies it cannot attribute). Hook
+  manifest gains `dnd5e.postSummon` (19 rows).
+- **[declared] Security: the relay no longer trusts the player's item.** `summonActor` refuses a
+  `character` source and any source the sender cannot already see in full (a world actor below
+  Observer, an actor in a compendium they may not observe), and judges what the item may summon by
+  its compendium original when it has one — an edited profile uuid or a Find Familiar CR raised to
+  30 no longer counts. A refused source is named by uuid, not name.
+- **[declared] Two GM tabs:** the server refuses a `keepId` create of an existing id (0.2.0's
+  comment said it replaced it). The refused tab now finds the other tab's actor or folder by its
+  deterministic id and answers with it, instead of failing the summon or leaving the copy in the root.
+- **[declared] Linked sources** (a steed) carry `flags.dnd5e.summon.origin` = the summoning item, so
+  dnd5e reuses the copy instead of asking the GM on every summon; an existing 0.2.0 copy gains it on
+  its next relay.
+- **[declared] Only dnd5e's Create New Actors refusal is relayed;** any other `fetchExisting` error
+  (an unknown uuid, …) reaches the player as dnd5e threw it, not as "Could not summon: …".
+- `core` adds `summonSourceRefusal`, `summonAllowedFrom`, `isSummonCopy`, `libraryFiling`,
+  `pickSummoner`; `shouldRelaySummon` takes `refused`. Setting hint and adjustments row
+  `creatures-summon-library` updated. README trimmed.
+
 ## 0.2.0 — 2026-10-19 (feedback Swrl5M, UQSJ0v, dkt5PG)
 
 - **Summon library.** A player whose role may not create actors (the Player role; Trusted may) can
