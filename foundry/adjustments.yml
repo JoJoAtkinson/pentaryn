@@ -870,6 +870,17 @@ adjustments:
     retire_class: safe
     check: make foundry-riders-check
 
+  - id: dnd5e-riders-projectile-buttons
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/projectiles.mjs, foundry/module/pentaryn-riders/riders-core.mjs]
+    markers: ["pr-shots", "getAssociatedRolls", "PROJECTILES"]
+    what: a Scorching Ray / Magic Missile usage card gets one button per ray or dart (3, +1 per level above the spell's, wand charges included via system.scaling); each rolls that ray's attack or that dart's damage at the creature targeted on click, threaded under the card; rolls already under the card fill the slots (setting projectiles)
+    why: dnd5e 6 and the PHB items give each spell one activity that rolls once, and Magic Missile's card Damage button reuses the cast-time targets, so a player saw one beam / one dart and could not split them (feedback JbnAbX, ixcdvA)
+    native_when: dnd5e rolls multi-projectile spells per projectile with per-roll targets
+    retire_class: safe
+    check: make foundry-riders-check
+
   - id: argon-riders-long-casts
     packages: [enhancedcombathud-dnd5e]
     modules: [pentaryn-riders]

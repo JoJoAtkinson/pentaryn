@@ -26,7 +26,7 @@ export const MODULE = "pentaryn-riders";
 export { MODULE as MOD };
 export const SHORT = "riders";
 export const NS = "riders";
-export const VERSION = "0.3.0";                        // === module.json version (constants.test pins it)
+export const VERSION = "0.4.0";                        // === module.json version (constants.test pins it)
 export const CONTRACT = "pentaryn-riders/api@1";       // bump the major on a published-shape change
 export const I18N = "PENTARYN_RIDERS";
 export const CSS = "pr-";
@@ -525,6 +525,81 @@ export function usedFromMessages(messages, origin) {
     for (const k of m?.flags?.[MODULE]?.applied ?? []) used.add(k);
   }
   return [...used];
+}
+
+/* -------------------------------------------- */
+/*  Projectiles: one roll per ray or dart       */
+/* -------------------------------------------- */
+
+/**
+ * Spells that make several separate rolls from one casting, each against a creature of the caster's
+ * choice. dnd5e (and the PHB items) give each one activity that rolls once, so the usage card gets one
+ * button per ray / dart (projectiles.mjs). `roll` is the roll each projectile makes ("attack" for a
+ * ray, "damage" for a dart) and the activity type the row applies to; `base` projectiles at
+ * `baseLevel`, one more per slot level above it (2024 PHB).
+ */
+export const PROJECTILES = Object.freeze([
+  Object.freeze({
+    key: "scorching-ray", noun: "ray", roll: "attack", base: 3, baseLevel: 2,
+    match: Object.freeze({ identifiers: Object.freeze(["scorching-ray"]), names: Object.freeze(["Scorching Ray"]) })
+  }),
+  Object.freeze({
+    key: "magic-missile", noun: "dart", roll: "damage", base: 3, baseLevel: 1,
+    match: Object.freeze({ identifiers: Object.freeze(["magic-missile"]), names: Object.freeze(["Magic Missile"]) })
+  })
+]);
+
+/**
+ * The PROJECTILES row for a spell's activity, or null. Matched by dnd5e identifier, else by name
+ * (a "(Wand)" suffix ignored); the activity must make the row's roll (Magic Missile's damage
+ * activity, Scorching Ray's attack).
+ * @param {{identifier?: string, name?: string, type?: string, activityType?: string}} spell
+ */
+export function projectileRule({ identifier, name, type, activityType } = {}) {
+  if (type && type !== "spell") return null;
+  const n = normalizeName(name);
+  const rule = PROJECTILES.find(r => (identifier && r.match.identifiers.includes(identifier))
+    || (!!n && r.match.names.some(x => normalizeName(x) === n)));
+  if (!rule) return null;
+  if (activityType && activityType !== rule.roll) return null;
+  return rule;
+}
+
+/**
+ * The level a spell was cast at, from its usage card: the spell's own level plus the card's
+ * `system.scaling` (an upcast slot, or extra wand charges), or the card's stated level when higher.
+ * @param {{baseLevel?: number, scaling?: number, level?: number|null}} card
+ */
+export function castLevelOf({ baseLevel, scaling, level } = {}) {
+  const base = Math.max(0, Math.trunc(Number(baseLevel)) || 0);
+  const scaled = base + Math.max(0, Math.trunc(Number(scaling)) || 0);
+  return Math.max(scaled, Math.trunc(Number(level)) || 0);
+}
+
+/** How many rays / darts a casting at `castLevel` makes: `base`, plus one per level above `baseLevel`. */
+export function projectileCount(rule, castLevel) {
+  if (!rule) return 0;
+  const level = Math.trunc(Number(castLevel));
+  return rule.base + (Number.isFinite(level) ? Math.max(0, level - rule.baseLevel) : 0);
+}
+
+/**
+ * The card's projectile slots from the rolls already made from it (oldest first; each roll's target
+ * names). A roll made with dnd5e's own card button, or the attack / damage dnd5e rolls straight after
+ * the cast, counts too: every roll threaded under the card is one projectile.
+ * @param {number} count
+ * @param {{targets?: string[]}[]} rolled
+ * @returns {{count: number, done: number, extra: number, next: number|null,
+ *            slots: {n: number, done: boolean, targets: string[]}[]}}
+ */
+export function projectileSlots(count, rolled = []) {
+  const n = Math.max(0, Math.trunc(Number(count)) || 0);
+  const made = Array.isArray(rolled) ? rolled : [];
+  const slots = [];
+  for (let i = 0; i < n; i++) {
+    slots.push({ n: i + 1, done: i < made.length, targets: i < made.length ? [...(made[i]?.targets ?? [])] : [] });
+  }
+  return { count: n, done: Math.min(made.length, n), extra: Math.max(0, made.length - n), next: made.length < n ? made.length + 1 : null, slots };
 }
 
 /* -------------------------------------------- */

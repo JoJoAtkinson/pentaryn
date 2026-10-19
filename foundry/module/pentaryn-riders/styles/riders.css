@@ -67,3 +67,11 @@
 /* Arcane Recovery picker (cast-flow.mjs part 6). */
 .pr-ar-total { text-align: right; font-weight: bold; }
 .pr-ar-total.over { color: var(--dnd5e-color-failure, #b0261c); }
+
+/* One button per ray / dart on a Scorching Ray or Magic Missile card (projectiles.mjs). */
+.chat-message .pr-shots { margin-top: 0.375rem; }
+.chat-message .pr-shots p.pr-shots-status { margin: 0 0 0.25rem; text-align: center; }
+.chat-message .pr-shots .pr-shots-row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.chat-message .pr-shots button.pr-shot { flex: 1 1 4.5rem; width: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-message .pr-shots button.pr-shot-next { border-color: var(--dnd5e-color-gold, #9f9275); font-weight: bold; }
+.chat-message .pr-shots button.pr-shot-done { opacity: 0.6; }

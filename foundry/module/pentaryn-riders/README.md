@@ -28,6 +28,7 @@ Argon table fixes (rituals, concentration, cast flow, HUD tidy-ups). Requires dn
 | **Concentration summons** | A token summoned by a concentration spell leaves the map when that concentration ends; the *Lost Concentration* card's icon-only button gets its words. | The sphere goes; "Break Concentration" beside ⦸. |
 | **Concentration saves** | A failed save ends concentration at once, unless Legendary Resistance, Indomitable, a Mind Sharpener or Bardic Inspiration could still turn it; the card shows "DC n · Failed / Success". | The result line under the roll. |
 | **Cast flow** | A summon keeps the sidebar on its tab and says "Click the map to place X"; summons open with *Place Summons* ticked; a self-only card (Shield) drops stale targets; a typed number counts on the first Use click; a wildcard summon image previews as a real one; restoring a slot (Pearl of Power) opens on the highest spent level; after Arcane Recovery the owner picks the slots (PHB budget enforced). | Dialog defaults, the Arcane Recovery window. |
+| **Rays and darts** (Scorching Ray, Magic Missile) | The usage card gets one button per ray / dart: 3, plus one per slot level above the spell's (a wand's extra charges count). Target one creature, click the next button: that ray's attack (Scorching Ray) or that dart's damage (Magic Missile) is rolled at it and threaded under the card. dnd5e's own automatic first roll and its card button fill a slot too; a rolled slot names its target. More than one target refuses the click. | "Ray 1 · Thorgrim", "Ray 2", "Ray 3" under the card's buttons (owners only). |
 | **Argon tidy-ups** | Badges of buttons spending another item's uses (Metamagic → Font of Magic) refresh; open panels collapse before an area or summon placement; Metamagic opens no target picker; spell tooltips use the spell's roll data (Scorching Ray: 3 rays); the hover tooltip lets clicks through. | The HUD behaves. |
 
 ## Settings
@@ -44,6 +45,7 @@ All world, Boolean, default on, read live (no reload needed), in this order in *
 | `arcaneRecovery` | The Arcane Recovery picker after the feature is used. |
 | `enabled` | The damage and healing riders, the tray preset and Battle Medic. |
 | `hdControls` | The sheet's Hit Dice − / + (a change re-renders open character sheets). |
+| `projectiles` | One button per ray / dart on Scorching Ray and Magic Missile cards. |
 
 ## API — game.pentaryn.riders
 
@@ -104,7 +106,8 @@ n/a — emits none. Listens to (in this order, `test/golden/hooks.json`): `dnd5e
 `dnd5e.summonToken`, `deleteActiveEffect`, `dnd5e.renderChatMessage`, `createChatMessage`,
 `updateItem`, `dnd5e.preCreateMeasuredTemplate`, `dnd5e.preSummon`, `renderItemButtonArgonComponent`,
 `changeSidebarTab`, `dnd5e.postSummon`, `renderActivityUsageDialog`, `dnd5e.postUseActivity`,
-`dnd5e.postDamageRollConfiguration`, `dnd5e.preCalculateDamage`, `renderCharacterActorSheet`.
+`dnd5e.postDamageRollConfiguration`, `dnd5e.preCalculateDamage`, `renderCharacterActorSheet`, then
+the projectile buttons' `dnd5e.renderChatMessage`, `createChatMessage`, `deleteChatMessage`.
 
 ## Patches and adjustments
 
@@ -123,7 +126,7 @@ Non-patch rows: `argon-shared-uses-badge`, `argon-collapse-on-area-placement`,
 `argon-tooltip-click-through` (CSS on Argon's `#tooltip`), `dnd5e-concentration-summons`,
 `dnd5e-concentration-auto-break`, `dnd5e-summon-keeps-sidebar`, `dnd5e-restore-slot-default`,
 `dnd5e-usage-dialog-first-click`, `dnd5e-chat-message-types`, `argon-riders-long-casts`,
-`dnd5e-riders-arcane-recovery-picker`, `dnd5e-riders-damage-tray-preset`,
+`dnd5e-riders-arcane-recovery-picker`, `dnd5e-riders-projectile-buttons`, `dnd5e-riders-damage-tray-preset`,
 `dnd5e-riders-roll-term-riders`, `dnd5e-riders-sheet-hit-dice`, `core-riders-query-battle-medic`.
 Nothing in Argon's files is edited.
 
@@ -165,6 +168,10 @@ Nothing in Argon's files is edited.
 | A turn-flow or Argon action-bar change | `pentaryn-combat` |
 | A dnd5e cast-flow or concentration fix that is not a rider | here, as a feature file (or a new module if it grows) |
 
+**Another multi-roll spell** (Eldritch Blast's beams, say) is a `PROJECTILES` row in
+`riders-core.mjs`: `noun` (its `PENTARYN_RIDERS.projectiles.<noun>.*` strings), `roll` (`"attack"`
+or `"damage"`, the activity type), `base` at `baseLevel`, one more per level above.
+
 **A new behaviour**: a feature file with `install(reg, ctx)` / `uninstall()`, listed in `FEATURES`
 in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` with a marker and a
 `riders-…` adjustments row; a setting is a `SETTINGS` row with literal labels.
@@ -182,6 +189,12 @@ in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` 
 - **Summon cleanup reacts to concentration effects only**: an effect whose `concentrating` status
   was stripped before it was deleted leaves its summons on the map (dnd5e never does that).
 - `preview()` is a string transform for checking; the live riders edit real roll terms.
+- **A wand that will not cast** ("No uses on Magic Missile available to spend") is item data, not
+  this module: its Cast activity points at a spell whose own activity spends the *spell's* uses
+  with the slot off, so dnd5e ignores the wand's charges. Repoint the Cast activity at the PHB spell
+  (`scripts/foundry/fixes/2026-10-19-wand-cast-spell.mjs`).
+- **A ray / dart slot counts every roll under the card**, including one rolled by hand from the
+  card's own button; a roll deleted from chat frees its slot.
 
 ## Files
 
@@ -201,6 +214,7 @@ concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Rec
 | `patches.mjs` | the six wraps |
 | `rituals.mjs`, `concentration.mjs`, `argon-tidy.mjs`, `cast-flow.mjs` | features: table fixes |
 | `damage-riders.mjs`, `card-note.mjs`, `tray-preset.mjs`, `battle-medic.mjs`, `hd-sheet.mjs` | features: the riders, Battle Medic, the sheet − / + |
+| `projectiles.mjs` | feature: one button per ray / dart on Scorching Ray and Magic Missile cards (`PROJECTILES` in riders-core) |
 | `styles/riders.css`, `lang/en.json`, `lib/` | styles (`.pr-*`, and the `#tooltip` click-through rule), strings, the vendored kit (with `lib/argon-tooltip.css`, D7: listed in `styles`, inert for riders alone) |
 
 ## Tests
