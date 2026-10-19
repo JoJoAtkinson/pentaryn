@@ -1,16 +1,21 @@
 /**
- * Pentaryn Senses — FEATURE: the Light cantrip and lit items. What the player sees: README; the
- * design and its evidence: context/plans/senses-light-cantrip.md (plan C4).
+ * Pentaryn Senses — FEATURE: the Light cantrip, Produce Flame and lit items. What the player sees:
+ * README; the design and its evidence: context/plans/senses-light-cantrip.md (plan C4).
  *
- *   Light item    flags.pentaryn-senses.lightCast = { scene, token } | { scene, x, y } | null  (the caster writes)
- *   Token, square flags.pentaryn-senses.spellLight = { source, prior }  (the active GM reconciles; one light per Light)
+ *   Light / Produce Flame item  flags.pentaryn-senses.lightCast = { scene, token } | { scene, x, y } | null  (the caster writes)
+ *   Token, square flags.pentaryn-senses.spellLight = { source, prior }  (the active GM reconciles; one light per spell item)
+ *
+ * Produce Flame rides the Light cantrip's flag and reconcile with two differences: its Cast lights
+ * the caster at once (the flame is in their hand: no "Where does the light go?"), and the light is
+ * a flame (FLAME_LIGHT). Its Hurl Fire / Attack activity leaves the light alone.
  *   Torch, lamp…  flags.pentaryn-senses.lit / .hooded  (the owner toggles; carried.mjs lights the carrier)
  *
  * Hooks are guarded at warn ('pentaryn-senses | light <hook>'): a bug never breaks a sheet, a card or the HUD.
  */
 
 import {
-  MODULE, FLAGS, SPELL_LIGHT, ACTIVITY_PROFILES, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
+  MODULE, FLAGS, ACTIVITY_PROFILES, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
+  spellLightKind, spellLightData, isSpellLightCast,
   readSpellCast, readSpellLight, castFlag, planSpellLight, squareId, spellLightUpdate, restoredLight,
   sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise, handSquareEdit,
   esc, unsetPath
@@ -19,7 +24,7 @@ import { coreRollMode } from "./settings.mjs";
 import { isActiveGM, isAnyGM, claimDocument } from "./lib/election.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { realItem, itemFrom, casterToken, allItems, litBy, anyLitBy, allSources, findToken } from "./light-adapter.mjs";
-import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, pick, prompt } from "./light-ui.mjs";
+import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, oneChoiceDialog, pick, prompt } from "./light-ui.mjs";
 
 const { lightCast: CAST, lit: LIT, hooded: HOODED, spellLight: SPELL } = FLAGS;
 const DEBOUNCE_MS = 250;
@@ -55,13 +60,14 @@ export async function cast(item, target) {
   const flag = castFlag(target.scene ?? canvas?.scene?.id, target, Date.now());
   if (!flag) return false;
   await item.update({ [CAST]: flag });
+  const spell = item.name;   // "Light", "Produce Flame"
   if (!game.users.activeGM) ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoGM"));
   else if (flag.token) {
     const tok = game.scenes.get(flag.scene)?.tokens.get(flag.token);
     // Never name a token whose nameplate this user can't see (crowd extras run displayName NONE).
-    if (tok && canSeeName(tok)) ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnToken", { name: tok.name }));
-    else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnCreature"));
-  } else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnSquare"));
+    if (tok && canSeeName(tok)) ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnToken", { spell, name: tok.name }));
+    else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnCreature", { spell }));
+  } else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnSquare", { spell }));
   return true;
 }
 
@@ -95,6 +101,20 @@ export async function onMe(item) {
   const tok = casterToken(item?.actor);
   if (!tok) {
     ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoToken"));
+    return false;
+  }
+  return cast(item, { scene: tok.parent.id, token: tok.id });
+}
+
+/**
+ * Produce Flame's cast: the flame is in the caster's hand, so it lights the caster's token on the
+ * viewed scene with no prompt. With no token here the player is told to cast it where they stand.
+ */
+export async function lightCaster(item) {
+  item = realItem(item);
+  const tok = canvas?.scene ? casterToken(item?.actor) : null;
+  if (!tok) {
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.FlameNoToken", { spell: item?.name ?? "" }));
     return false;
   }
   return cast(item, { scene: tok.parent.id, token: tok.id });
@@ -315,12 +335,13 @@ async function removeSquares(plan, done) {
 }
 
 /** The light that is wanted: the token lit (newest caster wins), or the square made. */
-async function applyWanted(source, plan, done) {
+async function applyWanted(source, plan, done, item) {
+  const light = spellLightData(item);   // Produce Flame's flame, else the Light cantrip's glow
   if (plan.light) {
     const tok = game.scenes.get(plan.light.scene)?.tokens.get(plan.light.token);
     if (tok) {
       const other = readSpellLight(tok)?.source;
-      await tok.update(spellLightUpdate(tok, source, tok.light?.toObject?.() ?? tok.light));
+      await tok.update(spellLightUpdate(tok, source, tok.light?.toObject?.() ?? tok.light, light));
       done.lit = tok.id;
       // Two casters, one token: newest wins; the first caster's Light lets go.
       if (other && other !== source) {
@@ -339,7 +360,7 @@ async function applyWanted(source, plan, done) {
         await scene.createEmbeddedDocuments("AmbientLight", [{
           _id: squareId(source, scene.id, plan.create.x, plan.create.y),
           x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
-          config: foundry.utils.deepClone(SPELL_LIGHT),
+          config: foundry.utils.deepClone(light),
           flags: { [MODULE]: { spellLight: { source } } }
         }], { keepId: true });
       } catch (e) {
@@ -380,7 +401,7 @@ async function reconcile(source) {
   const plan = planSpellLight({ desired, existing: litBy(source) });
   const touchedActors = await restoreTokens(plan, done);
   await removeSquares(plan, done);
-  await applyWanted(source, plan, done);
+  await applyWanted(source, plan, done, item);
   await resyncCarried(touchedActors);
   return remember(plan, done, desired);
 }
@@ -487,8 +508,10 @@ function onUse(activity, usageConfig) {
 
 function onUsed(activity) {
   const item = activity?.item;
-  if (!isLightSpellData(item)) return;
-  prompt(item).catch(e => warn("prompt", e));
+  const kind = spellLightKind(item);
+  if (kind === "light") prompt(item).catch(e => warn("prompt", e));
+  // Produce Flame: its Cast (PHB) / Light Effect (D&D Beyond) lights the caster; Hurl Fire does not.
+  else if (kind === "flame" && isSpellLightCast(activity, item)) lightCaster(item).catch(e => warn("flame", e));
 }
 
 export function uninstall() {
@@ -514,6 +537,8 @@ export function install(reg, ctx) {
   on("dnd5e.renderChatMessage", decorateCard);
   on("renderBaseActorSheet", decorateSheet);
   on("renderTokenHUD", injectHUD);
+  // A double-click on a spell light or lit item opened two "which activity?" dialogs (DsekWh).
+  on("renderActivityChoiceDialog", oneChoiceDialog);
   on("canvasTearDown", () => cancelPick());
 
   // A Torch that arrives after setupLight (bought, looted, dragged from a compendium) gets its

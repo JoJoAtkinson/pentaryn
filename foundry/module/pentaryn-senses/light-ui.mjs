@@ -1,11 +1,11 @@
 /**
- * Pentaryn Senses — UI for the Light cantrip and lit items: the "Where does the light go?" prompt,
- * the map pick, the spell card's buttons, the inventory row's flame (and hood), and End light on
- * the Token HUD. DOM only: every action is light.mjs's, handed in by its install() through
+ * Pentaryn Senses — UI for the Light cantrip, Produce Flame and lit items: the "Where does the light
+ * go?" prompt, the map pick, the spell card's buttons, the inventory row's flame (and hood), End
+ * light on the Token HUD, and one activity-choice dialog per item (a double-click opened two). DOM only: every action is light.mjs's, handed in by its install() through
  * bindActions() (a UI file never imports a feature).
  */
 
-import { MODULE, profileFor, isLit, isHooded, isLightSpellData, lightingItemId, readSpellLight, esc, setTip, rootOf, hudColumn, hudButton } from "./senses-core.mjs";
+import { MODULE, profileFor, isLit, isHooded, spellLightKind, isSpellLightData, lightingItemId, readSpellLight, esc, setTip, rootOf, hudColumn, hudButton } from "./senses-core.mjs";
 import { realItem, itemFrom } from "./light-adapter.mjs";
 import { collapseArgonPanels } from "./argon.mjs";
 import { isActiveGM } from "./lib/election.mjs";
@@ -29,11 +29,12 @@ const warn = (label, err) => log.warn(`light ${label}`, err);
 /**
  * The Light actions, once, for both the prompt's buttons (`dialog`) and the spell card's action row
  * (`card`): same labels, same icons, same order. `handler` names light.mjs's action (null: Not now).
+ * `flame`: the row is also on Produce Flame's card (the flame is in the caster's hand: no pick).
  */
 export const LIGHT_ACTIONS = Object.freeze([
-  Object.freeze({ action: "me", icon: "fa-solid fa-user", label: "PENTARYN_SENSES.Light.OnMe", handler: "onMe", dialog: true, card: true }),
+  Object.freeze({ action: "me", icon: "fa-solid fa-user", label: "PENTARYN_SENSES.Light.OnMe", handler: "onMe", dialog: true, card: true, flame: true }),
   Object.freeze({ action: "pick", icon: "fa-solid fa-crosshairs", label: "PENTARYN_SENSES.Light.Pick", handler: "pickAndCast", dialog: true, card: true }),
-  Object.freeze({ action: "end", icon: "fa-solid fa-lightbulb-slash", label: "PENTARYN_SENSES.Light.End", handler: "end", card: true }),
+  Object.freeze({ action: "end", icon: "fa-solid fa-lightbulb-slash", label: "PENTARYN_SENSES.Light.End", handler: "end", card: true, flame: true }),
   Object.freeze({ action: "cancel", icon: "fa-solid fa-xmark", label: "PENTARYN_SENSES.Light.NotNow", handler: null, dialog: true })
 ]);
 const lightAction = act => LIGHT_ACTIONS.find(a => a.action === act);
@@ -174,7 +175,8 @@ export function decorateCard(message, html) {
   const uuid = message.system?.item?.uuid;
   if (!uuid) return;
   const item = itemFrom(uuid);
-  if (!isLightSpellData(item)) return;
+  const kind = spellLightKind(item);
+  if (!kind) return;
   const root = rootOf(html);
   if (!root) return;
   // The PHB Light's summon button (not groupable, so it keeps data-action): drop it with its <li>.
@@ -199,7 +201,7 @@ export function decorateCard(message, html) {
     content.append(section);
   }
   if (list.querySelector("[data-ps-light]")) return;
-  const row = LIGHT_ACTIONS.filter(a => a.card).map(a => cardButton(a.icon, _loc(a.label), a.action));
+  const row = LIGHT_ACTIONS.filter(a => a.card && (kind === "light" || a.flame)).map(a => cardButton(a.icon, _loc(a.label), a.action));
   for (const li of row) {
     const b = li.firstElementChild;
     b.addEventListener("click", ev => {
@@ -289,6 +291,29 @@ export function injectHUD(app, element) {
     },
     onError: e => warn("hud click", e),
   });
+}
+
+/* -------------------------------------------- */
+/*  One activity choice per item                */
+/* -------------------------------------------- */
+
+/**
+ * renderActivityChoiceDialog: dnd5e opens a new "which activity?" dialog on every click of an
+ * item's Use, so a double-click on Produce Flame opened two, and picking in both cast it twice
+ * (DsekWh). For a spell light or a lit item, a second dialog for an item whose dialog is already
+ * open closes at once (its use resolves to nothing) and the open one comes to the front.
+ */
+export function oneChoiceDialog(app, element, context, options) {
+  if (options && options.isFirstRender === false) return;
+  const item = app?.item;
+  if (!item?.uuid || (!isSpellLightData(item) && !profileFor(item))) return;
+  const open = foundry.applications?.instances;
+  if (!open?.values) return;
+  const first = [...open.values()].find(a => a !== app && a?.constructor === app.constructor
+    && a.rendered !== false && a.item?.uuid === item.uuid);
+  if (!first) return;
+  first.bringToFront?.();
+  Promise.resolve(app.close?.({ animate: false })).catch(e => warn("choice dialog close", e));
 }
 
 /** Cancel a pick in progress (canvas teardown, uninstall). */

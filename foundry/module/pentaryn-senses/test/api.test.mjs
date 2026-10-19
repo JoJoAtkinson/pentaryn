@@ -36,7 +36,7 @@ test("describe(): the manifest as JSON (golden); flags and settings as declared"
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
   assert.equal(d.flagScope, "pentaryn-senses");
   assert.deepEqual(d.settings.map(s => [s.key, s.store === true]), [["sightReset", true]]);
-  assert.equal(d.hooks.length, 33, "glow 1 + chain 8 + light 15 + carried 9 ([declared PT TF-2] + carried updateToken; the entry's own init/ready are not reg records)");
+  assert.equal(d.hooks.length, 34, "glow 1 + chain 8 + light 16 + carried 9 ([declared PT TF-2] + carried updateToken; [declared 0.6.0 DsekWh] + light renderActivityChoiceDialog; the entry's own init/ready are not reg records)");
   assert.deepEqual(d.events, []);
 });
 
@@ -47,7 +47,7 @@ test("rows ↔ implementations: every row path is a published function, nothing 
   const KIT = ["version", "contract", "settings", "trace", "uninstall", "describe"];
   const paths = Object.keys(surfaceOf(S)).filter(p => !KIT.includes(p) && !p.startsWith("light.SPELL_LIGHT") && p !== "light.PHB_LIGHT_ACTOR");
   assert.deepEqual(paths.sort(), MANIFEST.rows.map(r => r.path).sort());
-  assert.equal(S.version, "0.5.0");
+  assert.equal(S.version, "0.6.0");
   assert.equal(S.contract, "pentaryn-senses/api@1");
   assert.deepEqual(S.settings(), { sightReset: { store: true, size: null } });
   assert.deepEqual(S.trace(), []);
