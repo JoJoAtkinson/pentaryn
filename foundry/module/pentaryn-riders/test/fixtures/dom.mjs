@@ -114,6 +114,12 @@ export class FakeElement {
     const adopted = nodes.map(n => p._adopt(n));
     p.childNodes.splice(p.childNodes.indexOf(this) + 1, 0, ...adopted);
   }
+  before(...nodes) {
+    const p = this.parentNode;
+    if (!p) return;
+    const adopted = nodes.map(n => p._adopt(n));
+    p.childNodes.splice(p.childNodes.indexOf(this), 0, ...adopted);
+  }
   replaceWith(n) {
     const p = this.parentNode;
     if (!p) return;

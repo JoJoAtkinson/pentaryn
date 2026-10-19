@@ -29,7 +29,7 @@
         "AMBIGUOUS",
         "BAD_ARGS"
       ],
-      "doc": "Read-only riders state for one actor, plain JSON, depth ≤ 4: report()'s rows, the Hit Dice summary, all nine settings, and the tokens its concentration effects keep on any scene. opts.as = a user ref answers with that user's view (rows and hd need OBSERVER; concentrationSummons is GM-only)."
+      "doc": "Read-only riders state for one actor, plain JSON, depth ≤ 4: report()'s rows, the Hit Dice summary, all ten settings, and the tokens its concentration effects keep on any scene. opts.as = a user ref answers with that user's view (rows and hd need OBSERVER; concentrationSummons is GM-only)."
     },
     {
       "path": "selftest",
@@ -340,6 +340,13 @@
       "type": "Boolean",
       "default": true,
       "doc": "Scorching Ray and Magic Missile cards get one button per ray / dart (3, plus one per level above the spell's), each rolled at the creature targeted when clicked."
+    },
+    {
+      "key": "spellView",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "The character sheet's Spells tab opens on the spells ready to cast, with a Prepared / All spells toggle remembered per user and actor; a change re-renders open character sheets."
     }
   ],
   "events": [],
@@ -459,6 +466,14 @@
     {
       "name": "updateActiveEffect",
       "label": "effect choices"
+    },
+    {
+      "name": "dnd5e.filterItem",
+      "label": "spell view: filter"
+    },
+    {
+      "name": "renderCharacterActorSheet",
+      "label": "spell view: switch"
     }
   ],
   "patches": [

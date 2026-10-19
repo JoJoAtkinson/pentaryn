@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
 const ROOT = new URL("../", import.meta.url);
-const FEATURES = ["rituals", "concentration", "argon-tidy", "cast-flow", "damage-riders", "card-note", "tray-preset", "battle-medic", "hd-sheet", "projectiles", "effect-choices"];
+const FEATURES = ["rituals", "concentration", "argon-tidy", "cast-flow", "damage-riders", "card-note", "tray-preset", "battle-medic", "hd-sheet", "projectiles", "effect-choices", "spell-view"];
 
 test("the entry lists the ten features in today's load order", () => {
   const entry = readFileSync(new URL("riders.mjs", ROOT), "utf8");

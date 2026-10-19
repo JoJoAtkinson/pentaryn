@@ -1,14 +1,23 @@
 {
-  "rules": "object",
+  "inspect": "function",
+  "selftest": "function",
+  "arcaneRecovery": "function",
   "featuresOf": "function",
   "report": "function",
   "setType": "function",
   "retireManual": "function",
-  "installBattleMedic": "function",
-  "battleMedic": "function",
   "spendHitDie": "function",
   "restoreHitDie": "function",
   "hdPools": "function",
   "preview": "function",
-  "core": "object"
+  "installBattleMedic": "function",
+  "battleMedic": "function",
+  "rules": "object",
+  "core": "object",
+  "version": "string",
+  "contract": "string",
+  "settings": "function",
+  "trace": "function",
+  "uninstall": "function",
+  "describe": "function"
 }

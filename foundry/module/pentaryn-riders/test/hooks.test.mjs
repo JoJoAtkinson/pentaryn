@@ -26,7 +26,7 @@ test("registration manifest (non-lifecycle) equals golden/hooks.json", () => {
   pinJSON("hooks", atLoad.filter(h => !LIFECYCLE.has(h.name)), import.meta.url);
 });
 
-test("the 26 non-lifecycle registrations, in order (guide S1 list)", () => {
+test("the 31 non-lifecycle registrations, in order (guide S1 list)", () => {
   assert.deepEqual(atLoad.filter(h => !LIFECYCLE.has(h.name)).map(h => h.name), [
     "dnd5e.preUseActivity",                 // rituals: slot unticked
     "dnd5e.summonToken",                    // concentration: stamp
@@ -57,6 +57,8 @@ test("the 26 non-lifecycle registrations, in order (guide S1 list)", () => {
     "createChatMessage",                    // projectiles: card refresh
     "deleteChatMessage",                    // projectiles: card refresh
     "updateActiveEffect",                   // effect-choices: pick-one passive effects (tNdOEx)
+    "dnd5e.filterItem",                     // spell-view: Prepared view filter
+    "renderCharacterActorSheet",            // spell-view: Prepared / All spells switch
   ]);
   assert.ok(atLoad.filter(h => !LIFECYCLE.has(h.name)).every(h => h.kind === "on"));
 });
@@ -125,6 +127,6 @@ test("the shared hooks run their listeners in manifest order (rituals → cast-f
     createChatMessage: 2, deleteChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
     renderItemButtonArgonComponent: 1, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
     "dnd5e.postUseActivity": 2, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
-    renderCharacterActorSheet: 1, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1,
+    renderCharacterActorSheet: 2, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1, "dnd5e.filterItem": 1,
   });
 });

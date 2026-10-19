@@ -27,7 +27,7 @@ export const MANIFEST = Object.freeze({
       gm: false, writes: false,
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
       doc: "Read-only riders state for one actor, plain JSON, depth ≤ 4: report()'s rows, the Hit Dice summary, "
-        + "all nine settings, and the tokens its concentration effects keep on any scene. opts.as = a user ref "
+        + "all ten settings, and the tokens its concentration effects keep on any scene. opts.as = a user ref "
         + "answers with that user's view (rows and hd need OBSERVER; concentrationSummons is GM-only).",
     },
     {

@@ -119,6 +119,20 @@ export function isBattleMedic(activity) {
   return normalizeName(activity.name) === "battle medic" && matchRule(HEALER, itemInfo(activity.item));
 }
 
+/* ── the sheet's Prepared / All spells view ─────────────────────────────── */
+
+/** An Item as core inPreparedView reads it (dnd5e 6: `system.method`, `prepared` 0/1/2, `linkedActivity`). */
+export function spellViewInfo(item) {
+  const sys = item?.system ?? {};
+  return {
+    type: item?.type ?? "",
+    level: Number(sys.level) || 0,
+    canPrepare: !!(sys.canPrepare ?? CONFIG.DND5E?.spellcasting?.[sys.method]?.prepares),
+    prepared: Number(sys.prepared) || 0,
+    linked: !!sys.linkedActivity,
+  };
+}
+
 /* ── Hit Dice ───────────────────────────────────────────────────────────── */
 
 /** The actor's Hit Dice pools (core hdPoolsFrom over `attributes.hd` and the class items). */

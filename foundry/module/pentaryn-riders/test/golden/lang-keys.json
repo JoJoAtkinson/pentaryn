@@ -29,6 +29,8 @@
   "PENTARYN_RIDERS.settings.arcaneRecovery.hint",
   "PENTARYN_RIDERS.settings.projectiles.name",
   "PENTARYN_RIDERS.settings.projectiles.hint",
+  "PENTARYN_RIDERS.settings.spellView.name",
+  "PENTARYN_RIDERS.settings.spellView.hint",
   "PENTARYN_RIDERS.rituals.group",
   "PENTARYN_RIDERS.rituals.longGroup",
   "PENTARYN_RIDERS.summon.place",
@@ -53,5 +55,11 @@
   "PENTARYN_RIDERS.projectiles.dart.slot",
   "PENTARYN_RIDERS.projectiles.dart.status",
   "PENTARYN_RIDERS.projectiles.dart.oneTarget",
-  "PENTARYN_RIDERS.projectiles.noTarget"
+  "PENTARYN_RIDERS.projectiles.noTarget",
+  "PENTARYN_RIDERS.spellView.label",
+  "PENTARYN_RIDERS.spellView.prepared",
+  "PENTARYN_RIDERS.spellView.all",
+  "PENTARYN_RIDERS.spellView.preparedTip",
+  "PENTARYN_RIDERS.spellView.allTip",
+  "PENTARYN_RIDERS.spellView.hiddenNote"
 ]
