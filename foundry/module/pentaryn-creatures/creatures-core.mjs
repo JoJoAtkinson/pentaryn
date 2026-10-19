@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-creatures";
 export const SHORT = "creatures";
 export const NS = "creatures";
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 export const CONTRACT = "pentaryn-creatures/api@1";
 export const I18N = "PENTARYN_CREATURES";
 export const CSS = "pcr-";
@@ -279,6 +279,8 @@ export function countLit(lightFlags) {
  * that copy instead, owned by the player, in the character's library folder
  * `<LIBRARY_ROOT>/<First name> — summons & forms`. dnd5e then reuses that copy on every later
  * summon (it looks for an owned, auto-imported actor from the same source before importing).
+ * A player who may create actors imports the copy through dnd5e itself; that copy is filed into the
+ * same folder afterwards (`libraryFiling`, 0.3.0).
  */
 
 /** The API row (and so the relay query `pentaryn-creatures.summonActor`). */
@@ -299,8 +301,9 @@ const ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 
 /**
  * A Foundry document id (16 of [A-Za-z0-9]) that is always the same for the same seed. Two GM tabs
- * answering one relay create the same `_id` with `keepId`, so the second create replaces the first
- * with identical data instead of making a duplicate (blueprint §5.9.2). Not cryptographic.
+ * answering one relay create the same `_id` with `keepId`: the server refuses the second create (the
+ * id exists), and that tab finds the first tab's document by the same id and answers with it, so
+ * there is never a duplicate (blueprint §5.9.2). Not cryptographic.
  */
 export function stableId(seed) {
   const s = String(seed);
@@ -358,12 +361,13 @@ export function libraryOwnership(summonerOwnership, senderId) {
 }
 
 /**
- * Should a failed `fetchExisting` be retried through the GM? Only for a player (never a GM, never a
+ * Should a failed `fetchExisting` be retried through the GM? Only dnd5e's Create New Actors refusal
+ * (`refused`; any other error is dnd5e's to show as it is), only for a player (never a GM, never a
  * user who may create actors: their error is a real one), with the setting on, and only for dnd5e's
  * own summon call (it names the summoning item as the origin).
  */
-export function shouldRelaySummon({ isGM, canCreate, enabled, originKey, originValue } = {}) {
-  if (isGM || canCreate || enabled === false) return false;
+export function shouldRelaySummon({ isGM, canCreate, enabled, originKey, originValue, refused } = {}) {
+  if (refused !== true || isGM || canCreate || enabled === false) return false;
   return originKey === SUMMON_ORIGIN_KEY && typeof originValue === "string" && originValue.length > 0;
 }
 
@@ -396,4 +400,81 @@ export function summonAllowed(activities, target) {
     }
   }
   return { ok: false, reason: "that actor is not one this item can summon" };
+}
+
+/**
+ * May this user be handed a copy of the source at all, whatever the item says? Never a player
+ * character, and only a source the user can already see in full: a world actor they may observe, an
+ * actor in a compendium they may observe (`visible`, read by the caller). The item is the player's
+ * own and they can edit its summon profiles, so the item alone never decides this.
+ * @param {{ actorType?: string|null, visible?: boolean }} source
+ * @returns {string|null}  the refusal, or null when the source may be copied
+ */
+export function summonSourceRefusal({ actorType, visible } = {}) {
+  if (actorType === "character") return "a player character is never copied";
+  if (visible !== true) return "the summoner cannot see that actor";
+  return null;
+}
+
+/**
+ * `summonAllowed`, preferring the summoning item's compendium original (`original`: its activities,
+ * null when the item has none or it is not found) over the world item (`world`), which its owner can
+ * edit. A compendium source must be one the original can summon (an edited profile uuid or CR does
+ * not count); a world source may also come from the world item's profiles, the GM's own pointers at
+ * world actors (the library convention), still behind `summonSourceRefusal`. No original: the world
+ * item decides.
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function summonAllowedFrom({ original = null, world = [] } = {}, target) {
+  if (!Array.isArray(original) || !original.length) return summonAllowed(world, target);
+  const r = summonAllowed(original, target);
+  if (r.ok) return r;
+  if (!target?.inPack) return summonAllowed(world, target);
+  return { ok: false, reason: "that actor is not one this item's compendium original can summon" };
+}
+
+/**
+ * Is this world actor a summon copy dnd5e (or the library) imported: `flags.dnd5e.isAutoImported`
+ * (or dnd5e's older `summonedCopy`) and the source uuid it was imported from?
+ * @param {{ autoImported?: boolean, source?: string|null }} copy
+ */
+export function isSummonCopy(copy) {
+  return copy?.autoImported === true && typeof copy.source === "string" && copy.source.length > 0;
+}
+
+/**
+ * The update that files a summon copy into a character's library, or null when it is already filed.
+ * Never takes anything away: ownership only gains the character's owners (level 3); the folder, the
+ * library flag and, for a linked copy with a known summoning item, dnd5e's summon origin (without it
+ * dnd5e never reuses a linked copy) are set when they differ. Flat dotted keys, for `Actor#update`.
+ * @param {{ folderId?: string|null, ownership?: object, library?: string|null, linked?: boolean, origin?: string|null }} copy
+ * @param {{ summonerId: string, summonerOwnership?: object, folderId?: string|null, originUuid?: string|null }} to
+ * @returns {object|null}
+ */
+export function libraryFiling(copy, { summonerId, summonerOwnership, folderId = null, originUuid = null } = {}) {
+  if (!copy || !summonerId) return null;
+  const out = {};
+  if (folderId && copy.folderId !== folderId) out.folder = folderId;
+  if (copy.library !== summonerId) out[`flags.${MODULE}.library`] = summonerId;
+  if (copy.linked === true && originUuid && copy.origin !== originUuid) out[SUMMON_ORIGIN_KEY] = originUuid;
+  const owners = Object.entries(summonerOwnership ?? {})
+    .filter(([k, v]) => k !== "default" && v === 3).map(([k]) => k).sort();
+  for (const k of owners) if ((copy.ownership?.[k] ?? 0) < 3) out[`ownership.${k}`] = 3;
+  return Object.keys(out).length ? out : null;
+}
+
+/**
+ * Whose summon is this loose copy? The sweep's answer when nothing names the summoning item: the one
+ * character that can summon its source (`canSummon`) and shares an owner with the copy (the caster
+ * owns what dnd5e imported). Anything else is left for the GM to file by hand.
+ * @param {{ copyOwners: string[], candidates: { id: string, owners: string[], canSummon: boolean }[] }} o
+ * @returns {{ id: string } | { reason: string }}
+ */
+export function pickSummoner({ copyOwners = [], candidates = [] } = {}) {
+  const mine = new Set(copyOwners);
+  if (!mine.size) return { reason: "no player owns the copy" };
+  const fits = candidates.filter(c => c?.canSummon && (c.owners ?? []).some(u => mine.has(u)));
+  if (fits.length === 1) return { id: fits[0].id };
+  if (!fits.length) return { reason: "no character of its owner can summon it" };
+  return { reason: `more than one character could have summoned it (${fits.map(c => c.id).sort().join(", ")})` };
 }

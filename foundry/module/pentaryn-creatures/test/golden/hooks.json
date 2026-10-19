@@ -64,6 +64,10 @@
     "name": "setup"
   },
   {
+    "kind": "on",
+    "name": "dnd5e.postSummon"
+  },
+  {
     "kind": "once",
     "name": "ready"
   },

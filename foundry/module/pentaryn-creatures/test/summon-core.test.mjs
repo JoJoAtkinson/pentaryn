@@ -3,7 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   LIBRARY_ROOT, SUMMON_ORIGIN_KEY, libraryActorId, libraryFolderId, libraryFolderName, libraryOwnership, libraryRootId,
-  shouldRelaySummon, stableId, summonAllowed,
+  isSummonCopy, libraryFiling, pickSummoner, shouldRelaySummon, stableId, summonAllowed, summonAllowedFrom,
+  summonSourceRefusal,
 } from "../creatures-core.mjs";
 
 test("stableId: 16 Foundry id characters, the same for the same seed, different for another", () => {
@@ -43,9 +44,11 @@ test("libraryOwnership: default none; the character's owners and the sender own 
 });
 
 test("shouldRelaySummon: only a player without Create Actors, setting on, on dnd5e's summon call", () => {
-  const yes = { isGM: false, canCreate: false, enabled: true, originKey: SUMMON_ORIGIN_KEY, originValue: "Actor.a.Item.i" };
+  const yes = { refused: true, isGM: false, canCreate: false, enabled: true, originKey: SUMMON_ORIGIN_KEY, originValue: "Actor.a.Item.i" };
   assert.equal(shouldRelaySummon(yes), true);
   assert.equal(shouldRelaySummon({ ...yes, enabled: undefined }), true, "unset reads as on");
+  assert.equal(shouldRelaySummon({ ...yes, refused: false }), false, "only dnd5e's Create New Actors refusal (finding 5)");
+  assert.equal(shouldRelaySummon({ ...yes, refused: undefined }), false);
   assert.equal(shouldRelaySummon({ ...yes, isGM: true }), false);
   assert.equal(shouldRelaySummon({ ...yes, canCreate: true }), false, "Trusted players import themselves (Marrith)");
   assert.equal(shouldRelaySummon({ ...yes, enabled: false }), false);
@@ -77,4 +80,63 @@ test("summonAllowed: a profile's uuid; a CR summon takes a compendium npc within
   const noLimit = [{ mode: "cr", profiles: [{ cr: null, types: ["beast"] }] }];
   assert.equal(summonAllowed(noLimit, { ...owl, cr: 9 }).ok, true);
   assert.equal(summonAllowed([...profiles, ...familiar], owl).ok, true, "any activity on the item may allow it");
+});
+
+test("summonSourceRefusal (0.3.0, finding 1): never a PC, only a source the sender can already see", () => {
+  assert.equal(summonSourceRefusal({ actorType: "npc", visible: true }), null);
+  assert.match(summonSourceRefusal({ actorType: "character", visible: true }), /player character/);
+  assert.match(summonSourceRefusal({ actorType: "npc", visible: false }), /cannot see/);
+  assert.match(summonSourceRefusal({ actorType: "npc" }), /cannot see/, "unknown visibility refuses");
+  assert.match(summonSourceRefusal(), /cannot see/);
+});
+
+test("summonAllowedFrom (finding 1): the compendium original decides a pack source; the world item only adds world actors", () => {
+  const owl = { uuid: "Compendium.dnd5e.monsters.Actor.owl", inPack: true, actorType: "npc", cr: 0, creatureType: "beast" };
+  const bear = { ...owl, uuid: "Compendium.dnd5e.monsters.Actor.bear", cr: 1 };
+  const original = [{ mode: "cr", profiles: [{ cr: 0, types: ["beast"] }] }];
+  const edited = [{ mode: "cr", profiles: [{ cr: 30, types: [] }] }];
+  assert.deepEqual(summonAllowedFrom({ original, world: edited }, owl), { ok: true });
+  assert.equal(summonAllowedFrom({ original, world: edited }, bear).ok, false, "an edited CR does not count");
+  assert.equal(summonAllowedFrom({ original: null, world: edited }, bear).ok, true, "no original: the world item decides");
+  assert.equal(summonAllowedFrom({ original: [], world: edited }, bear).ok, true);
+  const steed = { uuid: "Actor.steed", inPack: false, actorType: "npc", cr: 0, creatureType: "celestial" };
+  const pointer = [{ mode: "", profiles: [{ uuid: "Actor.steed" }] }];
+  assert.equal(summonAllowedFrom({ original, world: pointer }, steed).ok, true, "the GM's world pointer still works");
+  assert.equal(summonAllowedFrom({ original, world: [] }, steed).ok, false);
+  assert.equal(summonAllowedFrom(undefined, owl).ok, false);
+});
+
+test("isSummonCopy: auto-imported with a source", () => {
+  assert.equal(isSummonCopy({ autoImported: true, source: "Compendium.x.Actor.y" }), true);
+  assert.equal(isSummonCopy({ autoImported: false, source: "Compendium.x.Actor.y" }), false);
+  assert.equal(isSummonCopy({ autoImported: true, source: null }), false);
+  assert.equal(isSummonCopy({ autoImported: true, source: "" }), false);
+  assert.equal(isSummonCopy(null), false);
+});
+
+test("libraryFiling (finding 2): folder, flag, owners added never removed, a linked copy's origin; null when filed", () => {
+  const copy = { folderId: "pcFolder", ownership: { default: 0, p1: 3 }, library: null, linked: false, origin: null };
+  const to = { summonerId: "aPC", summonerOwnership: { default: 0, gm: 3, p1: 3, p2: 3, obs: 2 }, folderId: "lib" };
+  assert.deepEqual(libraryFiling(copy, to), {
+    folder: "lib", "flags.pentaryn-creatures.library": "aPC", "ownership.gm": 3, "ownership.p2": 3,
+  });
+  const filed = { ...copy, folderId: "lib", library: "aPC", ownership: { default: 0, gm: 3, p1: 3, p2: 3, extra: 3 } };
+  assert.equal(libraryFiling(filed, to), null, "already filed: nothing, and an extra owner is kept");
+  assert.deepEqual(libraryFiling({ ...filed, linked: true }, { ...to, originUuid: "Actor.aPC.Item.i" }),
+    { [SUMMON_ORIGIN_KEY]: "Actor.aPC.Item.i" });
+  assert.equal(libraryFiling({ ...filed, linked: true, origin: "Actor.aPC.Item.i" }, { ...to, originUuid: "Actor.aPC.Item.i" }), null);
+  assert.equal(libraryFiling(filed, { ...to, originUuid: "Actor.aPC.Item.i" }), null, "an unlinked copy carries no origin");
+  assert.equal(libraryFiling({ ...filed, folderId: "x" }, { ...to, folderId: null }), null, "no folder: it stays");
+  assert.equal(libraryFiling(null, to), null);
+  assert.equal(libraryFiling(copy, {}), null);
+});
+
+test("pickSummoner (the sweep): the one character that can summon it and shares an owner", () => {
+  const c = (id, owners, canSummon = true) => ({ id, owners, canSummon });
+  assert.deepEqual(pickSummoner({ copyOwners: ["p1"], candidates: [c("aPC", ["p1"]), c("aMara", ["p2"])] }), { id: "aPC" });
+  assert.deepEqual(pickSummoner({ copyOwners: ["p1"], candidates: [c("aPC", ["p1"], false), c("aAlt", ["p1"])] }), { id: "aAlt" });
+  assert.match(pickSummoner({ copyOwners: [], candidates: [c("aPC", ["p1"])] }).reason, /no player owns/);
+  assert.match(pickSummoner({ copyOwners: ["p1"], candidates: [c("aMara", ["p2"])] }).reason, /no character/);
+  assert.match(pickSummoner({ copyOwners: ["p1"], candidates: [c("b", ["p1"]), c("a", ["p1"])] }).reason, /more than one.*\(a, b\)/);
+  assert.match(pickSummoner().reason, /no player owns/);
 });

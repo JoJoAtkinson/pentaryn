@@ -50,7 +50,8 @@ test("surface equals golden/surface.json", () => {
 test("flag contract: we write our light flag; we read aoe's handle flags, Item Piles and dnd5e originalActor", () => {
   assert.deepEqual(api.describe().flags, {
     // [declared] 0.2.0: the summon library's copies carry our library flag and dnd5e's isAutoImported
-    writes: ["flags.pentaryn-creatures.light", "flags.pentaryn-creatures.library", "flags.dnd5e.isAutoImported"],
+    writes: ["flags.pentaryn-creatures.light", "flags.pentaryn-creatures.library", "flags.dnd5e.isAutoImported",
+      "flags.dnd5e.summon.origin"],   // [declared] 0.3.0: a linked library copy carries dnd5e's summon origin
     reads: ["flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.item-piles.data.enabled", "flags.dnd5e.originalActor"],
   });
 });
