@@ -1,6 +1,6 @@
 ---
 name: importer
-description: "Importing or re-importing the generated NPC Actors from actors.json into a world, checking a fresh build at the table (Gate 2), or an import that refused."
+description: "Importing or re-importing the generated NPC Actors from actors.json into a world, checking a fresh build at the table (Gate 2), or an import that refused; also a D&D Beyond PC transfer (ddb-importer) that came in wrong: gear as consumables, 1/day spells as At-Will, a backpack that looks empty."
 ---
 
 Read [`context/foundry/importer.md`](../../../context/foundry/importer.md) in full before acting. It is the source of truth; this skill only routes to it.
