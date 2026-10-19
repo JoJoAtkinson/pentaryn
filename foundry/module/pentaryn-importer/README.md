@@ -60,7 +60,7 @@ Ask it: `game.pentaryn.importer.describe()` (offline: `test/golden/describe.json
 | `selftest()` | — | — | `{ ok, checks }` |
 | `inspect(ref)` | — | — | `{ actor, ddb, importId, stamp, needsCorrection, frozen }` (nothing GM-only) |
 | `ddbCorrections.plan(ref)` | — | — | the dry run: `{ changes, notes, frozen, needsCorrection, enabled }`; throws `BAD_ARGS` for a non-DDB actor |
-| `ddbCorrections.apply(ref, { dryRun })` | owner | Items, effects, base data, the stamp | `ok({ applied, errors, stamped, … })` / `fail`; a non-owner relays to the active GM |
+| `ddbCorrections.apply(ref, { dryRun })` | owner | Items, effects, base data, the stamp | `ok({ applied, errors, stamped, … })` / `fail`; a non-owner relays to the active GM, which refuses (`REFUSED`) a sender who does not own the actor |
 | `ddbCorrections.rules()` | — | — | `[{ id, label, doc }]` |
 | `moduleId`, `actorsContract`, `_internals` | — | — | the module id, `"pentaryn/actors.json@1"`, the four helpers below |
 
@@ -128,9 +128,10 @@ the first, then retry.
 Never written on an update: `img`, `prototypeToken.texture`, `system.attributes.hp.value` (GM work,
 and a wounded token must not heal mid-session). Nothing goes to world settings.
 
-DDB corrections (on a D&D Beyond character only, items frozen with `flags.ddbimporter.ignoreItemUpdate`
-/ `ignoreItemImport` untouched): Item type and system (retype, `==system`; recreated under the same id
-if Foundry refuses), Item fields (`system.method`, a Cast activity's `spell.uuid/level` and
+DDB corrections (on a D&D Beyond character only, items frozen with `flags.ddbimporter.ignoreItemImport`
+untouched — `ignoreItemUpdate` alone is not a freeze): Item type and system (retype, core's
+`ForcedReplacement` operator; recreated under the same id if Foundry refuses), deletion of a stale
+cached spell copy (`flags.dnd5e.cachedFor`) whose Cast activity now casts another spell, Item fields (`system.method`, a Cast activity's `spell.uuid/level` and
 `consumption.spellSlot`), ActiveEffects on the Transmuter's Stone (deterministic ids,
 `flags.pentaryn-riders.stone` / `.choice` — pentaryn-riders reads `choice`), the actor's base
 darkvision / CON-save proficiency while they are still the stone's, and the stamp
@@ -151,7 +152,8 @@ JSON differs between Python and JS).
 
 No other module reads `flags.pentaryn.*` (the generator writes them, the importer reads them back) or
 `flags.pentaryn-importer.ddbCorrections`. The importer reads `flags.ddbimporter.importId` and the
-freeze flags (ddb-importer's), and `flags.pentaryn-riders.stone` (its own effects' key).
+freeze flag `ignoreItemImport` (ddb-importer's), dnd5e's `flags.dnd5e.cachedFor` on cached spell
+copies, and `flags.pentaryn-riders.stone` (its own effects' key).
 
 ## Events
 

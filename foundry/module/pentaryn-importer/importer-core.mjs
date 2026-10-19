@@ -111,7 +111,7 @@ export const MODULE = "pentaryn-importer";
 export const SHORT = "importer";
 export const NS = "importer";
 /** module.json `version`; test/version-gate.test.mjs pins them equal. */
-export const VERSION = "1.2.0";
+export const VERSION = "1.2.1";
 /**
  * The kit API contract of `game.pentaryn.importer` (describe(), buildApi). NOT the actors.json
  * contract — that is CONTRACT_ID below, which the generator and the version gate speak.
