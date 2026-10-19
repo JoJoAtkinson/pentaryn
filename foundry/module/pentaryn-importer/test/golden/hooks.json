@@ -1,6 +1,14 @@
 [
   {
     "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
     "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "ddb-importer.characterProcessDataComplete"
   }
 ]

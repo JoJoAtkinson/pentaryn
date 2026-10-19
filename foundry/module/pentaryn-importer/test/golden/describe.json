@@ -42,18 +42,133 @@
       "query": false,
       "sideEffects": [],
       "doc": "Live smoke checks after a sync: published, the module.json gate flags present, the legacy root."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId?, base? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ actor: { id, name }, ddb, importId, stamp: { importId, at, version, changes } | null, needsCorrection, frozen: string[] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "1.2.0",
+      "doc": "Read-only DDB-correction state of one actor, plain JSON: whether it is a D&D Beyond character, its ddb-importer importId, the stamp of its last correction, whether a sync came since, and the items frozen against syncs (flags.ddbimporter.ignoreItemUpdate / ignoreItemImport)."
+    },
+    {
+      "path": "ddbCorrections.plan",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "doc": "a D&D Beyond character (flags.ddbimporter): Actor, uuid, id or exact name"
+        }
+      ],
+      "returns": "Promise<{ actor: { id, name }, importId, changes: [{ rule, op, item, itemId, summary, data }], notes: [{ rule, item, note }], frozen: string[], needsCorrection, enabled }>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "1.2.0",
+      "doc": "Dry run of the DDB corrections on one character: what each rule would change now (empty changes = already correct). needsCorrection is true when the character was synced from D&D Beyond since its last correction. BAD_ARGS for an actor without flags.ddbimporter."
+    },
+    {
+      "path": "ddbCorrections.apply",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "doc": "a D&D Beyond character: Actor, uuid, id or exact name"
+        },
+        {
+          "name": "opts",
+          "type": "{ dryRun? }",
+          "optional": true,
+          "doc": "dryRun: true returns the plan, writes nothing"
+        }
+      ],
+      "returns": "Promise<{ ok, changes, notes, frozen, applied: string[], errors: string[], stamped, reason } | fail>",
+      "gm": false,
+      "writes": true,
+      "query": true,
+      "relay": true,
+      "dryRun": true,
+      "sideEffects": [
+        "updates/retypes the character's Items",
+        "creates ActiveEffects (flags.pentaryn-riders.stone, flags.pentaryn-riders.choice)",
+        "updates the actor's base data",
+        "stamps flags.pentaryn-importer.ddbCorrections",
+        "a chat message whispered to the GMs when something changed"
+      ],
+      "since": "1.2.0",
+      "doc": "Apply the DDB corrections to one character now (what runs by itself after every ddb-importer sync). Idempotent. A client that cannot update the actor relays it to the active GM. Runs whatever the ddbCorrections setting says (the setting governs the automatic runs)."
+    },
+    {
+      "path": "ddbCorrections.rules",
+      "params": [],
+      "returns": "[{ id, label, doc }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "1.2.0",
+      "doc": "The DDB correction rules, in the order they run."
     }
   ],
-  "queries": [],
-  "settings": [],
+  "queries": [
+    "pentaryn-importer.ddbCorrections.apply"
+  ],
+  "settings": [
+    {
+      "key": "ddbCorrections",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Correct D&D Beyond characters after every ddb-importer sync, and at GM login for any synced since. Read live."
+    }
+  ],
   "events": [],
-  "hooks": [],
+  "hooks": [
+    {
+      "name": "ddb-importer.characterProcessDataComplete",
+      "label": "ddb corrections"
+    }
+  ],
   "patches": [],
   "flags": {
     "writes": [
-      "flags.pentaryn.*"
+      "flags.pentaryn.*",
+      "flags.pentaryn-importer.ddbCorrections",
+      "flags.pentaryn-riders.stone",
+      "flags.pentaryn-riders.choice"
     ],
-    "reads": []
+    "reads": [
+      "flags.ddbimporter.importId",
+      "flags.ddbimporter.ignoreItemUpdate",
+      "flags.ddbimporter.ignoreItemImport",
+      "flags.pentaryn-riders.stone"
+    ]
   },
   "errors": [
     "NOT_GM",
