@@ -27,7 +27,7 @@
  */
 
 import {
-  LIBRARY_ROOT, MODULE, SUMMON_ROW, isSummonCopy, libraryActorId, libraryFiling, libraryFolderId,
+  LIBRARY_ROOT, MODULE, SUMMON_ROW, filingRefusal, isSummonCopy, libraryActorId, libraryFiling, libraryFolderId,
   libraryFolderName, libraryRootId, pickSummoner, shouldRelaySummon, summonAllowedFrom, summonSourceRefusal,
 } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
@@ -189,6 +189,21 @@ const playerOwners = doc => Object.entries(doc?.ownership ?? {})
   .filter(([k, v]) => k !== "default" && v === 3 && game.users.get(k) && !game.users.get(k).isGM)
   .map(([k]) => k);
 
+/** A player character: the only kind of summoner whose copies are filed. */
+const isPlayerCharacter = actor => actor?.type === "character" && playerOwners(actor).length > 0;
+
+/**
+ * Why this copy is not `summoner`'s to file (core `filingRefusal`), or null. `user` is the sender:
+ * owning the copy as a player is their claim to it.
+ */
+function claimRefusal(copy, summary, summoner, user) {
+  return filingRefusal({
+    library: summary.library, copyOwners: playerOwners(copy), summonerId: summoner.id,
+    summonerOwners: playerOwners(summoner),
+    senderOwnsAsPlayer: !!user && !user.isGM && copy.testUserPermission(user, "OWNER"),
+  });
+}
+
 /**
  * The filing of one copy for one character: `{ entry, update }` (update null when already filed).
  * With `write`, the library folder is made when missing; without, nothing is written.
@@ -232,6 +247,8 @@ async function fileOne({ actorRef, itemUuid, summonerRef, dryRun, user }) {
     const check = summonAllowedFrom(
       { original: await originalActivities(item), world: summonActivities(item) }, copyTarget(summary));
     if (!check.ok) return fail("REFUSED", `${copy.name}: ${check.reason} (${item.name})`);
+    const claim = claimRefusal(copy, summary, summoner, user);
+    if (claim) return fail("REFUSED", `${copy.name} is not ${summoner.name}'s to file: ${claim}`);
     originUuid = itemUuid;
   } else if (summonerRef && user.isGM) {
     summoner = game.actors.get(summonerRef) ?? game.actors.getName(summonerRef) ?? null;
@@ -267,8 +284,12 @@ async function sweep({ dryRun }) {
     let originUuid = null;
     if (!summoner && s.origin) {
       const item = await fromUuid(s.origin).catch(() => null);
-      summoner = summonerOf(item);
-      if (summoner) originUuid = s.origin;
+      const owner = summonerOf(item);
+      // only a player character's own copy: never an NPC's item, never another player's copy
+      if (isPlayerCharacter(owner) && !claimRefusal(copy, s, owner, null)) {
+        summoner = owner;
+        originUuid = s.origin;
+      }
     }
     if (!summoner) {
       const target = copyTarget(s);
@@ -335,6 +356,12 @@ async function fileAfterSummon(activity, _profile, tokens) {
     const copy = game.actors.get(id);
     const summary = copySummary(copy);
     if (!copy || !isSummonCopy(summary)) continue;
+    // dnd5e may have reused another character's copy (the GM owns them all): leave it where it is
+    const claim = claimRefusal(copy, summary, summoner, game.user);
+    if (claim) {
+      ctx?.log.debug?.("summon library: copy left unfiled", { id, summoner: summoner.id, reason: claim });
+      continue;
+    }
     const folderId = findLibraryFolder(summoner)?.id ?? libraryFolderId(summoner.id);
     const pending = libraryFiling(summary,
       { summonerId: summoner.id, summonerOwnership: summoner.ownership, folderId, originUuid: item.uuid });

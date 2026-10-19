@@ -76,7 +76,8 @@ up as the players play. Two ways in:
   library folder (made if missing), flagged `flags.pentaryn-creatures.library`, the character's
   other owners added, and a linked copy given dnd5e's summon origin so dnd5e can reuse it. A
   player's client asks the active GM (`fileLibrary`, relay); a GM client does it itself. With no GM
-  online the copy stays loose until the GM runs `fileLibrary()`.
+  online it stays loose until the GM runs `fileLibrary()`. Never re-filed: a copy filed to another
+  character, or a loose one only another player owns (dnd5e reuses any copy a GM owns; `filingRefusal`).
 - **A player who may not** (Player role; a fallback here) — dnd5e refused: "You must have 'Create New
   Actors' permission…". The wrap on `Actor5e.fetchExisting` catches **only that refusal** (any other
   dnd5e error is shown as it is) and the active GM makes the copy, already filed (`summonActor`).
@@ -130,8 +131,9 @@ read; every write runs only on the active GM's client.
   `pentaryn-creatures.fileLibrary`). A player files one copy they own for the item that summoned it.
   The GM may pass `{ actor, summoner }` (the character's id or exact name) to file one by hand, or
   **nothing to sweep**: every `isAutoImported` copy, its summoner taken from the library flag, dnd5e's
-  summon origin, or else the one character that shares a player owner with the copy and has an item
-  that can summon it. Anything else is listed `unresolved` (no live player owner, more than one
+  summon origin (a player character's item only), or else the one character that shares a player
+  owner with the copy and has an item that can summon it (a profile may name either `_stats` source).
+  The GM's `{ actor, summoner }` is the override: it may move a copy filed elsewhere. Anything else is listed `unresolved` (no live player owner, more than one
   candidate). One batch; idempotent (a filed copy writes nothing); owners are only added.
 - `library(ref)` → `{ actor, folder, summons: [{ id, name, source }] }`: a character's library (the
   copies flagged for it and everything in its folder), as this client sees it.

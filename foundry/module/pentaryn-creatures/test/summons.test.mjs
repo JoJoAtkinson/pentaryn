@@ -458,6 +458,73 @@ test("finding 2: fileLibrary() — the GM's sweep files loose copies (dry run fi
   }
 });
 
+test("review 2 finding 1: the GM casts from Talo's sheet and dnd5e hands over Mara's copy — it stays Mara's", async () => {
+  F.become({ userId: GM });
+  batches.length = 0;
+  queries.length = 0;
+  // dnd5e's fetchExisting reuses any auto-imported copy the GM owns: Mara's filed one, or Wren's loose one
+  const filed = dnd5eImport("maraHand0000001", HAND, { [PLAYER2]: 3 },
+    { flags: { dnd5e: { isAutoImported: true }, [MODULE]: { library: "aMara" } } });
+  const loose = dnd5eImport("wrenHand0000001", HAND, { [PLAYER2]: 3 });
+  try {
+    await postSummon("iHand", [filed.id, loose.id]);
+    assert.equal(batches.length, 0, "nothing is re-filed after the summon");
+    assert.equal(filed.flags[MODULE].library, "aMara");
+    assert.equal(filed.folder, null);
+    assert.deepEqual(filed.ownership, { default: 0, [PLAYER2]: 3 }, "Talo's player gains nothing");
+    assert.equal(loose.flags[MODULE], undefined);
+    assert.deepEqual(loose.ownership, { default: 0, [PLAYER2]: 3 });
+    const again = await api().fileLibrary({ actor: filed.id, item: itemUuid("iHand") });
+    assert.deepEqual([again.ok, again.code], [false, "REFUSED"]);
+    assert.match(again.reason, /already filed to another character \(aMara\)/);
+    const theirs = await api().fileLibrary({ actor: loose.id, item: itemUuid("iHand") });
+    assert.deepEqual([theirs.ok, theirs.code], [false, "REFUSED"]);
+    assert.match(theirs.reason, /another player's copy/);
+    assert.equal(batches.length, 0);
+  } finally {
+    F.become({ userId: PLAYER });
+    game.actors.delete(filed.id);
+    game.actors.delete(loose.id);
+  }
+});
+
+test("review 2 finding 2: dnd5e's clone of a linked world actor (itself compendium-imported) matches on what dnd5e fetched", async () => {
+  F.become({ userId: GM });
+  // the GM's world Goblin came from a compendium; dnd5e's clone keeps that compendiumSource and adds duplicateSource
+  const clone = dnd5eImport("cloneGob0000001", HAND, {}, {
+    name: "Goblin", prototypeToken: { actorLink: true }, system: { details: { cr: null, type: { value: "humanoid" } } },
+    _stats: { compendiumSource: "Compendium.dnd5e.monsters.Actor.goblin0000000000", duplicateSource: "Actor.aGob" },
+  });
+  try {
+    const r = await api().fileLibrary({ actor: clone.id, item: itemUuid("iEdit"), dryRun: true });
+    assert.equal(r.ok, true, r.reason);
+    assert.deepEqual(r.filed.map(f => [f.id, f.summoner]), [[clone.id, "Talo"]], "the item's profile names Actor.aGob");
+  } finally {
+    F.become({ userId: PLAYER });
+    game.actors.delete(clone.id);
+  }
+});
+
+test("review 2 finding 3: the sweep's summon-origin path files only to a player character", async () => {
+  const gob = game.actors.get("aGob");
+  const gobItem = W.makeDoc("Item", { id: "iGobLight", name: "Light", system: { activities: [summon("", [{ uuid: LIGHT, types: new Set() }])] } }, { parent: gob });
+  gobItem.actor = gob;
+  SOURCES.set(gobItem.uuid, gobItem);
+  const copy = dnd5eImport("gobOrigin000001", LIGHT, { [PLAYER]: 3 },
+    { flags: { dnd5e: { isAutoImported: true, summon: { origin: gobItem.uuid } } } });
+  F.become({ userId: GM });
+  try {
+    const dry = await api().fileLibrary({ dryRun: true });
+    const entry = dry.filed.find(f => f.id === copy.id);
+    assert.equal(entry?.summoner, "Talo", "an NPC's item never takes the copy; its owner's character does");
+    assert.ok(!dry.filed.some(f => f.summoner === "Goblin"));
+  } finally {
+    F.become({ userId: PLAYER });
+    SOURCES.delete(gobItem.uuid);
+    game.actors.delete(copy.id);
+  }
+});
+
 test("library(ref): the character's copies, by name", () => {
   const lib = api().library("Talo");
   assert.deepEqual(lib.actor, { id: "aPC", name: "Talo" });

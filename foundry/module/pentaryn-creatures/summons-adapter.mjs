@@ -127,6 +127,11 @@ export function copySummary(actor) {
     id: actor?.id ?? null,
     autoImported: !!(f.dnd5e?.isAutoImported || f.dnd5e?.summonedCopy),
     source: actor?._stats?.compendiumSource || actor?._stats?.duplicateSource || null,
+    // what dnd5e matched it on: compendiumSource, and for its clone of a linked world actor (itself
+    // compendium-imported) the world actor it actually fetched, duplicateSource
+    sources: [actor?._stats?.compendiumSource, actor?._stats?.duplicateSource]
+      .filter((u, i, all) => typeof u === "string" && u && all.indexOf(u) === i),
+    fetched: actor?._stats?.duplicateSource || actor?._stats?.compendiumSource || null,
     folderId: actor?.folder?.id ?? null,
     ownership: { ...(actor?.ownership ?? {}) },
     library: f["pentaryn-creatures"]?.library ?? null,
@@ -138,11 +143,16 @@ export function copySummary(actor) {
   };
 }
 
-/** A copy's source as `summonAllowed` reads it, from the copy's own data (the sweep fetches nothing). */
+/**
+ * A copy's source as `summonAllowed` reads it, from the copy's own data (the sweep fetches nothing).
+ * `uuids` carries both sources, so a profile naming either one matches; `inPack` is where dnd5e
+ * fetched it from (a clone of a world actor is not a compendium pick, whatever it was imported from).
+ */
 export function copyTarget(summary) {
   return {
     uuid: summary.source,
-    inPack: String(summary.source ?? "").startsWith("Compendium."),
+    uuids: summary.sources?.length ? [...summary.sources] : [summary.source].filter(Boolean),
+    inPack: String(summary.fetched ?? summary.source ?? "").startsWith("Compendium."),
     actorType: summary.actorType,
     cr: summary.cr,
     creatureType: summary.creatureType,

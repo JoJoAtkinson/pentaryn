@@ -376,15 +376,18 @@ export function shouldRelaySummon({ isGM, canCreate, enabled, originKey, originV
  * actor: the source must be what one of the item's summon activities can summon.
  *  - mode "cr" (Find Familiar): a compendium npc whose CR is at most the profile's and whose
  *    creature type is one of the profile's (no types: any);
- *  - otherwise: the source uuid is one of the activity's profiles.
+ *  - otherwise: the source uuid is one of the activity's profiles. A copy can name two sources
+ *    (`uuids`: its compendium source and, for dnd5e's clone of a linked world actor, the world actor
+ *    dnd5e actually fetched); either one matching a profile is enough.
  * @param {{ mode?: string, profiles: { uuid?: string|null, cr?: number|null, types?: string[] }[] }[]} activities
- * @param {{ uuid: string, inPack: boolean, actorType?: string, cr?: number|null, creatureType?: string|null }} target
+ * @param {{ uuid: string, uuids?: string[], inPack: boolean, actorType?: string, cr?: number|null, creatureType?: string|null }} target
  * @returns {{ ok: true } | { ok: false, reason: string }}
  */
 export function summonAllowed(activities, target) {
   const list = Array.isArray(activities) ? activities : [];
   if (!list.length) return { ok: false, reason: "the item has no summon activity" };
   if (!target?.uuid) return { ok: false, reason: "no source actor" };
+  const uuids = new Set([target.uuid, ...(Array.isArray(target.uuids) ? target.uuids : [])].filter(Boolean));
   for (const a of list) {
     const profiles = Array.isArray(a?.profiles) ? a.profiles : [];
     if (a?.mode === "cr") {
@@ -395,7 +398,7 @@ export function summonAllowed(activities, target) {
         return crOk && (!types.length || types.includes(target.creatureType));
       });
       if (fits) return { ok: true };
-    } else if (profiles.some(p => p?.uuid && p.uuid === target.uuid)) {
+    } else if (profiles.some(p => p?.uuid && uuids.has(p.uuid))) {
       return { ok: true };
     }
   }
@@ -461,6 +464,24 @@ export function libraryFiling(copy, { summonerId, summonerOwnership, folderId = 
     .filter(([k, v]) => k !== "default" && v === 3).map(([k]) => k).sort();
   for (const k of owners) if ((copy.ownership?.[k] ?? 0) < 3) out[`ownership.${k}`] = 3;
   return Object.keys(out).length ? out : null;
+}
+
+/**
+ * May this copy be filed to `summonerId` (the summoning item's character)? dnd5e's fetchExisting reuses
+ * any auto-imported copy of the same source its user owns, and the GM owns them all: a GM casting from
+ * one character's sheet can be handed another character's copy. So a copy already filed to a
+ * different character is never re-filed, and a loose copy is claimed only when it is plausibly the
+ * summoner's: its player owners overlap the summoner's, the sender owns it as a player, or no player
+ * owns it at all (a fresh import, nobody else's yet).
+ * @param {{ library?: string|null, copyOwners?: string[], summonerId: string, summonerOwners?: string[], senderOwnsAsPlayer?: boolean }} o
+ * @returns {string|null}  the refusal, or null when the copy may be filed
+ */
+export function filingRefusal({ library = null, copyOwners = [], summonerId, summonerOwners = [], senderOwnsAsPlayer = false } = {}) {
+  if (library && library !== summonerId) return `already filed to another character (${library})`;
+  if (library === summonerId || senderOwnsAsPlayer === true || !copyOwners.length) return null;
+  const theirs = new Set(summonerOwners);
+  if (copyOwners.some(u => theirs.has(u))) return null;
+  return "another player's copy (no owner in common with the summoner)";
 }
 
 /**

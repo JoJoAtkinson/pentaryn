@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   LIBRARY_ROOT, SUMMON_ORIGIN_KEY, libraryActorId, libraryFolderId, libraryFolderName, libraryOwnership, libraryRootId,
-  isSummonCopy, libraryFiling, pickSummoner, shouldRelaySummon, stableId, summonAllowed, summonAllowedFrom,
+  filingRefusal, isSummonCopy, libraryFiling, pickSummoner, shouldRelaySummon, stableId, summonAllowed, summonAllowedFrom,
   summonSourceRefusal,
 } from "../creatures-core.mjs";
 
@@ -139,4 +139,24 @@ test("pickSummoner (the sweep): the one character that can summon it and shares 
   assert.match(pickSummoner({ copyOwners: ["p1"], candidates: [c("aMara", ["p2"])] }).reason, /no character/);
   assert.match(pickSummoner({ copyOwners: ["p1"], candidates: [c("b", ["p1"]), c("a", ["p1"])] }).reason, /more than one.*\(a, b\)/);
   assert.match(pickSummoner().reason, /no player owns/);
+});
+
+test("summonAllowed: a copy's either source (compendiumSource or the world actor dnd5e cloned) matches a profile", () => {
+  const world = [{ mode: "", profiles: [{ uuid: "Actor.aGob" }] }];
+  const target = { uuid: "Compendium.dnd5e.monsters.Actor.goblin", uuids: ["Compendium.dnd5e.monsters.Actor.goblin", "Actor.aGob"], inPack: false };
+  assert.deepEqual(summonAllowed(world, target), { ok: true });
+  assert.equal(summonAllowed(world, { ...target, uuids: undefined }).ok, false, "the compendium source alone does not match");
+  const pack = [{ mode: "", profiles: [{ uuid: "Compendium.dnd5e.monsters.Actor.goblin" }] }];
+  assert.deepEqual(summonAllowed(pack, target), { ok: true });
+});
+
+test("filingRefusal: never another character's filed copy; a loose copy only when plausibly the summoner's", () => {
+  const base = { summonerId: "aPC", summonerOwners: ["rook"] };
+  assert.equal(filingRefusal({ ...base, library: "aPC", copyOwners: ["wren"] }), null, "already the summoner's");
+  assert.match(filingRefusal({ ...base, library: "aMara", copyOwners: ["rook"] }), /already filed to another character \(aMara\)/);
+  assert.match(filingRefusal({ ...base, library: "aMara", senderOwnsAsPlayer: true }), /already filed/, "even its owner cannot move it");
+  assert.equal(filingRefusal({ ...base, copyOwners: ["rook", "wren"] }), null, "an owner in common");
+  assert.equal(filingRefusal({ ...base, copyOwners: [] }), null, "a fresh import nobody's player owns");
+  assert.equal(filingRefusal({ ...base, copyOwners: ["wren"], senderOwnsAsPlayer: true }), null, "the sender's own copy");
+  assert.match(filingRefusal({ ...base, copyOwners: ["wren"] }), /another player's copy/);
 });

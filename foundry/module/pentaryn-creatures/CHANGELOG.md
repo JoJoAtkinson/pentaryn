@@ -24,7 +24,17 @@
   its next relay.
 - **[declared] Only dnd5e's Create New Actors refusal is relayed;** any other `fetchExisting` error
   (an unknown uuid, …) reaches the player as dnd5e threw it, not as "Could not summon: …".
-- `core` adds `summonSourceRefusal`, `summonAllowedFrom`, `isSummonCopy`, `libraryFiling`,
+- **[declared] Second review: filing never takes another character's copy.** dnd5e's
+  `fetchExisting` reuses any auto-imported copy of the source its user owns, and the GM owns them
+  all, so a GM casting from one character's sheet could be handed another's copy, which filing then
+  moved, re-flagged and gave to the wrong owners. A copy filed to a different character is never
+  re-filed (after a summon, or by `fileLibrary({ actor, item })`); a loose copy is claimed only when
+  it shares a player owner with the summoner, the sender owns it as a player, or no player owns it.
+  The GM's `{ actor, summoner }` remains the override. Core `filingRefusal`.
+- **[declared] A clone of a linked world actor** that was itself compendium-imported is matched on
+  `_stats.duplicateSource` (what dnd5e fetched) as well as `compendiumSource`, and is not treated as
+  a compendium pick. The sweep's summon-origin path files only to a `character` with player owners.
+- `core` adds `filingRefusal`, `summonSourceRefusal`, `summonAllowedFrom`, `isSummonCopy`, `libraryFiling`,
   `pickSummoner`; `shouldRelaySummon` takes `refused`. Setting hint and adjustments row
   `creatures-summon-library` updated. README trimmed.
 

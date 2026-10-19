@@ -17,6 +17,7 @@
   "core.VERSION": "string",
   "core.countLit": "countLit",
   "core.dockKey": "dockKey",
+  "core.filingRefusal": "filingRefusal",
   "core.isAoeHandle": "isAoeHandle",
   "core.isItemPile": "isItemPile",
   "core.isPlayerCreature": "isPlayerCreature",
