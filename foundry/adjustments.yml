@@ -908,7 +908,7 @@ adjustments:
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/cast-flow.mjs, foundry/module/pentaryn-riders/table-core.mjs]
     markers: ["arcaneRecoveryDialog"]
-    what: after Arcane Recovery is used, the owner picks spent slots of level 1-5 in a dialog that enforces half the Wizard level (rounded up) and writes them (setting arcaneRecovery)
+    what: after Arcane Recovery is used, the owner picks spent slots of level 1-5 in a dialog that enforces half the Wizard level (rounded up; +1 with a held Arcane Grimoire, equipped and not in a container) and writes them (setting arcaneRecovery); a second use while the picker is open is vetoed in dnd5e.preUseActivity before dnd5e spends it
     why: dnd5e only rolls "combined spell levels"; the player had to set slot pips on the sheet by hand, about 9 clicks (Area 6 re-run W5)
     native_when: dnd5e gives Arcane Recovery a slot-recovery activity or picker
     retire_class: safe
@@ -919,7 +919,7 @@ adjustments:
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/projectiles.mjs, foundry/module/pentaryn-riders/riders-core.mjs]
     markers: ["pr-shots", "getAssociatedRolls", "PROJECTILES"]
-    what: a Scorching Ray / Magic Missile usage card gets one button per ray or dart (3, +1 per level above the spell's, wand charges included via system.scaling); each rolls that ray's attack or that dart's damage at the creature targeted on click, threaded under the card; rolls already under the card fill the slots (setting projectiles)
+    what: a Scorching Ray / Magic Missile usage card gets one button per ray or dart (3, +1 per level above the spell's, wand charges included via system.scaling); each rolls that ray's attack or that dart's damage at the creature targeted on click, threaded under the card; rolls already under the card fill the slots (setting projectiles). Only dnd5e.renderChatMessage is hooked, since dnd5e's ChatMessage5e#_onCreate/_onDelete re-render the origin card when a roll under it is made or deleted
     why: dnd5e 6 and the PHB items give each spell one activity that rolls once, and Magic Missile's card Damage button reuses the cast-time targets, so a player saw one beam / one dart and could not split them (feedback JbnAbX, ixcdvA)
     native_when: dnd5e rolls multi-projectile spells per projectile with per-roll targets
     retire_class: safe
@@ -930,7 +930,7 @@ adjustments:
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/cast-flow.mjs, foundry/module/pentaryn-riders/core/usage.mjs]
     markers: ["openUsageDialogFor", "firstChoiceDialogFor", "staleConcentrationEnd"]
-    what: a second Use on an activity whose ActivityUsageDialog is still open is vetoed in dnd5e.preUseActivity (the open dialog comes to the front); on renderActivityChoiceDialog a second "which activity?" dialog for an item whose ActivityChoiceDialog is already open or rendering closes and the first comes to the front (any item); in dnd5e.preActivityConsumption a concentration replacement naming an effect that no longer exists is dropped (below the limit) or retargeted to the one effect held (at the limit)
+    what: a second Use on an activity whose ActivityUsageDialog is still open is vetoed in dnd5e.preUseActivity (the open dialog comes to the front); on renderActivityChoiceDialog a second "which activity?" dialog for an item whose ActivityChoiceDialog is already open or rendering closes and the first comes to the front (any item); in dnd5e.preActivityConsumption a concentration replacement naming an effect that no longer exists is dropped (below the limit) or the cast is refused with a notice to reopen the dialog (at the limit, since the effect held now is not the one the player picked); selftest() checks the preUseActivity vetoes run before other packages' listeners
     why: a double click opened two usage dialogs; casting from the second named the concentration the first had already ended and dnd5e refused with "The effect that is concentrated on and to be replaced does not exist." (feedback tNdOEx, Enlarge/Reduce); dnd5e opens an ActivityChoiceDialog per Use click, so a double click on Produce Flame cast it twice (feedback DsekWh)
     native_when: dnd5e keeps one usage dialog per activity and one choice dialog per item, or re-reads concentration when the dialog is submitted
     retire_class: safe

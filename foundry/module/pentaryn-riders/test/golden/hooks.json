@@ -69,6 +69,10 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
     "name": "renderActivityChoiceDialog"
   },
   {
@@ -106,14 +110,6 @@
   {
     "kind": "on",
     "name": "dnd5e.renderChatMessage"
-  },
-  {
-    "kind": "on",
-    "name": "createChatMessage"
-  },
-  {
-    "kind": "on",
-    "name": "deleteChatMessage"
   },
   {
     "kind": "on",

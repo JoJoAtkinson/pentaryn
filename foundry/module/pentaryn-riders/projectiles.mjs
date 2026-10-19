@@ -23,8 +23,11 @@
  * none it rolls untargeted (the GM can still apply the damage by hand).
  *
  * Only the caster's owners see the buttons. When a roll is made from (or removed from) the card, the
- * card is re-rendered on every client so the slots follow (`createChatMessage` / `deleteChatMessage`).
- * Setting pentaryn-riders.projectiles. Row dnd5e-riders-projectile-buttons.
+ * card is re-rendered on every client so the slots follow: dnd5e 6.0.6 does that itself
+ * (`ChatMessage5e#_onCreate` / `#_onDelete` → `#refreshOrigin` → `ui.chat.updateMessage(origin)`,
+ * the registry untracked first on delete), so this file adds no hook of its own for it.
+ * Uninstall removes the drawn buttons from every rendered card. Setting pentaryn-riders.projectiles.
+ * Row dnd5e-riders-projectile-buttons.
  */
 
 import { castLevelOf, projectileCount, projectileRule, projectileSlots } from "./riders-core.mjs";
@@ -165,22 +168,14 @@ function onRender(message, html) {
   try { render(message, html); } catch (err) { log.warn("projectile buttons skipped", err); }
 }
 
-/** A roll made from (or deleted under) a projectile card: re-render that card so its slots follow. */
-function refreshOrigin(message) {
-  try {
-    if (!message || !["attack", "damage"].includes(message.type)) return;
-    const id = originId(message);
-    const card = id ? game.messages?.get(id) : null;
-    if (!card || !projectileCard(card)) return;
-    ui.chat?.updateMessage?.(card)?.catch?.(err => log.debug("projectile card refresh", err));
-  } catch (err) { log.warn("projectile card refresh skipped", err); }
-}
-
 export function install(reg, ctx) {
   log = ctx.log;
   reg.on("dnd5e.renderChatMessage", onRender, { guard: false, label: "projectile buttons" });
-  reg.on("createChatMessage", refreshOrigin, { guard: false, label: "projectile buttons" });
-  reg.on("deleteChatMessage", refreshOrigin, { guard: false, label: "projectile buttons" });
 }
 
-export function uninstall() {}
+/** Uninstall: the buttons already drawn leave every rendered card (chat log, popouts, notifications). */
+export function uninstall() {
+  try {
+    for (const box of globalThis.document?.querySelectorAll?.(".pr-shots") ?? []) box.remove();
+  } catch (err) { log?.debug?.("projectile buttons left on rendered cards", err); }
+}

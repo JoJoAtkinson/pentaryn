@@ -397,6 +397,36 @@ test("LdPm43: a second use while the picker is open opens no second window (a no
   await resetSlots();
 });
 
+test("review finding 3: a second Arcane Recovery use while the picker is open is vetoed in preUseActivity, before dnd5e spends the use", async () => {
+  await resetSlots();
+  newNotes();
+  W.takeLog();
+  const seen = [];
+  W.answer = async () => {
+    await null;
+    seen.push(F.fireCall("dnd5e.preUseActivity", recovery(), {}, {}, {}));                          // the second use
+    seen.push(F.fireCall("dnd5e.preUseActivity", { item: wiz.items.get("ritualadept00001"), flags: {}, name: "" }, {}, {}, {}));   // another feature
+    return "cancel";
+  };
+  assert.notEqual(F.fireCall("dnd5e.preUseActivity", recovery(), {}, {}, {}), false, "no picker open: the first use goes ahead");
+  F.fire("dnd5e.postUseActivity", recovery(), {}, {});
+  mock.timers.tick(0);
+  await drain(200);
+  W.answer = () => "cancel";
+  assert.equal(seen[0], false, "vetoed: dnd5e never reaches consumption");
+  assert.notEqual(seen[1], false, "another feature of the same wizard is not stopped");
+  assert.deepEqual(newNotes(), [["info", "Arcane Recovery: the slot picker is already open."]]);
+  assert.notEqual(F.fireCall("dnd5e.preUseActivity", recovery(), {}, {}, {}), false, "picker closed: a use goes ahead again");
+  await F.game.settings.set(MODULE, "arcaneRecovery", false);
+  W.answer = async () => { await null; seen.push(F.fireCall("dnd5e.preUseActivity", recovery(), {}, {}, {})); return "cancel"; };
+  const { arcaneRecoveryDialog } = await import("../cast-flow.mjs");
+  await arcaneRecoveryDialog(wiz);
+  await F.game.settings.set(MODULE, "arcaneRecovery", true);
+  W.answer = () => "cancel";
+  assert.notEqual(seen[2], false, "setting off: never vetoed");
+  await resetSlots();
+});
+
 test("Arcane Recovery: an Arcane Grimoire (attuned when it needs it) adds 1 to the budget", async () => {
   const { arcaneRecoveryDialog } = await import("../cast-flow.mjs");
   const mage = grimoire => makeActor({ name: "Grim", ownership: { default: 3 }, system: { spells: { spell1: { level: 1, value: 0, max: 4 }, spell2: { level: 2, value: 0, max: 3 } } }, items: [
@@ -406,10 +436,13 @@ test("Arcane Recovery: an Arcane Grimoire (attuned when it needs it) adds 1 to t
   const totals = [];
   W.answer = d => { totals.push(d.element.querySelector(".pr-ar-total").textContent); return "cancel"; };
   await arcaneRecoveryDialog(mage(null));
-  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true }));
-  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: false }));
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true, equipped: true }));
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: false, equipped: true }));
+  // Review finding 4: held only. Unequipped, or packed in a container, it adds nothing.
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true, equipped: false }));
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true, equipped: true, container: "backpack00000001" }));
   W.answer = () => "cancel";
-  assert.deepEqual(totals, ["2 of 2 levels", "3 of 3 levels", "2 of 2 levels"]);
+  assert.deepEqual(totals, ["2 of 2 levels", "3 of 3 levels", "2 of 2 levels", "2 of 2 levels", "2 of 2 levels"]);
 });
 
 test("Arcane Recovery: no spent slot 1–5 → a notice and no dialog; the setting off, another feature, not owner → nothing", async () => {

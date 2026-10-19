@@ -124,10 +124,17 @@ check("41 LdPm43: ddb-importer's Arcane Recovery macro activity, not another mac
   [isDdbRecoveryMacro({ type: "ddbmacro", fn: "ddb.feat.arcaneRecovery" }), isDdbRecoveryMacro({ type: "ddbmacro", fn: "ddb.feat.naturalRecovery" }),
     isDdbRecoveryMacro({ type: "utility", fn: "ddb.feat.arcaneRecovery" }), isDdbRecoveryMacro({ type: "ddbmacro" })],
   [true, false, false, false]);
-check("42 Arcane Grimoire: +1 to the budget when attuned (or attunement not required)",
-  [arcaneRecoveryCap(6, 1), isArcaneGrimoire({ name: "+1 Arcane Grimoire", attunement: "required", attuned: true }),
-    isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: false }), isArcaneGrimoire({ name: "Arcane Grimoire" }), isArcaneGrimoire({ name: "Spellbook" })],
+check("42 Arcane Grimoire: +1 to the budget when held (equipped, not in a container) and attuned (or attunement not required)",
+  [arcaneRecoveryCap(6, 1), isArcaneGrimoire({ name: "+1 Arcane Grimoire", attunement: "required", attuned: true, equipped: true }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: false, equipped: true }), isArcaneGrimoire({ name: "Arcane Grimoire", equipped: true }),
+    isArcaneGrimoire({ name: "Spellbook", equipped: true })],
   [4, true, false, true, false]);
+check("43 Arcane Grimoire (review finding 4): not equipped, or inside a container (a backpack), it adds nothing",
+  [isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true, equipped: false }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true, equipped: true, container: "backpack00000001" }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", equipped: true, container: null })],
+  [false, false, false, true]);
 
 /* ── report ──────────────────────────────────────────────────────────────── */
 
