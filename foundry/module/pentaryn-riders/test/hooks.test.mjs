@@ -44,6 +44,8 @@ test("the 26 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.preUseActivity",                 // cast-flow: restore-slot default
     "dnd5e.preUseActivity",                 // cast-flow: stale target drop
     "renderActivityUsageDialog",            // cast-flow: first click
+    "dnd5e.preUseActivity",                 // cast-flow: one usage dialog per activity (tNdOEx)
+    "dnd5e.preActivityConsumption",         // cast-flow: stale concentration replacement (tNdOEx)
     "dnd5e.postUseActivity",                // cast-flow: Arcane Recovery
     "dnd5e.postDamageRollConfiguration",    // riders: damage/healing riders
     "dnd5e.renderChatMessage",              // riders: card note
@@ -54,6 +56,7 @@ test("the 26 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.renderChatMessage",              // projectiles: one button per ray / dart
     "createChatMessage",                    // projectiles: card refresh
     "deleteChatMessage",                    // projectiles: card refresh
+    "updateActiveEffect",                   // effect-choices: pick-one passive effects (tNdOEx)
   ]);
   assert.ok(atLoad.filter(h => !LIFECYCLE.has(h.name)).every(h => h.kind === "on"));
 });
@@ -115,13 +118,13 @@ test("before init: the try/catch readers give false, the direct readers throw in
   assert.deepEqual(F.calls.filter(c => c.op !== "Hooks.call"), []);
 });
 
-test("the shared hooks run their listeners in manifest order (rituals → cast-flow ×2 → Battle Medic)", () => {
+test("the shared hooks run their listeners in manifest order (rituals → cast-flow ×3 → Battle Medic)", () => {
   const { init: _i, ready: _r, ...counts } = F.listeners();
   assert.deepEqual(counts, {
-    "dnd5e.preUseActivity": 4, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
+    "dnd5e.preUseActivity": 5, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
     createChatMessage: 2, deleteChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
     renderItemButtonArgonComponent: 1, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
     "dnd5e.postUseActivity": 2, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
-    renderCharacterActorSheet: 1,
+    renderCharacterActorSheet: 1, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1,
   });
 });

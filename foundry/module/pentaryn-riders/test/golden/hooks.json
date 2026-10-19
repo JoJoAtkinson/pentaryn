@@ -65,6 +65,14 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preActivityConsumption"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.postUseActivity"
   },
   {
@@ -102,5 +110,9 @@
   {
     "kind": "on",
     "name": "deleteChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
   }
 ]

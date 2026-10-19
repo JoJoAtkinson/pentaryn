@@ -409,6 +409,14 @@
       "label": "usage dialog first click"
     },
     {
+      "name": "dnd5e.preUseActivity",
+      "label": "one usage dialog"
+    },
+    {
+      "name": "dnd5e.preActivityConsumption",
+      "label": "stale concentration"
+    },
+    {
       "name": "dnd5e.postUseActivity",
       "label": "Arcane Recovery picker"
     },
@@ -447,6 +455,10 @@
     {
       "name": "deleteChatMessage",
       "label": "projectile buttons"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "effect choices"
     }
   ],
   "patches": [

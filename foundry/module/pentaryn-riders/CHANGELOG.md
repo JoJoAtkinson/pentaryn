@@ -1,5 +1,21 @@
 # Changelog — pentaryn-riders
 
+## 0.4.0 — 2026-10-19 (player feedback tNdOEx, tiDvFa)
+
+- **Pick-one passive effects** (new feature `effect-choices.mjs`, pure `core/choices.mjs`): effects
+  flagged `flags.pentaryn-riders.choice = { group, max }` are a set where turning one on turns the
+  others of its group off (beyond `max`, a number or a roll-data formula). For the Wizard's
+  Transmuter's Stone, whose Darkvision the DDB import had baked into Marwen's base senses with
+  nothing to toggle. The item data is a fix script, `scripts/foundry/fixes/2026-10-19-transmuters-stone.js`
+  (dry run by default). Hook `updateActiveEffect`; row `dnd5e-riders-effect-choices`. [declared]
+- **One usage dialog per activity** (cast-flow part 7): a second Use while that activity's dialog is
+  open is vetoed and brings the open one forward. A double click had opened two Enlarge/Reduce
+  dialogs. [declared]
+- **Stale concentration replacement repaired** (cast-flow part 8, `dnd5e.preActivityConsumption`):
+  a dialog that named a concentration which ended meanwhile no longer fails with "The effect that
+  is concentrated on and to be replaced does not exist." Below the limit nothing is replaced; at
+  the limit with one effect, that one is. Pure `core/usage.mjs`; row `dnd5e-usage-dialog-single`.
+- `test/golden/hooks.json`: three registrations added (two in cast-flow's place, one at the end).
 ## 0.4.0 — 2026-10-19 (player feedback JbnAbX, ixcdvA)
 
 - **[declared] One button per ray / dart** (new feature `projectiles.mjs`, setting `projectiles`,

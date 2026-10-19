@@ -15,7 +15,7 @@
  *   patches.mjs            every wrap of another package's code (wrapMethod + adjustments row)
  *   api-manifest.mjs       PURE: the API rows (describe() reads them)
  *   api.mjs                implementations, inspect(), selftest(), buildApiFor(ctx)
- *   rituals.mjs … projectiles.mjs   the features: install(reg, ctx) / uninstall()
+ *   rituals.mjs … effect-choices.mjs   the features: install(reg, ctx) / uninstall()
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the features install synchronously when this file loads (as their module-scope hooks
@@ -43,9 +43,10 @@ import * as trayPreset from "./tray-preset.mjs";
 import * as battleMedic from "./battle-medic.mjs";
 import * as hdSheet from "./hd-sheet.mjs";
 import * as projectiles from "./projectiles.mjs";
+import * as effectChoices from "./effect-choices.mjs";
 
-/** Features in load order (= today's module evaluation order: the four side-effect imports, then the body). */
-const FEATURES = [rituals, concentration, argonTidy, castFlow, damageRiders, cardNote, trayPreset, battleMedic, hdSheet, projectiles];
+/** Features in load order (= the old module evaluation order: the four side-effect imports, then the body; projectiles and effect-choices appended). */
+const FEATURES = [rituals, concentration, argonTidy, castFlow, damageRiders, cardNote, trayPreset, battleMedic, hdSheet, projectiles, effectChoices];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
