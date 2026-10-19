@@ -85,9 +85,16 @@ they are looking at.
 
 ### Summon library
 
-A player whose role may not create actors (core **Create New Actors**; at this table the Player
-role, while Trusted has it) can still summon from a compendium: Mage Hand, Minor Illusion, a DDB
-summon, Animate Dead's skeleton, a Find Familiar pick from the Compendium Browser.
+A player whose role may not create actors (core **Create New Actors**; by default the Player role)
+can still summon from a compendium: Mage Hand, Minor Illusion, a DDB summon, Animate Dead's
+skeleton, a Find Familiar pick from the Compendium Browser.
+
+> **At this table the library is a fallback.** Since 2026-10-19 every player is **Trusted**, which
+> has Create New Actors here: the server is behind a Google login, so players are trusted to create
+> actors (a Create Actor button in the Actors tab, imports from packs they can see — no GM menus,
+> and no access to actors they don't own). dnd5e imports their summons itself and this relay never
+> runs; those copies land in the character's own folder, not the library folder. The relay still
+> covers any future Player-role user.
 
 - **Before:** dnd5e has to copy a compendium summon into the world before placing it, and refused a
   Player outright: "You must have 'Create New Actors' permission in order to summon directly from a

@@ -302,7 +302,7 @@ adjustments:
     files: [foundry/module/pentaryn-creatures/summons.mjs]
     markers: ["fetchExisting", "__pentarynCreaturesSummon"]
     what: wraps dnd5e's static Actor5e.fetchExisting through wrapMethod (libWrapper WRAPPER when lib-wrapper is active, else direct, marker __pentarynCreaturesSummon); when it throws on a player without core ACTOR_CREATE during a summon (origin key flags.dnd5e.summon.origin), the active GM makes the world copy (relay query pentaryn-creatures.summonActor) owned by that player, flagged flags.dnd5e.isAutoImported with _stats.compendiumSource, in PC Summons & Forms/<First name> — summons & forms, so dnd5e reuses it on every later summon (setting summonLibrary)
-    why: dnd5e 6.0.6 summons from a compendium only for users with Create New Actors; the Player role lacks it, and granting it lets players create any actor (feedback Swrl5M, UQSJ0v, dkt5PG, 2026-10-19)
+    why: dnd5e 6.0.6 summons from a compendium only for users with Create New Actors; the Player role lacks it (feedback Swrl5M, UQSJ0v, dkt5PG, 2026-10-19). Since the same day every player in pentaryn is Trusted (has ACTOR_CREATE; the server is behind a Google login), so this is a fallback for Player-role users only
     native_when: dnd5e imports compendium summons through the GM (a socket/query) for players without ACTOR_CREATE, or fetchExisting's lookup or permission check changes
     retire_class: guarded
     check: make foundry-creatures-check
