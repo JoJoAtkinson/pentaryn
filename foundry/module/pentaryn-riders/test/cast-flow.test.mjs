@@ -441,8 +441,11 @@ test("Arcane Recovery: an Arcane Grimoire (attuned when it needs it) adds 1 to t
   // Review finding 4: held only. Unequipped, or packed in a container, it adds nothing.
   await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true, equipped: false }));
   await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true, equipped: true, container: "backpack00000001" }));
+  // Second review: a grimoire typed loot has no equipped field — held unless it is in a container.
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true }));
+  await arcaneRecoveryDialog(mage({ attunement: "required", attuned: true, container: "backpack00000001" }));
   W.answer = () => "cancel";
-  assert.deepEqual(totals, ["2 of 2 levels", "3 of 3 levels", "2 of 2 levels", "2 of 2 levels", "2 of 2 levels"]);
+  assert.deepEqual(totals, ["2 of 2 levels", "3 of 3 levels", "2 of 2 levels", "2 of 2 levels", "2 of 2 levels", "3 of 3 levels", "2 of 2 levels"]);
 });
 
 test("Arcane Recovery: no spent slot 1–5 → a notice and no dialog; the setting off, another feature, not owner → nothing", async () => {

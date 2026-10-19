@@ -14,7 +14,8 @@ lang key (`usage.staleConcentration`); selftest gains "usage vetoes run first".
 - [declared] A second Arcane Recovery use while that wizard's picker is open is vetoed in
   `dnd5e.preUseActivity`, before dnd5e spends a use (0.5.0 spent the use and only showed the notice).
 - [declared] The Arcane Grimoire +1 counts only a held grimoire: equipped, attuned when it needs it,
-  not inside a container. One in a backpack no longer raises the budget.
+  not inside a container. One in a backpack no longer raises the budget. A grimoire whose item type
+  has no `system.equipped` field (loot) counts as held when it is not in a container (second review).
 - Projectile buttons: the `createChatMessage` / `deleteChatMessage` listeners are gone. dnd5e 6.0.6
   re-renders the origin card itself on a roll's create and delete (`ChatMessage5e#refreshOrigin`),
   so each roll re-rendered the card twice. Uninstall now removes drawn ray / dart buttons from

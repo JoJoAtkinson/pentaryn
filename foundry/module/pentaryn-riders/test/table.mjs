@@ -130,11 +130,17 @@ check("42 Arcane Grimoire: +1 to the budget when held (equipped, not in a contai
     isArcaneGrimoire({ name: "Spellbook", equipped: true })],
   [4, true, false, true, false]);
 check("43 Arcane Grimoire (review finding 4): not equipped, or inside a container (a backpack), it adds nothing",
-  [isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true }),
+  [isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true, equipped: null }),
     isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true, equipped: false }),
     isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true, equipped: true, container: "backpack00000001" }),
     isArcaneGrimoire({ name: "Arcane Grimoire", equipped: true, container: null })],
   [false, false, false, true]);
+check("44 Arcane Grimoire (second review): an item type with no equipped field (loot) is held unless it is in a container",
+  [isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: true }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", equipped: undefined }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", container: "backpack00000001" }),
+    isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: false })],
+  [true, true, false, false]);
 
 /* ── report ──────────────────────────────────────────────────────────────── */
 
