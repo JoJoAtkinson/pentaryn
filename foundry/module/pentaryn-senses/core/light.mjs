@@ -3,8 +3,8 @@
  * core/inspect.mjs). No Foundry globals, so test/light-core.test.mjs proves them in node.
  * Design: context/plans/senses-light-cantrip.md.
  *
- *   Item (Light spell)   flags.pentaryn-senses.lightCast  = { scene, token } | { scene, x, y } | null
- *   Token / AmbientLight flags.pentaryn-senses.spellLight = { source: "<Light item uuid>", prior }
+ *   Item (Light, Produce Flame) flags.pentaryn-senses.lightCast = { scene, token } | { scene, x, y } | null
+ *   Token / AmbientLight flags.pentaryn-senses.spellLight = { source: "<spell item uuid>", prior }
  *   Item (torch, lamp…)  flags.pentaryn-senses.lit / .hooded / .lightItem (profile override)
  *
  * Foundry's `dim` is the OUTER radius, so dim = bright + the rules' extra dim ring.
@@ -38,6 +38,14 @@ export const SPELL_LIGHT = Object.freeze({
 });
 
 const flame = (speed, intensity) => Object.freeze({ type: "torch", speed, intensity, reverse: false });
+
+/**
+ * Produce Flame (2024 PHB): a flame in the caster's hand, bright 20, dim 20 more. Warm and
+ * flickering like a torch, but it "emits no heat and ignites nothing" — only the light is modelled.
+ */
+export const FLAME_LIGHT = Object.freeze({
+  bright: 20, dim: 40, angle: 360, color: "#ff9a3c", alpha: 0.4, luminosity: 0.5, ...PLAIN, animation: flame(2, 2)
+});
 
 /** Mundane light sources by dnd5e item identifier (2024 PHB values). */
 export const LIGHT_PROFILES = Object.freeze({
@@ -195,6 +203,50 @@ export function isLightSpellData(item) {
   }
 }
 
+/** Is this item Produce Flame? By identifier, else by name (a D&D Beyond import keeps both). */
+export function isProduceFlameData(item) {
+  try {
+    if (item?.type !== "spell") return false;
+    return str(item.system?.identifier) === "produce-flame" || slug(item.name) === "produce-flame";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Which spell light an item makes, or null:
+ *   "light" — the Light cantrip: the caster picks a token or a square ("Where does the light go?");
+ *   "flame" — Produce Flame: the flame is in the caster's hand, so it always lights the caster.
+ * Both run on the same lightCast flag and the same GM reconcile; only the light and the prompt differ.
+ */
+export function spellLightKind(item) {
+  if (isLightSpellData(item)) return "light";
+  if (isProduceFlameData(item)) return "flame";
+  return null;
+}
+
+/** Is this item a spell light senses manages (Light or Produce Flame)? */
+export const isSpellLightData = item => spellLightKind(item) !== null;
+
+/** The token light a spell light gives: Produce Flame's flame, else the Light cantrip's glow. */
+export const spellLightData = item => (spellLightKind(item) === "flame" ? FLAME_LIGHT : SPELL_LIGHT);
+
+/**
+ * Does this use of a spell light make the light? The Light cantrip: any of its activities.
+ * Produce Flame: any activity but an attack — the PHB's "Cast" and D&D Beyond's "Light Effect"
+ * light the caster; "Hurl Fire" / "Attack" throw fire and leave the flame as it is.
+ */
+export function isSpellLightCast(activity, item) {
+  try {
+    const kind = spellLightKind(item);
+    if (kind === "light") return true;
+    if (kind !== "flame" || !activity) return false;
+    return activity.type !== "attack";
+  } catch {
+    return false;
+  }
+}
+
 /** Does using this activity mean "light / douse this item" rather than its own effect? */
 export function isLightToggle(activity, item) {
   try {
@@ -289,14 +341,15 @@ export function squareId(source, scene, x, y) {
 }
 
 /**
- * The token update that hands its light to the spell. `current` is the token's light right now.
+ * The token update that hands its light to the spell. `current` is the token's light right now;
+ * `light` the spell's (spellLightData: the Light cantrip's by default, Produce Flame's flame).
  * A token already lit by another caster keeps the first `prior`, so ending either restores the
  * light it had before any spell.
  */
-export function spellLightUpdate(doc, source, current) {
+export function spellLightUpdate(doc, source, current, light = SPELL_LIGHT) {
   const had = readSpellLight(doc);
   const prior = had ? had.prior : (isObj(current) ? clone(current) : null);
-  return { light: clone(SPELL_LIGHT), [FLAGS.spellLight]: { source, prior } };
+  return { light: clone(light), [FLAGS.spellLight]: { source, prior } };
 }
 
 /** The light a token goes back to when the spell leaves it. */

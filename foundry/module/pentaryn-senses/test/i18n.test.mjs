@@ -27,7 +27,7 @@ const keys = flatten(lang);
 test("lang/en.json is nested under one root, Light / Chain / Glow", () => {
   assert.deepEqual(Object.keys(lang), [I18N]);
   assert.deepEqual(Object.keys(lang[I18N]), ["Light", "Chain", "Glow"]);
-  assert.equal(Object.keys(lang[I18N].Light).length, 28, "the 27 flat keys plus SetupGMOnly");
+  assert.equal(Object.keys(lang[I18N].Light).length, 29, "the 27 flat keys plus SetupGMOnly and FlameNoToken (0.6.0)");
 });
 
 test("every literal PENTARYN_SENSES key in the code exists", () => {
@@ -54,7 +54,8 @@ test("keys render today's English, with the glue goldens' data", async () => {
     ["PENTARYN_SENSES.Light.SetupGMOnly", undefined, "pentaryn-senses: setupLight is GM-only."],
     ["PENTARYN_SENSES.Glow.Label", undefined, "Broken glow (wandering)"],
     ["PENTARYN_SENSES.Light.Lights", { actor: "Marrith", item: "Torch" }, "Marrith lights the Torch."],
-    ["PENTARYN_SENSES.Light.OnToken", { name: "Stake" }, "Light: Stake glows."],
+    ["PENTARYN_SENSES.Light.OnToken", { spell: "Light", name: "Stake" }, "Light: Stake glows."],
+    ["PENTARYN_SENSES.Light.OnToken", { spell: "Produce Flame", name: "Marwen" }, "Produce Flame: Marwen glows."],
     ["PENTARYN_SENSES.Light.Outshone", { item: "Torch" }, "Lit, but your Torch gives more light, so this one adds nothing now. Click to put it out."],
   ];
   for (const [key, data, want] of rows) assert.equal(_loc(key, data), want, key);
