@@ -45,6 +45,7 @@ test("the 31 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.preUseActivity",                 // cast-flow: stale target drop
     "renderActivityUsageDialog",            // cast-flow: first click
     "dnd5e.preUseActivity",                 // cast-flow: one usage dialog per activity (tNdOEx)
+    "renderActivityChoiceDialog",           // cast-flow: one choice dialog per item (DsekWh)
     "dnd5e.preActivityConsumption",         // cast-flow: stale concentration replacement (tNdOEx)
     "dnd5e.postUseActivity",                // cast-flow: Arcane Recovery
     "dnd5e.postDamageRollConfiguration",    // riders: damage/healing riders
@@ -126,7 +127,7 @@ test("the shared hooks run their listeners in manifest order (rituals → cast-f
     "dnd5e.preUseActivity": 5, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
     createChatMessage: 2, deleteChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
     renderItemButtonArgonComponent: 1, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
-    "dnd5e.postUseActivity": 2, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
+    renderActivityChoiceDialog: 1, "dnd5e.postUseActivity": 2, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
     renderCharacterActorSheet: 2, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1, "dnd5e.filterItem": 1,
   });
 });

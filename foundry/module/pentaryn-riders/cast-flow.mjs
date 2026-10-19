@@ -63,6 +63,13 @@
  *    dialog would show: `configure: false` callers are never stopped). Pure: core/usage.mjs.
  *    Row dnd5e-usage-dialog-single.
  *
+ *    Feedback DsekWh: the same for the "which activity?" step. dnd5e opens a new
+ *    ActivityChoiceDialog on every Use click of an item with several activities, so a double click
+ *    opened two and picking in both used the item twice (Produce Flame cast twice). When a second
+ *    choice dialog renders for an item whose choice dialog is already open (or still rendering),
+ *    the new one closes at once (its use resolves to nothing) and the first comes to the front.
+ *    Every item. Pure: core/usage.mjs `firstChoiceDialogFor`. Row dnd5e-usage-dialog-single.
+ *
  * 8. A stale concentration replacement is repaired. A dialog left open while the concentration it
  *    named ended (cast from the other dialog, dropped by hand) made dnd5e refuse the cast with "The
  *    effect that is concentrated on and to be replaced does not exist." `dnd5e.preActivityConsumption`
@@ -75,7 +82,7 @@ import { restoreSlotScaling, slotsFrom, arcaneRecoveryCap, arcaneRecoveryDefault
   arcaneRecoveryRows, isArcaneGrimoire, isDdbRecoveryMacro } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { itemInfo, restoreSidebar, sidebarState } from "./shapes.mjs";
-import { openUsageDialogFor, staleConcentrationEnd } from "./core/usage.mjs";
+import { firstChoiceDialogFor, openUsageDialogFor, staleConcentrationEnd } from "./core/usage.mjs";
 
 let log = null;
 
@@ -317,6 +324,23 @@ function oneDialog(activity, usageConfig, dialogConfig) {
   } catch (err) { log.warn("one usage dialog check skipped", err); }
 }
 
+function isChoiceDialog(app) {
+  const cls = globalThis.dnd5e?.applications?.activity?.ActivityChoiceDialog;
+  return cls ? app instanceof cls : false;
+}
+
+// renderActivityChoiceDialog: a second "which activity?" dialog for the same item closes (DsekWh).
+function oneChoiceDialog(app, element, context, options) {
+  try {
+    if (options && options.isFirstRender === false) return;
+    if (!isChoiceDialog(app)) return;
+    const first = firstChoiceDialogFor(foundry.applications.instances?.values?.(), app, isChoiceDialog);
+    if (!first) return;
+    try { first.bringToFront?.(); } catch (err) { log.debug("choice dialog to front", err); }
+    Promise.resolve(app.close?.({ animate: false })).catch(err => log.warn("second choice dialog close", err));
+  } catch (err) { log.warn("one choice dialog check skipped", err); }
+}
+
 /* ── 8. a stale concentration replacement ─────────────────────────────────── */
 
 function staleConcentration(activity, usageConfig) {
@@ -347,6 +371,7 @@ export function install(reg, ctx) {
   reg.on("dnd5e.preUseActivity", dropStaleTargets, { guard: false, label: "cast defaults" });
   reg.on("renderActivityUsageDialog", firstClick, { guard: false, label: "usage dialog first click" });
   reg.on("dnd5e.preUseActivity", oneDialog, { guard: false, label: "one usage dialog" });
+  reg.on("renderActivityChoiceDialog", oneChoiceDialog, { guard: false, label: "one choice dialog" });
   reg.on("dnd5e.preActivityConsumption", staleConcentration, { guard: false, label: "stale concentration" });
   reg.on("dnd5e.postUseActivity", arcaneRecoveryPicker, { guard: false, label: "Arcane Recovery picker" });
   ctx.expose({ arcaneRecoveryDialog });

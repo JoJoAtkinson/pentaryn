@@ -918,10 +918,10 @@ adjustments:
     packages: [dnd5e]
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/cast-flow.mjs, foundry/module/pentaryn-riders/core/usage.mjs]
-    markers: ["openUsageDialogFor", "staleConcentrationEnd"]
-    what: a second Use on an activity whose ActivityUsageDialog is still open is vetoed in dnd5e.preUseActivity (the open dialog comes to the front); in dnd5e.preActivityConsumption a concentration replacement naming an effect that no longer exists is dropped (below the limit) or retargeted to the one effect held (at the limit)
-    why: a double click opened two usage dialogs; casting from the second named the concentration the first had already ended and dnd5e refused with "The effect that is concentrated on and to be replaced does not exist." (feedback tNdOEx, Enlarge/Reduce)
-    native_when: dnd5e keeps one usage dialog per activity, or re-reads concentration when the dialog is submitted
+    markers: ["openUsageDialogFor", "firstChoiceDialogFor", "staleConcentrationEnd"]
+    what: a second Use on an activity whose ActivityUsageDialog is still open is vetoed in dnd5e.preUseActivity (the open dialog comes to the front); on renderActivityChoiceDialog a second "which activity?" dialog for an item whose ActivityChoiceDialog is already open or rendering closes and the first comes to the front (any item); in dnd5e.preActivityConsumption a concentration replacement naming an effect that no longer exists is dropped (below the limit) or retargeted to the one effect held (at the limit)
+    why: a double click opened two usage dialogs; casting from the second named the concentration the first had already ended and dnd5e refused with "The effect that is concentrated on and to be replaced does not exist." (feedback tNdOEx, Enlarge/Reduce); dnd5e opens an ActivityChoiceDialog per Use click, so a double click on Produce Flame cast it twice (feedback DsekWh)
+    native_when: dnd5e keeps one usage dialog per activity and one choice dialog per item, or re-reads concentration when the dialog is submitted
     retire_class: safe
     check: make foundry-riders-check
 

@@ -420,6 +420,10 @@
       "label": "one usage dialog"
     },
     {
+      "name": "renderActivityChoiceDialog",
+      "label": "one choice dialog"
+    },
+    {
       "name": "dnd5e.preActivityConsumption",
       "label": "stale concentration"
     },

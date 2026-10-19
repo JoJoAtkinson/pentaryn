@@ -44,3 +44,27 @@ export function openUsageDialogFor(apps, uuid, isUsageDialog) {
   }
   return null;
 }
+
+/**
+ * Among open applications, the activity-choice dialog that should stay for `app`'s item, or null
+ * when `app` is the one to keep. dnd5e opens a new ActivityChoiceDialog ("which activity?") on every
+ * click of an item's Use, so a double-click opened two and picking in both used the item twice
+ * (DsekWh, Produce Flame). The earliest registered dialog for the same item wins: `apps` is
+ * `foundry.applications.instances` in insertion order, and core registers an application there
+ * before its first render finishes, so a first dialog that is still rendering counts (no
+ * `rendered` gate: a very fast double-click would slip past it). Closing or closed dialogs
+ * (`state` < 0) do not count, so a new Use straight after a pick is never swallowed.
+ * `isChoiceDialog(app)` says whether an app is one (an instanceof test, in the caller).
+ */
+export function firstChoiceDialogFor(apps, app, isChoiceDialog) {
+  const uuidOf = a => { try { return a?.item?.uuid ?? null; } catch { return null; } };
+  const uuid = uuidOf(app);
+  if (!uuid) return null;
+  for (const other of apps ?? []) {
+    if (other === app) return null;
+    if (!other || !isChoiceDialog(other)) continue;
+    if (typeof other.state === "number" && other.state < 0) continue;
+    if (uuidOf(other) === uuid) return other;
+  }
+  return null;
+}

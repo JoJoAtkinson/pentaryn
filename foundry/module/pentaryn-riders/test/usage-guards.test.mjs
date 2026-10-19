@@ -6,7 +6,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { setupWorld } from "./fixtures/world.mjs";
 
-const { staleConcentrationEnd, openUsageDialogFor } = await import("../core/usage.mjs");
+const { staleConcentrationEnd, openUsageDialogFor, firstChoiceDialogFor } = await import("../core/usage.mjs");
 
 /* ── pure ─────────────────────────────────────────────────────────────────── */
 
@@ -34,6 +34,26 @@ test("openUsageDialogFor: the rendered usage dialog of that activity only", () =
   assert.equal(openUsageDialogFor(null, "A", is), null);
 });
 
+test("firstChoiceDialogFor: the earliest open choice dialog of the same item, rendering or not", () => {
+  const is = app => app.kind === "choice";
+  const item = uuid => ({ uuid });
+  const first = { kind: "choice", rendered: false, state: 1, item: item("I") };     // still rendering
+  const second = { kind: "choice", rendered: true, state: 2, item: item("I") };
+  const apps = [
+    { kind: "sheet", item: item("I") },
+    { kind: "choice", state: 2, item: item("other") },
+    { kind: "choice", get item() { throw new Error("item gone"); } },
+    first, second
+  ];
+  assert.equal(firstChoiceDialogFor(apps, second, is), first, "the second yields to the first, even before it rendered");
+  assert.equal(firstChoiceDialogFor(apps, first, is), null, "the first keeps itself (it registered first)");
+  assert.equal(firstChoiceDialogFor([...apps.slice(0, 3), second], second, is), null, "alone: kept");
+  const closing = { ...first, state: -2 };
+  assert.equal(firstChoiceDialogFor([closing, second], second, is), null, "a closing first (an activity was picked) does not count");
+  assert.equal(firstChoiceDialogFor(apps, { kind: "choice", item: null }, is), null, "no item: nothing to match");
+  assert.equal(firstChoiceDialogFor(null, second, is), null);
+});
+
 /* ── on a client ──────────────────────────────────────────────────────────── */
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_800_000_000_000 });
@@ -48,7 +68,13 @@ class ActivityUsageDialog {
   get activity() { return { uuid: this.uuid }; }
   bringToFront() { this.front++; }
 }
-globalThis.dnd5e = { applications: { activity: { ActivityUsageDialog } } };
+class ActivityChoiceDialog {
+  constructor(uuid) { this.state = 1; this.rendered = false; this.uuid = uuid; this.front = 0; this.closed = []; }
+  get item() { return { uuid: this.uuid }; }
+  bringToFront() { this.front++; }
+  close(opts) { this.closed.push(opts); this.state = -2; return Promise.resolve(this); }
+}
+globalThis.dnd5e = { applications: { activity: { ActivityUsageDialog, ActivityChoiceDialog } } };
 
 const ER = "Actor.marwen0000000001.Item.enlargereduce001.Activity.saveEnlargeReduce";
 const enlarge = { uuid: ER, actor: null, item: { name: "Enlarge/Reduce" } };
@@ -67,6 +93,45 @@ test("part 7: a second Use while that activity's dialog is open is vetoed and br
   assert.notEqual(F.fireCall("dnd5e.preUseActivity", enlarge, {}, {}, {}), false, "the dialog closed");
   instances.set("dlg", { rendered: true, activity: { uuid: ER } });       // not a usage dialog (a sheet)
   assert.notEqual(F.fireCall("dnd5e.preUseActivity", enlarge, {}, {}, {}), false);
+  instances.clear();
+});
+
+test("part 7 (DsekWh): a second choice dialog for an item closes and brings the first forward, for any item", async () => {
+  const instances = F.foundry.applications.instances;
+  instances.clear();
+  const PF = "Actor.marwen0000000001.Item.produceflame0001";
+  const first = new ActivityChoiceDialog(PF);
+  instances.set("c1", first);                                           // registered, still rendering
+  F.fire("renderActivityChoiceDialog", first, {}, {}, { isFirstRender: true });
+  assert.deepEqual(first.closed, [], "the first dialog stays");
+  const second = new ActivityChoiceDialog(PF);
+  instances.set("c2", second);
+  F.fire("renderActivityChoiceDialog", second, {}, {}, { isFirstRender: true });
+  await Promise.resolve();
+  assert.deepEqual(second.closed, [{ animate: false }], "the double-click's dialog closes");
+  assert.equal(first.front, 1, "the first comes forward");
+  assert.deepEqual(first.closed, []);
+  F.fire("renderActivityChoiceDialog", first, {}, {}, { isFirstRender: false });
+  assert.deepEqual(first.closed, [], "a re-render is never touched");
+
+  const other = new ActivityChoiceDialog("Actor.x.Item.longsword000001");   // a weapon: not light-only
+  instances.set("c3", other);
+  F.fire("renderActivityChoiceDialog", other, {}, {}, { isFirstRender: true });
+  assert.deepEqual(other.closed, [], "another item's dialog stays");
+  const otherTwice = new ActivityChoiceDialog("Actor.x.Item.longsword000001");
+  instances.set("c4", otherTwice);
+  F.fire("renderActivityChoiceDialog", otherTwice, {}, {}, { isFirstRender: true });
+  assert.equal(otherTwice.closed.length, 1, "every item, not only lights");
+
+  first.state = -2;                                                      // an activity was picked
+  const again = new ActivityChoiceDialog(PF);
+  instances.set("c5", again);
+  F.fire("renderActivityChoiceDialog", again, {}, {}, { isFirstRender: true });
+  assert.deepEqual(again.closed, [], "a new Use after a pick opens normally");
+
+  W.take();
+  F.fire("renderActivityChoiceDialog", { item: { uuid: PF } }, {}, {}, {});   // not a choice dialog
+  assert.deepEqual(W.take(), []);
   instances.clear();
 });
 

@@ -1,9 +1,9 @@
 # Changelog — pentaryn-riders
 
-## 0.5.0 — 2026-10-19 (player feedback LdPm43, JbnAbX, ixcdvA, tNdOEx, tiDvFa, EBGqNA)
+## 0.5.0 — 2026-10-19 (player feedback LdPm43, JbnAbX, ixcdvA, tNdOEx, tiDvFa, EBGqNA, DsekWh)
 
 One release for four fixes built in parallel (they had each taken 0.3.1 or 0.4.0, never released).
-Settings are now ten: `projectiles` ninth, `spellView` tenth. Hooks: 31 non-lifecycle registrations.
+Settings are now ten: `projectiles` ninth, `spellView` tenth. Hooks: 32 non-lifecycle registrations.
 
 ### Arcane Recovery prompts once (LdPm43)
 
@@ -54,11 +54,17 @@ Settings are now ten: `projectiles` ninth, `spellView` tenth. Hooks: 31 non-life
 - **One usage dialog per activity** (cast-flow part 7): a second Use while that activity's dialog is
   open is vetoed and brings the open one forward. A double click had opened two Enlarge/Reduce
   dialogs. [declared]
+- **One activity choice per item** (cast-flow part 7, DsekWh): dnd5e opens a new "which activity?"
+  dialog (ActivityChoiceDialog) on every Use click, so a double click on Produce Flame opened two
+  and picking in both cast it twice. A `renderActivityChoiceDialog` listener closes a second choice
+  dialog for an item whose choice dialog is already open (or still rendering) and brings the first
+  to the front. Every item; a dialog that is closing after a pick does not count. Pure
+  `core/usage.mjs` `firstChoiceDialogFor`; row `dnd5e-usage-dialog-single`. [declared]
 - **Stale concentration replacement repaired** (cast-flow part 8, `dnd5e.preActivityConsumption`):
   a dialog that named a concentration which ended meanwhile no longer fails with "The effect that
   is concentrated on and to be replaced does not exist." Below the limit nothing is replaced; at
   the limit with one effect, that one is. Pure `core/usage.mjs`; row `dnd5e-usage-dialog-single`.
-- `test/golden/hooks.json`: three registrations added (two in cast-flow's place, one at the end).
+- `test/golden/hooks.json`: four registrations added (three in cast-flow's place, one at the end).
 
 ### Spells tab opens on prepared spells (EBGqNA)
 

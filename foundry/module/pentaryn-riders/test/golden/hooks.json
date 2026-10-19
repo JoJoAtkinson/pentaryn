@@ -69,6 +69,10 @@
   },
   {
     "kind": "on",
+    "name": "renderActivityChoiceDialog"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.preActivityConsumption"
   },
   {

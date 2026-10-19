@@ -57,7 +57,7 @@ test("describe() equals golden/describe.json (version, kit, published and patch 
   assert.deepEqual(d.queries, [`${MODULE}.battleMedic`]);
   assert.deepEqual(d.settings.map(s => s.key), ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView"]);
   assert.deepEqual(d.events, []);
-  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 31);
+  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 32);
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
 });
 
