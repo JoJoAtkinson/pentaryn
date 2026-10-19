@@ -44,14 +44,20 @@
  *
  * 6. Arcane Recovery picks its slots (W5). dnd5e spends the use and rolls "combined spell levels";
  *    the player then had to open the Spells tab and click pips, on the honour system. After the use,
- *    the owner gets a dialog: each spent slot level 1–5 with a number, opening on the highest spent
- *    slots that fit, the PHB budget (half the Wizard level, rounded up; nothing of level 6+) shown
- *    and enforced. Recover writes the slots and posts one line. Setting
- *    pentaryn-riders.arcaneRecovery. Row dnd5e-riders-arcane-recovery-picker.
+ *    the owner gets a dialog: one row per slot level 1–5 the wizard has, "n of m left", one box per
+ *    slot (the slots still there ticked and locked, the spent ones tickable), opening with the
+ *    highest spent slots that fit ticked, the PHB budget (half the Wizard level, rounded up, +1 with
+ *    an attuned Arcane Grimoire; nothing of level 6+) shown and enforced. Recover writes the slots and
+ *    posts one line. Setting pentaryn-riders.arcaneRecovery. Row dnd5e-riders-arcane-recovery-picker.
+ *    LdPm43: a D&D Beyond import's Arcane Recovery is one `ddbmacro` activity that opens
+ *    ddb-importer's own picker as its subsequent action, so the player got two windows and both
+ *    restored slots. When the riders picker opens for such a use, the use's `subsequentActions` is
+ *    set false (dnd5e reads it after postUseActivity), so ddb-importer's macro does not run. The
+ *    chat card's macro button still runs it on an explicit click. Setting off → ddb's picker only.
  */
 
 import { restoreSlotScaling, slotsFrom, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
-  ARCANE_RECOVERY_MAX_LEVEL } from "./table-core.mjs";
+  arcaneRecoveryRows, isArcaneGrimoire, isDdbRecoveryMacro } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { itemInfo, restoreSidebar, sidebarState } from "./shapes.mjs";
 
@@ -159,27 +165,62 @@ function firstClick(app, element) {
 
 const ordinal = n => game.i18n.localize(`DND5E.SpellLevel${n}`);
 
+/** Actors whose picker is open on this client: a second use while one is open opens no second window. */
+const recovering = new Set();
+
+/** The grimoire that adds +1 to the budget, if the actor carries one (DMG Arcane Grimoire). */
+function grimoireOf(actor) {
+  return [...(actor?.items ?? [])].find(i => isArcaneGrimoire({
+    name: i?.name, attunement: i?.system?.attunement, attuned: i?.system?.attuned
+  })) ?? null;
+}
+
 async function arcaneRecoveryDialog(actor) {
+  const key = actor?.uuid ?? actor?.id ?? actor;
+  if (key && recovering.has(key)) {
+    ui.notifications.info(_loc("PENTARYN_RIDERS.arcaneRecovery.open"));
+    return null;
+  }
+  if (key) recovering.add(key);
+  try { return await recoveryPicker(actor); } finally { if (key) recovering.delete(key); }
+}
+
+async function recoveryPicker(actor) {
   const level = actor?.classes?.wizard?.system?.levels ?? 0;
-  const cap = arcaneRecoveryCap(level);
+  const grimoire = grimoireOf(actor);
+  const cap = arcaneRecoveryCap(level, grimoire ? 1 : 0);
   const slots = slotsFrom(actor?.system?.spells);
   const choice = arcaneRecoveryDefault(slots, cap);
-  const rows = [];
-  for (let l = 1; l <= ARCANE_RECOVERY_MAX_LEVEL; l++) {
-    const s = slots[l];
-    const spent = s ? Math.max(0, s.max - s.value) : 0;
-    if (!spent) continue;
-    rows.push(`<div class="form-group"><label>${foundry.utils.escapeHTML(ordinal(l))} <span class="hint">(${s.value}/${s.max})</span></label>
-      <div class="form-fields"><input type="number" name="l${l}" min="0" max="${spent}" step="1" value="${choice[l] ?? 0}"></div></div>`);
-  }
-  if (!rows.length) {
+  const table = arcaneRecoveryRows(slots, choice);
+  if (!table.some(r => r.spent)) {
     ui.notifications.info(_loc("PENTARYN_RIDERS.arcaneRecovery.none"));
     return null;
   }
-  const read = form => Object.fromEntries([...form.querySelectorAll("input[name^=l]")].map(i => [Number(i.name.slice(1)), Number(i.value) || 0]));
+  // One row per slot level the wizard has, one box per slot: the slots still there are ticked and
+  // locked (no name, so they never count), the spent ones are tickable (LdPm43: the player's pick).
+  const have = _loc("PENTARYN_RIDERS.arcaneRecovery.have");
+  const rows = table.map(r => {
+    const boxes = [];
+    for (let i = 0; i < r.value; i++) boxes.push(`<input type="checkbox" class="pr-ar-have" checked disabled data-tooltip="${foundry.utils.escapeHTML(have)}">`);
+    for (let i = 0; i < r.spent; i++) boxes.push(`<input type="checkbox" name="l${r.level}" value="${r.level}"${i < r.ticked ? " checked" : ""}>`);
+    const left = _loc("PENTARYN_RIDERS.arcaneRecovery.left", { value: r.value, max: r.max });
+    return `<div class="form-group pr-ar-row"><label>${foundry.utils.escapeHTML(ordinal(r.level))} <span class="hint">${foundry.utils.escapeHTML(left)}</span></label>`
+      + `<div class="form-fields pr-ar-slots">${boxes.join("")}</div></div>`;
+  });
+  const read = form => {
+    const out = {};
+    for (const r of table) if (r.spent) out[r.level] = 0;
+    for (const box of form.querySelectorAll("input[name^=l]")) {
+      if (box.disabled || !box.checked) continue;
+      const l = Number(box.name.slice(1));
+      if (l in out) out[l] += 1;
+    }
+    return out;
+  };
+  const extra = grimoire ? `<p class="hint">${foundry.utils.escapeHTML(_loc("PENTARYN_RIDERS.arcaneRecovery.grimoire", { name: grimoire.name }))}</p>` : "";
   const result = await foundry.applications.api.DialogV2.wait({
     window: { title: _loc("PENTARYN_RIDERS.arcaneRecovery.title"), icon: "fa-solid fa-book-open" },
-    content: `<p>${_loc("PENTARYN_RIDERS.arcaneRecovery.intro", { cap })}</p>${rows.join("")}<p class="pr-ar-total"></p>`,
+    content: `<p>${_loc("PENTARYN_RIDERS.arcaneRecovery.intro", { cap })}</p>${extra}${rows.join("")}<p class="pr-ar-total"></p>`,
     buttons: [
       { action: "ok", label: _loc("PENTARYN_RIDERS.arcaneRecovery.recover"), icon: "fa-solid fa-check", default: true,
         callback: (event, button) => read(button.form) },
@@ -197,6 +238,7 @@ async function arcaneRecoveryDialog(actor) {
         if (ok) ok.disabled = !check.ok || check.used === 0;
       };
       form.addEventListener("input", refresh);
+      form.addEventListener("change", refresh);
       refresh();
     },
     rejectClose: false
@@ -226,12 +268,16 @@ async function arcaneRecoveryDialog(actor) {
   return result;
 }
 
-function arcaneRecoveryPicker(activity) {
+function arcaneRecoveryPicker(activity, usage) {
   try {
     if (!on("arcaneRecovery")) return;
     const item = activity?.item;
     const actor = item?.actor;
     if (!actor?.isOwner || !isArcaneRecovery(itemInfo(item))) return;
+    // LdPm43: one picker per use. ddb-importer's macro activity would open its own picker as the
+    // use's subsequent action (and restore slots too); dnd5e skips subsequent actions when
+    // usageConfig.subsequentActions is false, read right after this hook.
+    if (usage && isDdbRecoveryMacro({ type: activity?.type, fn: activity?.macro?.function })) usage.subsequentActions = false;
     // Only the client that used it: postUseActivity runs on the user's own client.
     setTimeout(() => arcaneRecoveryDialog(actor).catch(err => log.warn("Arcane Recovery dialog", err)), 0);
   } catch (err) { log.warn("Arcane Recovery picker skipped", err); }

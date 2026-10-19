@@ -49,7 +49,7 @@
       },
       "arcaneRecovery": {
         "name": "Arcane Recovery picks its slots",
-        "hint": "After a wizard uses Arcane Recovery, a small window lists their spent slots of level 1 to 5, opening on the highest ones that fit the PHB budget (half the Wizard level, rounded up). Recover restores them. Turn off to restore slots on the sheet by hand."
+        "hint": "After a wizard uses Arcane Recovery, a small window shows their slots of level 1 to 5, how many are left of each, and a box per spent slot to tick; it opens with the highest ones that fit the PHB budget ticked (half the Wizard level, rounded up; +1 with an Arcane Grimoire). Recover restores them. A D&D Beyond import's own Arcane Recovery window is skipped while this is on. Turn off to restore slots on the sheet (or with the D&D Beyond macro) instead."
       }
     },
     "rituals": {
@@ -70,6 +70,10 @@
       "recover": "Recover",
       "cancel": "Not now",
       "total": "{used} of {cap} levels",
+      "left": "{value} of {max} left",
+      "have": "Still there",
+      "grimoire": "Includes +1 from {name}.",
+      "open": "Arcane Recovery: the slot picker is already open.",
       "done": "{name} recovers spell slots by studying the spellbook: {slots}.",
       "none": "Arcane Recovery: no spent slots of level 1 to 5 to recover.",
       "changed": "Arcane Recovery: the spell slots changed while the window was open, so nothing was recovered."

@@ -467,8 +467,10 @@ export async function setupWorld({ user = "gm", gmActive = true, argon = true, s
       const answer = await W.answer(dialog);
       if (answer === "cancel" || answer == null) return null;
       for (const [name, value] of Object.entries(answer)) {
-        const input = form.querySelector(`input[name="${name}"]`);
-        if (input) input.value = String(value);
+        const inputs = form.querySelectorAll(`input[name="${name}"]`);
+        // A row of checkboxes (the Arcane Recovery picker): the answer is how many to tick.
+        if (inputs[0]?.getAttribute("type") === "checkbox") inputs.forEach((box, i) => { box.checked = i < Number(value); });
+        else if (inputs[0]) inputs[0].value = String(value);
       }
       await form.fire("input");
       const okButton = config.buttons.find(b => b.action === "ok");

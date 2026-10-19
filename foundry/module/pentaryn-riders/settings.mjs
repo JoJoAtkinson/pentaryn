@@ -61,7 +61,7 @@ export const SETTINGS = Object.freeze([
     key: "arcaneRecovery", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_RIDERS.settings.arcaneRecovery.name",
     hint: "PENTARYN_RIDERS.settings.arcaneRecovery.hint",
-    doc: "After Arcane Recovery is used, the owner picks the slots to recover in a dialog.",
+    doc: "After Arcane Recovery is used, the owner ticks the spent slots to recover in one dialog; a D&D Beyond import's own Arcane Recovery macro is skipped for that use.",
   },
   {
     key: "enabled", scope: "world", config: true, type: Boolean, default: true,

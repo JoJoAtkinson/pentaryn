@@ -178,13 +178,57 @@ export function concentrationResult({ total = null, dc = null, canBreak = false,
   return { dc: knownDc, failed, autoBreak: !!(auto && canBreak && !keep) };
 }
 
-/** Arcane Recovery's budget: combined levels up to half the Wizard level, rounded up (PHB). */
-export function arcaneRecoveryCap(wizardLevel) {
-  return Math.max(0, Math.ceil((Number(wizardLevel) || 0) / 2));
+/**
+ * Arcane Recovery's budget: combined levels up to half the Wizard level, rounded up (PHB), plus
+ * `bonus` (1 with an Arcane Grimoire, DMG: "increase the number of slot levels you recover by 1").
+ */
+export function arcaneRecoveryCap(wizardLevel, bonus = 0) {
+  return Math.max(0, Math.ceil((Number(wizardLevel) || 0) / 2) + Math.max(0, Number(bonus) || 0));
 }
 
 /** Highest slot level Arcane Recovery may restore ("none of the slots can be level 6 or higher"). */
 export const ARCANE_RECOVERY_MAX_LEVEL = 5;
+
+/**
+ * Does this item raise Arcane Recovery's budget by 1? An Arcane Grimoire (by name, so "+1 Arcane
+ * Grimoire" too), attuned when it needs attunement (dnd5e `system.attunement === "required"`).
+ */
+export function isArcaneGrimoire({ name = "", attunement = "", attuned = false } = {}) {
+  if (!String(name).toLowerCase().includes("arcane grimoire")) return false;
+  return attunement !== "required" || !!attuned;
+}
+
+/**
+ * Is this activity D&D Beyond Importer's own Arcane Recovery macro (LdPm43)? ddb-importer imports
+ * the feature with one `ddbmacro` activity whose macro `ddb.feat.arcaneRecovery` opens its own slot
+ * picker after the use: with the riders picker open too, the player got two windows and each one
+ * restored slots. The riders picker is the one kept; the macro is skipped for that use.
+ * @param {{type?: string, fn?: string}} p  the activity type and its `macro.function`
+ */
+export function isDdbRecoveryMacro({ type = "", fn = "" } = {}) {
+  return type === "ddbmacro" && /(^|\.)arcaneRecovery$/i.test(String(fn ?? ""));
+}
+
+/**
+ * The picker's rows, one per slot level 1–5 the actor has (max > 0), in level order. Each slot is a
+ * box: the first `value` are the slots still there (shown ticked and locked), the `spent` ones after
+ * them can be ticked, and the first `ticked` of those open ticked (the default choice).
+ * @param {Record<number, {value: number, max: number}>} slots
+ * @param {Record<number, number>} choice  slots to open ticked, by level
+ * @returns {{level: number, value: number, max: number, spent: number, ticked: number}[]}
+ */
+export function arcaneRecoveryRows(slots = {}, choice = {}) {
+  const rows = [];
+  for (let level = 1; level <= ARCANE_RECOVERY_MAX_LEVEL; level++) {
+    const s = slots?.[level];
+    const max = Math.max(0, Number(s?.max) || 0);
+    if (!max) continue;
+    const value = Math.min(max, Math.max(0, Number(s.value) || 0));
+    const spent = max - value;
+    rows.push({ level, value, max, spent, ticked: Math.min(spent, Math.max(0, Number(choice?.[level]) || 0)) });
+  }
+  return rows;
+}
 
 /**
  * Arcane Recovery's opening choice: spend the budget on the highest spent slots first (level 5 down

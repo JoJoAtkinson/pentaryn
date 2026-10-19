@@ -38,6 +38,10 @@
   "PENTARYN_RIDERS.arcaneRecovery.recover",
   "PENTARYN_RIDERS.arcaneRecovery.cancel",
   "PENTARYN_RIDERS.arcaneRecovery.total",
+  "PENTARYN_RIDERS.arcaneRecovery.left",
+  "PENTARYN_RIDERS.arcaneRecovery.have",
+  "PENTARYN_RIDERS.arcaneRecovery.grimoire",
+  "PENTARYN_RIDERS.arcaneRecovery.open",
   "PENTARYN_RIDERS.arcaneRecovery.done",
   "PENTARYN_RIDERS.arcaneRecovery.none",
   "PENTARYN_RIDERS.arcaneRecovery.changed"
