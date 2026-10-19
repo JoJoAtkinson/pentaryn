@@ -51,17 +51,17 @@ export async function freshAim(tag) {
 }
 
 export async function seams() {
-  const [settings, areas, resolve, tray, attacks, effects, escape, refund, aim, scene, messages, argon, core, careful] = await Promise.all([
+  const [settings, areas, resolve, tray, attacks, effects, escape, refund, aim, scene, messages, argon, core, careful, tokenAreas] = await Promise.all([
     import("../../settings.mjs"), import("../../areas.mjs"), import("../../resolve.mjs"),
     import("../../tray.mjs"), import("../../attacks.mjs"), import("../../effects.mjs"), import("../../escape.mjs"),
     import("../../refund.mjs"), import("../../aim.mjs"), import("../../scene-adapter.mjs"), import("../../messages-adapter.mjs"),
-    import("../../argon.mjs"), import("../../core.mjs"), import("../../careful.mjs"),
+    import("../../argon.mjs"), import("../../core.mjs"), import("../../careful.mjs"), import("../../token-areas.mjs"),
   ]);
   const { isHandle, isTemplateRegion, multiplierFor } = core;
   const { activityOf, usageIdOf, cardEffects, spellOf } = messages;
   return {
     hooks, settings: group(settings),
-    areas: { ...group(scene), ...group(argon), isHandle, isTemplateRegion, ...group(areas) },
+    areas: { ...group(scene), ...group(argon), isHandle, isTemplateRegion, ...group(areas), ...group(tokenAreas) },
     resolve: { activityOf, usageIdOf, isPile: scene.isPile, multiplierFor, ...group(careful), ...group(resolve) },
     tray: group(tray), attacks: group(attacks),
     effects: { cardEffects, spellOf, ...group(effects) },

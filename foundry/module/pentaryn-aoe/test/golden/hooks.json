@@ -49,6 +49,14 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.createMeasuredTemplate"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.postUseActivity"
   },
   {

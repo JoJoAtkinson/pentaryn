@@ -8,13 +8,16 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.4.0";                          // === module.json version (core.test pins it)
+export const VERSION = "0.5.0";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";
 export const FLAG_SCOPE = MODULE;
 /** aoe emits no events of its own. */
 export const HOOKS = Object.freeze({});
+
+// Area geometry: centreOf, handleTopLeft, AREA_WALL_RULES, edgeClipsArea, areaClipOrigin, instantaneous.
+export * from "./core/areas.mjs";
 
 /** Read this module's flags without getFlag(): getFlag throws while the module is inactive (hot-patch). */
 export function aoeFlags(doc) {
@@ -37,48 +40,6 @@ export const doesNotExist = err => /does not exist/i.test(err?.message ?? "");
  */
 export function hydrateDamages(damages) {
   return (damages ?? []).map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
-}
-
-/**
- * Where the handle sits for a region shape, in scene pixels.
- * circle/ellipse: centre · rectangle: centre after rotation about its anchor · polygon: vertex mean ·
- * emanation (dnd5e 6, a stationary one; a moving one is attached to its caster and gets no handle):
- * the middle of its token-shaped base, whose width/height are in grid units, hence gridSize ·
- * cone/line/anything else: the shape origin (the caster's end).
- */
-export function centreOf(shape, { gridSize = 100 } = {}) {
-  if (!shape) return { x: 0, y: 0 };
-  switch (shape.type) {
-    case "emanation":
-    case "token": {
-      const b = shape.type === "token" ? shape : (shape.base ?? {});
-      return { x: (b.x ?? 0) + ((b.width ?? 1) * gridSize) / 2, y: (b.y ?? 0) + ((b.height ?? 1) * gridSize) / 2 };
-    }
-    case "circle":
-    case "ellipse":
-    case "ring":
-      return { x: shape.x, y: shape.y };
-    case "rectangle": {
-      const w = shape.width ?? 0, h = shape.height ?? 0;
-      const ax = shape.anchorX ?? 0, ay = shape.anchorY ?? 0;
-      // Offset from the anchor to the centre, rotated by the shape's rotation.
-      const dx = (0.5 - ax) * w, dy = (0.5 - ay) * h;
-      const r = ((shape.rotation ?? 0) * Math.PI) / 180;
-      return {
-        x: shape.x + dx * Math.cos(r) - dy * Math.sin(r),
-        y: shape.y + dx * Math.sin(r) + dy * Math.cos(r)
-      };
-    }
-    case "polygon": {
-      const p = shape.points ?? [];
-      if (p.length < 2) return { x: 0, y: 0 };
-      let sx = 0, sy = 0, n = 0;
-      for (let i = 0; i + 1 < p.length; i += 2) { sx += p[i]; sy += p[i + 1]; n++; }
-      return { x: sx / n, y: sy / n };
-    }
-    default:
-      return { x: shape.x ?? 0, y: shape.y ?? 0 };
-  }
 }
 
 /** Damage multiplier from a save result. Fail → full; success → by the activity's onSave. */

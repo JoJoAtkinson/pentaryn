@@ -1,7 +1,7 @@
 ---
 title: "Spell areas, saves and damage (pentaryn-aoe)"
 status: active
-last_modified: 2026-10-11
+last_modified: 2026-10-19
 tags: [context, foundry, dnd5e, module]
 ---
 
@@ -15,16 +15,33 @@ module internals → [`../../foundry/module/pentaryn-aoe/README.md`](../../found
 ## At the table
 
 **Moving and deleting an area.** Every spell area (a dnd5e template, which is a Region on v14)
-gets a small target-icon **handle token** in its centre. For cones and lines it sits at the caster's end.
+gets a small target-icon **handle token** at its centre. For cones and lines it sits at the caster's end.
 Everyone owns the handle and the area.
-- Drag the handle to move the area. It ignores walls (movement action *displace*).
+- Drag the handle to move the area. It ignores walls (movement action *displace*). When the area's
+  centre is a grid corner (a 20 ft cube, a Fireball), the handle sits in the square just below and to
+  the right of that corner, a quarter square off-centre. Core snaps a half-square token only to spots
+  inside one square, so a handle centred on a corner was knocked off the grid by the first drag
+  and the area could never be put back on it.
 - Delete the handle and the area goes with it. Delete the area and the handle goes too.
 - The **eraser icon** next to *Place Template* on the spell's chat card ("Remove all templates")
   deletes that spell's areas on the scene you are viewing.
-- An **emanation** (Spirit Guardians) gets no handle: dnd5e 6 attaches it to the caster's token,
-  so it moves with the caster.
+- A lasting **emanation** (Spirit Guardians) gets no handle: dnd5e 6 attaches it to the caster's token,
+  so it moves with the caster. The caster's **Token HUD** (right-click the token) then has an eraser
+  button, *Remove the spell areas on this token*.
+- An **instantaneous** emanation (Thunder Step, Thunderclap, Word of Radiance) stays where it was
+  cast, with a handle like any other area. It does not follow the caster.
 - Areas clean themselves up. An instantaneous spell's area (Fireball) is deleted once every ticked
   row has been applied. A concentration spell's areas go when the caster stops concentrating.
+
+**Which walls stop an area.** The PHB's rule is that an area spreads from its point of origin, and
+only total cover blocks it. On the map, total cover is a wall that blocks **both movement and
+sight**: normal walls, closed doors, terrain walls and windows clip an area. **Invisible walls**
+(move-only: a bridge's sides, a ledge, tables and furniture) and see-through walls never clip one.
+The same rule applies to every spell, physical or not. A cube is measured from its centre, a cone or line
+from its point, and a sphere or emanation from its centre. dnd5e on its own clips every area with
+every wall that blocks movement. The setting *Walls that stop a spell area* can turn that back on
+(`move`) or turn clipping off (`none`). An area placed before a rule change keeps its old outline
+until it is moved.
 
 **Cancelling a placement.** While a template follows the mouse, **Escape or right-click** cancels it,
 on the first press even when the sheet you cast from is open. Core's own Escape would close every open
@@ -108,6 +125,8 @@ mouse and the wheel turns it.
 | A touch spell cast at nobody goes on the caster | on | off: it waits in the GM's effects tray |
 | The same spell does not stack | on | |
 | Self cones and lines start at the caster | on | Part G |
+| Instantaneous areas stay where they were cast | on | Thunder Step's ring stays behind with a handle |
+| Walls that stop a spell area | Total cover | `cover` · `move` (dnd5e's default) · `none`; Part H |
 
 ## Console (`game.pentaryn.aoe`)
 

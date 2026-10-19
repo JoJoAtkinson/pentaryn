@@ -3,8 +3,8 @@
  * game.settings.register/get/set.
  *
  * Every row carries LITERAL `name` and `hint` keys (C51). Rows register in table order, which is
- * the order of the settings menu: the 16 booleans first (the old BOOLS order), then
- * npcSaveRollMode — golden/settings-register.json pins it.
+ * the order of the settings menu: the 17 booleans first (the old BOOLS order, then
+ * stationaryInstantAreas), then npcSaveRollMode, then areaWalls — golden/settings-register.json pins it.
  *
  * `setting(key)` falls back to the row default. That matters twice: while the module is
  * hot-patched into a client before the server has scanned it, and on any client where
@@ -67,6 +67,9 @@ export const SETTINGS = Object.freeze([
   { key: "aimSelfAreas", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.aimSelfAreas.Name", hint: "PENTARYN_AOE.Setting.aimSelfAreas.Hint",
     doc: "Part G: a Self-range cone or line keeps its point on the caster and turns toward the mouse." },
+  { key: "stationaryInstantAreas", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_AOE.Setting.stationaryInstantAreas.Name", hint: "PENTARYN_AOE.Setting.stationaryInstantAreas.Hint",
+    doc: "Part A: an instantaneous spell's emanation (Thunder Step) stays where it was cast, with a handle, instead of following its caster." },
   { key: "npcSaveRollMode", scope: "world", config: true, type: String, default: "gm",
     name: "PENTARYN_AOE.Setting.npcSaveRollMode.Name", hint: "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",
     // Core v14 message modes. dnd5e 6 hands the roll mode to core as messageMode, and core
@@ -77,6 +80,14 @@ export const SETTINGS = Object.freeze([
       public: "PENTARYN_AOE.Setting.npcSaveRollMode.public",
     },
     doc: "Part B: the message mode of the saves the GM's client rolls for monsters (gm, blind or public)." },
+  { key: "areaWalls", scope: "world", config: true, type: String, default: "cover",
+    name: "PENTARYN_AOE.Setting.areaWalls.Name", hint: "PENTARYN_AOE.Setting.areaWalls.Hint",
+    choices: {
+      cover: "PENTARYN_AOE.Setting.areaWalls.cover",
+      move: "PENTARYN_AOE.Setting.areaWalls.move",
+      none: "PENTARYN_AOE.Setting.areaWalls.none",
+    },
+    doc: "Part H: which walls clip a spell area: cover (walls that block movement and sight; a cube from its centre), move (dnd5e: every movement wall) or none." },
 ]);
 
 /** Every row's default, by key (kept exported: the old DEFAULTS object). */
