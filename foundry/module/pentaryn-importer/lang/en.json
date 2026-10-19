@@ -1,0 +1,10 @@
+{
+  "PENTARYN_IMPORTER": {
+    "settings": {
+      "ddbCorrections": {
+        "name": "Correct D&D Beyond characters after a sync",
+        "hint": "After a ddb-importer sync (and at GM login for any character synced since), re-apply the table's fixes: apparel typed as consumables, 1/day feat spells shown At-Will, item Cast activities that cannot spend charges, the Transmuter's Stone benefits. Items frozen with ddb-importer's \"ignore item update\" flag are left alone."
+      }
+    }
+  }
+}

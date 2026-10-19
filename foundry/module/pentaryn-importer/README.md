@@ -1,6 +1,6 @@
 ---
 created: 2026-08-10
-last_modified: 2026-10-12
+last_modified: 2026-10-19
 tags: ["foundry", "vtt", "module", "dnd5e"]
 status: active
 ---
@@ -15,14 +15,16 @@ contract → [`foundry/CONTRACT.md`](../../CONTRACT.md) · why the pipeline look
 
 Stage 2 of the Foundry pipeline. Reads the `actors.json` that Stage 1
 (`scripts/foundry/build_actors.py`) wrote, and upserts the NPC Actors it describes into the live
-world. Target: Foundry **v14** · dnd5e **6.0** (verified 6.0.6). The payload shapes are still the
+world. Since 1.2.0 it also carries the **DDB corrections**: the table's fixes to D&D Beyond
+characters, re-applied after every ddb-importer sync (below). Target: Foundry **v14** · dnd5e **6.0** (verified 6.0.6). The payload shapes are still the
 5.3 ones on purpose ([CONTRACT §1.2](../../CONTRACT.md): dnd5e 6 migrates them until 7.0; moving
-them is the `@2` contract bump). Tier `full`; no UI, no settings, one hook at load (`ready`) and one
-feature, the create watch (`create-watch.mjs`), which listens only while a create is in flight.
+them is the `@2` contract bump). Tier `full`; no UI, one setting, two hooks at load (`init`, `ready`)
+and two features: the create watch (`create-watch.mjs`), which listens only while a create is in
+flight, and the DDB corrections (`ddb-corrections.mjs`).
 
 ## What the player sees
 
-Nothing. The importer is GM-only and console-first. A GM sees a permanent error toast when the
+The NPC import: nothing. It is GM-only and console-first. A GM sees a permanent error toast when the
 version gate or the @ref lint refuses a run, when a non-GM calls it, when an entry cannot be
 prepared (a missing slug, an entry that is not an object — `null`, a string — or two items on one
 entry sharing a `flags.pentaryn.action`), and when a readback fails; an info toast with the counts after a
@@ -36,9 +38,16 @@ toast only if they call `import()` themselves: the `NOT_GM` refusal. Some refusa
 not a non-empty string, `unmanagedItems` not `"keep"`/`"delete"`; `import(null)` is `import({})`), a `module.json` without `flags.pentaryn`, and a call while an import is already
 running (`CONFLICT`).
 
+**DDB corrections.** After a player (or the GM) syncs a D&D Beyond character with ddb-importer,
+the sheet is corrected at once: robes and notes back under Equipment, feat 1/day spells under Innate
+Spellcasting, wands that spend their charges, the Transmuter's Stone as switchable benefits. The GMs
+get one whispered chat line listing what changed (nothing when nothing changed).
+
 ## Settings
 
-n/a — registers none.
+| Key | Scope | Default | Does |
+|---|---|---|---|
+| `ddbCorrections` | world | on | the automatic DDB corrections (after a sync, and the GM-ready sweep). Read live. `ddbCorrections.apply` runs regardless |
 
 ## API — game.pentaryn.importer
 
@@ -49,6 +58,10 @@ Ask it: `game.pentaryn.importer.describe()` (offline: `test/golden/describe.json
 |---|---|---|---|
 | `import(options)` | yes | Actors, Items, `flags.pentaryn.*` | `ImportResult`; **throws** on a refusal (below) |
 | `selftest()` | — | — | `{ ok, checks }` |
+| `inspect(ref)` | — | — | `{ actor, ddb, importId, stamp, needsCorrection, frozen }` (nothing GM-only) |
+| `ddbCorrections.plan(ref)` | — | — | the dry run: `{ changes, notes, frozen, needsCorrection, enabled }`; throws `BAD_ARGS` for a non-DDB actor |
+| `ddbCorrections.apply(ref, { dryRun })` | owner | Items, effects, base data, the stamp | `ok({ applied, errors, stamped, … })` / `fail`; a non-owner relays to the active GM |
+| `ddbCorrections.rules()` | — | — | `[{ id, label, doc }]` |
 | `moduleId`, `actorsContract`, `_internals` | — | — | the module id, `"pentaryn/actors.json@1"`, the four helpers below |
 
 **The legacy root keys.** At `ready` the importer also *merges* `import`, `moduleId`, `contract`
@@ -115,6 +128,15 @@ the first, then retry.
 Never written on an update: `img`, `prototypeToken.texture`, `system.attributes.hp.value` (GM work,
 and a wounded token must not heal mid-session). Nothing goes to world settings.
 
+DDB corrections (on a D&D Beyond character only, items frozen with `flags.ddbimporter.ignoreItemUpdate`
+/ `ignoreItemImport` untouched): Item type and system (retype, `==system`; recreated under the same id
+if Foundry refuses), Item fields (`system.method`, a Cast activity's `spell.uuid/level` and
+`consumption.spellSlot`), ActiveEffects on the Transmuter's Stone (deterministic ids,
+`flags.pentaryn-riders.stone` / `.choice` — pentaryn-riders reads `choice`), the actor's base
+darkvision / CON-save proficiency while they are still the stone's, and the stamp
+`flags.pentaryn-importer.ddbCorrections = { importId, at, version, changes }` (written only by a run
+with no errors). A whispered ChatMessage to the GMs when something changed.
+
 Each guarantee is an active check: `{cache: "no-cache"}` on the fetch (`express.static` would serve
 the previous build); the three-way version gate (JSON, `module.json` `flags.pentaryn`, live game),
 which lists every mismatch and refuses the whole run; the `@ref` lint over the exact FormulaField
@@ -127,8 +149,9 @@ JSON differs between Python and JS).
 
 ## Flags other modules read
 
-n/a — no other module reads `flags.pentaryn.*`; the generator writes them and the importer reads
-them back.
+No other module reads `flags.pentaryn.*` (the generator writes them, the importer reads them back) or
+`flags.pentaryn-importer.ddbCorrections`. The importer reads `flags.ddbimporter.importId` and the
+freeze flags (ddb-importer's), and `flags.pentaryn-riders.stone` (its own effects' key).
 
 ## Events
 
@@ -137,20 +160,31 @@ them back.
 | `pentaryn-importer.ready` | `(api)` | the API is published (kit `publishNamespace`) |
 | `pentaryn.ready` | `("importer", api, { when })` | the same, on the shared hook |
 
-Emits nothing of its own. Listens to: `ready` at load (pinned in `test/golden/hooks.json`), and
+Emits nothing of its own. Listens to: `init` and `ready` at load, then
+`ddb-importer.characterProcessDataComplete` from ready (pinned in `test/golden/hooks.json`), and
 `createActor` for one id only during a new actor's create round trip (create-watch.mjs; registered on
 the module's hook registry and removed when the create resolves, so `uninstall()` unwinds it).
 
 ## Patches and adjustments
 
-Patches nothing. One `foundry/adjustments.yml` row: `dnd5e-importer-gate` (the dnd5e minor this
-code and `build_actors.py` target). Its markers are matched across the row's files combined:
+Patches nothing. Two `foundry/adjustments.yml` rows: `ddb-importer-sync-corrections` (the
+ddb-importer hook, `importId` and freeze flags the DDB corrections lean on) and `dnd5e-importer-gate`
+(the dnd5e minor this code and `build_actors.py` target). Its markers are matched across the row's files combined:
 `targetSystemVersion` (the `module.json` `flags.pentaryn` gate key the importer reads) appears in
 `importer-core.mjs` and `documents-adapter.mjs`; `TARGET_SYSTEM_VERSION` is the generator's
 constant in `scripts/foundry/build_actors.py`. The importer has no constant of its own holding the
 number.
 
 ## Two sessions / who writes
+
+DDB corrections: ddb-importer fires its hook only on the client that ran the sync, so that client
+writes when it owns the actor (a player owner or a GM); a non-owner relays `ddbCorrections.apply` to
+the active GM. The GM-ready sweep runs on the active GM. Two GM tabs both answer a relay and both sweep:
+the writes are idempotent (the second plans from live data) and the stone's effects have deterministic
+ids, so a race fails one create instead of duplicating; that run then writes no stamp and the next
+sweep re-checks.
+
+The NPC import:
 
 Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
 `PentarynAbort` (code `NOT_GM`) and a permanent error toast. A second call on the same tab while one is running is refused with
@@ -195,7 +229,11 @@ so the next run retries it. An empty diff is a real no-op and still counts as up
    `api.mjs` `importActors`.
 4. A new API member → a row in `api-manifest.mjs`, its implementation in `api.mjs`, then
    `GOLDEN_UPDATE=1 node --test test/api.test.mjs` and review the `describe`/`surface` diff.
-5. Moving the dnd5e target minor → `module.json` `flags.pentaryn.targetSystemVersion` (a Foundry
+5. A DDB correction → a rule row in `ddb-core.mjs` `RULES` (`match`/`plan`, generic: item type,
+   name, identifier, data shape — never an actor or item id), a fixture in `test/fixtures/ddb.mjs`, a
+   table in `test/ddb-core.test.mjs` with its idempotence case. A one-off homebrew item is frozen,
+   not ruled (`context/foundry/importer.md`, "Freeze or rule").
+6. Moving the dnd5e target minor → `module.json` `flags.pentaryn.targetSystemVersion` (a Foundry
    restart, playbook §10), `TARGET_SYSTEM_VERSION` in `scripts/foundry/build_actors.py`, and the
    `dnd5e-importer-gate` row in `foundry/adjustments.yml`, together.
 
@@ -226,6 +264,10 @@ so the next run retries it. An empty diff is a real no-op and still counts as up
 | `importer-core.mjs` | pure: constants, error classes, lint, payload shaping, `versionProblems`, the design note |
 | `documents-adapter.mjs` | Foundry glue: fetch, gate/lint refusals, readback assertions, writes, summary, the logger |
 | `api-manifest.mjs` | the API rows (pure data) |
+| `settings.mjs` | `SETTINGS` (`ddbCorrections`), `setting()` |
+| `ddb-core.mjs` | pure: the DDB-correction rules, `planCorrections`, the stamp |
+| `ddb-adapter.mjs` | a live Actor → the rules' snapshot, the lookups (spells, PHB index), the writes |
+| `ddb-corrections.mjs` | feature: the ddb-importer listener, the relay, the GM-ready sweep, the summary |
 | `api.mjs` | `importActors`, `buildApiFor`, `legacyRoot`, `selftest` |
 | `lib/` | the vendored kit (tier full) — never edited here |
 
@@ -233,7 +275,7 @@ so the next run retries it. An empty diff is a real no-op and still counts as up
 
 From this folder: `node test/run.mjs` (also `make foundry-importer-check`). `core.test` runs every
 table against the verbatim oracle (`test/fixtures/legacy-importer.mjs`) and the core;
-`glue.test` and `write.test` load the entry under the kit's Foundry stub and pin toasts, console
+`ddb-core.test` (bare) and `ddb.test` cover the DDB corrections; `glue.test` and `write.test` load the entry under the kit's Foundry stub and pin toasts, console
 lines, results and Document writes; `hooks`, `api`, `i18n`, `version-gate` and `sites` cover the
 rest; `index` pins the slug index. One golden at a time: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`,
 then read the diff. `node test/bench.mjs` prints the slug-lookup timing curve (index vs the old per-entry scan).

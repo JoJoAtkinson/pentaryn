@@ -15,6 +15,9 @@ import {
   runExpectedAssertions, shout, stampContentHash, storedHash, updateActor
 } from "./documents-adapter.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
+import { isDdbActor, snapshotOf } from "./ddb-adapter.mjs";
+import { isFrozen, needsCorrection } from "./ddb-core.mjs";
+import { SETTINGS, setting, settingsSnapshot } from "./settings.mjs";
 import { buildApi } from "./lib/api.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 
@@ -365,6 +368,8 @@ function selftest(ctx) {
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: "game.pentaryn.importer is this API", ok: game.pentaryn?.importer === ctx.api },
     { label: "game.pentaryn.import is importActors", ok: game.pentaryn?.import === importActors },
+    { label: "ddbCorrections setting readable", ok: typeof setting("ddbCorrections") === "boolean" },
+    { label: "DDB corrections feature installed", ok: typeof ctx.exposed?.ddb?.apply === "function" },
     // One check per version-gate key (importer-M3): a module.json missing any of them refuses
     // every import, so selftest must not pass. `contract` must also be the one this code speaks.
     ...GATE_KEYS.map(key => ({
@@ -374,6 +379,31 @@ function selftest(ctx) {
     }))
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
+}
+
+/**
+ * inspect(ref): the DDB-correction state of one actor (1.2.0). Nothing in it is GM-only.
+ * @param {Actor} actor  resolved by the kit
+ */
+function inspect(actor) {
+  const snap = snapshotOf(actor);
+  return {
+    actor: { id: actor.id, name: actor.name },
+    ddb: isDdbActor(actor),
+    importId: snap.importId,
+    stamp: snap.stamp ? { importId: snap.stamp.importId ?? null, at: snap.stamp.at ?? null, version: snap.stamp.version ?? null, changes: snap.stamp.changes ?? null } : null,
+    needsCorrection: needsCorrection(snap),
+    frozen: snap.items.filter(isFrozen).map(i => i.name),
+  };
+}
+
+/** A DDB-corrections member, read from the feature at call time (api.mjs never imports a feature). */
+function ddb(ctx, name) {
+  return (...args) => {
+    const fn = ctx.exposed?.ddb?.[name];
+    if (typeof fn !== "function") throw new Error(`${MODULE}: the DDB corrections feature is not installed`);
+    return fn(...args);
+  };
 }
 
 /**
@@ -398,16 +428,21 @@ export function buildApiFor(ctx) {
   return buildApi(MANIFEST, {
     import: importActors,
     selftest: () => selftest(ctx),
+    inspect,
+    "ddbCorrections.plan": ddb(ctx, "plan"),
+    "ddbCorrections.apply": ddb(ctx, "apply"),
+    "ddbCorrections.rules": ddb(ctx, "rules"),
     moduleId: MODULE,
     actorsContract: CONTRACT_ID,
     _internals: INTERNALS
   }, {
     members: {
       trace: () => ctx.log.traces(),
+      settings: () => settingsSnapshot(),
       uninstall: () => ctx.uninstall()
     },
     extras: () => ({
-      settings: [],
+      settings: SETTINGS,
       events: HOOKS,
       hooks: ctx.reg.ids(),
       patches: [],

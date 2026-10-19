@@ -1,5 +1,35 @@
 # Changelog — Pentaryn Importer (`pentaryn-importer`)
 
+## 1.2.0 — 2026-10-19 — DDB corrections
+
+- **[declared] DDB corrections: the table's fixes to D&D Beyond characters survive a re-sync.** A
+  ddb-importer sync puts its own shapes back; the importer now re-applies four rules
+  (`ddb-core.mjs` `RULES`) right after it, on any character with `flags.ddbimporter`:
+  `apparel-as-equipment` (robes, clothes, notes typed consumable → equipment),
+  `freecast-innate` (feat 1/day casts filed At-Will → Innate), `cast-self-uses` (an item's Cast
+  activity on a DDB spell that spends its own uses → the PHB spell, slot on, so the item's charges are
+  spent; no PHB match → reported only) and `transmuters-stone` (pick-one passive effects with
+  `flags.pentaryn-riders.choice`, base darkvision / CON save reset while they are still the stone's).
+  Ported from the 2026-10-19 fix scripts (feedback tiDvFa, ixcdvA, tNdOEx), which stay as a fallback.
+  Items frozen with `flags.ddbimporter.ignoreItemUpdate` / `ignoreItemImport` are skipped.
+  - When: ddb-importer's `ddb-importer.characterProcessDataComplete` on the syncing client (an owner
+    applies, a non-owner relays to the active GM), and a GM-ready sweep of every DDB character whose
+    `flags.ddbimporter.importId` differs from its `flags.pentaryn-importer.ddbCorrections` stamp
+    (ddb-importer stores no sync timestamp; it gives each import a fresh importId). **The first GM
+    login after this ships corrects every DDB character in the world once.**
+  - One world setting, `ddbCorrections` (default on), switches the automatic runs off.
+  - One console line and one chat message whispered to the GMs per run that changed something;
+    nothing when nothing changed.
+  - API: `ddbCorrections.plan(ref)` (dry run), `.apply(ref, { dryRun })` (write; relay query
+    `pentaryn-importer.ddbCorrections.apply`), `.rules()`, and `inspect(ref)` (the stamp, frozen items).
+  - To see it at the table: sync a character from D&D Beyond; the robes sit under Equipment, the
+    1/day spells under Innate Spellcasting, the wand casts and spends a charge, and the GM gets a
+    "DDB corrections — <name>" whisper.
+- New files `ddb-core.mjs`, `ddb-adapter.mjs`, `ddb-corrections.mjs`, `settings.mjs`, `lang/en.json`
+  (`module.json` gains `languages`: a Foundry restart); kit `election` vendored. Tests
+  `ddb-core.test`, `ddb.test`; goldens `describe`, `surface`, `hooks` re-pinned for the new rows, the
+  setting, the query and the `init` + ddb-importer hooks.
+
 ## Unreleased — defect wave 3 (2026-10-13)
 
 - **[declared] An update Foundry refuses is a failure, not "updated"** (wave-3 importer item 1):

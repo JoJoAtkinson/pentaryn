@@ -32,7 +32,8 @@
  *   await game.pentaryn.import({ only: ["skeleton"] })   // Gate 2's "import one NPC"
  *   await game.pentaryn.import({ force: true })          // ignore contentHash, rewrite everything
  *
- * No UI, no settings, no hooks beyond `ready`.
+ * No UI. The DDB corrections (1.2.0, ddb-core.mjs / ddb-corrections.mjs) add one setting and one
+ * hook (ddb-importer's `characterProcessDataComplete`); the NPC import itself still has neither.
  *
  * ── API citations ────────────────────────────────────────────────────────────────────────────
  * Everything below was read out of the installed artefacts, not recalled:
@@ -110,7 +111,7 @@ export const MODULE = "pentaryn-importer";
 export const SHORT = "importer";
 export const NS = "importer";
 /** module.json `version`; test/version-gate.test.mjs pins them equal. */
-export const VERSION = "1.1.1";
+export const VERSION = "1.2.0";
 /**
  * The kit API contract of `game.pentaryn.importer` (describe(), buildApi). NOT the actors.json
  * contract — that is CONTRACT_ID below, which the generator and the version gate speak.
@@ -118,7 +119,7 @@ export const VERSION = "1.1.1";
 export const CONTRACT = "pentaryn-importer/api@1";
 /** The importer emits no hooks of its own. */
 export const HOOKS = Object.freeze({});
-/** i18n root (unused: the importer is console/toast-only by design) and CSS prefix (no CSS). */
+/** i18n root (the DDB-corrections setting's labels only; the import is console/toast-only) and CSS prefix (no CSS). */
 export const I18N = "PENTARYN_IMPORTER";
 export const CSS = "pim-";
 
