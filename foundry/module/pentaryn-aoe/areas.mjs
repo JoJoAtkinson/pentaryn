@@ -17,7 +17,7 @@
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
  */
 
-import { MODULE, aoeFlags, centreOf, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle, alreadyExists, doesNotExist } from "./core.mjs";
+import { MODULE, aoeFlags, centreOf, handleTopLeft, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle, alreadyExists, doesNotExist } from "./core.mjs";
 import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
@@ -169,8 +169,9 @@ const wantsHandle = region => isTemplateRegion(region) && !attachedElsewhere(reg
 function handleData(region, actor) {
   const scene = region.parent;
   const shape = region.shapes?.[0];
-  const { x, y } = centreOf(shape, { gridSize: scene.grid.size });
-  const half = (scene.grid.size * 0.5) / 2;
+  const centre = centreOf(shape, { gridSize: scene.grid.size });
+  // [declared] aoe-drag-snap: a spot core's drag snapping can return to (core.handleTopLeft).
+  const { x, y } = handleTopLeft(centre, { gridSize: scene.grid.size, square: squareGrid(scene) });
   const authorId = Object.entries(region.ownership ?? {}).find(([k, v]) => k !== "default" && v === OWNER)?.[0];
   const who = casterTokenName(region) ?? game.users.get(authorId)?.name ?? game.user.name;
   const proto = actor.prototypeToken.toObject();
@@ -186,8 +187,8 @@ function handleData(region, actor) {
     ...proto,
     _id: region.id,
     actorId: actor.id,
-    x: Math.round(x - half),
-    y: Math.round(y - half),
+    x,
+    y,
     elevation,
     ...(level ? { level } : {}),
     hidden: !!region.hidden,
@@ -198,6 +199,13 @@ function handleData(region, actor) {
     flags: { ...(proto.flags ?? {}), dnd5e: { ...(proto.flags?.dnd5e ?? {}), lockSize: true }, [MODULE]: { handle: true, region: region.id } }
   };
   return { data, level };
+}
+
+/** A square grid (CONST.GRID_TYPES.SQUARE = 1; a scene with no grid type given counts as square). */
+function squareGrid(scene) {
+  const g = scene?.grid ?? {};
+  if (typeof g.isSquare === "boolean") return g.isSquare;
+  return (g.type ?? 1) === 1;
 }
 
 /** The region change that attaches it to its handle token. */
@@ -510,4 +518,4 @@ export function uninstall() {}
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { HANDLE_NAME, HANDLE_SYSTEM, handlePrototype, handleActorData, handleActorRepairs, spellName, deleteHandlesOf, decorateCard, actionRow, concentrationItemUuid, attachedElsewhere, pending };
+export const _internals = { HANDLE_NAME, HANDLE_SYSTEM, handlePrototype, handleActorData, handleActorRepairs, spellName, deleteHandlesOf, decorateCard, actionRow, concentrationItemUuid, attachedElsewhere, pending, squareGrid };

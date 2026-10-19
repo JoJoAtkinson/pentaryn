@@ -69,11 +69,12 @@ test("EXT-1: the flags contract names the dnd5e flags aoe writes and core's temp
   assert.ok(flags.reads.includes("flags.core.MeasuredTemplate"));
 });
 
-test("describe().patches lists nothing until Argon or Part G is patched; hooks are the registration manifest", () => {
+test("describe().patches lists only Argon, Part G and Part H's patches; hooks are the registration manifest", () => {
   const d = api.describe();
-  assert.ok(d.patches.every(p => ["aoe-argon-handle-bind", "aoe-self-area-aim"].includes(p.adjustments)));
+  assert.ok(d.patches.every(p => ["aoe-argon-handle-bind", "aoe-self-area-aim", "aoe-area-walls"].includes(p.adjustments)));
+  assert.ok(d.patches.some(p => p.adjustments === "aoe-area-walls"), "Part H wraps RegionDocument#_computeShapeConstraint");
   assert.equal(d.hooks.length, api.hookIds().length);
-  assert.deepEqual(d.settings.map(s => s.key).slice(-1), ["npcSaveRollMode"]);
+  assert.deepEqual(d.settings.map(s => s.key).slice(-2), ["npcSaveRollMode", "areaWalls"]);
 });
 
 /* ── the -10 reads ──────────────────────────────────────────────────────────────────────────── */
@@ -164,8 +165,10 @@ test("inspect(…, { as: a player }): no tray summary; Careful Spell only on an 
 
 test("settings() is every SETTINGS row's live value", () => {
   const s = api.settings();
-  assert.equal(Object.keys(s).length, 17);
+  assert.equal(Object.keys(s).length, 19);
   assert.equal(s.npcSaveRollMode, "gm");
+  assert.equal(s.areaWalls, "cover");
+  assert.equal(s.stationaryInstantAreas, true);
   assert.equal(s.handleTokens, true);
 });
 

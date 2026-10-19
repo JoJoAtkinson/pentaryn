@@ -3,6 +3,7 @@
  *
  * Features, in load order (FEATURES; the file map is in README.md "Files"):
  *   areas.mjs    Part A  ownership, handle tokens, delete cascade, Remove all templates, cleanup, sweep
+ *   token-areas.mjs  A  areas that follow a token: instantaneous ones stay put; the Token HUD eraser
  *   careful.mjs  Part B  Careful Spell: the player picks who; the next save spell's tray protects them
  *   resolve.mjs  Part B  who is inside, NPC saves, the players' request card, Apply
  *   tray.mjs     Part B  the GM-only tray on the damage message (resolve's actions via ctx.exposed)
@@ -11,6 +12,7 @@
  *   refund.mjs   Part F  a cancelled placement gives back the slot / charge it spent
  *   aim.mjs      Part G  a Self cone or line starts at its caster and points at the mouse
  *   escape.mjs   Part E  Escape cancels a spell-area placement on the first press, even with a sheet open
+ *   walls.mjs    Part H  only walls that are total cover (block movement and sight) clip a spell area
  *
  * Lifecycle: init → settings and the Escape keybinding (a keybinding can only be registered then) ·
  * setup → each feature's install(reg, ctx), in FEATURES order (aoe has always registered its hooks
@@ -32,6 +34,7 @@ import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import { guardArgonBind, unguardArgonBind } from "./argon.mjs";
 import * as areas from "./areas.mjs";
+import * as tokenAreas from "./token-areas.mjs";
 import * as careful from "./careful.mjs";
 import * as resolvePart from "./resolve.mjs";
 import * as tray from "./tray.mjs";
@@ -40,9 +43,10 @@ import * as effects from "./effects.mjs";
 import * as refund from "./refund.mjs";
 import * as aim from "./aim.mjs";
 import * as escape from "./escape.mjs";
+import * as walls from "./walls.mjs";
 
 /** Features in load order: their hooks register in this order, and order within a hook name is behaviour. */
-const FEATURES = [areas, careful, resolvePart, tray, attacks, effects, refund, aim, escape];
+const FEATURES = [areas, tokenAreas, careful, resolvePart, tray, attacks, effects, refund, aim, escape, walls];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

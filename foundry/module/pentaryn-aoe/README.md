@@ -17,8 +17,13 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
 - **Part A — areas you can move and delete** (`areas.mjs`). Every template region is owned by
   everyone and gets a small handle token (`_id` = the region's id) it is attached to: drag the
   handle to move the area (it keeps its direction: a handle never auto-rotates), delete it to
-  delete the area; deleting the area deletes the handle. An emanation dnd5e attached to its caster
-  gets no handle. A handle is named "<Spell> (<caster's token name>)" — the author's user name
+  delete the area; deleting the area deletes the handle. On a square grid the handle sits where
+  core's half-square snapping can return it (`core.handleTopLeft`): an area centred on a grid corner
+  gets its handle in the square below-right of it, so a drag can put the area back on the grid. An
+  emanation dnd5e attached to its caster gets no handle; the caster's Token HUD gets an eraser,
+  "Remove the spell areas on this token". An instantaneous activity's emanation (Thunder Step) is
+  created unattached (`dnd5e.createMeasuredTemplate`, setting `stationaryInstantAreas`), so it stays
+  where it was cast and gets a handle. A handle is named "<Spell> (<caster's token name>)" — the author's user name
   when no caster token is found, never an actor name — and gives a faint dim light of half a
   square, so it and the area's outline show in darkness to anyone who can see that spot. Handles
   are never combatants and never stay targeted. The spell card gets an eraser icon after *Place Template*: **Remove all templates** of
@@ -57,6 +62,11 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   concentration counts as cancelled too: its concentration ends and its card goes.
 - **Part G — aim** (`aim.mjs`). A Self-range cone or line keeps its point on the caster's token
   edge and turns toward the mouse while placing.
+- **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
+  restricts every template region with the core `move` polygon, so every movement wall clipped it,
+  including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
+  sight clips an area (PHB 2024: only total cover blocks an area), and a cube is clipped from its
+  centre, not its corner (`core.edgeClipsArea`, `core.areaClipOrigin`).
 
 ## Settings
 
@@ -81,7 +91,9 @@ live through `setting()`, so a change applies without a reload).
 | `untargetedSelf` | on | D | a touch spell cast at nobody goes on the caster |
 | `noSpellStacking` | on | D | the same spell's effect replaces instead of stacking |
 | `aimSelfAreas` | on | G | Self cones and lines start at the caster |
+| `stationaryInstantAreas` | on | A | an instantaneous emanation stays where it was cast, with a handle |
 | `npcSaveRollMode` | `gm` | B | message mode of monster saves: `gm`, `blind` or `public` (a stored legacy `gmroll` is rewritten once by the active GM) |
+| `areaWalls` | `cover` | H | which walls clip an area: `cover` (block movement and sight), `move` (dnd5e: every movement wall), `none` |
 
 ## API — game.pentaryn.aoe
 
@@ -156,7 +168,9 @@ synchronous `false`).
 Patches (kit `wrapMethod`, listed by `describe().patches`, undone by `uninstall()`):
 `ui.ARGON.bind` (marker `_aoeGuard`, row `aoe-argon-handle-bind`: Argon never binds its HUD to a
 handle) and `RegionLayer.prototype.placeRegions` (marker `Symbol.for("pentaryn-aoe.aimWrapped")`,
-row `aoe-self-area-aim`: Part G's `onMove`). Non-patch rows: `core-region-placement-escape`,
+row `aoe-self-area-aim`: Part G's `onMove`) and `RegionDocument.prototype._computeShapeConstraint`
+(marker `Symbol.for("pentaryn-aoe.wallsWrapped")`, row `aoe-area-walls`: Part H, template regions
+with a `move` restriction only). Non-patch rows: `core-region-placement-escape`,
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
@@ -220,11 +234,12 @@ feature's function is reached through `ctx.exposed`, never an import.
 | File | Role |
 |---|---|
 | `aoe.mjs` | entry: FEATURES, ctx, init/setup/ready, the hot-patch `install()` |
+| `core/areas.mjs` | pure area geometry behind the core barrel: centres, handle spots, which walls clip |
 | `core.mjs` | pure: constants, rows, saves, matching, aiming, summaries |
 | `settings.mjs` | SETTINGS, `setting()`, the roll-mode migration |
 | `api-manifest.mjs`, `api.mjs` | API rows; own implementations, `inspect`, `buildApiFor` |
 | `scene-adapter.mjs`, `messages-adapter.mjs`, `argon.mjs` | adapters: scenes/regions/Item Piles, dnd5e messages, Argon |
-| `areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs` | features (Parts A–G) |
+| `areas.mjs`, `token-areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs`, `walls.mjs` | features (Parts A–H) |
 | `styles/aoe.css`, `lang/en.json`, `lib/` | styles; strings; vendored kit |
 | `test/` | node:test suites, goldens, fixtures (`seams.mjs` maps the checkpoint names) |
 

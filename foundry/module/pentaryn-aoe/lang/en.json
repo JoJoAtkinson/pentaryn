@@ -1,6 +1,7 @@
 {
   "PENTARYN_AOE": {
     "RemoveAllTemplates": "Remove all templates",
+    "RemoveTokenAreas": "Remove the spell areas on this token",
     "NoArea": "This spell has no templates on the scene you are viewing.",
     "CannotRemove": "You don't own those templates. Ask the GM to remove them.",
     "Effects": {
@@ -108,6 +109,17 @@
       "aimSelfAreas": {
         "Name": "Self cones and lines start at the caster",
         "Hint": "Placing a Self-range cone or line (Cone of Cold, Burning Hands, Lightning Bolt) keeps its point at the caster's token and points it at the mouse; click to cast. Off: core's placement (the point follows the mouse, the mouse wheel turns it)."
+      },
+      "stationaryInstantAreas": {
+        "Name": "Instantaneous areas stay where they were cast",
+        "Hint": "An instantaneous spell's emanation (Thunder Step, Thunderclap, Word of Radiance) is left where it was cast, with a handle to drag or delete it, instead of following the caster around. Lasting auras (Spirit Guardians) still follow. Off: dnd5e's behaviour."
+      },
+      "areaWalls": {
+        "Name": "Walls that stop a spell area",
+        "Hint": "PHB: an area spreads from its point of origin and only total cover stops it. Total cover: only walls that block both movement and sight clip an area; invisible walls (a bridge's sides, furniture, a ledge) and see-through ones never do, and a cube is measured from its centre. Every movement wall: dnd5e's default. No walls: areas are never clipped.",
+        "cover": "Total cover (blocks movement and sight)",
+        "move": "Every wall that blocks movement (dnd5e)",
+        "none": "No walls"
       }
     },
     "Keybinding": {

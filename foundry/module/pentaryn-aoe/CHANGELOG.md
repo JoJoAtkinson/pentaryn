@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- **0.5.0. Only total cover stops a spell area** (declared, aoe-area-walls, feedback 7v8jPs, RpnWw3,
+  3arqpV). dnd5e 6 clips every template region with the core `move` restriction, so every wall
+  that stops a token clipped every area. That included the invisible (move-only) walls that drew the camp-site's
+  rope bridge (64 of them) and the Common Room's furniture (150). Burning Hands and Cone of Cinders stopped at the
+  bridge, Web "anchored" to the tables, and Hypnotic Pattern was cut by both. A cube was also clipped from
+  its corner (a rectangle's origin) while a sphere was clipped from its centre, so one spell was
+  "blocked by a corner" and the next was not. New Part H (`walls.mjs`) wraps
+  `RegionDocument#_computeShapeConstraint` for template regions only: with the new setting
+  `areaWalls` = `cover` (default), a wall clips an area only if it blocks movement **and** sight,
+  and a cube is clipped from its centre. `move` restores dnd5e's clip and `none` turns clipping off. The same rule
+  applies to every spell; a wall that is total cover also hides a visual effect. Areas placed before
+  0.5.0 keep their old outline until moved. Adjustments row `aoe-area-walls`. Pinned by
+  `test/area-walls.test.mjs`.
+- **A handle can be dragged back onto the grid** (declared, aoe-drag-snap, feedback 7v8jPs). Core
+  snaps a half-square token only to quarter-square spots wholly inside one square. A handle centred
+  on a grid corner (a 20 ft cube, a Fireball) straddled four squares, so the first drag shifted the
+  area a quarter square and it could never land on the grid again. On a square grid the handle now
+  sits in the square below-right of such a corner (`core.handleTopLeft`). Goldens `create-handle`,
+  `handle-cases` and `ready-calls` change only in the handle's x/y.
+- **An instantaneous emanation stays where it was cast** (declared, aoe-instant-stationary,
+  feedback WSMeuV). dnd5e 6 attached Thunder Step's 10 ft emanation to Marwen. It followed her after
+  the teleport and for the rest of the session. It had no handle, no Active Effect, and with no
+  damage rolled `instantCleanup` never ran. On `dnd5e.createMeasuredTemplate` an instantaneous
+  activity's region data loses its `attachment.token`, so the area stays put and gets a handle.
+  Lasting auras (Spirit Guardians) still follow their caster. New setting `stationaryInstantAreas`
+  (default on). Adjustments row `dnd5e-instant-area-stationary`.
+- **A Token HUD eraser for areas that follow a token** (declared, aoe-token-hud-remove, WSMeuV).
+  A token that carries a template region the user may delete gets "Remove the spell areas on this
+  token" on its HUD. Two hooks are new (`dnd5e.createMeasuredTemplate`, `renderTokenHUD`): goldens
+  `hooks` and `describe` change by them, by the two settings, and by the Part H patch.
+  The stuck Thunder Step area already in the world is removed by
+  `scripts/foundry/fixes/2026-10-19-aoe-areas.js` (eval-js body, dry run by default).
+
 - **A damage card deleted mid-resolve is a clean cancel** (declared, aoe-vanish-1): deleting the
   card after the 750 ms resolve claim had settled but while `resolve()` was still running (for
   example while Careful Spell's flag was being cleared) logged one swallowed console error

@@ -53,7 +53,8 @@ test("createRegion by this client: ownership fixed, handle created at the centre
   const handle = s.tokens.get(r.id);
   assert.ok(handle, "the handle's id IS the region's id");
   assert.equal(A.handleFor(r), handle);
-  assert.deepEqual([handle.x, handle.y, handle.elevation, handle.level], [1475, 1175, 10, "lvlGround0000001"]);
+  // [declared] aoe-drag-snap: the centre (1500, 1200) is a grid corner, so the handle sits in the square below-right of it.
+  assert.deepEqual([handle.x, handle.y, handle.elevation, handle.level], [1500, 1200, 10, "lvlGround0000001"]);
   assert.equal(handle.name, "Fireball (Gamemaster)");
   assert.deepEqual(r.attachment, { token: r.id });
 });

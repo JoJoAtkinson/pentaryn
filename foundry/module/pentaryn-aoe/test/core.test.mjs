@@ -300,11 +300,12 @@ check("player status line: waiting, applied, superseded, nothing to say",
 /* ── checkpoint additions (guide S1.4, core.test.mjs) ─────────────────────────────────────────── */
 
 // [declared] Wave 7 batch (W4 version bumps, Joe 2026-10-12): flipped from 0.3.1 — aoe ships 0.4.0 with
-// core.VERSION (the API rows already say since: "0.4.0").
-test("module.json is pentaryn-aoe 0.4.0", () => {
+// core.VERSION (the API rows already say since: "0.4.0"). 0.5.0 (2026-10-19, feedback 7v8jPs, RpnWw3,
+// 3arqpV, WSMeuV): Part H walls, snappable handles, instantaneous areas stay put, the Token HUD eraser.
+test("module.json is pentaryn-aoe 0.5.0", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.4.0");
+  assert.equal(manifest.version, "0.5.0");
 });
 
 test("VERSION === module.json version", () => {

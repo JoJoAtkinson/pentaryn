@@ -360,6 +360,29 @@ export async function boot({ user = null, users = [], settings = {}, entry = fal
   }
   F.RegionLayer = RegionLayer;
   F.foundry.canvas.layers = { RegionLayer };
+
+  // core's region constraint (Part H wraps _computeShapeConstraint) and its "move" polygon backend:
+  // the backend keeps the edges its _testEdgeInclusion accepts, from F.edges (set per test).
+  class MovePolygon {
+    static create(origin, config) {
+      const p = new this();
+      p.origin = origin;
+      p.config = config;
+      p.edges = (F.edges ?? []).filter(e => p._testEdgeInclusion(e, config?.edgeTypes ?? {}));
+      return p;
+    }
+    _testEdgeInclusion(edge) { return (edge.move ?? 0) !== 0; }
+  }
+  class RegionDocument {
+    _computeShapeConstraint(origin, config) {
+      F.calls.push({ op: "coreConstraint", origin: F.plain(origin) });
+      return MovePolygon.create(origin, config);
+    }
+  }
+  F.MovePolygon = MovePolygon;
+  F.RegionDocument = RegionDocument;
+  F.foundry.documents = { ...(F.foundry.documents ?? {}), RegionDocument };
+  F.CONFIG.Canvas = { ...(F.CONFIG.Canvas ?? {}), polygonBackends: { move: MovePolygon } };
   F.foundry.dice = { Roll: { _mapLegacyRollMode: mode => ({ publicroll: "public", gmroll: "gm", blindroll: "blind", selfroll: "self" })[mode] || mode } };
 
   // the dnd5e <effect-application> element (its _prepareEffectData is the tray's own data path)

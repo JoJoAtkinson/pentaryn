@@ -56,7 +56,8 @@ test("settings register at init in BOOLS order, then npcSaveRollMode (golden/set
   assert.deepEqual(registered.map(r => r.key), [
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
-    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "npcSaveRollMode",
+    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "npcSaveRollMode",
+    "areaWalls",
   ]);
 });
 
@@ -69,19 +70,19 @@ test("the Escape keybinding registers once at init: PRIORITY, editable Escape, l
       editable: [{ key: "Escape" }], precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY, onDown: "function" });
 });
 
-test("-13 BOOLS is the literal 16-name list; DEFAULTS has 17 keys; npcSaveRollMode stays out of BOOLS", () => {
+test("-13 BOOLS is the literal 17-name list; DEFAULTS has 19 keys; npcSaveRollMode and areaWalls stay out of BOOLS", () => {
   const { BOOLS, DEFAULTS } = S.settings;
   assert.deepEqual(BOOLS, [
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
-    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas",
+    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas",
   ]);
   assert.equal(typeof DEFAULTS.npcSaveRollMode, "string");
   assert.deepEqual({ ...DEFAULTS }, {
     handleTokens: true, removeAreaButton: true, instantCleanup: true, concentrationCleanup: true, resolveSaves: true,
     npcSaveRollMode: "gm", autoApplyNpc: false, promptPlayers: true, autoDamageOnHit: true, autoApplySelf: true,
     highlightUnapplied: true, carefulSpell: true, refundCancelledArea: true, playerStatus: true, untargetedSelf: true,
-    noSpellStacking: true, aimSelfAreas: true,
+    noSpellStacking: true, aimSelfAreas: true, stationaryInstantAreas: true, areaWalls: "cover",
   });
   assert.deepEqual(S.settings.LEGACY_ROLL_MODES, ["gmroll", "blindroll", "publicroll"]);
 });
