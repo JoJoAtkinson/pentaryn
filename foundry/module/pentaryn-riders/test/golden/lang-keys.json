@@ -27,6 +27,8 @@
   "PENTARYN_RIDERS.settings.castDefaults.hint",
   "PENTARYN_RIDERS.settings.arcaneRecovery.name",
   "PENTARYN_RIDERS.settings.arcaneRecovery.hint",
+  "PENTARYN_RIDERS.settings.projectiles.name",
+  "PENTARYN_RIDERS.settings.projectiles.hint",
   "PENTARYN_RIDERS.rituals.group",
   "PENTARYN_RIDERS.rituals.longGroup",
   "PENTARYN_RIDERS.summon.place",
@@ -40,5 +42,12 @@
   "PENTARYN_RIDERS.arcaneRecovery.total",
   "PENTARYN_RIDERS.arcaneRecovery.done",
   "PENTARYN_RIDERS.arcaneRecovery.none",
-  "PENTARYN_RIDERS.arcaneRecovery.changed"
+  "PENTARYN_RIDERS.arcaneRecovery.changed",
+  "PENTARYN_RIDERS.projectiles.ray.slot",
+  "PENTARYN_RIDERS.projectiles.ray.status",
+  "PENTARYN_RIDERS.projectiles.ray.oneTarget",
+  "PENTARYN_RIDERS.projectiles.dart.slot",
+  "PENTARYN_RIDERS.projectiles.dart.status",
+  "PENTARYN_RIDERS.projectiles.dart.oneTarget",
+  "PENTARYN_RIDERS.projectiles.noTarget"
 ]

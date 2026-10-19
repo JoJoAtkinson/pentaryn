@@ -94,5 +94,17 @@
     "default": true,
     "type": "Boolean",
     "onChange": true
+  },
+  {
+    "id": "pentaryn-riders.projectiles",
+    "namespace": "pentaryn-riders",
+    "key": "projectiles",
+    "name": "PENTARYN_RIDERS.settings.projectiles.name",
+    "hint": "PENTARYN_RIDERS.settings.projectiles.hint",
+    "scope": "world",
+    "config": true,
+    "default": true,
+    "type": "Boolean",
+    "onChange": false
   }
 ]
