@@ -113,6 +113,10 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
     "name": "updateActiveEffect"
   },
   {

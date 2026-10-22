@@ -918,8 +918,8 @@ adjustments:
     packages: [dnd5e]
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/projectiles.mjs, foundry/module/pentaryn-riders/riders-core.mjs]
-    markers: ["pr-shots", "getAssociatedRolls", "PROJECTILES"]
-    what: a Scorching Ray / Magic Missile usage card gets one button per ray or dart (3, +1 per level above the spell's, wand charges included via system.scaling); each rolls that ray's attack or that dart's damage at the creature targeted on click, threaded under the card; rolls already under the card fill the slots (setting projectiles). Only dnd5e.renderChatMessage is hooked, since dnd5e's ChatMessage5e#_onCreate/_onDelete re-render the origin card when a roll under it is made or deleted
+    markers: ["pr-shots", "getAssociatedRolls", "PROJECTILES", "subsequentActions"]
+    what: a Scorching Ray / Magic Missile usage card gets one button per ray or dart (3, +1 per level above the spell's, wand charges included via system.scaling); each rolls that ray's attack or that dart's damage at the creature targeted on click, threaded under the card; rolls already under the card fill the slots (setting projectiles). dnd5e's own re-render covers the card (its ChatMessage5e#_onCreate/_onDelete re-render the origin card when a roll under it is made or deleted). In dnd5e.postUseActivity the use's subsequentActions is set false, so dnd5e's automatic first roll no longer opens a dialog before the buttons (5wv0Iq), and the sidebar opens on Chat when the chat log is off screen (client setting projectileChatTab)
     why: dnd5e 6 and the PHB items give each spell one activity that rolls once, and Magic Missile's card Damage button reuses the cast-time targets, so a player saw one beam / one dart and could not split them (feedback JbnAbX, ixcdvA)
     native_when: dnd5e rolls multi-projectile spells per projectile with per-roll targets
     retire_class: safe

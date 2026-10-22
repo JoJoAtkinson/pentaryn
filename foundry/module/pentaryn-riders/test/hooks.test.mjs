@@ -1,7 +1,7 @@
 // The hook manifest (guide S1, combat-riders-25/-31): what riders registers at import, in order,
 // pinned against golden/hooks.json. Today the order is module evaluation order — rituals →
 // concentration → argon-tidy → cast-flow → the riders.mjs body — and decides who runs first on the
-// shared hooks (dnd5e.preUseActivity ×4, dnd5e.renderChatMessage ×3, dnd5e.postUseActivity ×2).
+// shared hooks (dnd5e.preUseActivity ×4, dnd5e.renderChatMessage ×3, dnd5e.postUseActivity ×3).
 // The refactor may only change how lifecycle listeners are grouped (one init, one ready, guide §2.2):
 // the non-lifecycle order stays exactly as it is.
 //
@@ -26,7 +26,7 @@ test("registration manifest (non-lifecycle) equals golden/hooks.json", () => {
   pinJSON("hooks", atLoad.filter(h => !LIFECYCLE.has(h.name)), import.meta.url);
 });
 
-test("the 31 non-lifecycle registrations, in order (guide S1 list)", () => {
+test("the 32 non-lifecycle registrations, in order (guide S1 list)", () => {
   assert.deepEqual(atLoad.filter(h => !LIFECYCLE.has(h.name)).map(h => h.name), [
     "dnd5e.preUseActivity",                 // rituals: slot unticked
     "dnd5e.summonToken",                    // concentration: stamp
@@ -56,6 +56,7 @@ test("the 31 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.postUseActivity",                // riders: Battle Medic
     "renderCharacterActorSheet",            // riders: Hit Dice −/+
     "dnd5e.renderChatMessage",              // projectiles: one button per ray / dart (dnd5e re-renders the card on a roll: no create/delete hook, 0.5.1)
+    "dnd5e.postUseActivity",                // projectiles: no automatic first roll, Chat opened on the card (5wv0Iq, 0.5.2)
     "updateActiveEffect",                   // effect-choices: pick-one passive effects (tNdOEx)
     "dnd5e.filterItem",                     // spell-view: Prepared view filter
     "renderCharacterActorSheet",            // spell-view: Prepared / All spells switch
@@ -126,7 +127,7 @@ test("the shared hooks run their listeners in manifest order (rituals → cast-f
     "dnd5e.preUseActivity": 6, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
     createChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
     renderItemButtonArgonComponent: 1, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
-    renderActivityChoiceDialog: 1, "dnd5e.postUseActivity": 2, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
+    renderActivityChoiceDialog: 1, "dnd5e.postUseActivity": 3, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
     renderCharacterActorSheet: 2, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1, "dnd5e.filterItem": 1,
   });
 });

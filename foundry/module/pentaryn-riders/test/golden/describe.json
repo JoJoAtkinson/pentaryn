@@ -339,7 +339,7 @@
       "scope": "world",
       "type": "Boolean",
       "default": true,
-      "doc": "Scorching Ray and Magic Missile cards get one button per ray / dart (3, plus one per level above the spell's), each rolled at the creature targeted when clicked."
+      "doc": "Scorching Ray and Magic Missile cards get one button per ray / dart (3, plus one per level above the spell's), each rolled at the creature targeted when clicked; dnd5e's automatic first roll after the cast is skipped, so the buttons are the one way to roll."
     },
     {
       "key": "spellView",
@@ -347,6 +347,13 @@
       "type": "Boolean",
       "default": true,
       "doc": "The character sheet's Spells tab opens on the spells ready to cast, with a Prepared / All spells toggle remembered per user and actor; a change re-renders open character sheets."
+    },
+    {
+      "key": "projectileChatTab",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Client: casting Scorching Ray or Magic Missile while the chat log is off screen opens the sidebar on Chat, where the ray / dart buttons stay (a chat notification is dismissed after 5 s)."
     }
   ],
   "events": [],
@@ -462,6 +469,10 @@
     {
       "name": "dnd5e.renderChatMessage",
       "label": "projectile buttons"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "projectile: card buttons only"
     },
     {
       "name": "updateActiveEffect",

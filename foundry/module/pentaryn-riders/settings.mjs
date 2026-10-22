@@ -7,7 +7,7 @@
  *
  * Two readers keep today's per-site failure semantics (guide S4; the kit's settingReader would
  * return the row default `true` instead):
- *   settingOr(key, fallback)  the seven feature switches: `false` when the setting cannot be read
+ *   settingOr(key, fallback)  the feature switches: `false` when the setting cannot be read
  *                             (before init, a hot-patched client), else `value !== false`
  *   settingRaw(key)           `enabled` and `hdControls`: rethrows; the hook that reads it catches
  *                             and warns (`… | riders skipped`, `… | hit dice controls skipped`)
@@ -22,8 +22,9 @@ function rerenderCharacterSheets() {
 }
 
 /**
- * Every row is a world Boolean, on by default, shown in Configure Settings and read live on each
- * use, so none needs `requiresReload`.
+ * Every row is a Boolean, on by default, shown in Configure Settings and read live on each use, so
+ * none needs `requiresReload`. All are world settings except the last, `projectileChatTab` (client:
+ * whether a cast may move this player's sidebar is each player's call).
  * @type {import("./lib/settings.mjs").SettingRow[]}
  */
 export const SETTINGS = Object.freeze([
@@ -80,7 +81,7 @@ export const SETTINGS = Object.freeze([
     key: "projectiles", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_RIDERS.settings.projectiles.name",
     hint: "PENTARYN_RIDERS.settings.projectiles.hint",
-    doc: "Scorching Ray and Magic Missile cards get one button per ray / dart (3, plus one per level above the spell's), each rolled at the creature targeted when clicked.",
+    doc: "Scorching Ray and Magic Missile cards get one button per ray / dart (3, plus one per level above the spell's), each rolled at the creature targeted when clicked; dnd5e's automatic first roll after the cast is skipped, so the buttons are the one way to roll.",
   },
   {
     key: "spellView", scope: "world", config: true, type: Boolean, default: true,
@@ -88,6 +89,12 @@ export const SETTINGS = Object.freeze([
     hint: "PENTARYN_RIDERS.settings.spellView.hint",
     onChange: rerenderCharacterSheets,
     doc: "The character sheet's Spells tab opens on the spells ready to cast, with a Prepared / All spells toggle remembered per user and actor; a change re-renders open character sheets.",
+  },
+  {
+    key: "projectileChatTab", scope: "client", config: true, type: Boolean, default: true,
+    name: "PENTARYN_RIDERS.settings.projectileChatTab.name",
+    hint: "PENTARYN_RIDERS.settings.projectileChatTab.hint",
+    doc: "Client: casting Scorching Ray or Magic Missile while the chat log is off screen opens the sidebar on Chat, where the ray / dart buttons stay (a chat notification is dismissed after 5 s).",
   },
 ]);
 
@@ -109,7 +116,7 @@ export function settingRaw(key) {
 /** The kit reader (row default when unreadable): `ctx.setting`, selftest. */
 export const setting = settingReader(MODULE, SETTINGS);
 
-/** `{ key: value }` for all ten rows (api `settings()`). */
+/** `{ key: value }` for all eleven rows (api `settings()`). */
 export function settingsSnapshot() {
   return snapshot(MODULE, SETTINGS);
 }

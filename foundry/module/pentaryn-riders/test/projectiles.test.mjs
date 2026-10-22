@@ -203,3 +203,150 @@ test("a broken card root is warned as 'projectile buttons skipped'; non-usage ro
   // (the card note's own listener warns about the same broken roots; only ours is pinned here)
   assert.deepEqual(W.take().filter(l => /projectile/.test(l[1])).map(l => l.slice(0, 3)), [["warn", `${MODULE} | projectile buttons skipped`, "detached"]]);
 });
+
+/* ── the cast: no automatic roll, the card where it stays (feedback 5wv0Iq / MMLx5X) ──────────── */
+// Marwen's wand: every cast opened dnd5e's automatic Damage dialog (its _triggerSubsequentActions),
+// then Dart 1 opened a second; the card sat in a chat notification that core dismisses 5 s in, so the
+// buttons "disappeared". On the old code these fail: no postUseActivity listener, subsequentActions
+// stays undefined and the sidebar is never moved.
+
+/** A v14-shaped sidebar and chat log; `calls` records expand / changeTab in order. */
+function chatUi({ expanded = false, tab = "actors", popout = false, active } = {}) {
+  const calls = [];
+  const sidebar = {
+    expanded, tabGroups: { primary: tab },
+    expand() { calls.push(["expand"]); this.expanded = true; },
+    changeTab(t, group) { calls.push(["changeTab", t, group]); this.tabGroups[group] = t; },
+  };
+  const chat = { popout: popout ? { rendered: true } : null };
+  Object.defineProperty(chat, "active", { get: () => active ?? sidebar.tabGroups.primary === "chat" });
+  F.ui.sidebar = sidebar;
+  F.ui.chat = chat;
+  return calls;
+}
+function dropUi() { delete F.ui.sidebar; delete F.ui.chat; }
+
+const wizMM = () => wiz.items.get("magicmissile0001").system.activities.contents[0];
+const sorcRay = () => sorc.items.get("scorch0000000001").system.activities.contents[0];
+const used = (activity, usage = {}, results = { message: { id: "usecard000000020" } }) => {
+  const out = F.fireCall("dnd5e.postUseActivity", activity, usage, results);
+  return { usage, out };
+};
+
+test("5wv0Iq: after a Magic Missile or Scorching Ray cast dnd5e rolls nothing by itself (subsequentActions false); the hook is never vetoed", () => {
+  dropUi();
+  chatUi({ expanded: true, tab: "chat" });
+  const mm = used(wizMM());
+  assert.equal(mm.usage.subsequentActions, false, "no automatic Damage dialog: the dart buttons are the one way to roll");
+  assert.notEqual(mm.out, false);
+  assert.equal(used(sorcRay()).usage.subsequentActions, false, "no automatic Attack dialog either");
+  dropUi();
+});
+
+test("5wv0Iq: a wand's cached Magic Missile (the spell copy dnd5e casts through) is matched; the wand, Fireball, Eldritch Blast and a Scorching Ray damage activity are not", () => {
+  chatUi({ expanded: true, tab: "chat" });
+  const caster = makeActor({ id: "wandcaster000001", name: "Wand Caster", type: "character", ownership: { default: 3 }, items: [
+    { id: "cachedmm00000001", name: "Magic Missile", type: "spell", system: { level: 1, identifier: "magic-missile", linkedActivity: "x" }, activities: [{ id: "cmmdmg0000000001", type: "damage" }] },
+    { id: "wandmm0000000001", name: "Wand of Magic Missiles", type: "consumable", system: {}, activities: [{ id: "castMaMiWaOfMaMi", type: "cast" }] },
+    { id: "eldritch00000001", name: "Eldritch Blast", type: "spell", system: { level: 0 }, activities: [{ id: "ebatk00000000001", type: "attack" }] },
+    { id: "scdmg00000000001", name: "Scorching Ray", type: "spell", system: { level: 2 }, activities: [{ id: "scdmgact00000001", type: "damage" }] },
+  ] });
+  const act = id => caster.items.get(id).system.activities.contents[0];
+  assert.equal(used(act("cachedmm00000001")).usage.subsequentActions, false, "the cast-from-wand spell copy");
+  for (const id of ["wandmm0000000001", "eldritch00000001", "scdmg00000000001"]) {
+    assert.equal(used(act(id)).usage.subsequentActions, undefined, id);
+  }
+  const fireball = sorc.items.get("fireball00000001").system.activities.contents[0];
+  assert.equal(used(fireball).usage.subsequentActions, undefined, "Fireball keeps dnd5e's own flow");
+  dropUi();
+});
+
+test("5wv0Iq: the world setting off, or a caster this user does not own, leaves dnd5e's flow and the sidebar alone", async () => {
+  const calls = chatUi();
+  await F.game.settings.set(MODULE, "projectiles", false);
+  assert.equal(used(wizMM()).usage.subsequentActions, undefined, "setting off");
+  await F.game.settings.set(MODULE, "projectiles", true);
+  const stranger = makeActor({ id: "stranger00000002", name: "Stranger", type: "character", ownership: { default: 0 },
+    items: [{ id: "strmm00000000001", name: "Magic Missile", type: "spell", system: { level: 1 }, activities: [{ id: "strmmdmg00000001", type: "damage" }] }] });
+  F.become({ userId: IDS.player });
+  assert.equal(used(stranger.items.get("strmm00000000001").system.activities.contents[0]).usage.subsequentActions, undefined, "not the player's caster");
+  F.become({ userId: IDS.gm });
+  assert.deepEqual(calls, []);
+  dropUi();
+});
+
+test("5wv0Iq: the card opens where it stays — collapsed sidebar: expand then Chat; open on Actors: Chat only; Chat showing or a chat popout: untouched", () => {
+  let calls = chatUi({ expanded: false, tab: "actors" });
+  used(wizMM());
+  assert.deepEqual(calls, [["expand"], ["changeTab", "chat", "primary"]], "collapsed (the bug report's state)");
+  calls = chatUi({ expanded: true, tab: "actors" });
+  used(wizMM());
+  assert.deepEqual(calls, [["changeTab", "chat", "primary"]], "open on another tab");
+  calls = chatUi({ expanded: false, tab: "chat" });
+  used(wizMM());
+  assert.deepEqual(calls, [["expand"], ["changeTab", "chat", "primary"]], "collapsed on Chat: expanded (core's changeTab returns at once then)");
+  calls = chatUi({ expanded: true, tab: "chat" });
+  used(wizMM());
+  assert.deepEqual(calls, [], "Chat already showing");
+  calls = chatUi({ expanded: false, tab: "actors", popout: true });
+  used(wizMM());
+  assert.deepEqual(calls, [], "the chat popout shows the card");
+  dropUi();
+});
+
+test("5wv0Iq: Chat opens whatever the notification pane would do — 'pip' notifications or a narrow window show the card nowhere", () => {
+  // ChatLog#_shouldShowNotifications is false for "pip" and a narrow viewport too; we never ask it.
+  const calls = chatUi({ expanded: false, tab: "combat" });
+  F.ui.chat._shouldShowNotifications = () => false;
+  used(wizMM());
+  assert.deepEqual(calls, [["expand"], ["changeTab", "chat", "primary"]]);
+  dropUi();
+});
+
+test("5wv0Iq: the client setting off keeps the sidebar (the automatic roll still skipped); no usage, no message: no throw, no switch", async () => {
+  let calls = chatUi();
+  await F.game.settings.set(MODULE, "projectileChatTab", false);
+  assert.equal(used(wizMM()).usage.subsequentActions, false);
+  assert.deepEqual(calls, []);
+  await F.game.settings.set(MODULE, "projectileChatTab", true);
+  calls = chatUi();
+  W.take();
+  assert.notEqual(F.fireCall("dnd5e.postUseActivity", wizMM(), undefined, { message: null }), false);
+  assert.notEqual(F.fireCall("dnd5e.postUseActivity", wizMM()), false);
+  assert.deepEqual(calls, [], "a use that made no card (create: false) moves nothing");
+  assert.deepEqual(W.take(), []);
+  dropUi();
+});
+
+test("5wv0Iq: a broken activity or sidebar is warned, never thrown and never a veto; the automatic roll is still skipped when only the sidebar fails", () => {
+  W.take();
+  assert.notEqual(F.fireCall("dnd5e.postUseActivity", { type: "damage", get item() { throw new Error("odd item"); } }, {}, {}), false);
+  chatUi();
+  F.ui.sidebar.changeTab = () => { throw new Error("no tab"); };
+  const { usage, out } = used(wizMM());
+  assert.notEqual(out, false);
+  assert.equal(usage.subsequentActions, false);
+  assert.deepEqual(W.take().filter(l => /projectile/.test(l[1])).map(l => l.slice(0, 3)), [
+    ["warn", `${MODULE} | projectile cast: dnd5e's automatic roll left on`, "odd item"],
+    ["warn", `${MODULE} | projectile cast: chat tab not opened`, "no tab"],
+  ]);
+  dropUi();
+});
+
+test("5wv0Iq: live buttons carry data-action=prShot (the feedback recorder logs the click); a rolled one has none; the click still stops before dnd5e's card handler", async () => {
+  const { message, calls } = usageCard(wizMM(), { rolled: [["Thorgrim"]] });
+  const el = cardEl(message.id);
+  F.fire("dnd5e.renderChatMessage", message, el);
+  assert.deepEqual(buttons(el).map(b => b.dataset.action ?? null), [null, "prShot", "prShot"]);
+  // dnd5e's ChatMessage5e listener on the message element dispatches any [data-action] click that
+  // bubbles to it; the button's own handler stops propagation, so it never does.
+  const dnd5eSaw = [];
+  el.addEventListener("click", e => { if (!e.propagationStopped) dnd5eSaw.push(e.target.dataset.action); });
+  W.target();
+  const { event } = await buttons(el)[1].click();
+  await new Promise(r => setImmediate(r));
+  if (!event.propagationStopped) await el.fire("click", { target: event.target });
+  assert.deepEqual(dnd5eSaw, []);
+  assert.deepEqual(calls, [["rollDamage", "live", "2"]], "the click still rolls that dart with the event");
+  W.take();
+});

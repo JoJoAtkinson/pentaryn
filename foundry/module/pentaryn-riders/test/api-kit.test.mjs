@@ -35,7 +35,7 @@ test("the legacy surface is a subset of the kit-built one (same kinds)", () => {
   const legacy = readJSON(new URL("./golden/surface-legacy.json", import.meta.url));
   for (const [k, kind] of Object.entries(legacy)) assert.equal(typeof api[k], kind, k);
   assert.ok(Object.isFrozen(api));
-  assert.equal(api.version, "0.5.1");   // 0.5.1 (2026-10-19): review fixes. [declared] W4-R6 (Joe 2026-10-12): the Wave 7 batch bumps 0.2.0 -> 0.3.0; 0.5.0 (2026-10-19): Arcane Recovery once (LdPm43), projectiles (JbnAbX / ixcdvA), effect choices + usage-dialog guards (tNdOEx), the spell view (EBGqNA)
+  assert.equal(api.version, "0.5.2");   // 0.5.2 (2026-10-22): no automatic first dart / ray roll, Chat opened (5wv0Iq). 0.5.1 (2026-10-19): review fixes. [declared] W4-R6 (Joe 2026-10-12): the Wave 7 batch bumps 0.2.0 -> 0.3.0; 0.5.0 (2026-10-19): Arcane Recovery once (LdPm43), projectiles (JbnAbX / ixcdvA), effect choices + usage-dialog guards (tNdOEx), the spell view (EBGqNA)
   assert.equal(api.contract, "pentaryn-riders/api@1");
 });
 
@@ -55,9 +55,9 @@ test("nothing mutable is reachable from api.core or api.rules (S6; METAMAGIC is 
 test("describe() equals golden/describe.json (version, kit, published and patch routes excluded)", () => {
   const d = api.describe();
   assert.deepEqual(d.queries, [`${MODULE}.battleMedic`]);
-  assert.deepEqual(d.settings.map(s => s.key), ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView"]);
+  assert.deepEqual(d.settings.map(s => s.key), ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView", "projectileChatTab"]);
   assert.deepEqual(d.events, []);
-  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 31);   // 0.5.1: + one Arcane Recovery picker, - projectiles create/deleteChatMessage
+  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 32);   // 0.5.2: + projectiles' postUseActivity (5wv0Iq)
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
 });
 
@@ -65,11 +65,11 @@ test("surface equals golden/surface.json", () => {
   pinJSON("surface", surfaceOf(api), import.meta.url);
 });
 
-test("settings(): all ten keys with their live values", async () => {
+test("settings(): all eleven keys with their live values", async () => {
   await F.game.settings.set(MODULE, "longCasts", false);
   assert.deepEqual(api.settings(), {
     rituals: true, longCasts: false, concentrationSummons: true, concentrationAutoBreak: true,
-    castDefaults: true, arcaneRecovery: true, enabled: true, hdControls: true, projectiles: true, spellView: true,
+    castDefaults: true, arcaneRecovery: true, enabled: true, hdControls: true, projectiles: true, spellView: true, projectileChatTab: true,
   });
   await F.game.settings.set(MODULE, "longCasts", true);
 });
@@ -83,7 +83,7 @@ test("inspect(ref): report()'s rows, the Hit Dice summary, settings, plain JSON,
     assert.deepEqual(out.rows, rows);
     assert.deepEqual(out.actor, { documentName: "Actor", id: IDS.sorc, uuid: `Actor.${IDS.sorc}`, name: "Ilsa Vantrel" });
     assert.deepEqual(out.hd, { value: 0, max: 0 }, "a PC with no attributes.hd has no pools (hdPools)");
-    assert.equal(Object.keys(out.settings).length, 10);
+    assert.equal(Object.keys(out.settings).length, 11);
     assert.deepEqual(out.concentrationSummons, []);
     assert.ok(maxDepth(out) <= 4);
     assert.deepEqual(JSON.parse(JSON.stringify(out)), out);
@@ -101,7 +101,7 @@ test("inspect: a miss, an ambiguity and a substring are coded; opts.as = a playe
   F.game.actors.delete(twin.id);
   const asPlayer = api.inspect(npc, { as: IDS.player });
   assert.deepEqual([asPlayer.rows, asPlayer.hd, asPlayer.concentrationSummons], [null, null, null]);
-  assert.equal(Object.keys(asPlayer.settings).length, 10);
+  assert.equal(Object.keys(asPlayer.settings).length, 11);
   const own = api.inspect(sorc, { as: IDS.player });
   assert.ok(Array.isArray(own.rows) && own.hd, "the player owns Ilsa");
   assert.equal(own.concentrationSummons, null, "GM-only");

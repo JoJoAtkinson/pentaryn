@@ -10,17 +10,17 @@ const W = await setupWorld();
 const { F } = W;
 const { SETTINGS, registerSettings, settingOr, settingRaw, setting, settingsSnapshot } = await import("../settings.mjs");
 
-const ORDER = ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView"];
+const ORDER = ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView", "projectileChatTab"];
 const langHas = key => key.split(".").reduce((o, p) => o?.[p], LANG) !== undefined;
 
-test("SETTINGS: ten frozen rows in today's order, literal labels present in lang, a doc line each", () => {
+test("SETTINGS: eleven frozen rows in today's order, literal labels present in lang, a doc line each; only projectileChatTab is client scope", () => {
   assert.ok(Object.isFrozen(SETTINGS));
   assert.deepEqual(SETTINGS.map(r => r.key), ORDER);
   for (const r of SETTINGS) {
     assert.equal(r.name, `PENTARYN_RIDERS.settings.${r.key}.name`);
     assert.equal(r.hint, `PENTARYN_RIDERS.settings.${r.key}.hint`);
     assert.ok(langHas(r.name) && langHas(r.hint), r.key);
-    assert.deepEqual([r.scope, r.config, r.type, r.default], ["world", true, Boolean, true], r.key);
+    assert.deepEqual([r.scope, r.config, r.type, r.default], [r.key === "projectileChatTab" ? "client" : "world", true, Boolean, true], r.key);
     assert.ok(typeof r.doc === "string" && r.doc.length > 10, r.key);
   }
   assert.equal(typeof SETTINGS.find(r => r.key === "hdControls").onChange, "function");

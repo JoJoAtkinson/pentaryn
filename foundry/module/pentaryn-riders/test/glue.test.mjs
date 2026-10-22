@@ -1,6 +1,6 @@
 // Lifecycle glue on the active GM's client (guide S1): what `init` and `ready` do, pinned by their
 // EFFECTS so that folding today's four init and five ready listeners into one each (S5) keeps them:
-// - init: the ten settings, in registration order, with their option objects (golden/settings.json),
+// - init: the eleven settings, in registration order, with their option objects (golden/settings.json),
 //   and the Battle Medic relay query;
 // - ready: the four patches (Rituals `_renderInner`, SummonActivity `_prepareUsageConfig` and
 //   `getPlacement`, `TextEditor.enrichHTML`), each wrapping once; then, after a timer tick, the
@@ -27,10 +27,10 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
-test("init registers the ten settings in order, option objects as golden/settings.json", () => {
+test("init registers the eleven settings in order, option objects as golden/settings.json", () => {
   F.fire("init");
   const ids = F.calls.filter(c => c.op === "settings.register").map(c => c.id.slice(MODULE.length + 1));
-  assert.deepEqual(ids, ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView"]);
+  assert.deepEqual(ids, ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView", "projectileChatTab"]);
   pinJSON("settings", settingRows(F), import.meta.url);
   for (const row of settingRows(F)) {
     assert.equal(row.name, `PENTARYN_RIDERS.settings.${row.key}.name`);

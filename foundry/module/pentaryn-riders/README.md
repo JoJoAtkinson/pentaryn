@@ -31,14 +31,15 @@ Argon table fixes (rituals, concentration, cast flow, HUD tidy-ups). Requires dn
 | **Concentration summons** | A token summoned by a concentration spell leaves the map when that concentration ends; the *Lost Concentration* card's icon-only button gets its words. | The sphere goes; "Break Concentration" beside ⦸. |
 | **Concentration saves** | A failed save ends concentration at once, unless Legendary Resistance, Indomitable, a Mind Sharpener or Bardic Inspiration could still turn it; the card shows "DC n · Failed / Success". | The result line under the roll. |
 | **Cast flow** | A summon keeps the sidebar on its tab and says "Click the map to place X"; summons open with *Place Summons* ticked; a self-only card (Shield) drops stale targets; a typed number counts on the first Use click; a wildcard summon image previews as a real one; restoring a slot (Pearl of Power) opens on the highest spent level; after Arcane Recovery the owner ticks the slots to recover in one window: a row per slot level 1–5, "n of m left", a locked ticked box per slot still there and a box per spent slot, opening with the highest that fit ticked (PHB budget, +1 with a held Arcane Grimoire: equipped (or a loot item, which has no equipped field), attuned when it needs it, not in a container; enforced). A D&D Beyond import's Arcane Recovery (`ddbmacro` activity, `ddb.feat.arcaneRecovery`) no longer opens its own second picker: that use's `subsequentActions` is set false (LdPm43). A second use while the window is open is stopped before dnd5e spends it ("the slot picker is already open"). | Dialog defaults, the Arcane Recovery window. |
-| **Rays and darts** (Scorching Ray, Magic Missile) | The usage card gets one button per ray / dart: 3, plus one per slot level above the spell's (a wand's extra charges count). Target one creature, click the next button: that ray's attack (Scorching Ray) or that dart's damage (Magic Missile) is rolled at it and threaded under the card. dnd5e's own automatic first roll and its card button fill a slot too; a rolled slot names its target. More than one target refuses the click. | "Ray 1 · Thorgrim", "Ray 2", "Ray 3" under the card's buttons (owners only). |
+| **Rays and darts** (Scorching Ray, Magic Missile) | The usage card gets one button per ray / dart: 3, plus one per slot level above the spell's (a wand's extra charges count). Target one creature, click the next button: that ray's attack (Scorching Ray) or that dart's damage (Magic Missile) is rolled at it and threaded under the card. Nothing rolls by itself after the cast (dnd5e's automatic first roll is skipped), so each ray / dart is one click and one dialog; a roll from the card's own button fills a slot too, and a rolled slot names its target. More than one target refuses the click. When the chat log is not on screen, the cast opens the sidebar on **Chat**, where the card stays (a chat pop-up card fades after 5 s). | "Ray 1 · Thorgrim", "Ray 2", "Ray 3" under the card's buttons (owners only). |
 | **One usage dialog per spell** | A quick double click on Use opens one dialog, not two (the second click brings the open one forward); the same for the "which activity?" choice of any item with several activities (Produce Flame's Cast / Hurl Fire). A dialog left open while the concentration it named ended (cast from elsewhere, dropped) no longer fails with "The effect that is concentrated on and to be replaced does not exist.": below the limit nothing is replaced and the cast goes through; at the limit nothing is cast and a notice asks the player to reopen the dialog, which then names the concentration held now (it never ends one the player did not pick). | The cast goes through, or the reopen notice. |
 | **Pick-one benefits** (Transmuter's Stone) | A feature's benefits are passive effects in the sheet's **Effects** tab; turning one on turns the others of its group off (two may be on when its `max` allows, e.g. Wizard 10). The data comes from a fix script (`scripts/foundry/fixes/2026-10-19-transmuters-stone.js`). | Effects tab → Passive: one stone benefit lit. |
 | **Argon tidy-ups** | Badges of buttons spending another item's uses (Metamagic → Font of Magic) refresh; open panels collapse before an area or summon placement; Metamagic opens no target picker; spell tooltips use the spell's roll data (Scorching Ray: 3 rays); the hover tooltip lets clicks through. | The HUD behaves. |
 
 ## Settings
 
-All world, Boolean, default on, read live (no reload needed), in this order in *Configure Settings*:
+All Boolean, default on, read live (no reload needed), in this order in *Configure Settings*; all
+world settings except `projectileChatTab` (client, each player's own):
 
 | Key | What it does |
 |---|---|
@@ -50,8 +51,9 @@ All world, Boolean, default on, read live (no reload needed), in this order in *
 | `arcaneRecovery` | The Arcane Recovery picker after the feature is used (and ddb-importer's own Arcane Recovery macro skipped for that use; off → ddb's picker runs as imported). |
 | `enabled` | The damage and healing riders, the tray preset and Battle Medic. |
 | `hdControls` | The sheet's Hit Dice − / + (a change re-renders open character sheets). |
-| `projectiles` | One button per ray / dart on Scorching Ray and Magic Missile cards. |
+| `projectiles` | One button per ray / dart on Scorching Ray and Magic Missile cards, and no automatic first roll after the cast (off → dnd5e's own flow: the first roll opens by itself, the card's button rolls the rest). |
 | `spellView` | The Spells tab's Prepared / All spells switch and the Prepared default (a change re-renders open character sheets). |
+| `projectileChatTab` | Client: a Scorching Ray / Magic Missile cast opens the sidebar on Chat when the chat log is not showing (sidebar collapsed or on another tab, no chat popout), so the ray / dart card does not fade. |
 
 ## API — game.pentaryn.riders
 
@@ -116,7 +118,8 @@ n/a — emits none. Listens to (in this order, `test/golden/hooks.json`): `dnd5e
 `changeSidebarTab`, `dnd5e.postSummon`, `renderActivityUsageDialog`, `renderActivityChoiceDialog`, `dnd5e.postUseActivity`,
 `dnd5e.preActivityConsumption`, `dnd5e.postDamageRollConfiguration`, `dnd5e.preCalculateDamage`,
 `renderCharacterActorSheet` (Hit Dice), then the projectile buttons' `dnd5e.renderChatMessage`
-(dnd5e itself re-renders a card when a roll under it is made or deleted), then effect-choices'
+(dnd5e itself re-renders a card when a roll under it is made or deleted) and `dnd5e.postUseActivity`
+(no automatic first roll, Chat opened; after Arcane Recovery and Battle Medic), then effect-choices'
 `updateActiveEffect`, then the spell view's `dnd5e.filterItem`, `renderCharacterActorSheet`.
 On `dnd5e.preUseActivity` the one-usage-dialog and Arcane Recovery second-use vetoes must run before
 other packages' listeners (a `false` stops only the later ones); core loads module scripts in id
@@ -222,6 +225,14 @@ in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` 
   (`scripts/foundry/fixes/2026-10-19-wand-cast-spell.mjs`).
 - **A ray / dart slot counts every roll under the card**, including one rolled by hand from the
   card's own button; a roll deleted from chat frees its slot.
+- **Two Damage dialogs per Magic Missile cast** (5wv0Iq, before 0.5.2) was not a double click: dnd5e
+  rolled the first dart by itself after the cast, then the player clicked Dart 1. The dart buttons
+  "vanished" because the card was a chat notification (sidebar not on Chat), which core dismisses 5 s
+  in once the pointer leaves it. Now nothing rolls by itself and the cast opens Chat. The feedback
+  timeline shows a dart click as `click prShot` (the buttons' `data-action`).
+- **A wand's spell missing from the Spells tab** means its cached copy (`flags.dnd5e.cachedFor`) is
+  gone; dnd5e lists a cast-from-item spell only through that copy, and re-creates it on the wand's
+  next use (5wv0Iq: lost in the 10-19 wand repoint, back after the first cast). Not the spell view.
 - **The spell view is not dnd5e's own "Prepared" filter.** That one (filter menu → Prepared) keeps
   only `canPrepare && prepared`, so it also hides cantrips never ticked, at-will / innate spells and
   spells cast from an item. The two stack: both on shows the intersection. The Argon HUD's spell
@@ -234,7 +245,8 @@ in `riders.mjs` at the place its hook order needs; a wrap goes in `patches.mjs` 
 Load order is `FEATURES` in `riders.mjs`, and it decides who runs first on a shared hook:
 `dnd5e.preUseActivity` runs rituals' slot untick, cast-flow's restore-slot default, stale-target
 drop and one-dialog veto, then the Battle Medic veto; `dnd5e.renderChatMessage` runs the break label and the
-concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Recovery before Battle Medic.
+concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Recovery, then Battle Medic,
+then the projectiles' no-automatic-roll.
 
 | File | Role |
 |---|---|
@@ -248,7 +260,7 @@ concentration line before the card note; `dnd5e.postUseActivity` runs Arcane Rec
 | `patches.mjs` | the six wraps |
 | `rituals.mjs`, `concentration.mjs`, `argon-tidy.mjs`, `cast-flow.mjs` | features: table fixes |
 | `damage-riders.mjs`, `card-note.mjs`, `tray-preset.mjs`, `battle-medic.mjs`, `hd-sheet.mjs` | features: the riders, Battle Medic, the sheet − / + |
-| `projectiles.mjs` | feature: one button per ray / dart on Scorching Ray and Magic Missile cards (`PROJECTILES` in riders-core) |
+| `projectiles.mjs` | feature: one button per ray / dart on Scorching Ray and Magic Missile cards (`PROJECTILES` in riders-core), no automatic first roll, Chat opened on the cast |
 | `effect-choices.mjs` | feature: pick-one passive effects (the Transmuter's Stone) |
 | `spell-view.mjs`, `core/spell-view.mjs` | feature: the Spells tab's Prepared / All spells switch (`dnd5e.filterItem`); pure: which spells the Prepared view keeps |
 | `styles/riders.css`, `lang/en.json`, `lib/` | styles (`.pr-*`, and the `#tooltip` click-through rule), strings, the vendored kit (with `lib/argon-tooltip.css`, D7: listed in `styles`, inert for riders alone) |

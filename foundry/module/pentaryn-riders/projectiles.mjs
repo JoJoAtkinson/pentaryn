@@ -15,9 +15,24 @@
  * card's `system.scaling`). Each button rolls that ray's attack (Scorching Ray) or that dart's damage
  * (Magic Missile) at the creature the player targets when clicking it, exactly as the card's own
  * button would (dnd5e threads the roll under the card through the click's `[data-message-id]`). A
- * rolled slot shows who it went at. Every roll already threaded under the card counts — dnd5e's
- * automatic first roll, its own card button — so the slots never double-count. Damage after a ray
- * that hits is pentaryn-aoe's (autoDamageOnHit) or the card's Damage button, as before.
+ * rolled slot shows who it went at. Every roll already threaded under the card counts — dnd5e's own
+ * card button included — so the slots never double-count. Damage after a ray that hits is
+ * pentaryn-aoe's (autoDamageOnHit) or the card's Damage button, as before. The buttons carry
+ * `data-action="prShot"` only so the feedback recorder logs their clicks (5wv0Iq had none); the click
+ * handler stops propagation, so dnd5e's and ChatLog's `[data-action]` handlers never see one.
+ *
+ * The buttons are the one way to roll (feedback 5wv0Iq / MMLx5X, Marwen's wand). Until 0.5.2 dnd5e
+ * also rolled the first dart / ray on its own right after the cast (`_triggerSubsequentActions`), so
+ * every cast opened a Damage (Attack) dialog, then the player clicked Dart 1 and got a second one.
+ * The card itself sat in a chat notification when the sidebar was not on Chat, and core dismisses
+ * those 5 s after they appear once the pointer leaves them (moving to that dialog was enough), so the
+ * buttons "disappeared". In `dnd5e.postUseActivity` (on the caster's own client, an owner) we now set
+ * the use's `subsequentActions` false — dnd5e reads it right after the hook; the only other thing it
+ * skips is the `flags.dnd5e.consumed` stamp, which is Hit Dice only — and, when the chat log is not on
+ * screen (sidebar collapsed or on another tab, no chat popout), open the sidebar on Chat so the card
+ * stays (client setting projectileChatTab). Hook order there: cast-flow's Arcane Recovery, Battle
+ * Medic, then this; pentaryn-aoe's refund may return false first for an area spell (none of these),
+ * and pentaryn-combat's action count on the same hook is unaffected.
  *
  * One creature per projectile: with more than one target the click is refused with a toast; with
  * none it rolls untargeted (the GM can still apply the damage by hand).
@@ -26,7 +41,8 @@
  * card is re-rendered on every client so the slots follow: dnd5e 6.0.6 does that itself
  * (`ChatMessage5e#_onCreate` / `#_onDelete` → `#refreshOrigin` → `ui.chat.updateMessage(origin)`,
  * the registry untracked first on delete), so this file adds no hook of its own for it.
- * Uninstall removes the drawn buttons from every rendered card. Setting pentaryn-riders.projectiles.
+ * Uninstall removes the drawn buttons from every rendered card. Settings pentaryn-riders.projectiles
+ * (world: buttons and no automatic roll) and projectileChatTab (client: open Chat on the cast).
  * Row dnd5e-riders-projectile-buttons.
  */
 
@@ -101,6 +117,7 @@ function slotButton(message, text, slot, isNext) {
     b.textContent = slot.targets.length ? `${label} · ${slot.targets.join(", ")}` : label;
   } else {
     b.textContent = label;
+    b.dataset.action = "prShot";
     if (isNext) b.classList.add("pr-shot-next");
     b.addEventListener("click", event => {
       event.preventDefault();
@@ -168,9 +185,51 @@ function onRender(message, html) {
   try { render(message, html); } catch (err) { log.warn("projectile buttons skipped", err); }
 }
 
+/* ── the cast: buttons only, on a card that stays ───────────────────────── */
+
+/**
+ * Is the chat log on screen on this client: the sidebar open on Chat, or the chat popout rendered?
+ * Anything else shows a new card only as a chat notification (dismissed after core's 5 s once the
+ * pointer leaves it), or nowhere (notifications set to "pip", a narrow window), so we do not mirror
+ * `ChatLog#_shouldShowNotifications`: its `false` also means "nowhere".
+ */
+export function chatLogVisible() {
+  const sidebar = ui.sidebar;
+  const chat = ui.chat;
+  if (chat?.popout?.rendered) return true;
+  return !!sidebar?.expanded && (chat?.active ?? sidebar.tabGroups?.primary === "chat");
+}
+
+/** Open the sidebar on Chat when the chat log is not on screen. True when it moved the sidebar. */
+function showChatLog() {
+  if (!ui.sidebar || chatLogVisible()) return false;
+  if (!ui.sidebar.expanded) ui.sidebar.expand();
+  ui.sidebar.changeTab("chat", "primary");
+  return true;
+}
+
+/**
+ * dnd5e.postUseActivity (a Hooks.call: never return false): a PROJECTILES spell rolls from its card
+ * buttons only, and its card opens where it stays. Synchronous: dnd5e reads `subsequentActions` as
+ * soon as the listeners return.
+ */
+function onUsed(activity, usage, results) {
+  try {
+    if (!settingOr("projectiles", false)) return;
+    const item = activity?.item;
+    if (!item?.actor?.isOwner) return;
+    if (!projectileRule({ identifier: item.system?.identifier, name: item.name, type: item.type, activityType: activity.type })) return;
+    if (usage) usage.subsequentActions = false;
+  } catch (err) { log.warn("projectile cast: dnd5e's automatic roll left on", err); return; }
+  try {
+    if (results?.message && settingOr("projectileChatTab", false)) showChatLog();
+  } catch (err) { log.warn("projectile cast: chat tab not opened", err); }
+}
+
 export function install(reg, ctx) {
   log = ctx.log;
   reg.on("dnd5e.renderChatMessage", onRender, { guard: false, label: "projectile buttons" });
+  reg.on("dnd5e.postUseActivity", onUsed, { guard: false, label: "projectile: card buttons only" });
 }
 
 /** Uninstall: the buttons already drawn leave every rendered card (chat log, popouts, notifications). */

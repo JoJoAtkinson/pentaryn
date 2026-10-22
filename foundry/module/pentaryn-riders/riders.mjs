@@ -6,8 +6,8 @@
  * and stale-target drop, the one-usage-dialog and Arcane Recovery second-use vetoes, then the Battle
  * Medic veto (other modules' listeners come after ours: core loads module scripts in id order;
  * selftest() checks it); dnd5e.renderChatMessage = the break label and
- * the concentration line before the card note; dnd5e.postUseActivity = Arcane Recovery before
- * Battle Medic — test/golden/hooks.json pins it):
+ * the concentration line before the card note; dnd5e.postUseActivity = Arcane Recovery, Battle
+ * Medic, then projectiles' no-automatic-roll — test/golden/hooks.json pins it):
  *   riders-core.mjs        PURE: constants, the RULES table and the rider planning
  *   rituals-core.mjs       PURE: Ritual Adept and Longer casts filters
  *   table-core.mjs         PURE: concentration, Argon and cast-flow helpers

@@ -53,11 +53,15 @@
       },
       "projectiles": {
         "name": "One button per ray or dart",
-        "hint": "Scorching Ray and Magic Missile make several rolls, each at a creature of the caster's choice. Their chat card gets one button per ray or dart (3, plus one for each slot level above the spell's, or each extra wand charge). Target a creature, then click the next button. Turn off to roll from the card's own button only."
+        "hint": "Scorching Ray and Magic Missile make several rolls, each at a creature of the caster's choice. Their chat card gets one button per ray or dart (3, plus one for each slot level above the spell's, or each extra wand charge), and nothing is rolled until you click one. Target a creature, then click the next button. Turn off to roll from the card's own button only (the first roll then comes up by itself after the cast)."
       },
       "spellView": {
         "name": "Character sheets open on prepared spells",
         "hint": "The Spells tab shows the spells a character can cast today (prepared, always prepared, cantrips, at-will, innate, pact, cast from an item), with a Prepared / All spells switch above the list. Each user's choice is remembered per character. Turn off to always show the full list."
+      },
+      "projectileChatTab": {
+        "name": "Open Chat for ray and dart buttons",
+        "hint": "This computer only. When you cast Scorching Ray or Magic Missile and the chat log is not showing, the sidebar opens on Chat so the card with the ray or dart buttons stays on screen (a chat pop-up card disappears after a few seconds). Turn off to keep the sidebar as it is."
       }
     },
     "rituals": {

@@ -1,5 +1,32 @@
 # Changelog — pentaryn-riders
 
+## 0.5.2 — 2026-10-22 (player feedback 5wv0Iq, MMLx5X: Magic Missile from Marwen's wand)
+
+Hooks: 32 non-lifecycle registrations (+1 `dnd5e.postUseActivity`, projectiles). Settings are now
+eleven: `projectileChatTab` (client) last. Two new lang keys (its name and hint).
+
+- [declared] No automatic first dart / ray roll. dnd5e rolls a Damage (Magic Missile) or Attack
+  (Scorching Ray) activity by itself right after the cast (`_triggerSubsequentActions`). Each wand
+  cast opened a Damage dialog, and Dart 1 then opened a second one: the "double prompts". It was not a
+  double click. The second dialog came after the no-target toast, which only a dart click posts. For
+  a PROJECTILES spell the riders now set the use's `subsequentActions` to false in
+  `dnd5e.postUseActivity`, on the caster's client (an owner, world setting `projectiles`). Every dart
+  and ray is one button click and one dialog. The only other step dnd5e skips with it is the
+  `flags.dnd5e.consumed` stamp, which is for Hit Dice only.
+- [declared] The cast opens the sidebar on Chat when the chat log is not on screen: the sidebar is
+  collapsed or on another tab, and there is no chat popout. The card used to show only as a chat
+  notification, which core dismisses 5 s after it appears once the pointer leaves it. Moving to the
+  first dialog was enough, so the buttons "disappeared quickly or when anything was selected"; in
+  the Chat tab they "worked great" (MMLx5X). The check does not ask `ChatLog#_shouldShowNotifications`,
+  because its `false` also covers "pip" notifications and a narrow window, where the card shows
+  nowhere. A new client setting, `projectileChatTab` (default on), turns it off per player.
+- Live dart / ray buttons carry `data-action="prShot"`, so the feedback recorder logs their clicks
+  (5wv0Iq's timeline had none). Their handler still stops propagation, so dnd5e's and ChatLog's
+  `[data-action]` handlers never see the click.
+- Not a code change: Magic Missile was missing from the Spells tab because the wand's cached spell
+  copy was gone (lost in the 10-19 repoint). dnd5e re-created it on the first use. README Pitfalls
+  now covers it.
+
 ## 0.5.1 — 2026-10-19 (code review of 0.5.0, low severity)
 
 Hooks: 31 non-lifecycle registrations (+1 preUseActivity veto, −2 projectile chat hooks). One new

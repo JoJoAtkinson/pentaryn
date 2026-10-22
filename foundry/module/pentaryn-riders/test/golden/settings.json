@@ -118,5 +118,17 @@
     "default": true,
     "type": "Boolean",
     "onChange": true
+  },
+  {
+    "id": "pentaryn-riders.projectileChatTab",
+    "namespace": "pentaryn-riders",
+    "key": "projectileChatTab",
+    "name": "PENTARYN_RIDERS.settings.projectileChatTab.name",
+    "hint": "PENTARYN_RIDERS.settings.projectileChatTab.hint",
+    "scope": "client",
+    "config": true,
+    "default": true,
+    "type": "Boolean",
+    "onChange": false
   }
 ]

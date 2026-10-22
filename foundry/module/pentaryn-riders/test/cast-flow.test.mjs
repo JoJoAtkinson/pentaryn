@@ -516,5 +516,6 @@ test("Arcane Recovery: a failing dialog and a throw are warned", async () => {
   assert.deepEqual(W.take().filter(l => !l[1].includes("Battle Medic")), [
     ["warn", `${MODULE} | Arcane Recovery dialog`, "dialog broke"],
     ["warn", `${MODULE} | Arcane Recovery picker skipped`, "odd item"],
+    ["warn", `${MODULE} | projectile cast: dnd5e's automatic roll left on`, "odd item"],   // projectiles' listener (0.5.2) reads the item too
   ]);
 });
