@@ -62,6 +62,8 @@ KEYS = (
     # the headless Assistant-GM bot (context/foundry/headless-gm.md)
     "PENTARYN_HEADLESS_CHROME", "PENTARYN_HEADLESS_LIBS", "PENTARYN_HEADLESS_CANVAS",
     "PENTARYN_BOT_USER", "PENTARYN_INFISICAL_TOKEN_FILE",
+    # the world the nightly launches when none was active (a host reboot leaves Foundry at /setup)
+    "PENTARYN_DEFAULT_WORLD",
 )
 
 
@@ -207,6 +209,25 @@ def host_name() -> str:
 
 def primary_host() -> str:
     return get("PENTARYN_PRIMARY_HOST", DEFAULT_PRIMARY)
+
+
+WORLD_ID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
+
+
+def default_world() -> str | None:
+    """`PENTARYN_DEFAULT_WORLD`: the world to launch when Foundry is up with none active.
+
+    Unset means "relaunch only what was running" — the nightly's original behaviour. Set on
+    an always-on host so a reboot (Foundry boots to /setup) does not leave the table dark
+    until someone launches a world by hand (BOSS, 2026-10-29 → 11-05: eight nightlies with
+    `world=-`). The id is checked for shape only; a world that does not exist fails at
+    launch, loudly, in the nightly log."""
+    val = (get("PENTARYN_DEFAULT_WORLD") or "").strip()
+    if not val:
+        return None
+    if not WORLD_ID_RE.fullmatch(val):
+        raise HostError(f"PENTARYN_DEFAULT_WORLD={val!r}: must be a world id ([a-z0-9_-], 1-64)")
+    return val
 
 
 def role() -> str:
@@ -571,6 +592,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  app          {foundry_app_root()}   (Foundry {core_version()})")
             print(f"  port         {foundry_port()}")
             print(f"  env file     {env_file()}{'' if env_file().exists() else '   (absent)'}")
+            print(f"  default world {default_world() or '-   (PENTARYN_DEFAULT_WORLD unset: relaunch only what was active)'}")
+            return 0
+        if cmd == "default-world":
+            print(default_world() or "-")
             return 0
         if cmd == "role":
             print(role())
@@ -591,7 +616,7 @@ def main(argv: list[str] | None = None) -> int:
     except HostError as exc:
         print(f"  ✗ {exc}", file=sys.stderr)
         return 2
-    print(f"  ✗ unknown command {cmd!r} (show | role | require-primary <what> | clipboard)",
+    print(f"  ✗ unknown command {cmd!r} (show | role | default-world | require-primary <what> | clipboard)",
           file=sys.stderr)
     return 2
 

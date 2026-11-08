@@ -1,5 +1,30 @@
 # Changelog — Pentaryn Importer (`pentaryn-importer`)
 
+## 1.3.0 — 2026-11-07 — two DDB correction rules (feedback triage C2, D1)
+
+- **[declared] New rule `reaction-expiry`** (feedback `HdWHWk`, plan C2). An applied effect that lasts
+  one round (6 s / 1 round / 1 turn) with core's plain expiry `turnStart`, applied by a reaction activity
+  or sitting on a spell (ddb-importer writes Shield's activation as an action), becomes dnd5e's
+  `sourceStart` with `duration.value` cleared — the shape Marwen's newer Shield import already has. Core's
+  `turnStart` keys on the combatant whose turn it was when the effect was created, so a reaction's
+  barrier outlived the caster's own turn and sat on the sheet as Expired (Bazgar's "Precision Attack
+  Bonus" had the same shape). A longer duration (Feather Fall's minute), a `turnEnd` expiry, a transfer
+  effect or an effect already on `sourceStart` is never touched. At the table: Shield and Precision
+  Attack end at the start of the user's next turn and vanish with C4.
+- **[declared] New rule `large-form-size`** (feedback `rj3l7f`, plan D1). The Goliath's Large Form effect
+  (identifier `large-form`, or the name) that changes no size gets ddb-importer's own change —
+  `system.traits.size` override `lg`, priority 25 — appended to its changes, which are kept verbatim.
+  dnd5e's token size sync then grows the token on the active GM's client and shrinks it back when the
+  10-minute effect ends. A Large Form already changing size, or a passive (transfer) effect, is left alone.
+- New op `updateEffects` (`{ itemId, data: [{ _id, "<path>": value }] }`): one
+  `updateEmbeddedDocuments("ActiveEffect")` per item, rows for one effect merged across rules; a refused
+  update is one error and withholds the stamp like every other op. The snapshot's effects now carry
+  `transfer`, `duration` and `changes` (core 14's `system.changes`) beside `keys`.
+- **Reach:** the rules run on actors that carry `flags.ddbimporter` (Bazgar, Marwen, Sabriel on
+  2026-11-07). Marrith's, Caven's and Talo's sheets are not ddb-importer actors, so their Shield and Large
+  Form need the one-off data fix (plan C1 / D2) by hand. **The first GM login on 1.3.0 re-runs the
+  corrections on every DDB character once** (the version-stamp rule from 1.2.1).
+
 ## 1.2.1 — 2026-10-19 — DDB corrections review fixes
 
 - **[declared] Freeze is `flags.ddbimporter.ignoreItemImport` only.** ddb-importer 7.5.8's import

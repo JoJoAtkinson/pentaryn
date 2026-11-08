@@ -1,5 +1,23 @@
 # Changelog — pentaryn-creatures
 
+## 0.4.1 — 2026-11-05
+
+- **[declared] A dormant token wakes at its own size, upright.** The stored look now keeps the art
+  scale (`texture.scaleX/Y`) and `lockRotation`, and the wake restores them, so a statue shrunk to fit
+  its square or turned by hand no longer hands its scale and rotation to the creature. Looks stored by
+  0.4.0 have neither field and wake as before. To give the woken creature another size, set
+  `flags.pentaryn-creatures.dormant.look.texture.scaleX/Y` on the armed token.
+
+## 0.4.0 — 2026-11-05
+
+- **[declared] Dormant until combat.** New API rows `dormant(ref, opts)` and `wake(ref, opts)` and the
+  token flag `flags.pentaryn-creatures.dormant = { look, disguise }`: an armed token looks like a prop
+  (default "Statue", a stone statue, ring off, no nameplate/bars, SECRET disposition, the same name and
+  portrait on its unlinked actor) and the active GM puts its stored look back when a combat it is in
+  starts or it joins a running one. New feature `dormant.mjs`; hook manifest gains `updateCombat` and
+  `createCombatant` (21 rows); core gains `lookOf`, `readDormant`, `disguiseUpdate`, `wakeUpdate`,
+  `combatantRelabels` and their constants. Tests: `test/dormant.test.mjs`.
+
 ## 0.3.0 — 2026-10-19 (code review of 0.2.0)
 
 - **[declared] The library fills up again for Trusted players.** Every player at this table may

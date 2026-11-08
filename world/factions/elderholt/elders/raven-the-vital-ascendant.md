@@ -1,6 +1,6 @@
 ---
 created: 2025-12-11
-last_modified: 2025-12-11
+last_modified: 2026-11-05
 tags: ["world", "faction", "elderholt", "witch", "npc", "lore"]
 status: draft
 ---
@@ -108,15 +108,21 @@ Raven stands watch not out of loyalty or love, but because defending Elderholt a
 
 ## Caven Calderon
 
-Raven sought out one person on purpose: Caven Calderon, a human necromancer from Brenfen. Caven
-died and summoned himself back from between the planes. Ever since, he has worked his own body
+Raven chose one person on purpose: Caven Calderon, a human necromancer from Brenfen. They met in
+the ruins under Stonewatch, at the foot of Lone Peak: two necromancers who had followed the same
+rumour to the same sealed door, drawn to the same powers. Caven had died and summoned himself
+back from between the planes. Ever since, he has worked his own body
 like one of his undead, a puppet driven from somewhere he can't locate. Raven did not have his
 problem, but she understood it: a mind at odds with its body. The two of them explored magic
 together, looking for where his soul is and how to put him back. They understood each other.
 This is one of the very few bonds Raven has ever chosen.
 
-Caven was taken in the Underdark before Raven's lich rite. As far as he knows, she is still
-whole. Marrith believes the same.
+They disagreed only about the Drow: Caven was sure their libraries held answers, and Raven said
+they didn't and the cost was too high. He went anyway, alone, and a drow house took him. That was
+before Raven's lich rite. As far as he knows, she is still whole. Marrith believes the same.
+
+When Raven went missing, the others came into the Underdark to get Caven out, because no one
+knows her better or where she would go.
 
 ## Using Raven in Play
 

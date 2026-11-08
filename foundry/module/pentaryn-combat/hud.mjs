@@ -5,7 +5,7 @@
  * combat.mjs (one registry, one ctx).
  *
  *   turnflow/  action-buttons, boundaries, helper-token, dialogs, death, portrait, [patches init],
- *              manual-dice, effects, drawers, [patches ready], movement
+ *              manual-dice, hp-math, roll-manually, effects, drawers, [patches ready], movement
  *   hud/       tooltips, picker, bars (Full Attack, follow-ups, commands, pips); buttons-ui (ui)
  */
 
@@ -21,6 +21,8 @@ import * as death from "./turnflow/death.mjs";
 import * as portrait from "./turnflow/portrait.mjs";
 import * as patches from "./patches.mjs";
 import * as manualDice from "./turnflow/manual-dice.mjs";
+import * as hpMath from "./turnflow/hp-math.mjs";
+import * as rollManually from "./turnflow/roll-manually.mjs";
 import * as effects from "./turnflow/effects.mjs";
 import * as drawers from "./turnflow/drawers.mjs";
 import * as movement from "./turnflow/movement.mjs";
@@ -30,7 +32,7 @@ import * as picker from "./hud/picker.mjs";
 import * as bars from "./hud/bars.mjs";
 
 const install = features => { for (const [name, feature] of Object.entries(features)) installFeature(feature, name); };
-install({ actionButtons, boundaries, helperToken, dialogs, death, portrait, patches, manualDice, effects, drawers });
+install({ actionButtons, boundaries, helperToken, dialogs, death, portrait, patches, manualDice, hpMath, rollManually, effects, drawers });
 patches.installReady(reg, null);
 installFeature(movement, "movement");
 

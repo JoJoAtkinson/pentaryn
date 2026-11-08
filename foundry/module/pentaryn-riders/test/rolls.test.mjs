@@ -143,7 +143,7 @@ test("card note: removed and not redrawn when private, not a damage/healing card
   W.take();
   F.fire("dnd5e.renderChatMessage", dmgMessage(cases.both.flag), { querySelector: () => { throw new Error("detached"); } });
   F.fire("dnd5e.renderChatMessage", dmgMessage(cases.both.flag), null);
-  assert.deepEqual(W.take().map(l => l.slice(0, 2)), [["warn", `${MODULE} | card note skipped`]]);
+  assert.deepEqual(W.take().map(l => l.slice(0, 2)), [["warn", `${MODULE} | card note skipped`], ["warn", `${MODULE} | rest card skipped`], ["warn", `${MODULE} | Empower button skipped`]], "the same broken root reaches the rest card and Empower listeners after the note (0.7.0)");
 });
 
 /* ── the damage tray preset ──────────────────────────────────────────────── */

@@ -25,6 +25,14 @@
   },
   {
     "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
     "name": "updateItem"
   },
   {
@@ -126,5 +134,41 @@
   {
     "kind": "on",
     "name": "renderCharacterActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.restCompleted"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "renderActivityChoiceDialog"
+  },
+  {
+    "kind": "on",
+    "name": "renderItemButtonArgonComponent"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.applyDamage"
   }
 ]

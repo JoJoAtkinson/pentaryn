@@ -15,7 +15,7 @@ touched, so being on the edge is cheap.**
 **When:** Mondays. Games are at the end of the week and at weekends, and nobody plays on a
 Monday. The run lives **inside** the 03:00 BOSS nightly (`automation/bin/vtt-nightly.sh`): the
 nightly signs everyone out, backs the world up and waits for the upload, then restarts and
-relaunches the world. Only then, and only if all of that succeeded, it stops the headless GM
+relaunches the world (the one that was active, else the host's `PENTARYN_DEFAULT_WORLD`). Only then, and only if all of that succeeded, it stops the headless GM
 (the gate refuses while any user is connected) and runs `automation/bin/vtt-update.sh`. After
 the run it makes sure the world is serving, starts the bot again (which unpauses the world),
 and waits for the bot to reconnect. The day is `VTT_UPDATE_DAY` (`date +%u`, default `1`).

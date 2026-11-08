@@ -144,14 +144,14 @@ adjustments:
 
   - id: dnd5e-chat-message-types
     packages: [dnd5e]
-    modules: [pentaryn-aoe, pentaryn-senses, pentaryn-riders, pentaryn-combat]
-    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/effects.mjs, foundry/module/pentaryn-aoe/messages-adapter.mjs, foundry/module/pentaryn-senses/light-ui.mjs, foundry/module/pentaryn-riders/damage-riders.mjs, foundry/module/pentaryn-riders/card-note.mjs, foundry/module/pentaryn-riders/concentration.mjs, foundry/module/pentaryn-riders/shapes.mjs, foundry/module/pentaryn-combat/turn-riders.mjs, foundry/module/pentaryn-combat/turnflow/dialogs.mjs]
+    modules: [pentaryn-aoe, pentaryn-senses, pentaryn-riders, pentaryn-combat, pentaryn-reactions]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/effects.mjs, foundry/module/pentaryn-aoe/messages-adapter.mjs, foundry/module/pentaryn-senses/light-ui.mjs, foundry/module/pentaryn-riders/damage-riders.mjs, foundry/module/pentaryn-riders/card-note.mjs, foundry/module/pentaryn-riders/concentration.mjs, foundry/module/pentaryn-riders/shapes.mjs, foundry/module/pentaryn-combat/turn-riders.mjs, foundry/module/pentaryn-combat/turnflow/dialogs.mjs, foundry/module/pentaryn-reactions/card.mjs, foundry/module/pentaryn-reactions/reactions-core.mjs]
     markers: ["message.type", "system.targets", "system.origin", "getAssociatedActivity", "registry.messages"]
-    what: reads message.type ("usage" / "attack" / "damage" / "save") and message.system.{activity,item,targets,origin,onSave,ability,mode,ammunition} on dnd5e 6 chat messages, plus message.getAssociatedActivity() and message.system.getEffects(); replaces the 5.x flags.dnd5e.roll / .activity / .item / .originatingMessage reads (renamed from dnd5e-chat-card-flags on the 6.0.6 port)
-    why: the only way to find the usage / attack / damage message an area, save, effect or rider belongs to
+    what: reads message.type ("usage" / "attack" / "damage" / "save") and message.system.{activity,item,targets,origin,onSave,ability,mode,ammunition} on dnd5e 6 chat messages, plus message.getAssociatedActivity() and message.system.getEffects(); replaces the 5.x flags.dnd5e.roll / .activity / .item / .originatingMessage reads (renamed from dnd5e-chat-card-flags on the 6.0.6 port); pentaryn-reactions 0.1.x reads type, system.targets / activity / item / origin and the rolls' options.type off attack and damage cards to decide whose reaction card is due (plainMessage, triggerOf)
+    why: the only way to find the usage / attack / damage message an area, save, effect, rider or reaction prompt belongs to
     native_when: n/a — a data-shape dependency, not a workaround
     retire_class: never
-    check: make foundry-aoe-check foundry-senses-check foundry-riders-check foundry-combat-check
+    check: make foundry-aoe-check foundry-senses-check foundry-riders-check foundry-combat-check foundry-reactions-check
 
   - id: dnd5e-importer-gate
     packages: [dnd5e]
@@ -1524,3 +1524,193 @@ adjustments:
     native_when: dnd5e exposes the original actor of a transformed token through an API
     retire_class: never
     check: make foundry-pins-check foundry-portals-check
+
+  # Feedback triage 2026-11 (context/plans/feedback-triage-2026-11.md), clusters K and L6 — pentaryn-combat 0.3.1.
+  - id: combat-core-token-hud-arithmetic
+    packages: [core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow/hp-math.mjs]
+    markers: ["_parseAttributeInput", "_pcHpMath"]
+    what: TokenHUD#_parseAttributeInput gets "50-10" as "=40" — an input that starts with a digit and holds an operator is evaluated with Roll.safeEval (rounded down) before core parses it; "=40", "-10", "+5" and "50%" pass through untouched (setting hpMath)
+    why: core 14.369's parser (foundry.mjs:98512) understands =N, +N, -N and N% only; "50-10" is NaN and the change is dropped (K, GaMIoP)
+    native_when: core's attribute-bar input evaluates arithmetic itself
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-sheet-arithmetic
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow/hp-math.mjs]
+    markers: ["_onChangeInputDelta", "_pcHpMath"]
+    what: BaseActorSheet#_onChangeInputDelta rewrites the box's value from "50-10" to "=40" before dnd5e's parseInputDelta reads it; every other form passes through untouched (setting hpMath). The HP box and its meter carry the tooltip "=40 sets · -10 subtracts · 50-10 does the math" (renderBaseActorSheet, renderTokenHUD)
+    why: dnd5e 6.0.6's parseInputDelta (dnd5e.mjs:530) is module-private — the sheets call the local binding, not dnd5e.utils.parseInputDelta — so the one wrappable seam is the sheet handler every actor sheet's delta box goes through (K, GaMIoP)
+    native_when: dnd5e's parseDelta evaluates arithmetic
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-roll-manually-action
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow/roll-manually.mjs]
+    markers: ["_finalizeConfig", "_pcRollManually"]
+    what: D20RollConfigurationDialog#_finalizeConfig marks each roll config (options.pentarynManual) when the pressed button's data-action is "manual" — the "Roll manually" button the module adds to every d20 roll window on renderD20RollConfigurationDialog; dnd5e's own code already treats the unknown action as Normal mode (L6, no setting)
+    why: dnd5e 6.0.6's roll window has three buttons (advantage / normal / disadvantage, dnd5e.mjs:19431) and no per-roll way to ask for the Roll Resolution box (M4D2Im)
+    native_when: dnd5e's roll dialog offers a manual / physical-dice button of its own
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-core-roll-manually-evaluate
+    packages: [core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow/roll-manually.mjs]
+    markers: ["_evaluate", "_pcRollManually"]
+    what: Roll#_evaluate on a roll marked options.pentarynManual raises a module flag for the synchronous prefix of core's own _evaluate (resolver construction and awaitFulfillment's term identification) and lowers it before the promise is returned; skipped for allowInteractive false and for a user without MANUAL_ROLLS
+    why: core 14.369 has no per-roll fulfillment switch — identifyFulfillableTerms (foundry.mjs:34985) and the resolver read the client setting core.diceConfiguration at evaluation time, and allowInteractive false only forces digital (L6)
+    native_when: Roll#evaluate takes a per-roll fulfillment method, or a per-roll "resolve manually" option
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-core-roll-manually-dice-config
+    packages: [core]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow/roll-manually.mjs]
+    markers: ["ClientSettings", "diceConfiguration", "_pcRollManually"]
+    what: ClientSettings#get answers core.diceConfiguration with the d20 as Manual (a copy; other denominations as configured; the Setting-document read untouched) only while the flag above is up, so core's RollResolver opens one box for the d20 of that roll alone; the stored setting is never written
+    why: the two reads core makes while identifying fulfillable terms are the only way to make one roll manual without flipping the player's Dice Configuration in localStorage and back (L6; the plan's "wrap ClientSettings#get for that key while a module flag is set")
+    native_when: core exposes a per-roll fulfillment override (see combat-core-roll-manually-evaluate)
+    retire_class: safe
+    check: make foundry-combat-check
+
+  # Feedback triage 2026-11 (context/plans/feedback-triage-2026-11.md) — Record rows for the 2026-11-07 builds:
+  # pentaryn-riders 0.6.0 / 0.7.0 / 0.7.1, pentaryn-dropbin 0.3.0, pentaryn-aoe 0.6.0 / 0.6.1.
+  - id: core-riders-expiry-delete
+    packages: [core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/expiry.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["expiryAction", "EXPIRY_ACTION"]
+    what: init sets CONFIG.ActiveEffect.expiryAction = "delete" (table-core EXPIRY_ACTION; the previous value is kept and uninstall() restores it), so core's expiry registry deletes every timed effect at expiry, world-wide, on the active GM's client (activeGM.isSelf — with the headless GM "Claude" active, that bot's tab); a CONFIG value, not a setting; pentaryn-transform tolerates delete (wildshape.mjs)
+    why: core 14.369's default "update" only marks an expired effect `expired` and leaves it grey on the sheet (HdWHWk "Imperceptible Barrier did not reset"; the stale one on Caven 10-10); dnd5e already deleted expired effects out of combat and at combat end, so the grey leftover only ever appeared inside a fight (triage C4)
+    native_when: core or dnd5e defaults expiryAction to delete, or exposes it as a world setting
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-riders-self-cast-expiry
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/expiry.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["sourceStart", "isExpiryEvent", "getSourceActor", "selfEffectExpiry", "sourceActorFor", "system.origin.actor"]
+    what: on preCreateActiveEffect (the creating client, GM or player; never GM-gated) an effect whose duration.expiry is core's turnStart, whose origin (dnd5e system.origin.actor when recorded, else any of system.origin.activity | item or the plain origin) is the actor it is created on or one of that actor's items / activities, while a combat has started and it is not that actor's turn, is rewritten to dnd5e's owner-aware sourceStart pseudo-expiry with duration.value null, as dnd5e's own _preCreate does for every pseudo-expiry; pure rule selfEffectExpiry (table-core, fixtures 45-52, 57). Then, for any sourceStart / sourceEnd effect with no system.origin.actor, the caster is resolved from system.origin.activity, then .item, then origin (fromUuidSync strict false; an Actor, or a document with one; a compendium index entry is skipped) and recorded in system.origin.actor (updateSource); pure rule sourceActorFor (fixtures 58-60). Shield on the caster's own turn, a caster-turn effect on a foe, no combat, any other expiry, an actor already recorded are untouched
+    why: core's plain turnStart keys on start.combatant, so Shield cast on the attacker's turn expired at the attacker's next turn (TwPCoB, triage C3). And dnd5e 6.0.6's getSourceActor() reads system.origin.actor ?? item ?? activity ?? origin, where an effect its own activity applied carries actor null and item the spell's COMPENDIUM uuid, which resolves to an index entry with no actor, so the source is null, isExpiryEvent finds no combatant and falls back to start.round < context.round, the first turn of the NEXT ROUND (live 2026-11-07, Caven, last in initiative, cast Shield in round 2; the barrier went as round 3 began on Marrith's turn). dnd5e checks o.actor first, so the recorded uuid fixes getSourceActor on every client; belt and braces with pentaryn-importer's DDB correction (C2)
+    native_when: dnd5e's spell data (or its ActiveEffect _preCreate) gives a self-cast reaction spell sourceStart itself and records the applying actor in system.origin.actor (or getSourceActor resolves the embedded activity before the compendium item), or core's turnStart keys on the effect's source combatant
+    retire_class: guarded
+    check: make foundry-riders-check
+
+  - id: dnd5e-riders-summon-fell
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/concentration.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["endConcentration", "summonFell", "droppedToZero", "concentrationSpellName"]
+    what: on updateActor with system.attributes.hp.value at 0 or less — and the old value above 0 when dnd5e's options.dnd5e.hp carries it (droppedToZero — a second hit at 0 is not a fall) — the active GM (with no GM online, the user who made the change) resolves each stamped summon token's concentration effect with fromUuid, claims the token (kit claimDocument, key summonFell, so two tabs on that account end it once), calls caster.endConcentration(effect) and whispers one line to the caster's owners and the GMs; the spell's name is read from the effect's flags.dnd5e.item (concentrationSpellName); the existing cleanup (row dnd5e-concentration-summons) then removes the token(s). A token already in flight is skipped; an effect that is gone ends nothing. HP → 0 only, never deleteToken, which portals and pins fire on scene moves
+    why: the 2024 summon spells say the spirit disappears when it drops to 0 HP or the spell ends; dnd5e 6.0.6 does only the second direction, so a fallen Elemental Spirit lay there with the concentration still up (and dropbin made it a corpse) (TwPCoB, triage E1)
+    native_when: dnd5e ends a concentration whose summoned creature drops to 0 HP
+    retire_class: guarded
+    check: make foundry-riders-check
+
+  - id: dnd5e-riders-rest-card
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/rest.mjs]
+    markers: ["dnd5e.restCompleted", "dnd5e.preUseActivity", "renderActivityChoiceDialog", "data-activity-id", "pentaryn: {"]
+    what: dnd5e.restCompleted (long; a callAll on the resting owner's client) whispers one card to the character's players and the rester, a row per REST_RULES match drawn at render from the card's `rest` flag (Cosmic Omen's "Read the stars" → flags.pentaryn-riders.omen on the feat, read once a day; "Review prepared spells" for a caster whose spells prepare); dnd5e.preUseActivity (sync, a literal false, the owner's click) stops a Cosmic Omen activity used with no omen stored or the wrong one, rolls / reads the omen and re-calls the day's activity with the click's whole usage and dialog config (activity.use(usage, dialog, message)), usage.pentaryn.omen marking the re-call; renderActivityChoiceDialog marks dnd5e's "which activity?" dialog's button[data-activity-id] rows (today's badged, the other disabled); the next long rest clears the flag (setting restCard)
+    why: dnd5e 6.0.6 has no post-rest card, no per-day feature state, and its activity-choice dialog has no hook to pre-pick or disable a row, so a reaction feat with two activities (Weal / Woe) was a 50/50 misclick at the table (pcuOX7, gWNXLN; triage G1 + G3)
+    native_when: dnd5e posts a long-rest summary with feature prompts, or a multi-activity feature can carry the day's choice itself
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: argon-riders-omen-badge
+    packages: [enhancedcombathud-dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/rest.mjs]
+    markers: ["renderItemButtonArgonComponent", "button.activity", "pr-omen-badge", "pr-omen-off"]
+    what: renderItemButtonArgonComponent appends a .pr-omen-badge to the Argon item button element whose activity (Argon dnd5e renders one button per activity of a multi-activity item, button.activity) matches today's stored omen and toggles .pr-omen-off on the other; Argon re-renders the button when the item changes, so the flag write redraws it; CSS only on the module's own badge element and classes; both marks go when the next long rest clears the flag. Nothing in Argon's files is edited
+    why: Argon has no per-activity badge or disabled state a module can ask for; the omen flag is the only thing that says which of Cosmic Omen's two reaction buttons is today's (triage G1)
+    native_when: Argon dnd5e exposes a per-activity badge / disabled hook, or Cosmic Omen becomes one activity
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-riders-empowered-spell
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs]
+    markers: ["damage-application", "dnd5e.applyDamage", "toJSON", "supersededBy", "trayApplied", "configure: false"]
+    what: a type "damage" card from a spell whose caster has Empowered Spell and a Sorcery Point left gets "Empower (1 SP)" on dnd5e.renderChatMessage (the owner who can also edit the card — author or GM; not drawn when every die is at or above its average); one click spends the point through the feat's activity (use({}, { configure, false }, { create, false }) — no dialog, no card), rerolls the dice below their average (lowest first, up to CHA mod) from the card's Roll#toJSON term results (core/empower.mjs; only top-level dice added linearly, a min<n> floor re-applied), posts a NEW damage card threaded under the usage card (system.origin, the old card's system.targets / item / activity and riders flags copied, the old faces kept inactive) and marks the old card flags.pentaryn-riders.supersededBy, whose <damage-application> tray is removed on render; dnd5e.applyDamage (the applying client, options.origin = the card) marks a live spell damage card of such a caster trayApplied once, and the button goes (setting empoweredSpell)
+    why: dnd5e 6.0.6 has no reroll-dice-on-a-posted-card flow and records nothing on a card when its tray applies damage; its damage message shape (type, system.targets / origin, rolls serialised as JSON) and the <damage-application> element are the surfaces the feature stands on (WUiaAA; triage H1)
+    native_when: dnd5e offers Empowered Spell (or a generic reroll of chosen dice) on the damage card, or records tray applies on the message
+    retire_class: guarded
+    check: make foundry-riders-check
+
+  - id: itempiles-dropbin-never-loot
+    packages: [item-piles, core]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/noloot.mjs, foundry/module/pentaryn-dropbin/piles.mjs]
+    markers: ["item-piles-renderPileItem", "data-pd-item-uuid", ".item-piles-item-row", "renderItemPileInventoryApp", "ContextMenu"]
+    what: Item Piles' item-piles-renderPileItem (element, item) hook stamps the GM's loot-window rows with their item's uuid (data-pd-item-uuid); at renderItemPileInventoryApp a core ContextMenu (foundry.applications.ux.ContextMenu.implementation) is installed on those rows (piles.mjs SELECTORS.itemRow = .item-piles-item-row, the frozen selector table to re-check after an Item Piles update) with "Never loot this" / "Lootable again", which write or delete flags.pentaryn-dropbin.noLoot on the Item; players see no menu, prompt or toast (the primary surface of noLoot; the sheet control is row dnd5e-dropbin-item-sheet-noloot, the pile filter row itempiles-dropbin-corpse-item-filters)
+    why: Item Piles has no per-item "not loot" mark — its item filters are world-wide paths — and its loot window exposes no row menu or row-render API beyond the element hook (triage A2; iXWG4o, S7Bc3j)
+    native_when: Item Piles offers a per-item exclusion flag with a row control in the loot window
+    retire_class: guarded
+    check: make foundry-dropbin-check; live, as GM right-click a row in a loot window → Never loot this hides it from the players' window and Loot all
+
+  - id: itempiles-dropbin-corpse-item-filters
+    packages: [item-piles]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/corpses.mjs, foundry/module/pentaryn-dropbin/noloot.mjs, foundry/module/pentaryn-dropbin/dropbin-core.mjs, foundry/module/pentaryn-dropbin/piles.mjs]
+    markers: ["overrideItemFilters", "corpseItemFilters", "NO_LOOT_FILTER", "ITEM_FILTERS"]
+    what: every corpse pile is created with flags.item-piles.data.overrideItemFilters = the world's item filters as Item Piles reads them (its ITEM_FILTERS, piles.mjs itemFilters()) plus one row on flags.pentaryn-dropbin.noLoot (dropbin-core NO_LOOT_FILTER, corpseItemFilters), so the marked item stays on the actor and Item Piles itself keeps it out of the window, out of Loot all and out of "empty" (the corpse eye); a corpse made before 0.3.0 gets the row written by the first noLoot toggle on one of its items (noloot.mjs). The world setting item-piles.itemFilters is never written (A1 only warns at ready when its natural-weapon row is not on system.type.value)
+    why: Item Piles applies its filters per pile from overrideItemFilters or the world setting; a filter row is the only way to hide an item without taking it off the actor (triage A2, A1)
+    native_when: Item Piles filters by a per-item flag natively, or migrates the world item filters across dnd5e data-path changes itself
+    retire_class: guarded
+    check: make foundry-dropbin-check
+
+  - id: dnd5e-dropbin-item-sheet-noloot
+    packages: [dnd5e]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/noloot.mjs]
+    markers: ["getHeaderControlsItemSheet5e"]
+    what: dnd5e's getHeaderControlsItemSheet5e (app, controls) adds the GM's "Never loot this" / "Lootable again" control to the item sheet's header ⋯ menu for every item that could end up on a pile (never on a character's gear); the same flags.pentaryn-dropbin.noLoot write as the loot-window menu
+    why: the item sheet is the one surface for an item not yet on a pile (an NPC's gear before the fight); dnd5e 6.0.6's sheet exposes its header controls only through this hook (triage A2)
+    native_when: dnd5e's item sheet carries a module-extensible context menu, or the control is no longer wanted beside the loot-window menu
+    retire_class: safe
+    check: make foundry-dropbin-check
+
+  - id: dnd5e-card-apply-takeover
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["damage-application", ".apply-button", "recorded-targets:build", "ul.targets option", "getMergedOptions", ".calculated.damage > .value", "applyTargets", "splitApplyRows", "isApplyCard"]
+    what: on dnd5e.renderChatMessage a damage or healing card's (dnd5e 6 types them "damage" / "healing" — core.isApplyCard) <damage-application> tray (dnd5e's allowPlayerDamageTray on) is wired in the capture phase — players and GMs alike — the Apply button's click (.apply-button) is the module's and dnd5e's own handler never runs (applyCard — the rows dnd5e lists, ul.targets option, each with the tray's getMergedOptions; owned rows land locally through Actor#applyDamage with the row's typed total, the rest go to the active GM as the pentaryn-aoe.applyRelay query carrying a per-press requestId and the pill menu's ignore / downgrade choices; rows this user may not have applied are skipped silently, as dnd5e skips them; core.applyTargets, splitApplyRows); the row work hangs on the element's own recorded-targets:build event (rows are built when the tray opens); a typed total per row (B5) is written into dnd5e's own .calculated.damage > .value and recomputed a tick after a multiplier or pill click (setting applyFromCard)
+    why: dnd5e 6.0.6's Apply silently skips a target the player does not own (Talo heals Caven — nobody owns another PC here) and offers no total to type; the tray is a custom element with no hook before its click handler and no per-row API; so the capture-phase listener and its DOM (.apply-button, ul.targets, .calculated.damage, the build event) are the only seams (feedback fs7q6K, OrwZqP, DnK6lE, OnvqIi; triage B relay, B5)
+    native_when: dnd5e's damage tray relays unowned rows through a GM (or lets a player apply to any targeted token) and takes a typed total per row
+    retire_class: guarded
+    check: make foundry-aoe-check; live (two browsers), a player's Heal on a PC they do not own lands through the GM
+
+  - id: dnd5e-card-healing-type
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/apply.mjs]
+    markers: ["APPLY_CARD_TYPES", "isApplyCard", "healing"]
+    what: Part I treats dnd5e's two typed roll cards alike — message.type "damage" (DamageMessageData) and "healing" (HealingMessageData, the same damage-card.hbs and <damage-application>) — for wiring the tray, following late targets and accepting the applyRelay query (core.APPLY_CARD_TYPES / isApplyCard)
+    why: dnd5e 6.0.6 types a healing roll's card "healing", not "damage"; 0.6.0–0.6.1 asked for "damage" alone, so Heal / Healing Word were never wired, followed or relayed (live playtest 2026-11-07, three findings, one cause)
+    native_when: dnd5e folds healing into the damage message type, or exposes one predicate for "a card with an Apply tray"
+    retire_class: guarded
+    check: make foundry-aoe-check; live, a player's Healing Word on a PC they do not own lands through the GM
+
+  - id: dnd5e-card-late-targets
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["targetToken", "lateTargets", "system.targets", "targetingMode", "lateTargetCard"]
+    what: a player's damage or healing card that recorded no targets at use time is filled with its author's targets as they target (targetToken, user.isSelf, debounced 150 ms, the newest own untargeted card under 10 minutes old and not yet applied — core.lateTargetCard); message.system.targets is written as dnd5e target descriptors with flags.pentaryn-aoe.lateTargets, so dnd5e's own rows list them; on the tray's recorded-targets:build event a <recorded-targets> element dnd5e remembered as "selected" is switched to targetingMode "targeted" once (its public setter); an Apply that went to held targets records them on system.targets too and stamps flags.pentaryn-aoe.applied (author or GM write), so late targets stop following the card. Players only — a GM's untargeted card keeps dnd5e's selected-tokens habit
+    why: dnd5e 6.0.6 fixes a card's targets at use time and shows SELECTED tokens on a card with none, so "Heal, then target Caven" applied to nobody or to the wrong token; system.targets is dnd5e's own field, rewritten by the author (triage B, late targets — replaces the plan's B4 prompt)
+    native_when: dnd5e lets a card's targets be set after the roll, or applies to the user's current targets on an untargeted card
+    retire_class: guarded
+    check: make foundry-aoe-check

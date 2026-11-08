@@ -7,9 +7,11 @@
 // Actor effect and scan every scene's tokens, so an effect without the concentrating status whose
 // uuid a token carried took that token with it. It now returns early for those (flipped pin below).
 // combat-riders-40: resultOf's comment-only catch prints nothing today (pinned; S3 makes it debug).
+// 4 (TwPCoB, triage E1, 0.6.0): a stamped summon at 0 HP ends the concentration that keeps it
+// (updateActor, GM-elected, one claim per fallen token, one whispered line), never on deleteToken.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { makeDoc, makeScene } from "./kit/foundry-stub.mjs";
+import { makeDoc, makeScene, makeToken } from "./kit/foundry-stub.mjs";
 import { IDS, MODULE, drain, makeActor, setupWorld } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1_800_000_000_000 });
@@ -168,6 +170,186 @@ test("[declared] riders-async-3: the later claim wins when both tabs write befor
   W.take();
 });
 
+/* ── 4. a summon at 0 HP ends the concentration that keeps it (TwPCoB) ───── */
+
+/**
+ * A summoned Elemental Spirit: an unlinked token on scene One whose synthetic actor is `actor`
+ * (actor.isToken, actor.token), stamped with Ilsa's concentration effect FX (or `stamp`).
+ */
+function summon({ stamp = FX, hp = 0, name = "Elemental Spirit" } = {}) {
+  const actor = makeActor({ name, type: "npc", ownership: { default: 0 }, system: { attributes: { hp: { value: hp, max: 40 } } } });
+  const scene = makeScene({ id: "sceneone00000000", name: "One", tokens: [] });
+  const token = makeToken({ id: `tok${String(++summon.n).padStart(13, "0")}`, name, actor, flags: stamp ? { [MODULE]: { concentration: stamp } } : {} }, scene);
+  token.collection = scene.tokens;
+  scene.tokens.set(token.id, token);
+  F.game.scenes.clear();
+  F.game.scenes.set(scene.id, scene);
+  actor.isToken = true;
+  actor.token = token;
+  return { actor, token, scene };
+}
+summon.n = 0;
+const concEffect = () => ({ ...conc, name: "Concentrating", parent: sorc });
+/** fromUuid as the stub cannot resolve an ActiveEffect uuid: FX → Ilsa's effect (or whatever `effects` maps). */
+function resolving(effects = { [FX]: concEffect() }) {
+  const real = globalThis.fromUuid;
+  globalThis.fromUuid = async uuid => effects[uuid] ?? null;
+  return () => { globalThis.fromUuid = real; };
+}
+const fall = (actor, { before = 12, after = 0, userId = IDS.gm, options } = {}) =>
+  F.fire("updateActor", actor, { system: { attributes: { hp: { value: after } } } }, options ?? { dnd5e: { hp: { value: before } } }, userId);
+// the claim on the fallen token waits 750 ms (kit claimDocument), then the end, then the chat line
+const settleFall = async () => { await drain(); mock.timers.tick(750); await drain(); };
+const ends = () => W.takeLog().filter(l => l.op === "endConcentration" || l.op === "ChatMessage.create");
+
+test("summon fell: on the active GM the effect is resolved, the token claimed, concentration ended once, one whispered line to the owners and GMs", async () => {
+  const restore = resolving();
+  try {
+    const { actor, token } = summon();
+    sorc.concEnded = [conc];
+    W.take(); W.takeLog();
+    const before = F.calls.length;
+    fall(actor);
+    await settleFall();
+    assert.deepEqual(F.calls.slice(before).filter(c => c.op === "update").map(c => [c.uuid, c.changes]), [[token.uuid, { [`flags.${MODULE}.claims.summonFell`]: "socket-gm-1" }]]);
+    assert.deepEqual(ends(), [
+      { op: "endConcentration", actor: "Ilsa Vantrel" },
+      { op: "ChatMessage.create", data: { speaker: { actor: sorc.id, alias: "Ilsa Vantrel" }, whisper: [IDS.gm, IDS.player], content: "<p>Ilsa Vantrel&#x27;s Elemental Spirit fell; concentration on Fireball ends.</p>" } },   // escapeHTML'd
+    ]);
+    assert.deepEqual(W.take(), [["info", `${MODULE} | summon fell: concentration ended`]]);
+  } finally { restore(); }
+});
+
+test("summon fell is idempotent: a second update before the first settles, a second hit at 0, and a fall whose effect is already gone end nothing more", async () => {
+  const restore = resolving();
+  try {
+    const { actor } = summon();
+    sorc.concEnded = [conc];
+    W.take(); W.takeLog();
+    fall(actor, { before: 12, after: 0 });
+    fall(actor, { before: 12, after: -3 });        // the same fall, seen again before the claim settled
+    await settleFall();
+    assert.equal(ends().filter(l => l.op === "endConcentration").length, 1, "one end");
+    fall(actor, { before: 0, after: -5 });         // a hit on a summon already at 0: not a fall
+    await settleFall();
+    assert.deepEqual(ends(), []);
+    globalThis.fromUuid = async () => null;        // the effect is gone (ended above)
+    fall(actor, { options: {} });                  // no old value known: a fall, but nothing to end
+    await settleFall();
+    assert.deepEqual(ends(), []);
+    assert.deepEqual(W.take(), [["info", `${MODULE} | summon fell: concentration ended`]]);
+  } finally { restore(); }
+});
+
+test("[declared] riders-async-3 pattern: two tabs on the active GM's account see one fall — concentration ends once, one line", async () => {
+  const restore = resolving();
+  try {
+    const { actor, token } = summon();
+    sorc.concEnded = [conc];
+    W.take(); W.takeLog();
+    try {
+      F.become({ socketId: "socket-bridge" });
+      fall(actor);                                 // the MCP bridge tab
+      F.become({ socketId: "socket-browser" });
+      fall(actor);                                 // a GM browser tab, same user: its own in-flight set is empty
+      await settleFall();
+    } finally {
+      F.become({ socketId: "socket-gm-1" });
+    }
+    // both tabs await fromUuid before claiming, so both read "no claim" and both write: the later write
+    // (the browser tab's) wins, as the cleanup's "later claim wins" pin above; one tab ends it either way
+    assert.equal(token.flags[MODULE].claims.summonFell, "socket-browser");
+    assert.equal(ends().filter(l => l.op === "endConcentration").length, 1);
+    assert.equal(W.take().filter(l => l[0] === "info").length, 1);
+  } finally { restore(); }
+});
+
+test("summon fell: nothing on a player client while a GM is active, with no GM the user who dealt the blow acts; unstamped, still up, not an hp change, the setting off → nothing", async () => {
+  const restore = resolving();
+  try {
+    const { actor } = summon();
+    sorc.concEnded = [conc];
+    W.take(); W.takeLog();
+    F.become({ userId: IDS.player });
+    fall(actor, { userId: IDS.player });
+    await settleFall();
+    assert.deepEqual(ends(), [], "a player client with a GM active");
+    W.gm.active = false;
+    fall(actor, { userId: IDS.gm });
+    await settleFall();
+    assert.deepEqual(ends(), [], "no GM: another user's blow");
+    fall(actor, { userId: IDS.player });
+    await settleFall();
+    assert.equal(ends().filter(l => l.op === "endConcentration").length, 1, "no GM: the user who made the change");
+    W.gm.active = true;
+    F.become({ userId: IDS.gm });
+    W.take();
+    const up = summon({ hp: 5 });
+    fall(up.actor, { before: 12, after: 5 });
+    const plain = summon({ stamp: null });
+    fall(plain.actor);
+    const other = summon();
+    F.fire("updateActor", other.actor, { name: "Renamed" }, {}, IDS.gm);
+    await F.game.settings.set(MODULE, "concentrationSummons", false);
+    fall(other.actor);
+    await F.game.settings.set(MODULE, "concentrationSummons", true);
+    await settleFall();
+    assert.deepEqual(ends(), []);
+    assert.deepEqual(W.take(), []);
+  } finally { restore(); }
+});
+
+test("summon fell: a world (linked) summon actor's dependent tokens are read with getDependentTokens; an effect on no Actor, or one that ended nothing, posts no line", async () => {
+  const restore = resolving({ [FX]: concEffect(), "Actor.x.ActiveEffect.y": { ...conc, uuid: "Actor.x.ActiveEffect.y", parent: { documentName: "Item" } } });
+  try {
+    const { token } = summon();
+    const linked = makeActor({ name: "Draconic Spirit", type: "npc", system: { attributes: { hp: { value: 0, max: 50 } } } });
+    linked.getDependentTokens = ({ concreteOnly }) => (concreteOnly ? [token] : []);
+    sorc.concEnded = [];
+    W.take(); W.takeLog();
+    fall(linked);
+    await settleFall();
+    assert.deepEqual(ends(), [{ op: "endConcentration", actor: "Ilsa Vantrel" }], "ended nothing (already gone): no line");
+    assert.deepEqual(W.take(), []);
+    sorc.concEnded = [conc];
+    const odd = summon({ stamp: "Actor.x.ActiveEffect.y" });
+    fall(odd.actor);
+    await settleFall();
+    assert.deepEqual(ends(), []);
+  } finally { restore(); }
+});
+
+test("summon fell: a failing end is warned once; a throw in the check is warned; deleteToken prunes a stuck in-flight token", async () => {
+  const restore = resolving();
+  try {
+    const { actor, token } = summon();
+    const real = sorc.endConcentration;
+    sorc.endConcentration = async () => { throw new Error("cannot end"); };
+    W.take(); W.takeLog();
+    fall(actor);
+    await settleFall();
+    sorc.endConcentration = real;
+    assert.deepEqual(W.take(), [["warn", `${MODULE} | summon fell: concentration not ended`, "cannot end"]]);
+    fall({ get isToken() { throw new Error("odd summon"); } });
+    assert.deepEqual(W.take(), [["warn", `${MODULE} | summon fell check skipped`, "odd summon"]]);
+    // a resolve that never answers leaves the token in flight; deleteToken (the cleanup, a scene move) forgets it
+    globalThis.fromUuid = () => new Promise(() => {});
+    const stuck = summon();
+    fall(stuck.actor);
+    globalThis.fromUuid = async () => concEffect();
+    sorc.concEnded = [conc];
+    fall(stuck.actor);
+    await settleFall();
+    assert.deepEqual(ends(), [], "still in flight: the second fall is skipped");
+    F.fire("deleteToken", stuck.token, {}, IDS.gm);
+    fall(stuck.actor);
+    await settleFall();
+    assert.equal(ends().filter(l => l.op === "endConcentration").length, 1, "pruned: handled again");
+    W.take();
+    void token;
+  } finally { restore(); }
+});
+
 /* ── 2. the break button's label ─────────────────────────────────────────── */
 
 test("Break Concentration buttons get their text once; a jQuery-like wrapper works", () => {
@@ -179,8 +361,9 @@ test("Break Concentration buttons get their text once; a jQuery-like wrapper wor
   const broken = W.html(`<div></div>`);
   broken.querySelectorAll = () => { throw new Error("detached"); };
   F.fire("dnd5e.renderChatMessage", { type: "base", flags: {}, system: {} }, broken);
-  // the same broken root reaches the card note listener after it (riders.mjs): both warn
-  assert.deepEqual(W.take(), [["warn", `${MODULE} | break-concentration label skipped`, "detached"], ["warn", `${MODULE} | card note skipped`, "detached"]]);
+  // the same broken root reaches the card note, rest card and Empower listeners after it (riders.mjs): all warn
+  assert.deepEqual(W.take(), [["warn", `${MODULE} | break-concentration label skipped`, "detached"], ["warn", `${MODULE} | card note skipped`, "detached"],
+    ["warn", `${MODULE} | rest card skipped`, "detached"], ["warn", `${MODULE} | Empower button skipped`, "detached"]]);
 });
 
 /* ── 3. auto-break and the result line ───────────────────────────────────── */
@@ -320,7 +503,8 @@ test("result line: DC and Failed / Failed: concentration ended / Success, after 
   const broken = W.html(`<div></div>`);
   broken.querySelector = () => { throw new Error("detached"); };
   F.fire("dnd5e.renderChatMessage", saveMessage(), broken);
-  assert.deepEqual(W.take(), [["warn", `${MODULE} | concentration result line skipped`, "detached"], ["warn", `${MODULE} | card note skipped`, "detached"]]);
+  assert.deepEqual(W.take(), [["warn", `${MODULE} | concentration result line skipped`, "detached"], ["warn", `${MODULE} | card note skipped`, "detached"],
+    ["warn", `${MODULE} | rest card skipped`, "detached"], ["warn", `${MODULE} | Empower button skipped`, "detached"]]);
 });
 
 test("result line: a save message without a root renders nothing", () => {

@@ -12,6 +12,7 @@
  *   api-manifest.mjs     PURE API rows (describe() reads them)
  *   api.mjs              implementations, selftest()
  *   ghost.mjs            the feature: install(reg, ctx) / uninstall()
+ *   ghost-combat.mjs     the GM's ghost-in-combat flag (Token HUD toggle, setGhost(ref, { combat }), inspect)
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the feature installs synchronously in this body (where its module-scope Hooks.on
@@ -31,9 +32,10 @@ import { publishNamespace } from "./lib/publish.mjs";
 import { onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import * as ghost from "./ghost.mjs";
+import * as ghostCombat from "./ghost-combat.mjs";
 
-/** Features in load order. */
-const FEATURES = [ghost];
+/** Features in load order (ghost first: its hooks have always registered first). */
+const FEATURES = [ghost, ghostCombat];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

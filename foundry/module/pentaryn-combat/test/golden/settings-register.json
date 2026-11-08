@@ -328,5 +328,16 @@
     "namespace": "pentaryn-combat",
     "key": "enterUses",
     "onChange": "function"
+  },
+  {
+    "name": "PENTARYN_COMBAT.Setting.hpMath.Name",
+    "hint": "PENTARYN_COMBAT.Setting.hpMath.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "namespace": "pentaryn-combat",
+    "key": "hpMath",
+    "onChange": "function"
   }
 ]

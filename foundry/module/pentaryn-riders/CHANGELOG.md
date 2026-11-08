@@ -1,5 +1,159 @@
 # Changelog — pentaryn-riders
 
+## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
+
+Hooks: 43 non-lifecycle registrations, unchanged. Two new lang keys (`rest.omen.wealShort`, `rest.omen.woeShort`).
+Two new pure exports (`sourceActorFor` in table-core, `omenButtonMark` in riders-core). No new setting, flag,
+hook or API row.
+
+- [fixed] **A `sourceStart` effect expired when the next round began, not on the caster's turn.** Caven,
+  last in initiative, cast Shield on his own turn in round 2; the barrier vanished as round 3 began on
+  Marrith's turn (hers only ever looked right because she is first). dnd5e's `isExpiryEvent` asks
+  `getSourceActor()`, which reads `fromUuidSync(system.origin.actor ?? .item ?? .activity ?? origin)` — and
+  on an effect dnd5e's own activity applied, `actor` is null and `item` is the spell's COMPENDIUM uuid
+  (`Compendium.dnd-players-handbook.spells.Item.phbsplShield0000`): an index entry with no `.actor`, so the
+  source is null, no combatant is found and the effect falls back to "past the creation round". The
+  `preCreateActiveEffect` guard (the creating client, never GM-gated) now resolves the caster from
+  `system.origin.activity`, then `.item`, then `origin` (an Actor, or a document with one; a compendium entry
+  is skipped) and records it in `system.origin.actor`, which dnd5e reads first on every client. Only for a
+  `sourceStart` / `sourceEnd` effect with no actor recorded; anything else is untouched. `selfEffectExpiry`
+  reads that same live shape as self-cast now (any of activity, item or origin may name the actor; a recorded
+  actor is the authority) — it used to take the compendium item first and match nothing.
+- [fixed] **Talo's Cosmic Omen button was greyed with no badge, and unusable from the HUD.** The README
+  claimed Argon shows one reaction button per activity; it does so only under its `explodeItemActivities`
+  setting (weapons only by default), so a feat gets ONE `DND5eItemButton` for the whole item — and that
+  button's `activity` getter answers the item's FIRST activity (Weal), which 0.7.0 read as "the other one"
+  against a stored Woe and greyed. An item button (`isActivity` false, or `_item` the item) is never greyed
+  and its badge names the omen ("Weal" / "Woe"); its click goes to dnd5e's "which activity?" dialog, marked
+  as before. The per-activity badge / grey stays for a split item (`isActivity` true). Pure rule
+  `omenButtonMark`.
+- Goldens: `surface.json` (+`core.omenButtonMark`; table-core's `sourceActorFor` sits under `rules`, which the surface pins as one object), `lang-keys.json` (+2). Fixtures: table-core
+  checks 57–60, riders-core 9e.
+- Still outside this folder: the adjustments rows `dnd5e-riders-self-cast-expiry` (add the recorded source
+  actor, `system.origin.actor`, and `sourceActorFor` to its `what` / `markers`) and `argon-riders-omen-badge`
+  (one button per feat; `isActivity`, `explodeItemActivities`) in `foundry/adjustments.yml`.
+
+## 0.7.1 — 2026-11-07 (review of 0.7.0: the omen read once a day, the applied mark by the feat alone)
+
+Hooks: 43 non-lifecycle registrations (+1 rest: `updateItem`). Two new lang keys (`empower.createFailed`,
+`empower.retireFailed`). No new setting, flag or API row; `readOmen` answers one more field.
+
+- [fixed] **The stars are read once a day.** `readOmen` (the card's Read the stars, the G3 first-use
+  fallback and the API row) answered a second read by rolling again and overwriting
+  `flags.pentaryn-riders.omen`; the card redrew only on the clicking client, so a stale button on any other
+  owner's card (the GM's log in particular: GM and player both own every PC) could flip the day's omen, and
+  with it which Argon activity is badged and which the redirect runs. Now an omen already stored is
+  answered as it is (`{ omen, face: null, rolled: false }`: no roll, no write, no roll message); the API
+  row returns `rolled`. And the omen's flag write reaches every client as `updateItem`, where rest redraws
+  the rest cards it has rendered for that actor (`ui.chat.updateMessage`: the log, its popout, the
+  notifications), so the button goes everywhere once read and comes back everywhere when the next rest
+  clears the flag.
+- [fixed] **Applied means done, points or not.** The applied-card mark (`trayApplied`) depended on the
+  card being able to show the button at apply time, so a card applied at 0 Sorcery Points was never marked
+  and grew the Empower button once Font of Magic converted a slot. The mark now depends on the feat alone
+  (a live spell damage card of a caster with Empowered Spell; `spellDamageCard`).
+- [changed] **No button when every die is at or above its average.** A plain click used to open the
+  picker in that case — a dialog on a one-click button. The button is not drawn at all (one click would have
+  nothing to do; the rule's reroll of a die above average is a bet against the mean). Shift-click still
+  picks when at least one die is below average.
+- [changed] **A failure after the point is spent is said out loud.** `ChatMessage.create` failing after
+  `activity.use` left the point gone, the old card live and nothing on screen. One warning now names the
+  lost point (the old card stays live); an old card that fails to retire after the new one posted gets its
+  own line (apply only the new one). Both console lines carry the card ids and the user.
+- [changed] The G3 redirect re-calls the day's activity with the click's whole usage and dialog config
+  (Argon's `legacy: false` and dnd5e's prepared `consume` / `create` included), not the event alone.
+- Goldens: `hooks.json` (+`updateItem`), `describe.json` (`readOmen` returns and side effects; this
+  regeneration also pinned 0.6.0's `updateActor` / `deleteToken` / `preCreateActiveEffect` and 0.7.0's rows,
+  which the committed golden was missing), `lang-keys.json`.
+- Still not here: the adjustments rows `dnd5e-riders-rest-card`, `argon-riders-omen-badge` and
+  `dnd5e-riders-empowered-spell` (the batch file, §5.6), and `make foundry-module-index` for the Module APIs
+  table; both are outside this module's folder.
+
+## 0.7.0 — 2026-11-07 (player feedback pcuOX7, gWNXLN, WUiaAA: feedback triage 2026-11, clusters G1 + G3 and H1)
+
+Hooks: 42 non-lifecycle registrations (+5 rest: `dnd5e.restCompleted`, `dnd5e.renderChatMessage`,
+`dnd5e.preUseActivity`, `renderActivityChoiceDialog`, `renderItemButtonArgonComponent`; +2 empower:
+`dnd5e.renderChatMessage`, `dnd5e.applyDamage`). Two new feature files, `rest.mjs` and `empower.mjs`, last
+in `FEATURES`; one new pure file, `core/empower.mjs`. Settings are now thirteen: `restCard` and
+`empoweredSpell` (world) before the client row. Two API rows: `restCard(ref)`, `readOmen(ref)`. Thirty new
+lang keys (`settings.restCard.*`, `settings.empoweredSpell.*`, `rest.*`, `empower.*`). Five new flags
+(`omen`, `rest`, `empowered`, `supersededBy`, `trayApplied`). Builds on 0.6.0 (C3, C4, E1): nothing there
+is changed.
+
+- [declared] **After a long rest, one card** (G1). `dnd5e.restCompleted` (long) on the owner's client
+  whispers one card to the character's players and the rester, a row per `REST_RULES` match, drawn at
+  render from the card's `rest` flag so it shows today's state and survives a reload. Rows shipped:
+  **Cosmic Omen** (Talo): "Read the stars" rolls 1d6, posts the roll, stores
+  `flags.pentaryn-riders.omen = "weal" | "woe"` (even / odd) on the feat; with an omen stored, Argon's two
+  reaction buttons (one per activity) get a "today's omen" badge on the match and the other greyed, and
+  dnd5e's "which activity?" dialog does the same with the other disabled; the next long rest clears the
+  flag. **Prepared spells** (a caster whose spells prepare; the 2024 sorcerer too): "Review prepared
+  spells" sets this user's Spells view for the character to All (through spell-view's new
+  `ctx.exposed.setSpellView`) and opens the sheet on the Spells tab. No Portent row until a Diviner
+  exists (review). Setting `restCard`.
+- [declared] **Use it and the stars decide** (G3 as the fallback). A Cosmic Omen activity used with no
+  omen stored (offline for the rest, the card closed) is stopped on `dnd5e.preUseActivity` (sync, a
+  literal `false`, the owner's click), the omen is rolled and stored as the button would, and the day's
+  activity is used in its place (`usage.pentaryn.omen` marks the re-call). The wrong activity with an
+  omen stored is redirected the same way, with one notice; a match goes through untouched.
+- [declared] **Empowered Spell in one click** (H1, one-click per the review). A `type: "damage"` card from
+  a spell whose caster has Empowered Spell and a Sorcery Point left gets "Empower (1 SP)" for the owner
+  who can edit the card (author or GM), drawn on `dnd5e.renderChatMessage` from the card's state. One
+  click spends the point through the feat's activity (`use({}, { configure: false }, { create: false })`:
+  no dialog, no card of its own), rerolls the dice below their average (lowest first, up to CHA mod,
+  `core/empower.mjs`), posts a NEW damage card under the usage card (`system.origin`, the old card's
+  targets, item, activity and riders flags copied; the old faces kept inactive and struck through) and
+  marks the old card `supersededBy`: its `damage-application` tray is removed on render and one line says
+  so. New rolls are kept even when lower. Shift-click (or a plain click with nothing below average) opens
+  a picker listing each die with its face, the one-click choice pre-ticked. `dnd5e.applyDamage` on the
+  applying client marks a button-carrying card `trayApplied` once, and the button goes. Only top-level
+  dice added linearly are rerolled; a `min<n>` floor is re-applied. Setting `empoweredSpell`.
+- API: `restCard(ref)` (the card without resting; clears the omen as a rest does), `readOmen(ref)` (roll
+  and store today's omen). `describe().flags.writes` lists the five new flags.
+- Not here: the adjustments rows `dnd5e-riders-rest-card`, `argon-riders-omen-badge` and
+  `dnd5e-riders-empowered-spell` wait in the batch file, as §5.6 asks; the README lists them under
+  Patches and adjustments.
+
+## 0.6.0 — 2026-11-07 (player feedback HdWHWk, TwPCoB: feedback triage 2026-11, clusters C3, C4, E1)
+
+Hooks: 35 non-lifecycle registrations (+2 concentration: `updateActor`, `deleteToken`; +1 expiry:
+`preCreateActiveEffect`). A new feature file, `expiry.mjs`, last in `FEATURES`. One new lang key
+(`concentration.summonFell`). `selftest()` gains "expired effects are deleted". No new setting.
+
+- [declared] **Expired effects vanish** (C4; Joe 2026-11-07: "they're expired, no point keeping them").
+  `init` sets `CONFIG.ActiveEffect.expiryAction = "delete"` (core default `"update"`, which marked an
+  expired effect `expired` and left it grey on the sheet: the "Imperceptible Barrier did not reset"
+  Marrith saw, and the stale one found on Caven on 10-10). World-wide, for every timed effect, by the
+  active GM's client (core's registry acts on `activeGM.isSelf`); dnd5e already deleted expired effects
+  out of combat and at combat end. A CONFIG value, not a setting. `uninstall()` restores the previous
+  value; pentaryn-transform tolerates `delete` (its `wildshape.mjs`).
+- [declared] **A self-cast reaction expires on its caster's turn** (C3, narrowed per the review). Core's
+  plain `turnStart` keys on the combatant whose turn it was when the effect was created, so Shield,
+  cast on the attacker's turn, expired at the attacker's next turn. On `preCreateActiveEffect` (the
+  creating client, never GM-gated) an effect whose `duration.expiry` is `turnStart`, whose origin
+  (dnd5e `system.origin.actor|item|activity`, else `origin`) is the actor it is created on or one of
+  that actor's items / activities, while combat has started and it is not that actor's turn, becomes
+  dnd5e's owner-aware `sourceStart`; `duration.value` goes null with it, as dnd5e's own `_preCreate`
+  does for every pseudo-expiry (a finite seconds value would hold a Shield cast earlier in the round
+  for one turn too long). Shield on the caster's own turn, a caster-turn effect on a foe, no combat,
+  any other expiry: untouched. Pure rule `selfEffectExpiry` (table-core, fixtures 45–52). Belt and
+  braces with pentaryn-importer's DDB correction (C2), which fixes the imported data itself.
+- [declared] **A summon at 0 HP ends the concentration that keeps it** (E1, narrowed: HP → 0 only,
+  never `deleteToken`, which portals and pins fire on scene moves). The 2024 summon spells say the
+  spirit disappears when it drops to 0 HP or the spell ends; riders only did the other direction. On
+  `updateActor` with `system.attributes.hp.value` at 0 or less (and the old value above 0 when dnd5e's
+  `options.dnd5e.hp` carries it: a second hit at 0 is not a fall), the active GM (with no GM online,
+  the user who made the change) resolves each stamped token's effect with `fromUuid`, claims the token
+  (kit `claimDocument`, key `summonFell`: two tabs on that account end it once), calls
+  `caster.endConcentration(effect)` and whispers one line to the caster's owners and the GMs:
+  "<Caster>'s <Summon> fell; concentration on <Spell> ends." The existing cleanup (1b) then removes the
+  token(s). A token already in flight is skipped; an effect that is gone ends nothing and posts nothing.
+  dropbin's corpse is skipped for every dnd5e-summoned token on dropbin's side (`flags.dnd5e.summon`).
+  Pure helpers `droppedToZero`, `concentrationSpellName`, `summonStampOf` (table-core, fixtures 53–56).
+- Not here: the adjustments rows for the two new behaviours (`core-riders-expiry-delete`,
+  `dnd5e-riders-self-cast-expiry`, `dnd5e-riders-summon-fell`) wait in the batch file, as §5.6 asks;
+  the README lists them under Patches and adjustments.
+
 ## 0.5.2 — 2026-10-22 (player feedback 5wv0Iq, MMLx5X: Magic Missile from Marwen's wand)
 
 Hooks: 32 non-lifecycle registrations (+1 `dnd5e.postUseActivity`, projectiles). Settings are now

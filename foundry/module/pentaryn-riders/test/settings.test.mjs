@@ -10,10 +10,10 @@ const W = await setupWorld();
 const { F } = W;
 const { SETTINGS, registerSettings, settingOr, settingRaw, setting, settingsSnapshot } = await import("../settings.mjs");
 
-const ORDER = ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView", "projectileChatTab"];
+const ORDER = ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView", "restCard", "empoweredSpell", "projectileChatTab"];
 const langHas = key => key.split(".").reduce((o, p) => o?.[p], LANG) !== undefined;
 
-test("SETTINGS: eleven frozen rows in today's order, literal labels present in lang, a doc line each; only projectileChatTab is client scope", () => {
+test("SETTINGS: thirteen frozen rows in today's order (restCard, empoweredSpell before the client row, 0.7.0), literal labels present in lang, a doc line each; only projectileChatTab is client scope", () => {
   assert.ok(Object.isFrozen(SETTINGS));
   assert.deepEqual(SETTINGS.map(r => r.key), ORDER);
   for (const r of SETTINGS) {

@@ -30,6 +30,7 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | [`foundry-attunement.md`](foundry-attunement.md) | The `pentaryn-attunement` sidebar slot strip + over-cap warnings | shipped |
 | [`foundry-mcp-fork.md`](foundry-mcp-fork.md) | The forked Foundry MCP bridge (now at `~/Documents/GitHub/foundry-vtt-mcp`) | shipped |
 | [`seafoot-v14-migration.md`](seafoot-v14-migration.md) | 520 v9 map modules → one v14 module | complete |
+| [`feedback-triage-2026-11.md`](feedback-triage-2026-11.md) | Triage of the 2026-11-05 session's 16 `pentaryn-feedback` reports into 13 fix clusters (A–M) with causes, options and a recommended order | live 2026-11-07 — seven modules + new pentaryn-reactions synced and enabled, 15 of 17 reports resolved; evening browser playtest found 3 bugs, fixed and re-verified live in riders 0.7.2 / aoe 0.6.2; not committed |
 | [`table-feedback-2026-10-08.md`](table-feedback-2026-10-08.md) | Triage of player feedback from the Underdark one-shot: bugs, rules riders, UX design questions | built and playtested 2026-10-09 |
 | [`druid-wild-shape.md`](druid-wild-shape.md) | Talo's Wild Shape and Starry Form on the Argon HUD (`pentaryn-transform` 0.2-0.3) | built; playtest 2026-10-10 passed core, audit items open |
 | [`cursors-design.md`](cursors-design.md) | The `pentaryn-cursors` tool-cursor set: rules, glyph choice, hotspots (moved out of the module, cursors guide step 8) | built (0.1.0); history only |

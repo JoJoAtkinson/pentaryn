@@ -24,7 +24,8 @@ function rerenderCharacterSheets() {
 /**
  * Every row is a Boolean, on by default, shown in Configure Settings and read live on each use, so
  * none needs `requiresReload`. All are world settings except the last, `projectileChatTab` (client:
- * whether a cast may move this player's sidebar is each player's call).
+ * whether a cast may move this player's sidebar is each player's call); `restCard` and
+ * `empoweredSpell` (0.7.0) sit before it so the client row stays last.
  * @type {import("./lib/settings.mjs").SettingRow[]}
  */
 export const SETTINGS = Object.freeze([
@@ -91,6 +92,18 @@ export const SETTINGS = Object.freeze([
     doc: "The character sheet's Spells tab opens on the spells ready to cast, with a Prepared / All spells toggle remembered per user and actor; a change re-renders open character sheets.",
   },
   {
+    key: "restCard", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_RIDERS.settings.restCard.name",
+    hint: "PENTARYN_RIDERS.settings.restCard.hint",
+    doc: "After a long rest the owner gets one whispered card with a line per matching rule (Cosmic Omen: Read the stars; prepared casters: Review prepared spells); a Cosmic Omen used with no omen stored rolls it then.",
+  },
+  {
+    key: "empoweredSpell", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_RIDERS.settings.empoweredSpell.name",
+    hint: "PENTARYN_RIDERS.settings.empoweredSpell.hint",
+    doc: "A sorcerer with Empowered Spell and Sorcery Points left gets an Empower (1 SP) button on their spell damage cards: one click spends the point and rerolls the dice below their average (up to CHA mod), posting a new damage roll and retiring the old card's tray.",
+  },
+  {
     key: "projectileChatTab", scope: "client", config: true, type: Boolean, default: true,
     name: "PENTARYN_RIDERS.settings.projectileChatTab.name",
     hint: "PENTARYN_RIDERS.settings.projectileChatTab.hint",
@@ -116,7 +129,7 @@ export function settingRaw(key) {
 /** The kit reader (row default when unreadable): `ctx.setting`, selftest. */
 export const setting = settingReader(MODULE, SETTINGS);
 
-/** `{ key: value }` for all eleven rows (api `settings()`). */
+/** `{ key: value }` for all thirteen rows (api `settings()`). */
 export function settingsSnapshot() {
   return snapshot(MODULE, SETTINGS);
 }

@@ -12,6 +12,9 @@ export { MODULE, MODULE as MOD };
 /** The flag a summoned token carries: the uuid of the concentration effect that keeps it. */
 export const SUMMON_FLAG = "concentration";
 
+/** What an expired timed effect becomes, world-wide (expiry.mjs sets CONFIG.ActiveEffect.expiryAction; core's default `"update"` keeps it grey). */
+export const EXPIRY_ACTION = "delete";
+
 /**
  * The concentration effect that a cast of `itemId` started, among an actor's effects.
  * dnd5e 6 marks each concentration effect with flags.dnd5e.item = { id, type, ... }.
@@ -57,6 +60,94 @@ export function summonTokenIds(tokens, effectUuid) {
     if (t?.flags?.[MODULE]?.[SUMMON_FLAG] === effectUuid) ids.push(t.id);
   }
   return ids;
+}
+
+/** The concentration-effect uuid a summoned token carries, or null (the stamp, concentration.mjs). */
+export function summonStampOf(token) {
+  const uuid = token?.flags?.[MODULE]?.[SUMMON_FLAG];
+  return typeof uuid === "string" && uuid ? uuid : null;
+}
+
+/**
+ * Did this HP change take the creature to 0 (TwPCoB)? `after` is the new value; `before` the old one
+ * when the update carries it (dnd5e puts the pre-update hp in `options.dnd5e.hp`), so a second hit on a
+ * creature already at 0 is not a fall. No `before`: 0 or less is a fall.
+ * @param {{ before?: number|null, after?: number|null }} p
+ */
+export function droppedToZero({ before = null, after = null } = {}) {
+  const now = after == null ? NaN : Number(after);
+  if (!Number.isFinite(now) || now > 0) return false;
+  const was = before == null ? NaN : Number(before);   // null / undefined: the old value is unknown
+  return !Number.isFinite(was) || was > 0;
+}
+
+/**
+ * The spell a concentration effect holds, for the "fell" chat line: the actor's item named by
+ * flags.dnd5e.item (`id`, or a cached copy's `data`), else the effect's own name.
+ * @param {{ itemFlag?: { id?: string, data?: { _id?: string, name?: string } }|null, items?: Iterable<{ id: string, name: string }>, effectName?: string }} p
+ */
+export function concentrationSpellName({ itemFlag = null, items = [], effectName = "" } = {}) {
+  const id = itemFlag?.id ?? itemFlag?.data?._id ?? null;
+  if (id) for (const i of items ?? []) if (i?.id === id && i.name) return i.name;
+  return itemFlag?.data?.name || effectName || "";
+}
+
+/**
+ * Should a new effect's `turnStart` expiry become dnd5e's owner-aware `sourceStart` (HdWHWk, triage
+ * C3, narrowed)? Core's plain `turnStart` keys on the combatant whose turn it was when the effect was
+ * created, so a self-cast reaction (Shield, cast on the attacker's turn) expired at the ATTACKER's
+ * next turn. Rewritten only when: the expiry is `turnStart`, combat has started, the effect's origin
+ * is the actor it is created on or one of that actor's items or activities, and it is not that
+ * actor's turn. The origin: dnd5e's `system.origin.actor` when it is recorded (the authority), else
+ * ANY of `system.origin.activity`, `system.origin.item` or the plain `origin` — on an effect dnd5e's
+ * activity applied, `item` is the spell's COMPENDIUM uuid and only `activity` names the caster
+ * (0.7.2). Everything else is untouched: a caster's effect on a foe (origin another actor), the
+ * caster's own turn (turnStart is right there), no combat.
+ * @param {object} p
+ * @param {string|null} p.expiry          `duration.expiry` as created
+ * @param {string|null} [p.origin]        the effect's `origin` uuid
+ * @param {{ actor?: string, item?: string, activity?: string }|null} [p.systemOrigin]  dnd5e's `system.origin`
+ * @param {string|null} p.parentUuid      the actor the effect is created on
+ * @param {boolean} p.combatStarted
+ * @param {string|null} [p.turnActorUuid] the actor whose turn it is
+ * @returns {"sourceStart"|null}  the new expiry, or null to leave the effect alone
+ */
+export function selfEffectExpiry(p = {}) {
+  const { expiry = null, origin = null, systemOrigin = null, parentUuid = null, combatStarted = false, turnActorUuid = null } = p ?? {};
+  if (expiry !== "turnStart" || !combatStarted || !parentUuid) return null;
+  const own = ref => typeof ref === "string" && (ref === parentUuid || ref.startsWith(`${parentUuid}.`));
+  const actor = systemOrigin?.actor;
+  const self = typeof actor === "string" && actor ? own(actor) : [systemOrigin?.activity, systemOrigin?.item, origin].some(own);
+  if (!self) return null;
+  if (turnActorUuid === parentUuid) return null;
+  return "sourceStart";
+}
+
+/**
+ * The caster to record in `system.origin.actor` on a `sourceStart` / `sourceEnd` effect that has none
+ * (0.7.2; live 2026-11-07: Caven's Shield barrier went when round 3 began on Marrith's turn). dnd5e's
+ * `getSourceActor()` reads `fromUuidSync(o.actor ?? o.item ?? o.activity ?? origin)`, and on an effect
+ * its activity applied `item` is the spell's COMPENDIUM uuid: that resolves to an index entry with no
+ * `.actor`, the source is null, `isExpiryEvent` finds no combatant for it and falls back to "past the
+ * creation round" — the first turn of the next round, whoever's it is. With `actor` recorded, dnd5e
+ * reads it first, on every client. Nothing is written for any other expiry, or when `actor` is there.
+ * @param {object} p
+ * @param {string|null} p.expiry   `duration.expiry` as it will be created (after the turnStart rewrite)
+ * @param {{ actor?: string|null }|null} [p.systemOrigin]  dnd5e's `system.origin`
+ * @param {Iterable<string|null>|(() => Iterable<string|null>)} [p.candidates]  the actor uuids the
+ *   origin's activity, item and plain `origin` resolve to, in that order, null for one that does not
+ *   (a compendium entry); a function is called only when the expiry asks for a source (the resolving is
+ *   the adapter's and costs a lookup per candidate)
+ * @returns {string|null}  the uuid to write, or null to leave the effect alone
+ */
+export function sourceActorFor(p = {}) {
+  const { expiry = null, systemOrigin = null, candidates = [] } = p ?? {};
+  if (expiry !== "sourceStart" && expiry !== "sourceEnd") return null;
+  const actor = systemOrigin?.actor;
+  if (typeof actor === "string" && actor) return null;
+  const list = typeof candidates === "function" ? candidates() : candidates;
+  for (const c of list ?? []) if (typeof c === "string" && c) return c;
+  return null;
 }
 
 /**

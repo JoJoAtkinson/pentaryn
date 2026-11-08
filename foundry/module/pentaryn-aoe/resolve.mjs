@@ -20,7 +20,7 @@
 
 import {
   MODULE, RECENT_MESSAGES, aoeFlags, doesNotExist, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS
+  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS, scaleDamages
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -211,6 +211,8 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const described = tokens.map(tk => describeToken(tk, { handleActorId }));
   const rows = buildRows(described, { casterActorId });
   const usage = usageIdOf(message);
+  // J2: a save already rolled from the usage card's own button fills its row before anyone is asked.
+  fillEarlierSaves(rows, { usage, ability, dc, onSave, before: message.timestamp ?? Date.now(), exclude: message.id });
   // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
   const careful = (await context?.exposed.carefulFor?.(activity.actor, { usage, onSave, rows })) ?? null;
   if (vanished(message.id)) return cancelled(message.id);
@@ -251,6 +253,39 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     if (ids.length) await applyRows(message.id, ids);
   }
   return aoeFlags(game.messages.get(message.id)).resolution;
+}
+
+/**
+ * J2 (feedback fs7q6K): saves rolled from the spell's usage card (its Saving Throw button) BEFORE the
+ * damage was rolled fill the manual rows they answer, so a save the GM already clicked for Caven is
+ * not waited for again. Only an ability save threaded under this usage card (system.origin), not a
+ * request-card result (that belongs to the tray that asked), not a monster save this module rolled,
+ * posted no later than the damage message, and not already recorded on another live tray. Mutates
+ * and returns `rows`.
+ */
+function fillEarlierSaves(rows, { usage, ability, dc, onSave, before, exclude }) {
+  if (!usage) return rows;
+  const recent = game.messages.contents.slice(-RECENT_MESSAGES);
+  const taken = new Set();
+  for (const m of recent) {
+    if (m.id === exclude) continue;
+    for (const r of aoeFlags(m).resolution?.rows ?? []) if (r.save?.messageId) taken.add(r.save.messageId);
+  }
+  const shell = { ability, usage, request: null, superseded: false, rows };
+  let filled = 0;
+  for (const m of recent) {
+    if (!isAbilitySave(m) || taken.has(m.id) || m.flags?.dnd5e?.requestResult || aoeFlags(m).npcSave) continue;
+    if ((m.timestamp ?? 0) > before || usageIdOf(m) !== usage) continue;
+    const roll = m.rolls?.[0];
+    if (!roll) continue;
+    const info = { ability: m.system?.ability, actorId: m.speaker?.actor ?? null, tokenId: m.speaker?.token ?? null, usageId: usage, created: m.timestamp ?? 0 };
+    const idx = matchSave(shell, info);
+    if (idx < 0) continue;
+    fillSave(rows[idx], { total: roll.total, success: saveSuccess(roll, dc), messageId: m.id }, onSave);
+    filled++;
+  }
+  if (filled) why("resolve", exclude, "earlier saves filled", { filled });
+  return rows;
 }
 
 /** aoe-vanish-1: the card was deleted mid-resolve — stop quietly, as if it had never been clicked. */
@@ -372,6 +407,7 @@ async function onSaveMessage(message) {
     actorId: message.speaker?.actor ?? null,
     tokenId: message.speaker?.token ?? null,
     requestId: reqFlag?.requestId ?? null,
+    usageId: usageIdOf(message),   // J2: threaded under the spell's usage card → answers whenever it was rolled
     created: message.timestamp ?? Date.now()
   };
   // Newest open resolution first; only a handful of recent messages are ever candidates.
@@ -465,7 +501,6 @@ async function applyRowsNow(messageId, rowIds) {
   if (!res) { why("apply", messageId, "no resolution"); return null; }
   if (res.superseded) { why("apply", messageId, "superseded"); ui.notifications.warn(_loc("PENTARYN_AOE.Tray.Superseded")); return null; }
   const todo = applicableRows(res.rows, rowIds);
-  const damages = hydrateDamages(res.damages);
   const liveRow = id => aoeFlags(game.messages.get(messageId)).resolution?.rows.find(r => r.id === id);
   const failed = [];
   let out = null;
@@ -475,6 +510,8 @@ async function applyRowsNow(messageId, rowIds) {
     const actor = fromUuidSync(row.actor);
     if (!actor) continue;
     const before = actor.system.attributes.hp.value;
+    // B5: a total typed on the row (real dice) replaces the rolled one, each type keeping its share.
+    const damages = hydrateDamages(scaleDamages(res.damages, row.amount));
     try {
       await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
     } catch (err) {
@@ -509,7 +546,8 @@ async function cleanupInstant(res) {
 }
 
 /**
- * GM edits from the tray: tick, multiplier, and Careful Spell's protection (aoe-careful-select).
+ * GM edits from the tray: tick, multiplier, Careful Spell's protection (aoe-careful-select) and, B5,
+ * the row's typed total (`amount`: a number ≥ 0; null, '' or the rolled total clears it).
  * Unprotected, a row gets back the save it had; a monster row that had none is rolled now, a
  * player row waits again.
  */
@@ -520,11 +558,22 @@ export async function setRow(messageId, rowId, changes) {
     if (!MULTIPLIERS.includes(m)) { log.warn("setRow multiplier", { messageId, rowId, multiplier: v }); return null; }
     changes = { ...changes, multiplier: m };
   }
+  if ("amount" in changes) {
+    const v = changes.amount;
+    const blank = v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+    const n = blank ? null : Number(v);
+    if (n !== null && !(Number.isFinite(n) && n >= 0)) { log.warn("setRow amount", { messageId, rowId, amount: v }); return null; }
+    changes = { ...changes, amount: n === null ? null : Math.floor(n) };
+  }
   const out = await mutate(messageId, r => {
     const row = r.rows.find(x => x.id === rowId);
     if (!row || row.applied) return r;
     if ("apply" in changes) row.apply = !!changes.apply;
     if ("multiplier" in changes) { row.multiplier = changes.multiplier; row.overridden = true; }
+    if ("amount" in changes) {
+      if (changes.amount === null) delete row.amount;
+      else row.amount = changes.amount;
+    }
     if ("protected" in changes && !r.superseded) {
       if (changes.protected) protectRows([row], [row.id], r.onSave);
       else unprotectRow(row);
@@ -588,4 +637,4 @@ export function uninstall() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, queues, applying };
+export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, fillEarlierSaves, queues, applying };

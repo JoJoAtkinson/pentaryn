@@ -458,7 +458,7 @@
         },
         {
           "name": "changes",
-          "type": "{ apply?, multiplier?, protected? }",
+          "type": "{ apply?, multiplier?, protected?, amount? }",
           "resolve": false
         }
       ],
@@ -470,9 +470,9 @@
         "flags.pentaryn-aoe.resolution",
         "ChatMessage (save roll, unprotected monster row)"
       ],
-      "nullWhen": "no resolution, or a multiplier not in 0/0.25/0.5/1/2 (row unchanged, logged)",
+      "nullWhen": "no resolution, a multiplier not in 0/0.25/0.5/1/2, or an amount that is not a number ≥ 0 (row unchanged, logged)",
       "legacy": true,
-      "doc": "GM edit of one unapplied row (tick, multiplier, Careful Spell protection; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution."
+      "doc": "GM edit of one unapplied row (tick, multiplier, Careful Spell protection, a typed total that replaces the rolled one for that row — null or the rolled total clears it; unprotected, a row gets back its own save, a monster row with none is rolled). Returns the updated resolution."
     },
     {
       "path": "selfApply",
@@ -536,9 +536,33 @@
       "sideEffects": [],
       "legacy": true,
       "doc": "The region placement following the mouse right now (core's placement context), or null."
+    },
+    {
+      "path": "applyRelay",
+      "params": [
+        {
+          "name": "data",
+          "type": "{ messageId, requestId, rows: { uuid, multiplier, amount?, options? }[] }",
+          "resolve": false,
+          "doc": "messageId: the damage or healing card; requestId: one id per Apply press, required (two GM tabs land it once; BAD_ARGS without one); rows: the target token uuids the sender does not own, each with the tray's multiplier, when typed the total to use instead of the rolled one, and the pill menu's ignore / downgrade choices as plain data"
+        }
+      ],
+      "returns": "{ ok: true, applied: string[], claimed?: false } | { ok: false, code, reason }",
+      "gm": true,
+      "writes": true,
+      "query": true,
+      "relay": true,
+      "sideEffects": [
+        "Actor hp (applyDamage, on the active GM's client)",
+        "flags.pentaryn-aoe.claims"
+      ],
+      "since": "0.6.0",
+      "doc": "Part I relay: the active GM applies a damage or healing card's rows to tokens the sender does not own, with the sender's multiplier, typed total and ignore / downgrade choices. The sender must be the card's author or own its actor (REFUSED otherwise; the sender checks the same rule first and skips such rows silently); the damage is read from the card, never from the request."
     }
   ],
-  "queries": [],
+  "queries": [
+    "pentaryn-aoe.applyRelay"
+  ],
   "settings": [
     {
       "key": "handleTokens",
@@ -660,6 +684,20 @@
       "doc": "Part A: an instantaneous spell's emanation (Thunder Step) stays where it was cast, with a handle, instead of following its caster."
     },
     {
+      "key": "autoDamageOnSave",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part C (J1): using a save activity that has damage and at least one target rolls the damage at once, so a single-target save spell is Use → save → Apply; an area spell's damage still waits for the area."
+    },
+    {
+      "key": "applyFromCard",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part I: Apply on a damage or healing card goes through this module: rows for tokens the user does not own are relayed to the active GM, a player's targets fill a card that recorded none, and every row has a total the player can type (B relay, late targets, B5)."
+    },
+    {
       "key": "npcSaveRollMode",
       "scope": "world",
       "type": "String",
@@ -749,6 +787,10 @@
       "label": "postRollAttack"
     },
     {
+      "name": "dnd5e.postUseActivity",
+      "label": "postUseActivity(save)"
+    },
+    {
       "name": "createChatMessage",
       "label": "createChatMessage(selfApply)"
     },
@@ -767,6 +809,18 @@
     {
       "name": "dnd5e.preCreateMeasuredTemplate",
       "label": "preCreateMeasuredTemplate(aim)"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "renderChatMessage(apply)"
+    },
+    {
+      "name": "targetToken",
+      "label": "targetToken(late)"
+    },
+    {
+      "name": "deleteChatMessage",
+      "label": "deleteChatMessage(apply)"
     },
     {
       "name": "canvasReady",
@@ -798,6 +852,8 @@
       "flags.pentaryn-aoe.damageMessage",
       "flags.pentaryn-aoe.careful",
       "flags.pentaryn-aoe.npcSave",
+      "flags.pentaryn-aoe.lateTargets",
+      "flags.pentaryn-aoe.applied",
       "flags.dnd5e.lockSize",
       "flags.dnd5e.requestResult"
     ],

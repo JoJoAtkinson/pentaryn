@@ -33,7 +33,7 @@
       },
       "concentrationSummons": {
         "name": "Concentration summons leave with concentration",
-        "hint": "When a caster's concentration ends (dropped, broken, or a new concentration spell), the tokens that spell summoned (Flaming Sphere, Summon Dragon...) are removed from the map by the GM's client. Summons without concentration are never touched. Turn off to clean them up by hand."
+        "hint": "When a caster's concentration ends (dropped, broken, or a new concentration spell), the tokens that spell summoned (Flaming Sphere, Summon Dragon...) are removed from the map by the GM's client; a summon that drops to 0 HP ends that concentration itself, with one whispered line. Summons without concentration are never touched. Turn off to clean them up by hand."
       },
       "longCasts": {
         "name": "Longer casts on the Combat HUD",
@@ -59,6 +59,14 @@
         "name": "Character sheets open on prepared spells",
         "hint": "The Spells tab shows the spells a character can cast today (prepared, always prepared, cantrips, at-will, innate, pact, cast from an item), with a Prepared / All spells switch above the list. Each user's choice is remembered per character. Turn off to always show the full list."
       },
+      "restCard": {
+        "name": "After a long rest: one card",
+        "hint": "When a character finishes a long rest, its owner gets one whispered card with a line per thing the rest offers: Cosmic Omen (Read the stars: roll the day's omen, which marks Weal or Woe on the Combat HUD and the sheet until the next long rest) and, for a caster who prepares spells, Review prepared spells (opens the Spells tab on every spell). A Cosmic Omen used with no omen rolled yet rolls it then. Turn off for dnd5e's rest alone."
+      },
+      "empoweredSpell": {
+        "name": "Empowered Spell: one click",
+        "hint": "A sorcerer with Empowered Spell and Sorcery Points left gets an Empower (1 SP) button on their spell damage cards. One click spends the point, rerolls the dice that came up below their average (up to the Charisma modifier, lowest first) and posts the new damage roll; the old card's apply tray is retired so it cannot be applied twice. Shift-click picks the dice. Turn off to do Empowered Spell by hand."
+      },
       "projectileChatTab": {
         "name": "Open Chat for ray and dart buttons",
         "hint": "This computer only. When you cast Scorching Ray or Magic Missile and the chat log is not showing, the sidebar opens on Chat so the card with the ray or dart buttons stays on screen (a chat pop-up card disappears after a few seconds). Turn off to keep the sidebar as it is."
@@ -74,7 +82,8 @@
     "concentration": {
       "failed": "DC {dc} · Failed",
       "failedEnded": "DC {dc} · Failed: concentration ended",
-      "success": "DC {dc} · Success: still concentrating"
+      "success": "DC {dc} · Success: still concentrating",
+      "summonFell": "{caster}'s {summon} fell; concentration on {spell} ends."
     },
     "arcaneRecovery": {
       "title": "Arcane Recovery",
@@ -113,6 +122,44 @@
     },
     "usage": {
       "staleConcentration": "Your concentration changed while this window was open, so nothing was cast. Close it and use the spell again to choose which concentration it ends."
+    },
+    "rest": {
+      "title": "Long rest: {name}",
+      "omen": {
+        "label": "Cosmic Omen",
+        "read": "Read the stars",
+        "readTip": "Roll the day's omen (1d6): even is Weal, odd is Woe, until your next long rest.",
+        "weal": "Weal (even)",
+        "woe": "Woe (odd)",
+        "flavor": "Cosmic Omen: {omen}",
+        "today": "today's omen",
+        "wealShort": "Weal",
+        "woeShort": "Woe",
+        "redirect": "The stars read {omen} today: {activity} it is.",
+        "gone": "Cosmic Omen is no longer on the sheet."
+      },
+      "spells": {
+        "label": "Prepared spells",
+        "review": "Review prepared spells",
+        "reviewTip": "Opens the Spells tab on every spell, so you can prepare and unprepare."
+      }
+    },
+    "empower": {
+      "button": "Empower (1 SP)",
+      "tip": "Spend 1 Sorcery Point to reroll up to {n} damage dice that came up below their average; the new rolls are kept. Shift-click to choose the dice.",
+      "title": "Empowered Spell",
+      "intro": "Choose up to {n} dice to reroll (1 Sorcery Point). The new rolls are kept, higher or lower.",
+      "reroll": "Reroll",
+      "cancel": "Not now",
+      "count": "{used} of {n} dice",
+      "die": "d{faces}: {value}",
+      "none": "Choose at least one die.",
+      "note": "Empowered Spell (1 SP): {changes}",
+      "change": "{from} → {to}",
+      "superseded": "Superseded by Empowered Spell: apply the new roll below.",
+      "noUse": "Empowered Spell was not used (no Sorcery Points left?). Nothing was rerolled.",
+      "createFailed": "Empowered Spell: the Sorcery Point was spent but the new damage card could not be posted. The old card stays live; tell the GM.",
+      "retireFailed": "Empowered Spell: the new damage card is posted, but the old card could not be marked as superseded. Apply only the new one."
     }
   }
 }

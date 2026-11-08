@@ -43,11 +43,13 @@ export async function dropbinWorld() {
     hooks: { ITEM: { DROP: "item-piles-dropItem", PRE_TRANSFER: "item-piles-preTransferItems" } },
     API: {
       ACTOR_CLASS_TYPE: "character",
+      // the world setting item-piles.itemFilters as itempilesdnd5e 1.1.0's dnd5e ≥ 5 preset (A1: the healthy shape)
+      ITEM_FILTERS: [{ path: "type", filters: "background,class,facility,feat,race,spell,subclass" }, { path: "system.type.value", filters: "natural" }],
       isValidItemPile: doc => piles.has(doc) || piles.has(doc?.actor) || !!doc?.flags?.["item-piles"]?.data?.enabled,
       isItemPileEmpty: () => false,
       getActorFlagData: actor => ({ ...(actor?.flags?.["item-piles"]?.data ?? {}) }),
       transferEverything: async (...a) => F.calls.push({ op: "transferEverything", args: a.map(x => x?.name ?? x) }),
-      turnTokensIntoItemPiles: async docs => F.calls.push({ op: "turnTokensIntoItemPiles", n: docs.length }),
+      turnTokensIntoItemPiles: async (docs, opts) => F.calls.push({ op: "turnTokensIntoItemPiles", n: docs.length, pileSettings: F.plain(opts?.pileSettings ?? null) }),
       revertTokensFromItemPiles: async docs => F.calls.push({ op: "revertTokensFromItemPiles", n: docs.length }),
     },
   };

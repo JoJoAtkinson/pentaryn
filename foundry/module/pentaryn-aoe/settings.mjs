@@ -3,8 +3,9 @@
  * game.settings.register/get/set.
  *
  * Every row carries LITERAL `name` and `hint` keys (C51). Rows register in table order, which is
- * the order of the settings menu: the 17 booleans first (the old BOOLS order, then
- * stationaryInstantAreas), then npcSaveRollMode, then areaWalls — golden/settings-register.json pins it.
+ * the order of the settings menu: the 19 booleans first (the old BOOLS order, then
+ * stationaryInstantAreas, autoDamageOnSave, applyFromCard), then npcSaveRollMode, then areaWalls —
+ * golden/settings-register.json pins it.
  *
  * `setting(key)` falls back to the row default. That matters twice: while the module is
  * hot-patched into a client before the server has scanned it, and on any client where
@@ -87,6 +88,12 @@ export const SETTINGS = Object.freeze([
   { key: "stationaryInstantAreas", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.stationaryInstantAreas.Name", hint: "PENTARYN_AOE.Setting.stationaryInstantAreas.Hint",
     doc: "Part A: an instantaneous spell's emanation (Thunder Step) stays where it was cast, with a handle, instead of following its caster." },
+  { key: "autoDamageOnSave", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_AOE.Setting.autoDamageOnSave.Name", hint: "PENTARYN_AOE.Setting.autoDamageOnSave.Hint",
+    doc: "Part C (J1): using a save activity that has damage and at least one target rolls the damage at once, so a single-target save spell is Use → save → Apply; an area spell's damage still waits for the area." },
+  { key: "applyFromCard", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_AOE.Setting.applyFromCard.Name", hint: "PENTARYN_AOE.Setting.applyFromCard.Hint",
+    doc: "Part I: Apply on a damage or healing card goes through this module: rows for tokens the user does not own are relayed to the active GM, a player's targets fill a card that recorded none, and every row has a total the player can type (B relay, late targets, B5)." },
   { key: "npcSaveRollMode", scope: "world", config: true, type: String, default: "gm",
     name: "PENTARYN_AOE.Setting.npcSaveRollMode.Name", hint: "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",
     // Core v14 message modes. dnd5e 6 hands the roll mode to core as messageMode, and core
@@ -138,6 +145,14 @@ export async function migrateSettings() {
 
 /** Read a setting; the row default if it is unregistered or unreadable; undefined for an unknown key. */
 export const setting = settingReader(MODULE, SETTINGS);
+
+/**
+ * dnd5e's own `autoCollapseChatTrays` ("always", "never" or "manual"): Part I folds a card's Apply
+ * tray after Apply as dnd5e would. "manual" (leave it open) when the setting cannot be read.
+ */
+export function dnd5eTrayCollapse() {
+  return log.swallow("autoCollapseChatTrays", () => game.settings.get("dnd5e", "autoCollapseChatTrays"), "manual");
+}
 
 /** `{ key: liveValue }` for every row (the API's settings() member). */
 export function settingsSnapshot() {

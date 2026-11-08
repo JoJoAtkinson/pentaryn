@@ -18,6 +18,7 @@
   "loot.install": "addButton",
   "loot.recipientFor": "recipientFor",
   "loot.refreshAll": "refreshAll",
+  "noLoot": "noLoot",
   "restore": "restore",
   "restoreResult": "restoreResult",
   "search": "search",

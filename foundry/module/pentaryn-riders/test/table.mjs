@@ -6,7 +6,8 @@
 
 const { concentrationEffectFor, summonTokenIds, spendsUsesOf, MOD, SUMMON_FLAG, skipsTargetPicker, restoreSlotScaling,
   placeSummonsDefault, isWildcardPath, concentrationResult, arcaneRecoveryCap, arcaneRecoveryDefault, arcaneRecoveryCheck, isArcaneRecovery,
-  arcaneRecoveryRows, isDdbRecoveryMacro, isArcaneGrimoire } = await import("../table-core.mjs");
+  arcaneRecoveryRows, isDdbRecoveryMacro, isArcaneGrimoire, selfEffectExpiry, sourceActorFor, droppedToZero, concentrationSpellName, summonStampOf,
+  EXPIRY_ACTION } = await import("../table-core.mjs");
 
 let pass = 0;
 const failures = [];
@@ -141,6 +142,87 @@ check("44 Arcane Grimoire (second review): an item type with no equipped field (
     isArcaneGrimoire({ name: "Arcane Grimoire", container: "backpack00000001" }),
     isArcaneGrimoire({ name: "Arcane Grimoire", attunement: "required", attuned: false })],
   [true, true, false, false]);
+
+/* ── triage 2026-11 C3: a self-cast reaction expires on its caster's turn (HdWHWk) ── */
+
+const marrith = "Actor.marrith000000001", foe = "Actor.foe00000000001";
+const shield = { expiry: "turnStart", origin: `${marrith}.Item.shield0000000001.Activity.a1`, parentUuid: marrith, combatStarted: true };
+check("45 Shield off-turn (cast on the attacker's turn): turnStart → sourceStart",
+  selfEffectExpiry({ ...shield, turnActorUuid: foe }), "sourceStart");
+check("46 Shield on the caster's own turn: untouched",
+  selfEffectExpiry({ ...shield, turnActorUuid: marrith }), null);
+check("47 a caster-turn effect on a foe (Hold Person's effect: origin the caster, parent the foe): untouched",
+  selfEffectExpiry({ expiry: "turnStart", origin: `${marrith}.Item.hold000000000001.Activity.a1`, parentUuid: foe, combatStarted: true, turnActorUuid: marrith }), null);
+check("48 no combat (not started, or none): untouched",
+  [selfEffectExpiry({ ...shield, combatStarted: false, turnActorUuid: foe }), selfEffectExpiry({ ...shield, combatStarted: false, turnActorUuid: null })], [null, null]);
+check("49 only a plain turnStart is rewritten: sourceStart, turnEnd, none, an unknown one stay",
+  ["sourceStart", "turnEnd", null, undefined, "roundStart"].map(expiry => selfEffectExpiry({ ...shield, expiry, turnActorUuid: foe })), [null, null, null, null, null]);
+check("50 the origin may be the actor itself, one of its items, or dnd5e's system.origin.actor / item / activity; a foreign or missing one is untouched",
+  [selfEffectExpiry({ ...shield, origin: marrith, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: `${marrith}.Item.shield0000000001`, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: null, systemOrigin: { actor: marrith }, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: null, systemOrigin: { item: `${marrith}.Item.shield0000000001` }, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: null, systemOrigin: { activity: `${marrith}.Item.shield0000000001.Activity.a1` }, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: null, systemOrigin: { actor: foe }, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: null, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: `${marrith}0.Item.x`, turnActorUuid: foe })],
+  ["sourceStart", "sourceStart", "sourceStart", "sourceStart", "sourceStart", null, null, null]);
+check("51 a token actor (unlinked) is matched on its own uuid; no parent uuid, no input → untouched",
+  [selfEffectExpiry({ expiry: "turnStart", origin: "Scene.s.Token.t.Actor.a.Item.i", parentUuid: "Scene.s.Token.t.Actor.a", combatStarted: true, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, parentUuid: null, turnActorUuid: foe }), selfEffectExpiry(), selfEffectExpiry(null)],
+  ["sourceStart", null, null, null]);
+check("52 the world-wide expiry action is delete", EXPIRY_ACTION, "delete");
+
+/* ── triage 2026-11 E1: a summon at 0 HP ends its concentration (TwPCoB) ─── */
+
+check("53 droppedToZero: 12 → 0 and 3 → -2 are falls; a second hit at 0 is not; healing is not",
+  [droppedToZero({ before: 12, after: 0 }), droppedToZero({ before: 3, after: -2 }), droppedToZero({ before: 0, after: 0 }),
+   droppedToZero({ before: -1, after: -3 }), droppedToZero({ before: 0, after: 5 }), droppedToZero({ before: 12, after: 1 })],
+  [true, true, false, false, false, false]);
+check("54 droppedToZero: no old value known → 0 or less is a fall; junk or no new value is not",
+  [droppedToZero({ after: 0 }), droppedToZero({ before: null, after: -4 }), droppedToZero({ before: "12", after: "0" }),
+   droppedToZero({ after: "x" }), droppedToZero({ after: null }), droppedToZero({}), droppedToZero()],
+  [true, true, true, false, false, false, false]);
+const spellItems = [{ id: "summonel00000001", name: "Summon Elemental" }, { id: "fly0000000000001", name: "Fly" }];
+check("55 concentrationSpellName: the actor's item by flags.dnd5e.item.id, a cached copy's data, else the effect's name",
+  [concentrationSpellName({ itemFlag: { id: "summonel00000001" }, items: spellItems, effectName: "Concentrating" }),
+   concentrationSpellName({ itemFlag: { data: { _id: "fly0000000000001" } }, items: spellItems, effectName: "Concentrating" }),
+   concentrationSpellName({ itemFlag: { id: "gone000000000001", data: { _id: "gone000000000001", name: "Spiritual Weapon" } }, items: spellItems, effectName: "Concentrating" }),
+   concentrationSpellName({ itemFlag: { id: "gone000000000001" }, items: spellItems, effectName: "Concentrating: ?" }),
+   concentrationSpellName({ itemFlag: null, items: null, effectName: "Concentrating" }), concentrationSpellName()],
+  ["Summon Elemental", "Fly", "Spiritual Weapon", "Concentrating: ?", "Concentrating", ""]);
+check("56 summonStampOf: the stamp's uuid, or null for an unstamped token, an empty stamp, a non-string, no token",
+  [summonStampOf({ flags: { [MOD]: { [SUMMON_FLAG]: "Actor.A.ActiveEffect.e1" } } }), summonStampOf({ flags: {} }),
+   summonStampOf({ flags: { [MOD]: { [SUMMON_FLAG]: "" } } }), summonStampOf({ flags: { [MOD]: { [SUMMON_FLAG]: 7 } } }), summonStampOf(null)],
+  ["Actor.A.ActiveEffect.e1", null, null, null, null]);
+
+/* ── 0.7.2: dnd5e's own origin shape, and the source actor recorded (Caven's barrier, live 2026-11-07) ── */
+
+const SPELL = "Compendium.dnd-players-handbook.spells.Item.phbsplShield0000";
+const liveOrigin = { activity: `${marrith}.Item.shield0000000001.Activity.a1`, item: SPELL, actor: null };
+check("57 selfEffectExpiry reads dnd5e's live shape (item the COMPENDIUM uuid, activity the caster's, actor null) as self-cast; a recorded actor is the authority; the compendium item alone is nobody's",
+  [selfEffectExpiry({ ...shield, origin: null, systemOrigin: liveOrigin, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: null, systemOrigin: { ...liveOrigin, actor: foe }, turnActorUuid: foe }),
+   selfEffectExpiry({ ...shield, origin: null, systemOrigin: { item: SPELL, actor: null }, turnActorUuid: foe })],
+  ["sourceStart", null, null]);
+check("58 sourceActorFor: a sourceStart / sourceEnd effect with no actor recorded gets the first candidate that resolved (activity before item before origin); an unresolved one (null, empty) is skipped",
+  [sourceActorFor({ expiry: "sourceStart", systemOrigin: liveOrigin, candidates: [marrith, null, foe] }),
+   sourceActorFor({ expiry: "sourceEnd", systemOrigin: { actor: null }, candidates: [null, null, foe] }),
+   sourceActorFor({ expiry: "sourceStart", systemOrigin: null, candidates: [null, "", marrith] }),
+   sourceActorFor({ expiry: "sourceStart", systemOrigin: { actor: "" }, candidates: [foe] })],
+  [marrith, foe, marrith, foe]);
+check("59 sourceActorFor: untouched when the actor is recorded, for any other expiry, with nothing resolved, or no input",
+  [sourceActorFor({ expiry: "sourceStart", systemOrigin: { ...liveOrigin, actor: marrith }, candidates: [foe] }),
+   ...["turnStart", "turnEnd", "targetStart", null, undefined].map(expiry => sourceActorFor({ expiry, systemOrigin: liveOrigin, candidates: [marrith] })),
+   sourceActorFor({ expiry: "sourceStart", systemOrigin: liveOrigin, candidates: [null, null, null] }),
+   sourceActorFor({ expiry: "sourceStart", systemOrigin: liveOrigin }), sourceActorFor(), sourceActorFor(null)],
+  [null, null, null, null, null, null, null, null, null, null]);
+let resolved = 0;
+const lazy = () => { resolved++; return [marrith]; };
+check("60 sourceActorFor: a candidates function is called only when the expiry asks for a source and none is recorded",
+  [sourceActorFor({ expiry: "turnStart", candidates: lazy }), sourceActorFor({ expiry: "sourceStart", systemOrigin: { actor: marrith }, candidates: lazy }), resolved,
+   sourceActorFor({ expiry: "sourceStart", candidates: lazy }), resolved],
+  [null, null, 0, marrith, 1]);
 
 /* ── report ──────────────────────────────────────────────────────────────── */
 

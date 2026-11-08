@@ -110,6 +110,15 @@ const filled = { ...res, rows: res.rows.map(r => (r.id === "cv" ? { ...r, save: 
 check("a filled row is not overwritten", matchSave(filled, { requestId: "req1", actorUuid: "Actor.cav" }), -1);
 check("synthetic token actor id does not match by base id", matchSave(res, { ability: "dex", actorId: "gob", created: 10 }), -1);
 
+/* ── matchSave, J2: a save threaded under the spell's usage card answers whenever it was rolled ── */
+const resU = { ...res, usage: "usageCard0000001" };
+check("J2: a save under the same usage card, rolled before the damage, answers by speaker token", matchSave(resU, { ability: "dex", tokenId: "cv", usageId: "usageCard0000001", created: 1 }, { createdAfter: 5 }), 2);
+check("J2: … and by speaker actor id", matchSave(resU, { ability: "dex", actorId: "cav", usageId: "usageCard0000001", created: 1 }, { createdAfter: 5 }), 2);
+check("J2: a save under another usage card keeps the time rule", matchSave(resU, { ability: "dex", tokenId: "cv", usageId: "usageCardOther01", created: 1 }, { createdAfter: 5 }), -1);
+check("J2: the ability must still match", matchSave(resU, { ability: "con", tokenId: "cv", usageId: "usageCard0000001", created: 1 }), -1);
+check("J2: a resolution with no usage card ignores usageId", matchSave({ ...res, usage: null }, { ability: "dex", tokenId: "cv", usageId: "usageCard0000001", created: 1 }, { createdAfter: 5 }), -1);
+check("J2: auto rows are still never filled from chat", matchSave(resU, { ability: "dex", tokenId: "g1", usageId: "usageCard0000001", created: 1 }), -1);
+
 /* ── shouldAutoDamage ────────────────────────────────────────────────────── */
 check("hit (≥ AC) → damage", shouldAutoDamage({ total: 15, target: 15 }), true);
 check("miss (< AC) → nothing", shouldAutoDamage({ total: 14, target: 15 }), false);
@@ -117,6 +126,71 @@ check("crit beats AC → damage", shouldAutoDamage({ total: 12, target: 30, isCr
 check("natural 1 → nothing even with no target", shouldAutoDamage({ total: 9, isFumble: true }), false);
 check("no target (AC unknown) → damage", shouldAutoDamage({ total: 3, target: undefined }), true);
 check("no roll → nothing", shouldAutoDamage(null), false);
+
+/* ── J1: shouldAutoDamageOnUse ───────────────────────────────────────────── */
+const { shouldAutoDamageOnUse, damageTotal, scaleDamages, rowAmount, splitApplyRows, lateTargetCard, LATE_TARGET_WINDOW_MS } = core;
+check("J1: a save activity with damage and a target → roll", shouldAutoDamageOnUse({ type: "save", damageParts: 1, targets: 1 }), true);
+check("J1: no target → nothing (a narrated use posts nothing extra)", shouldAutoDamageOnUse({ type: "save", damageParts: 1, targets: 0 }), false);
+check("J1: no damage parts → nothing", shouldAutoDamageOnUse({ type: "save", damageParts: 0, targets: 2 }), false);
+check("J1: an area spell waits for its area", shouldAutoDamageOnUse({ type: "save", damageParts: 1, targets: 3, template: "sphere" }), false);
+check("J1: not a save activity → nothing", shouldAutoDamageOnUse({ type: "attack", damageParts: 1, targets: 1 }), false);
+check("J1: nothing given → nothing", shouldAutoDamageOnUse(), false);
+
+/* ── B5: damageTotal, scaleDamages, rowAmount ────────────────────────────── */
+const fireCold = [{ value: 10, type: "fire", properties: ["mgc"] }, { value: 5, type: "cold" }];
+check("damageTotal sums the parts; none → 0", [damageTotal(fireCold), damageTotal([]), damageTotal(null)], [15, 0, 0]);
+check("scaleDamages keeps each type's share and sums to the amount (12 of 15 → 8 + 4)", scaleDamages(fireCold, 12).map(d => d.value), [8, 4]);
+check("scaleDamages: largest remainder, whole numbers (7 of 15 → 5 + 2)", scaleDamages(fireCold, 7).map(d => d.value), [5, 2]);
+check("scaleDamages: 0 → all zero; a larger total scales up", [scaleDamages(fireCold, 0).map(d => d.value), scaleDamages(fireCold, 30).map(d => d.value)], [[0, 0], [20, 10]]);
+check("scaleDamages: no amount (null, undefined, NaN, negative) → the input unchanged", [scaleDamages(fireCold, null) === fireCold, scaleDamages(fireCold, undefined) === fireCold, scaleDamages(fireCold, "x") === fireCold, scaleDamages(fireCold, -3) === fireCold], [true, true, true, true]);
+check("scaleDamages: a roll with no total gives the amount to its first part", scaleDamages([{ value: 0, type: "fire" }, { value: 0, type: "cold" }], 9).map(d => d.value), [9, 0]);
+check("scaleDamages never mutates and keeps the other fields", (() => { const out = scaleDamages(fireCold, 12); return [fireCold[0].value, out[0].type, out[0].properties]; })(), [10, "fire", ["mgc"]]);
+check("scaleDamages: [] stays []", scaleDamages([], 5), []);
+check("rowAmount: blank, the rolled total, junk or a negative → null (no override)", [rowAmount("", 15), rowAmount("15", 15), rowAmount("abc", 15), rowAmount("-2", 15), rowAmount(null, 15), rowAmount(undefined, 15)], [null, null, null, null, null, null]);
+check("rowAmount: another whole number is the row's total (decimals floored)", [rowAmount("12", 15), rowAmount(" 7 ", 15), rowAmount("9.8", 15), rowAmount(0, 15)], [12, 7, 9, 0]);
+
+/* ── Part I: applyTargets, splitApplyRows, lateTargetCard, the relay's options ── */
+const { applyTargets, packApplyOptions, unpackApplyOptions } = core;
+check("applyTargets: the rows dnd5e lists are the rows, whatever the user targets", applyTargets({ listed: ["a", "b"], recorded: 0, targeted: ["c"] }), { uuids: ["a", "b"], late: false });
+check("applyTargets: nobody listed on an untargeted card and a player holds targets → those targets (late)", applyTargets({ listed: [], recorded: 0, targeted: ["c", "d"] }), { uuids: ["c", "d"], late: true });
+check("applyTargets: a GM gets the empty list (a stale target never lands on a select habit)", applyTargets({ listed: [], recorded: 0, targeted: ["c"], isGM: true }), { uuids: [], late: false });
+check("applyTargets: a card that recorded targets never falls back; no targets held → nothing", [applyTargets({ listed: [], recorded: 2, targeted: ["c"] }), applyTargets({ listed: [], recorded: 0, targeted: [] }), applyTargets()], [{ uuids: [], late: false }, { uuids: [], late: false }, { uuids: [], late: false }]);
+check("applyTargets: blank option values are dropped", applyTargets({ listed: ["", "a"], recorded: 1 }), { uuids: ["a"], late: false });
+check("packApplyOptions: Sets become arrays, `true` stays, empty sets and the rest of the options are dropped",
+  packApplyOptions({ multiplier: 2, originatingMessage: {}, ignore: { immunity: new Set(["fire"]), resistance: true, vulnerability: new Set() }, downgrade: new Set(["cold"]) }),
+  { ignore: { immunity: ["fire"], resistance: true }, downgrade: ["cold"] });
+check("packApplyOptions: nothing chosen → {} (the row carries no options)", [packApplyOptions({ multiplier: 1 }), packApplyOptions(), packApplyOptions({ ignore: {}, downgrade: new Set() })], [{}, {}, {}]);
+check("unpackApplyOptions: arrays back to Sets; junk (a number, a string list, an array where an object belongs) is dropped",
+  (() => { const o = unpackApplyOptions({ ignore: { immunity: ["fire", 3], resistance: true, modification: "x", vulnerability: [] }, downgrade: ["cold", 7] }); return { ignore: Object.fromEntries(Object.entries(o.ignore).map(([k, v]) => [k, v === true ? true : [...v]])), downgrade: [...o.downgrade] }; })(),
+  { ignore: { immunity: ["fire"], resistance: true }, downgrade: ["cold"] });
+check("unpackApplyOptions: nothing, or junk → {} (dnd5e's defaults)", [unpackApplyOptions(), unpackApplyOptions(null), unpackApplyOptions({ ignore: ["immunity"], downgrade: "cold" })], [{}, {}, {}]);
+check("pack ∘ unpack is the identity on a real choice", (() => { const o = unpackApplyOptions(packApplyOptions({ ignore: { immunity: new Set(["fire", "cold"]) }, downgrade: new Set(["acid"]) })); return [[...o.ignore.immunity], [...o.downgrade]]; })(), [["fire", "cold"], ["acid"]]);
+const applyRows = [
+  { uuid: "Scene.s.Token.me", owner: true, multiplier: 1 },
+  { uuid: "Scene.s.Token.ally", owner: false, multiplier: 1, amount: 12 },
+  { uuid: "Scene.s.Token.skip", owner: false, multiplier: 0 },
+  { uuid: "Scene.s.Token.half", owner: false, multiplier: 0.5 },
+  { uuid: "", owner: false, multiplier: 1 },
+];
+check("splitApplyRows: owned rows stay local, the rest are relayed; ×0 and uuid-less rows go nowhere",
+  [splitApplyRows(applyRows).local.map(r => r.uuid), splitApplyRows(applyRows).relay.map(r => r.uuid)],
+  [["Scene.s.Token.me"], ["Scene.s.Token.ally", "Scene.s.Token.half"]]);
+check("splitApplyRows: nothing → empty", splitApplyRows(null), { local: [], relay: [] });
+const T0 = 1_000_000;
+const cards = [
+  { id: "old", type: "damage", author: "pl", timestamp: T0 - LATE_TARGET_WINDOW_MS - 1, targets: 0 },
+  { id: "mine", type: "damage", author: "pl", timestamp: T0 - 5000, targets: 0 },
+  { id: "targeted", type: "damage", author: "pl", timestamp: T0 - 4000, targets: 2 },
+  { id: "theirs", type: "damage", author: "gm", timestamp: T0 - 3000, targets: 0 },
+  { id: "usage", type: "usage", author: "pl", timestamp: T0 - 2000, targets: 0 },
+];
+check("lateTargetCard: the newest own damage card with no targets inside the window", lateTargetCard(cards, { userId: "pl", now: T0 }), "mine");
+check("lateTargetCard: a card these targets already filled still follows", lateTargetCard([...cards, { id: "late", type: "damage", author: "pl", timestamp: T0 - 1000, targets: 1, lateTargets: true }], { userId: "pl", now: T0 }), "late");
+check("lateTargetCard: an applied card is done", lateTargetCard([...cards, { id: "done", type: "damage", author: "pl", timestamp: T0 - 1000, targets: 1, lateTargets: true, applied: true }], { userId: "pl", now: T0 }), "mine");
+check("0.6.2: a healing card (dnd5e type `healing`) is followed too — Heal cast, then Caven targeted", lateTargetCard([...cards, { id: "heal", type: "healing", author: "pl", timestamp: T0 - 1000, targets: 0 }], { userId: "pl", now: T0 }), "heal");
+check("isApplyCard: damage and healing cards, nothing else", ["damage", "healing", "usage", "save", "attack", undefined, null].map(t => core.isApplyCard(t)), [true, true, false, false, false, false, false]);
+check("APPLY_CARD_TYPES is frozen and names both", [Object.isFrozen(core.APPLY_CARD_TYPES), [...core.APPLY_CARD_TYPES]], [true, ["damage", "healing"]]);
+check("lateTargetCard: outside the window, another author, or no user → null", [lateTargetCard(cards.slice(0, 1), { userId: "pl", now: T0 }), lateTargetCard(cards, { userId: "other", now: T0 }), lateTargetCard(cards, { now: T0 })], [null, null, null]);
 
 /* ── newestRegion / flags ────────────────────────────────────────────────── */
 check("newest by createdTime", newestRegion([{ id: "a", _stats: { createdTime: 5 } }, { id: "b", _stats: { createdTime: 9 } }, { id: "c", _stats: { createdTime: 7 } }]).id, "b");
@@ -303,11 +377,12 @@ check("player status line: waiting, applied, superseded, nothing to say",
 // core.VERSION (the API rows already say since: "0.4.0"). 0.5.0 (2026-10-19, feedback 7v8jPs, RpnWw3,
 // 3arqpV, WSMeuV): Part H walls, snappable handles, instantaneous areas stay put, the Token HUD eraser.
 // 0.5.1 (2026-10-19, code review): a rotated cube clips from its new centre, monster auras stay attached,
-// areaWalls re-clips on change, an uninstalled wrapper passes through.
-test("module.json is pentaryn-aoe 0.5.1", () => {
+// areaWalls re-clips on change, an uninstalled wrapper passes through. 0.6.2 (2026-11-07, playtest): a healing
+// roll's card is dnd5e type `healing`; Part I accepts it (isApplyCard).
+test("module.json is pentaryn-aoe 0.6.2", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.5.1");
+  assert.equal(manifest.version, "0.6.2");
 });
 
 test("VERSION === module.json version", () => {

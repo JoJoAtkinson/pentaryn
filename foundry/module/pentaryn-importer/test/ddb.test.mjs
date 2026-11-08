@@ -5,7 +5,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
 import { manifestOf } from "./kit/harness.mjs";
-import { DDB_DM, DDB_HB, DDB_MM, PHB_INDEX, SPELLS, fighter, liveActor, wizard } from "./fixtures/ddb.mjs";
+import { DDB_DM, DDB_HB, DDB_MM, PHB_INDEX, SPELLS, fighter, knight, liveActor, wizard } from "./fixtures/ddb.mjs";
 import { applyPlan, lookupsFor, replacedSystem, snapshotOf, uuidKey } from "../ddb-adapter.mjs";
 import { planCorrections } from "../ddb-core.mjs";
 
@@ -94,6 +94,38 @@ test("applyPlan batches the item updates into one call and stamps with the actor
   // and nothing is left to do
   const again = snapshotOf(a);
   assert.deepEqual(planCorrections(again, await lookupsFor(again)).changes, []);
+});
+
+test("snapshotOf carries each effect's transfer, duration and changes (core 14 system.changes), and applyPlan batches effect updates per item", async () => {
+  const a = liveActor(knight());
+  const snap = snapshotOf(a);
+  const barrier = snap.items.find(i => i._id === "shield").effects[0];
+  assert.equal(barrier.transfer, false);
+  assert.deepEqual(barrier.duration, { value: 6, units: "seconds", expiry: "turnStart", expired: false });
+  assert.deepEqual(barrier.keys, ["system.attributes.ac.bonus"]);
+  assert.equal(barrier.changes[0].type, "add");
+  const plan = planCorrections(snap, await lookupsFor(snap));
+  const out = await applyPlan(a, plan, { importId: "imp3", at: 1, version: "1.3.0", changes: plan.changes.length });
+  assert.deepEqual(out.errors, []);
+  assert.equal(out.stamped, true);
+  assert.deepEqual(a.writes.map(w => w[0]), ["effects.update", "effects.update", "effects.update", "actor.update"]);
+  assert.deepEqual(a.writes.map(w => w[1]).slice(0, 3), ["shield", "precise", "large"]);
+  assert.deepEqual(a.writes[0][2], [{ _id: "barrier", "duration.expiry": "sourceStart", "duration.value": null }]);
+  assert.equal(a.writes[2][2][0]["system.changes"].at(-1).key, "system.traits.size");
+  const grow = a.items.get("large").effects.get("grow")._source;
+  assert.equal(grow.system.changes.length, 3);
+  assert.deepEqual(a.items.get("shield").effects.get("barrier")._source.duration, { value: null, units: "seconds", expiry: "sourceStart", expired: false });
+  // and nothing is left to do
+  const again = snapshotOf(a);
+  assert.deepEqual(planCorrections(again, await lookupsFor(again)).changes, []);
+  // a refused effect update is one error; the stamp is withheld
+  const b = liveActor(knight());
+  b.items.get("large").updateEmbeddedDocuments = async () => { throw new Error("nope"); };
+  const snapB = snapshotOf(b);
+  const outB = await applyPlan(b, planCorrections(snapB, await lookupsFor(snapB)), { importId: "imp3" });
+  assert.deepEqual(outB.errors, ["Large Form: effect updates: nope"]);
+  assert.equal(outB.stamped, false);
+  assert.equal(outB.applied.length, 2, "the two reaction effects still went");
 });
 
 test("review 2: a planned delete whose item another writer removed first is success, and the rest still go", async () => {
@@ -293,7 +325,8 @@ test("inspect: the stamp, needsCorrection and frozen items; depth ≤ 4", () => 
 });
 
 test("api.ddbCorrections.rules lists the rule ids", () => {
-  assert.deepEqual(api.ddbCorrections.rules().map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "stale-cast-cache", "transmuters-stone"]);
+  assert.deepEqual(api.ddbCorrections.rules().map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "stale-cast-cache", "transmuters-stone",
+    "reaction-expiry", "large-form-size"]);
 });
 
 test("the GM-ready sweep corrects only DDB actors synced since their stamp", async () => {

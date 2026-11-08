@@ -3,6 +3,7 @@
   "contract": "string",
   "describe": "function",
   "ghostFor": "ghostFor",
+  "inspect": "inspect",
   "pinsUnderTokens": "pinsUnderTokens",
   "selftest": "selftest",
   "setGhost": "setGhost",

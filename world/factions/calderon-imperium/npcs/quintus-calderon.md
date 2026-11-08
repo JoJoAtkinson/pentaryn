@@ -1,6 +1,6 @@
 ---
 created: 2026-03-29
-last_modified: 2026-03-29
+last_modified: 2026-11-05
 tags: ["npc", "ruler", "calderon-imperium", "emperor"]
 status: stub
 ---
@@ -65,12 +65,16 @@ GM only. Caven's player does not know he becomes Quintus.
   1. **Where** he is puppeting himself from. In effect, where his soul is now.
   2. **How** to restore himself to his body and be his full self again, as he was before he
      died.
-- **Raven:** [[raven-the-vital-ascendant|Raven]] sought him out. She does not have his problem,
-  but she understands how he feels: mind and body at odds. They explored magic together
-  looking for answers, and they understood each other.
+- **Raven:** they met in the ruins under Stonewatch (Lone Peak), two necromancers drawn to the
+  same sealed door. [[raven-the-vital-ascendant|Raven]] does not have his problem, but she
+  understands how he feels: mind and body at odds. They explored magic together looking for
+  answers, and they understood each other. They disagreed only about the Drow; she said the
+  libraries would not have it.
 - **The Underdark:** this is why he went into the drow libraries. He wanted knowledge of the
   realms and the nature of undeath, and above all to learn whether a soul is still tied to an
   undead body. That would tell him how he himself exists. A drow house caught him there.
+- **Why the others came for him:** Raven went missing, and they came into the Underdark to get
+  him out, because no one knows her better.
 - **Raven, as far as he knows:** still whole. Her lich rite (3200) happened while he was in the
   cells, so he doesn't know about it. Marrith, the other PC from Elderholt, believes the same.
 - **Is he alive? Deliberately open.** Nobody knows, Caven included, and the not knowing is the

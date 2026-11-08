@@ -226,3 +226,7 @@ The watchdog ticks every 10 s, and the decision is `state.mjs nextAction()`.
   `automation/windows/`, and that has not been built.
 - **A second bridge peer.** This would happen if Joe opened a GM tab on BOSS itself. How the
   broker behaves with two peers has not been checked.
+
+## Known gaps
+
+- **Smoke tests that need a combat or targets cannot run from the bot's tab.** It has no canvas, so `game.combat` is null there, an effect it creates records no combat start, and `game.user.targets` is empty; a turn-based or targeting check run through `eval-js` is not representative. When Joe (role 4) is connected his tab is `game.users.activeGM`, not the bot, so GM-side automation in a fight runs there. Drive such checks from a browser tab (2026-11-07, feedback-triage smoke).

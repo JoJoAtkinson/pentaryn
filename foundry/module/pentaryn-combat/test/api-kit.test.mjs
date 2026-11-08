@@ -47,7 +47,7 @@ test("rows: the 22 legacy members are legacy and resolve no ref; the new reads r
   for (const r of MANIFEST.rows.filter(x => x.legacy)) assert.notEqual(r.params[0]?.name, "ref", r.path);
   for (const k of ["inspect", "coversMultiattack"]) assert.equal(rows[k].params[0].name, "ref", k);
   const d = api.describe();
-  assert.equal(d.settings.length, 30);
+  assert.equal(d.settings.length, 31);
   assert.equal(d.flagScope, MODULE);
   assert.ok(d.hooks.length > 60);
   assert.ok(d.patches.length >= 2 && d.patches.every(p => /^combat-/.test(p.adjustments)), JSON.stringify(d.patches));
@@ -69,7 +69,7 @@ test("inspect: plain JSON, depth ≤ 4; plan and turn equal the legacy members; 
   assert.throws(() => api.inspect("Figh"), /NOT_FOUND/, "never a substring");
   const fig = api.inspect(cast.fighter);
   assert.equal(fig.pips.max >= 2, true);
-  assert.deepEqual(Object.keys(fig.settings).length, 30);
+  assert.deepEqual(Object.keys(fig.settings).length, 31);
   assert.equal(fig.running, null);
 });
 
@@ -100,7 +100,7 @@ test("coversMultiattack: the Multiattack item id for a form or NPC with 2+ parse
 test("selftest, settings, trace, uninstall are members", () => {
   const st = api.selftest();
   assert.equal(st.ok, true, JSON.stringify(st.checks));
-  assert.equal(Object.keys(api.settings()).length, 30);
+  assert.equal(Object.keys(api.settings()).length, 31);
   assert.deepEqual(api.trace(), []);
   assert.equal(typeof api.uninstall, "function");
 });

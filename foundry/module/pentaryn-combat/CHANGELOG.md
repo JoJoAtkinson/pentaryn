@@ -1,5 +1,31 @@
 # Changelog — Pentaryn Combat (`pentaryn-combat`)
 
+## 0.3.1 — 2026-11-07 (feedback triage 2026-11, clusters K and L6)
+
+A patch, not a minor, on purpose: the legacy `pentarynCombat.*` event names sunset at 0.4.0 (`HOOKS`
+`until`), and retiring them is its own declared change (hud/bars.mjs still listens on them).
+
+- **HP box arithmetic** (K, `GaMIoP`; setting `hpMath`, default on): `50-10` typed into the Token
+  HUD's bar box or an actor sheet's HP box gives 40 (`Roll.safeEval`, rounded down). `=40`, `-10`,
+  `+5` and `50%` reach core / dnd5e exactly as before. Two kit wraps: `TokenHUD#_parseAttributeInput`
+  and `BaseActorSheet#_onChangeInputDelta` (dnd5e's `parseInputDelta` is module-private, so the sheet
+  handler is the seam). The boxes — and the sheet's HP meter, since its box is hidden until clicked —
+  carry the tooltip "=40 sets · -10 subtracts · 50-10 does the math". New feature file
+  `turnflow/hp-math.mjs`; pure rules in `core/dice-input.mjs`.
+- **Roll manually** (L6, `M4D2Im`; Joe 2026-11-07, review adjustment: d20 only, secondary, no damage
+  twin; no setting, no toggle, no remembered state): every dnd5e d20 roll window (attack, check, save)
+  gets a quieter fourth button beside Advantage / Normal / Disadvantage. It rolls in Normal mode and
+  opens core's Roll Resolution box for the d20, so the player types the face they rolled at the table;
+  a box left blank is rolled by the computer. Advantage is handled at the table (roll two, type the one
+  the rule says), so the advantage-based Sneak Attack offer does not fire for such a roll. Hidden for a
+  user without `MANUAL_ROLLS`. Quick, damage and blind rolls stay digital. Three kit wraps:
+  `D20RollConfigurationDialog#_finalizeConfig` marks the roll (`options.pentarynManual`); `Roll#_evaluate`
+  raises a flag for the marked roll's synchronous term identification only; `ClientSettings#get` answers
+  `core.diceConfiguration` with the d20 as Manual while it is up (a copy — the stored setting is never
+  written). New feature file `turnflow/roll-manually.mjs`; button style `.pc-roll-manually`.
+- Five `foundry/adjustments.yml` rows (`combat-core-token-hud-arithmetic`, `combat-dnd5e-sheet-arithmetic`,
+  `combat-dnd5e-roll-manually-action`, `combat-core-roll-manually-evaluate`, `combat-core-roll-manually-dice-config`).
+
 ## 0.3.0 — 2026-10-12 (migrated to the addon blueprint, wave 4; released by the Wave 7 restart batch)
 
 The Wave 7 batch bumped `module.json` and `core.VERSION` to 0.3.0 together and added the

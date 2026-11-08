@@ -243,7 +243,18 @@
       "enterUses": {
         "Name": "Enter in a usage window uses the ability",
         "Hint": "In a usage window's number box (Lay on Hands' points, a scaling amount), Enter takes the number and presses Use Ability. Off: Enter only takes the number; click Use Ability."
+      },
+      "hpMath": {
+        "Name": "HP box arithmetic",
+        "Hint": "Typing 50-10 into the Token HUD's bar box or a sheet's HP box gives 40 (rounded down). =40 sets, -10 subtracts and 50% work as before. Off: core's and dnd5e's own parsing, which drops an expression."
       }
+    },
+    "HpMath": {
+      "Tip": "=40 sets · -10 subtracts · 50-10 does the math"
+    },
+    "RollManually": {
+      "Label": "Roll manually",
+      "Hint": "Roll your d20 at the table and type the face you kept; a box left blank is rolled by the computer. Normal mode: with advantage or disadvantage, roll two and type the one the rule says."
     },
     "Reckless": {
       "Effect": "Reckless",

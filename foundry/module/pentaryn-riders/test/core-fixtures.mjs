@@ -11,7 +11,7 @@ const {
   RULES, ruleByKey, normalizeName, matchRule, resolveTypes, termTypes, planDice, withModifier,
   parseFormula, formatTerms, bonusTerms, transformFormula, planRiders, pickSpend, pickRestore,
   battleMedicFormula, clampHeal, carriedAbilities, riderFlag, noteParts, usedFromMessages, MOD,
-  ADEPT_TYPES, AFFINITY_TYPES
+  ADEPT_TYPES, AFFINITY_TYPES, REST_RULES, EMPOWERED_SPELL, restRuleByKey, restRulesFor, omenOf, omenOfActivity, omenActivityFor, omenButtonMark, OMENS
 } = core;
 
 let pass = 0;
@@ -35,6 +35,41 @@ check("1 rule keys", RULES.map(r => r.key),
   ["elemental-adept", "elemental-affinity", "potent-spellcasting-druid", "potent-spellcasting-cleric", "healer"]);
 ok("2 table frozen", Object.isFrozen(RULES) && Object.isFrozen(RULES[0]));
 check("3 ruleByKey miss", ruleByKey("nope"), null);
+
+/* ── the long-rest table (triage 2026-11 G1) and Empowered Spell's identity (H1) ── */
+
+check("4 rest rule keys, in card order", REST_RULES.map(r => r.key), ["cosmic-omen", "prepare-spells"]);
+ok("5 rest table frozen", Object.isFrozen(REST_RULES) && REST_RULES.every(Object.isFrozen) && Object.isFrozen(EMPOWERED_SPELL));
+check("6 restRuleByKey miss", restRuleByKey("portent"), null);
+const omenItem = { id: "omen000000000001", identifier: "cosmic-omen", name: "Cosmic Omen", type: "feat" };
+check("7 restRulesFor: Talo (Cosmic Omen, a druid who prepares) gets both rows, the omen row naming its item",
+  restRulesFor({ items: [{ id: "x", name: "Wild Shape", type: "feat" }, omenItem], preparedCaster: true }),
+  [{ key: "cosmic-omen", item: "omen000000000001" }, { key: "prepare-spells", item: null }]);
+check("8 restRulesFor: a fighter gets nothing; a sorcerer who prepares gets the spells row only; by source or name too",
+  [restRulesFor({ items: [{ id: "a", name: "Second Wind", type: "feat" }] }),
+   restRulesFor({ items: [], preparedCaster: true }).map(r => r.key),
+   restRulesFor({ items: [{ id: "s", source: "Compendium.dnd-players-handbook.classes.Item.phbdrdCosmicOmen", name: "x", type: "feat" }] }).map(r => r.item),
+   restRulesFor({ items: [{ id: "n", name: "Cosmic Omen (Stars)", type: "feat" }] }).map(r => r.item),
+   restRulesFor({ items: [{ id: "c", name: "Cosmic Omen", type: "consumable" }] }).length, restRulesFor().length],
+  [[], ["prepare-spells"], ["s"], ["n"], 0, 0]);
+check("9 omenOf: even is weal, odd is woe; junk is null", [1, 2, 3, 4, 5, 6, 0, -2, 2.5, "4", "x", null, undefined].map(omenOf),
+  ["woe", "weal", "woe", "weal", "woe", "weal", null, null, null, "weal", null, null, null]);
+check("9a omenOfActivity: the PHB names, either word, any case; a third activity is null",
+  [{ name: "Weal (Even)" }, { name: "Woe (Odd)" }, { name: "weal" }, { name: "EVEN" }, { name: "Odd omen" }, { name: "Consult the stars" }, null].map(omenOfActivity),
+  ["weal", "woe", "weal", "weal", "woe", null, null]);
+const omenActs = [{ id: "a1", name: "Weal (Even)" }, { id: "a2", name: "Woe (Odd)" }];
+check("9b omenActivityFor picks the omen's activity; a Set or Map of activities too; no omen → null",
+  [omenActivityFor(omenActs, "weal")?.id, omenActivityFor(omenActs, "woe")?.id, omenActivityFor(new Set(omenActs), "woe")?.id, omenActivityFor(omenActs, "x"), omenActivityFor(null, "weal"), omenActivityFor([{ id: "z", name: "Stars" }], "weal")],
+  ["a1", "a2", "a2", null, null, null]);
+check("9c OMENS", OMENS, ["weal", "woe"]);
+check("9e omenButtonMark (0.7.2): an item button (Argon's default for a feat) is never greyed and names the omen; a per-activity button is badged on the match, greyed on the other, left alone on a third; no omen → nothing",
+  [omenButtonMark({ omen: "woe", perActivity: false, kind: "weal" }), omenButtonMark({ omen: "woe", perActivity: true, kind: "woe" }), omenButtonMark({ omen: "woe", perActivity: true, kind: "weal" }),
+   omenButtonMark({ omen: "woe", perActivity: true, kind: null }), omenButtonMark({ omen: null, perActivity: true, kind: "weal" }), omenButtonMark({ omen: "x", perActivity: false }), omenButtonMark()],
+  [{ badge: "woe", named: true, off: false }, { badge: "woe", named: false, off: false }, { badge: null, named: false, off: true },
+   { badge: null, named: false, off: false }, { badge: null, named: false, off: false }, { badge: null, named: false, off: false }, { badge: null, named: false, off: false }]);
+ok("9d Empowered Spell matched by identifier, source or name; not the Font of Magic",
+  matchRule(EMPOWERED_SPELL, { identifier: "empowered-spell", name: "x", type: "feat" }) && matchRule(EMPOWERED_SPELL, { source: "Compendium.dnd-players-handbook.classes.Item.phbmmoEmpoweredS", name: "x", type: "feat" })
+  && matchRule(EMPOWERED_SPELL, { name: "Empowered Spell", type: "feat" }) && !matchRule(EMPOWERED_SPELL, { identifier: "font-of-magic", name: "Font of Magic", type: "feat" }));
 
 /* ── matching ─────────────────────────────────────────────────────────────── */
 

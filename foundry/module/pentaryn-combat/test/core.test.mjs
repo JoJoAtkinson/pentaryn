@@ -31,7 +31,9 @@ const ADDED_EXT11 = ["ATTACK_ACTION_KINDS", "MOVEMENT_KEYS"];
 const ADDED_EXT13 = ["ARGON"];
 // Wave 2 ext-8: the one builder for our until-turn-end effects (Dash, Disengage, Steady Aim).
 const ADDED_EXT8 = ["turnEffectData"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13, ...ADDED_EXT8];
+// Feedback triage 2026-11 (K, L6): the HP box's arithmetic and Roll manually's d20 dice configuration (core/dice-input.mjs).
+const ADDED_TRIAGE = ["arithmeticAssignment", "arithmeticExpression", "manualDiceConfig"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13, ...ADDED_EXT8, ...ADDED_TRIAGE];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();
@@ -50,10 +52,47 @@ test("object exports are frozen tables, rows and arrays included", () => {
 });
 
 // [declared] Wave 7 batch (W4 version bumps, Joe 2026-10-12), flipped from "0.2.5 (play-test fix PT1-6
-// kept)": combat ships the blueprint migration as 0.3.0, with combat-core VERSION.
-test("module.json version is 0.3.0 (the Wave 7 batch release)", () => {
-  assert.equal(manifest.version, "0.3.0");
+// kept)": combat ships the blueprint migration as 0.3.0, with combat-core VERSION. 0.3.1 (2026-11-07):
+// feedback triage K (HP box arithmetic) and L6 (Roll manually); a patch, not a minor, because the
+// legacy pentarynCombat.* event names sunset at 0.4.0 (HOOKS `until`) and that is its own declared change.
+test("module.json version is 0.3.1 (feedback triage K + L6)", () => {
+  assert.equal(manifest.version, "0.3.1");
   assert.equal(manifest.id, core.MOD);
+});
+
+/* ── core/dice-input.mjs (feedback triage 2026-11, K and L6): a fixture per rule ─────────────── */
+
+test("arithmeticExpression: an operator inside and no leading sign; every existing form is not arithmetic", () => {
+  assert.equal(core.arithmeticExpression("50-10"), "50-10");
+  assert.equal(core.arithmeticExpression(" 2*(3+4) "), "2*(3+4)", "trimmed");
+  assert.equal(core.arithmeticExpression("100 - 1"), "100 - 1", "spaces inside are fine");
+  for (const left of ["=40", "-10", "+5", "50%", "40", "", "abc", "1d8+2", "50.5-10", "(50)", "50 10"]) {
+    assert.equal(core.arithmeticExpression(left), null, JSON.stringify(left));
+  }
+  assert.equal(core.arithmeticExpression(40), null, "not a string");
+  assert.equal(core.arithmeticExpression(null), null);
+});
+
+test("arithmeticAssignment: the evaluator's result rounded down as '=N'; null for non-arithmetic or a non-finite result; a throw is the caller's", () => {
+  const evaluate = e => Function(`"use strict"; return (${e});`)();
+  assert.equal(core.arithmeticAssignment("50-10", evaluate), "=40");
+  assert.equal(core.arithmeticAssignment("7/2", evaluate), "=3", "D&D rounds down");
+  assert.equal(core.arithmeticAssignment("2*(3+4)", evaluate), "=14");
+  assert.equal(core.arithmeticAssignment("10-50", evaluate), "=-40", "the sign is the player's: core and dnd5e clamp as they do for =-40");
+  assert.equal(core.arithmeticAssignment("1/0", evaluate), null, "Infinity is not a number to set");
+  assert.equal(core.arithmeticAssignment("-10", evaluate), null, "a delta is left to core");
+  assert.equal(core.arithmeticAssignment("50-10", () => "nope"), null);
+  assert.throws(() => core.arithmeticAssignment("50-", evaluate), SyntaxError, "a trailing operator throws in the evaluator; the feature catches it");
+});
+
+test("manualDiceConfig: the d20 as Manual on a copy; every other denomination as configured", () => {
+  const stored = { d6: "mersenne", default: "" };
+  const out = core.manualDiceConfig(stored);
+  assert.deepEqual(out, { d6: "mersenne", default: "", d20: "manual" });
+  assert.deepEqual(stored, { d6: "mersenne", default: "" }, "the stored object is untouched");
+  assert.deepEqual(core.manualDiceConfig({ d20: "mersenne" }), { d20: "manual" }, "a digital d20 is overridden for this roll");
+  assert.deepEqual(core.manualDiceConfig(undefined), { d20: "manual" });
+  assert.deepEqual(core.manualDiceConfig(null), { d20: "manual" });
 });
 
 test("VERSION === module.json version", () => {

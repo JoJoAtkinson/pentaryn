@@ -37,10 +37,25 @@
  *    Setting pentaryn-riders.concentrationAutoBreak (world, default on). Row
  *    dnd5e-concentration-auto-break.
  *
- * Setting: pentaryn-riders.concentrationSummons (world, default on) turns part 1 off.
+ * 4. A summon that drops to 0 HP ends the concentration that keeps it (TwPCoB, triage E1). The 2024
+ *    summon spells say the spirit disappears when it drops to 0 HP or the spell ends; nothing watched
+ *    the summon, so the Elemental Spirit lay there (and dropbin made it a corpse). On `updateActor`
+ *    (hp.value → 0, never deleteToken: portals and pins delete tokens on scene moves) the active GM
+ *    (with no GM online, the user who made the change) resolves each stamped token's effect with
+ *    `fromUuid`, claims the token (two tabs on that account, riders-async-3's pattern) and calls
+ *    `caster.endConcentration(effect)`; part 1b then removes the token(s). One whispered line to the
+ *    caster's owners and the GMs: "<Caster>'s <Summon> fell; concentration on <Spell> ends." Once per
+ *    fall: a second hit at 0 is not a fall (dnd5e's `options.dnd5e.hp` carries the old value), a
+ *    token already being handled is skipped, and an effect that is gone ends nothing. Every
+ *    dnd5e-summoned token skips dropbin's corpse (pentaryn-dropbin, `flags.dnd5e.summon`).
+ *
+ * Setting: pentaryn-riders.concentrationSummons (world, default on) turns parts 1 and 4 off.
  */
 
-import { MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult, isConcentration } from "./table-core.mjs";
+import {
+  MODULE, SUMMON_FLAG, concentrationEffectFor, summonTokenIds, concentrationResult, isConcentration, summonStampOf,
+  droppedToZero, concentrationSpellName,
+} from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { featureKeys } from "./shapes.mjs";
 import { claimDocument, claimMessage } from "./lib/election.mjs";
@@ -162,6 +177,59 @@ function resultLine(message, html) {
   } catch (err) { log.warn("concentration result line skipped", err); }
 }
 
+/* ── 4. a summon at 0 HP ends the concentration that keeps it ─────────── */
+
+/** Token uuids whose fall is being handled in this tab (pruned when done, on deleteToken, at uninstall). */
+const falling = new Set();
+
+/** The actor's tokens on every scene (a synthetic actor: its one token). */
+function tokensOf(actor) {
+  if (actor?.isToken) return actor.token ? [actor.token] : [];
+  return actor?.getDependentTokens?.({ concreteOnly: true }) ?? [];
+}
+
+function summonFell(actor, changes, options, userId) {
+  try {
+    if (!enabled() || !foundry.utils.hasProperty(changes, "system.attributes.hp.value")) return;
+    const gm = game.users.activeGM;
+    if (gm ? !gm.isSelf : userId !== game.user.id) return;
+    const after = foundry.utils.getProperty(changes, "system.attributes.hp.value");
+    if (!droppedToZero({ before: options?.dnd5e?.hp?.value ?? null, after })) return;
+    for (const token of tokensOf(actor)) {
+      const uuid = summonStampOf(token);
+      if (!uuid || falling.has(token.uuid)) continue;
+      falling.add(token.uuid);
+      endForFallen(actor, token, uuid)
+        .catch(err => log.warn("summon fell: concentration not ended", err))
+        .finally(() => falling.delete(token.uuid));
+    }
+  } catch (err) { log.warn("summon fell check skipped", err); }
+}
+
+// Two tabs on the active GM's account both pass the gate above: the claim on the fallen token elects one.
+// An effect that is already gone (ended meanwhile, or this fall handled by the other tab) ends nothing.
+async function endForFallen(summon, token, uuid) {
+  const effect = await fromUuid(uuid);
+  const caster = effect?.parent;
+  if (!effect || caster?.documentName !== "Actor") return;
+  if (!await claimDocument(token, "summonFell", { scope: MODULE })) return;
+  const ended = await caster.endConcentration(effect);
+  if (!ended?.length) return;
+  log.info("summon fell: concentration ended", { uuid, token: token.uuid, by: game.user.id });
+  const spell = concentrationSpellName({ itemFlag: effect.flags?.dnd5e?.item ?? null, items: caster.items, effectName: effect.name });
+  const text = _loc("PENTARYN_RIDERS.concentration.summonFell", { caster: caster.name, summon: token.name ?? summon.name, spell });
+  const whisper = game.users.filter(u => u.isGM || caster.testUserPermission(u, "OWNER")).map(u => u.id);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: caster }),
+    whisper,
+    content: `<p>${foundry.utils.escapeHTML(text)}</p>`,
+  });
+}
+
+function forgetFallen(token) {
+  falling.delete(token?.uuid);
+}
+
 /* ── wiring ───────────────────────────────────────────────────────────── */
 
 export function install(reg, ctx) {
@@ -172,7 +240,11 @@ export function install(reg, ctx) {
   reg.on("dnd5e.renderChatMessage", labelBreakButton, { guard: false, label: "break-concentration label" });
   reg.on("createChatMessage", autoBreak, { guard: false, label: "concentration auto-break" });
   reg.on("dnd5e.renderChatMessage", resultLine, { guard: false, label: "concentration result line" });
+  reg.on("updateActor", summonFell, { guard: false, label: "concentration summon fell" });
+  reg.on("deleteToken", forgetFallen, { guard: false, label: "concentration summon fell prune" });
 }
 
-/** Nothing to clear: the summon stamps live on the tokens. */
-export function uninstall() {}
+/** The summon stamps live on the tokens; only the in-flight set is cleared. */
+export function uninstall() {
+  falling.clear();
+}

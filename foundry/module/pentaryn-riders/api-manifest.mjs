@@ -49,6 +49,29 @@ export const MANIFEST = Object.freeze({
         + "A non-owner gets { ok: false, code: \"REFUSED\" }.",
     },
     {
+      path: "restCard",
+      params: [REF],
+      returns: "{ ok: true, actor, rules: string[], message: string|null } | { ok: false, code, reason }",
+      gm: false, writes: true,
+      since: "0.7.0",
+      sideEffects: ["ChatMessage (one whispered card)", "flags.pentaryn-riders.rest", "flags.pentaryn-riders.omen (cleared)"],
+      doc: "Whisper the long-rest card for an actor this client owns (or as a GM) without resting: one line per "
+        + "matching REST_RULES row (Cosmic Omen: Read the stars; a prepared caster: Review prepared spells); the "
+        + "stored omen is cleared, as a long rest does. rules is [] and message null when nothing matches. A non-owner "
+        + "gets { ok: false, code: \"REFUSED\" }.",
+    },
+    {
+      path: "readOmen",
+      params: [REF],
+      returns: "{ ok: true, actor, omen: \"weal\"|\"woe\", face: number|null, rolled: boolean } | { ok: false, code, reason }",
+      gm: false, writes: true,
+      since: "0.7.0",
+      sideEffects: ["flags.pentaryn-riders.omen (when none is stored)", "ChatMessage (the 1d6, when rolled)"],
+      doc: "Today's Cosmic Omen for an actor this client owns (or as a GM): an omen already stored is answered as it is "
+        + "(rolled: false, nothing written); otherwise 1d6 is rolled and stored on the feat, even is weal, odd is woe, until "
+        + "the next long rest. { ok: false, code: \"NONE\" } when the actor has no Cosmic Omen.",
+    },
+    {
       path: "featuresOf",
       params: [ACTOR],
       returns: "{ key, rule, items: Item[], types: string[]|null }[]",
@@ -127,6 +150,11 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-riders.faces",
       "flags.pentaryn-riders.concentration",
       "flags.pentaryn-riders.relay",
+      "flags.pentaryn-riders.omen",
+      "flags.pentaryn-riders.rest",
+      "flags.pentaryn-riders.empowered",
+      "flags.pentaryn-riders.supersededBy",
+      "flags.pentaryn-riders.trayApplied",
     ],
     reads: [],
   },

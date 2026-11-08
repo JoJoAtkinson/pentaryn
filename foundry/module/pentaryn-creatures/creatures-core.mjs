@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-creatures";
 export const SHORT = "creatures";
 export const NS = "creatures";
-export const VERSION = "0.3.0";
+export const VERSION = "0.4.1";
 export const CONTRACT = "pentaryn-creatures/api@1";
 export const I18N = "PENTARYN_CREATURES";
 export const CSS = "pcr-";
@@ -498,4 +498,136 @@ export function pickSummoner({ copyOwners = [], candidates = [] } = {}) {
   if (fits.length === 1) return { id: fits[0].id };
   if (!fits.length) return { reason: "no character of its owner can summon it" };
   return { reason: `more than one character could have summoned it (${fits.map(c => c.id).sort().join(", ")})` };
+}
+
+/* -------------------------------------------- */
+/*  Dormant until combat (0.4.0)                */
+/* -------------------------------------------- */
+
+/*
+ * A creature that sits on the map as a prop (a statue, a suit of armour, a corpse) until a fight
+ * starts. Arming a token stores its real look in `flags.pentaryn-creatures.dormant = { look, disguise }`
+ * and puts the disguise on: prop art with the ring off, a prop name on the token AND its unlinked
+ * actor (the name and portrait a player's double-click Look window shows), no nameplate or bars,
+ * and the SECRET disposition (core then draws no hover border, nameplate, bars, effects or target
+ * pips for a non-owner, and a player cannot hover or target it). Waking writes the stored look back
+ * and sets the flag to null. `hidden` is recorded but never written: whether the token shows is
+ * the GM's call, before and after.
+ */
+
+export const DORMANT_FLAG = "dormant";
+/** CONST.TOKEN_DISPOSITIONS (core never imported here). */
+export const DISPOSITIONS = Object.freeze({ SECRET: -2, HOSTILE: -1, NEUTRAL: 0, FRIENDLY: 1 });
+/** CONST.TOKEN_DISPLAY_MODES.NONE */
+export const DISPLAY_NONE = 0;
+/** The disguise when the caller names none: a stone statue (Forgotten Adventures, in this install's assets). */
+export const DORMANT_DEFAULTS = Object.freeze({
+  name: "Statue",
+  img: "assets/tiles/tiles-03/fa/dwarf-settlement/structures/statues/statue-stone-slate-dwarf-hammer-a-2x2.webp",
+  disposition: DISPOSITIONS.SECRET,
+});
+
+const plainCopy = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+const nonEmpty = v => typeof v === "string" && v.trim() !== "";
+
+/**
+ * The token's own look, from its source data: everything a disguise changes, plus `hidden` (kept for
+ * the record, never restored), plus the art scale and rotation lock, so a prop shrunk or turned by hand
+ * wakes at the creature's own size and upright. `delta` is the unlinked actor's override of name and
+ * portrait (null = the world actor's).
+ */
+export function lookOf(src) {
+  return {
+    name: src?.name ?? "",
+    displayName: src?.displayName ?? DISPLAY_NONE,
+    displayBars: src?.displayBars ?? DISPLAY_NONE,
+    disposition: src?.disposition ?? DISPOSITIONS.NEUTRAL,
+    hidden: src?.hidden === true,
+    texture: { src: src?.texture?.src ?? null, scaleX: src?.texture?.scaleX ?? 1, scaleY: src?.texture?.scaleY ?? 1 },
+    lockRotation: src?.lockRotation === true,
+    ring: plainCopy(src?.ring ?? {}),
+    delta: { name: src?.delta?.name ?? null, img: src?.delta?.img ?? null },
+  };
+}
+
+/** The dormant flag `{ look, disguise }` from a token (document or source), or null. Never throws. */
+export function readDormant(doc) {
+  let raw;
+  try { raw = doc?.flags?.[MODULE]?.[DORMANT_FLAG]; } catch { return null; }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || !raw.look || typeof raw.look !== "object") return null;
+  return raw;
+}
+
+/**
+ * The flattened update that disguises a token. Re-arming an armed token keeps the look stored the
+ * first time (never the disguise) and only changes the disguise. Throws a plain Error on bad options.
+ * @param {object} src  the token's source data
+ * @param {{ name?: string, img?: string, disposition?: number }} [opts]
+ */
+export function disguiseUpdate(src, opts = {}) {
+  const prior = readDormant(src);
+  const look = prior?.look ?? lookOf(src);
+  const pick = k => opts?.[k] ?? prior?.disguise?.[k] ?? DORMANT_DEFAULTS[k];
+  const disguise = { name: pick("name"), img: pick("img"), disposition: pick("disposition") };
+  if (!nonEmpty(disguise.name)) throw new Error("name must be a non-empty string");
+  if (!nonEmpty(disguise.img)) throw new Error("img must be a non-empty path");
+  if (!Object.values(DISPOSITIONS).includes(disguise.disposition)) throw new Error("disposition must be -2, -1, 0 or 1");
+  return {
+    name: disguise.name,
+    displayName: DISPLAY_NONE,
+    displayBars: DISPLAY_NONE,
+    disposition: disguise.disposition,
+    "texture.src": disguise.img,
+    "ring.enabled": false,
+    "delta.name": disguise.name,
+    "delta.img": disguise.img,
+    [`flags.${MODULE}.${DORMANT_FLAG}`]: { look, disguise },
+  };
+}
+
+/**
+ * The flattened update that puts the stored look back and clears the flag, or null when not dormant.
+ * Scale and rotation lock are restored only when the look has them (looks stored before 0.4.1 do not).
+ */
+export function wakeUpdate(src) {
+  const d = readDormant(src);
+  if (!d) return null;
+  const L = d.look;
+  return {
+    name: L.name,
+    displayName: L.displayName,
+    displayBars: L.displayBars,
+    disposition: L.disposition,
+    "texture.src": L.texture?.src ?? null,
+    ...(typeof L.texture?.scaleX === "number" ? { "texture.scaleX": L.texture.scaleX } : {}),
+    ...(typeof L.texture?.scaleY === "number" ? { "texture.scaleY": L.texture.scaleY } : {}),
+    ...(typeof L.lockRotation === "boolean" ? { lockRotation: L.lockRotation } : {}),
+    ring: plainCopy(L.ring ?? {}),
+    "delta.name": L.delta?.name ?? null,
+    "delta.img": L.delta?.img ?? null,
+    [`flags.${MODULE}.${DORMANT_FLAG}`]: null,
+  };
+}
+
+/**
+ * Combatant relabels after a wake: core derives a combatant's empty name and image from its token
+ * once, at prepare time, so the tracker would keep the disguise. Each combatant of `tokenId` whose
+ * stored name/img is empty or the disguise's gets the real one written.
+ * @param {{ id: string, tokenId: string, name?: string, img?: string }[]} combatants  source values
+ * @param {string} tokenId
+ * @param {{ look: object, disguise?: object }} flag  the dormant flag read BEFORE the wake
+ * @returns {{ _id: string, name?: string, img?: string }[]}
+ */
+export function combatantRelabels(combatants, tokenId, flag) {
+  const out = [];
+  const dName = flag?.disguise?.name;
+  const dImg = flag?.disguise?.img;
+  for (const c of combatants ?? []) {
+    if (!c || c.tokenId !== tokenId) continue;
+    const u = { _id: c.id };
+    if (!c.name || c.name === dName) u.name = flag.look.name;
+    if (!c.img || c.img === dImg) u.img = flag.look.texture?.src ?? null;
+    if ("name" in u || "img" in u) out.push(u);
+  }
+  return out;
 }

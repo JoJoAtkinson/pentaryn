@@ -20,11 +20,12 @@ export const MANIFEST = Object.freeze({
       params: [{ name: "opts", type: "{ sceneId?: string | Scene } | string | Scene", optional: true,
         doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
-        + "sceneId, version, settings: { <key>: scope } }",
+        + "sceneId, version, settings: { <key>: scope }, combatExempt: string[] }",
       gm: false, writes: false, legacy: true,
       doc: "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM "
         + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
-        + "are wrapped, and every setting key with its scope (ghost and ownedOnTop are client settings).",
+        + "are wrapped, every setting key with its scope (ghost and ownedOnTop are client settings), and combatExempt: the ids "
+        + "of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks).",
     },
     {
       path: "ghostFor",
@@ -45,12 +46,20 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "setGhost",
-      params: [{ name: "on", type: "boolean" }],
-      returns: "Promise<void>",
+      params: [
+        { name: "on", type: "boolean | Actor | Token | TokenDocument | uuid | id | exact name",
+          doc: "a boolean: your own button (legacy); a creature reference: the GM's ghost-in-combat override for it" },
+        { name: "opts", type: "{ combat: boolean }", optional: true,
+          doc: "with a creature reference only: combat true sets flags.pentaryn-movement.ghostInCombat, false clears it" },
+      ],
+      returns: "Promise<void> (boolean) | Promise<{ ok, uuid, name, ghostInCombat, feat } | { ok: false, code, reason }> (reference)",
       gm: false, writes: true, legacy: true,
-      sideEffects: ["setting pentaryn-movement.ghost (client)"],
-      doc: "Switch ghost on or off for yourself, like the player's button. Player clients only: on a GM "
-        + "client (and so from the MCP bridge) it sets the GM's own client setting, which changes nothing for players.",
+      sideEffects: ["setting pentaryn-movement.ghost (client)", "flags.pentaryn-movement.ghostInCombat (actor; GM, reference form)"],
+      doc: "setGhost(true|false): switch ghost on or off for yourself, like the player's button (player clients only: on a GM "
+        + "client, and so from the MCP bridge, it sets the GM's own client setting, which changes nothing for players). "
+        + "setGhost(creature, { combat }): GM only — let that creature's owner ghost it during a fight (the actor flag "
+        + "ghostInCombat; a token's synthetic actor keeps it on that token); NOT_GM, NOT_FOUND, AMBIGUOUS or BAD_ARGS as a refusal object. "
+        + "A feat named Incorporeal Passage / Incorporeal Movement / Ethereal grants the same without the flag.",
     },
     {
       path: "setPolicy",
@@ -72,6 +81,17 @@ export const MANIFEST = Object.freeze({
         + "[] without a scene or for an unknown scene id.",
     },
     {
+      path: "inspect",
+      params: [{ name: "ref", kind: "actor", type: "Actor | Token | TokenDocument | uuid | id | exact name",
+        doc: "a creature; a token gives its own (synthetic) actor" }],
+      returns: "{ uuid, name, flag, feat, ghostInCombat }",
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
+      since: "0.2.0",
+      doc: "Read-only ghost-in-combat state of one creature, plain JSON: flag (the GM override flags.pentaryn-movement.ghostInCombat), "
+        + "feat (the incorporeal feat's name, or null) and ghostInCombat (either grants it). Options are ignored.",
+    },
+    {
       path: "selftest",
       params: [],
       returns: "{ ok, checks: [{ label, ok, detail }] }",
@@ -79,6 +99,6 @@ export const MANIFEST = Object.freeze({
       doc: "Live smoke checks after a sync: published, settings readable, both core methods wrapped, hooks registered.",
     },
   ],
-  flags: { writes: [], reads: [] },
+  flags: { writes: ["flags.pentaryn-movement.ghostInCombat"], reads: [] },
   unlisted: ["core"],
 });

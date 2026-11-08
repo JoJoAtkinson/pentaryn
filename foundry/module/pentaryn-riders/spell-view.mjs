@@ -130,6 +130,9 @@ export function install(reg, ctx) {
   log = ctx.log;
   reg.on("dnd5e.filterItem", onFilterItem, { guard: "warn", label: "spell view: filter" });
   reg.on("renderCharacterActorSheet", onRenderSheet, { guard: false, label: "spell view: switch" });
+  // The rest card's "Review prepared spells" (rest.mjs) sets the view through here, so the pending
+  // choice and the user flag stay one thing.
+  ctx.expose({ setSpellView: (actor, view) => storeView(actor, spellViewOf(view)) });
 }
 
 export function uninstall() {

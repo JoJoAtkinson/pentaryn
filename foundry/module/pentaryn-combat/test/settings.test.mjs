@@ -16,8 +16,8 @@ const flat = {};
   }
 })(LANG, "");
 
-test("SETTINGS: 30 frozen rows in DEFAULTS order, literal name/hint keys present in lang, a doc each", () => {
-  assert.equal(settings.SETTINGS.length, 30);
+test("SETTINGS: 31 frozen rows in DEFAULTS order, literal name/hint keys present in lang, a doc each", () => {
+  assert.equal(settings.SETTINGS.length, 31);
   assert.deepEqual(settings.SETTINGS.map(r => r.key), Object.keys(settings.DEFAULTS));
   for (const r of settings.SETTINGS) {
     assert.ok(Object.isFrozen(r), r.key);
@@ -33,7 +33,7 @@ test("SETTINGS: 30 frozen rows in DEFAULTS order, literal name/hint keys present
 test("registerSettings passes the entry's onChange to every row; a second call registers nothing", () => {
   const seen = [];
   const keys = settings.registerSettings({ onChange: v => seen.push(v) });
-  assert.equal(keys.length, 30);
+  assert.equal(keys.length, 31);
   F.game.settings.settings.get(`${MODULE}.swingPips`).onChange(false);
   assert.deepEqual(seen, [false]);
   assert.deepEqual(settings.registerSettings(), []);

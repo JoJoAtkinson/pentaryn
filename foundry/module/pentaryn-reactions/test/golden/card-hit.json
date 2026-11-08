@@ -1,0 +1,86 @@
+{
+  "data": {
+    "content": "<div class=\"pentaryn-reactions prea-card\"><p class=\"prea-line\">Grick hits Marrith with Bite (18 vs AC 16).</p><div class=\"prea-options\"><span class=\"prea-label\">Reaction:</span><button type=\"button\" class=\"prea-use\" data-prea-use=\"Actor.marrith000000001.Item.itemshield000001.Activity.actshield000001\"><img class=\"prea-icon\" src=\"icons/itemshield000001.webp\" alt=\"\">Shield</button></div></div>",
+    "whisper": [
+      "playerP000000001"
+    ],
+    "speaker": {
+      "scene": null,
+      "actor": "marrith000000001",
+      "token": null,
+      "alias": "Marrith"
+    },
+    "flags": {
+      "pentaryn-reactions": {
+        "card": {
+          "key": "Token.tokgrick00000001|combatumbral0001:2:0|Actor.marrith000000001",
+          "combatId": "combatumbral0001",
+          "attacker": {
+            "key": "Token.tokgrick00000001",
+            "name": "Grick",
+            "actor": "grick00000000001"
+          },
+          "pc": {
+            "uuid": "Scene.sceneumbral00001.Token.tokmarrith000001",
+            "actorUuid": "Actor.marrith000000001",
+            "name": "Marrith"
+          },
+          "swings": [
+            {
+              "message": "attackBite000001",
+              "kind": "hit",
+              "attack": "Bite",
+              "public": true,
+              "total": 18,
+              "ac": 16,
+              "types": []
+            }
+          ],
+          "options": [
+            {
+              "id": "actshield000001",
+              "uuid": "Actor.marrith000000001.Item.itemshield000001.Activity.actshield000001",
+              "name": "Shield",
+              "img": "icons/itemshield000001.webp"
+            }
+          ],
+          "closed": null
+        }
+      }
+    }
+  },
+  "card": {
+    "key": "Token.tokgrick00000001|combatumbral0001:2:0|Actor.marrith000000001",
+    "combatId": "combatumbral0001",
+    "attacker": {
+      "key": "Token.tokgrick00000001",
+      "name": "Grick",
+      "actor": "grick00000000001"
+    },
+    "pc": {
+      "uuid": "Scene.sceneumbral00001.Token.tokmarrith000001",
+      "actorUuid": "Actor.marrith000000001",
+      "name": "Marrith"
+    },
+    "swings": [
+      {
+        "message": "attackBite000001",
+        "kind": "hit",
+        "attack": "Bite",
+        "public": true,
+        "total": 18,
+        "ac": 16,
+        "types": []
+      }
+    ],
+    "options": [
+      {
+        "id": "actshield000001",
+        "uuid": "Actor.marrith000000001.Item.itemshield000001.Activity.actshield000001",
+        "name": "Shield",
+        "img": "icons/itemshield000001.webp"
+      }
+    ],
+    "closed": null
+  }
+}

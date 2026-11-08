@@ -34,7 +34,9 @@ const rows = F.hooks.filter(h => !(h.kind === "once" && LIFECYCLE.has(h.name)));
 
 test("hook registration manifest (golden/hooks.json): module evaluation, then setup's registrations", () => {
   pinJSON("hooks", rows, import.meta.url);
-  assert.equal(rows.length, 65);   // M8: +2 (the runner's updateCombat/updateToken and the riders' updateCombat; bars' updateToken gone)
+  // M8: +2 (the runner's updateCombat/updateToken and the riders' updateCombat; bars' updateToken gone).
+  // 2026-11-07 (triage K, L6): +3 — hp-math's renderTokenHUD and renderBaseActorSheet tips, roll-manually's renderD20RollConfigurationDialog button.
+  assert.equal(rows.length, 68);
 });
 
 test("combat.mjs graph registers strip's four roll-window hooks first, then its own three lifecycle hooks", () => {
@@ -50,6 +52,8 @@ test("the lifecycle once-rows, in order (their effects are glue.test's)", () => 
     "ready",                             // turnflow: orphan flag sweep
     "ready",                             // turnflow: patchPortrait
     "init", "init",                      // turnflow: scrolling-text guard, chat pop-up guard
+    "init",                              // turnflow: HP box arithmetic (TokenHUD + BaseActorSheet wraps)
+    "init",                              // turnflow: Roll manually (dialog, Roll#_evaluate, ClientSettings#get wraps)
     "ready",                             // turnflow: pip settle
     "ready", "ready",                    // hud: applyPickerGuide, picker-cue MutationObserver
   ]);

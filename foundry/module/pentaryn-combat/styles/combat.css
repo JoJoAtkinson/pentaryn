@@ -253,3 +253,15 @@ body.pentaryn-combat-picker-cue .ech-target-picker::after {
 .chat-message .pentaryn-combat-undone-text { font-weight: 400; font-style: italic; }
 
 .extended-combat-hud .pentaryn-combat-disabled { opacity: 0.4; filter: grayscale(1); }
+
+/* "Roll manually" on dnd5e's d20 roll window (turnflow/roll-manually.mjs): the fourth button beside
+   Advantage / Normal / Disadvantage, quieter so the three modes stay primary (L6, 2026-11-07). */
+.roll-configuration .dialog-buttons button.pc-roll-manually {
+  flex: 0 1 auto;
+  font-size: var(--font-size-12, 12px);
+  opacity: 0.75;
+}
+.roll-configuration .dialog-buttons button.pc-roll-manually:hover,
+.roll-configuration .dialog-buttons button.pc-roll-manually:focus-visible {
+  opacity: 1;
+}

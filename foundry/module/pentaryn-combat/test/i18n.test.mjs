@@ -42,8 +42,8 @@ test("the template-built keys, as the sources build them today (golden/i18n-temp
   pinJSON("i18n-templates", hits, import.meta.url);
 });
 
-test("settings: Setting.<key>.Name / Hint for each of the 30 DEFAULTS keys", () => {
-  assert.equal(settingKeys.length, 30);
+test("settings: Setting.<key>.Name / Hint for each of the 31 DEFAULTS keys", () => {
+  assert.equal(settingKeys.length, 31);
   for (const k of settingKeys) for (const p of ["Name", "Hint"]) assert.ok(has(`PENTARYN_COMBAT.Setting.${k}.${p}`), `${k}.${p}`);
   assert.deepEqual(Object.keys(lang.PENTARYN_COMBAT.Setting).sort(), [...settingKeys].sort(), "no stale setting strings");
 });

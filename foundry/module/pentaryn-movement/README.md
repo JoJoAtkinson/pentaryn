@@ -30,6 +30,14 @@ Built from the 2026-10-08 table feedback (plan item C2, `context/plans/table-fee
   **switched off** with a toast. It does not come back by itself; when it is allowed again, a
   second toast says so once. During a fight the button stays visible, dimmed, with a small swords
   badge, and clicking it explains why it's off.
+- **Incorporeal creatures keep ghosting through a fight.** If one of your tokens is incorporeal — its
+  actor has a **feat** named *Incorporeal Passage*, *Incorporeal Movement* or *Ethereal…* (the Summon
+  Undead spirit, a ghost), or the GM marked it (below) — the button stays usable while the fight runs:
+  no swords badge, no "fight started" switch-off, and that creature passes through walls and other
+  creatures as usual. Your other tokens walk normally until the fight ends (the button's tooltip says
+  so). Feats only: a character who merely knows the *Etherealness* **spell** is not incorporeal. Only
+  movement passes; walls still block light and sight. When a fight has switched ghost off and such a
+  creature of yours then arrives (you summon it), one toast says it may ghost.
 
 **GM control.**
 
@@ -41,6 +49,11 @@ Built from the 2026-10-08 table feedback (plan item C2, `context/plans/table-fee
 - **"A combat is running on the scene"** = an **active** encounter linked to the scene that has a
   combatant or has started, or an unlinked one with a combatant standing there. An empty encounter
   does not count, and **hidden combatants don't count** (a hidden ambush tips no one off).
+- **Ghost in combat for one creature** (GM only): Token HUD → the ghost button in the right column.
+  Pressed = the creature's owner may ghost it during a fight (the actor flag
+  `flags.pentaryn-movement.ghostInCombat`; on an unlinked token it stays with that token). A creature
+  whose feat already grants it is shown pressed with the feat named, and the click changes nothing.
+  Same from the console: `game.pentaryn.movement.setGhost(creature, { combat: true })`.
 
 **How ghost works.** It reuses core's own mechanism: the constrain options the GM's
 *Unconstrained Movement* tool passes into a move — `ignoreWalls`, `ignoreCost` (core
@@ -72,14 +85,16 @@ too (they re-read the setting; nothing is written).
 
 Canonical: `game.modules.get("pentaryn-movement").api`; `game.pentaryn.movement` is the same
 frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offline:
-`test/golden/describe.json`). Every row except `selftest` is `legacy` (today's signatures).
+`test/golden/describe.json`). Every row except `inspect` and `selftest` is `legacy` (today's signatures).
 
 | Method | GM | Writes | Returns |
 |---|---|---|---|
-| `status(opts?)` | — | — | policy, `combatOnScene`, allowed and why not, the player's switch, `patched.{drag,keyboard}`, then `sceneId`, `version`, `settings` (key → scope). `opts.sceneId` (or a bare scene id or Scene) asks about another scene (default: the viewed one); `sceneId` comes back as the id |
-| `ghostFor(token)` | — | — | is ghost in effect for that token (a placeable or a TokenDocument) on this client |
+| `status(opts?)` | — | — | policy, `combatOnScene`, allowed and why not, the player's switch, `patched.{drag,keyboard}`, then `sceneId`, `version`, `settings` (key → scope), `combatExempt` (ids of your tokens there that may ghost through the fight; `[]` when no fight blocks). `opts.sceneId` (or a bare scene id or Scene) asks about another scene (default: the viewed one); `sceneId` comes back as the id |
+| `ghostFor(token)` | — | — | is ghost in effect for that token (a placeable or a TokenDocument) on this client; during a fight under *Exploration only*, true only for an incorporeal or GM-flagged token |
 | `combatActive(sceneId?)` | — | — | does a combat stop ghosting there; takes a scene id or a Scene (default: the viewed one) |
 | `setGhost(on)` | — | client setting `ghost` | the player's button. **Player clients only:** on a GM client (and so from the MCP bridge) it changes nothing for players |
+| `setGhost(creature, { combat })` | yes | actor flag `ghostInCombat` | the GM's ghost-in-combat override for one creature (Actor, Token, TokenDocument, uuid, id or exact name; `combat` true sets, false clears); `{ ok, uuid, name, ghostInCombat, feat }` or a refusal object (`NOT_GM`, `NOT_FOUND`, `AMBIGUOUS`, `BAD_ARGS`) |
+| `inspect(ref)` | — | — | `{ uuid, name, flag, feat, ghostInCombat }` for one creature (a token gives its own actor): the GM flag, the incorporeal feat's name or null, and whether either grants ghost in combat; throws coded `NOT_FOUND` / `AMBIGUOUS` / `BAD_ARGS` |
 | `setPolicy(value)` | yes | world settings `ghostPolicy`, `ghostPolicyLast` | `"off" \| "exploration" \| "always"`; rejects with `Error("GM only")` on a player client |
 | `pinsUnderTokens(scene?)` | — | — | map pins whose centre sits under a visible token on the same scene level (a pin shown on every level, or a token with no level, always counts), player-owned first; `scene` is a Scene or a scene id (an unknown id answers `[]`) (pins belong **beside** tokens: owned-on-top makes a pin under your token unclickable) |
 | `selftest()` | — | — | `{ ok, checks }` |
@@ -89,12 +104,17 @@ Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`, `unin
 
 ## Data written
 
-None on documents. Settings only: the world settings `ghostPolicy` / `ghostPolicyLast` (GM) and the
-client settings `ghost` and `ownedOnTop` (each player, for themselves).
+| Where | Path | Who | What |
+|---|---|---|---|
+| Actor (a token's synthetic actor for an unlinked token) | `flags.pentaryn-movement.ghostInCombat` | GM | `true` = its owner may ghost it during a fight (Token HUD toggle, `setGhost(creature, { combat })`); cleared with `unsetFlag` |
+
+Settings: the world settings `ghostPolicy` / `ghostPolicyLast` (GM) and the client settings `ghost`
+and `ownedOnTop` (each player, for themselves).
 
 ## Flags other modules read
 
-n/a — movement writes and reads no flags.
+n/a — no other module reads `ghostInCombat` (ask `inspect(ref)` rather than the flag), and movement
+reads no foreign flag.
 
 ## Events
 
@@ -103,7 +123,7 @@ Emits none of its own. The kit fires two hooks at publish: `pentaryn-movement.re
 Listens to (pinned in `test/golden/hooks.json`, in this order): `init` (once), `setup` (once),
 `getSceneControlButtons`, `renderSceneControls`, `drawTokenLayer`, `canvasReady`, `refreshToken`,
 `updateActor`, `updateToken`, `createCombat`, `updateCombat`, `deleteCombat`, `createCombatant`,
-`updateCombatant`, `deleteCombatant`, `ready` (once).
+`updateCombatant`, `deleteCombatant`, `createToken`, `deleteToken`, `renderTokenHUD`, `ready` (once).
 
 ## Patches and adjustments
 
@@ -120,7 +140,8 @@ All three carry the `__pentarynMovement` marker and go through the kit (`wrapMet
 
 Client-only: nothing is elected and nothing runs on one client for everyone. Each client decides
 ghost and the sort for its own user. A player's client clears its own `ghost` setting when ghost
-stops being allowed; only a GM writes the world settings.
+stops being allowed; only a GM writes the world settings and the `ghostInCombat` actor flag (from the
+GM client that clicked or called — no relay; the headless GM bot is a GM client like any other).
 
 ## Extending
 
@@ -141,6 +162,8 @@ stops being allowed; only a GM writes the world settings.
 - Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag
   disabled`) and ghost then simply does nothing for that input.
 - The GM never ghosts through this module (core's own tool is the GM's).
+- The incorporeal test is by **feat name** (`INCORPOREAL_FEATS` in core). A homebrew creature whose
+  trait is named differently needs the GM toggle; a spell by that name never counts.
 - Errors in the two per-frame hooks (`refreshToken`, `renderSceneControls`) are warned once per
   session, then suppressed.
 
@@ -152,7 +175,8 @@ stops being allowed; only a GM writes the world settings.
 | `movement-core.mjs` | pure rules, constants, label key maps |
 | `settings.mjs` | the `SETTINGS` table |
 | `combat-adapter.mjs` | combats and scenes → plain core inputs |
-| `ghost.mjs` | the feature: patches, sort, toolbar, refresh |
+| `ghost.mjs` | the feature: patches, sort, toolbar, refresh, the incorporeal exception on the player's side |
+| `ghost-combat.mjs` | the GM's ghost-in-combat flag: Token HUD toggle, `setGhost(creature, { combat })`, `inspect` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `styles/movement.css` | the dimmed combat badge (`.pm-blocked`) |
 | `lib/` | the vendored kit (`vendor.py`; never edited here) |
@@ -171,6 +195,9 @@ module. One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, then rev
 2. Start a combat with a combatant on the scene: the button switches off with a toast, is dimmed,
    and a drag stops at walls. An encounter holding only a **hidden** combatant changes nothing;
    revealing it switches ghost off.
+2b. Summon an Undead Spirit (Incorporeal Passage) into that fight: one toast, the button is usable
+   again, the spirit drags through a wall, your character still stops at it. As GM, open a plain
+   creature's Token HUD and press the ghost toggle: its owner's button comes back the same way.
 3. GM clicks the GM button: the players' buttons disappear; click again and they come back.
 4. Two tokens overlapping: the player's own is drawn on top and takes the click; for the GM nothing
    changed.

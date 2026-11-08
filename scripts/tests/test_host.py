@@ -43,6 +43,30 @@ def test_missing_env_file_is_fine(monkeypatch, tmp_path):
     assert host.file_values() == {}
 
 
+def test_default_world_unset_is_none(monkeypatch, tmp_path):
+    monkeypatch.delenv("PENTARYN_DEFAULT_WORLD", raising=False)
+    monkeypatch.setenv("PENTARYN_ENV_FILE", str(tmp_path / "env"))
+    assert host.default_world() is None
+    assert host.main(["default-world"]) == 0
+
+
+def test_default_world_reads_env_then_file(monkeypatch, tmp_path):
+    f = tmp_path / "env"
+    f.write_text("PENTARYN_DEFAULT_WORLD=pentaryn\n")
+    monkeypatch.setenv("PENTARYN_ENV_FILE", str(f))
+    monkeypatch.delenv("PENTARYN_DEFAULT_WORLD", raising=False)
+    assert host.default_world() == "pentaryn"
+    monkeypatch.setenv("PENTARYN_DEFAULT_WORLD", "ardenford")
+    assert host.default_world() == "ardenford"
+
+
+@pytest.mark.parametrize("bad", ["Pentaryn", "../x", "a b", "-lead"])
+def test_default_world_rejects_non_ids(monkeypatch, bad):
+    monkeypatch.setenv("PENTARYN_DEFAULT_WORLD", bad)
+    with pytest.raises(host.HostError):
+        host.default_world()
+
+
 def test_example_file_lists_every_key():
     text = (Path(host.__file__).parent / "host.env.example").read_text()
     listed = set(re.findall(r"^#?([A-Z_]+)=", text, re.M))

@@ -10,6 +10,7 @@ import * as core from "./riders-core.mjs";
 import { HOOKS, MODULE, NS, RULES, matchRule } from "./riders-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, settingsSnapshot } from "./settings.mjs";
+import { EXPIRY_ACTION } from "./table-core.mjs";
 import {
   RELAY_QUERY, carriedBy, concentrationSummonsOf, featuresOf, hdPools, hdSummary, isBattleMedic, isType, itemInfo, restoreHitDie,
   spendHitDie, withLegacyActor,
@@ -139,6 +140,21 @@ async function arcaneRecovery(actor, ctx) {
   return ok({ actor: refOf(actor), recovered: recovered ?? null });
 }
 
+/** The long-rest card for an owned actor, without resting (rest.mjs builds and whispers it). */
+async function restCard(actor, ctx) {
+  if (!actor.isOwner) return fail("REFUSED", `${game.user.name} does not own ${actor.name}`);
+  const posted = await ctx.exposed.restCard(actor);
+  return ok({ actor: refOf(actor), rules: posted.rules, message: posted.message });
+}
+
+/** Roll and store today's Cosmic Omen for an owned actor (rest.mjs). */
+async function readOmen(actor, ctx) {
+  if (!actor.isOwner) return fail("REFUSED", `${game.user.name} does not own ${actor.name}`);
+  const read = await ctx.exposed.readOmen(actor);
+  if (!read) return fail("NONE", `${actor.name} has no Cosmic Omen`);
+  return ok({ actor: refOf(actor), omen: read.omen, face: read.face, rolled: read.rolled });
+}
+
 /** `describe().patches`: this module's live patch records (a symbol marker by its description).
  *  The one definition; patches.mjs re-exports it (riders-maint-01). */
 export function patchRecords() {
@@ -173,6 +189,7 @@ function selftest(ctx) {
     { label: "settings readable", ok: SETTINGS.every(r => typeof ctx.setting(r.key) === "boolean") },
     { label: "hooks registered", ok: hooks.length > 0, detail: hooks.length },
     { label: "Battle Medic relay registered", ok: typeof CONFIG.queries?.[RELAY_QUERY] === "function" },
+    { label: "expired effects are deleted", ok: CONFIG.ActiveEffect?.expiryAction === EXPIRY_ACTION, detail: CONFIG.ActiveEffect?.expiryAction ?? null },
     { label: "patches installed", ok: true, detail: patchRecords().map(p => p.adjustments) },
     vetoOrderCheck(ctx),
   ];
@@ -185,6 +202,8 @@ export function buildApiFor(ctx) {
     inspect: (actor, opts) => inspect(actor, opts),
     selftest: () => selftest(ctx),
     arcaneRecovery: actor => arcaneRecovery(actor, ctx),
+    restCard: actor => restCard(actor, ctx),
+    readOmen: actor => readOmen(actor, ctx),
     // legacy rows: a name, id, uuid or Token also resolves; a miss answers null (combat-riders-12)
     ...Object.fromEntries(Object.entries({ featuresOf, report, setType, retireManual, spendHitDie, restoreHitDie, hdPools })
       .map(([k, fn]) => [k, withLegacyActor(fn)])),

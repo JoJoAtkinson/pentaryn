@@ -21,18 +21,17 @@ are never edited: the bars are recomposed in `render*ArgonComponent` hooks.
 | Special bar | **Nick: Scimitar** (free, once per turn), **Sneak Attack: Ask / Auto** toggle, **New turn** (out of combat only) | one click |
 | Attack card in chat | **+ Sneak Attack 3d6** (also Frenzy — d6s equal to the Rage Damage bonus, not offered or spent without one — Colossus Slayer, Divine Strike) — roller and GM only, once per turn; tooltip shows advantage ✓ / ally beside the target ? / no disadvantage ✓ | one click → damage card, crit carried, weapon's damage type, no type picker |
 | Damage card in Auto mode | "+ Sneak Attack 3d6 [**Undo**]" (a button, 0.2.2) | Undo gives the once-per-turn back after a miss |
+| Any d20 roll window (attack, check, save) | **Roll manually**, a quieter fourth button after Advantage / Normal / Disadvantage (0.3.1; hidden without the `MANUAL_ROLLS` permission — roles 2–4 here) | rolls in Normal mode and opens core's Roll Resolution box for the d20: type the face you rolled at the table, a blank box is rolled by the computer. Advantage is the table's business: roll two, type the one the rule says — so the advantage-based Sneak Attack offer does not fire. Damage, Quick and blind rolls stay digital |
+| Token HUD bar box · sheet HP box | tooltip "=40 sets · -10 subtracts · 50-10 does the math" (0.3.1, `hpMath`) | type `50-10` → 40 (rounded down; `2*(3+4)` works too); `=40`, `-10`, `+5`, `50%` exactly as before |
 
 **Action Surge** (its feature used on your turn) adds a second Attack action's swings: the pips
-widen 2 → 4 and Full Attack offers the next two.
+widen 2 → 4 and Full Attack offers the next two. **One attack at a time stays exactly as it was:**
+clicking a weapon is Argon's own flow (picker → dialog → pentaryn-aoe auto-damage); only the pips count it.
 
-**One attack at a time stays exactly as it was.** Clicking a weapon is Argon's own flow (picker →
-dialog → pentaryn-aoe auto-damage); only the pips count it.
-
-**Rolling your own dice.** Every roll here is dnd5e's own `rollAttack` / `rollDamage`, so Configure
-Settings → Dice Configuration → *Manual* gives a type-in box per d20 and per damage roll, in order
-(the sequence waits for each swing's damage before opening the next swing). Quick mode skips the
-*dialog*, never the manual-dice box. Players who'd rather just say the number at the table can
-ignore the cards; nothing is applied without the GM's damage tray.
+**Rolling your own dice.** Every roll here is dnd5e's own `rollAttack` / `rollDamage`: **Roll manually**
+asks for one d20 per window; Configure Settings → Dice Configuration → *Manual* asks on every roll
+instead, damage dice included (the sequence waits for each swing's damage before the next swing). Quick
+mode skips the *dialog*, never the box. A reroll inside a Roll manually roll (Lucky) is the computer's.
 
 Clicks per case (target budget from the plan):
 
@@ -85,6 +84,7 @@ live, so a change applies at the next HUD render. Off = the HUD as it was for th
 | `quickenedSpell` | after Quickened Spell on your turn, the next 1-Action spell spends the Bonus pip (notice "Quickened: X is your Bonus Action") and the Action stays free | Quickened only spends points | U-5-9 |
 | `helperTokenControl` | when an area handle you dragged or a summon you had selected is deleted and nothing else is selected, your caster's token is selected again, so the HUD stays up | nothing selected, the HUD closes | U-5-10 |
 | `enterUses` | in a dnd5e usage window (Lay on Hands' points, any scaling amount), **Enter** in a number or text box takes the number and presses Use Ability (dnd5e's Use is not a submit button, so Enter only committed the number; 0.2.4) | Enter commits the number; click Use Ability | U-3-20 |
+| `hpMath` | `50-10` typed into the Token HUD's bar box or an actor sheet's HP box is evaluated (`Roll.safeEval`, rounded down) and handed to core / dnd5e as `=40`; the boxes carry the tooltip (0.3.1). **Roll manually has no setting** (Joe, 2026-11-07: nothing to turn on or remember) | an expression is NaN and dropped, as core and dnd5e do | K `GaMIoP` |
 
 **Argon setting this module is tuned for:** *Target Picker - Clear Targets*
 (`enhancedcombathud.rangepickerclear`) **off**, Argon's default. A target set with **T** before
@@ -154,7 +154,8 @@ Optional overrides on an actor: `flags.pentaryn-combat.attacks` (integer swing c
 
 ## Flags other modules read
 
-None directly. pentaryn-transform asks this module's published `coversMultiattack(ref)` to hide a covered
+`flags.pentaryn-combat.reaction` — pentaryn-reactions reads it (`{combatId}` = spent this combat) to suppress its
+reminder card once the reaction is gone (0.1.0, 2026-11-07). pentaryn-transform asks this module's published `coversMultiattack(ref)` to hide a covered
 Multiattack button (transform-creatures-13); it reads no combat setting.
 This module reads `flags.pentaryn-aoe.handle` (an area handle) and pentaryn-aoe's `autoDamageOnHit` setting.
 
@@ -178,8 +179,11 @@ the new one) until `pentaryn-combat 0.4.0`.
 Prototype patches go through the kit (`wrapMethod` / `defineAccessor`) and show in `describe().patches`:
 `PreciseText#destroy`, `#x`, `#y`, `InterfaceCanvasGroup#createScrollingText`, `ChatLog#notify`
 (`scrollingTextGuard`), `PortraitPanel#getEffects` (`portraitConditions`), `ActionPanel#updateActionUse`
-(the pip settle). Argon buttons are wrapped per instance in their render hooks. Every wrap, private read
-and foreign flag has a row in `foundry/adjustments.yml` (`combat-*` patch rows; `argon-*` / `dnd5e-*` /
+(the pip settle), `TokenHUD#_parseAttributeInput` and `BaseActorSheet#_onChangeInputDelta` (`hpMath`),
+`D20RollConfigurationDialog#_finalizeConfig`, `Roll#_evaluate` and `ClientSettings#get` (Roll manually: the
+d20 reads as Manual only during the marked roll's synchronous term identification; the setting is never
+written). Argon buttons are wrapped per instance in their render hooks. Every wrap, private read and
+foreign flag has a row in `foundry/adjustments.yml` (`combat-*` patch rows; `argon-*` / `dnd5e-*` /
 `core-*` workarounds).
 
 ## Two sessions / who writes
@@ -233,12 +237,8 @@ Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy
 
 ## Files
 
-Load order: `combat.mjs` (esmodules[0]) installs `roll-dock.mjs` as it evaluates; at setup `counting.mjs`,
-`turn-riders.mjs`, `offhand.mjs`, `sequence.mjs`; at ready `api.mjs` builds the API. `hud.mjs`
-(esmodules[1]) installs `turnflow/*` and `patches.mjs`, then `hud/tooltips.mjs`, `hud/picker.mjs`,
-`hud/bars.mjs`. `context.mjs` is their shared ctx, plus the features' one `opts(label)` and one
-`tempHooks(getReg)`. Pure: `combat-core.mjs` + `core/*.mjs`. Settings: `settings.mjs`. API:
-`api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`, `dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`, `hud/pips-bar.mjs`. Vendored kit: `lib/` (never edited here).
+Load order: `combat.mjs` (esmodules[0]) installs `roll-dock.mjs` as it evaluates; at setup `counting.mjs`, `turn-riders.mjs`, `offhand.mjs`, `sequence.mjs`; at ready `api.mjs` builds the API. `hud.mjs` (esmodules[1]) installs `turnflow/*` (hp-math and roll-manually among them) and `patches.mjs`, then `hud/tooltips.mjs`, `hud/picker.mjs`, `hud/bars.mjs`. `context.mjs` is their shared ctx, plus the features' one `opts(label)` and one `tempHooks(getReg)`.
+Pure: `combat-core.mjs` + `core/*.mjs`. Settings: `settings.mjs`. API: `api-manifest.mjs`, `api.mjs`. Adapters: `shapes.mjs`, `argon.mjs`, `dialog-adapter.mjs`. UI: `strip.mjs`, `hud/buttons-ui.mjs`, `hud/pips-bar.mjs`. Vendored kit: `lib/` (never edited here).
 
 ## Tests
 

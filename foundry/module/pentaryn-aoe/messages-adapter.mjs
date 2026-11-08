@@ -45,6 +45,44 @@ export function recordedTarget(tg) {
   return { token: token ?? null, actor: tg?.actor ?? null };
 }
 
+/**
+ * dnd5e 6 target descriptors for tokens (Token placeables or TokenDocuments), as `system.targets`
+ * stores them: `{ actor, ac, img, name, token }`. dnd5e's own `TargetsField.getDescriptors` when the
+ * system exposes it (`dnd5e.dataModels.fields`), else the same shape built here. Tokens with no
+ * actor are skipped; one entry per token. Default: this user's current targets.
+ * @param {Iterable<object>} [tokens]
+ * @returns {{actor: string, ac: number|null, img: string|undefined, name: string, token: string}[]}
+ */
+export function targetDescriptors(tokens = game.user?.targets ?? []) {
+  const Field = globalThis.dnd5e?.dataModels?.fields?.TargetsField;
+  if (typeof Field?.getDescriptors === "function") return Field.getDescriptors(tokens);
+  const out = new Map();
+  for (const target of tokens ?? []) {
+    const token = target?.document ?? target;
+    const actor = token?.actor;
+    if (!actor?.uuid) continue;
+    const ac = actor.statuses?.has?.("coverTotal") ? null : actor.system?.attributes?.ac?.value;
+    out.set(token.uuid, { actor: actor.uuid, ac: ac ?? null, img: token.texture?.src, name: token.name, token: token.uuid });
+  }
+  return Array.from(out.values());
+}
+
+/**
+ * A damage or healing card's damage descriptions, as dnd5e's `<damage-application>` builds them for
+ * Apply: the message's damage rolls aggregated by type, each `{ value (≥ 0), type, properties: Set }`.
+ * `[]` for a message with no rolls.
+ */
+export function cardDamages(message) {
+  const rolls = message?.rolls ?? [];
+  if (!rolls.length) return [];
+  const agg = dnd5e.dice.aggregateDamageRolls(rolls, { respectProperties: true });
+  return agg.map(roll => ({
+    value: Math.max(0, roll.total ?? 0),
+    type: roll.options?.type,
+    properties: new Set(roll.options?.properties ?? [])
+  }));
+}
+
 /** The spell identifier an applied effect came from (its source effect's item, else its origin). */
 export function spellOf(effect) {
   for (const uuid of [effect._stats?.duplicateSource, effect.origin]) {

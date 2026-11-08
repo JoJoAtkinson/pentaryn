@@ -13,10 +13,22 @@
 export const MODULE = "pentaryn-movement";
 export const SHORT = "movement";
 export const NS = "movement";                          // game.pentaryn.movement
-export const VERSION = "0.1.2";                        // === module.json version (a test pins it)
+export const VERSION = "0.2.0";                        // === module.json version (a test pins it)
 export const CONTRACT = "pentaryn-movement/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_MOVEMENT";
-export const CSS = Object.freeze({ blocked: "pm-blocked" });
+export const CSS = Object.freeze({ blocked: "pm-blocked", hud: "pm-ghost-combat" });
+
+/*
+ * Ghost during a fight (feedback nwhjz2, triage I1). The policy "exploration" switches ghost off
+ * while a combat runs, for every token — but an incorporeal creature (Summon Undead's spirit with
+ * Incorporeal Passage, a ghost with Incorporeal Movement, an Etherealness feature) should keep
+ * passing through walls. Two ways a token is exempt: its actor has a FEAT item whose name matches
+ * INCORPOREAL_FEATS (feats only: a wizard's Etherealness SPELL does not make the wizard incorporeal),
+ * or the GM set the actor flag `flags.pentaryn-movement.ghostInCombat` (the Token HUD toggle,
+ * `setGhost(token, { combat: true })`). Only movement passes: walls still block light and sight.
+ */
+export const GHOST_COMBAT_FLAG = "ghostInCombat";
+export const INCORPOREAL_FEATS = /Incorporeal (Movement|Passage)|Ethereal/i;
 
 /** Movement emits no events of its own. */
 export const HOOKS = Object.freeze({});
@@ -51,7 +63,15 @@ export const TOOL_CLIP_KEYS = Object.freeze({
   ready: "PENTARYN_MOVEMENT.tool.clip.ready",
   combat: "PENTARYN_MOVEMENT.tool.clip.combat",
   off: "PENTARYN_MOVEMENT.tool.clip.off",
-  vision: "PENTARYN_MOVEMENT.tool.clip.vision"
+  vision: "PENTARYN_MOVEMENT.tool.clip.vision",
+  exempt: "PENTARYN_MOVEMENT.tool.clip.exempt"   // appended while a fight runs and an incorporeal token of yours is here
+});
+
+/** The GM's Token HUD toggle (ghost in combat for this creature), by what grants it. */
+export const HUD_KEYS = Object.freeze({
+  on: "PENTARYN_MOVEMENT.hud.combat.on",
+  off: "PENTARYN_MOVEMENT.hud.combat.off",
+  feat: "PENTARYN_MOVEMENT.hud.combat.feat"
 });
 
 /** The GM button title (and the flip toast), by policy. */
@@ -79,7 +99,8 @@ export const NOTIFY_CLEARED = Object.freeze({
 });
 export const NOTIFY_BACK = Object.freeze({
   combat: "PENTARYN_MOVEMENT.notify.back.combat",
-  off: "PENTARYN_MOVEMENT.notify.back.off"
+  off: "PENTARYN_MOVEMENT.notify.back.off",
+  exempt: "PENTARYN_MOVEMENT.notify.back.exempt"   // allowed again mid-fight because an incorporeal token of yours arrived
 });
 
 /** World setting values, in the order the settings dropdown lists them. */
@@ -145,22 +166,46 @@ export function buildGhostContext({ isGM, policy, wish, ownedOnTop, combats } = 
   });
 }
 
-/** ghostFor() for one token from a ghost context: equal to ghostFor() over the live inputs. */
-export function ghostForCtx(ctx, { isOwner, sceneId, isGM = ctx?.isGM } = {}) {
+/**
+ * The name of the first FEAT-type item that makes its owner incorporeal (INCORPOREAL_FEATS), or
+ * null. `items` are plain `{ type, name }` (an actor's `items.contents` qualifies as is). Feats only:
+ * a spell named Etherealness is the caster's spell, not the caster's nature.
+ */
+export function incorporealFeat(items) {
+  for (const it of items ?? []) {
+    if (it?.type === "feat" && typeof it.name === "string" && INCORPOREAL_FEATS.test(it.name)) return it.name;
+  }
+  return null;
+}
+
+/**
+ * Is this actor exempt from the "no ghost during a fight" rule? `items` as for incorporealFeat;
+ * `flag` is `flags.pentaryn-movement.ghostInCombat` (the GM's override). Either grants it.
+ */
+export function ghostInCombat({ items, flag } = {}) {
+  return flag === true || incorporealFeat(items) !== null;
+}
+
+/**
+ * ghostFor() for one token from a ghost context: equal to ghostFor() over the live inputs. `exempt`
+ * is the token's own (ghostInCombat); it only matters while a combat runs on its scene.
+ */
+export function ghostForCtx(ctx, { isOwner, sceneId, isGM = ctx?.isGM, exempt = false } = {}) {
   return ghostFor({
-    isGM, policy: ctx?.policy, wish: ctx?.wish, isOwner,
+    isGM, policy: ctx?.policy, wish: ctx?.wish, isOwner, exempt,
     combatActive: !!sceneId && !!ctx?.combatScenes?.has(sceneId)
   });
 }
 
 /**
  * May players ghost at all, given the GM policy and whether a combat is running here?
- * Returns { allowed, reason } where reason is "off" | "combat" | null.
+ * Returns { allowed, reason } where reason is "off" | "combat" | null. `exempt` lifts the combat
+ * block only (an incorporeal token, or the GM's per-creature override); "off" stays off for everyone.
  */
-export function ghostAllowed({ policy, combatActive } = {}) {
+export function ghostAllowed({ policy, combatActive, exempt = false } = {}) {
   const p = normalizePolicy(policy);
   if (p === "off") return { allowed: false, reason: "off" };
-  if (p === "exploration" && combatActive) return { allowed: false, reason: "combat" };
+  if (p === "exploration" && combatActive && !exempt) return { allowed: false, reason: "combat" };
   return { allowed: true, reason: null };
 }
 
@@ -168,9 +213,9 @@ export function ghostAllowed({ policy, combatActive } = {}) {
  * Is ghost movement in effect for this token on this client?
  * The GM never gets it from here: the GM has core's own Unconstrained Movement tool.
  */
-export function ghostFor({ isGM, policy, combatActive, wish, isOwner } = {}) {
+export function ghostFor({ isGM, policy, combatActive, wish, isOwner, exempt = false } = {}) {
   if (isGM || !wish || !isOwner) return false;
-  return ghostAllowed({ policy, combatActive }).allowed;
+  return ghostAllowed({ policy, combatActive, exempt }).allowed;
 }
 
 /**
@@ -204,13 +249,15 @@ export function ghostKeyboardMovement(result, objects, isGhost) {
  * What the player's toolbar button shows. `state` is what drives the title, the toolclip text and
  * the dimmed look; `active` is the pressed state, which is the effective ghost, never just the wish.
  */
-export function playerTool({ isGM, policy, combatActive, wish } = {}) {
+export function playerTool({ isGM, policy, combatActive, wish, exempt = false } = {}) {
   const p = normalizePolicy(policy);
-  const { allowed, reason } = ghostAllowed({ policy: p, combatActive });
+  const { allowed, reason } = ghostAllowed({ policy: p, combatActive, exempt });
   const visible = !isGM && p !== "off";
   const active = visible && allowed && !!wish;
   const state = !allowed ? (reason ?? "off") : active ? "on" : "ready";
-  return { visible, active, state };
+  // `exempt` here: the button is usable only because an incorporeal token of yours is in the fight
+  // (the toolclip says so, and that your other tokens still walk normally).
+  return { visible, active, state, exempt: visible && p === "exploration" && !!combatActive && !!exempt };
 }
 
 /** The GM's flip button: pressed whenever players may ghost at all. */
@@ -237,9 +284,9 @@ export function flipPolicy(policy, last, on) {
  * button never sits pressed while doing nothing, and ghost never comes back on by itself after a
  * fight. Returns the reason ("off" | "combat") or null.
  */
-export function wishToClear({ policy, combatActive, wish } = {}) {
+export function wishToClear({ policy, combatActive, wish, exempt = false } = {}) {
   if (!wish) return null;
-  const { allowed, reason } = ghostAllowed({ policy, combatActive });
+  const { allowed, reason } = ghostAllowed({ policy, combatActive, exempt });
   return allowed ? null : reason;
 }
 
@@ -248,18 +295,18 @@ export function wishToClear({ policy, combatActive, wish } = {}) {
  * (usability Area 8, L7: the button stays off after the fight and is easy to forget). Nothing is
  * switched back on by itself. `cleared` is the reason it was switched off on this client, or null.
  */
-export function ghostBack({ cleared, policy, combatActive, wish } = {}) {
+export function ghostBack({ cleared, policy, combatActive, wish, exempt = false } = {}) {
   if (!cleared || wish) return false;
-  return ghostAllowed({ policy, combatActive }).allowed;
+  return ghostAllowed({ policy, combatActive, exempt }).allowed;
 }
 
 /**
  * The console status (finding -23), from plain inputs. Key order is part of the contract: later
  * keys are only ever appended.
  */
-export function statusFrom({ policy, combat, wish, isGM, ownedOnTop, patched } = {}) {
+export function statusFrom({ policy, combat, wish, isGM, ownedOnTop, patched, exempt = false } = {}) {
   const p = normalizePolicy(policy);
-  const { allowed, reason } = ghostAllowed({ policy: p, combatActive: combat });
+  const { allowed, reason } = ghostAllowed({ policy: p, combatActive: combat, exempt });
   return {
     policy: p, combatOnScene: !!combat, allowed, reason,
     wish: !!wish, ghost: !isGM && allowed && !!wish,
@@ -273,9 +320,11 @@ export function statusFrom({ policy, combat, wish, isGM, ownedOnTop, patched } =
  * it names why ghost is allowed NOW: cleared by a fight that is still running means the GM changed
  * the policy, so the toast is the GM one (`off`), not "the fight is over".
  */
-export function ghostBackKey({ cleared, policy, combatActive, wish } = {}) {
-  if (!ghostBack({ cleared, policy, combatActive, wish })) return null;
-  if (cleared === "combat" && combatActive) return NOTIFY_BACK.off;
+export function ghostBackKey({ cleared, policy, combatActive, wish, exempt = false } = {}) {
+  if (!ghostBack({ cleared, policy, combatActive, wish, exempt })) return null;
+  // Cleared by a fight that still runs: allowed again either because an incorporeal token of yours
+  // arrived (exempt) or because the GM changed the policy; never "the fight is over".
+  if (cleared === "combat" && combatActive) return exempt && normalizePolicy(policy) === "exploration" ? NOTIFY_BACK.exempt : NOTIFY_BACK.off;
   return NOTIFY_BACK[cleared] ?? null;
 }
 

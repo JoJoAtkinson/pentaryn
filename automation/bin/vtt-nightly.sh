@@ -139,6 +139,18 @@ PIDFILE="$REPO/.run/cloudflared.pid"
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then TUNNEL_WAS_UP=1; fi
 log "state: foundry=$FOUNDRY world=$WORLD users=$USERS tunnel=$([ -n "$TUNNEL_WAS_UP" ] && echo up || echo down)"
 
+# No world active (a host reboot boots Foundry to /setup): launch the host's default world
+# after the restart instead of nothing. PENTARYN_DEFAULT_WORLD in ~/.config/pentaryn/env;
+# unset keeps the original "relaunch only what was active". 2026-10-29 → 11-05 ran 8 nights
+# with world=- and left the table dark until Joe launched pentaryn by hand.
+if [ "$WORLD" = "-" ] && [ "$FOUNDRY" != down ]; then
+  DEFAULT_WORLD=$("$PY" -m scripts.foundry.host default-world 2>>"$LOG" || echo "-")
+  if [ "$DEFAULT_WORLD" != "-" ] && [ -n "$DEFAULT_WORLD" ]; then
+    WORLD="$DEFAULT_WORLD"
+    log "  no world active — will launch the default world $WORLD after the restart"
+  fi
+fi
+
 if [ "$FOUNDRY" != up ] && [ "$FOUNDRY" != down ]; then
   log "✗ FAILED: Foundry's state could not be read (port or process live, /api/status failing)"
   log "  — nothing touched"
@@ -195,7 +207,7 @@ else
 fi
 if [ $? -eq 0 ]; then RESTARTED=1; else RC=1; exit 1; fi   # the trap retries once
 
-# ── relaunch the world that was active (needs the admin password from Infisical) ──
+# ── relaunch the world that was active, or the host's default (admin password from Infisical) ──
 relaunch_world() {
   [ "$WORLD" != "-" ] || return 0
   if [ -n "$DRY" ]; then log "▸ relaunch world $WORLD (dry run — not run)"; return 0; fi

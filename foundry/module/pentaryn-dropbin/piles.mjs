@@ -17,14 +17,17 @@ const itempiles = () => globalThis.game?.itempiles;
 /**
  * Item Piles' loot window (ItemPileInventoryApp) DOM, as Loot all finds it: the footer, its direct
  * buttons, the Close Lid (containers) / Leave icons Loot all sits before, and the native Take All
- * icon. Re-check these against the window after an Item Piles update.
+ * icon; and an item row (ListEntry.svelte), where the GM's "Never loot this" menu opens. Re-check
+ * these against the window after an Item Piles update.
  */
 export const SELECTORS = Object.freeze({
   footer: "footer.sheet-footer",
   footerButton: ":scope > button",
   exitIcon: "i.fa-box, i.fa-sign-out-alt",
   nativeTakeAllIcon: "i.fa-fist-raised",
+  itemRow: ".item-piles-item-row",
 });
+
 
 /** `game.itempiles.API`, or undefined when Item Piles is not active. */
 export const api = () => itempiles()?.API;
@@ -37,6 +40,9 @@ export const dropHook = () => itempiles()?.hooks?.ITEM?.DROP;
  * a drop onto an existing pile is one — or undefined.
  */
 export const preTransferHook = () => itempiles()?.hooks?.ITEM?.PRE_TRANSFER;
+
+/** The world's `item-piles.itemFilters` rows as Item Piles reads them (its ITEM_FILTERS), or undefined. */
+export const itemFilters = () => api()?.ITEM_FILTERS;
 
 /** The actor type Item Piles treats as a character (its ACTOR_CLASS_TYPE), or undefined. */
 export const actorClassType = () => api()?.ACTOR_CLASS_TYPE;

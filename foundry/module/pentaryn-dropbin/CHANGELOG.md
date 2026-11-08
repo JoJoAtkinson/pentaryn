@@ -1,5 +1,33 @@
 # Changelog — Pentaryn Drop Bin (`pentaryn-dropbin`)
 
+## 0.3.0 — 2026-11-07 (feedback triage A1, A2, E3)
+
+- **Never loot this (A2, reports `iXWG4o`, `S7Bc3j`).** The GM marks an item that must never be
+  loot: right-click its row in a loot window → *Never loot this* (the primary surface), or the same
+  control in the item sheet's header ⋯ menu (never on a character's gear), or
+  `game.pentaryn.dropbin.noLoot(item, { on })`. Written as `flags.pentaryn-dropbin.noLoot = true` on
+  the Item (deleted on *Lootable again*). Every corpse pile now carries the world's item filters plus
+  a row on that flag as its Item Piles `overrideItemFilters`, so the item stays on the actor and Item
+  Piles itself keeps it out of the window, out of *Loot all* and out of "empty" (the eye). A corpse
+  made before 0.3.0 gets the row written by the first toggle on one of its items. Players see no menu,
+  prompt or toast. New feature file `noloot.mjs`; `piles.mjs` gains `itemFilters()` and
+  `SELECTORS.itemRow`; new lang keys `noLoot.never` / `noLoot.again`.
+- **A summon is never a corpse (E3, review finding 3, report `TwPCoB`).** An actor dnd5e's summoning
+  stamped (`flags.dnd5e.summon`: spirits, familiars, pentaryn-creatures' library copies) is skipped by
+  the corpse sync at 0 HP — no pile, no Dead overlay — and left for `pentaryn-riders` to remove.
+  `inspect` reports `summoned`; `flags.dnd5e.summon` is a declared foreign read.
+- **Stale natural-weapon filter check (A1).** Nothing migrates the world setting
+  `item-piles.itemFilters`, and this world still held dnd5e 2.x's `system.weaponType` path, so every
+  Rend showed as loot. The GM's client now warns once at `ready` when the `natural` row is not on
+  `system.type.value`, with the one-line `game.settings.set(...)` that resets it to itempilesdnd5e's
+  dnd5e ≥ 5 preset, and `selftest()` carries the same check (`detail.path`, `detail.fix`). The module
+  never writes the setting.
+- Pure rules in `dropbin-core.mjs`: `isNoLootItem`, `NO_LOOT_FILTER`, `hasNoLootFilter`,
+  `corpseItemFilters`, `isSummoned`, `naturalFilterCheck`, `DND5E_ITEM_FILTERS`. Hooks golden grows by
+  four load-time registrations (the filter check at ready; the row stamp, loot-window menu and item
+  sheet control). Manifest: row `noLoot`; flags writes add `flags.pentaryn-dropbin.noLoot` and
+  `flags.item-piles.data.overrideItemFilters`.
+
 ## Unreleased — 2026-10-13 (defect wave 3)
 
 Declared changes:

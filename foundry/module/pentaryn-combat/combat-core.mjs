@@ -23,6 +23,8 @@
  *                         hudFollowPlan, deltasConsumed, areaPlacementSkipped
  *   core/layout.mjs       dockRect, swingTag, drawerLeft, clampToView
  *   core/timing.mjs       DELAYS: every timer delay, named (combat-riders-37)
+ *   core/dice-input.mjs   arithmeticExpression / arithmeticAssignment (the HP box's "50-10"),
+ *                         manualDiceConfig (Roll manually's d20)
  */
 
 /* ── identity (blueprint constants; one MODULE for every file) ──────────────── */
@@ -31,7 +33,7 @@ export const MODULE = "pentaryn-combat";
 export { MODULE as MOD };                  // game.pentaryn.combat.core.MOD stays readable for macros
 export const SHORT = "combat";
 export const NS = "combat";                // game.pentaryn.combat
-export const VERSION = "0.3.0";            // === module.json version (core.test pins it)
+export const VERSION = "0.3.1";            // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-combat/api@1";
 export const I18N = "PENTARYN_COMBAT";
 export const CSS = "pc-";
@@ -189,6 +191,9 @@ import {
 import {
   DELAYS
 } from "./core/timing.mjs";
+import {
+  arithmeticAssignment, arithmeticExpression, manualDiceConfig
+} from "./core/dice-input.mjs";
 
 export {
   featureSet, normalizeName, slugify, attackCount, canSwing, defaultWeapon, extraSwings,
@@ -204,5 +209,5 @@ export {
   overridePlan, parseMultiattack, SPECIAL_ACTIONS, actionsLeft, areaPlacementSkipped, dashChanges,
   deltasConsumed, expiringAt, hudFollowPlan, orphanUsage, portraitExtras, recordSpecialAction,
   specialActionOf, turnBoundary, turnEffectData, clampToView, dockRect, drawerLeft, swingTag, pruneOlder, DELAYS,
-  ATTACK_ACTION_KINDS, MOVEMENT_KEYS
+  ATTACK_ACTION_KINDS, MOVEMENT_KEYS, arithmeticAssignment, arithmeticExpression, manualDiceConfig
 };

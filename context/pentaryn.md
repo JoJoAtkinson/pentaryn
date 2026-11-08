@@ -134,6 +134,10 @@ settings were copied on disk with classic-level while both worlds were closed.
   Move people by moving their tokens (portals, Teleport, Gather), and **re-activate Entry before
   players log in** (and after any session where you activated a map), so the login flash is the
   lobby. The live runner puts the active scene back to what it found (Entry) when it ends.
+- **"Back to my character" macro** (`zH6cda9MQRjlZ4og`, 2026-11-05, players OBSERVER) sits in hotbar
+  slot 1 of every player. It views the map their pinned token is on (else their assigned
+  character's first visible token), at its level, selects it and pans to it. It only moves the
+  view, never the token. For a player stuck on the lobby; no reload needed.
 
 **Left out**
 

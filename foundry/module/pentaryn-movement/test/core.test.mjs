@@ -77,15 +77,15 @@ check("no base, no ghost → {}", constrainFor(null, false), {});
 /* ── playerTool ──────────────────────────────────────────────────────────── */
 check("GM never sees the player button", playerTool({ isGM: true, policy: "always", wish: true }).visible, false);
 check("hidden when policy off", playerTool({ isGM: false, policy: "off", wish: true }),
-  { visible: false, active: false, state: "off" });
+  { visible: false, active: false, state: "off", exempt: false });
 check("ready, not pressed", playerTool({ isGM: false, policy: "exploration", combatActive: false, wish: false }),
-  { visible: true, active: false, state: "ready" });
+  { visible: true, active: false, state: "ready", exempt: false });
 check("on, pressed", playerTool({ isGM: false, policy: "exploration", combatActive: false, wish: true }),
-  { visible: true, active: true, state: "on" });
+  { visible: true, active: true, state: "on", exempt: false });
 check("combat: visible, not pressed even with wish", playerTool({ isGM: false, policy: "exploration", combatActive: true, wish: true }),
-  { visible: true, active: false, state: "combat" });
+  { visible: true, active: false, state: "combat", exempt: false });
 check("always ignores combat", playerTool({ isGM: false, policy: "always", combatActive: true, wish: true }),
-  { visible: true, active: true, state: "on" });
+  { visible: true, active: true, state: "on", exempt: false });
 
 /* ── gmTool / flipPolicy ─────────────────────────────────────────────────── */
 check("GM tool for GM only", gmTool({ isGM: false, policy: "always" }).visible, false);

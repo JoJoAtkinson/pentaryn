@@ -32,7 +32,7 @@ the order is pinned by its `test/golden/hooks.json`. Check live with
 | Argon hook | Listeners, in firing order |
 |---|---|
 | `renderActionPanelArgonComponent` | combat `turnflow/action-buttons.mjs` (special actions, Opportunity Attack) → combat `hud/bars.mjs` compose the bars → combat `hud/bars.mjs` pips repaint → transform `hud-panels.mjs` (Bonus / Action / Special bars: Wild Shape, Starry Form, Return) |
-| `renderItemButtonArgonComponent` | combat `hud/bars.mjs` (Pole Strike gate, duplicate off-hand slot) → riders `argon-tidy.mjs` (button tidy, then the per-prototype wraps of §2) → transform `hud-panels.mjs` (Opportunity Attack label) |
+| `renderItemButtonArgonComponent` | combat `hud/bars.mjs` (Pole Strike gate, duplicate off-hand slot) → riders `argon-tidy.mjs` (button tidy, then the per-prototype wraps of §2) → riders `rest.mjs` (the Cosmic Omen badge: an item button is never greyed; only Argon's per-activity split, `explodeItemActivities`, badges one and greys the other — row `argon-riders-omen-badge`) → transform `hud-panels.mjs` (Opportunity Attack label) |
 | `renderButtonPanelButtonArgonComponent` | combat `turnflow/drawers.mjs` (drawer opens above its own button) |
 | `renderPortraitPanelArgonComponent` | transform `hud-panels.mjs` (form line and HP) |
 | `renderEffectArgonComponent` | transform `hud-panels.mjs` (the form's effect) |

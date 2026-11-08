@@ -40,8 +40,11 @@ running (`CONFLICT`).
 
 **DDB corrections.** After a player (or the GM) syncs a D&D Beyond character with ddb-importer,
 the sheet is corrected at once: robes and notes back under Equipment, feat 1/day spells under Innate
-Spellcasting, wands that spend their charges, the Transmuter's Stone as switchable benefits. The GMs
-get one whispered chat line listing what changed (nothing when nothing changed).
+Spellcasting, wands that spend their charges, the Transmuter's Stone as switchable benefits, a reaction's
+one-round effect (Shield's barrier, Precision Attack) that ends at the start of *your* next turn instead
+of lingering as Expired, and a Goliath's Large Form that grows the token. Nothing to click and nothing to
+remember: the fixes land before the sheet is next opened, and come back after every re-sync. The GMs get
+one whispered chat line listing what changed (nothing when nothing changed).
 
 ## Settings
 
@@ -236,7 +239,10 @@ so the next run retries it. An empty diff is a real no-op and still counts as up
 5. A DDB correction → a rule row in `ddb-core.mjs` `RULES` (`match`/`plan`, generic: item type,
    name, identifier, data shape — never an actor or item id), a fixture in `test/fixtures/ddb.mjs`, a
    table in `test/ddb-core.test.mjs` with its idempotence case. A one-off homebrew item is frozen,
-   not ruled (`context/foundry/importer.md`, "Freeze or rule").
+   not ruled (`context/foundry/importer.md`, "Freeze or rule"). Ops: `retype`, `updateItem`,
+   `createEffects`, `updateEffects` (one `updateEmbeddedDocuments("ActiveEffect")` per item; two rules
+   on one effect merge their paths), `deleteItem`, `updateActor`. An effect's `changes` in the snapshot
+   are core 14's `system.changes`.
 6. Moving the dnd5e target minor → `module.json` `flags.pentaryn.targetSystemVersion` (a Foundry
    restart, playbook §10), `TARGET_SYSTEM_VERSION` in `scripts/foundry/build_actors.py`, and the
    `dnd5e-importer-gate` row in `foundry/adjustments.yml`, together.

@@ -3,7 +3,9 @@
  * transfers read from the live pentaryn world on 2026-10-19 (read-only): consumable-trinket apparel,
  * feat 1/day spells with method "atwill" and uses.max "1", a wand whose Cast activity points at a DDB
  * spell that spends its own uses, a homebrew item with no PHB spell, the Transmuter's Stone feat with
- * its benefit baked into base data. Names are generic; no live ids.
+ * its benefit baked into base data; and (2026-11-07, feedback HdWHWk / rj3l7f) a Goliath Eldritch Knight
+ * whose one-round reaction effects (Shield, Precision Attack) expire on core's plain `turnStart` and whose
+ * Large Form effect changes no size. Names are generic; no live ids.
  *
  * `snapshot()` is the plain shape ddb-core.mjs plans on; `liveActor()` wraps one in the few Document
  * behaviours ddb-adapter.mjs touches, recording every write in `writes`.
@@ -37,6 +39,14 @@ export const SPELLS = {
 
 const item = (_id, name, type, system, flags = {}, effects = [], source = null) => ({ _id, name, type, system, flags, source, effects });
 const cast = (id, uuid) => ({ [id]: { _id: id, type: "cast", spell: { uuid, level: null }, consumption: { spellSlot: false, targets: [] } } });
+/** A utility activity that applies the listed effects (`activation` as ddb-importer writes it). */
+const utility = (id, name, activation, effectIds, extra = {}) => ({ [id]: { _id: id, type: "utility", name,
+  activation: { type: activation, value: null, override: false }, effects: effectIds.map(_id => ({ _id, level: {}, uuid: null })),
+  duration: { units: "inst", override: false, concentration: false, expiry: null }, uses: { spent: 0, recovery: [], max: "" }, ...extra } });
+/** An applied effect as ddb-importer 7.5.8 writes it (core 14: `system.changes`, duration `{ value, units, expiry }`). */
+const effect = (_id, name, duration, changes, extra = {}) => ({ _id, name, disabled: false, transfer: false, duration: { expired: false, ...duration },
+  changes: changes.map(c => ({ priority: 20, phase: "initial", conditions: "{}", replacement: "", ...c })), flags: {}, ...extra });
+export const ONE_ROUND = { value: 6, units: "seconds", expiry: "turnStart" };
 
 /** The wizard: apparel, notes, free casts, a wand, a lens, the stone. */
 export function wizard({ importId = "imp1", stamp = null } = {}) {
@@ -84,6 +94,43 @@ export function fighter({ importId = "imp2", stamp = null, frozenAxe = false } =
   };
 }
 
+/**
+ * The knight: a Goliath Eldritch Knight (Battle Master dip), as the 2026-11-06 live read describes the
+ * shapes: Shield's barrier and the Precision Attack bonus last 6 s with core's plain `turnStart`; Large Form
+ * changes speed and Strength checks but not size; Stone's Endurance is a reaction with no effect; Feather
+ * Fall a reaction whose effect lasts a minute (never touched).
+ */
+export function knight({ importId = "imp3", stamp = null } = {}) {
+  return {
+    id: "actorKnight00001", name: "Test Knight", ddb: true, importId, stamp,
+    system: { attributes: { senses: { ranges: { darkvision: 0 } } }, abilities: { con: { proficient: 1 } } },
+    items: [
+      item("race", "Goliath", "race", { senses: { ranges: {} } }),
+      item("shield", "Shield", "spell", { level: 1, method: "spell", activities: utility("utilShield", "", "reaction", ["barrier"]) }, {}, [
+        effect("barrier", "Imperceptible Barrier", ONE_ROUND, [{ key: "system.attributes.ac.bonus", value: "+5", type: "add" }]),
+      ]),
+      item("precise", "Maneuver: Precision Attack", "feat", { identifier: "maneuver-options-precision-attack",
+        activities: utility("utilPrecise", "Precision Attack", "reaction", ["precision"]) }, {}, [
+        effect("precision", "Precision Attack Bonus", ONE_ROUND, [
+          { key: "system.rolls.attack.mwak.bonus", value: "@scale.battle-master.combat-superiority-die", type: "add" },
+          { key: "system.rolls.attack.rwak.bonus", value: "@scale.battle-master.combat-superiority-die", type: "add" },
+        ]),
+      ]),
+      item("large", "Large Form", "feat", { identifier: "large-form",
+        activities: utility("utilLarge", "Enlarge", "bonus", ["grow"], { duration: { units: "minute", value: "10", concentration: false, override: false, expiry: null } }) }, {}, [
+        effect("grow", "Large Form", { value: 600, units: "seconds", expiry: "turnStart" }, [
+          { key: "system.attributes.movement.walk", value: 10, type: "add", priority: null },
+          { key: "system.abilities.str.check.roll.mode", value: 1, type: "add", priority: null },
+        ]),
+      ]),
+      item("endure", "Stone's Endurance", "feat", { identifier: "stones-endurance", activities: utility("utilEndure", "", "reaction", []) }),
+      item("feather", "Feather Fall", "spell", { level: 1, method: "spell", activities: utility("utilFeather", "", "reaction", ["float"]) }, {}, [
+        effect("float", "Feather Fall", { value: 60, units: "seconds", expiry: "turnStart" }, [{ key: "system.attributes.movement.fly", value: 60, type: "override" }]),
+      ]),
+    ],
+  };
+}
+
 export const lookups = () => ({ spells: clone(SPELLS), phbSpells: clone(PHB_INDEX) });
 
 /* -------------------------------------------------------------------------------------------- */
@@ -125,6 +172,10 @@ export function liveActor(snap, { isOwner = true, failRetype = false, writes = [
     items: new Coll(),
   };
   actor._source = { system: clone(snap.system), flags: actor.flags };
+  /** An effect Document-like: `_source` as core 14 stores it (`system.changes`; a snapshot's `changes` lands there). */
+  const mkEffect = d => ({ id: d._id, name: d.name, disabled: d.disabled, transfer: d.transfer ?? false,
+    _source: { flags: clone(d.flags ?? {}), transfer: d.transfer ?? false, duration: clone(d.duration ?? {}),
+      system: { ...clone(d.system ?? {}), changes: clone(d.system?.changes ?? d.changes ?? []) } } });
   const mkItem = data => {
     const it = {
       id: data._id, name: data.name, type: data.type, effects: new Coll(),
@@ -142,11 +193,19 @@ export function liveActor(snap, { isOwner = true, failRetype = false, writes = [
         writes.push(["effects.create", this.id, docs.map(d => [d._id, d.name, d.disabled]), clone(opts)]);
         for (const d of docs) {
           if (this.effects.has(d._id)) throw new Error(`ActiveEffect ${d._id} already exists`);
-          this.effects.set(d._id, { id: d._id, name: d.name, disabled: d.disabled, _source: { flags: clone(d.flags) } });
+          this.effects.set(d._id, mkEffect(d));
+        }
+      },
+      async updateEmbeddedDocuments(kind, updates) {
+        writes.push(["effects.update", this.id, clone(updates)]);
+        for (const u of updates) {
+          const e = this.effects.get(u._id);
+          if (!e) throw new Error(`ActiveEffect "${u._id}" does not exist!`);
+          for (const [k, v] of Object.entries(u)) if (k !== "_id") setPath(e._source, k, clone(v));
         }
       },
     };
-    for (const e of data.effects ?? []) it.effects.set(e._id, { id: e._id, name: e.name, disabled: e.disabled, _source: { flags: clone(e.flags) } });
+    for (const e of data.effects ?? []) it.effects.set(e._id, mkEffect(e));
     return it;
   };
   for (const data of snap.items) actor.items.set(data._id, mkItem(data));

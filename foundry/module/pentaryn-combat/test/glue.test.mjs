@@ -1,6 +1,6 @@
 // Lifecycle characterisation on the active GM's client (guide S1, glue.test). Both entries load as
 // Foundry loads them; init / setup / ready fire; their effects are pinned:
-//   init   30 world settings in DEFAULTS order, option objects key by key (golden/settings-register.json)
+//   init   31 world settings in DEFAULTS order, option objects key by key (golden/settings-register.json)
 //   setup  hooks only (hooks.test pins them), no calls
 //   ready  the orphan-flag sweep, Argon's picker tutorial marked seen, the pip-settle and portrait
 //          patches; publish ONE TICK later, then the weapon-set seed (golden/ready-calls.json)
@@ -39,10 +39,10 @@ test("import alone: no calls, no publish, no settings; Argon's DOM untouched", (
   assert.deepEqual(lines, []);
 });
 
-test("init: 30 world settings in DEFAULTS order with literal label keys (golden/settings-register.json)", () => {
+test("init: 31 world settings in DEFAULTS order with literal label keys (golden/settings-register.json)", () => {
   F.fire("init");
   const keys = Object.keys(settingsMod.DEFAULTS);
-  assert.equal(keys.length, 30);
+  assert.equal(keys.length, 31);
   assert.deepEqual(F.calls, keys.map(k => ({ op: "settings.register", id: `${MODULE}.${k}` })));
   const rows = keys.map(k => {
     const raw = F.game.settings.settings.get(`${MODULE}.${k}`);

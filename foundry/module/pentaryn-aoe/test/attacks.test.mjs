@@ -71,3 +71,48 @@ test("nothing rolls: setting off, not an attack activity, no roll, no damage par
   assert.deepEqual(await roll([{ total: 20, options: {} }], subject({ damage: { parts: [] } })), []);
   assert.deepEqual(await A.onPostRollAttack([{ total: 20 }]), undefined, "no subject");
 });
+
+/* ── J1 (feedback fs7q6K): a save activity used at a target rolls its damage at once ─────────── */
+
+function saveSubject(over = {}) {
+  return {
+    type: "save", uuid: "Actor.r.Item.lash.Activity.sv", damage: { parts: [{}] }, target: { template: { type: "" } },
+    rollDamage: async (config, dialog, message) => { F.calls.push({ op: "rollDamage", config: F.plain(config), dialog, message: F.plain(message) }); return ["dmg"]; },
+    ...over,
+  };
+}
+const targets = [{ actor: "Actor.actCaven00000001", token: "Scene.s.Token.cv", name: "Caven" }];
+async function use(subj, results, usageConfig = { event: null }) {
+  F.calls.length = 0;
+  F.fire("dnd5e.postUseActivity", subj, usageConfig, results);
+  await flush();
+  return F.calls.filter(c => c.op === "rollDamage");
+}
+
+test("J1: Use with a recorded target rolls damage with no dialog, threaded under the usage card with its targets", async () => {
+  const [call] = await use(saveSubject(), { message: { id: "usageLash0000001", system: { targets } } });
+  assert.deepEqual(call, { op: "rollDamage", config: { event: null }, dialog: { configure: false }, message: { data: { system: { origin: "usageLash0000001", targets } } } });
+});
+
+test("J1: the usage message's data form (create: false) carries the targets too; no message → no origin", async () => {
+  const [a] = await use(saveSubject(), { message: { data: { system: { targets } } } });
+  assert.deepEqual(a.message, { data: { system: { targets } } });
+});
+
+test("J1: no target, no damage parts, an area spell, another activity type, or the setting off → nothing", async () => {
+  assert.deepEqual(await use(saveSubject(), { message: { id: "u", system: { targets: [] } } }), []);
+  assert.deepEqual(await use(saveSubject(), { message: { id: "u", system: {} } }), []);
+  assert.deepEqual(await use(saveSubject({ damage: { parts: [] } }), { message: { id: "u", system: { targets } } }), []);
+  assert.deepEqual(await use(saveSubject({ target: { template: { type: "sphere" } } }), { message: { id: "u", system: { targets } } }), []);
+  assert.deepEqual(await use(saveSubject({ type: "attack" }), { message: { id: "u", system: { targets } } }), []);
+  await game.settings.set(MODULE, "autoDamageOnSave", false);
+  assert.deepEqual(await use(saveSubject(), { message: { id: "u", system: { targets } } }), []);
+  await game.settings.set(MODULE, "autoDamageOnSave", true);
+  assert.equal(await A.onPostUseActivity(null, {}, {}), undefined, "no activity");
+});
+
+test("J1: the listener never vetoes (returns nothing), so refund's own veto is the only one on the hook", async () => {
+  const out = F.fireCall("dnd5e.postUseActivity", saveSubject(), { event: null }, { message: { id: "u2", system: { targets } } });
+  assert.equal(out, true);
+  await flush();
+});

@@ -193,6 +193,14 @@ export class FakeElement {
   get textContent() {
     return this.nodes.map(n => n.textContent).join("");
   }
+  set textContent(v) {
+    for (const n of this.nodes) n.parent = null;
+    this.nodes = [];
+    if (v !== null && v !== undefined && String(v) !== "") this.append(new FakeText(String(v)));
+  }
+  get parentElement() {
+    return this.parent?.nodeType === 1 ? this.parent : null;
+  }
 
   /* selectors */
   matches(selector, scope = null) {

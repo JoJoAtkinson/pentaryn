@@ -1,5 +1,5 @@
 // The hook manifest (guide step 7): what this module registers, in order, pinned against
-// golden/hooks.json (the same 19 rows the glue test pins), the registry labels, the feature
+// golden/hooks.json (the same 21 rows the glue test pins), the registry labels, the feature
 // contract (install/uninstall), and uninstall() leaving nothing behind. A player client.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -50,12 +50,14 @@ test("registry labels (describe().hooks), in order; the lifecycle hooks are the 
     { name: "setup", label: "setup: wrap Token#isVisible" },
     { name: "setup", label: "setup: wrap Actor5e.fetchExisting" },   // [declared] 0.2.0 summon library
     { name: "dnd5e.postSummon", label: "dnd5e.postSummon: file the copy in the library" },   // [declared] 0.3.0 filing
+    { name: "updateCombat", label: "updateCombat: wake dormant combatants" },   // [declared] 0.4.0 dormant until combat
+    { name: "createCombatant", label: "createCombatant: wake dormant combatants" },
   ]);
 });
 
 test("every feature file exports install and uninstall", async () => {
   const files = featureFiles();
-  assert.deepEqual(files, ["light.mjs", "creature-strip.mjs", "owner-sees.mjs", "summons.mjs"]);
+  assert.deepEqual(files, ["light.mjs", "creature-strip.mjs", "owner-sees.mjs", "summons.mjs", "dormant.mjs"]);
   for (const f of files) {
     const mod = await import(new URL(f, ROOT));
     assert.equal(typeof mod.install, "function", `${f}: install`);
@@ -110,6 +112,7 @@ test("hot patch: after uninstall(), re-importing the entry re-wires hooks, the w
     "on:createToken", "on:updateToken", "on:updateActor", "on:createUser", "on:updateUser", "on:deleteUser",
     "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
     "on:controlToken", "on:dnd5e.postSummon",   // [declared] 0.3.0
+    "on:updateCombat", "on:createCombatant",   // [declared] 0.4.0
   ], "the feature hooks again; no lifecycle hooks (they already fired), the wrap is applied at once");
   assert.equal(api2.patchedWith(), "direct");
   assert.notEqual(Object.getOwnPropertyDescriptor(W.TokenClass.prototype, "isVisible").get, W.coreGetter);

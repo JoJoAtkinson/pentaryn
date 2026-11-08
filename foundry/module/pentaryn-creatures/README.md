@@ -4,7 +4,8 @@
 Arcane Eye, steed), a creature glows when it shouldn't (or doesn't when it should), the
 "Your creatures" strip is missing or wrong, a player can't summon ("You must have 'Create New
 Actors' permission in order to summon directly from a compendium"), or summon copies pile up loose
-in "Player Characters" or the Actors root.
+in "Player Characters" or the Actors root. Also: a monster that should look like a statue (a prop)
+until the fight starts — **dormant until combat** (0.4.0).
 
 Table feedback 2026-10-08, item C3. Four parts, one module: a creature light, owners always see
 their own tokens, the "Your creatures" strip, and the summon library (0.2.0, feedback
@@ -89,6 +90,31 @@ up as the players play. Two ways in:
   original** when it has one: a player can edit their own item's profiles or CR, the original they
   cannot. Anything else is refused with the reason.
 
+### Dormant until combat (GM)
+
+A creature that stands on the map as a prop — a statue, a suit of armour — and turns out to be a
+monster when the fight starts. **Arm** a token: `await game.pentaryn.creatures.dormant("<token id>")`
+(or a GM script macro over the selected tokens; the pentaryn world has one, *Dormant until combat*: disguises the selection, or wakes it when every selected token is already dormant). Its real look is stored on the token
+(`flags.pentaryn-creatures.dormant.look`) and it becomes **"Statue"**: stone statue art with the ring
+off, the same name and portrait on its unlinked actor (what a player's double-click Look window shows),
+no nameplate or bars, and **SECRET** disposition, so a player gets no hover border, nameplate, bars,
+effects or target pips and cannot hover or target it. `hidden` is never touched: show or hide it as
+you like.
+
+**When a combat it is in starts** (Begin Combat, round 1), or when it is added to a combat already
+running, the active GM's client puts the stored look back by itself, clears the flag and relabels
+its combatant in the tracker. Before Begin Combat nothing changes, so the tracker shows "Statue" and
+its initiative roll says "Statue" — roll it while the token is hidden (a private roll) or keep it out
+of the tracker until you begin. **Undo** without a fight: `wake("<token id>")`. **Re-arm** after a
+test fight: `dormant` again. Other disguises: `dormant(id, { name: "Old armour", img: "<path>",
+disposition: 0 })`. The flag is per token, so any token on any scene can use it; disguise names
+repeat, so pass a token id or uuid, not the name.
+
+**Size and facing (0.4.1).** The stored look also keeps the art scale and the rotation lock, and the
+wake puts them back: shrink the statue (`texture.scaleX/Y`) or turn it (rotation unlocked) as you
+like, and the creature still wakes at its own size and upright. To wake it bigger or smaller, set
+`flags.pentaryn-creatures.dormant.look.texture.scaleX` and `scaleY` on the armed token.
+
 ## Settings
 
 | Setting | Key | Scope | Default | What |
@@ -137,6 +163,11 @@ read; every write runs only on the active GM's client.
   candidate). One batch; idempotent (a filed copy writes nothing); owners are only added.
 - `library(ref)` → `{ actor, folder, summons: [{ id, name, source }] }`: a character's library (the
   copies flagged for it and everything in its folder), as this client sees it.
+- `dormant(ref, { name?, img?, disposition?, sceneId?, dryRun? })` → `{ ok, dryRun, token, name,
+  img, disposition }` (0.4.0): arm or re-arm one token (above). Re-arming keeps the look stored the
+  first time. GM only (`NOT_GM`); bad options `BAD_ARGS`.
+- `wake(ref, { sceneId?, dryRun? })` → `{ ok, dryRun, woke, token, name? }` (0.4.0): put the stored
+  look back now; `woke: false` when the token is not dormant. GM only.
 - `core`: a frozen copy of the pure module.
 
 ## Data written
@@ -148,6 +179,10 @@ read; every write runs only on the active GM's client.
 | Actor (relay copy) | made by the active GM: the source's data, `ownership` = `default: 0` + the character's owners + the sender, `folder`, `_stats.compendiumSource` (or `duplicateSource`), `flags.dnd5e.isAutoImported`, `flags.dnd5e.summon.origin` (linked source: the item's uuid), `flags.pentaryn-creatures.library` = the character's id |
 | Actor (dnd5e's own copy, filed) | `folder`, `ownership.<owner>` = 3 for the character's owners (never removed), `flags.pentaryn-creatures.library`, `flags.dnd5e.summon.origin` (linked copy, item known) |
 | Folder `PC Summons & Forms`, `<First name> — summons & forms` | made only when missing (an existing folder of that name is used) |
+| token `name`, `displayName`, `displayBars`, `disposition`, `texture.src`, `ring`, `delta.name`, `delta.img` | the dormant disguise, and on waking the stored look |
+| token `texture.scaleX/Y`, `lockRotation` | on waking only, from the stored look (0.4.1) |
+| token `flags.pentaryn-creatures.dormant` | `{ look, disguise }` while dormant · `null` once awake |
+| Combatant `name`, `img` | on waking, only where they still show the disguise (core derives them once) |
 
 Our token writes carry `{ pentarynCreatures: true }`, so our own `updateToken` hook skips them.
 
@@ -171,7 +206,9 @@ None of its own; the kit fires `pentaryn-creatures.ready` `(api)` and `pentaryn.
 `createToken`, `updateToken`, `updateActor`, `createUser`, `updateUser`, `deleteUser` (the light);
 `canvasReady`, `createToken`, `deleteToken`, `updateToken`, `updateActor`, `updateUser`,
 `controlToken` (the strip); `init`, `setup` (owner-sees), `setup` (the wrap), `dnd5e.postSummon`
-(filing; dnd5e fires it on the summoning client only), `ready`, `ready`. Queries, registered on
+(filing; dnd5e fires it on the summoning client only), `updateCombat`, `createCombatant` (dormant
+until combat: core fires `combatStart` only on the client that began the combat, so the round change
+is the trigger), `ready`, `ready`. Queries, registered on
 every client (relay: any sender, the active GM answers): `pentaryn-creatures.summonActor`,
 `pentaryn-creatures.fileLibrary`.
 
@@ -188,6 +225,8 @@ every client (relay: any sender, the active GM answers): `pentaryn-creatures.sum
 - **The lights:** the active GM's client only (no fallback). Two tabs on the GM account may send
   the same update; harmless, `lightUpdate` is idempotent.
 - **Visibility and the strip:** every client, no writes.
+- **Dormant tokens:** the active GM's client wakes them (no fallback: with no GM online they wake on
+  the next round change after one connects). A second tab on that account writes the same values.
 - **The library:** a player's client asks, the active GM's client writes — and the query reaches
   every tab of the GM account (bridge and browser), so both answer. The relay copy and its folders
   have deterministic ids (`core.libraryActorId`, `libraryFolderId`, `libraryRootId`): the server
@@ -228,6 +267,7 @@ module's flag → a predicate in core, read through an adapter, listed in `MANIF
 | `tokens-adapter.mjs` | TokenDocument → plain summary (the foreign flag reads) |
 | `light.mjs` · `owner-sees.mjs` · `creature-strip.mjs` | features: the light queue · the `isVisible` wrap · when the strip redraws |
 | `summons.mjs` | feature: the library (the `fetchExisting` wrap, the GM relay, `postSummon` filing, the sweep, `library`) |
+| `dormant.mjs` | feature: dormant until combat (`arm`/`wake`, the combat triggers) |
 | `summons-adapter.mjs` | dnd5e summon activities / source / copy → plain data; the copy's create data |
 | `strip.mjs` | UI: the strip's DOM and the Combat HUD dock |
 | `api-manifest.mjs`, `api.mjs` | the published API |

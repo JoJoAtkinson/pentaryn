@@ -1,14 +1,15 @@
 ---
 title: "Spell areas, saves and damage (pentaryn-aoe)"
 status: active
-last_modified: 2026-10-19
+last_modified: 2026-11-07
 tags: [context, foundry, dnd5e, module]
 ---
 
 # Spell areas, saves and damage — `pentaryn-aoe`
 
-**Read this when:** a spell circle/cone won't move or delete, "damage isn't being rolled", or a
-save spell should roll the monsters' saves and apply full/half damage.
+**Read this when:** a spell circle/cone won't move or delete, "damage isn't being rolled", a
+save spell should roll the monsters' saves and apply full/half damage, a player's Apply did nothing
+for an ally, "heal doesn't let me target", or a player wants to type the total from real dice.
 **Not this file:** how it was designed and why → [`../plans/aoe-circles.md`](../plans/aoe-circles.md) ·
 module internals → [`../../foundry/module/pentaryn-aoe/README.md`](../../foundry/module/pentaryn-aoe/README.md)
 
@@ -61,8 +62,8 @@ that cancels core's region placement before anything else (`escape.mjs`).
 3. posts one **request card** for the player characters. Each player sees only their own
    button and rolls with the normal dialog, so advantage and bonuses are theirs to set. A save
    rolled from the card's own "DC 17 DEX" button counts too;
-4. shows the GM a **tray** under the damage roll, below dnd5e's own damage tray. Each row has a tick, the save result, a
-   multiplier (×0 ¼ ½ 1 2), and the damage after resistances. The tray buttons are
+4. shows the GM a **tray** under the damage roll, below dnd5e's own damage tray. Each row has a tick, the save result, the
+   total (the rolled one until you type another), a multiplier (×0 ¼ ½ 1 2), and the damage after resistances. The tray buttons are
    **Re-roll NPC saves**, **Ping players** and **Apply N**.
    The per-row dice icon re-rolls one monster. The shield icon rolls a save for an absent player.
 
@@ -72,6 +73,23 @@ Nothing is applied until **Apply** is pressed. Rows still waiting are skipped, a
 Apply again later applies only the rows that have resolved since. A second Damage click on the
 same area greys out the older tray ("superseded"), so the same area can't be applied twice.
 The tray has no rule for Legendary Resistance, Evasion or cover. Set the multiplier on that row by hand.
+
+**Single-target save spells (Psionic Lash, Toll the Dead).** Using the spell at a target rolls its
+damage at once, like an attack that hits: Use → the target rolls the save (the request card, or the
+card's own Saving Throw button) → Apply. A save rolled from the card's own button *before* the damage
+counts too, so nobody is asked twice. A spell that places an area still waits for the area; a use with
+no target rolls nothing (narrate away).
+
+**Apply on any damage or healing card (players too).** dnd5e's own Apply tray is on every damage and
+healing card. Pressing Apply does what the tray shows: your own tokens take it on your client; a row
+for a token you do not own (healing Caven) is applied by the GM's client for you, with the same
+multiplier, no confirmation on either side. You hear from the module only if no GM is connected (one
+short note; press Apply again when the GM is back). A card you rolled with nothing targeted fills with
+your targets as you target them, so the rows show who will take it; pressing Apply on an untargeted
+card while you hold targets goes to those targets. **Real dice:** every row has a small total,
+pre-filled with the rolled one; type the number your dice showed and Apply uses it (the ×0 ½ ×1 ×2
+multipliers still apply on top). The number that would land shows beside it while it differs. The GM's
+save tray has the same total per row.
 
 **Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
 client. It also rolls when the target's AC is unknown, for example with no target selected.
@@ -122,6 +140,8 @@ mouse and the wheel turns it.
 | Apply monster damage automatically | off | PCs always wait for Apply |
 | Ask players to roll | on | the request card |
 | Roll damage on a hit | on | pentaryn-combat reads it too |
+| Roll damage when a save spell is used | on | a save activity with damage used at a target rolls at once; not an area spell |
+| Apply from the card | on | a player's Apply reaches the allies they do not own through the GM; late targets fill an untargeted card; a total to type per row |
 | Apply self-cast effects automatically | on | the caster's one effect goes on straight away |
 | Highlight effects not yet applied | on | cards under an hour old |
 | Careful Spell protects the creatures the player chooses | on | |
@@ -155,8 +175,9 @@ game.pentaryn.aoe.applyRows(messageId[, rowIds])
 - **Two GM tabs are fine** (the bridge tab plus your own). One of them does the work: one handle per
   area, one save per monster, one request card. A tab that was open before a module update keeps
   the old code until it is reloaded, and until then it can still add a second handle or save.
-- **Needs the GM online.** No sockets are used. With no GM connected, saves aren't rolled and
-  nothing is applied. Moving and deleting areas still works.
+- **Needs the GM online.** With no GM connected, saves aren't rolled, nothing is applied from the
+  save tray, and a player's Apply for a token they do not own waits (the one note they get). Moving
+  and deleting areas, and applying to your own tokens, still work.
 - **Every client needs the module**, because each player's own client creates the handle,
   answers the request card and auto-rolls damage. Without it on a client, the GM
   backstop adds the handle about 2.5 s later, and `sweep` repairs the rest.
@@ -164,6 +185,8 @@ game.pentaryn.aoe.applyRows(messageId[, rowIds])
   area is gone. It also gives *existing* template regions shared ownership and a handle. So
   leftover areas from before the module was installed get handles the first time their scene is viewed.
 - **A moved area needs Damage clicked again.** Containment is read when the damage is rolled.
+- **A card follows your targets only while it is yours, untargeted and fresh** (under ten minutes,
+  not yet applied). A card the GM rolled lists selected tokens, as dnd5e always did.
 - The handle is one shared world actor, **"Area handle"**, in `Scene Props`. The module creates it
   on the GM's first ready. Don't delete it; if you do, it is recreated. It is `tiny`, hovers, and its
   tokens carry `flags.dnd5e.lockSize` (the GM's ready and `sweep` keep it so), because dnd5e 6

@@ -12,6 +12,12 @@
  *   - the `dead` status on the token (the GM's override, e.g. a coup de grâce on a sleeper).
  * To keep a 0-HP NPC alive and unlootable (knocked out for questioning), set
  * `flags.pentaryn-dropbin.noLoot = true` on its token or actor; it is then never converted.
+ * A dnd5e summon (`flags.dnd5e.summon` on the actor: spirits, familiars, anything the summon activity
+ * placed) is never a corpse either (E3): the 2024 rules make it disappear at 0 HP and pentaryn-riders
+ * removes the token; dropbin leaves it alone.
+ * An ITEM marked `flags.pentaryn-dropbin.noLoot = true` (the GM's "Never loot this", A2) stays on the
+ * actor but never shows in the pile: each corpse pile carries the world's item filters plus that row
+ * as its `overrideItemFilters` (noloot.mjs owns the toggle).
  *
  * Only the active GM user converts (activeGM.isSelf: every tab of that account, W2-D1), so other
  * players' and GMs' clients never race it.
@@ -20,7 +26,9 @@
  *   - `type: "pile"`, keeping the creature's own token art, so the body stays a body on the map.
  *   - `distance: 1`: the looter has to stand next to the body.
  *   - `deleteWhenEmpty: false`: a stripped corpse stays where it fell.
- *   - Natural weapons, feats and spells never show (the world's `item-piles.itemFilters`).
+ *   - Natural weapons, feats and spells never show (the world's `item-piles.itemFilters`, copied into
+ *     the pile's `overrideItemFilters` with the noLoot row; A1: the GM's ready line warns when that
+ *     world setting still names dnd5e 2.x's `system.weaponType`, nothing is written).
  *   - Token sight is switched off while it is a corpse (and restored on revival): players observe
  *     it, and an observed token with sight would let them see what the body "sees".
  *   - Players get OBSERVER on the token's own actor delta (an unlinked token), so no other token of
@@ -33,8 +41,11 @@
  *     char sheet"): see sheetGuard. The loot window is only Item Piles' own, distance-checked.
  */
 
-import { MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot, isPileFlagged } from "./dropbin-core.mjs";
-import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
+import {
+  MODULE, showEye, eyePlacement, needsRedraw, isActiveGMSelf, isOurCorpse as ourCorpse, hasNoLoot as noLoot, isPileFlagged,
+  isSummoned, corpseItemFilters, naturalFilterCheck,
+} from "./dropbin-core.mjs";
+import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles, itemFilters } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
 const EYE = "modules/pentaryn-dropbin/assets/icon-eye.webp";     // the module's own asset, never one world's (dropbin-EXT-8)
@@ -62,6 +73,7 @@ function eligible(tokenDoc) {
   const actor = tokenDoc?.actor;
   if (!actor || actor.type !== "npc") return false;      // PCs and pile containers are never corpses
   if (noLoot(tokenDoc)) return false;
+  if (isSummoned(actor)) return false;                   // E3: a summon disappears at 0 HP (riders removes it)
   return true;
 }
 
@@ -81,6 +93,8 @@ function refused(fn, doc, want) {
 
 const PILE_SETTINGS = { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
   displayOne: false, showItemName: false, overrideSingleItemScale: false };
+/** A corpse's pile settings: the fixed ones plus the item filters (the world's rows and the noLoot row, A2). */
+const pileSettings = () => ({ ...PILE_SETTINGS, overrideItemFilters: corpseItemFilters(itemFilters()) });
 
 /** Each distinct actor of `docs` once (a linked NPC's tokens share one), by uuid. */
 const actorsOf = docs => [...new Map(docs.map(t => t.actor).filter(Boolean).map(a => [a.uuid ?? a.id, a])).values()];
@@ -109,7 +123,7 @@ async function toCorpses(tokenDocs) {
   // A linked token has no delta map of its own: its base actor's is saved instead (observeBase).
   const saved = docs.map(t => t.actorLink ? null : ourCorpse(t) ? (t.flags[MODULE].ownership ?? null)
     : foundry.utils.deepClone(t.delta?.ownership ?? null));
-  await turnTokensIntoItemPiles(docs, { pileSettings: PILE_SETTINGS, tokenSettings: {} });
+  await turnTokensIntoItemPiles(docs, { pileSettings: pileSettings(), tokenSettings: {} });
   const made = [];
   for (const [i, tokenDoc] of docs.entries()) {
     const linked = !!tokenDoc.actorLink, ownership = saved[i];
@@ -566,11 +580,24 @@ function addHudButtons(app, element) {
   mk("pd-corpse-sheet", "fa-user", _loc("PENTARYN_DROPBIN.corpse.sheet"), () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
 }
 
+/**
+ * A1: nothing migrates the world's `item-piles.itemFilters`, and a world made on dnd5e 2.x still hid
+ * natural weapons by `system.weaponType`, a path dnd5e 6 does not have, so every Rend and Bite showed
+ * as loot. The GM's client says so once at ready, with the one line that fixes it; the setting is
+ * never written from here (selftest reports the same check).
+ */
+function warnStaleFilter() {
+  if (!game.user.isGM) return;
+  const check = naturalFilterCheck(itemFilters());
+  if (check.ok !== false) return;
+  console.warn(`${MODULE} | item-piles.itemFilters hides natural weapons by ${check.path ? `"${check.path}"` : "no row"}, not "system.type.value" (dnd5e 6): monster attacks show as loot. Fix (GM console): ${check.fix}`);
+}
+
 /* -------------------------------------------- */
 /*  Lifecycle                                   */
 /* -------------------------------------------- */
 
-/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD, the sheet guard, base release. */
+/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD, the sheet guard, base release, the filter check. */
 export function install(reg, ctx) {
   ctx.expose({ corpses });
   const on = (name, fn, label) => reg.on(name, fn, { label });
@@ -591,6 +618,7 @@ export function install(reg, ctx) {
   on("deleteToken", onTokenDeleted, "corpse: token deleted");
   on("deleteScene", onSceneDeleted, "corpse: scene deleted");
   ctx.onReady(() => releaseOrphanBases(), "corpse base release");
+  ctx.onReady(warnStaleFilter, "corpse: natural-weapon filter check");
 }
 
 /** Cancel the pending debounced syncs. */

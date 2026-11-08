@@ -36,7 +36,8 @@
       "Apply": "Apply {n}",
       "ApplyFailed": "Damage could not be applied to {names}. The other creatures took their damage; press Apply again to retry.",
       "NobodyToPing": "No connected player is waiting on a save.",
-      "PingText": "{item}: please roll your {ability} save from the request card in chat."
+      "PingText": "{item}: please roll your {ability} save from the request card in chat.",
+      "AmountTip": "The total for this creature: pre-filled with the rolled total; type the number from real dice to use it instead. The multiplier still applies on top."
     },
     "Setting": {
       "handleTokens": {
@@ -120,6 +121,14 @@
         "cover": "Total cover (blocks movement and sight)",
         "move": "Every wall that blocks movement (dnd5e)",
         "none": "No walls"
+      },
+      "autoDamageOnSave": {
+        "Name": "Roll damage when a save spell is used",
+        "Hint": "Using a save activity that has damage and at least one target (Psionic Lash, Toll the Dead) rolls its damage straight away, so the flow is Use → the target saves → Apply. A spell that places an area still waits for the area; a use with no target rolls nothing."
+      },
+      "applyFromCard": {
+        "Name": "Apply from the card",
+        "Hint": "Apply on a damage or healing card does three more things. A row for a token the player does not own (healing an ally) is applied by the GM's client for them, with the same multiplier; a short note appears only if no GM is connected. A card that recorded no targets fills with the player's current targets as they target. Every row has a small total, pre-filled with the rolled total: type the number from real dice and that is what Apply uses, with the multiplier on top."
       }
     },
     "Keybinding": {
@@ -149,6 +158,11 @@
     "Refund": {
       "Done": "{item}: placement cancelled, so nothing was spent. The slot, charge or uses are back.",
       "Ended": "{item}: placement cancelled, so its concentration ended and its card was removed."
+    },
+    "Apply": {
+      "AmountTip": "Total to apply to this target: pre-filled with the rolled total; type the number from real dice to use it instead. The multiplier still applies on top. A typed total lasts until Apply or a page reload.",
+      "NoGm": "No GM is connected, so {names} did not take this. The GM can apply it from this card.",
+      "RelayFailed": "The GM's client could not apply this to {names} ({reason}). The GM can apply it from this card."
     }
   }
 }

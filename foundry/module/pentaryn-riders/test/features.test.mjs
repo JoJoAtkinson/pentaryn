@@ -5,9 +5,9 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
 const ROOT = new URL("../", import.meta.url);
-const FEATURES = ["rituals", "concentration", "argon-tidy", "cast-flow", "damage-riders", "card-note", "tray-preset", "battle-medic", "hd-sheet", "projectiles", "effect-choices", "spell-view"];
+const FEATURES = ["rituals", "concentration", "argon-tidy", "cast-flow", "damage-riders", "card-note", "tray-preset", "battle-medic", "hd-sheet", "projectiles", "effect-choices", "spell-view", "expiry", "rest", "empower"];
 
-test("the entry lists the ten features in today's load order", () => {
+test("the entry lists the fifteen features in today's load order (expiry appended, 0.6.0; rest and empower, 0.7.0)", () => {
   const entry = readFileSync(new URL("riders.mjs", ROOT), "utf8");
   const imported = [...entry.matchAll(/^import \* as \w+ from "\.\/([\w-]+)\.mjs";$/gm)].map(m => m[1]);
   assert.deepEqual(imported, FEATURES);

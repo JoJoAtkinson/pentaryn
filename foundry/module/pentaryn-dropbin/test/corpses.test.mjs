@@ -590,3 +590,60 @@ test("dropbin-M5: isDead is always a boolean (manifest: returns boolean)", () =>
   assert.strictEqual(isDead(hp(0, 7)), true);
   assert.strictEqual(isDead(hp(5, 10, new Set(["dead"]))), true, "the dead status");
 });
+
+/* ── 0.3.0: summons are never corpses (E3); corpse piles filter noLoot items (A2) ──────────────── */
+
+// Review 2026-11-07, finding 3 / E3: the Elemental Spirit at 0 HP became a lootable corpse. Any actor
+// dnd5e's summoning stamped (flags.dnd5e.summon) disappears at 0 HP in the 2024 rules, familiars
+// included; riders removes the token, dropbin leaves it alone.
+test("E3: a dnd5e summon at 0 HP is never turned into a corpse by the hp sync; a plain NPC beside it still is", async () => {
+  const spirit = goblin(null);
+  spirit.actor.name = "Elemental Spirit";
+  spirit.actor.flags.dnd5e = { summon: { level: 4, mod: 5, origin: "Actor.talo000000000001.Item.summonElementa", activity: "act0000000000001", profile: "prof000000000001" } };
+  const gob = goblin(null);
+  const piles = () => F.calls.filter(c => c.op === "turnTokensIntoItemPiles").length;
+  const before = piles();
+  await corpses.sync(spirit.actor);
+  assert.equal(piles(), before, "no Item Piles call for the summon");
+  assert.equal(spirit.flags[MOD]?.corpse, undefined, "not our corpse");
+  assert.equal(spirit.actor.statuses.has("dead"), false, "no Dead overlay either: the token is riders' to remove");
+  await corpses.sync(gob.actor);
+  assert.equal(gob.flags[MOD]?.corpse, true, "the ordinary goblin is still a corpse");
+  // the inspect row says why
+  const row = game.pentaryn.dropbin.inspect(spirit);
+  assert.deepEqual([row.summoned, row.corpse, row.dead], [true, false, true]);
+});
+
+test("E3: a Find Familiar copy (pentaryn-creatures' origin-only stamp) is a summon too", async () => {
+  const owl = goblin(null);
+  owl.actor.flags.dnd5e = { summon: { origin: "Actor.caven00000000001.Item.findFamiliar0001" } };
+  await corpses.sync(owl.actor);
+  assert.equal(owl.flags[MOD]?.corpse, undefined);
+});
+
+// A2: the Dread Blade is a `weapon / martialM` (weight 0, price 0) on a Monster Manual copy, so the
+// natural-weapon filter cannot hide it. The GM marks the item noLoot; every corpse pile now carries the
+// world's item filters plus a row on that flag as its Item Piles overrideItemFilters, so the item stays
+// on the actor and never shows in the loot window (Loot all and the eye's "empty" follow the same filter).
+test("A2: toCorpse writes the pile's overrideItemFilters: the world's rows then the noLoot row", async () => {
+  const tok = goblin(null);
+  const from = F.calls.length;
+  await corpses.toCorpse(tok);
+  const [call] = F.calls.slice(from).filter(c => c.op === "turnTokensIntoItemPiles");
+  assert.deepEqual(call.pileSettings.overrideItemFilters, [
+    { path: "type", filters: "background,class,facility,feat,race,spell,subclass" },
+    { path: "system.type.value", filters: "natural" },
+    { path: "flags.pentaryn-dropbin.noLoot", filters: "true" },
+  ]);
+  assert.deepEqual([call.pileSettings.type, call.pileSettings.distance, call.pileSettings.deleteWhenEmpty], ["pile", 1, false], "the fixed settings are unchanged");
+});
+
+test("A2: without Item Piles' filter list (undefined) the pile still gets the noLoot row alone", async () => {
+  const tok = goblin(null);
+  const API = F.game.itempiles.API, keep = API.ITEM_FILTERS;
+  API.ITEM_FILTERS = undefined;
+  const from = F.calls.length;
+  try { await corpses.toCorpse(tok); } finally { API.ITEM_FILTERS = keep; }
+  const [call] = F.calls.slice(from).filter(c => c.op === "turnTokensIntoItemPiles");
+  assert.deepEqual(call.pileSettings.overrideItemFilters, [{ path: "flags.pentaryn-dropbin.noLoot", filters: "true" }]);
+});

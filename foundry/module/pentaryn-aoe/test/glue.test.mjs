@@ -56,8 +56,8 @@ test("settings register at init in BOOLS order, then npcSaveRollMode (golden/set
   assert.deepEqual(registered.map(r => r.key), [
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
-    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "npcSaveRollMode",
-    "areaWalls",
+    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "autoDamageOnSave",
+    "applyFromCard", "npcSaveRollMode", "areaWalls",
   ]);
 });
 
@@ -70,19 +70,19 @@ test("the Escape keybinding registers once at init: PRIORITY, editable Escape, l
       editable: [{ key: "Escape" }], precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY, onDown: "function" });
 });
 
-test("-13 BOOLS is the literal 17-name list; DEFAULTS has 19 keys; npcSaveRollMode and areaWalls stay out of BOOLS", () => {
+test("-13 BOOLS is the literal 19-name list; DEFAULTS has 21 keys; npcSaveRollMode and areaWalls stay out of BOOLS", () => {
   const { BOOLS, DEFAULTS } = S.settings;
   assert.deepEqual(BOOLS, [
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
-    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas",
+    "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "autoDamageOnSave", "applyFromCard",
   ]);
   assert.equal(typeof DEFAULTS.npcSaveRollMode, "string");
   assert.deepEqual({ ...DEFAULTS }, {
     handleTokens: true, removeAreaButton: true, instantCleanup: true, concentrationCleanup: true, resolveSaves: true,
     npcSaveRollMode: "gm", autoApplyNpc: false, promptPlayers: true, autoDamageOnHit: true, autoApplySelf: true,
     highlightUnapplied: true, carefulSpell: true, refundCancelledArea: true, playerStatus: true, untargetedSelf: true,
-    noSpellStacking: true, aimSelfAreas: true, stationaryInstantAreas: true, areaWalls: "cover",
+    noSpellStacking: true, aimSelfAreas: true, stationaryInstantAreas: true, autoDamageOnSave: true, applyFromCard: true, areaWalls: "cover",
   });
   assert.deepEqual(S.settings.LEGACY_ROLL_MODES, ["gmroll", "blindroll", "publicroll"]);
 });
@@ -119,9 +119,9 @@ const LEGACY = [
   "setting", "spellAreas", "sweep", "uninstall",
 ];
 
-test("[declared] D-A3 -10 the published API keeps the 20 legacy names and adds the kit members and the -10 reads", () => {
+test("[declared] D-A3 -10 the published API keeps the 20 legacy names and adds the kit members, the -10 reads and Part I's relay", () => {
   assert.deepEqual(Object.keys(game.pentaryn.aoe).sort(), [...LEGACY,
-    "contract", "describe", "inspect", "isHandle", "latestResolution", "resolution", "settings", "summary", "trace", "version",
+    "applyRelay", "contract", "describe", "inspect", "isHandle", "latestResolution", "resolution", "settings", "summary", "trace", "version",
   ].sort());
   for (const k of LEGACY) assert.equal(typeof game.pentaryn.aoe[k], "function", k);
 });

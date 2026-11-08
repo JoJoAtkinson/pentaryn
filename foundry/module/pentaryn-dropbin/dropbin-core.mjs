@@ -26,7 +26,7 @@ export {
 
 export const SHORT = "dropbin";
 export const NS = "dropbin";
-export const VERSION = "0.2.3";                          // === module.json version (a test pins it)
+export const VERSION = "0.3.0";                          // === module.json version (a test pins it)
 export const CONTRACT = "pentaryn-dropbin/api@1";
 export const I18N = "PENTARYN_DROPBIN";
 export const CSS = "pd-";
@@ -76,6 +76,73 @@ export const isOurCorpse = doc => !!doc.flags?.[MODULE]?.corpse;
 
 /** Opted out of looting: `noLoot` on the token or on its actor. */
 export const hasNoLoot = tokenDoc => !!(tokenDoc.flags?.[MODULE]?.noLoot || tokenDoc.actor?.flags?.[MODULE]?.noLoot);
+
+/**
+ * An item the GM marked "Never loot this" (`flags.pentaryn-dropbin.noLoot === true`, A2). The value is
+ * boolean on purpose: Item Piles' filter below compares `=== true` after reading "true" from its row.
+ */
+export const isNoLootItem = item => item?.flags?.[MODULE]?.noLoot === true;
+
+/**
+ * The Item Piles filter row that keeps a noLoot item out of a corpse pile (A2). Item Piles reads the
+ * item's `flags.pentaryn-dropbin.noLoot` and hides it when it is `true`: the item stays on the actor,
+ * never shows in the loot window, and Loot all / isItemPileEmpty skip it. Written per corpse as the
+ * pile's `overrideItemFilters` (a per-pile override REPLACES the world list, so the world rows come
+ * along: corpseItemFilters).
+ */
+export const NO_LOOT_FILTER = Object.freeze({ path: `flags.${MODULE}.noLoot`, filters: "true" });
+
+/** Whether a filter list (the world's or a pile override) already carries the noLoot row. */
+export const hasNoLootFilter = filters => Array.isArray(filters) && filters.some(f => f?.path === NO_LOOT_FILTER.path);
+
+/**
+ * A corpse pile's `overrideItemFilters`: the world's `item-piles.itemFilters` rows as they are (string
+ * or array `filters`, Item Piles cleans both), then the noLoot row once. A missing or malformed world
+ * list gives the noLoot row alone.
+ */
+export function corpseItemFilters(worldFilters) {
+  const rows = Array.isArray(worldFilters) ? worldFilters.filter(f => f && typeof f.path === "string") : [];
+  const copy = rows.filter(f => f.path !== NO_LOOT_FILTER.path).map(f => ({ path: f.path, filters: Array.isArray(f.filters) ? [...f.filters] : f.filters }));
+  return [...copy, { ...NO_LOOT_FILTER }];
+}
+
+/**
+ * A dnd5e summon (E3): any actor dnd5e's summoning stamped (`flags.dnd5e.summon`, written by the
+ * summon activity; pentaryn-creatures stamps `.origin` on its linked copies). The 2024 spirits and
+ * familiars disappear at 0 HP, so such a token is never a corpse; riders removes it.
+ */
+export const isSummoned = actor => {
+  const stamp = actor?.flags?.dnd5e?.summon;
+  return !!stamp && typeof stamp === "object";
+};
+
+/* ------------------------------------------------ the world's natural-weapon filter (A1) */
+
+/** dnd5e keeps a weapon's kind here since 3.x; the 2.x preset said `system.weaponType` and matches nothing. */
+export const NATURAL_WEAPON_PATH = "system.type.value";
+/** itempilesdnd5e 1.1.0's preset for dnd5e ≥ 5 (its `5.0.0` row), the value a stale world setting is reset to. */
+export const DND5E_ITEM_FILTERS = Object.freeze([
+  Object.freeze({ path: "type", filters: "background,class,facility,feat,race,spell,subclass" }),
+  Object.freeze({ path: NATURAL_WEAPON_PATH, filters: "natural" }),
+]);
+
+const filterValues = f => (Array.isArray(f?.filters) ? f.filters : String(f?.filters ?? "").split(",")).map(v => String(v).trim());
+
+/**
+ * Whether the world's `item-piles.itemFilters` hides natural weapons on the path dnd5e 6 uses (A1).
+ * Nothing migrates that setting: a world made on dnd5e 2.x kept `system.weaponType` and every Rend
+ * and Bite showed up as loot. `{ ok, path, fix }`: `path` is where the `natural` row sits (null: none),
+ * `fix` the one line that resets the setting (never run by this module). `filters` undefined or not
+ * an array (Item Piles inactive) is `ok: null`, not applicable.
+ */
+export function naturalFilterCheck(filters) {
+  if (!Array.isArray(filters)) return { ok: null, path: null, fix: null };
+  const natural = filters.filter(f => filterValues(f).includes("natural"));
+  const path = natural.find(f => f.path === NATURAL_WEAPON_PATH)?.path ?? natural[0]?.path ?? null;
+  const ok = path === NATURAL_WEAPON_PATH;
+  const fix = ok ? null : `game.settings.set("item-piles", "itemFilters", ${JSON.stringify(DND5E_ITEM_FILTERS)})`;
+  return { ok, path, fix };
+}
 
 /** The active GM user's own client (every tab of that account, W2-D1). */
 export const isActiveGMSelf = users => users?.activeGM?.isSelf === true;

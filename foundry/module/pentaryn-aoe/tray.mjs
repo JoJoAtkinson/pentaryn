@@ -8,9 +8,12 @@
  * resolve.mjs rolls are threaded under the usage card, its half-damage pill agrees with this tray.
  * dnd5e 6 damage card (damage-card.hbs): .message-content holds .chat-card, the roll's
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
+ * B5: each open row carries a small total, pre-filled with the rolled total; a typed number (real
+ * dice) replaces it for that row (`row.amount`), the multiplier still applies on top, and the
+ * .pa-amount cell beside the multiplier shows what would land.
  */
 
-import { aoeFlags, MULTIPLIERS, MULTIPLIER_LABELS, playerStatus, applicableRows, hydrateDamages, areaLocked } from "./core.mjs";
+import { aoeFlags, MULTIPLIERS, MULTIPLIER_LABELS, playerStatus, applicableRows, hydrateDamages, areaLocked, damageTotal, scaleDamages, rowAmount } from "./core.mjs";
 import { setting } from "./settings.mjs";
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -23,7 +26,7 @@ function preview(row, res, message = null) {
   if (row.multiplier === null || row.multiplier === undefined) return "—";
   const actor = fromUuidSync(row.actor);
   if (!actor?.calculateDamage) return "—";
-  const damages = hydrateDamages(res.damages);
+  const damages = hydrateDamages(scaleDamages(res.damages, row.amount));   // B5: the row's typed total, if any
   // originatingMessage as Apply passes it (resolve.applyRows), so a damage-card rider such as
   // Elemental Adept's ignored resistance shows here too, not only once applied.
   const out = actor.calculateDamage(damages, { multiplier: row.multiplier, originatingMessage: message ?? undefined });
@@ -59,13 +62,16 @@ function rowHTML(row, res, message = null) {
   const shield = row.applied || res.superseded || !setting("carefulSpell") ? ""
     : `<a data-pa="protect" data-row="${esc(row.id)}" class="pa-protect${row.protected ? " on" : ""}" data-tooltip="${esc(_loc(row.protected ? "PENTARYN_AOE.Careful.Unprotect" : "PENTARYN_AOE.Careful.Protect"))}"><i class="fa-solid fa-shield-halved" inert></i></a>`;
   const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(_loc("PENTARYN_AOE.Tray.Applied"))}</span>` : preview(row, res, message);
+  // B5: the row's total (the rolled one until the GM types another); gone once the row is applied.
+  const amount = row.applied ? ""
+    : `<input type="number" class="pa-total" min="0" step="1" data-pa="amount" value="${esc(row.amount ?? damageTotal(res.damages))}" data-tooltip="${esc(_loc("PENTARYN_AOE.Tray.AmountTip"))}" ${locked}>`;
   return `<li class="pa-row ${row.applied ? "applied" : ""}" data-row="${esc(row.id)}">
     <input type="checkbox" data-pa="tick" ${row.apply ? "checked" : ""} ${locked}>
     <img src="${esc(row.img ?? "icons/svg/mystery-man.svg")}" alt="">
     <span class="pa-name" data-tooltip="${esc(row.kind === "manual" ? _loc("PENTARYN_AOE.Tray.Manual") : _loc("PENTARYN_AOE.Tray.Auto"))}">${esc(row.name)}${row.caster ? ` <em>(${esc(_loc("PENTARYN_AOE.Tray.Caster"))})</em>` : ""}</span>
     <span class="pa-save">${saveCell(row)}</span>
     ${row.applied ? "" : extra}${shield}
-    <select data-pa="mult" ${locked}>${blank}${opts}</select>
+    ${amount}<select data-pa="mult" ${locked}>${blank}${opts}</select>
     <span class="pa-amount">${status}</span>
   </li>`;
 }
@@ -138,6 +144,8 @@ function decorate(message, html) {
     const rowId = el.closest("[data-row]")?.dataset.row;
     if (el.dataset.pa === "tick") return context.exposed.setRow(message.id, rowId, { apply: el.checked });
     if (el.dataset.pa === "mult" && el.value !== "") return context.exposed.setRow(message.id, rowId, { multiplier: el.value });
+    // B5: the rolled total typed back (or a blank) clears the override; anything else is the row's total
+    if (el.dataset.pa === "amount") return context.exposed.setRow(message.id, rowId, { amount: rowAmount(el.value, damageTotal(aoeFlags(message).resolution?.damages ?? res.damages)) });
     if (el.dataset.pa === "region") {
       // aoe-edge-8: resolve() only runs on the active GM; elsewhere say so and show the area still in use.
       if (!game.users.activeGM?.isSelf) {

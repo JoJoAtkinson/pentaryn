@@ -185,7 +185,7 @@ test("only Item buttons are wrapped; a class without targets/getTooltipData gain
   render(null);
   W.take();
   render({ get item() { throw new Error("odd button"); } });
-  assert.deepEqual(W.take(), [["warn", `${MODULE} | Argon button tidy skipped`, "odd button"]]);
+  assert.deepEqual(W.take(), [["warn", `${MODULE} | Argon button tidy skipped`, "odd button"], ["warn", `${MODULE} | Cosmic Omen HUD mark skipped`, "odd button"]], "the same odd button reaches the rest card's HUD mark after the tidy (0.7.0)");
 });
 
 test("combat-riders-40 pin: an enrich option that throws is enriched as asked, silently", () => {

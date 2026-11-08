@@ -34,7 +34,7 @@ Foundry **v14.369** (since 2026-10-10) · system **dnd5e 6.0.6** (all four world
 > game.world.title   // e.g. "Space Journey"
 > ```
 >
-> The `WORLD=` argument to `make login` is the only place a world name is named on purpose, and
+> The `WORLD=` argument to `make login` and the per-host `PENTARYN_DEFAULT_WORLD` (what the nightly launches when none was active, [`ops.md`](ops.md)) are the only places a world name is named on purpose, and
 > it is supplied per invocation. Current campaign state — which world is live, who is in it, what
 > is built — lives in [`../space-journey.md`](../space-journey.md), never here.
 
@@ -68,24 +68,25 @@ The table is generated from each `module.json`, the module's code and its
 
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
-| `aoe` | `pentaryn-aoe` | 0.5.1 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+15) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
+| `aoe` | `pentaryn-aoe` | 0.6.2 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+16) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
 | `attunement` | `pentaryn-attunement` | 0.3.0 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
-| `combat` | `pentaryn-combat` | 0.3.0 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
-| `creatures` | `pentaryn-creatures` | 0.3.0 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` … (+3) | [README](../../foundry/module/pentaryn-creatures/README.md) |
+| `combat` | `pentaryn-combat` | 0.3.1 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
+| `creatures` | `pentaryn-creatures` | 0.4.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` … (+5) | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
-| `dropbin` | `pentaryn-dropbin` | 0.2.3 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
+| `dropbin` | `pentaryn-dropbin` | 0.3.0 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+12) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
 | `feedback` | `pentaryn-feedback` | 0.1.2 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
-| `importer` | `pentaryn-importer` | 1.2.1 | full tier | `import`, `ddbCorrections.plan`, `ddbCorrections.apply`, `ddbCorrections.rules` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
+| `importer` | `pentaryn-importer` | 1.3.0 | full tier | `import`, `ddbCorrections.plan`, `ddbCorrections.apply`, `ddbCorrections.rules` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | `personal`, `add`, `status`, `open`, `shouldShowBar`, `ensure`, `ensureAll`, `report` … (+3) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | `search`, `page`, `monster`, `monsters`, `names`, `packs`, `onList`, `spellList` … (+1) | [README](../../foundry/module/pentaryn-lookup/README.md) |
-| `movement` | `pentaryn-movement` | 0.1.2 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens` | [README](../../foundry/module/pentaryn-movement/README.md) |
+| `movement` | `pentaryn-movement` | 0.2.0 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens` | [README](../../foundry/module/pentaryn-movement/README.md) |
 | `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
 | `pins` | `pentaryn-pins` | 0.3.0 | full tier | `pin`, `unpin`, `pins`, `pinnedToken`, `pinnedTokens`, `audit`, `teleport`, `gather` | [`pins.md`](pins.md) · [README](../../foundry/module/pentaryn-pins/README.md) |
 | `portals` | `pentaryn-portals` | 0.8.0 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `teleportToken` … (+4) | [README](../../foundry/module/pentaryn-portals/README.md) |
 | `prompts` | `pentaryn-prompts` | 0.4.6 | full tier | `list`, `gather`, `crops`, `replaceMany`, `show`, `replace`, `open`, `place` … (+6) | [README](../../foundry/module/pentaryn-prompts/README.md) |
+| `reactions` | `pentaryn-reactions` | 0.1.1 | small tier | — (no describe golden yet) | [`reactions.md`](reactions.md) · [README](../../foundry/module/pentaryn-reactions/README.md) |
 | `resume` | `pentaryn-resume` | 0.2.0 | small tier | — (no describe golden yet) | [`resume.md`](resume.md) · [README](../../foundry/module/pentaryn-resume/README.md) |
-| `riders` | `pentaryn-riders` | 0.5.2 | full tier | `arcaneRecovery`, `featuresOf`, `report`, `setType`, `retireManual`, `spendHitDie`, `restoreHitDie`, `hdPools` … (+3) | [README](../../foundry/module/pentaryn-riders/README.md) |
+| `riders` | `pentaryn-riders` | 0.7.2 | full tier | `arcaneRecovery`, `restCard`, `readOmen`, `featuresOf`, `report`, `setType`, `retireManual`, `spendHitDie` … (+5) | [README](../../foundry/module/pentaryn-riders/README.md) |
 | `chain`, `senses` | `pentaryn-senses` | 0.5.0 | full tier | `syncLight`, `carriedLight`, `resetSight`, `light.cast`, `light.end`, `light.pick`, `light.toggle`, `light.hood` … (+14) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | `show`, `showAll`, `showOne`, `cards`, `clear`, `closeAllCards`, `edit`, `addTie` … (+101) | [README](../../foundry/module/pentaryn-ties/README.md) |
 | `transform` | `pentaryn-transform` | 0.4.0 | full tier | `shift`, `revert`, `forms`, `wildShapeActivity`, `original`, `isRevertItem`, `sweepSpentForms`, `formImage` … (+4) | [README](../../foundry/module/pentaryn-transform/README.md) |
@@ -115,6 +116,7 @@ The table is generated from each `module.json`, the module's code and its
 | The Argon Combat HUD misbehaves — a button missing or doubled, wrong pips, a tooltip that sticks or eats a click, the HUD on the wrong token; every Argon hook and patch by module and order | [`argon.md`](argon.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
 | Spell circles you can't move/delete, an area cut short by walls or stuck on a token, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
+| "Why didn't I get the Shield card" — the whispered reaction reminder when a monster hits or damages a PC, a card that is grey or missing, nothing waits on it — `pentaryn-reactions` | [`reactions.md`](reactions.md) · [README](../../foundry/module/pentaryn-reactions/README.md) |
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "Log back in where I was" — each player's last map, level, pan and zoom restored at login, also after the 03:00 nightly restart (`pentaryn-resume`) | [`resume.md`](resume.md) |
@@ -124,6 +126,7 @@ The table is generated from each `module.json`, the module's code and its
 | Wild Shape / Starry Form / Return / Change Form / a form left in the sidebar — `pentaryn-transform` | [`../../foundry/module/pentaryn-transform/README.md`](../../foundry/module/pentaryn-transform/README.md) |
 | Lights on tokens — carried items, torches/lanterns (flame and hood buttons), the Light cantrip ("Where does the light go?"), the Broken glow, token chains (`pentaryn-senses`) | [`../../foundry/module/pentaryn-senses/README.md`](../../foundry/module/pentaryn-senses/README.md) |
 | "You must have 'Create New Actors' permission in order to summon", a player can't summon Mage Hand / Find Familiar, a character's summon library (`PC Summons & Forms/<name> — summons & forms`) — `pentaryn-creatures` | [`../../foundry/module/pentaryn-creatures/README.md`](../../foundry/module/pentaryn-creatures/README.md) (Summon library) |
+| "Make these monsters look like statues until the fight starts" — a token disguised as a prop that wakes when its combat begins; re-arm or undo it (`game.pentaryn.creatures.dormant` / `wake`) | [`../../foundry/module/pentaryn-creatures/README.md`](../../foundry/module/pentaryn-creatures/README.md) (Dormant until combat) |
 | Table-feedback modules — ghost movement, creature strip, Loot all, portals follow | [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
 | An addon Joe retired and removed (walls, `pentaryn-walls`) — what it did, its archive branch, how to bring it back | [`retired.md`](retired.md) |
 | Finding a battlemap in the OneDrive library (1,371 maps, via rclone), which maps tile/stack/are variants, filing a new pack | [`map-library.md`](map-library.md) |

@@ -18,6 +18,8 @@
     { "from": "turnflow/effects.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
     { "from": "turnflow/helper-token.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
     { "from": "turnflow/manual-dice.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/hp-math.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
+    { "from": "turnflow/roll-manually.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
     { "from": "turnflow/movement.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
     { "from": "turnflow/portrait.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },
     { "from": "hud/bars.mjs", "to": "context.mjs", "why": "opts: the one hook-label helper (final review M7); never ctx or reg" },

@@ -10,7 +10,7 @@ import { HOOKS, MODULE, NS } from "./movement-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, policyWrite, settingsSnapshot, unreadableSettings } from "./settings.mjs";
 import { pinInputs, sceneOf } from "./combat-adapter.mjs";
-import { buildApi } from "./lib/api.mjs";
+import { buildApi, toPlain } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
 import { publishedOf } from "./lib/publish.mjs";
 
@@ -52,6 +52,13 @@ function selftest(ctx) {
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }
 
+/**
+ * setGhost keeps its legacy shape, `setGhost(on: boolean)` (your own button), and since 0.2.0 also
+ * takes a creature reference: `setGhost(ref, { combat })` is the GM's ghost-in-combat override for
+ * it (I1). A string or an object is a reference; anything else is the boolean form.
+ */
+const isCreatureRef = on => typeof on === "string" || (on !== null && typeof on === "object");
+
 /** Build the frozen API. Throws (at ready, in node too) when manifest and implementations drift. */
 export function buildApiFor(ctx) {
   const x = ctx.exposed;
@@ -59,9 +66,11 @@ export function buildApiFor(ctx) {
     status: opts => x.status(opts),
     ghostFor: token => x.ghostFor(token),
     combatActive: sceneId => x.combatActive(sceneId),
-    setGhost: on => x.setGhost(on),
+    setGhost: (on, opts) => (isCreatureRef(on) ? x.setGhostInCombat(on, opts) : x.setGhost(on)),
     setPolicy,
     pinsUnderTokens,
+    // `ref` is resolved by the kit per call (an Actor; a token gives its synthetic actor); reads throw coded.
+    inspect: actor => toPlain(x.inspectActor(actor)),
     selftest: () => selftest(ctx),
     core,
   }, {

@@ -13,7 +13,7 @@
 .pentaryn-aoe-tray .pa-rows { list-style: none; margin: 0; padding: 0; }
 .pentaryn-aoe-tray .pa-row {
   display: grid;
-  grid-template-columns: auto 22px 1fr auto auto auto auto 2.5em;
+  grid-template-columns: auto 22px 1fr auto auto auto auto auto 2.5em;
   gap: 4px; align-items: center; padding: 2px 0;
 }
 .pentaryn-aoe-tray .pa-row.applied { opacity: 0.6; }
@@ -77,3 +77,10 @@ effect-application.pentaryn-aoe-unapplied > .card-tray > label::after {
 .pa-careful-picks .pa-careful-pick { display: flex; align-items: center; gap: 6px; }
 .chat-message .pa-status { margin: 4px 0 0; font-size: var(--font-size-12, 12px); font-style: italic; opacity: 0.85; }
 .chat-message .pa-status i { margin-right: 4px; }
+
+/* B5 — a typed total per row. The GM tray: before the multiplier, the result stays in .pa-amount. */
+.pentaryn-aoe-tray .pa-row input.pa-total { width: 3.4em; height: 20px; padding: 0 2px; text-align: right; font-size: inherit; }
+/* Part I — the same field on dnd5e's own damage / healing tray, one per target row (the module's one
+   element inside dnd5e's list; dnd5e's DOM is not styled: a typed total's result is written into
+   dnd5e's own per-row number). */
+.pa-card-amount { width: 3.4em; height: 20px; min-height: 20px; padding: 0 2px; margin-left: 4px; text-align: right; font-size: var(--font-size-12, 12px); }

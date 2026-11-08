@@ -295,6 +295,12 @@ MODULES = {
         # active scene unchanged since the save) and what counts as a change worth writing.
         check=ALL_GATES,
     ),
+    "reactions": ModuleSpec(
+        "pentaryn-reactions",
+        # node-test: reactions-core.mjs (which card a hit or damage roll earns, which reaction
+        # options fit it, every suppression) is pure; the glue suite drives the GM-side card in node.
+        check=ALL_GATES,
+    ),
     "pings": ModuleSpec(
         "pentaryn-pings",
         # node-test: test/run.mjs runs the characterisation suites (pings guide step 9; C39).

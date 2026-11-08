@@ -5,9 +5,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as core from "../ddb-core.mjs";
-import { DDB_DM, DDB_HB, PHB_INDEX, fighter, lookups, wizard } from "./fixtures/ddb.mjs";
+import { DDB_DM, DDB_HB, ONE_ROUND, PHB_INDEX, fighter, knight, lookups, wizard } from "./fixtures/ddb.mjs";
 
-const { RULES, otherDarkvision, planCorrections, needsCorrection, stableId, spellKey, spellUuidsNeeded, summaryLine, STONE_EFFECTS } = core;
+const { RULES, otherDarkvision, planCorrections, needsCorrection, stableId, spellKey, spellUuidsNeeded, summaryLine, STONE_EFFECTS,
+  LARGE_FORM_CHANGE, applyingActivities, isOneRound, offTurnEffects } = core;
 const DARK = "system.attributes.senses.ranges.darkvision";
 const byRule = (plan, id) => plan.changes.filter(c => c.rule === id);
 
@@ -32,6 +33,17 @@ function applyToSnapshot(snap, plan) {
       }
     }
     if (c.op === "createEffects") it.effects.push(...c.data.map(e => ({ _id: e._id, name: e.name, disabled: e.disabled, flags: e.flags })));
+    if (c.op === "updateEffects") {
+      for (const u of c.data) {
+        const e = it.effects.find(x => x._id === u._id);
+        for (const [k, v] of Object.entries(u)) {
+          if (k === "_id") continue;
+          // the adapter snapshots core's system.changes as `changes` (+ `keys`)
+          if (k === "system.changes") Object.assign(e, { changes: structuredClone(v), keys: v.map(x => x.key) });
+          else set(e, k, v);
+        }
+      }
+    }
     if (c.op === "updateActor") for (const [k, v] of Object.entries(c.data)) set(s, k, v);
     if (c.op === "deleteItem") s.items = s.items.filter(i => i._id !== c.itemId);
   }
@@ -39,7 +51,8 @@ function applyToSnapshot(snap, plan) {
 }
 
 test("the rule table: ids in run order, each with label and doc", () => {
-  assert.deepEqual(RULES.map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "stale-cast-cache", "transmuters-stone"]);
+  assert.deepEqual(RULES.map(r => r.id), ["apparel-as-equipment", "freecast-innate", "cast-self-uses", "stale-cast-cache", "transmuters-stone",
+    "reaction-expiry", "large-form-size"]);
   for (const r of RULES) {
     assert.equal(typeof r.match, "function", r.id);
     assert.equal(typeof r.plan, "function", r.id);
@@ -332,10 +345,113 @@ test("a re-sync that kept the effects but re-baked the base values: only the res
   assert.deepEqual(got.map(c => [c.rule, c.op]), [["transmuters-stone", "updateActor"]]);
 });
 
+/* reaction-expiry — feedback HdWHWk (Shield's barrier stayed past Marrith's turn), plan C2 */
+
+const flat = (snap, id) => snap.items.find(i => i._id === id);
+
+test("a one-round turnStart effect applied by a reaction becomes sourceStart with the duration cleared", () => {
+  const plan = planCorrections(knight(), lookups());
+  const got = byRule(plan, "reaction-expiry");
+  assert.deepEqual(got.map(c => [c.op, c.itemId]), [["updateEffects", "shield"], ["updateEffects", "precise"]]);
+  assert.deepEqual(got[0].data, [{ _id: "barrier", "duration.expiry": "sourceStart", "duration.value": null }]);
+  assert.deepEqual(got[1].data, [{ _id: "precision", "duration.expiry": "sourceStart", "duration.value": null }]);
+  assert.match(got[0].summary, /^Shield: Imperceptible Barrier now ends at the start of the user's next turn/);
+  // Large Form (a bonus action, 10 minutes), Stone's Endurance (no effect) and Feather Fall (a minute) are not touched
+  assert.equal(got.some(c => ["large", "endure", "feather"].includes(c.itemId)), false);
+  assert.deepEqual(plan.notes.filter(n => n.rule === "reaction-expiry"), []);
+});
+
+test("a spell's one-round effect matches whatever its activation says (ddb-importer writes Shield as an action); a feat's does not", () => {
+  const snap = knight();
+  flat(snap, "shield").system.activities.utilShield.activation.type = "action";
+  flat(snap, "precise").system.activities.utilPrecise.activation.type = "action";
+  assert.deepEqual(byRule(planCorrections(snap, lookups()), "reaction-expiry").map(c => c.itemId), ["shield"]);
+});
+
+test("one round only: 6 s, 1 round or 1 turn; longer, no duration, turnEnd, a transfer effect, or already sourceStart: no match", () => {
+  assert.equal(isOneRound({ value: 6, units: "seconds" }), true);
+  assert.equal(isOneRound({ value: 1, units: "rounds" }), true);
+  assert.equal(isOneRound({ value: 1, units: "turns" }), true);
+  assert.equal(isOneRound({ value: 12, units: "seconds" }), false);
+  assert.equal(isOneRound({ value: 2, units: "rounds" }), false);
+  assert.equal(isOneRound({ value: null, units: "seconds" }), false);
+  assert.equal(isOneRound({ value: 0, units: "seconds" }), false);
+  assert.equal(isOneRound({ value: 6, units: "minutes" }), false);
+  const shieldWith = duration => {
+    const snap = knight();
+    Object.assign(flat(snap, "shield").effects[0], duration);
+    return byRule(planCorrections(snap, lookups()), "reaction-expiry").some(c => c.itemId === "shield");
+  };
+  assert.equal(shieldWith({ duration: { value: 1, units: "rounds", expiry: "turnStart" } }), true, "the PHB compendium shape");
+  assert.equal(shieldWith({ duration: { value: 6, units: "seconds", expiry: "turnEnd" } }), false);
+  assert.equal(shieldWith({ duration: { value: 6, units: "seconds", expiry: "sourceStart" } }), false);
+  assert.equal(shieldWith({ duration: { value: null, units: "seconds", expiry: "sourceStart" } }), false, "Marwen's newer import: already right");
+  assert.equal(shieldWith({ duration: { value: 6, units: "seconds", expiry: null } }), false);
+  assert.equal(shieldWith({ transfer: true }), false, "a passive effect is not applied by the reaction");
+});
+
+test("applyingActivities: the activities listing the effect; every one when none lists any; none when others are listed", () => {
+  const snap = knight();
+  const precise = flat(snap, "precise");
+  assert.deepEqual(applyingActivities(precise, { _id: "precision" }).map(a => a._id), ["utilPrecise"]);
+  assert.deepEqual(applyingActivities(precise, { _id: "other" }), [], "another effect is listed, this one is not: not applied");
+  precise.system.activities.utilPrecise.effects = [];
+  assert.deepEqual(applyingActivities(precise, { _id: "precision" }).map(a => a._id), ["utilPrecise"], "no activity lists effects: all apply");
+  assert.deepEqual(offTurnEffects(precise).map(e => e._id), ["precision"]);
+  // an effect another (non-reaction) activity applies on an item that also has a reaction is left alone
+  const snap2 = knight();
+  const p2 = flat(snap2, "precise");
+  p2.effects.push({ _id: "extra", name: "Extra", transfer: false, duration: { ...ONE_ROUND }, changes: [], flags: {} });
+  p2.system.activities = { ...p2.system.activities, ...{ act: { _id: "act", type: "utility", activation: { type: "action" }, effects: [{ _id: "extra" }] } } };
+  assert.deepEqual(offTurnEffects(p2).map(e => e._id), ["precision"]);
+});
+
+/* large-form-size — feedback rj3l7f (Large Form did not grow the token), plan D1 */
+
+test("Large Form without a size change gets ddb-importer's own change; the existing changes are kept verbatim", () => {
+  const snap = knight();
+  const got = byRule(planCorrections(snap, lookups()), "large-form-size");
+  assert.deepEqual(got.map(c => [c.op, c.itemId]), [["updateEffects", "large"]]);
+  assert.equal(got[0].data.length, 1);
+  const { _id, ...rest } = got[0].data[0];
+  assert.equal(_id, "grow");
+  assert.deepEqual(Object.keys(rest), ["system.changes"]);
+  const before = flat(snap, "large").effects[0].changes;
+  assert.deepEqual(rest["system.changes"].slice(0, 2), before, "the walk and STR changes as they were");
+  assert.deepEqual(rest["system.changes"][2], { key: "system.traits.size", value: "lg", type: "override", priority: 25, phase: "initial" });
+  assert.deepEqual(rest["system.changes"][2], { ...LARGE_FORM_CHANGE });
+  assert.match(got[0].summary, /Large Form: Large Form sets size Large/);
+});
+
+test("a Large Form that already changes size, one matched by name alone, a passive effect, another feat", () => {
+  const sized = knight();
+  flat(sized, "large").effects[0].changes.push({ key: "system.traits.size", value: "lg", type: "override", priority: 25 });
+  assert.deepEqual(byRule(planCorrections(sized, lookups()), "large-form-size"), [], "already there: idempotent");
+  const named = knight();
+  flat(named, "large").system.identifier = "";
+  assert.deepEqual(byRule(planCorrections(named, lookups()), "large-form-size").map(c => c.itemId), ["large"]);
+  const passive = knight();
+  flat(passive, "large").effects[0].transfer = true;
+  assert.deepEqual(byRule(planCorrections(passive, lookups()), "large-form-size"), [], "a transfer effect is not the form");
+  const other = knight();
+  flat(other, "large").name = "Powerful Build";
+  flat(other, "large").system.identifier = "powerful-build";
+  assert.deepEqual(byRule(planCorrections(other, lookups()), "large-form-size"), []);
+});
+
+test("a frozen Shield or Large Form is left alone by the new rules too", () => {
+  const snap = knight();
+  flat(snap, "shield").flags = { ddbimporter: { ignoreItemImport: true } };
+  flat(snap, "large").flags = { ddbimporter: { ignoreItemImport: true } };
+  const plan = planCorrections(snap, lookups());
+  assert.deepEqual(plan.frozen, ["Shield", "Large Form"]);
+  assert.deepEqual(plan.changes.map(c => c.itemId), ["precise"]);
+});
+
 /* the whole plan */
 
 test("idempotent: the corrected snapshot plans nothing", () => {
-  for (const make of [wizard, fighter]) {
+  for (const make of [wizard, fighter, knight]) {
     const snap = make();
     const fixed = applyToSnapshot(snap, planCorrections(snap, lookups()));
     // the repointed Cast now names a PHB spell, so it is no longer looked up or matched

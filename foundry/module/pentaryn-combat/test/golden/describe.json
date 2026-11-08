@@ -723,6 +723,13 @@
       "type": "Boolean",
       "default": true,
       "doc": "Enter in a usage window's number box (Lay on Hands' points) uses the ability"
+    },
+    {
+      "key": "hpMath",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "\"50-10\" in the Token HUD's bar box or a sheet's HP box gives 40 (=40 sets, -10 subtracts, as before)"
     }
   ],
   "events": [
@@ -855,6 +862,26 @@
     {
       "name": "renderRollResolver",
       "label": "focus the Roll Resolution box"
+    },
+    {
+      "name": "init",
+      "label": "patch: HP box arithmetic"
+    },
+    {
+      "name": "renderTokenHUD",
+      "label": "HP math tip: Token HUD"
+    },
+    {
+      "name": "renderBaseActorSheet",
+      "label": "HP math tip: actor sheet"
+    },
+    {
+      "name": "init",
+      "label": "patch: Roll manually"
+    },
+    {
+      "name": "renderD20RollConfigurationDialog",
+      "label": "Roll manually button"
     },
     {
       "name": "dnd5e.postUseActivity",

@@ -2,6 +2,98 @@
 
 ## Unreleased
 
+- **0.6.2 (2026-11-07). Live playtest of Part I** (ZZ Talo: Heal, Healing Word on Caven; Marrith's Fire
+  Bolt relayed fine). One root cause under all three findings: dnd5e 6 types a healing roll's card
+  `healing` (`HealingMessageData`, the same damage-card template), and every Part I check asked for
+  `type === "damage"`, so a healing card was never wired, never followed and refused by the relay.
+  - **Healing cards are damage cards to Part I** (`core.isApplyCard`, `APPLY_CARD_TYPES = ["damage",
+    "healing"]`): the card is decorated (typed totals on every row, the unowned row included — finding
+    2), late targets fill an untargeted healing card and its tray flips to the recorded targets (finding
+    1: Heal cast with nobody targeted, then Caven targeted, changed nothing), and `applyRelay` accepts
+    it (finding 3: the GM answered `NOT_FOUND` — in fact the card was not even wired, so the Apply press
+    was dnd5e's own, which skips the unowned row silently; Caven stayed at 40).
+  - **A refused or failed relay is said, once** (`PENTARYN_AOE.Apply.RelayFailed`, back with the reason
+    in it): a GM client that refused or threw used to be logged only, and at the table silence read as a
+    heal that had landed. `NoGm` stays for no GM / no answer in time; a losing GM tab's `claimed: false`
+    is not a failure. The player's own card and rows are otherwise unchanged.
+  - Tests: `card-apply.test.mjs` — the healing card is now typed `healing` as dnd5e types it (the 0.6.1
+    helper typed it `damage`, which is why nothing caught this); F1 late targets on a healing card, F2
+    the healing row's total, F3 the heal relay on both sides and the one toast per refusal / failure.
+    `core.test.mjs` — `isApplyCard`, `lateTargetCard` on a healing card. No golden changed.
+
+- **0.6.1 (2026-11-07). Review of 0.6.0's Part I** (second builder pass on the feedback-triage review).
+  - **Apply hits the rows dnd5e lists.** The Apply-time fallback to the user's current targets ran for
+    every user, so the tray showed the SELECTED tokens while Apply hit the TARGETED ones whenever both
+    were held (a GM's stale target under an environmental card; a player's goblin instead of their own
+    PC). Now the listed rows are always the rows (`core.applyTargets`); the one fallback — dnd5e lists
+    nobody on a card that recorded no targets — is for players only, and a GM's untargeted card keeps
+    dnd5e's selected habit.
+  - **Unauthorised rows are skipped silently, as dnd5e skips them.** The sender now applies the GM's own
+    rule first (the card's author, or the owner of its actor): on the GM's breath-weapon card listing two
+    PCs a player's Apply lands their own row and relays nothing, with no toast. The toast is kept for
+    `NO_GM` and `TIMEOUT` only (the relay could not run); a GM client that refused or failed is logged.
+    `PENTARYN_AOE.Apply.RelayFailed` is gone, and `NoGm` no longer says to press Apply again (a second
+    press re-applies the owned rows): the GM can apply it from the card.
+  - **Fewer things on the row:** a typed total's result is written into dnd5e's own per-row number
+    (`.calculated.damage > .value`) instead of a second number beside it; dnd5e's text comes back when
+    the total is cleared, and the typed rows are recomputed a tick after a multiplier or pill change. On
+    a save spell's card (a Part B resolution) the GM gets no totals on dnd5e's tray: the module's tray
+    under it is the one to apply from, and the docs say so.
+  - **The relay carries the pill menu's choices** (`options`: ignore / downgrade as arrays,
+    `core.packApplyOptions` / `unpackApplyOptions`), so the GM applies with the sender's resistances
+    ignored or immunities downgraded as the sender set them.
+  - **`applyRelay` needs a `requestId`** (`BAD_ARGS` without one): the per-press claim is what keeps
+    two GM tabs from landing it twice (§5.4 idempotency), so an unclaimed request is not applied by
+    every tab any more. The tray folds before the relay is awaited (no wait on the claim's settle).
+  - `AmountTip` says a typed total lasts until Apply or a page reload. Golden: `describe`
+    (`applyRelay`'s params and doc). Tests: `card-apply.test.mjs` rewritten for the rules above,
+    `core.test.mjs` for `applyTargets` and the options pack / unpack.
+
+- **0.6.0 (2026-11-07). Fewer steps on a damage or healing card** (feedback triage 2026-11, clusters
+  J1, J2, B relay + late targets, B5; feedback fs7q6K, OrwZqP, DnK6lE, OnvqIi).
+  - **J1 — a save spell used at a target rolls its damage at once** (`attacks.mjs`, setting
+    `autoDamageOnSave`, default on, the sibling of `autoDamageOnHit`). `dnd5e.postUseActivity` for a
+    `save` activity with damage parts and at least one recorded target rolls the damage with no dialog,
+    threaded under the usage card with the card's targets, so Psionic Lash is Use → the target saves →
+    Apply. A save spell that places an area waits for the area (Part B lists who is inside); a use
+    with no target posts nothing extra. `core.shouldAutoDamageOnUse`.
+  - **J2 — a save rolled before Damage counts** (`resolve.mjs`, `core.matchSave`). A save rolled from
+    the usage card's own Saving Throw button before the damage (threaded under the usage card) fills
+    that target's row when the tray is built (`fillEarlierSaves`: not a request-card result, not a
+    monster save this module rolled, not one already counted on another tray), and no request card is
+    posted for a row that already has its save. `matchSave` takes `info.usageId`: a save under the
+    spell's usage card answers whenever it was rolled; any other save must still be newer than the
+    damage.
+  - **B relay — a player's Apply reaches the allies they do not own** (new Part I, `apply.mjs`, setting
+    `applyFromCard`, default on). With dnd5e's `allowPlayerDamageTray` on, dnd5e's Apply silently skips
+    a target the player does not own (Talo heals Caven: nobody owns another PC here). The Apply press on
+    a damage or healing card now goes through the module: owned rows land on the player's client as
+    dnd5e lands them; the rest go to the active GM as one query, `pentaryn-aoe.applyRelay` (a manifest
+    `relay` row, registered on every client at ready), which applies them with the same multiplier. The
+    click is the decision; the player sees one toast only when no GM is connected (or the GM's client
+    refused). The GM side reads the damage from the card, checks the sender is the card's author or owns
+    its actor, and claims a per-press `requestId` so two GM tabs land it once. Audit line
+    `pentaryn-aoe | apply relay`.
+  - **Late targets** (replaces the plan's B4 prompt). A card that recorded no targets at use time
+    (Heal cast, then Caven targeted) is filled with its author's targets as they target (`targetToken`,
+    debounced 150 ms, players only, the newest own untargeted card under 10 minutes old, until
+    applied: `system.targets` + `flags.pentaryn-aoe.lateTargets`), so dnd5e's own rows list them; a
+    card dnd5e remembered as "selected" is switched to its recorded targets once. An Apply on a card
+    with no recorded targets goes to the targets the user holds (the tray's multiplier), else to
+    dnd5e's rows; the card then records those targets and is stamped `flags.pentaryn-aoe.applied`.
+  - **B5 — type the total** (`apply.mjs` on dnd5e's tray, `tray.mjs` on the GM save tray). Every target
+    row gets one small total, pre-filled with the rolled total; a typed number replaces it for that
+    row's Apply, each damage type keeping its share (`core.scaleDamages`, whole numbers that add up),
+    the multiplier still applies on top, and the number that would land shows beside it only while it
+    differs. On the GM tray the row's total is `row.amount` (`setRow(…, { amount })`, cleared by the
+    rolled total, a blank or null; the `.pa-amount` cell shows the result). Players report totals, not
+    die faces, so this is how a real roll gets in.
+  - Goldens: `hooks` (J1's `dnd5e.postUseActivity`, Part I's `dnd5e.renderChatMessage`, `targetToken`,
+    `deleteChatMessage`), `describe` / `surface` (`applyRelay`, the two settings, `setRow`'s `amount`,
+    the two flags), `settings-register`, `tray-html` / `tray-host` (the row's total). New tests:
+    `card-apply.test.mjs`, `early-saves.test.mjs`; J1 cases in `attacks.test.mjs`, B5 in
+    `tray.test.mjs`, the pure rules in `core.test.mjs`.
+
 - **0.5.1. Code review of 0.5.0's Part H and instantaneous areas** (declared, aoe-area-walls,
   dnd5e-instant-area-stationary; pinned by `test/area-walls-review.test.mjs`).
   - **A rotated or resized cube is clipped from its new centre.** During an update core passes the

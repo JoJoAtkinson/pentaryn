@@ -6,9 +6,9 @@
  *
  * Reads only `_source` data (never derived data, which dnd5e and active effects change). Writes are
  * batched: one `updateEmbeddedDocuments("Item")` for every plain item update, one Item update per type
- * change (a type change cannot be batched with others), one effect create per item, one
- * `deleteEmbeddedDocuments("Item")` for every stale cached spell copy, one actor update that carries
- * the base-data resets and the correction stamp together.
+ * change (a type change cannot be batched with others), one effect create per item, one effect update
+ * batch per item, one `deleteEmbeddedDocuments("Item")` for every stale cached spell copy, one actor
+ * update that carries the base-data resets and the correction stamp together.
  */
 
 import { PHB_SPELLS, STAMP_KEY, STAMP_PATH, spellUuidsNeeded } from "./ddb-core.mjs";
@@ -71,8 +71,9 @@ export function snapshotOf(actor) {
         castKeys: castKeysOf(s.system?.activities),
         effects: listOf(item.effects).map(e => {
           const es = sourceOf(e) ?? {};
-          const keys = (es.system?.changes ?? es.changes ?? []).map(c => c?.key).filter(Boolean);
-          return { _id: e.id, name: e.name, disabled: !!e.disabled, flags: clone(es.flags ?? {}), keys };
+          const changes = clone(es.system?.changes ?? es.changes ?? []);   // core 14: system.changes
+          return { _id: e.id, name: e.name, disabled: !!e.disabled, transfer: !!(es.transfer ?? e.transfer),
+            duration: clone(es.duration ?? {}), changes, flags: clone(es.flags ?? {}), keys: changes.map(c => c?.key).filter(Boolean) };
         }),
       };
     }),
@@ -158,6 +159,21 @@ export async function applyPlan(actor, plan, stamp) {
       applied.push(say(c));
     } catch (err) {
       errors.push(`${c.item}: effects: ${err?.message ?? err}`);
+    }
+  }
+
+  const effectUpdates = new Map();
+  for (const c of plan.changes.filter(c => c.op === "updateEffects")) effectUpdates.set(c.itemId, [...(effectUpdates.get(c.itemId) ?? []), c]);
+  for (const [itemId, group] of effectUpdates) {
+    const item = actor.items.get(itemId);
+    try {
+      if (!item) throw new Error("item is gone");
+      const merged = new Map();     // one row per effect: two rules on one effect merge their paths
+      for (const c of group) for (const u of c.data ?? []) merged.set(u._id, { ...(merged.get(u._id) ?? {}), ...clone(u) });
+      await item.updateEmbeddedDocuments("ActiveEffect", [...merged.values()]);
+      applied.push(...group.map(say));
+    } catch (err) {
+      errors.push(`${group[0].item}: effect updates: ${err?.message ?? err}`);
     }
   }
 

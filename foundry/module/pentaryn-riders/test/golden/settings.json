@@ -120,6 +120,30 @@
     "onChange": true
   },
   {
+    "id": "pentaryn-riders.restCard",
+    "namespace": "pentaryn-riders",
+    "key": "restCard",
+    "name": "PENTARYN_RIDERS.settings.restCard.name",
+    "hint": "PENTARYN_RIDERS.settings.restCard.hint",
+    "scope": "world",
+    "config": true,
+    "default": true,
+    "type": "Boolean",
+    "onChange": false
+  },
+  {
+    "id": "pentaryn-riders.empoweredSpell",
+    "namespace": "pentaryn-riders",
+    "key": "empoweredSpell",
+    "name": "PENTARYN_RIDERS.settings.empoweredSpell.name",
+    "hint": "PENTARYN_RIDERS.settings.empoweredSpell.hint",
+    "scope": "world",
+    "config": true,
+    "default": true,
+    "type": "Boolean",
+    "onChange": false
+  },
+  {
     "id": "pentaryn-riders.projectileChatTab",
     "namespace": "pentaryn-riders",
     "key": "projectileChatTab",

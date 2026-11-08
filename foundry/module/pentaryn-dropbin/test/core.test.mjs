@@ -232,3 +232,61 @@ test("dropbin-R4: with no target, the synthetic token actor the item left (by fr
   assert.equal(restoreTarget(undefined, e("Scene.s.Token.t.Actor.a"), { isActor, actors, fromUuid }), synth);
   assert.equal(restoreTarget(other, e("Scene.s.Token.t.Actor.a"), { isActor, actors, fromUuid }), other, "an explicit target still wins");
 });
+
+/* ── 0.3.0: noLoot items (A2), summons (E3), the natural-weapon filter check (A1) ────────────────── */
+
+import * as core from "../dropbin-core.mjs";
+
+test("A2: isNoLootItem is the boolean item flag only (Item Piles compares === true)", () => {
+  const M = "pentaryn-dropbin";
+  assert.equal(core.isNoLootItem({ flags: { [M]: { noLoot: true } } }), true);
+  assert.equal(core.isNoLootItem({ flags: { [M]: { noLoot: "true" } } }), false, "a string never matches the filter");
+  assert.equal(core.isNoLootItem({ flags: { [M]: { noLoot: 1 } } }), false);
+  assert.equal(core.isNoLootItem({ flags: { [M]: {} } }), false);
+  assert.equal(core.isNoLootItem({ flags: {} }), false);
+  assert.equal(core.isNoLootItem(null), false);
+});
+
+test("A2: corpseItemFilters = the world rows as they are + the noLoot row once; hasNoLootFilter finds it", () => {
+  const world = [{ path: "type", filters: "spell,feat" }, { path: "system.type.value", filters: ["natural"] }];
+  const out = core.corpseItemFilters(world);
+  same(out, [{ path: "type", filters: "spell,feat" }, { path: "system.type.value", filters: ["natural"] }, { path: "flags.pentaryn-dropbin.noLoot", filters: "true" }]);
+  assert.notEqual(out[1].filters, world[1].filters, "arrays are copied, not shared");
+  assert.equal(core.hasNoLootFilter(out), true);
+  assert.equal(core.hasNoLootFilter(world), false);
+  assert.equal(core.hasNoLootFilter(false), false, "Item Piles' default overrideItemFilters");
+  assert.equal(core.hasNoLootFilter(null), false);
+  same(core.corpseItemFilters(out), out, "already carrying the row: unchanged, never doubled");
+  same(core.corpseItemFilters(undefined), [{ path: "flags.pentaryn-dropbin.noLoot", filters: "true" }], "no Item Piles: the row alone");
+  same(core.corpseItemFilters([null, { filters: "x" }, { path: "type", filters: "spell" }]), [{ path: "type", filters: "spell" }, { path: "flags.pentaryn-dropbin.noLoot", filters: "true" }], "malformed rows dropped");
+  assert.equal(Object.isFrozen(core.NO_LOOT_FILTER), true);
+});
+
+test("E3: isSummoned is dnd5e's summon stamp on the actor (an object), nothing else", () => {
+  assert.equal(core.isSummoned({ flags: { dnd5e: { summon: { level: 3, origin: "Actor.a.Item.b", activity: "x", profile: "p" } } } }), true, "the dnd5e summon activity's stamp");
+  assert.equal(core.isSummoned({ flags: { dnd5e: { summon: { origin: "Actor.a.Item.b" } } } }), true, "pentaryn-creatures' linked copy");
+  assert.equal(core.isSummoned({ flags: { dnd5e: { summon: {} } } }), true, "an empty stamp is still a stamp");
+  assert.equal(core.isSummoned({ flags: { dnd5e: { summon: null } } }), false);
+  assert.equal(core.isSummoned({ flags: { dnd5e: { summon: "yes" } } }), false, "not the stamp's shape");
+  assert.equal(core.isSummoned({ flags: { dnd5e: { isPolymorphed: true } } }), false, "other dnd5e flags are not a summon");
+  assert.equal(core.isSummoned({ flags: {} }), false);
+  assert.equal(core.isSummoned(null), false);
+});
+
+test("A1: naturalFilterCheck — the dnd5e ≥ 5 preset passes, the 2.x preset names its stale path and the fix, no row is a miss, no Item Piles is n/a", () => {
+  const v5 = [{ path: "type", filters: "background,class,facility,feat,race,spell,subclass" }, { path: "system.type.value", filters: "natural" }];
+  const v2 = [{ path: "type", filters: "spell,feat,class,subclass,background,race" }, { path: "system.weaponType", filters: "natural" }];
+  same(core.naturalFilterCheck(v5), { ok: true, path: "system.type.value", fix: null });
+  same(core.naturalFilterCheck([{ path: "system.type.value", filters: ["simpleM", "natural"] }]), { ok: true, path: "system.type.value", fix: null }, "array filters");
+  same(core.naturalFilterCheck([{ path: "system.type.value", filters: " natural " }]), { ok: true, path: "system.type.value", fix: null }, "Item Piles trims");
+  const stale = core.naturalFilterCheck(v2);
+  assert.deepEqual([stale.ok, stale.path], [false, "system.weaponType"]);
+  assert.equal(stale.fix, `game.settings.set("item-piles", "itemFilters", ${JSON.stringify(core.DND5E_ITEM_FILTERS)})`);
+  assert.match(stale.fix, /"system\.type\.value","filters":"natural"/);
+  assert.deepEqual(Object.entries(core.naturalFilterCheck([{ path: "type", filters: "spell" }])).map(([k, v]) => `${k}=${v}`).slice(0, 2), ["ok=false", "path=null"], "no natural row at all");
+  same(core.naturalFilterCheck([]), { ok: false, path: null, fix: core.naturalFilterCheck(v2).fix });
+  same(core.naturalFilterCheck(undefined), { ok: null, path: null, fix: null }, "Item Piles inactive: not applicable");
+  same(core.naturalFilterCheck("nope"), { ok: null, path: null, fix: null });
+  // both paths present (a world patched by hand): the dnd5e 6 one wins
+  same(core.naturalFilterCheck([...v2, v5[1]]).ok, true);
+});

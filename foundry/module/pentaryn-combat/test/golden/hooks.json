@@ -57,6 +57,18 @@
   },
   {
     "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "on",
+    "name": "renderBaseActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "renderD20RollConfigurationDialog"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.postUseActivity"
   },
   {

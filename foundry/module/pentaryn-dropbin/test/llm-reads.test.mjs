@@ -79,7 +79,7 @@ test("inspect(token): our corpse, its saved sight and ownership, Item Piles data
   assert.deepEqual(out, {
     token: { documentName: "Token", id: "tokGob0000000001", uuid: out.token.uuid, name: "Goblin" },
     actor: { documentName: "Actor", id: gob.id, uuid: gob.uuid, name: "Goblin" },
-    dead: true, corpse: true, noLoot: false, pile: { enabled: true, type: "pile" },
+    dead: true, summoned: false, corpse: true, noLoot: false, pile: { enabled: true, type: "pile" },
     saved: { sight: true, ownership: null },
   });
   assert.ok(maxDepth(out) <= 4);

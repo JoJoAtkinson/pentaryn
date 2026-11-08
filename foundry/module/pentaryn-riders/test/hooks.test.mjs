@@ -26,7 +26,7 @@ test("registration manifest (non-lifecycle) equals golden/hooks.json", () => {
   pinJSON("hooks", atLoad.filter(h => !LIFECYCLE.has(h.name)), import.meta.url);
 });
 
-test("the 32 non-lifecycle registrations, in order (guide S1 list)", () => {
+test("the 43 non-lifecycle registrations, in order (guide S1 list; 0.6.0: + summon fell, its prune, the self-cast expiry guard; 0.7.0: + the rest card's five and Empower's two; 0.7.1: + the rest card refresh)", () => {
   assert.deepEqual(atLoad.filter(h => !LIFECYCLE.has(h.name)).map(h => h.name), [
     "dnd5e.preUseActivity",                 // rituals: slot unticked
     "dnd5e.summonToken",                    // concentration: stamp
@@ -34,6 +34,8 @@ test("the 32 non-lifecycle registrations, in order (guide S1 list)", () => {
     "dnd5e.renderChatMessage",              // concentration: break label
     "createChatMessage",                    // concentration: auto-break
     "dnd5e.renderChatMessage",              // concentration: DC/result line
+    "updateActor",                          // concentration: a summon at 0 HP ends its concentration (TwPCoB, 0.6.0)
+    "deleteToken",                          // concentration: prune the in-flight fall set
     "updateItem",                           // argon-tidy: shared-uses badge
     "dnd5e.preCreateMeasuredTemplate",      // argon-tidy: collapse
     "dnd5e.preSummon",                      // argon-tidy: collapse
@@ -60,6 +62,15 @@ test("the 32 non-lifecycle registrations, in order (guide S1 list)", () => {
     "updateActiveEffect",                   // effect-choices: pick-one passive effects (tNdOEx)
     "dnd5e.filterItem",                     // spell-view: Prepared view filter
     "renderCharacterActorSheet",            // spell-view: Prepared / All spells switch
+    "preCreateActiveEffect",                // expiry: a self-cast reaction expires on its caster's turn (HdWHWk, 0.6.0)
+    "dnd5e.restCompleted",                  // rest: the long-rest card (pcuOX7 / gWNXLN, 0.7.0)
+    "dnd5e.renderChatMessage",              // rest: the card's rows and buttons
+    "updateItem",                           // rest: the omen flag redraws the rendered cards on every client (0.7.1)
+    "dnd5e.preUseActivity",                 // rest: Cosmic Omen used with no omen (or the wrong one) rolls / redirects (G3)
+    "renderActivityChoiceDialog",           // rest: today's omen marked, the other greyed
+    "renderItemButtonArgonComponent",       // rest: the same on Argon's reaction buttons
+    "dnd5e.renderChatMessage",              // empower: the Empower (1 SP) button, the note, the retired card (WUiaAA, 0.7.0)
+    "dnd5e.applyDamage",                    // empower: an applied card loses its button
   ]);
   assert.ok(atLoad.filter(h => !LIFECYCLE.has(h.name)).every(h => h.kind === "on"));
 });
@@ -105,6 +116,7 @@ test("before init: the try/catch readers give false, the direct readers throw in
   F.fire("renderCharacterActorSheet", { document: sorc, isEditable: true, isEditMode: false, element: W.html(`<div><div class="meter-group"><div class="label">HD</div><div class="meter hit-dice"></div></div></div>`) });
   F.fire("dnd5e.summonToken", { actor: sorc, item: fireball }, {}, {});
   F.fire("deleteActiveEffect", { parent: { documentName: "Actor" }, uuid: "Actor.a.ActiveEffect.e" }, {}, IDS.gm);
+  F.fire("updateActor", sorc, { system: { attributes: { hp: { value: 0 } } } }, {}, IDS.gm);   // summon fell: the try/catch reader gives false
   await F.fire("createChatMessage", { type: "save", system: { type: "concentration" }, rolls: [{ total: 3, options: { target: 10 } }], getAssociatedActor: () => sorc }, {}, IDS.gm);
   await W.F.fire("dnd5e.postUseActivity", { item: wiz.items.get("arcanerec0000001") });
   mock.timers.tick(1);
@@ -124,10 +136,11 @@ test("before init: the try/catch readers give false, the direct readers throw in
 test("the shared hooks run their listeners in manifest order (rituals → cast-flow ×4 → Battle Medic)", () => {
   const { init: _i, ready: _r, ...counts } = F.listeners();
   assert.deepEqual(counts, {
-    "dnd5e.preUseActivity": 6, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 4,
-    createChatMessage: 1, updateItem: 1, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
-    renderItemButtonArgonComponent: 1, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
-    renderActivityChoiceDialog: 1, "dnd5e.postUseActivity": 3, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
+    "dnd5e.preUseActivity": 7, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 6,
+    createChatMessage: 1, updateItem: 2, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
+    renderItemButtonArgonComponent: 2, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
+    renderActivityChoiceDialog: 2, "dnd5e.postUseActivity": 3, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
     renderCharacterActorSheet: 2, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1, "dnd5e.filterItem": 1,
+    updateActor: 1, deleteToken: 1, preCreateActiveEffect: 1, "dnd5e.restCompleted": 1, "dnd5e.applyDamage": 1,
   });
 });

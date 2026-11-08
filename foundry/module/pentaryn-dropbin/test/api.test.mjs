@@ -49,9 +49,11 @@ test("version and contract", () => {
 
 test("every pre-migration row is legacy; restore/export/clear are GM write rows; flags contract", () => {
   const rows = Object.fromEntries(api.describe().methods.map(m => [m.path, m]));
-  for (const [path, m] of Object.entries(rows)) assert.equal(!!m.legacy, !["inspect", "restoreResult", "selftest"].includes(path), path);
+  for (const [path, m] of Object.entries(rows)) assert.equal(!!m.legacy, !["inspect", "restoreResult", "selftest", "noLoot"].includes(path), path);
+  assert.deepEqual([rows.noLoot.gm, rows.noLoot.writes, rows.noLoot.params[0].kind], [true, true, "item"], "noLoot: a GM write row on an item ref");
   for (const p of ["restore", "export", "clear"]) assert.deepEqual([rows[p].gm, rows[p].writes], [true, true], p);
-  assert.deepEqual(api.describe().flags.reads, ["flags.item-piles.data"]);
+  assert.deepEqual(api.describe().flags.reads, ["flags.item-piles.data", "flags.dnd5e.summon"], "E3: dnd5e's summon stamp is read");
+  assert.ok(api.describe().flags.writes.includes("flags.pentaryn-dropbin.noLoot"), "A2: the item flag is declared");
   assert.ok(api.describe().flags.writes.includes("flags.pentaryn-dropbin.ownership"), "PT3-1's saved pre-death map");
 });
 

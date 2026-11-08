@@ -1,5 +1,29 @@
 # Changelog — pentaryn-movement
 
+## 0.2.0 — 2026-11-07
+
+Ghost movement for incorporeal creatures during a fight (player feedback `nwhjz2`, triage
+`context/plans/feedback-triage-2026-11.md` I1; review 2026-11-07: feats only).
+
+- **Incorporeal creatures keep ghosting through a fight.** Under *Exploration only*, a token whose
+  actor has a **feat** named *Incorporeal Passage*, *Incorporeal Movement* or *Ethereal…* (the Summon
+  Undead spirit, a ghost) still passes through walls and creatures while a combat runs on the scene.
+  Feats only: a PC with the *Etherealness* **spell** is not incorporeal. Only movement passes; walls
+  still block light and sight.
+- **GM override per creature.** Token HUD (right column, GM only) → the ghost toggle sets
+  `flags.pentaryn-movement.ghostInCombat` on the token's actor (an unlinked summon keeps it on that
+  token); pressed when the creature may ghost, and a feat-granted one is shown pressed with the feat
+  named. Same from the console or the bridge: `setGhost(creature, { combat: true|false })` (an Actor,
+  Token, uuid, id or exact name; a refusal object for NOT_GM / NOT_FOUND / AMBIGUOUS / BAD_ARGS).
+  `inspect(ref)` reads it back: `{ uuid, name, flag, feat, ghostInCombat }`.
+- **The button follows.** With one of your incorporeal tokens in the fight, the ghost button stays
+  usable (no swords badge, no "fight started" clear — the toolclip says only incorporeal creatures
+  pass), and pressing it mid-fight is not refused. When the fight has switched ghost off and such a
+  token of yours then arrives (a summon), one toast says it may ghost; when it leaves, the usual
+  fight clear applies. `status().combatExempt` lists those token ids (appended key).
+- Listens to three more hooks: `createToken`, `deleteToken` (a refresh when a token of the viewed
+  scene comes or goes) and `renderTokenHUD` (the toggle). `setGhost(true|false)` is unchanged.
+
 ## Unreleased (addon-blueprint migration, wave 2)
 
 Code layout follows the blueprint (entry, core, settings, combat adapter, the `ghost` feature, API

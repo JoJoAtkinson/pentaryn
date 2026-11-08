@@ -111,6 +111,10 @@ export const SETTINGS = Object.freeze([
   { key: "enterUses", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_COMBAT.Setting.enterUses.Name", hint: "PENTARYN_COMBAT.Setting.enterUses.Hint",
     doc: "Enter in a usage window's number box (Lay on Hands' points) uses the ability" },
+  // feedback triage 2026-11 (context/plans/feedback-triage-2026-11.md), cluster K
+  { key: "hpMath", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_COMBAT.Setting.hpMath.Name", hint: "PENTARYN_COMBAT.Setting.hpMath.Hint",
+    doc: "\"50-10\" in the Token HUD's bar box or a sheet's HP box gives 40 (=40 sets, -10 subtracts, as before)" },
 ].map(Object.freeze));
 
 /** `{ key: default }` for every row, derived from the table. */

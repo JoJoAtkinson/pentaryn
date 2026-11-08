@@ -210,3 +210,59 @@ test("the GM never gets the player line or the hidden class", () => {
   F.fire("dnd5e.renderChatMessage", hiddenSave, h);
   assert.equal(h.hidden, false);
 });
+
+/* ── B5: a typed total per row (the GM tray) ─────────────────────────────────────────────────── */
+
+test("B5: every open row has a total pre-filled with the rolled total; an applied row has none; a superseded tray's is disabled", () => {
+  const live = { ...clone(base), superseded: false };   // later resolves on this area superseded the first tray
+  const html = T.trayHTML(live, msg);
+  const inputs = root(html).querySelectorAll('input[data-pa="amount"]');
+  assert.equal(inputs.length, base.rows.length);
+  assert.deepEqual([...new Set(inputs.map(i => i.getAttribute("value")))], ["28"]);
+  assert.deepEqual(inputs.map(i => i.disabled), inputs.map(() => false));
+  const applied = clone(live);
+  applied.rows[0].applied = true;
+  assert.equal(root(T.trayHTML(applied, msg)).querySelectorAll('input[data-pa="amount"]').length, base.rows.length - 1);
+  const typed = clone(live);
+  typed.rows[1].amount = 20;
+  assert.equal(root(T.trayHTML(typed, msg)).querySelector(`[data-row="${IDS.g2}"] input[data-pa="amount"]`).getAttribute("value"), "20");
+  const sup = root(T.trayHTML({ ...clone(base), superseded: true }, msg));
+  assert.ok(sup.querySelectorAll('input[data-pa="amount"]').every(i => i.disabled));
+});
+
+test("B5: preview uses the row's typed total, the multiplier on top", () => {
+  assert.equal(T.preview({ multiplier: 0.5, actor: ctx.g1.uuid, amount: 20 }, base, msg), "10");
+  assert.equal(T.preview({ multiplier: 1, actor: ctx.g1.uuid, amount: 0 }, base, msg), "0");
+  assert.equal(T.preview({ multiplier: 0.5, actor: ctx.g1.uuid }, base, msg), "14", "no typed total: the rolled one");
+});
+
+test("B5: typing a total goes through setRow; the rolled total or a blank clears it; junk is refused; Apply lands the typed total", async () => {
+  // the Fireball's area went with the Apply above (instantCleanup), so this card names its targets
+  for (const a of [ctx.g1, ctx.g2]) a.system.attributes.hp.value = 7;   // back up: a row at 0 HP is unticked
+  const m = damage(W, ctx, { id: "dmgTray000000004", targets: [{ actor: ctx.g1.uuid, token: ctx.s.tokens.get(IDS.g1).uuid }, { actor: ctx.g2.uuid, token: ctx.s.tokens.get(IDS.g2).uuid }] });
+  await S.resolve.resolve(m.id);
+  const tray = trayFor(m);
+  assert.deepEqual(resOf(m.id).rows.map(r => r.id), [IDS.g1, IDS.g2]);
+  const input = tray.querySelector(`[data-row="${IDS.g2}"] input[data-pa="amount"]`);
+  input.value = "20";
+  dispatch(input, "change");
+  await flush();
+  assert.equal(resOf(m.id).rows[1].amount, 20);
+  input.value = "28";
+  dispatch(input, "change");
+  await flush();
+  assert.equal("amount" in resOf(m.id).rows[1], false, "the rolled total again: no override");
+  assert.equal(await S.resolve.setRow(m.id, IDS.g2, { amount: "abc" }), null);
+  assert.equal(await S.resolve.setRow(m.id, IDS.g2, { amount: -4 }), null);
+  await S.resolve.setRow(m.id, IDS.g2, { amount: "9.7" });
+  assert.equal(resOf(m.id).rows[1].amount, 9);
+  await S.resolve.setRow(m.id, IDS.g2, { amount: null });
+  assert.equal("amount" in resOf(m.id).rows[1], false);
+  await S.resolve.setRow(m.id, IDS.g1, { amount: 10 });
+  const [m1, m2] = resOf(m.id).rows.map(r => r.multiplier);
+  F.calls.length = 0;
+  await S.resolve.applyRows(m.id, [IDS.g1, IDS.g2]);
+  assert.deepEqual(F.calls.filter(c => c.op === "applyDamage").map(c => [c.actor, c.damages.map(d => d.value), c.multiplier]),
+    [[ctx.g1.uuid, [10], m1], [ctx.g2.uuid, [28], m2]], "g1 takes its typed 10, g2 the rolled 28, each times its own multiplier");
+  assert.equal(resOf(m.id).rows[0].hp.after, 7 - Math.floor(10 * m1));
+});

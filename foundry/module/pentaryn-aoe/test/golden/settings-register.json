@@ -171,6 +171,26 @@
   },
   {
     "ns": "pentaryn-aoe",
+    "key": "autoDamageOnSave",
+    "name": "PENTARYN_AOE.Setting.autoDamageOnSave.Name",
+    "hint": "PENTARYN_AOE.Setting.autoDamageOnSave.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
+    "key": "applyFromCard",
+    "name": "PENTARYN_AOE.Setting.applyFromCard.Name",
+    "hint": "PENTARYN_AOE.Setting.applyFromCard.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
     "key": "npcSaveRollMode",
     "name": "PENTARYN_AOE.Setting.npcSaveRollMode.Name",
     "hint": "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",

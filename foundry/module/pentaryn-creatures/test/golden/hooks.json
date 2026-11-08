@@ -68,6 +68,14 @@
     "name": "dnd5e.postSummon"
   },
   {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "createCombatant"
+  },
+  {
     "kind": "once",
     "name": "ready"
   },

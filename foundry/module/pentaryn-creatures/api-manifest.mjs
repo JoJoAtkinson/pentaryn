@@ -146,9 +146,40 @@ export const MANIFEST = Object.freeze({
       doc: "A character's summon library as this client sees it: the copies made for it (flags.pentaryn-creatures.library) "
         + "and every actor in its `<First name> — summons & forms` folder, by name; source is the compendium or world uuid.",
     },
+    {
+      path: "dormant",
+      params: [
+        { name: "ref", kind: "token", type: "Token | TokenDocument | uuid | id | exact name" },
+        { name: "opts", type: "{ name?, img?, disposition?, sceneId?, dryRun? }", optional: true,
+          doc: "the disguise: name (default \"Statue\"), img (default a stone statue), disposition (default -2 SECRET); "
+            + "re-arming keeps the stored look and changes only what is passed" },
+      ],
+      returns: "Promise<{ ok: true, dryRun, token, name, img, disposition } | { ok: false, code, reason }>",
+      gm: true, writes: true, dryRun: true, since: "0.4.0",
+      sideEffects: ["token name/displayName/displayBars/disposition/texture.src/ring.enabled", "token delta.name/delta.img",
+        "flags.pentaryn-creatures.dormant"],
+      doc: "Dormant until combat: disguise a token as a prop. Its real look (name, nameplate and bars modes, disposition, "
+        + "art, ring, the unlinked actor's name and portrait; hidden for the record) is stored in the dormant flag, then "
+        + "it gets the prop art with the ring off, the prop name on the token and its unlinked actor, no nameplate or bars "
+        + "and SECRET disposition. Visibility (hidden) is never touched. When a combat it is in starts (or it joins a running "
+        + "one) the active GM wakes it. GM only (NOT_GM); a missing token is NOT_FOUND, bad options BAD_ARGS.",
+    },
+    {
+      path: "wake",
+      params: [
+        { name: "ref", kind: "token", type: "Token | TokenDocument | uuid | id | exact name" },
+        { name: "opts", type: "{ sceneId?, dryRun? }", optional: true },
+      ],
+      returns: "Promise<{ ok: true, dryRun, woke, token, name? } | { ok: false, code, reason }>",
+      gm: true, writes: true, dryRun: true, since: "0.4.0",
+      sideEffects: ["token name/displayName/displayBars/disposition/texture.src/ring", "token delta.name/delta.img",
+        "flags.pentaryn-creatures.dormant (null)", "Combatant name/img (those still showing the disguise)"],
+      doc: "Undo a dormant disguise now: write the stored look back, set the flag to null and relabel the token's combatants "
+        + "that still show the disguise. A token that is not dormant answers woke: false and writes nothing. GM only (NOT_GM).",
+    },
   ],
   flags: {
-    writes: ["flags.pentaryn-creatures.light", "flags.pentaryn-creatures.library", "flags.dnd5e.isAutoImported", "flags.dnd5e.summon.origin"],
+    writes: ["flags.pentaryn-creatures.light", "flags.pentaryn-creatures.library", "flags.pentaryn-creatures.dormant", "flags.dnd5e.isAutoImported", "flags.dnd5e.summon.origin"],
     reads: ["flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.item-piles.data.enabled", "flags.dnd5e.originalActor"],
   },
   unlisted: ["core"],

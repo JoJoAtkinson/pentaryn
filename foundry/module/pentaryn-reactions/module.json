@@ -1,0 +1,48 @@
+{
+  "id": "pentaryn-reactions",
+  "title": "Pentaryn Reactions",
+  "description": "A non-blocking reminder card: when a monster hits or damages a player character, the character's owner is whispered a card listing the reaction-timed spells and features that fit (Shield, Absorb Elements); one click uses the activity. Nothing waits on it and nothing is applied by it.",
+  "version": "0.1.1",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.369"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0",
+          "verified": "6.0.6"
+        }
+      }
+    ],
+    "recommends": []
+  },
+  "esmodules": [
+    "reactions.mjs"
+  ],
+  "styles": [
+    "styles/reactions.css"
+  ],
+  "socket": false,
+  "flags": {
+    "pentaryn": {
+      "tier": "small",
+      "namespace": "reactions",
+      "flagScope": "pentaryn-reactions",
+      "cssPrefix": "prea-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Reactions', then reload.",
+        "  game.pentaryn.reactions.describe()"
+      ]
+    }
+  }
+}

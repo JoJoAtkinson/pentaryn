@@ -6,9 +6,16 @@
  * damage. With autoDamageOnHit on, the roller's own client rolls damage straight after a hit
  * (or after any attack whose target AC it can't know), exactly as clicking Damage would.
  * A known miss or a natural 1 rolls nothing. The manual Damage button stays.
+ *
+ * J1 (feedback fs7q6K, Psionic Lash): a save activity has the same gap — Use posts the card, and the
+ * damage waits for a Damage click. With autoDamageOnSave on, using a save activity that has damage
+ * and at least one recorded target rolls its damage at once on the user's own client, threaded under
+ * the usage card with the card's targets, exactly as the card's Damage button would. Part B then
+ * builds the GM tray from those targets. A save spell that places an area is left alone (its damage
+ * is rolled once the area is down), and a use with no target posts nothing extra.
  */
 
-import { shouldAutoDamage } from "./core.mjs";
+import { shouldAutoDamage, shouldAutoDamageOnUse } from "./core.mjs";
 import { setting } from "./settings.mjs";
 
 export async function onPostRollAttack(rolls, { subject } = {}) {
@@ -34,8 +41,32 @@ export async function onPostRollAttack(rolls, { subject } = {}) {
   return subject.rollDamage({ attackMode, ammunition, isCritical: roll.isCritical }, { configure: false }, message);
 }
 
+/** The targets the usage card recorded (dnd5e 6 `system.targets`; the data form when the card was not created). */
+const usageTargets = results => results?.message?.system?.targets ?? results?.message?.data?.system?.targets ?? [];
+
+/**
+ * J1: dnd5e.postUseActivity on the using client. Returns nothing (never a veto); refund's own
+ * listener (Part F) is the one that may return false for a cancelled area, and an area activity is
+ * skipped here anyway.
+ */
+export async function onPostUseActivity(activity, usageConfig, results) {
+  if (!setting("autoDamageOnSave") || !activity) return;
+  const targets = usageTargets(results);
+  const go = shouldAutoDamageOnUse({
+    type: activity.type, damageParts: activity.damage?.parts?.length ?? 0, targets: targets.length,
+    template: activity.target?.template?.type ?? null
+  });
+  if (!go) return;
+  // The usage card's id threads the damage under it, as the card's Damage button does (SaveActivity
+  // #rollDamage passes the card's targets the same way), so Part B and dnd5e's outcomes agree.
+  const origin = results?.message?.id ?? null;
+  const message = { data: { system: { ...(origin ? { origin } : {}), targets } } };
+  return activity.rollDamage({ event: usageConfig?.event }, { configure: false }, message);
+}
+
 export function install(reg) {
   reg.on("dnd5e.postRollAttack", reg.guardSwallowAsync("postRollAttack", onPostRollAttack), { guard: false, label: "postRollAttack" });
+  reg.on("dnd5e.postUseActivity", reg.guardSwallowAsync("postUseActivity(save)", onPostUseActivity), { guard: false, label: "postUseActivity(save)" });
 }
 
 export function uninstall() {}

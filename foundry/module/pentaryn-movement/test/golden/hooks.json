@@ -60,6 +60,18 @@
     "name": "deleteCombatant"
   },
   {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
     "kind": "once",
     "name": "ready"
   }

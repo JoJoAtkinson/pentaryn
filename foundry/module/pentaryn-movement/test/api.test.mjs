@@ -35,7 +35,7 @@ test("published synchronously at ready: module.api is game.pentaryn.movement, fr
 test("every described method is a function on the API; core is published unlisted (a frozen copy)", () => {
   for (const m of api.describe().methods) assert.equal(typeof api[m.path], "function", m.path);
   assert.deepEqual(api.describe().methods.map(m => m.path),
-    ["status", "ghostFor", "combatActive", "setGhost", "setPolicy", "pinsUnderTokens", "selftest"]);
+    ["status", "ghostFor", "combatActive", "setGhost", "setPolicy", "pinsUnderTokens", "inspect", "selftest"]);
   assert.ok(Object.isFrozen(api.core));
   assert.equal(api.core.MODULE, MODULE);
 });

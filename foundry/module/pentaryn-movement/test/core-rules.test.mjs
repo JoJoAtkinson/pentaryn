@@ -20,7 +20,7 @@ test("VERSION === module.json version; identity constants", () => {
   assert.equal(core.NS, "movement");
   assert.equal(core.CONTRACT, "pentaryn-movement/api@1");
   assert.equal(core.I18N, "PENTARYN_MOVEMENT");
-  assert.deepEqual(core.CSS, { blocked: "pm-blocked" });
+  assert.deepEqual(core.CSS, { blocked: "pm-blocked", hud: "pm-ghost-combat" });
   assert.deepEqual(core.HOOKS, {});
   assert.ok(Object.isFrozen(core.HOOKS));
 });

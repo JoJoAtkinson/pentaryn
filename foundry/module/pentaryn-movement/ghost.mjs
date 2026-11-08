@@ -11,6 +11,8 @@
  *  - Ghost: Token#_getDragConstrainOptions and TokenLayer#_prepareKeyboardMovementUpdates are wrapped
  *    so a player's own token gets core's unconstrained-movement constrain options (ignoreWalls,
  *    ignoreCost; dnd5e's ignoreTokens) while ghost is in effect. The rules are in movement-core.
+ *    An incorporeal token (a feat, or the GM's ghostInCombat flag) keeps ghosting through a fight
+ *    (I1); the GM's side of that flag — the Token HUD toggle, the write, inspect — is ghost-combat.mjs.
  */
 
 import * as core from "./movement-core.mjs";
@@ -19,7 +21,7 @@ import {
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
 import { SETTINGS, policyWrite, setting } from "./settings.mjs";
-import { combatSummaries, sceneIdOf } from "./combat-adapter.mjs";
+import { combatSummaries, exemptActor, exemptTokenIds, sceneIdOf, sceneOf } from "./combat-adapter.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
 /** The ctx this feature was installed with (null when uninstalled). */
@@ -68,7 +70,21 @@ function invalidate() {
 function ghostFor(token) {
   const doc = token?.document ?? (token?.documentName === "Token" ? token : null);
   if (!doc) return false;
-  return core.ghostForCtx(context(), { isGM: game.user.isGM, isOwner: !!doc.isOwner, sceneId: doc.parent?.id });
+  const ctx = context();
+  const sceneId = doc.parent?.id;
+  const isGM = game.user.isGM;
+  const isOwner = !!doc.isOwner;
+  // The incorporeal exception (I1) is read from the actor only when a fight here would otherwise
+  // block ghost: a few item names and one flag, on the token's own actor — never a world scan.
+  const blocked = ctx.policy === "exploration" && !!sceneId && ctx.combatScenes.has(sceneId);
+  const exempt = blocked && ctx.wish && isOwner && !isGM && exemptActor(doc.actor);
+  return core.ghostForCtx(ctx, { isGM, isOwner, sceneId, exempt });
+}
+
+/** The Scene for a scene id: the viewed one when it matches, else the world's (null if unknown). */
+function sceneFor(sceneId) {
+  if (!sceneId) return null;
+  return canvas?.scene?.id === sceneId ? canvas.scene : sceneOf(sceneId);
 }
 
 function ownedRankOf(token) {
@@ -87,16 +103,20 @@ const SETTING_SCOPES = Object.freeze(Object.fromEntries(SETTINGS.map(r => [r.key
 function status(opts = {}) {
   const scene = typeof opts === "string" || opts?.documentName === "Scene" ? opts : opts?.sceneId;
   const sceneId = scene == null ? (canvas?.scene?.id ?? null) : sceneIdOf(scene);
+  // Not combatActive(sceneId): there null means the viewed scene, and a junk argument that
+  // resolved to null here must answer no combat, not the viewed scene's (movement-edge-4).
+  const combat = core.combatOnScene(combatSummaries(), sceneId);
+  const p = policy();
+  const combatExempt = combat && p === "exploration" && !game.user.isGM ? exemptTokenIds(sceneFor(sceneId)) : [];
   return {
     ...core.statusFrom({
-      // Not combatActive(sceneId): there null means the viewed scene, and a junk argument that
-      // resolved to null here must answer no combat, not the viewed scene's (movement-edge-4).
-      policy: policy(), combat: core.combatOnScene(combatSummaries(), sceneId), wish: wish(), isGM: game.user.isGM,
+      policy: p, combat, wish: wish(), isGM: game.user.isGM, exempt: combatExempt.length > 0,
       ownedOnTop: setting("ownedOnTop"), patched: { drag: dragPatched, keyboard: keyboardPatched }
     }),
     sceneId,
     version: VERSION,
     settings: SETTING_SCOPES,
+    combatExempt,
   };
 }
 
@@ -233,7 +253,8 @@ function addTools(controls) {
       toggle: true,
       active: pt.active,
       onChange: (_event, active) => onPlayerToggle(active),
-      toolclip: toolclip(TOOL_KEYS[pt.state], [TOOL_CLIP_KEYS.what, TOOL_CLIP_KEYS[pt.state], TOOL_CLIP_KEYS.vision])
+      toolclip: toolclip(TOOL_KEYS[pt.state], [TOOL_CLIP_KEYS.what, TOOL_CLIP_KEYS[pt.state],
+        ...(pt.exempt ? [TOOL_CLIP_KEYS.exempt] : []), TOOL_CLIP_KEYS.vision])
     };
   }
 
@@ -256,7 +277,7 @@ function addTools(controls) {
 async function onPlayerToggle(active) {
   try {
     if (active) {
-      const { allowed, reason } = core.ghostAllowed({ policy: policy(), combatActive: combatActive() });
+      const { allowed, reason } = core.ghostAllowed(liveState());   // exempt included: an incorporeal token of yours in the fight
       if (!allowed) {
         ui.notifications.warn(NOTIFY_BLOCKED[reason], { localize: true });
         await game.settings.set(MODULE, "ghost", false);
@@ -289,8 +310,15 @@ async function onGmFlip(active) {
   }
 }
 
-/** policy, combat on the viewed scene and wish, read live once (one combat scan). */
-const liveState = () => ({ policy: policy(), combatActive: combatActive(), wish: wish() });
+/**
+ * policy, combat on the viewed scene, wish and exempt, read live once (one combat scan). `exempt`
+ * (an owned incorporeal or GM-flagged token is here) is looked up only when a fight would block ghost.
+ */
+const liveState = () => {
+  const now = { policy: policy(), combatActive: combatActive(), wish: wish() };
+  now.exempt = now.policy === "exploration" && now.combatActive && !game.user.isGM && exemptTokenIds(canvas?.scene).length > 0;
+  return now;
+};
 
 let lastToolKey = null;
 function rerenderControls(force = false, now = liveState()) {
@@ -408,18 +436,27 @@ export function install(reg, ctx) {
     catch (err) { log.warnOnce("refreshToken", "refreshToken (further errors suppressed)", err); }
   }, { guard: false, label: "refreshToken: lift and fade" });
 
-  // Ownership changes who is lifted.
+  // Ownership changes who is lifted; our ghostInCombat flag changes whether a fight blocks the button.
   reg.on("updateActor", (actor, changes) => {
+    if (changes?.flags?.[MODULE] !== undefined) queueRefresh();
     if (!("ownership" in (changes ?? {}))) return;
     for (const t of actor.getActiveTokens?.() ?? []) t.renderFlags.set({ refreshState: true });
     if (canvas?.tokens?.objects) canvas.tokens.objects.sortDirty = true;
   }, { guard: false, label: "updateActor: ownership re-sort" });
   reg.on("updateToken", (doc, changes) => {
+    // An unlinked token's flag lands on its delta (the synthetic actor), which arrives as a Token update.
+    if (changes?.delta?.flags?.[MODULE] !== undefined || "actorLink" in (changes ?? {}) || "actorId" in (changes ?? {})) queueRefresh();
     if (!("sort" in (changes ?? {})) && !("elevation" in (changes ?? {}))) return;
     if (canvas?.tokens?.objects) canvas.tokens.objects.sortDirty = true;
   }, { guard: false, label: "updateToken: sort/elevation re-sort" });
 
   for (const h of COMBAT_HOOKS) reg.on(h, () => { invalidate(); queueRefresh(); }, { guard: false, label: `${h}: refresh` });
+
+  // An incorporeal token of this user's arriving or leaving the viewed scene mid-fight (dnd5e's
+  // summon places a token and adds no combatant itself) changes whether the fight blocks the button.
+  const onTokenHere = doc => { if (doc?.parent?.id && doc.parent.id === canvas?.scene?.id) queueRefresh(); };
+  reg.on("createToken", onTokenHere, { label: "createToken: refresh (ghost in combat)" });
+  reg.on("deleteToken", onTokenHere, { label: "deleteToken: refresh (ghost in combat)" });
 
   if (ctx.late) {
     installLayerSort();

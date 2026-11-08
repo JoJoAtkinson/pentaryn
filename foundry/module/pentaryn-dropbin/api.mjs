@@ -7,7 +7,7 @@
 import * as core from "./dropbin-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, setting, settingsSnapshot } from "./settings.mjs";
-import { api as itemPilesApi } from "./piles.mjs";
+import { api as itemPilesApi, itemFilters } from "./piles.mjs";
 import { hasSocket } from "./socketlib-adapter.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { publishedOf } from "./lib/publish.mjs";
@@ -23,6 +23,7 @@ function tokenRow(token, isDead) {
     token: refOf(token),
     actor: refOf(token.actor),
     dead: !!isDead(token.actor),
+    summoned: core.isSummoned(token.actor),
     corpse,
     noLoot: core.hasNoLoot(token),
     pile: core.pileFlags(token),
@@ -65,11 +66,12 @@ function inspect(ref, opts, isDead) {
   for (const scene of scenesFor(sceneId)) {
     for (const t of scene.tokens) if (t.actorId === actor.id && core.isOurCorpse(t)) corpses.push(tokenRow(t, isDead));
   }
-  return toPlain({ actor: refOf(actor), dead: !!isDead(actor), noLoot: !!ownFlags(actor).noLoot, pile: core.pileFlags(actor), corpses });
+  return toPlain({ actor: refOf(actor), dead: !!isDead(actor), summoned: core.isSummoned(actor), noLoot: !!ownFlags(actor).noLoot, pile: core.pileFlags(actor), corpses });
 }
 
 function selftest(ctx) {
   const log = setting("log"), counter = setting("counter");
+  const filters = core.naturalFilterCheck(itemFilters());
   const checks = [
     { label: "published as module.api", ok: game.modules.get(core.MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${core.NS} is this API`, ok: game.pentaryn?.[core.NS] === ctx.api },
@@ -77,13 +79,16 @@ function selftest(ctx) {
     { label: "counter is at least the highest entry number", ok: (counter ?? 0) >= Math.max(0, ...(log ?? []).map(e => e.n ?? 0)) },
     { label: "socketlib relay registered", ok: hasSocket() },
     { label: "Item Piles API present", ok: !!itemPilesApi() },
+    // A1: null when Item Piles is inactive (not applicable), false when the world still has the dnd5e 2.x path
+    { label: "item-piles.itemFilters hides natural weapons by system.type.value (dnd5e 6)", ok: filters.ok !== false,
+      detail: { path: filters.path, fix: filters.fix } },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }
 
 function impl(ctx) {
-  const { ledger, corpses, loot } = ctx.exposed;
+  const { ledger, corpses, loot, noLoot } = ctx.exposed;
   return {
     "corpses.sync": corpses.sync,
     "corpses.toCorpse": corpses.toCorpse,
@@ -104,6 +109,7 @@ function impl(ctx) {
     export: ledger.export,
     clear: ledger.clear,
     restoreResult: ledger.restoreResult,
+    noLoot: (item, opts) => noLoot.set(item, opts),
     inspect: (ref, opts) => inspect(ref, opts, corpses.isDead),
     selftest: () => selftest(ctx),
   };

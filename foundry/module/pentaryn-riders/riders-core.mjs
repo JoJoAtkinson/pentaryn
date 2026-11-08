@@ -26,7 +26,7 @@ export const MODULE = "pentaryn-riders";
 export { MODULE as MOD };
 export const SHORT = "riders";
 export const NS = "riders";
-export const VERSION = "0.5.2";                        // === module.json version (constants.test pins it)
+export const VERSION = "0.7.2";                        // === module.json version (constants.test pins it)
 export const CONTRACT = "pentaryn-riders/api@1";       // bump the major on a published-shape change
 export const I18N = "PENTARYN_RIDERS";
 export const CSS = "pr-";
@@ -603,6 +603,112 @@ export function projectileSlots(count, rolled = []) {
 }
 
 /* -------------------------------------------- */
+/*  After a long rest (G1), Empowered Spell (H1) */
+/* -------------------------------------------- */
+
+/**
+ * What a long rest offers (feedback pcuOX7 / gWNXLN, triage G1). One row per rule; a rule matches an
+ * actor by an item (`match`, as RULES) or by a predicate on the actor (`when`). `action` names the
+ * button the rest card draws (rest.mjs): "omen" rolls the day's Cosmic Omen and stores it on the
+ * item; "spellView" opens the sheet's Spells tab on every spell. No Portent row until a Diviner
+ * exists at the table (the 2026-11-07 review).
+ */
+export const REST_RULES = Object.freeze([
+  Object.freeze({
+    key: "cosmic-omen",
+    label: "Cosmic Omen",
+    action: "omen",
+    match: Object.freeze({
+      identifiers: Object.freeze(["cosmic-omen"]),
+      sources: Object.freeze([`${PHB}.classes.Item.phbdrdCosmicOmen`]),
+      names: Object.freeze(["Cosmic Omen"])
+    })
+  }),
+  Object.freeze({
+    key: "prepare-spells",
+    label: "Prepared spells",
+    action: "spellView",
+    when: Object.freeze({ preparedCaster: true })
+  })
+]);
+
+/** Empowered Spell (Metamagic), as the damage card's Empower button finds it (empower.mjs). */
+export const EMPOWERED_SPELL = Object.freeze({
+  key: "empowered-spell",
+  label: "Empowered Spell",
+  match: Object.freeze({
+    identifiers: Object.freeze(["empowered-spell"]),
+    sources: Object.freeze([`${PHB}.classes.Item.phbmmoEmpoweredS`]),
+    names: Object.freeze(["Empowered Spell"])
+  })
+});
+
+export const restRuleByKey = key => REST_RULES.find(r => r.key === key) ?? null;
+
+/**
+ * The REST_RULES rows an actor gets on its rest card, in table order: `[{ key, item }]` (`item` the
+ * matching item's id, null for a predicate row). An item row matches the first item that matches
+ * (an actor with two Cosmic Omen items gets one line).
+ * @param {{ items?: {id?: string, identifier?: string, source?: string, name?: string, type?: string}[], preparedCaster?: boolean }} actor
+ */
+export function restRulesFor({ items = [], preparedCaster = false } = {}) {
+  const out = [];
+  for (const rule of REST_RULES) {
+    if (rule.match) {
+      const item = (items ?? []).find(i => matchRule(rule, i));
+      if (item) out.push({ key: rule.key, item: item.id ?? null });
+    } else if (rule.when?.preparedCaster && preparedCaster) out.push({ key: rule.key, item: null });
+  }
+  return out;
+}
+
+/** The omens: even → weal, odd → woe (PHB Cosmic Omen). */
+export const OMENS = Object.freeze(["weal", "woe"]);
+
+/** A d6 face → "weal" (even) | "woe" (odd); anything that is not a positive integer → null. */
+export function omenOf(face) {
+  const n = Number(face);
+  if (!Number.isInteger(n) || n < 1) return null;
+  return n % 2 === 0 ? "weal" : "woe";
+}
+
+/**
+ * Which omen a Cosmic Omen activity is: "Weal (Even)" → weal, "Woe (Odd)" → woe, by name
+ * (either word, as a whole word), else null (a renamed or third activity).
+ * @param {{ name?: string }} activity
+ */
+export function omenOfActivity(activity) {
+  const n = normalizeName(activity?.name);
+  if (/(?:^|\s)(?:weal|even)(?:\s|$)/.test(n)) return "weal";
+  if (/(?:^|\s)(?:woe|odd)(?:\s|$)/.test(n)) return "woe";
+  return null;
+}
+
+/** The activity of `omen` among a Cosmic Omen item's activities, or null. */
+export function omenActivityFor(activities, omen) {
+  if (!OMENS.includes(omen)) return null;
+  for (const a of activities ?? []) if (omenOfActivity(a) === omen) return a;
+  return null;
+}
+
+/**
+ * What a Combat HUD button of a Cosmic Omen shows with `omen` stored (0.7.2; live 2026-11-07: Talo's one
+ * button greyed, no badge). Argon draws one button per ITEM unless its `explodeItemActivities` setting
+ * splits the item (weapons only, by default — never a feat): an item button stands for both activities,
+ * so it is never greyed and its badge must NAME the omen (`named`); a per-activity button (`kind`, read
+ * off the activity's name) gets the plain badge when it is the omen's and is greyed when it is the
+ * other's; a third, unnamed activity is left alone. No omen → nothing.
+ * @param {{ omen?: string|null, perActivity?: boolean, kind?: string|null }} p
+ * @returns {{ badge: "weal"|"woe"|null, named: boolean, off: boolean }}
+ */
+export function omenButtonMark({ omen = null, perActivity = false, kind = null } = {}) {
+  if (!OMENS.includes(omen)) return { badge: null, named: false, off: false };
+  if (!perActivity) return { badge: omen, named: true, off: false };
+  if (kind === omen) return { badge: omen, named: false, off: false };
+  return { badge: null, named: false, off: OMENS.includes(kind) };
+}
+
+/* -------------------------------------------- */
 /*  Hit Dice                                    */
 /* -------------------------------------------- */
 
@@ -637,11 +743,14 @@ export function clampHeal(amount, faces, prof) {
 
 /* Hit Dice pools, the Battle Medic gate and the report row: core/hit-dice.mjs (combat-riders-26);
    the Battle Medic relay's claim: core/relay.mjs (combat-riders-41); the sheet's Prepared / All
-   spells view: core/spell-view.mjs (feedback EBGqNA).
+   spells view: core/spell-view.mjs (feedback EBGqNA); Empowered Spell's dice: core/empower.mjs
+   (feedback WUiaAA).
    Imported and re-exported by name (not `export … from`), so the import-graph gates see the edge
    (pentaryn-walls' barrel does the same). */
 import { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow } from "./core/hit-dice.mjs";
 import { relayClaimWinner, relayPrune, relayRequestId } from "./core/relay.mjs";
 import { SPELL_VIEWS, inPreparedView, spellViewCounts, spellViewOf } from "./core/spell-view.mjs";
+import { dieValue, empowerCandidates, empowerPlan, empowerRolls, minimumOf } from "./core/empower.mjs";
 export { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow, relayClaimWinner, relayPrune, relayRequestId };
 export { SPELL_VIEWS, inPreparedView, spellViewCounts, spellViewOf };
+export { dieValue, empowerCandidates, empowerPlan, empowerRolls, minimumOf };

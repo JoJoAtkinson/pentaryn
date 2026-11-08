@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "createChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "updateChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "combatTurnChange"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "deleteChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "renderChatMessageHTML"
+  },
+  {
+    "kind": "on",
+    "name": "ready"
+  }
+]

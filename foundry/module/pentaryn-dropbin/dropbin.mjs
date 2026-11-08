@@ -12,12 +12,13 @@
  *   socketlib-adapter.mjs ADAPTER: the player → GM ledger relay
  *   corpses.mjs          FEATURE: dead NPCs become lootable piles, the drawn eye, the GM HUD
  *   loot.mjs             FEATURE: the Loot all button
+ *   noloot.mjs           FEATURE: the GM's "Never loot this" on an item (pile menu, sheet header, API)
  *   i18n-shim.mjs        FEATURE: the DND5E.ItemRarity* keys itempilesdnd5e still reads
  *   ledger.mjs           FEATURE: capture, record, restore, the JSON mirror
  *   itempiles.mjs        FEATURE: attunement repair, container locks, directory filters, in-view rule
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
- * Lifecycle: module body → corpses, loot and the shim install; the `init` listener (settings) is
+ * Lifecycle: module body → corpses, loot, noloot and the shim install; the `init` listener (settings) is
  * registered; then the ledger and the Item Piles patches install — all synchronously, in this
  * order, so every listener keeps its place against other modules (golden/hooks.json). ready, in
  * registration order: the corpse eye migration; the ledger (capture hooks, then the API is built
@@ -36,12 +37,13 @@ import { makeLog } from "./lib/log.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
 import * as corpses from "./corpses.mjs";
 import * as loot from "./loot.mjs";
+import * as noloot from "./noloot.mjs";
 import * as shim from "./i18n-shim.mjs";
 import * as ledger from "./ledger.mjs";
 import * as itempiles from "./itempiles.mjs";
 
 /** Features in load order; `init` registers between the shim and the ledger. */
-const BEFORE_INIT = [corpses, loot, shim];
+const BEFORE_INIT = [corpses, loot, noloot, shim];
 const AFTER_INIT = [ledger, itempiles];
 
 const log = makeLog(MODULE);

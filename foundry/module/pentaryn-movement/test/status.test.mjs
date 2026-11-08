@@ -15,10 +15,11 @@ F.fire("setup");
 F.fire("ready");
 const api = game.pentaryn.movement;
 
-test("appended keys: sceneId, version, settings (key → scope), after the historic eight", () => {
+test("appended keys: sceneId, version, settings (key → scope), combatExempt, after the historic eight", () => {
   const s = api.status();
   assert.deepEqual(Object.keys(s), ["policy", "combatOnScene", "allowed", "reason", "wish", "ghost", "ownedOnTop",
-    "patched", "sceneId", "version", "settings"]);
+    "patched", "sceneId", "version", "settings", "combatExempt"]);
+  assert.deepEqual(s.combatExempt, []);
   assert.equal(s.sceneId, SCENE);
   assert.equal(s.version, VERSION);
   assert.deepEqual(s.settings, { ghostPolicy: "world", ghostPolicyLast: "world", ghost: "client", ownedOnTop: "client" });

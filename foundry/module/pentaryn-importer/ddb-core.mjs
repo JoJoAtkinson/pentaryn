@@ -17,10 +17,12 @@
  *
  * Snapshot (all `_source` data, plain JSON):
  *   actor   { id, name, ddb: boolean, importId, stamp, system, items: [item] }
- *   item    { _id, name, type, system, flags, source, sourceKey?, castKeys?, effects: [{ _id, name, disabled, flags, keys? }] }
+ *   item    { _id, name, type, system, flags, source, sourceKey?, castKeys?, effects: [effect] }
  *           (`source` is `_stats.compendiumSource`, or null; `sourceKey` the same uuid normalised by
  *           Foundry's parseUuid, `castKeys` each Cast activity's spell uuid normalised, by activity id —
- *           both optional, the raw uuid stands in; an effect's `keys` are its changes' keys)
+ *           both optional, the raw uuid stands in)
+ *   effect  { _id, name, disabled, transfer, duration: { value, units, expiry }, changes: [{ key, type, value, priority }], flags, keys? }
+ *           (`changes` are the effect's `system.changes` (core 14), `keys` their keys)
  *   lookups { spells: { [uuid]: { name, system } | null }, phbSpells: [{ _id, name }] | null }
  *
  * Ops (one per change; the adapter batches them):
@@ -29,6 +31,7 @@
  *   { op: "createEffects", itemId, data: [effectData] }           deterministic `_id`s, created with keepId
  *   { op: "updateActor",   data: { "<path>": value } }            merged with the correction stamp
  *   { op: "deleteItem",    itemId }                                batched into one deleteEmbeddedDocuments
+ *   { op: "updateEffects", itemId, data: [{ _id, "<path>": value }] }  one updateEmbeddedDocuments("ActiveEffect") per item
  *
  * Ported from the 2026-10-19 fix scripts (scripts/foundry/fixes/): 2026-10-19-ddb-pc-cleanup.js
  * (feedback tiDvFa), 2026-10-19-wand-cast-spell.mjs (ixcdvA), 2026-10-19-transmuters-stone.js (tNdOEx).
@@ -476,11 +479,109 @@ const transmutersStone = {
 };
 
 /* -------------------------------------------------------------------------------------------- */
+/*  Rule 6 — a one-round reaction effect that ends on the wrong creature's turn                  */
+/* -------------------------------------------------------------------------------------------- */
+
+/** The longest duration that still means "until the start of your next turn", by unit. */
+const ONE_ROUND = Object.freeze({ seconds: 6, rounds: 1, turns: 1 });
+
+/** True for a finite duration of at most one round: 6 seconds, 1 round or 1 turn (feedback HdWHWk). */
+export function isOneRound(duration) {
+  const value = Number(duration?.value);
+  const max = ONE_ROUND[duration?.units];
+  return Number.isFinite(value) && value > 0 && max !== undefined && value <= max;
+}
+
+/**
+ * The activities that apply an effect: those listing its id in their `effects`; when no activity on the
+ * item lists any effect, every activity (dnd5e applies the item's effects from each); when others are
+ * listed but not this one, none.
+ */
+export function applyingActivities(item, effect) {
+  const acts = Object.values(get(item, "system.activities") ?? {});
+  const listed = acts.filter(a => (a?.effects ?? []).some(e => e?._id === effect._id));
+  if (listed.length) return listed;
+  return acts.some(a => (a?.effects ?? []).length) ? [] : acts;
+}
+
+const isReaction = a => get(a, "activation.type") === "reaction";
+
+/**
+ * The item's applied (non-transfer) effects that last one round and expire on core's plain `turnStart`,
+ * when a reaction applies them — or the item is a spell: a spell's "until the start of your next turn"
+ * runs from the caster's turn whatever ddb-importer wrote as its activation (it imports Shield as an
+ * action). Core's `turnStart` keys on the combatant whose turn it was when the effect was created, so a
+ * reaction's effect ends at the *attacker's* next turn; dnd5e's `sourceStart` ends it at the start of the
+ * next turn of the actor who used the item.
+ */
+export function offTurnEffects(item) {
+  return (item.effects ?? []).filter(e => !e.transfer && get(e, "duration.expiry") === "turnStart" && isOneRound(e.duration)
+    && (item.type === "spell" || applyingActivities(item, e).some(isReaction)));
+}
+
+const reactionExpiry = {
+  id: "reaction-expiry",
+  label: "One-round reaction effects that end on the wrong turn",
+  doc: "An effect a reaction applies for one round (Shield's barrier, a Battle Master's Precision Attack) "
+    + "arrives with core's plain expiry `turnStart` and a 6-second duration. Core keys `turnStart` on whose "
+    + "turn it was when the effect was created — the attacker's — so the effect outlives the caster's own "
+    + "turn and sits on the sheet as Expired. It becomes dnd5e's `sourceStart` (ends at the start of the "
+    + "next turn of the actor who used the item; out of combat any time advance ends it) with the duration "
+    + "cleared — the shape newer ddb-importer Shield imports already have. Matches a one-round "
+    + "(6 s / 1 round) `turnStart` effect applied by a reaction activity, or on a spell; a longer duration "
+    + "(Feather Fall's minute) is never shortened.",
+  match: (actor, item) => offTurnEffects(item).length > 0,
+  plan(actor, item) {
+    const effects = offTurnEffects(item);
+    return {
+      changes: [{ op: "updateEffects", itemId: item._id,
+        data: effects.map(e => ({ _id: e._id, "duration.expiry": "sourceStart", "duration.value": null })),
+        summary: `${item.name}: ${effects.map(e => e.name).join(", ")} now ends at the start of the user's next turn (sourceStart)` }],
+      notes: [],
+    };
+  },
+};
+
+/* -------------------------------------------------------------------------------------------- */
+/*  Rule 7 — Large Form without a size change                                                     */
+/* -------------------------------------------------------------------------------------------- */
+
+const SIZE_PATH = "system.traits.size";
+/** ddb-importer's own LargeForm change (its ChangeHelper.overrideChange("lg", 25, "system.traits.size")). */
+export const LARGE_FORM_CHANGE = Object.freeze({ key: SIZE_PATH, value: "lg", type: "override", priority: 25, phase: "initial" });
+
+const isLargeForm = item => item.type === "feat"
+  && (get(item, "system.identifier") === "large-form" || headName(item.name) === "Large Form");
+
+/** The item's applied (non-transfer) effects with no change on the actor's size. */
+const sizelessEffects = item => (item.effects ?? []).filter(e => !e.transfer && !(e.changes ?? []).some(c => c?.key === SIZE_PATH));
+
+const largeFormSize = {
+  id: "large-form-size",
+  label: "Large Form without a size change",
+  doc: "The Goliath's Large Form effect arrives changing walking speed and Strength checks only, so the "
+    + "token stays Medium: dnd5e resizes a token from a change to system.traits.size (tokenSizeSync, on "
+    + "the active GM's client) and there is none. The effect gets ddb-importer's own change, "
+    + "system.traits.size override `lg` (priority 25), when it lacks one; its other changes are kept as "
+    + "they are. The effect's 10-minute duration ends it and dnd5e shrinks the token back (feedback rj3l7f).",
+  match: (actor, item) => isLargeForm(item) && sizelessEffects(item).length > 0,
+  plan(actor, item) {
+    const effects = sizelessEffects(item);
+    return {
+      changes: [{ op: "updateEffects", itemId: item._id,
+        data: effects.map(e => ({ _id: e._id, "system.changes": [...clone(e.changes ?? []), { ...LARGE_FORM_CHANGE }] })),
+        summary: `${item.name}: ${effects.map(e => e.name).join(", ")} sets size Large (the token grows)` }],
+      notes: [],
+    };
+  },
+};
+
+/* -------------------------------------------------------------------------------------------- */
 /*  The rule table and the planner                                                                */
 /* -------------------------------------------------------------------------------------------- */
 
 /** Every rule, in the order it runs. A new rule is a row here plus a table in test/ddb-core.test.mjs. */
-export const RULES = Object.freeze([apparelAsEquipment, freeCastInnate, castSelfUses, staleCastCache, transmutersStone]);
+export const RULES = Object.freeze([apparelAsEquipment, freeCastInnate, castSelfUses, staleCastCache, transmutersStone, reactionExpiry, largeFormSize]);
 
 /**
  * Plan the corrections for one snapshot. Pure: never mutates its inputs.

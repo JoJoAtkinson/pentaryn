@@ -23,6 +23,7 @@
     "combat-core.mjs": [
       "core/count.mjs",
       "core/damage.mjs",
+      "core/dice-input.mjs",
       "core/followups.mjs",
       "core/identity.mjs",
       "core/layout.mjs",
@@ -59,6 +60,7 @@
       "core/turn.mjs",
       "core/turnflow.mjs"
     ],
+    "core/dice-input.mjs": [],
     "core/followups.mjs": [
       "core/turn.mjs",
       "core/weapons.mjs"
@@ -107,9 +109,11 @@
       "turnflow/drawers.mjs",
       "turnflow/effects.mjs",
       "turnflow/helper-token.mjs",
+      "turnflow/hp-math.mjs",
       "turnflow/manual-dice.mjs",
       "turnflow/movement.mjs",
-      "turnflow/portrait.mjs"
+      "turnflow/portrait.mjs",
+      "turnflow/roll-manually.mjs"
     ],
     "hud/bars.mjs": [
       "argon.mjs",
@@ -253,6 +257,14 @@
       "settings.mjs",
       "shapes.mjs"
     ],
+    "turnflow/hp-math.mjs": [
+      "combat-core.mjs",
+      "context.mjs",
+      "lib/api.mjs",
+      "lib/log.mjs",
+      "lib/patch.mjs",
+      "settings.mjs"
+    ],
     "turnflow/manual-dice.mjs": [
       "combat-core.mjs",
       "context.mjs",
@@ -271,11 +283,22 @@
       "lib/log.mjs",
       "lib/patch.mjs",
       "settings.mjs"
+    ],
+    "turnflow/roll-manually.mjs": [
+      "combat-core.mjs",
+      "context.mjs",
+      "lib/api.mjs",
+      "lib/log.mjs",
+      "lib/patch.mjs"
     ]
   },
   "order": [
     "hud.mjs",
-    "turnflow/portrait.mjs",
+    "turnflow/roll-manually.mjs",
+    "lib/patch.mjs",
+    "lib/log.mjs",
+    "lib/api.mjs",
+    "context.mjs",
     "settings.mjs",
     "lib/settings.mjs",
     "combat-core.mjs",
@@ -289,15 +312,15 @@
     "core/multiattack.mjs",
     "core/layout.mjs",
     "core/followups.mjs",
+    "core/dice-input.mjs",
     "core/damage.mjs",
     "core/count.mjs",
-    "lib/patch.mjs",
-    "lib/log.mjs",
-    "context.mjs",
     "lib/hooks.mjs",
+    "turnflow/portrait.mjs",
     "turnflow/movement.mjs",
     "turnflow/manual-dice.mjs",
     "dialog-adapter.mjs",
+    "turnflow/hp-math.mjs",
     "turnflow/helper-token.mjs",
     "shapes.mjs",
     "turnflow/effects.mjs",
@@ -326,7 +349,6 @@
     "api.mjs",
     "lib/resolve.mjs",
     "lib/errors.mjs",
-    "lib/api.mjs",
     "api-manifest.mjs"
   ]
 }

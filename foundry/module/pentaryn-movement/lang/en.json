@@ -11,7 +11,15 @@
         "ready": "Click to switch it on. Click again to switch it off.",
         "combat": "It switches off while a fight is running on this map, and you can switch it back on when the fight ends.",
         "off": "The GM has switched it off for now.",
-        "vision": "Careful: walking through a wall means you see what's on the other side."
+        "vision": "Careful: walking through a wall means you see what's on the other side.",
+        "exempt": "A fight is running: only your incorporeal creatures (Incorporeal Passage, Incorporeal Movement, Ethereal) pass through walls while it is on. Your other tokens walk normally until the fight ends."
+      }
+    },
+    "hud": {
+      "combat": {
+        "on": "Ghost in combat: ON for this creature (it may move through walls during a fight). Click to turn off.",
+        "off": "Ghost in combat: off for this creature. Click to let it move through walls during a fight.",
+        "feat": "Ghost in combat: ON for this creature, granted by its {feat}. Nothing to switch."
       }
     },
     "gm": {
@@ -35,7 +43,8 @@
       },
       "back": {
         "combat": "The fight is over: ghost movement is available again. Click the ghost button under the Ruler to use it.",
-        "off": "The GM allows ghost movement again. Click the ghost button under the Ruler to use it."
+        "off": "The GM allows ghost movement again. Click the ghost button under the Ruler to use it.",
+        "exempt": "Your incorporeal creature may move through walls during the fight. Click the ghost button under the Ruler to use it."
       }
     },
     "settings": {

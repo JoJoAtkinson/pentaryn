@@ -8,7 +8,7 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.5.1";                          // === module.json version (core.test pins it)
+export const VERSION = "0.6.2";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";
@@ -57,6 +57,21 @@ export const MULTIPLIER_LABELS = Object.freeze({ 0: "×0", 0.25: "×¼", 0.5: "�
 
 /** How far back the GM's save matching and api.latestResolution look in the chat log (messages). */
 export const RECENT_MESSAGES = 60;
+
+/** Part I: how long a player's Apply waits for the active GM to land the rows they do not own (ms). */
+export const RELAY_TIMEOUT_MS = 8000;
+
+/** Part I: how long after a damage or healing card is posted its author's new targets still fill it (ms). */
+export const LATE_TARGET_WINDOW_MS = 10 * 60_000;
+
+/**
+ * Part I: the dnd5e 6 message types that carry a `<damage-application>` tray. dnd5e types a healing
+ * roll's card `healing` (`HealingMessageData`, the same damage-card template), not `damage`; 0.6.0 and
+ * 0.6.1 asked for `damage` alone, so no healing card was wired, followed or relayed (playtest 2026-11-07).
+ */
+export const APPLY_CARD_TYPES = Object.freeze(["damage", "healing"]);
+/** Is this message type a damage or healing card (one Apply from the card acts on)? */
+export const isApplyCard = type => APPLY_CARD_TYPES.includes(type);
 
 /**
  * Is this token a creature that can be caught in an area?
@@ -135,15 +150,19 @@ export function allApplied(rows) {
 
 /**
  * Which manual row does a save-roll message answer?
- * res:  the resolution · info: { ability, actorUuid, actorId, tokenId, requestId, created }
+ * res:  the resolution · info: { ability, actorUuid, actorId, tokenId, requestId, usageId, created }
  * Returns the row index or -1. A row already holding a save is never overwritten here.
+ * J2: a save threaded under the spell's own usage card (`info.usageId === res.usage`, the card's
+ * Saving Throw button) answers whenever it was rolled, before or after the damage; any other save
+ * must be newer than the damage roll. The ability must match either way.
  */
 export function matchSave(res, info, { createdAfter = 0 } = {}) {
   if (!res || res.superseded) return -1;
   const viaRequest = !!info.requestId && info.requestId === res.request;
+  const viaUsage = !!info.usageId && info.usageId === res.usage;
   if (!viaRequest) {
     if (info.ability !== res.ability) return -1;
-    if ((info.created ?? 0) < createdAfter) return -1;
+    if (!viaUsage && (info.created ?? 0) < createdAfter) return -1;
   }
   return res.rows.findIndex(r => r.kind === "manual" && !r.save && (
     (info.actorUuid && r.actor === info.actorUuid)
@@ -162,6 +181,166 @@ export function shouldAutoDamage(roll) {
   if (roll.isCritical) return true;
   const known = Number.isFinite(roll.target);
   return !(known && roll.total < roll.target);
+}
+
+/**
+ * J1: should using a save activity roll its damage at once (the sibling of shouldAutoDamage)?
+ * Only a save activity with damage parts and at least one recorded target; never one that places
+ * an area (its damage waits for the area, Part B lists who is inside), and a narrated use with no
+ * target posts nothing extra.
+ * @param {{type?: string, damageParts?: number, targets?: number, template?: string|null}} use
+ */
+export function shouldAutoDamageOnUse({ type = null, damageParts = 0, targets = 0, template = null } = {}) {
+  if (type !== "save") return false;
+  if (!(Number(damageParts) > 0) || !(Number(targets) > 0)) return false;
+  return !template;
+}
+
+/** The rolled total of a card's damage descriptions (`[{ value, type }]`); 0 for none. */
+export function damageTotal(damages) {
+  return (damages ?? []).reduce((n, d) => n + (Number(d?.value) || 0), 0);
+}
+
+/**
+ * B5: the same damage descriptions re-totalled to `amount` (a total the player reported from real
+ * dice), each type keeping its share of the roll. Whole numbers that add up to `amount` exactly
+ * (largest remainder); a roll with no total gives the whole amount to its first part. `amount`
+ * null, undefined or not a finite number ≥ 0 → the input, unchanged. Never mutates.
+ * @param {{value: number, type: string, properties?: *}[]} damages
+ * @param {number|null|undefined} amount
+ */
+export function scaleDamages(damages, amount) {
+  const list = damages ?? [];
+  if (amount === null || amount === undefined || !Number.isFinite(Number(amount)) || Number(amount) < 0) return list;
+  const target = Math.floor(Number(amount));
+  const total = damageTotal(list);
+  if (!list.length) return list;
+  if (total <= 0) return list.map((d, i) => ({ ...d, value: i === 0 ? target : 0 }));
+  const exact = list.map(d => (Math.max(0, Number(d.value) || 0) * target) / total);
+  const floors = exact.map(v => Math.floor(v));
+  let left = target - floors.reduce((n, v) => n + v, 0);
+  const order = exact.map((v, i) => [v - floors[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
+  for (const [, i] of order) { if (left <= 0) break; floors[i] += 1; left -= 1; }
+  return list.map((d, i) => ({ ...d, value: floors[i] }));
+}
+
+/**
+ * B5: what a typed amount means for a row. `null` when the field is blank, not a number, negative,
+ * or says the rolled total again (no override); else the whole number typed.
+ * @param {string|number|null|undefined} raw   the field's value
+ * @param {number} total                       the card's rolled total
+ */
+export function rowAmount(raw, total) {
+  if (raw === null || raw === undefined) return null;
+  const text = String(raw).trim();
+  if (text === "") return null;
+  const n = Number(text);
+  if (!Number.isFinite(n) || n < 0) return null;
+  const whole = Math.floor(n);
+  return whole === Number(total) ? null : whole;
+}
+
+/**
+ * Part I: the rows an Apply press lands here and the rows the active GM lands for this user.
+ * A row with a 0 multiplier applies nothing and goes nowhere. Owned rows are local; the rest are
+ * relayed (a GM owns everything, so a GM relays nothing).
+ * @param {{uuid: string, owner: boolean, multiplier: number, amount?: number|null}[]} rows
+ * @returns {{ local: object[], relay: object[] }}
+ */
+export function splitApplyRows(rows) {
+  const out = { local: [], relay: [] };
+  for (const r of rows ?? []) {
+    if (!r?.uuid || !(Number(r.multiplier) > 0)) continue;
+    (r.owner ? out.local : out.relay).push(r);
+  }
+  return out;
+}
+
+/**
+ * Part I (late targets): the one damage or healing card (`isApplyCard`) this user's new targets fill — the
+ * newest card they authored within `windowMs` that recorded no targets at use time (or that these late
+ * targets already filled, `lateTargets`) and that nobody has applied yet. Plain descriptions:
+ * `{ id, type, author, timestamp, targets, lateTargets, applied }`. Null when there is none.
+ * @param {object[]} messages   oldest first, as the chat log holds them
+ * @param {{ userId: string, now: number, windowMs?: number }} who
+ */
+export function lateTargetCard(messages, { userId, now, windowMs = LATE_TARGET_WINDOW_MS } = {}) {
+  if (!userId) return null;
+  for (let i = (messages ?? []).length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m || !isApplyCard(m.type) || m.author !== userId || m.applied) continue;
+    if (!(Number(m.targets) === 0 || m.lateTargets)) continue;
+    if ((now ?? 0) - (m.timestamp ?? 0) > windowMs) continue;
+    return m.id;
+  }
+  return null;
+}
+
+/**
+ * Part I: which rows an Apply press on dnd5e's tray lands. The rows dnd5e lists (`listed`: the uuids
+ * of its `<option>`s), always — what the tray shows is what Apply hits. The one fallback: dnd5e lists
+ * nobody (the card recorded no targets and nothing is selected) and a player holds targets, then those
+ * targets are the rows (`late: true`). A GM's habit is select, so a GM gets the empty list and nothing
+ * lands; a card that recorded targets never falls back (the user switched to selected and selected
+ * nobody: nothing lands, as dnd5e).
+ * @param {{ listed?: string[], recorded?: number, targeted?: string[], isGM?: boolean }} o
+ * @returns {{ uuids: string[], late: boolean }}
+ */
+export function applyTargets({ listed = [], recorded = 0, targeted = [], isGM = false } = {}) {
+  const shown = (listed ?? []).filter(Boolean);
+  if (shown.length || isGM || Number(recorded) > 0 || !(targeted ?? []).length) return { uuids: shown, late: false };
+  return { uuids: targeted.filter(Boolean), late: true };
+}
+
+/**
+ * Part I: the per-target apply options the relay carries (dnd5e's `DamageApplicationOptions` from the
+ * sender's pill menu) as plain data for the socket: `ignore` maps each change (immunity, resistance,
+ * vulnerability, modification) to `true` (every type) or the types ignored; `downgrade` is the immunity
+ * types downgraded to resistance. Sets become arrays; nothing set → `{}` (the row carries no options).
+ * @param {{ ignore?: Record<string, true|Set<string>|string[]>, downgrade?: Set<string>|string[] }} [options]
+ * @returns {{ ignore?: Record<string, true|string[]>, downgrade?: string[] }}
+ */
+export function packApplyOptions(options) {
+  const out = {};
+  const ignore = options?.ignore;
+  if (ignore && typeof ignore === "object") {
+    const packed = {};
+    for (const [change, v] of Object.entries(ignore)) {
+      if (v === true) packed[change] = true;
+      else {
+        const list = v instanceof Set ? [...v] : Array.isArray(v) ? v : [];
+        if (list.length) packed[change] = [...list];
+      }
+    }
+    if (Object.keys(packed).length) out.ignore = packed;
+  }
+  const dg = options?.downgrade;
+  const list = dg instanceof Set ? [...dg] : Array.isArray(dg) ? dg : [];
+  if (list.length) out.downgrade = [...list];
+  return out;
+}
+
+/**
+ * Part I: the inverse of `packApplyOptions` on the GM: arrays back to the Sets dnd5e's
+ * `calculateDamage` reads; anything that is not `true`, an array of strings or a string is dropped.
+ * @param {*} wire   the row's `options` from the request (untrusted)
+ * @returns {{ ignore?: Record<string, true|Set<string>>, downgrade?: Set<string> }}
+ */
+export function unpackApplyOptions(wire) {
+  const out = {};
+  const strings = v => new Set((Array.isArray(v) ? v : []).filter(t => typeof t === "string"));
+  const ig = wire?.ignore;
+  if (ig && typeof ig === "object" && !Array.isArray(ig)) {
+    const ignore = {};
+    for (const [change, v] of Object.entries(ig)) {
+      if (v === true) ignore[change] = true;
+      else { const set = strings(v); if (set.size) ignore[change] = set; }
+    }
+    if (Object.keys(ignore).length) out.ignore = ignore;
+  }
+  const downgrade = strings(wire?.downgrade);
+  if (downgrade.size) out.downgrade = downgrade;
+  return out;
 }
 
 /** Pick the newest of several candidate regions: by createdTime, else the last in scene order. */
@@ -476,7 +655,7 @@ export function summariseResolution(res) {
     rows: rows.map(r => ({
       id: r.id, name: r.name, kind: r.kind, apply: !!r.apply,
       save: r.save ? { total: r.save.total ?? null, success: r.save.success ?? null } : null,
-      multiplier: r.multiplier ?? null, applied: !!r.applied, hp: r.hp ?? null, caster: !!r.caster, protected: !!r.protected,
+      multiplier: r.multiplier ?? null, amount: r.amount ?? null, applied: !!r.applied, hp: r.hp ?? null, caster: !!r.caster, protected: !!r.protected,
     })),
     careful: res.careful ?? null,
     playerStatus: playerStatus(res),

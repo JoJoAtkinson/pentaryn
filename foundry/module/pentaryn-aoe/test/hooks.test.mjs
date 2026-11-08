@@ -1,5 +1,5 @@
 // The hook manifest: what aoe registers, in order, pinned against golden/hooks.json. Order WITHIN a
-// name is behaviour (three dnd5e.renderChatMessage decorators, two createChatMessage jobs, and two
+// name is behaviour (four dnd5e.renderChatMessage decorators, two createChatMessage jobs, and three
 // dnd5e.postUseActivity listeners where Careful Spell's must run before refund's literal
 // false stops the rest), and S5 keeps today's FEATURES order, so the full order is pinned.
 import { test } from "node:test";
@@ -38,17 +38,18 @@ test("registration manifest (init + setup + ready as the active GM) equals golde
   pinJSON("hooks", golden, import.meta.url);
 });
 
-test("setup registers the feature hooks in Part order: areas, token areas, resolve, tray, attacks, effects, refund, aim", () => {
+test("setup registers the feature hooks in Part order: areas, token areas, resolve, tray, attacks, effects, refund, aim, escape, walls, apply", () => {
   assert.deepEqual(atSetup.map(h => `${h.kind} ${h.name}`), [
     "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken", "on preMoveToken",
     "on dnd5e.renderChatMessage", "on deleteActiveEffect", "on canvasReady",
     "on dnd5e.createMeasuredTemplate", "on renderTokenHUD",
     "on dnd5e.postUseActivity", "on createChatMessage", "on preDeleteChatMessage", "on deleteChatMessage", "on updateChatMessage",
     "on dnd5e.renderChatMessage",
-    "on dnd5e.postRollAttack",
+    "on dnd5e.postRollAttack", "on dnd5e.postUseActivity",
     "on createChatMessage", "on dnd5e.renderChatMessage", "on preCreateActiveEffect",
     "on dnd5e.postUseActivity",
     "on dnd5e.preCreateMeasuredTemplate",
+    "on dnd5e.renderChatMessage", "on targetToken", "on deleteChatMessage",
   ]);
 });
 
@@ -60,14 +61,15 @@ test("[declared] aoe-edge-3 ready (active GM, no ui.ARGON) adds no hook (the can
 test("after the lifecycle, every on() listener is live once", () => {
   const live = F.listeners();
   for (const name of ["init", "setup", "ready"]) assert.equal(live[name], undefined, name);
-  assert.equal(live["dnd5e.renderChatMessage"], 3);
+  assert.equal(live["dnd5e.renderChatMessage"], 4);
   assert.equal(live.createChatMessage, 2);
-  assert.equal(live["dnd5e.postUseActivity"], 2);
+  assert.equal(live["dnd5e.postUseActivity"], 3);
+  assert.equal(live.targetToken, 2);
 });
 
-test("the Careful arm runs before refund's veto on dnd5e.postUseActivity", () => {
+test("the Careful arm runs before refund's veto on dnd5e.postUseActivity; J1's damage roll sits between them", () => {
   const ids = S.hooks.hookIds().filter(h => h.name === "dnd5e.postUseActivity").map(h => h.id);
-  assert.equal(ids.length, 2);
-  assert.ok(ids[0] < ids[1]);
+  assert.equal(ids.length, 3);
+  assert.ok(ids[0] < ids[1] && ids[1] < ids[2]);
   assert.equal(MODULE, "pentaryn-aoe");
 });

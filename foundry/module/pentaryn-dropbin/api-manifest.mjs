@@ -18,7 +18,7 @@ const N = { name: "n", type: "number|string", doc: "the ledger number" };
 
 // What a corpse conversion writes (dropbin-EXT-2): sync runs either one, revive runs sync.
 const CORPSE_FLAGS = ["flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership", "flags.pentaryn-dropbin.dead"];
-const TO_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Dead)", "flags.core.overlay"];
+const TO_CORPSE_WRITES = ["Item Piles pile flags", "flags.item-piles.data.overrideItemFilters", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Dead)", "flags.core.overlay"];
 const FROM_CORPSE_WRITES = ["Item Piles pile flags", ...CORPSE_FLAGS, "delta.ownership", "actor ownership (linked)", "sight.enabled", "ActiveEffect (Lootable, removed)"];
 const SYNC_WRITES = [...new Set([...TO_CORPSE_WRITES, ...FROM_CORPSE_WRITES])];
 
@@ -105,10 +105,20 @@ export const MANIFEST = Object.freeze({
       params: [{ name: "ref", kind: "token", type: "Token|TokenDocument|Actor|uuid|id|exact name", resolve: false,
         doc: "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId). By name, a token wins; several tokens of that name throw AMBIGUOUS, pass the token uuid/id or the actor" },
         { name: "opts", type: "{ sceneId? }", optional: true, doc: "sceneId: the one scene to look in (\"current\" = this client's canvas); default every scene" }],
-      returns: "{ token, actor, dead, corpse, noLoot, pile, saved } | { actor, dead, noLoot, pile, corpses: [...] }",
+      returns: "{ token, actor, dead, summoned, corpse, noLoot, pile, saved } | { actor, dead, summoned, noLoot, pile, corpses: [...] }",
       gm: false, writes: false, since: "0.2.2",
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
-      doc: "Read-only, plain JSON: whether this token (or this actor's tokens) is a corpse we made, its saved sight and pre-death ownership, noLoot, and Item Piles' flag data.",
+      doc: "Read-only, plain JSON: whether this token (or this actor's tokens) is a corpse we made, its saved sight and pre-death ownership, noLoot, whether dnd5e summoned it (never a corpse), and Item Piles' flag data.",
+    },
+    {
+      path: "noLoot",
+      params: [{ name: "ref", kind: "item", type: "Item|uuid|id|exact name",
+        doc: "the Item: a document, its uuid (an actor's item: Actor.<id>.Item.<id>), or a world item's id or exact name" },
+        { name: "opts", type: "{ on? }", optional: true, doc: "on: true marks, false unmarks; omitted flips" }],
+      returns: '{ ok: true, uuid, noLoot, filterWritten } | { ok: false, code: "NOT_GM" | "BAD_ARGS" | "NOT_FOUND" | "AMBIGUOUS", reason }',
+      gm: true, writes: true, since: "0.3.0",
+      sideEffects: ["flags.pentaryn-dropbin.noLoot (Item)", "flags.item-piles.data.overrideItemFilters (a corpse pile made before 0.3.0)"],
+      doc: "GM: 'Never loot this' on an item — it stays on the actor but never shows in a corpse pile (the pile menu and the item sheet header call this).",
     },
     {
       path: "selftest", params: [], returns: "{ ok, checks: [{ label, ok, detail }] }", gm: false, writes: false, since: "0.2.2",
@@ -117,7 +127,8 @@ export const MANIFEST = Object.freeze({
   ],
   flags: {
     writes: ["flags.pentaryn-dropbin.corpse", "flags.pentaryn-dropbin.sight", "flags.pentaryn-dropbin.ownership",
-      "flags.pentaryn-dropbin.dead", "flags.item-piles.data.lockedSound", "flags.item-piles.data.enabled"],
-    reads: ["flags.item-piles.data"],
+      "flags.pentaryn-dropbin.dead", "flags.pentaryn-dropbin.noLoot", "flags.item-piles.data.lockedSound", "flags.item-piles.data.enabled",
+      "flags.item-piles.data.overrideItemFilters"],
+    reads: ["flags.item-piles.data", "flags.dnd5e.summon"],
   },
 });

@@ -6,9 +6,9 @@ on a body is wrong, a locked chest opened (or did not), or you are changing or c
 the migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-dropbin.md`
 
 Four jobs, one module: **the ledger** (every item that leaves a character, with its full source, so
-it can be handed back), **lootable corpses**, the **Loot all** button, and the **Item Piles
-patches** the world needs (attunement repair, container locks, directory filters, the in-view rule,
-the dnd5e 6 rarity keys).
+it can be handed back), **lootable corpses** (with the GM's *Never loot this* on an item), the
+**Loot all** button, and the **Item Piles patches** the world needs (attunement repair, container
+locks, directory filters, the in-view rule, the dnd5e 6 rarity keys).
 
 ## What the player sees
 
@@ -18,6 +18,28 @@ the dnd5e 6 rarity keys).
   back into a creature. Set `flags.pentaryn-dropbin.noLoot = true` on a token or actor to keep a
   0-HP NPC alive and unlootable (knocked out for questioning). A linked NPC's tokens on every
   scene convert, not only on the scene the GM is viewing (dropbin-EC-5).
+- **A summon is never a corpse.** Anything dnd5e's summoning placed (`flags.dnd5e.summon` on the
+  actor: Summon Elemental's spirit, a familiar, a pentaryn-creatures library copy) is left alone at
+  0 HP: no pile, no Dead overlay, no eye. The 2024 rules make it disappear, and `pentaryn-riders`
+  removes the token and ends the concentration (E3, 2026-11-07). `inspect` reports `summoned`.
+- **Never loot this (GM).** A monster attack dressed as a weapon (the Unbound Ancient's *Dread
+  Blade*: `weapon / martialM`, weight 0, price 0, a Monster Manual copy) slips past the
+  natural-weapon filter. The GM **right-clicks the item's row in the loot window** and picks *Never
+  loot this*; the row is gone for everyone at once, the item stays on the actor. The same toggle sits
+  in the item sheet's header controls (the ⋯ menu; not on a character's gear) to mark a creature
+  before it dies or a world item every copy inherits from, and *Lootable again* undoes either. Players
+  see no menu, no prompt and no toast. How it hides: `flags.pentaryn-dropbin.noLoot = true` on the
+  Item, and every corpse pile carries the world's item filters plus a row on that flag as its Item
+  Piles `overrideItemFilters`, so Item Piles itself leaves the item out of the window, out of *Loot
+  all* and out of "is the pile empty" (the eye). A corpse made before 0.3.0 has no such row; the
+  first toggle on one of its items writes it. Because it is a filter, the GM's own loot window hides
+  the item too: unmark it from the item sheet (HUD → *Open character sheet (GM)* → the item) or
+  with `noLoot(item, { on: false })`.
+- **The natural-weapon filter itself** is the world setting `item-piles.itemFilters`, which nothing
+  migrates: a world made on dnd5e 2.x kept `system.weaponType`, a path dnd5e 6 does not have, and
+  every Rend and Bite showed as loot (A1, fixed by hand 2026-11-07). The GM's client warns once at
+  `ready` with the one line that resets it, and `selftest()` carries the same check with the fix in
+  its detail. The module never writes that setting.
 - **On the body:** the Dead skull as core's **full-body overlay**, and an **eye badge** in the
   token's top-right corner while the body still holds something. Every client draws the eye on the
   token itself; it is not a document. It disappears when the body is emptied or revived, and hides
@@ -95,11 +117,12 @@ published at `ready`. Ask it: `game.pentaryn.dropbin.describe()` (offline: `test
 | `restoreResult(n, target?)` | yes | Item on the actor | `{ ok: true, item, actor }` or `{ ok: false, reason: "not-gm" \| "no-entry" \| "no-actor" \| "not-created" }`, no toasts |
 | `export()` | yes | the mirror | `true`, or `false` for a player or a failed upload |
 | `clear()` | yes | `log`, the mirror | `false` unless confirmed; **keeps the counter** |
-| `inspect(ref, { sceneId })` | — | — | a token's (or an actor's tokens') corpse state: `dead, corpse, noLoot, pile, saved {sight, ownership}` |
+| `inspect(ref, { sceneId })` | — | — | a token's (or an actor's tokens') corpse state: `dead, summoned, corpse, noLoot, pile, saved {sight, ownership}` |
+| `noLoot(ref, { on })` | yes | item `noLoot` flag; a pre-0.3.0 corpse pile's filters | `{ ok: true, uuid, noLoot, filterWritten }` or `{ ok: false, code: "NOT_GM" \| "BAD_ARGS" \| "NOT_FOUND" \| "AMBIGUOUS", reason }`; `ref` is an Item, its uuid (`Actor.<id>.Item.<id>`), or a world item's id or exact name; no `on` flips |
 | `corpses.sync/toCorpse/fromCorpse/revive/migrateLegacyEyes` | yes | see Data written | legacy; run on the active GM; without Item Piles, or given the wrong document (`sync` an Actor, the others a TokenDocument), one console warning and nothing done |
 | `corpses.isDead/paintEye/paintAllEyes` | — | — | legacy |
 | `loot.install(app)` / `loot.refreshAll()` / `loot.recipientFor(app)` | — | — | legacy |
-| `selftest()` | — | — | `{ ok, checks }` |
+| `selftest()` | — | — | `{ ok, checks }`; one check is the world's natural-weapon filter path (A1), its `detail.fix` the one-line reset |
 
 `target` is an Actor (a synthetic token actor too), a TokenDocument (its actor), an actor id or
 exact name, or an Actor/Token UUID; with no target, the actor the item left — an unlinked token's
@@ -118,7 +141,9 @@ itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 | world settings `log`, `counter` | the ledger | drops: the active GM; deletes: a GM client (players relay through socketlib) |
 | `Data/assets/drop-bin/drop-log.json` | the mirror, ~2 s after a burst; `export()` at once | the recording GM |
 | token `flags.pentaryn-dropbin.corpse`, `.sight`, `.ownership` | our corpse, its sight and pre-death delta ownership | active GM |
-| token `delta.ownership`, `sight.enabled`; Item Piles pile flags | while a corpse | active GM |
+| token `delta.ownership`, `sight.enabled`; Item Piles pile flags (`overrideItemFilters`: the world's rows + the `noLoot` row) | while a corpse | active GM |
+| Item `flags.pentaryn-dropbin.noLoot` (true, or deleted) | the GM's *Never loot this* / *Lootable again* | the GM who clicked (any GM tab) |
+| a pre-0.3.0 corpse pile's `flags.item-piles.data.overrideItemFilters` | written by the first toggle on one of its items | the GM who clicked |
 | linked NPC actor `flags.pentaryn-dropbin.corpse`, `.ownership`, `.dead`; `ownership.default` | a linked corpse: its pre-death map, players OBSERVER, whether its Dead is ours | active GM |
 | linked NPC actor `flags.item-piles.data.enabled` (false), its Dead removed | when its last corpse token (or that scene) goes: the pile Item Piles wrote on the actor turned off, and Dead only if dropbin added it | active GM |
 | actor/token `flags.item-piles.data.lockedSound`; pile `sight.enabled`; Note `global` | ready backfills | active GM |
@@ -128,12 +153,14 @@ itemName, itemType, quantity, sceneId, sceneName, x, y, pileUuid, item}`.
 ## Flags other modules read
 
 n/a — no other module reads `flags.pentaryn-dropbin.*`. This module reads `flags.item-piles.data`
-(Item Piles' own; `api-manifest.mjs` `flags.reads`) and its own `noLoot`, set by the GM.
+(Item Piles' own) and `flags.dnd5e.summon` (dnd5e's summoning stamp, also written by
+pentaryn-creatures on its library copies; `api-manifest.mjs` `flags.reads`), and its own `noLoot` on
+tokens, actors and items, set by the GM.
 
 ## Events
 
 n/a — emits none of its own beyond the kit's `pentaryn-dropbin.ready` (api) and `pentaryn.ready`.
-Listens to the 33 load-time and 6 post-ready hooks pinned in `test/golden/hooks.json` and
+Listens to the load-time and post-ready hooks pinned in `test/golden/hooks.json` and
 `test/golden/hooks-after-ready.json`.
 
 ## Patches and adjustments
@@ -151,7 +178,11 @@ Listens to the 33 load-time and 6 post-ready hooks pinned in `test/golden/hooks.
 - Loot all reads Item Piles' private Svelte state (`app.svelte.appShell.$$.ctx`) to follow *Change*
 - Loot all finds the loot window's footer, its Close Lid / Leave buttons and the native Take All
   icon through `piles.mjs`'s frozen `SELECTORS` table; re-check it after an Item Piles update
-- corpse piles: `turnTokensIntoItemPiles` / `revertTokensFromItemPiles`
+- corpse piles: `turnTokensIntoItemPiles` / `revertTokensFromItemPiles`, with `overrideItemFilters`
+  built from `ITEM_FILTERS` (the world setting as Item Piles reads it)
+- Never loot this: Item Piles' `item-piles-renderPileItem` hook `(element, item)` stamps the GM's rows
+  (`data-pd-item-uuid`); a core `ContextMenu` on the loot window's `SELECTORS.itemRow` rows; dnd5e's
+  `getHeaderControlsItemSheet5e` for the sheet control
 - `i18n-shim.mjs`: `DND5E.ItemRarity*` / `DND5E.Unknown` added at `i18nInit` when missing
 
 Rows in `foundry/adjustments.yml`: `itempiles-corpses`, `itempiles-rarity-i18n`; the socketlib relay
@@ -187,6 +218,9 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 - **Ready backfills** (lock sounds, in-view rule): the active GM user — every tab on that account
   (W2-D1); the writes are idempotent.
 - **Locks, directory filters, the eye, Loot all:** each client, for itself.
+- **Never loot this:** the GM who clicks writes the item flag (and, on a pre-0.3.0 corpse, the pile's
+  filters) from their own tab; the hide is Item Piles' filter, so every open loot window follows.
+  The headless GM is not involved.
 
 ## Extending
 
@@ -208,6 +242,13 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 - The corpse eye is the module's own asset, `assets/icon-eye.webp` (loaded as
   `modules/pentaryn-dropbin/assets/icon-eye.webp`): never point it at a world's `assets/` folder,
   the module runs in any dnd5e world (dropbin-EXT-8).
+- A corpse pile's `overrideItemFilters` REPLACES Item Piles' world list (that is how the per-pile
+  override works), so the world's rows are copied in at death. A filter changed in the world setting
+  reaches only corpses made after the change; the noLoot row is always there.
+- The item `noLoot` flag must be boolean `true`: Item Piles' filter compares `=== true` after reading
+  `"true"` from its row. Unmarking deletes the key rather than writing `false`.
+- `selftest().ok` is false while the world's natural-weapon filter path is stale (A1); the check's
+  `detail.fix` is the line to run in the GM console. The module never writes that setting.
 
 ## Files
 
@@ -218,7 +259,7 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
 | `ledger-core.mjs`, `loot-core.mjs` | pure ledger rules; pure Loot all / eye rules (`MODULE` lives here) |
 | `settings.mjs` | SETTINGS store rows, readLog, the serialised appendLedger |
 | `piles.mjs`, `socketlib-adapter.mjs` | adapters: Item Piles, socketlib |
-| `ledger.mjs`, `itempiles.mjs`, `corpses.mjs`, `loot.mjs`, `i18n-shim.mjs` | features |
+| `ledger.mjs`, `itempiles.mjs`, `corpses.mjs`, `loot.mjs`, `noloot.mjs`, `i18n-shim.mjs` | features (`noloot.mjs`: the GM's *Never loot this* surfaces) |
 | `api-manifest.mjs`, `api.mjs` | API rows; implementations, inspect, selftest |
 | `assets/icon-eye.webp` | the corpse eye badge's texture, shipped with the module |
 | `lang/en.json`, `lib/` | strings; vendored kit |

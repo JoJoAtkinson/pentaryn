@@ -93,6 +93,9 @@ export function buildApiFor(ctx) {
     summonActor: (opts, qctx) => x.summonActor(opts, qctx),
     fileLibrary: (opts, qctx) => x.fileLibrary(opts, qctx),
     library: (actor) => x.library(actor),
+    // the kit resolved `ref` to a TokenDocument (opts.sceneId narrows it); disguise names repeat, so pass an id or uuid
+    dormant: (doc, opts) => x.arm(doc, opts),
+    wake: (doc, opts) => x.wake(doc, opts),
     core,
   }, {
     members: {

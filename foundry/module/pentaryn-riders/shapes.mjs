@@ -6,8 +6,8 @@
  */
 
 import {
-  MODULE, RULES, carriedAbilities, hdPoolsFrom, hdSummaryOf, matchRule, normalizeName, pickRestore, pickSpend,
-  resolveTypes, ruleByKey,
+  EMPOWERED_SPELL, MODULE, OMENS, RULES, carriedAbilities, hdPoolsFrom, hdSummaryOf, matchRule, normalizeName, pickRestore, pickSpend,
+  resolveTypes, restRuleByKey, restRulesFor, ruleByKey,
 } from "./riders-core.mjs";
 import { SUMMON_FLAG } from "./table-core.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
@@ -131,6 +131,62 @@ export function spellViewInfo(item) {
     prepared: Number(sys.prepared) || 0,
     linked: !!sys.linkedActivity,
   };
+}
+
+/* ── after a long rest (rest.mjs) ───────────────────────────────────────── */
+
+/** Does this character prepare spells (dnd5e 6: a spell whose method prepares)? */
+export function isPreparedCaster(actor) {
+  if (actor?.type !== "character") return false;
+  return [...(actor.items ?? [])].some(i => i?.type === "spell" && spellViewInfo(i).canPrepare);
+}
+
+/** The actor's rest-card rows (core restRulesFor over its items): `[{ key, item }]`. */
+export function restRulesOf(actor) {
+  const items = [...(actor?.items ?? [])].map(i => ({ ...itemInfo(i), id: i.id }));
+  return restRulesFor({ items, preparedCaster: isPreparedCaster(actor) });
+}
+
+/** The actor's Cosmic Omen item (the first REST_RULES "cosmic-omen" match), or null. */
+export function cosmicOmenOf(actor) {
+  const rule = restRuleByKey("cosmic-omen");
+  for (const item of actor?.items ?? []) if (matchRule(rule, itemInfo(item))) return item;
+  return null;
+}
+
+/** Is this item a Cosmic Omen feat? */
+export function isCosmicOmen(item) {
+  return !!item && matchRule(restRuleByKey("cosmic-omen"), itemInfo(item));
+}
+
+/** The omen stored on a Cosmic Omen item for today: "weal" | "woe" | null. */
+export function storedOmen(item) {
+  const v = item?.flags?.[MODULE]?.omen ?? null;
+  return OMENS.includes(v) ? v : null;
+}
+
+/* ── Empowered Spell (empower.mjs) ──────────────────────────────────────── */
+
+/**
+ * The actor's Empowered Spell feat and the activity that spends the Sorcery Point: `{ item, activity }`
+ * or null. The activity is the one whose consumption spends another item's uses (Font of Magic), else
+ * the feat's first activity.
+ */
+export function empoweredSpellOf(actor) {
+  for (const item of actor?.items ?? []) {
+    if (!matchRule(EMPOWERED_SPELL, itemInfo(item))) continue;
+    const activities = [...(item.system?.activities ?? [])];
+    const activity = activities.find(a => (a?.consumption?.targets ?? []).some(t => t?.type === "itemUses")) ?? activities[0] ?? null;
+    return { item, activity };
+  }
+  return null;
+}
+
+/** Sorcery Points left for an Empowered Spell activity: the uses of the item its consumption spends (else its own item). */
+export function fontUsesLeft(actor, activity) {
+  const target = (activity?.consumption?.targets ?? []).find(t => t?.type === "itemUses")?.target;
+  const item = target ? actor?.items?.get?.(target) : activity?.item;
+  return Math.max(0, Number(item?.system?.uses?.value) || 0);
 }
 
 /* ── Hit Dice ───────────────────────────────────────────────────────────── */

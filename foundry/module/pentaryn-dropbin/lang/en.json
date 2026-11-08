@@ -30,6 +30,10 @@
       "revive": "Revive (1 HP): no longer lootable",
       "reviveFailed": "Could not revive {name}. See the console.",
       "sheet": "Open character sheet (GM)"
+    },
+    "noLoot": {
+      "never": "Never loot this",
+      "again": "Lootable again"
     }
   }
 }

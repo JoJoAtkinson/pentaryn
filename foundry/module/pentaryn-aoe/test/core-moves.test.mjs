@@ -61,7 +61,7 @@ test("-10 summariseResolution: rows without images or message ids, the Apply cou
     itemName: "Fireball", ability: "dex", dc: 15, onSave: "half", region: "r1", superseded: false,
     careful: { names: ["Caven"], max: 3 },
     rows: [
-      { id: "g1", name: "Goblin", img: "g.webp", kind: "auto", apply: true, save: { total: 18, success: true, messageId: "m1" }, multiplier: 0.5, applied: false, caster: false },
+      { id: "g1", name: "Goblin", img: "g.webp", kind: "auto", apply: true, save: { total: 18, success: true, messageId: "m1" }, multiplier: 0.5, amount: 12, applied: false, caster: false },
       { id: "cv", name: "Caven", kind: "manual", apply: true, save: { total: null, success: true, messageId: null, careful: true }, multiplier: 0, applied: true, hp: { before: 30, after: 30 }, caster: false, protected: true },
       { id: "mr", name: "Marrith", kind: "manual", apply: false, save: null, multiplier: null, applied: false, caster: true },
     ],
@@ -69,9 +69,9 @@ test("-10 summariseResolution: rows without images or message ids, the Apply cou
   assert.deepEqual(core.summariseResolution(res), {
     item: "Fireball", ability: "dex", dc: 15, onSave: "half", region: "r1", superseded: false, applicable: 1,
     rows: [
-      { id: "g1", name: "Goblin", kind: "auto", apply: true, save: { total: 18, success: true }, multiplier: 0.5, applied: false, hp: null, caster: false, protected: false },
-      { id: "cv", name: "Caven", kind: "manual", apply: true, save: { total: null, success: true }, multiplier: 0, applied: true, hp: { before: 30, after: 30 }, caster: false, protected: true },
-      { id: "mr", name: "Marrith", kind: "manual", apply: false, save: null, multiplier: null, applied: false, hp: null, caster: true, protected: false },
+      { id: "g1", name: "Goblin", kind: "auto", apply: true, save: { total: 18, success: true }, multiplier: 0.5, amount: 12, applied: false, hp: null, caster: false, protected: false },
+      { id: "cv", name: "Caven", kind: "manual", apply: true, save: { total: null, success: true }, multiplier: 0, amount: null, applied: true, hp: { before: 30, after: 30 }, caster: false, protected: true },
+      { id: "mr", name: "Marrith", kind: "manual", apply: false, save: null, multiplier: null, amount: null, applied: false, hp: null, caster: true, protected: false },
     ],
     careful: { names: ["Caven"], max: 3 },
     playerStatus: "waiting",

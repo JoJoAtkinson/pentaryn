@@ -72,6 +72,10 @@
     "name": "ready"
   },
   {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
     "kind": "on",
     "name": "renderItemPileInventoryApp"
   },
@@ -98,6 +102,18 @@
   {
     "kind": "on",
     "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "item-piles-renderPileItem"
+  },
+  {
+    "kind": "on",
+    "name": "renderItemPileInventoryApp"
+  },
+  {
+    "kind": "on",
+    "name": "getHeaderControlsItemSheet5e"
   },
   {
     "kind": "once",

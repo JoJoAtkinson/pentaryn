@@ -13,6 +13,7 @@
  *   aim.mjs      Part G  a Self cone or line starts at its caster and points at the mouse
  *   escape.mjs   Part E  Escape cancels a spell-area placement on the first press, even with a sheet open
  *   walls.mjs    Part H  only walls that are total cover (block movement and sight) clip a spell area
+ *   apply.mjs    Part I  Apply from any damage / healing card: unowned rows relayed to the GM, late targets, typed totals
  *
  * Lifecycle: init → settings and the Escape keybinding (a keybinding can only be registered then) ·
  * setup → each feature's install(reg, ctx), in FEATURES order (aoe has always registered its hooks
@@ -30,6 +31,7 @@ import { HOOKS, MODULE, NS, VERSION } from "./core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { emitter, hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
+import { registerQueries } from "./lib/queries.mjs";
 import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import { guardArgonBind, unguardArgonBind } from "./argon.mjs";
@@ -44,9 +46,10 @@ import * as refund from "./refund.mjs";
 import * as aim from "./aim.mjs";
 import * as escape from "./escape.mjs";
 import * as walls from "./walls.mjs";
+import * as apply from "./apply.mjs";
 
 /** Features in load order: their hooks register in this order, and order within a hook name is behaviour. */
-const FEATURES = [areas, tokenAreas, careful, resolvePart, tray, attacks, effects, refund, aim, escape, walls];
+const FEATURES = [areas, tokenAreas, careful, resolvePart, tray, attacks, effects, refund, aim, escape, walls, apply];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -101,13 +104,16 @@ function onSetup() {
 }
 
 /**
- * ready, in today's order: the API (built first: a manifest drift stops the publish with one clear
- * line, the startup work still runs), published synchronously ([declared] D-A3: it used to wait a
+ * ready, in today's order: the contributed queries (every client), then the API (a manifest drift
+ * stops the publish with one clear line, the startup work still runs), published synchronously ([declared] D-A3: it used to wait a
  * tick for pentaryn-importer's frozen root, which the importer no longer makes); the Argon guard a
  * tick later (Argon makes ui.ARGON in its own ready hook); then the active GM's startup work.
  * `hot`: the hot-patch install() runs the Argon guard and the startup work itself.
  */
 function onReady({ hot = false } = {}) {
+  // The contributed query rows (Part I's relay) on EVERY client: a player's queryGM needs the name
+  // registered on the sender too. Registered before the API is built, so a drift still answers coded.
+  registerQueries({ module: MODULE, rows: ctx.contributions.flatMap(c => c.rows ?? []) }, () => ctx.api, { log });
   try {
     ctx.api = buildApiFor(ctx);
   } catch (err) {

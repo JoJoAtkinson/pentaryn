@@ -5,8 +5,9 @@
  * runs its listeners: dnd5e.preUseActivity = rituals' slot untick, cast-flow's restore-slot default
  * and stale-target drop, the one-usage-dialog and Arcane Recovery second-use vetoes, then the Battle
  * Medic veto (other modules' listeners come after ours: core loads module scripts in id order;
- * selftest() checks it); dnd5e.renderChatMessage = the break label and
- * the concentration line before the card note; dnd5e.postUseActivity = Arcane Recovery, Battle
+ * selftest() checks it; rest's Cosmic Omen redirect comes after them all); dnd5e.renderChatMessage = the break label and
+ * the concentration line before the card note, then the projectile buttons, the rest card and the
+ * Empower button; dnd5e.postUseActivity = Arcane Recovery, Battle
  * Medic, then projectiles' no-automatic-roll — test/golden/hooks.json pins it):
  *   riders-core.mjs        PURE: constants, the RULES table and the rider planning
  *   rituals-core.mjs       PURE: Ritual Adept and Longer casts filters
@@ -17,12 +18,13 @@
  *   patches.mjs            every wrap of another package's code (wrapMethod + adjustments row)
  *   api-manifest.mjs       PURE: the API rows (describe() reads them)
  *   api.mjs                implementations, inspect(), selftest(), buildApiFor(ctx)
- *   rituals.mjs … spell-view.mjs   the features: install(reg, ctx) / uninstall()
+ *   rituals.mjs … empower.mjs      the features: install(reg, ctx) / uninstall()
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the features install synchronously when this file loads (as their module-scope hooks
  * did before; moving them to `setup` would reorder them against other modules) · init → the
- * settings and the Battle Medic relay query · ready → the patches, then the publish.
+ * settings, the Battle Medic relay query and CONFIG.ActiveEffect.expiryAction = "delete" (expiry.mjs) ·
+ * ready → the patches, then the publish.
  *
  * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.riders.uninstall()`, then
  * `await import("/modules/pentaryn-riders/riders.mjs?v=2")`. Any edit to another file needs a reload.
@@ -47,9 +49,12 @@ import * as hdSheet from "./hd-sheet.mjs";
 import * as projectiles from "./projectiles.mjs";
 import * as effectChoices from "./effect-choices.mjs";
 import * as spellView from "./spell-view.mjs";
+import * as expiry from "./expiry.mjs";
+import * as rest from "./rest.mjs";
+import * as empower from "./empower.mjs";
 
-/** Features in load order (= the old module evaluation order: the four side-effect imports, then the body; projectiles, effect-choices and spell-view appended). */
-const FEATURES = [rituals, concentration, argonTidy, castFlow, damageRiders, cardNote, trayPreset, battleMedic, hdSheet, projectiles, effectChoices, spellView];
+/** Features in load order (= the old module evaluation order: the four side-effect imports, then the body; projectiles, effect-choices, spell-view, expiry, rest and empower appended). */
+const FEATURES = [rituals, concentration, argonTidy, castFlow, damageRiders, cardNote, trayPreset, battleMedic, hdSheet, projectiles, effectChoices, spellView, expiry, rest, empower];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -86,6 +91,7 @@ function uninstall() {
 function onInit() {
   registerSettings();
   battleMedic.registerRelay();
+  expiry.configure();
 }
 
 function onReady() {

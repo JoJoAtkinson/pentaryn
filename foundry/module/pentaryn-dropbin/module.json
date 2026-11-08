@@ -1,8 +1,8 @@
 {
   "id": "pentaryn-dropbin",
   "title": "Pentaryn Drop Bin",
-  "description": "An append-only ledger of every item that leaves a character. Records Item Piles drops to the ground and outright deletions from a sheet, in the order they happened, with the item's complete source data — so a two-hander dropped in a corridor three sessions ago can be handed back exactly as it was. Writes to a world setting and mirrors to assets/drop-bin/drop-log.json. GM is the only writer; player clients route their entries through socketlib. Exposes game.pentaryn.dropbin. Also turns dead NPCs into lootable piles (Dead as the full-body overlay, a drawn eye while there is loot) and adds a Loot all button to Item Piles loot windows.",
-  "version": "0.2.3",
+  "description": "An append-only ledger of every item that leaves a character. Records Item Piles drops to the ground and outright deletions from a sheet, in the order they happened, with the item's complete source data — so a two-hander dropped in a corridor three sessions ago can be handed back exactly as it was. Writes to a world setting and mirrors to assets/drop-bin/drop-log.json. GM is the only writer; player clients route their entries through socketlib. Exposes game.pentaryn.dropbin. Also turns dead NPCs into lootable piles (Dead as the full-body overlay, a drawn eye while there is loot) and adds a Loot all button to Item Piles loot windows. The GM marks an item 'Never loot this' from the loot window's right-click menu or the item sheet; dnd5e summons never become corpses.",
+  "version": "0.3.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14.369"
@@ -64,7 +64,8 @@
       "afterSync": [
         "Already enabled? A browser RELOAD (F5) picks up .mjs changes; module.json needs a restart.",
         "Item Piles loot windows get a 'Loot all' button; corpses show Dead as the overlay plus a drawn eye.",
-        "  game.pentaryn.dropbin.corpses.migrateLegacyEyes()"
+        "  game.pentaryn.dropbin.corpses.migrateLegacyEyes()",
+        "GM right-click on a loot window's item row: Never loot this. selftest() reports a stale item-piles.itemFilters natural-weapon path."
       ]
     }
   }

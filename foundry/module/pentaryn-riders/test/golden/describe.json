@@ -62,6 +62,49 @@
       "doc": "Open the Arcane Recovery picker for an actor this client owns, without spending a use: the chosen slots are restored and one chat line posted, as after the feature's own use. recovered is null when cancelled, nothing was spent, or the slots changed while the picker was open (a warning says so). A non-owner gets { ok: false, code: \"REFUSED\" }."
     },
     {
+      "path": "restCard",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        }
+      ],
+      "returns": "{ ok: true, actor, rules: string[], message: string|null } | { ok: false, code, reason }",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ChatMessage (one whispered card)",
+        "flags.pentaryn-riders.rest",
+        "flags.pentaryn-riders.omen (cleared)"
+      ],
+      "since": "0.7.0",
+      "doc": "Whisper the long-rest card for an actor this client owns (or as a GM) without resting: one line per matching REST_RULES row (Cosmic Omen: Read the stars; a prepared caster: Review prepared spells); the stored omen is cleared, as a long rest does. rules is [] and message null when nothing matches. A non-owner gets { ok: false, code: \"REFUSED\" }."
+    },
+    {
+      "path": "readOmen",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        }
+      ],
+      "returns": "{ ok: true, actor, omen: \"weal\"|\"woe\", face: number|null, rolled: boolean } | { ok: false, code, reason }",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-riders.omen (when none is stored)",
+        "ChatMessage (the 1d6, when rolled)"
+      ],
+      "since": "0.7.0",
+      "doc": "Today's Cosmic Omen for an actor this client owns (or as a GM): an omen already stored is answered as it is (rolled: false, nothing written); otherwise 1d6 is rolled and stored on the feat, even is weal, odd is woe, until the next long rest. { ok: false, code: \"NONE\" } when the actor has no Cosmic Omen."
+    },
+    {
       "path": "featuresOf",
       "params": [
         {
@@ -349,6 +392,20 @@
       "doc": "The character sheet's Spells tab opens on the spells ready to cast, with a Prepared / All spells toggle remembered per user and actor; a change re-renders open character sheets."
     },
     {
+      "key": "restCard",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "After a long rest the owner gets one whispered card with a line per matching rule (Cosmic Omen: Read the stars; prepared casters: Review prepared spells); a Cosmic Omen used with no omen stored rolls it then."
+    },
+    {
+      "key": "empoweredSpell",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "A sorcerer with Empowered Spell and Sorcery Points left gets an Empower (1 SP) button on their spell damage cards: one click spends the point and rerolls the dice below their average (up to CHA mod), posting a new damage roll and retiring the old card's tray."
+    },
+    {
       "key": "projectileChatTab",
       "scope": "client",
       "type": "Boolean",
@@ -381,6 +438,14 @@
     {
       "name": "dnd5e.renderChatMessage",
       "label": "concentration result line"
+    },
+    {
+      "name": "updateActor",
+      "label": "concentration summon fell"
+    },
+    {
+      "name": "deleteToken",
+      "label": "concentration summon fell prune"
     },
     {
       "name": "updateItem",
@@ -485,6 +550,42 @@
     {
       "name": "renderCharacterActorSheet",
       "label": "spell view: switch"
+    },
+    {
+      "name": "preCreateActiveEffect",
+      "label": "self-cast expiry"
+    },
+    {
+      "name": "dnd5e.restCompleted",
+      "label": "rest card"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "rest card rows"
+    },
+    {
+      "name": "updateItem",
+      "label": "rest card refresh"
+    },
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "Cosmic Omen: the stars decide"
+    },
+    {
+      "name": "renderActivityChoiceDialog",
+      "label": "Cosmic Omen choice mark"
+    },
+    {
+      "name": "renderItemButtonArgonComponent",
+      "label": "Cosmic Omen HUD mark"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "Empower button"
+    },
+    {
+      "name": "dnd5e.applyDamage",
+      "label": "Empower: applied card"
     }
   ],
   "patches": [
@@ -520,7 +621,12 @@
       "flags.pentaryn-riders.target",
       "flags.pentaryn-riders.faces",
       "flags.pentaryn-riders.concentration",
-      "flags.pentaryn-riders.relay"
+      "flags.pentaryn-riders.relay",
+      "flags.pentaryn-riders.omen",
+      "flags.pentaryn-riders.rest",
+      "flags.pentaryn-riders.empowered",
+      "flags.pentaryn-riders.supersededBy",
+      "flags.pentaryn-riders.trayApplied"
     ],
     "reads": []
   },

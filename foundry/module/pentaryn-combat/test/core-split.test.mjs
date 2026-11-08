@@ -28,7 +28,7 @@ test("the barrel re-exports every topic export, each from exactly one file", asy
       assert.ok(k in barrel, k);
     }
   }
-  assert.equal(files.length, 12);
+  assert.equal(files.length, 13);   // 2026-11-07: + core/dice-input.mjs (triage K, L6)
 });
 
 // combat-core-M2 / M10: core/turn.mjs imported followUps (unused) and actionsLeft (turnflow.mjs), so

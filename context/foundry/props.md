@@ -62,6 +62,11 @@ Props placed in bulk carry `flags.pentaryn.props = {batch, group}`. Remove a who
 - `gold-hoard-2026-10-17` — 17 tiles on the same floor: FA gold coin and treasure piles under
   Solvaeryx and the five loot eyes.
 - `music-store-2026-10-17` — 12 FA instrument tiles in Ysolde Vane's shop room on the same floor.
+- `grimsby-slaughter-2026-11-05` — 83 tiles on `Demonically Tainted Hamlet of Grimsby`: 12 bodies
+  and a drag trail (`group` = `body N (kind)`). No installed pack has a top-down corpse, so each body
+  is FA clothing laid out in a body's shape (cloak or dress or shirt, trousers, boots, hat), some
+  with bloody broken weapons, over Tom Cartos blood pools **tinted `#6a1818` at alpha 0.45–0.55**:
+  the pools' raw bright red with a black outline is what reads as cartoonish.
 
 **Place Claude's props unlocked** (`locked: false`). Joe arranges them by hand afterwards, and a
 locked tile won't drag — he hit that with the corpse batch on 2026-10-17.
