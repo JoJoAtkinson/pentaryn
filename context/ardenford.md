@@ -16,7 +16,7 @@ the city's lore, districts, shops and NPCs → `world/factions/ardenhaven/locati
 > **This is a volatile file.** Dated findings and IDs belong here, not in the Foundry
 > domain root.
 
-Foundry world id **`ardenford`**, title **Ardenford**, dnd5e 6.0.6 on core 14.369 (migrated 2026-10-10).
+Foundry world id **`ardenford`**, title **Ardenford**, dnd5e 6.1.1 on core 14.370 (migrated 2026-11-20; 6.0.6 on 14.369 from 2026-10-10).
 Seated in [Ardenford](../world/factions/ardenhaven/locations/ardenford/ardenford.md), the
 three-tiered capital of Ardenhaven — Lower Tier harbour, Middle Tier trade and
 residential, Upper Tier ridge, and an ancient tunnel network under all of it.

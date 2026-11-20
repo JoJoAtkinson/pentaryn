@@ -3,7 +3,7 @@
   "title": "Pentaryn Player Journal",
   "description": "An 'Add to my journal' bar under any journal (or its image popout) the player can observe but does not own, and any item in an eye pile they can inspect. Clicking it copies what the player was shown, with GM secrets stripped, embeds turned into links and relative links made absolute, into their own personal journal. That journal then opens on the new entry, glowing among all their others. One journal per user, made by the GM client (or through a native user query to the active GM). Exposes game.pentaryn.journal.",
   "version": "0.1.0",
-  "compatibility": { "minimum": "14", "verified": "14.369" },
+  "compatibility": { "minimum": "14", "verified": "14.370" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "relationships": {
     "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],

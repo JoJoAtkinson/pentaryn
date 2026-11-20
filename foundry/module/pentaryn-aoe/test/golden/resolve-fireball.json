@@ -125,6 +125,29 @@
       }
     ]
   },
+  "targets": [
+    {
+      "actor": "Actor.actGoblin0000001",
+      "ac": null,
+      "img": "icons/tokGoblin0000001.webp",
+      "name": "Goblin 1",
+      "token": "Scene.FireScene0000001.Token.tokGoblin0000001"
+    },
+    {
+      "actor": "Actor.actGoblin0000002",
+      "ac": null,
+      "img": "icons/tokGoblin0000002.webp",
+      "name": "Goblin 2",
+      "token": "Scene.FireScene0000001.Token.tokGoblin0000002"
+    },
+    {
+      "actor": "Actor.actCaven00000001",
+      "ac": null,
+      "img": "icons/tokCaven00000001.webp",
+      "name": "Caven",
+      "token": "Scene.FireScene0000001.Token.tokCaven00000001"
+    }
+  ],
   "calls": [
     {
       "op": "update",
@@ -137,7 +160,10 @@
       "op": "update",
       "uuid": "ChatMessage.dmgFireball00001",
       "keys": [
-        "flags.pentaryn-aoe.resolution"
+        "flags.pentaryn-aoe.resolution",
+        "system.targets",
+        "flags.pentaryn-aoe.areaTargets",
+        "flags.pentaryn-aoe.recordedTargets"
       ]
     },
     {

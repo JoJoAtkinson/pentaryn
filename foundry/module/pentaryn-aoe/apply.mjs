@@ -12,11 +12,16 @@
  *                 when the relay did not land (one toast: no GM, no answer in time, or the GM's client
  *                 refused or failed — never silence, 0.6.2). Rows the user may not have applied through
  *                 the GM (not the card's author, not the owner of its actor: the GM's breath weapon on
- *                 two PCs) are skipped silently, as dnd5e skips them.
+ *                 two PCs) are skipped silently, as dnd5e skips them. A save spell's card (one that
+ *                 carries a Part B resolution) relays nothing for a player: since 0.6.4 its rows are
+ *                 the area's creatures, and the GM's own tray applies them once the saves are in — a
+ *                 relay would land the damage a second time. The player hears that once (one toast).
  *   late targets  a card that recorded no targets at use time (Heal cast, then Caven targeted) lists
  *                 its author's targets: as they target, the card's `system.targets` is filled in, so
  *                 dnd5e's own rows show them; and when dnd5e lists nobody on such a card, a player's
- *                 Apply goes to the targets they hold.
+ *                 Apply goes to the targets they hold. A card the GM's resolve has stamped off an area
+ *                 (`areaTargets`) is never followed again, even if late targets had filled it first:
+ *                 the area's creatures stay its rows (core.lateTargetCard).
  *   typed total   players roll real dice and report a total. Every row gets a small total, pre-filled
  *                 with the rolled one; a typed number replaces it for that row's Apply, the multiplier
  *                 still applies on top, and dnd5e's own per-row number shows what would land.
@@ -31,7 +36,8 @@
 
 import {
   MODULE, RECENT_MESSAGES, RELAY_TIMEOUT_MS, LATE_TARGET_WINDOW_MS, aoeFlags, damageTotal, scaleDamages, rowAmount,
-  splitApplyRows, lateTargetCard, hydrateDamages, applyTargets, packApplyOptions, unpackApplyOptions, isApplyCard
+  splitApplyRows, lateTargetCard, hydrateDamages, applyTargets, packApplyOptions, unpackApplyOptions, isApplyCard,
+  moduleFilledTargets
 } from "./core.mjs";
 import { setting, dnd5eTrayCollapse } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -55,8 +61,13 @@ const listenerGuard = (label, fn) => (context?.reg ? context.reg.guard(label, fn
 const amounts = new Map();
 /** `<damage-application>` elements this client already wired (a card decorated twice in one render). */
 const wired = new WeakSet();
-/** `<recorded-targets>` elements already switched to targeted once for a late-targets card. */
-const flipped = new WeakSet();
+/**
+ * Message ids whose native tray this client already switched from "selected" to "targeted", once. Keyed
+ * by message, not by `<recorded-targets>` element: a card re-renders on every write (save, tick, apply),
+ * each render a fresh element that comes up "selected" again from dnd5e's `_targetState.mode` when the
+ * user switched it back — flipping that element would undo their choice.
+ */
+const flipped = new Set();
 let scheduleFollow = null;
 
 const userIdOf = author => author?.id ?? (typeof author === "string" ? author : null);
@@ -90,13 +101,18 @@ function decorate(message, html) {
 
 /**
  * dnd5e remembers, per message, that a card first shown with no targets lists SELECTED tokens; once
- * late targets have filled the card, show the recorded targets instead (its public setter, once).
+ * late targets or the area's creatures have filled the card (core.moduleFilledTargets), show the
+ * recorded targets instead (its public setter), once per message on this client. The setter writes
+ * the message's `_targetState.mode` too, so every later render of that card comes up "targeted" by
+ * itself; and when the user switches the tray back to "selected", a re-render (a fresh element on
+ * every save, tick or apply write) keeps their choice instead of flipping it again.
  */
 function onRowsBuilt(ev, el, message) {
   const recorded = ev.target;
-  if (recorded && !flipped.has(recorded) && aoeFlags(message).lateTargets && message.system?.targets?.length
+  const id = message?.id;
+  if (recorded && id && !flipped.has(id) && moduleFilledTargets(aoeFlags(message)) && message.system?.targets?.length
     && recorded.targetingMode === "selected") {
-    flipped.add(recorded);
+    flipped.add(id);
     recorded.targetingMode = "targeted";   // rebuilds the rows; this handler runs again for them
     return;
   }
@@ -225,7 +241,9 @@ function onClick(ev, el, message) {
  * them applied (the card's author, or the owner of its actor; otherwise skipped silently, as dnd5e
  * skips them). When dnd5e lists nobody on a card that recorded no targets, a player's held targets
  * are the rows (the tray's one multiplier) and the card then records them. A card that recorded no
- * targets, or followed late targets, is stamped applied, so late targets stop following it.
+ * targets, or followed late targets, is stamped applied, so late targets stop following it. A save
+ * spell's card (a Part B resolution) relays nothing for a player: the GM's tray applies it, so the
+ * unowned rows are skipped with one info toast; owned rows still land here.
  * @param {ChatMessage} message
  * @param {HTMLElement} el   the card's `<damage-application>`
  * @returns {Promise<{ local: string[], relay: string[], skipped: string[], relayed: object|null }>}
@@ -245,11 +263,14 @@ export async function applyCard(message, el) {
     return { uuid, token, owner: !!token?.isOwner, multiplier: Number(options?.multiplier), options, amount: typed.get(uuid) ?? null };
   });
   const { local, relay: unowned } = splitApplyRows(rows);
+  // a save spell's card: its rows are the area's creatures and the GM's tray applies them — no relay
+  const gmTray = !game.user?.isGM && !!aoeFlags(message).resolution;
   // the GM applies the same rule: rows this user may not have applied through the GM are skipped, quietly
-  const mayRelay = unowned.length > 0 && mayApply(message, game.user);
+  const mayRelay = unowned.length > 0 && !gmTray && mayApply(message, game.user);
   const relay = mayRelay ? unowned : [];
   const skipped = mayRelay ? [] : unowned;
   if (skipped.length) log.debug("apply: rows not this user's to relay", { uuid: message.uuid, ids: skipped.map(r => r.uuid) });
+  if (gmTray && unowned.length) log.notify("info", _loc("PENTARYN_AOE.Apply.GmTray", { names: unowned.map(r => r.token?.name ?? r.uuid).join(", ") }));
   for (const r of local) {
     const actor = r.token?.actor;
     if (typeof actor?.applyDamage !== "function") continue;
@@ -328,7 +349,8 @@ async function stampApplied(message, rows, current) {
 
 const describeRecent = () => game.messages.contents.slice(-RECENT_MESSAGES).map(m => ({
   id: m.id, type: m.type, author: userIdOf(m.author), timestamp: m.timestamp ?? 0,
-  targets: m.system?.targets?.length ?? 0, lateTargets: !!aoeFlags(m).lateTargets, applied: !!aoeFlags(m).applied
+  targets: m.system?.targets?.length ?? 0, lateTargets: !!aoeFlags(m).lateTargets,
+  areaTargets: !!aoeFlags(m).areaTargets, applied: !!aoeFlags(m).applied
 }));
 
 /**

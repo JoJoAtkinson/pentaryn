@@ -8,7 +8,7 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.6.3";                          // === module.json version (core.test pins it)
+export const VERSION = "0.6.4";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";
@@ -259,8 +259,11 @@ export function splitApplyRows(rows) {
 /**
  * Part I (late targets): the one damage or healing card (`isApplyCard`) this user's new targets fill — the
  * newest card they authored within `windowMs` that recorded no targets at use time (or that these late
- * targets already filled, `lateTargets`) and that nobody has applied yet. Plain descriptions:
- * `{ id, type, author, timestamp, targets, lateTargets, applied }`. Null when there is none.
+ * targets already filled, `lateTargets`) and that nobody has applied yet. A card an area resolve has
+ * stamped (`areaTargets`, Part B) is done too, whatever its `lateTargets` says: its `system.targets`
+ * are the area's creatures, and the author's later targeting must not replace them (0.6.4 review).
+ * Plain descriptions: `{ id, type, author, timestamp, targets, lateTargets, areaTargets, applied }`.
+ * Null when there is none.
  * @param {object[]} messages   oldest first, as the chat log holds them
  * @param {{ userId: string, now: number, windowMs?: number }} who
  */
@@ -268,7 +271,7 @@ export function lateTargetCard(messages, { userId, now, windowMs = LATE_TARGET_W
   if (!userId) return null;
   for (let i = (messages ?? []).length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (!m || !isApplyCard(m.type) || m.author !== userId || m.applied) continue;
+    if (!m || !isApplyCard(m.type) || m.author !== userId || m.applied || m.areaTargets) continue;
     if (!(Number(m.targets) === 0 || m.lateTargets)) continue;
     if ((now ?? 0) - (m.timestamp ?? 0) > windowMs) continue;
     return m.id;
@@ -290,6 +293,31 @@ export function applyTargets({ listed = [], recorded = 0, targeted = [], isGM = 
   const shown = (listed ?? []).filter(Boolean);
   if (shown.length || isGM || Number(recorded) > 0 || !(targeted ?? []).length) return { uuids: shown, late: false };
   return { uuids: targeted.filter(Boolean), late: true };
+}
+
+/**
+ * Part B: the rows whose tokens the module records as the damage card's `system.targets` when the
+ * damage was resolved off an area — the rows buildRows ticks (the caster, a hidden token and anyone
+ * at 0 HP are unticked) minus a Careful-protected row already at ×0 (protectRows on a half spell).
+ * Why the ticked rows and not every creature inside: dnd5e's native Apply hits every listed token the
+ * user owns and the GM owns everything, so an unticked row listed there would take the damage from a
+ * GM's native Apply; and a hidden creature's name must not reach the players' card.
+ * @param {object[]} rows  resolution rows (after carefulFor has protected its picks)
+ * @returns {object[]} the rows to stamp, in tray order
+ */
+export function areaTargetRows(rows) {
+  return (rows ?? []).filter(r => r?.apply && r.multiplier !== 0);
+}
+
+/**
+ * Did this module write the card's `system.targets` — late targets (Part I, `lateTargets`) or the
+ * area's creatures (Part B, `areaTargets`)? For both, the native tray's "selected" memory is flipped
+ * to "targeted" once (apply.mjs onRowsBuilt), so dnd5e lists what was recorded, not the GM's selection.
+ * @param {object} flags  the message's `flags["pentaryn-aoe"]` (aoeFlags)
+ * @returns {boolean}
+ */
+export function moduleFilledTargets(flags) {
+  return !!(flags?.lateTargets || flags?.areaTargets);
 }
 
 /**

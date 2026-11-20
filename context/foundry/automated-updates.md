@@ -202,7 +202,7 @@ most of what follows is undocumented and was established by reading it.
 | `POST /setup {action:"adminConfigure"}` | Server config. |
 | `POST /update {action:"updateCheck"}` | Licence-authenticated core check. |
 | `POST /update {action:"previewCompatibility"}` | The collision check, done by Foundry. |
-| `POST /update {action:"updateDownload"}` | Downloads, installs, restarts. |
+| `POST /update {action:"updateDownload"}` | Downloads and installs; resolves on fetch, the install runs on. Then `Updater.restart()` (`dist/core/update.mjs`): the **Electron** build respawns itself; the **Node** build (BOSS) **exits 0** with `SETUP.UpdateCompleteManual`, and the `foundryvtt` unit's `Restart=on-failure` leaves a clean exit down. `apply_core` waits for the port to drop, gives a self-restart 30 s, then starts the unit itself (`"restarted": "started by updater"` or `"self"` in the applied record). Until 2026-11-20 it waited 1800 s for a self-restart that never came. |
 | `POST /join {action:"loginAs"}` | Log in as any user with no user password — **needs `session.admin`**. |
 | `POST /setup {action:"worldShutdown"}` | Graceful world deactivate (14.369+) — **needs an admin password**. Before 14.369 this was `POST /join {action:"shutdown"}`, which 14.369 silently ignores (200 `{}`); `deactivate_world()` tries both. |
 
@@ -399,7 +399,8 @@ argv: `--tools "" --disallowed-tools <list> --strict-mcp-config --mcp-config
 data goes on stdin, cwd is a fresh temp dir (no `CLAUDE.md`). Output passes a validator
 (`validate_triage`, `validate_analysis`): enums, length caps (over-long = **reject**), the
 offered-id allow-list (also sent as a schema `enum`), URL stripping, identifier-only `api`,
-cited files must be in the bundle, fix files must be in the cited area, tests must be a
+cited files must be in the bundle, fix files must be in the cited area (a module area may
+also fix the shared kit under `foundry/lib/`, which every module vendors), tests must be a
 real `make foundry-*-check` / `pytest scripts/tests/…` (anything else becomes `none`),
 `unattended_fix_ok` recomputed. `handoff_brief()` is the only view a future tool-using
 tier gets — validated fields only, never `evidence.notes` or the triage digest.
@@ -602,7 +603,7 @@ would otherwise have to go and rediscover.
 
 | | |
 |---|---|
-| Foundry core | **14.367** at the 2026-08 build (14.369 since the attended 2026-10-10 update) |
+| Foundry core | **14.367** at the 2026-08 build; 14.369 since the attended 2026-10-10 update; 14.370 since 2026-11-20 (by hand, the updater's own preview/updateDownload/smoke steps, after the 2026-11-19 run held it) |
 | dnd5e | 5.3.3 at the 2026-08 build; 6.0.6 since 2026-10-10; 6.1.1 since 2026-11-20 (by hand, after the importer/aoe retarget on branch `dnd5e-6.1`; the 2026-11-19 run's plan) |
 | Worlds | `space-journey` and `ardenhaven`, both migrated to 14.367, both smoke-clean |
 | Browser smoke | Re-verified live 2026-08-22 against `space-journey`: logged in as Gamemaster, `gameReady` and `canvasReady` true, scene "1. The Library (The Parley)", 28 modules active, zero client errors. It does get past the join screen and does exercise the world |

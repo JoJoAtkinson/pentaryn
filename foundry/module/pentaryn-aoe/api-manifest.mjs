@@ -76,7 +76,8 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.handleActor", "flags.pentaryn-aoe.region",
       "flags.pentaryn-aoe.resolution", "flags.pentaryn-aoe.claims", "flags.pentaryn-aoe.effectsApplied",
       "flags.pentaryn-aoe.damageMessage", "flags.pentaryn-aoe.careful", "flags.pentaryn-aoe.npcSave",
-      "flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.applied",
+      "flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets",
+      "flags.pentaryn-aoe.applied",
       "flags.dnd5e.lockSize", "flags.dnd5e.requestResult",
     ],
     reads: ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled"],
@@ -98,7 +99,7 @@ export const FEATURE_ROWS = Object.freeze({
       { writes: true, sideEffects: ["Token (handle)", "flags.pentaryn-aoe.handle", "flags.pentaryn-aoe.region", "Region attachment"] }),
   ],
   resolve: [
-    legacy("resolve", [MESSAGE, p("opts", "{ regionId? }", { optional: true, doc: "regionId: another candidate area; null = the roller's targets" })], "Promise<object|null>",
+    legacy("resolve", [MESSAGE, p("opts", "{ regionId? }", { optional: true, doc: "regionId: another candidate area; null = the roller's targets (flags.pentaryn-aoe.recordedTargets once an area has been stamped over system.targets, else the card's)" })], "Promise<object|null>",
       "Active GM: build (or rebuild) the tray on a damage message from a save activity, roll the NPC saves and post the players' request card. Returns the resolution.",
       { gm: true, writes: true, nullWhen: "not the active GM, not a damage message, its activity has no save, or its tray is superseded or has an applied row (warning toast)", sideEffects: [...WRITES_RESOLUTION, "ChatMessage (NPC saves, request card)"] }),
     legacy("applyRows", [MESSAGE_ID, p("rowIds", "string[]|null", { optional: true, doc: "default: every applicable row" })], "Promise<object|null>",

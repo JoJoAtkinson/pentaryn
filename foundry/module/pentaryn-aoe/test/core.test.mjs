@@ -26,7 +26,7 @@ const {
   matchSave, shouldAutoDamage, newestRegion, aoeFlags, regionFromSpell, regionOfActivity, selfApplyReason,
   pendingEffects, isTemplateRegion, attachedTokenId, attachedToOther, handleVertical, placementInProgress,
   stillListing, isHandleTarget, supersedes, protectRows, unprotectRow, placementCancelled, playerStatus,
-  sameSpellEffect, aimFromCaster, aimsFromCaster
+  sameSpellEffect, aimFromCaster, aimsFromCaster, areaTargetRows, moduleFilledTargets
 } = await import("../core.mjs");
 
 const round = p => ({ x: Math.round(p.x * 1000) / 1000, y: Math.round(p.y * 1000) / 1000 });
@@ -193,10 +193,31 @@ const cards = [
 check("lateTargetCard: the newest own damage card with no targets inside the window", lateTargetCard(cards, { userId: "pl", now: T0 }), "mine");
 check("lateTargetCard: a card these targets already filled still follows", lateTargetCard([...cards, { id: "late", type: "damage", author: "pl", timestamp: T0 - 1000, targets: 1, lateTargets: true }], { userId: "pl", now: T0 }), "late");
 check("lateTargetCard: an applied card is done", lateTargetCard([...cards, { id: "done", type: "damage", author: "pl", timestamp: T0 - 1000, targets: 1, lateTargets: true, applied: true }], { userId: "pl", now: T0 }), "mine");
+check("0.6.4 review: a card an area resolve stamped (areaTargets) is done too, whatever lateTargets says or how many targets it lists — the area's rows stay",
+  [lateTargetCard([...cards, { id: "stamped", type: "damage", author: "pl", timestamp: T0 - 1000, targets: 3, lateTargets: true, areaTargets: true }], { userId: "pl", now: T0 }),
+   lateTargetCard([...cards, { id: "emptyArea", type: "damage", author: "pl", timestamp: T0 - 1000, targets: 0, areaTargets: true }], { userId: "pl", now: T0 })],
+  ["mine", "mine"]);
 check("0.6.2: a healing card (dnd5e type `healing`) is followed too — Heal cast, then Caven targeted", lateTargetCard([...cards, { id: "heal", type: "healing", author: "pl", timestamp: T0 - 1000, targets: 0 }], { userId: "pl", now: T0 }), "heal");
 check("isApplyCard: damage and healing cards, nothing else", ["damage", "healing", "usage", "save", "attack", undefined, null].map(t => core.isApplyCard(t)), [true, true, false, false, false, false, false]);
 check("APPLY_CARD_TYPES is frozen and names both", [Object.isFrozen(core.APPLY_CARD_TYPES), [...core.APPLY_CARD_TYPES]], [true, ["damage", "healing"]]);
 check("lateTargetCard: outside the window, another author, or no user → null", [lateTargetCard(cards.slice(0, 1), { userId: "pl", now: T0 }), lateTargetCard(cards, { userId: "other", now: T0 }), lateTargetCard(cards, { now: T0 })], [null, null, null]);
+// 0.6.4: the rows an area resolve stamps as the card's system.targets — ticked rows only
+const stampRows = [
+  { id: "g1", apply: true, multiplier: 0.5 },                      // saved, half
+  { id: "g2", apply: true, multiplier: 1 },                        // failed
+  { id: "cv", apply: true, multiplier: null },                     // waiting on a player
+  { id: "mr", apply: false, caster: true, multiplier: null },      // the caster: unticked
+  { id: "dead", apply: false, multiplier: 1 },                     // 0 HP: unticked
+  { id: "hid", apply: false, multiplier: 1 },                      // hidden: unticked, never named to players
+  { id: "safe", apply: true, protected: true, multiplier: 0 },     // Careful on a half spell: ×0
+  { id: "kept", apply: true, protected: true, multiplier: 1 },     // Careful on a full spell: still lands
+];
+check("areaTargetRows: ticked rows minus a ×0 row; caster, dead and hidden are out; a null multiplier (waiting) stays",
+  areaTargetRows(stampRows).map(r => r.id), ["g1", "g2", "cv", "kept"]);
+check("areaTargetRows: nothing → []", [areaTargetRows(null), areaTargetRows(undefined), areaTargetRows([])], [[], [], []]);
+check("moduleFilledTargets: late targets or area targets, nothing else",
+  [moduleFilledTargets({}), moduleFilledTargets({ lateTargets: true }), moduleFilledTargets({ areaTargets: true }), moduleFilledTargets(undefined)],
+  [false, true, true, false]);
 
 /* ── newestRegion / flags ────────────────────────────────────────────────── */
 check("newest by createdTime", newestRegion([{ id: "a", _stats: { createdTime: 5 } }, { id: "b", _stats: { createdTime: 9 } }, { id: "c", _stats: { createdTime: 7 } }]).id, "b");
@@ -384,11 +405,12 @@ check("player status line: waiting, applied, superseded, nothing to say",
 // 3arqpV, WSMeuV): Part H walls, snappable handles, instantaneous areas stay put, the Token HUD eraser.
 // 0.5.1 (2026-10-19, code review): a rotated cube clips from its new centre, monster auras stay attached,
 // areaWalls re-clips on change, an uninstalled wrapper passes through. 0.6.2 (2026-11-07, playtest): a healing
-// roll's card is dnd5e type `healing`; Part I accepts it (isApplyCard).
-test("module.json is pentaryn-aoe 0.6.3", () => {
+// roll's card is dnd5e type `healing`; Part I accepts it (isApplyCard). 0.6.4 (2026-11-20): an area resolve
+// writes the ticked rows into the card's system.targets (areaTargetRows), so dnd5e's own tray lists the area.
+test("module.json is pentaryn-aoe 0.6.4", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.6.3");
+  assert.equal(manifest.version, "0.6.4");
 });
 
 test("VERSION === module.json version", () => {

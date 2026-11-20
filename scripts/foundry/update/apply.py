@@ -388,8 +388,8 @@ def _prune_snapshots(fa: FoundryAdmin, keep: int) -> None:
 def apply_decisions(fa: FoundryAdmin, plan: dict) -> tuple[list[dict], list[dict]]:
     """Install everything in the ``auto`` bucket. System first, then modules, core last.
 
-    Core is last because installing it restarts the process; anything queued behind it
-    would never run.
+    Core is last because installing it ends the server process (``apply_core`` brings a
+    new one up); anything queued behind it would never run.
     """
     applied: list[dict] = []
     failed: list[dict] = []
@@ -400,7 +400,7 @@ def apply_decisions(fa: FoundryAdmin, plan: dict) -> tuple[list[dict], list[dict
 
     for decision in auto:
         if decision["type"] == "core":
-            continue  # handled by the caller: it restarts the server
+            continue  # handled by the caller: it ends in a new server process
         record = {"id": decision["id"], "type": decision["type"],
                   "from": decision["installed"], "to": decision["target"]}
         # A target that is not actually newer would make wait_for_package_version
@@ -427,27 +427,88 @@ def apply_decisions(fa: FoundryAdmin, plan: dict) -> tuple[list[dict], list[dict
     return applied, failed
 
 
+CORE_INSTALL_TIMEOUT = 1800   # download + extract + install, until the old process exits
+CORE_RESPAWN_GRACE = 30       # a self-restarting build's time to re-bind the port
+CORE_RESTART_TIMEOUT = 300    # the new process answering /api/status with the target version
+
+
+def _reported_version() -> str | None:
+    """What a fresh, unauthenticated ``/api/status`` says, or None while nothing answers."""
+    try:
+        return FoundryAdmin().status().version
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def apply_core(fa: FoundryAdmin, decision: dict) -> dict:
-    """Download, install and restart into a new core build."""
+    """Download and install a new core build, then get a server running on it.
+
+    ``updateDownload`` resolves on fetch (``onFetched``), so the install carries on after
+    the call returns; the old process exiting is what marks it finished. Whether a new one
+    appears depends on the build — ``Updater.restart()`` in ``dist/core/update.mjs``:
+
+    * **Electron** (the Mac app) respawns itself: ``spawn(argv)`` then ``process.exit()``.
+    * **Node** (BOSS, the ``foundryvtt`` user unit) does ``setTimeout(process.exit, 50)``
+      with ``SETUP.UpdateCompleteManual`` — exit code 0, and ``Restart=on-failure`` does
+      not restart a clean exit. Until 2026-11-20 this function assumed a self-restart and
+      polled 1800 s for a server that was never coming back.
+
+    So: wait for the port to drop, give a self-restarting build a short grace to re-bind,
+    and if nothing answers start the app ourselves (``admin.start_app`` is a no-op on an
+    open port, so a late self-restart never gets a second instance). Then confirm the
+    running server reports the target version. ``record["restarted"]`` says which path
+    was taken: ``"self"`` or ``"started by updater"``.
+    """
     record = {"id": "core", "type": "core", "from": decision["installed"],
               "to": decision["target"]}
     try:
         fa.update("updateDownload")
     except Exception as exc:  # noqa: BLE001
         return {**record, "error": str(exc)}
+    target = decision["target"]
 
-    # The server restarts itself when the install completes; wait for it to come back
-    # reporting the new version rather than trusting the call.
-    deadline = time.monotonic() + 1800
+    # 1. The install is done when the process exits and the port drops. A build that
+    #    respawns inside one poll interval never shows a closed port; it shows up here as
+    #    the new version instead.
+    deadline = time.monotonic() + CORE_INSTALL_TIMEOUT
+    dropped = False
     while time.monotonic() < deadline:
-        try:
-            status = FoundryAdmin().status()
-            if status.version == decision["target"]:
-                return record
-        except Exception:  # noqa: BLE001
-            pass
+        if not admin_mod.port_open():
+            dropped = True
+            break
+        if _reported_version() == target:
+            return {**record, "restarted": "self"}
         time.sleep(5)
-    return {**record, "error": f"server never came back reporting {decision['target']}"}
+    if not dropped:
+        return {**record, "error": f"the server never left the old build within "
+                                   f"{CORE_INSTALL_TIMEOUT} s: the install is still running, "
+                                   f"or it failed and kept serving {decision['installed']}"}
+
+    # 2. Grace for a self-restart (Electron); otherwise start the unit — the Node build
+    #    exited 0 and nothing else will.
+    deadline = time.monotonic() + CORE_RESPAWN_GRACE
+    restarted = "self"
+    while not admin_mod.port_open():
+        if time.monotonic() >= deadline:
+            restarted = "started by updater"
+            try:
+                admin_mod.start_app()
+            except Exception as exc:  # noqa: BLE001
+                return {**record, "restarted": restarted,
+                        "error": f"the server exited after the install and could not be "
+                                 f"started: {exc}"}
+            break
+        time.sleep(2)
+
+    # 3. The server that answers must be the new build.
+    deadline = time.monotonic() + CORE_RESTART_TIMEOUT
+    while time.monotonic() < deadline:
+        if _reported_version() == target:
+            return {**record, "restarted": restarted}
+        time.sleep(5)
+    return {**record, "restarted": restarted,
+            "error": f"server came back ({restarted}) but never reported {target} within "
+                     f"{CORE_RESTART_TIMEOUT} s"}
 
 
 # ── Phase 9: put service back ────────────────────────────────────────────────
@@ -655,7 +716,8 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
         if core_decision and not result.failed:
             core_record = apply_core(fa, core_decision)
             (result.failed if core_record.get("error") else result.applied).append(core_record)
-            # The core installer respawns the server process, so this session's cookie
+            # The core step ends in a new server process — respawned by Electron, or
+            # started by the updater after the Node build's exit — so this session's cookie
             # belongs to a server that no longer exists. Mint a new one before the smoke
             # test tries to launch anything.
             if not core_record.get("error"):

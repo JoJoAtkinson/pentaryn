@@ -35,12 +35,16 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   GM-only tray after dnd5e's own damage tray: tick, save, a total (B5: pre-filled with the rolled
   total; a number typed from real dice replaces it for that row, `row.amount`, each damage type
   keeping its share), multiplier, the damage that would land, Apply. Every save is threaded under
-  the spell's usage card, so dnd5e's outcomes and half-damage pill agree. A save rolled from the
+  the spell's usage card, so dnd5e's outcomes and half-damage pill agree. Off an area the same
+  write stamps the ticked rows' tokens into the card's `system.targets` (hidden, caster, 0 HP and a
+  Careful ×0 row excluded; `flags.pentaryn-aoe.areaTargets`), so dnd5e's own tray lists the area's
+  creatures instead of the GM's selected tokens and a GM who applies from it hits the area. A save rolled from the
   usage card's own Saving Throw button before Damage fills its row when the tray is built (J2:
   `fillEarlierSaves`; a save under the usage card answers whenever it was rolled, `matchSave`
   `usageId`), so nobody is asked twice. A save activity with no DC judges no save: each shows its
   total with a '?', the multiplier stays '?', and the GM sets it by hand. An older Damage click on the same area (or the same card after its area went) greys
-  out. Players see one status line on their own card (waiting / applied / re-rolled), never
+  out: the module's tray on it refuses, but dnd5e's own tray on that older card still lists the
+  area's creatures (its stamp is kept), and a GM who presses it applies that damage by hand. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
 - **Careful Spell** (`careful.mjs`). Metamagic is tracked, not forced onto a spell (Joe's ruling,
   2026-10-12). Using it opens a picker on the caster's client: the creatures on their scene they
@@ -92,7 +96,8 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   is skipped silently, as dnd5e skips it. **Late targets:** a card that recorded no targets at use time
   (Heal cast, then Caven targeted) is filled with its author's current targets as they target
   (`targetToken`, debounced; `system.targets` + `flags.pentaryn-aoe.lateTargets`, players only, cards
-  under 10 minutes old, until applied), so dnd5e's own rows list them; and when dnd5e lists nobody on
+  under 10 minutes old, until applied — or until the GM's `resolve()` stamps the area into the card,
+  `areaTargets`, after which the author's targeting never rewrites it), so dnd5e's own rows list them; and when dnd5e lists nobody on
   such a card (nothing selected) a player's Apply goes to the targets they hold, at the tray's
   multiplier, and the card records them. A GM's untargeted card keeps dnd5e's selected-tokens habit
   (a stale target never lands). **Typed totals (B5):** every target row gets a small total pre-filled
@@ -103,6 +108,8 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   relays nothing. **Save spells:** the GM's Part B tray under the card is the one to apply a save spell
   from (it knows each row's save; dnd5e's tray only halves once a save is threaded), so on a card that
   carries a resolution the GM gets no typed totals on dnd5e's tray, and the Part B tray's own totals are used.
+  A player's Apply on such a card relays nothing (the GM's tray applies it; one info toast says so) — their
+  own rows still land.
 - **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
   including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
@@ -157,7 +164,7 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `sweep(scene = canvas.scene)` | `Promise<{ orphansDeleted, ownershipFixed, handlesCreated, sizeLocked }>` | GM (zeros otherwise) |
 | `ensureHandleActor()` | `Promise<Actor \| null>` | GM creates (fixed id `pentarynAoeHndl0`); a player gets the existing one or null |
 | `createHandle(region)` | `Promise<TokenDocument \| null>` | null: not a template, handled, attached elsewhere, or another client won |
-| `resolve(messageOrId, { regionId? })` | `Promise<resolution \| null>` | active GM; null: not a damage message from a save activity, or its tray is superseded or has an applied row (warning toast; the tray's area picker is disabled then too). On a GM tab that is not the active GM the area picker warns and goes back to the current area |
+| `resolve(messageOrId, { regionId? })` | `Promise<resolution \| null>` | active GM; null: not a damage message from a save activity, or its tray is superseded or has an applied row (warning toast; the tray's area picker is disabled then too). `regionId: null` builds the rows from the roller's own targets — `flags.pentaryn-aoe.recordedTargets` once an area stamp has overwritten `system.targets`, else the card's. On a GM tab that is not the active GM the area picker warns and goes back to the current area |
 | `applyRows(messageId, rowIds?)` | `Promise<resolution \| null>` | GM; null when superseded (warning toast) or no tray; when a row's damage fails, the other rows still land and are marked applied, a warning toast names the failed rows, and the first error rejects (Apply again retries only those) |
 | `rollNpcSaves(messageId, { rowIds?, force? })` | `Promise<resolution \| null>` | GM; a monster whose save fails to roll is logged (`npcSave`, naming the row) and left unrolled for a re-roll, and the saves that landed are kept |
 | `rollForPlayer(messageId, rowId, { event? })` | `Promise<Roll[] \| null>` | GM |
@@ -182,7 +189,9 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 |---|---|---|
 | `flags.pentaryn-aoe.resolution` | the damage message | `{ activity, item, itemName, region, regions, scene, usage, ability, dc, onSave, careful, damages, request, created, superseded, rows[] }`; a row carries `amount` only while the GM has typed a total for it |
 | `flags.pentaryn-aoe.claims.<job>` | the damage / usage / player save message | the socket id of the session doing `resolve` / `selfApply` / `matchSave`, or `relay-<requestId>` for one Apply relayed to the GM |
-| `flags.pentaryn-aoe.lateTargets` | the author's own damage / healing message | `true` once the player's late targets filled its `system.targets` (dnd5e's own field, rewritten by the author; the Apply that recorded targets writes it too) |
+| `flags.pentaryn-aoe.lateTargets` | the author's own damage / healing message | `true` once the player's late targets filled its `system.targets` (dnd5e's own field, rewritten by the author; the Apply that recorded targets writes it too); `false` once an area resolve stamped the card over them |
+| `flags.pentaryn-aoe.areaTargets` | the damage message resolved off an area | `true` once `resolve()` wrote the area's creatures into its `system.targets` (dnd5e's own field; replaced on a re-resolve with another area) |
+| `flags.pentaryn-aoe.recordedTargets` | the damage message resolved off an area | the card's `system.targets` as they were before the first area stamp, a plain array of dnd5e descriptors (`[]` when the roller targeted nobody); written once, and what `resolve(id, { regionId: null })` builds its rows from after the stamp |
 | `flags.pentaryn-aoe.applied` | a damage / healing message that had no recorded targets, or followed late targets | `{ at, by, targets[] }` after its Apply, so late targets stop following it |
 | `flags.pentaryn-aoe.effectsApplied` | the usage card | `{ ids, auto, reason, actor, actorName, names }` |
 | `flags.pentaryn-aoe.npcSave` | a monster save message | `true` |
@@ -261,7 +270,10 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
   tabs would land it twice. The tray folds before the relay is awaited, so the player's card does not
   wait on the claim's settle.
 - **Late targets** run on the author's own client only (`user.isSelf` on `targetToken`), one
-  message, debounced; the Apply stamp is written by the author or a GM.
+  message, debounced; the Apply stamp is written by the author or a GM. Two writers can reach a save
+  spell's card's `system.targets` (the author's late targets, the GM's area stamp): the stamp wins —
+  `lateTargetCard` skips a card flagged `areaTargets`, and the stamp clears `lateTargets`. Only a
+  late-targets write already in flight when the stamp lands can still land after it (sub-second).
 - **Apply** (`applyRows`): overlapping calls for one tray in one tab run one after another, so
   the later one skips the rows the earlier one applied; a later call stops waiting on an Apply
   stuck for 10 s (`APPLY_WAIT_MS`). Across tabs, each row is re-read from the live message just
@@ -293,7 +305,8 @@ feature's function is reached through `ctx.exposed`, never an import.
   dnd5e rewrites that number on a multiplier or pill change, so the module recomputes the typed rows a
   tick after any other click on the card and restores dnd5e's latest text when the total is cleared.
   A card first shown with no targets is remembered by dnd5e as "selected" mode per message; once late
-  targets fill it, the first row build switches it to "targeted" through the element's public setter, once.
+  targets or area targets fill it, the first row build switches it to "targeted" through the element's
+  public setter, once.
 - Debugging a missing tray: `CONFIG.debug["pentaryn-aoe"] = true`, then `game.pentaryn.aoe.trace()`.
 - Never `GOLDEN_UPDATE=1 node test/run.mjs` on the whole suite.
 

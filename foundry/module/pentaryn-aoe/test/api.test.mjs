@@ -61,8 +61,8 @@ test("every pre-migration row is legacy with resolve: false params; the -10 read
 test("the flags contract: what aoe writes, what it reads", () => {
   const { flags } = api.describe();
   assert.ok(flags.writes.includes("flags.pentaryn-aoe.handle") && flags.writes.includes("flags.pentaryn-aoe.resolution"));
-  assert.equal(flags.writes.length, 13);
-  for (const f of ["flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.applied"]) assert.ok(flags.writes.includes(f), f);
+  assert.equal(flags.writes.length, 15);
+  for (const f of ["flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets", "flags.pentaryn-aoe.applied"]) assert.ok(flags.writes.includes(f), f);
   assert.deepEqual(flags.reads, ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled"]);
 });
 

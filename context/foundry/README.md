@@ -21,7 +21,7 @@ server, the tunnel, the updater, the asset pipeline.
 
 ## The platform
 
-Foundry **v14.369** (since 2026-10-10) · system **dnd5e 6.0.6** (all four worlds — pentaryn, ardenford, ardenhaven, space-journey; `world.json` systemVersion checked 2026-10-15) · **D&D 2024 rules**
+Foundry **v14.370** (since 2026-11-20; 14.369 from 2026-10-10) · system **dnd5e 6.1.1** (since 2026-11-20; all four worlds — pentaryn, ardenford, ardenhaven, space-journey — launched once so each migrated; `world.json` systemVersion checked 2026-11-20) · **D&D 2024 rules**
 
 > **This domain is not written for one world.** Everything here applies to **any dnd5e world**
 > authored in this setup — the tooling, the modules and the conventions travel; only the content
@@ -68,20 +68,20 @@ The table is generated from each `module.json`, the module's code and its
 
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
-| `aoe` | `pentaryn-aoe` | 0.6.2 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+16) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
+| `aoe` | `pentaryn-aoe` | 0.6.4 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+16) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
 | `attunement` | `pentaryn-attunement` | 0.3.0 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
 | `combat` | `pentaryn-combat` | 0.3.1 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.4.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` … (+5) | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
 | `dropbin` | `pentaryn-dropbin` | 0.3.0 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+12) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
 | `feedback` | `pentaryn-feedback` | 0.1.2 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
-| `importer` | `pentaryn-importer` | 1.3.0 | full tier | `import`, `ddbCorrections.plan`, `ddbCorrections.apply`, `ddbCorrections.rules` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
+| `importer` | `pentaryn-importer` | 1.3.1 | full tier | `import`, `ddbCorrections.plan`, `ddbCorrections.apply`, `ddbCorrections.rules` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | `personal`, `add`, `status`, `open`, `shouldShowBar`, `ensure`, `ensureAll`, `report` … (+3) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | `search`, `page`, `monster`, `monsters`, `names`, `packs`, `onList`, `spellList` … (+1) | [README](../../foundry/module/pentaryn-lookup/README.md) |
 | `movement` | `pentaryn-movement` | 0.2.0 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens` | [README](../../foundry/module/pentaryn-movement/README.md) |
 | `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
-| `pins` | `pentaryn-pins` | 0.3.0 | full tier | `pin`, `unpin`, `pins`, `pinnedToken`, `pinnedTokens`, `audit`, `teleport`, `gather` | [`pins.md`](pins.md) · [README](../../foundry/module/pentaryn-pins/README.md) |
+| `pins` | `pentaryn-pins` | 0.4.1 | full tier | `pin`, `unpin`, `pins`, `pinnedToken`, `pinnedTokens`, `audit`, `teleport`, `gather` | [`pins.md`](pins.md) · [README](../../foundry/module/pentaryn-pins/README.md) |
 | `portals` | `pentaryn-portals` | 0.8.0 | full tier | `snapshot`, `cardFor`, `teleportParty`, `lookAt`, `destinations`, `link`, `unlink`, `teleportToken` … (+4) | [README](../../foundry/module/pentaryn-portals/README.md) |
 | `prompts` | `pentaryn-prompts` | 0.4.6 | full tier | `list`, `gather`, `crops`, `replaceMany`, `show`, `replace`, `open`, `place` … (+6) | [README](../../foundry/module/pentaryn-prompts/README.md) |
 | `reactions` | `pentaryn-reactions` | 0.1.1 | small tier | — (no describe golden yet) | [`reactions.md`](reactions.md) · [README](../../foundry/module/pentaryn-reactions/README.md) |

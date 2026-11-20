@@ -32,7 +32,7 @@ applied after the packages and their smoke test, and rolled back one by one:
 
 | Component | Updates to | Rollback |
 |---|---|---|
-| Node.js (Foundry's service) | newest within the core's `engines.node` (`>=24.13.1 <25` on 14.369) | `~/.local/share/pentaryn/node` symlink back to the old nvm version. Foundry is restarted and the worlds smoked again on the new Node |
+| Node.js (Foundry's service) | newest within the core's `engines.node` (`>=24.22.1 <25` on 14.370; `>=24.13.1` on 14.369) | `~/.local/share/pentaryn/node` symlink back to the old nvm version. Foundry is restarted and the worlds smoked again on the new Node |
 | cloudflared, infisical, gh | apt's candidate | `apt-get install <pkg>=<old>` |
 | other Ubuntu packages | `apt-get upgrade` | none |
 | rclone | `rclone selfupdate --stable` | the old binary from `.state/host-rollback/` |

@@ -5,7 +5,9 @@
  * would land (actor.calculateDamage, so resistances show), and Apply. Players never get this
  * element; they see the usage card, their own request button and their own save rolls.
  * The system's own <damage-application> tray is left in place as a manual fallback; since the saves
- * resolve.mjs rolls are threaded under the usage card, its half-damage pill agrees with this tray.
+ * resolve.mjs rolls are threaded under the usage card, its half-damage pill agrees with this tray, and
+ * since 0.6.4 its rows are the area's creatures (resolve writes the ticked rows into `system.targets`),
+ * so a GM who applies from it hits the area, not the selected PC.
  * dnd5e 6 damage card (damage-card.hbs): .message-content holds .chat-card, the roll's
  * section.icon-row, then <damage-application>; this tray goes right after the native one.
  * B5: each open row carries a small total, pre-filled with the rolled total; a typed number (real

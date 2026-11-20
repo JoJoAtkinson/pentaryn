@@ -48,9 +48,9 @@ export function fireball(W, F, { saves = {}, careful = null } = {}) {
 }
 
 /** The damage message a Damage click would post (dnd5e 6 typed message), with its hook optional. */
-export function damage(W, ctx, { id = "dmgFireball00001", total = 28, hook = false, timestamp, targets = [], usage = IDS.usage, activity = ctx.activity, onSave } = {}) {
+export function damage(W, ctx, { id = "dmgFireball00001", total = 28, hook = false, timestamp, targets = [], usage = IDS.usage, activity = ctx.activity, onSave, flags = {} } = {}) {
   return W.message({
-    id, type: "damage", author: PLAYER_ID, ...(timestamp !== undefined ? { timestamp } : {}),
+    id, type: "damage", author: PLAYER_ID, flags, ...(timestamp !== undefined ? { timestamp } : {}),
     system: { activity: { uuid: activity.uuid }, origin: usage, targets, ...(onSave ? { onSave } : {}) },
     rolls: [{ total, options: { type: "fire", properties: ["mgc"] } }],
     speaker: { scene: ctx.s.id, actor: ctx.wizard.id },

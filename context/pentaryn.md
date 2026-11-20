@@ -16,7 +16,7 @@ method → [`foundry/ops.md`](foundry/ops.md) *Creating a new world* · other ca
 
 > **Volatile file.** Dated findings and IDs belong here.
 
-Foundry world id **`pentaryn`**, title **Pentaryn**, dnd5e 6.0.6 on core 14.369 (both since 2026-10-10), rules
+Foundry world id **`pentaryn`**, title **Pentaryn**, dnd5e 6.1.1 (since 2026-11-20; 6.0.6 from 2026-10-10) on core 14.370 (since 2026-11-20; 14.369 from 2026-10-10), rules
 `modern` (2024). This is Joe's main Pentaryn world build. First use: a 3200 A.F. Underdark
 one-shot with PCs Marrith, Caven and Talo (built to level 12, 2026-10-04).
 

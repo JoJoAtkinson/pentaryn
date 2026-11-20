@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+- **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
+  card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM
+  who applied from it (the module's tray sits right under it) hit the selected character, not the
+  goblins. The save activity records no targets at use time, so dnd5e fell back to the GM's selection.
+  - **The area is stamped as the card's targets** (`resolve.mjs`): the same write that stores the
+    resolution writes the ticked rows' tokens into `system.targets` (dnd5e's own descriptors,
+    `targetDescriptors`) and sets `flags.pentaryn-aoe.areaTargets`. Which rows (`core.areaTargetRows`):
+    the rows buildRows ticks — not the caster, not a hidden token (its name must not reach the
+    players' card), nobody at 0 HP — minus a Careful-protected row already at ×0. dnd5e's native Apply
+    hits every listed token the user owns and the GM owns everything, so an unticked row listed there
+    would have taken damage. No area (recorded targets, `regionId: null`): nothing about targets is written.
+  - **The tray's "selected" memory flips once per message** for area targets as it does for late targets
+    (`core.moduleFilledTargets` gates `onRowsBuilt`). The flip is keyed by message id, not by the
+    rendered `<recorded-targets>` element (code review): a card re-renders on every save, tick and apply
+    write, and each fresh element comes up in whatever mode dnd5e's `_targetState` holds — so a user's
+    own switch back to "selected" is kept across re-renders instead of being flipped again.
+  - **`regionId: null` still means the roller's targets** (code review): the first stamp of a card also
+    writes `flags.pentaryn-aoe.recordedTargets` — its `system.targets` as they were, a plain array, `[]`
+    when the roller targeted nobody — and the no-area path builds its rows from that, not from the area
+    the stamp wrote over them. Written once; a re-resolve with another area leaves it.
+  - **Late targets stop at the stamp** (code review): a player who targeted something before the GM's
+    resolve landed (`lateTargets: true`) kept rewriting `system.targets` on every later target change,
+    replacing the area with their pick while `areaTargets` stayed true — dnd5e's tray then listed the
+    player's target, the very bug this release fixes. `core.lateTargetCard` now skips a card flagged
+    `areaTargets` (`describeRecent` carries it) and the stamp writes `lateTargets: false` when it was set.
+  - **A player's Apply on a save spell's card relays nothing** (`apply.mjs`): the stamp lands on the
+    player's card too, so without this their Apply would have relayed the monsters and the GM's Apply N
+    would have landed the damage twice. Unowned rows are skipped with one info toast
+    (`PENTARYN_AOE.Apply.GmTray`); the player's own rows still land locally, as before.
+  - Not changed: a superseded card keeps its stamp and dnd5e's tray on it is not greyed (only the Part B
+    tray is), so a GM pressing that native tray applies the area by hand; the docs now say so. Clearing
+    `system.targets` in `supersedeOlder` is left for later.
+  - Goldens: `resolve-fireball.json` (the stamp and the four-key update) and `describe.json`
+    (`flags.writes` gains `areaTargets` and `recordedTargets`; the `regionId` doc). Docs: README Part B /
+    Part I / API / Data written / Pitfalls, `tray.mjs` header, `context/foundry/aoe.md`.
 - **0.6.3 (2026-11-20). dnd5e 6.1.1.** The Apply relay carries the two option shapes 6.1's damage tray
   can hand `calculateDamage`: `ignore: true` and `downgrade: true` ("every type", which
   `DamageMessageData#getDamageApplicationOptions` now produces when the card's own

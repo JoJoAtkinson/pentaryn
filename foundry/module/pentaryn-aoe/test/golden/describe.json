@@ -316,7 +316,7 @@
           "type": "{ regionId? }",
           "resolve": false,
           "optional": true,
-          "doc": "regionId: another candidate area; null = the roller's targets"
+          "doc": "regionId: another candidate area; null = the roller's targets (flags.pentaryn-aoe.recordedTargets once an area has been stamped over system.targets, else the card's)"
         }
       ],
       "returns": "Promise<object|null>",
@@ -853,6 +853,8 @@
       "flags.pentaryn-aoe.careful",
       "flags.pentaryn-aoe.npcSave",
       "flags.pentaryn-aoe.lateTargets",
+      "flags.pentaryn-aoe.areaTargets",
+      "flags.pentaryn-aoe.recordedTargets",
       "flags.pentaryn-aoe.applied",
       "flags.dnd5e.lockSize",
       "flags.dnd5e.requestResult"

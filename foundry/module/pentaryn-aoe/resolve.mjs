@@ -15,19 +15,25 @@
  * message.system. Every save this file rolls (NPC, request card, GM-for-player) is posted with the
  * activity's messageSources and system.origin = the spell's usage card, the way dnd5e's own save
  * button does, so the usage card's outcomes and the native damage tray's half-damage pill agree
- * with the multipliers here.
+ * with the multipliers here. The damage card's `system.targets` are written from the area (the ticked
+ * rows, core.areaTargetRows) in the same write as the resolution, so dnd5e's own damage tray lists the
+ * creatures in the area instead of the GM's selected tokens; `flags.pentaryn-aoe.areaTargets` marks it.
+ * The first stamp keeps what the card recorded at use time in `flags.pentaryn-aoe.recordedTargets`
+ * (`[]` when the roller targeted nobody), and `resolve(id, { regionId: null })` reads that, not the
+ * stamp, so "null = the roller's targets" stays true after an area has been written over them.
  */
 
 import {
   MODULE, RECENT_MESSAGES, aoeFlags, doesNotExist, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
-  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS, scaleDamages
+  supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS, scaleDamages,
+  areaTargetRows
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { FEATURE_ROWS } from "./api-manifest.mjs";
 import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
-import { activityOf, usageIdOf, recordedTarget } from "./messages-adapter.mjs";
+import { activityOf, usageIdOf, recordedTarget, targetDescriptors } from "./messages-adapter.mjs";
 
 export const REQUEST_HANDLER = `${MODULE}.save`;
 const abilityLabel = a => CONFIG.DND5E.abilities[a]?.label ?? a;
@@ -199,9 +205,11 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     ? (regionId ? scene?.regions.get(regionId) ?? null : null)
     : newestRegion(candidates);
 
+  // No area: the roller's own targets — the ones kept at the first stamp when an area has since
+  // overwritten `system.targets`, else the card's as they stand.
   const tokens = region
     ? [...(region.tokens ?? [])]
-    : tokensForTargets(message.system.targets, scene);
+    : tokensForTargets(aoeFlags(message).recordedTargets ?? message.system.targets, scene);
 
   const ability = activity.save.ability?.first?.() ?? [...(activity.save.ability ?? [])][0];
   const dc = activity.save.dc?.value;
@@ -237,7 +245,24 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   // Write the bare state first so the tray appears and later results have somewhere to land.
   // AC-6: queued like every other write, so a mutate already running on the old resolution
   // cannot land after this one and bring the old area's rows back. A failed write still throws.
-  const failed = await enqueue(message.id, () => message.update({ [`flags.${MODULE}.resolution`]: res }).then(() => null, err => err));
+  // Off an area, the same write stamps the ticked rows' tokens as the card's `system.targets`
+  // (dnd5e's own field), so the native tray lists the area's creatures, not the GM's selection;
+  // `areaTargets` marks it (apply.mjs flips the tray's "selected" memory once). With no area
+  // (recorded targets, or none) the card's targets are left as they are. Late targets (Part I) that
+  // filled the card before this write landed are overwritten by the stamp and their flag cleared:
+  // core.lateTargetCard skips a stamped card, so the author's later targeting leaves the area's rows.
+  // The first stamp (no `areaTargets` yet) also keeps the card's targets as they were in
+  // `recordedTargets` — a plain array, `[]` when it had none — for a later `regionId: null`.
+  const update = { [`flags.${MODULE}.resolution`]: res };
+  if (region) {
+    const flags = aoeFlags(message);
+    const stamp = new Set(areaTargetRows(rows).map(r => r.id));
+    update["system.targets"] = targetDescriptors(tokens.filter(tk => stamp.has(tk.id)));
+    update[`flags.${MODULE}.areaTargets`] = true;
+    if (!flags.areaTargets) update[`flags.${MODULE}.recordedTargets`] = Array.from(message.system?.targets ?? [], t => ({ ...t }));
+    if (flags.lateTargets) update[`flags.${MODULE}.lateTargets`] = false;
+  }
+  const failed = await enqueue(message.id, () => message.update(update).then(() => null, err => err));
   if (failed && vanished(message.id, failed)) return cancelled(message.id);
   if (failed) throw failed;
   if (vanished(message.id)) return cancelled(message.id);

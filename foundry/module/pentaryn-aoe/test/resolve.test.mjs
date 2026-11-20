@@ -27,6 +27,7 @@ test("a Fireball damage message is resolved on the GM: rows, NPC saves, one requ
   const res = resOf(msg.id);
   pinJSON("resolve-fireball", {
     resolution: res,
+    targets: msg.system.targets,
     calls: ops("rollSavingThrow", "create", "update").map(c => (c.op === "update" ? { op: c.op, uuid: c.uuid, keys: Object.keys(c.changes) } : c)),
   }, import.meta.url);
   assert.deepEqual(res.rows.map(r => [r.id, r.kind, r.apply, r.caster, r.save?.success ?? null, r.multiplier]), [
@@ -39,6 +40,14 @@ test("a Fireball damage message is resolved on the GM: rows, NPC saves, one requ
   ]);
   assert.equal(res.request, ops("create").find(c => c.data.type === "request") && game.messages.contents.find(m => m.type === "request").id);
   assert.equal(msg.flags[MODULE].claims.resolve, game.socket.id);
+  // 0.6.4: the ticked rows are the card's own targets, so dnd5e's tray lists the area — not Marrith (the
+  // caster), not the dead goblin, not the hidden one (never named to the players)
+  assert.deepEqual(msg.system.targets.map(t => t.token.split(".").pop()), [IDS.g1, IDS.g2, IDS.cv]);
+  assert.deepEqual(msg.system.targets.map(t => Object.keys(t).sort()), Array(3).fill(["ac", "actor", "img", "name", "token"]), "dnd5e's descriptor shape");
+  assert.equal(msg.flags[MODULE].areaTargets, true);
+  const stamp = ops("update").find(c => c.uuid === msg.uuid && "system.targets" in c.changes);
+  assert.deepEqual(Object.keys(stamp.changes), [`flags.${MODULE}.resolution`, "system.targets", `flags.${MODULE}.areaTargets`, `flags.${MODULE}.recordedTargets`], "one write: the resolution, the stamp and what the card recorded");
+  assert.deepEqual(msg.flags[MODULE].recordedTargets, [], "the roller targeted nobody, and the first stamp keeps that honest");
 });
 
 test("NPC saves: threaded under the usage card and flagged npcSave (rollMode gm is in the golden)", () => {
@@ -269,14 +278,23 @@ test("createChatMessage does nothing: as a player, setting off, already resolved
 });
 
 test("resolve(id, { regionId: null }) uses the recorded targets instead of the area", async () => {
+  for (const g of [ctx.g1, ctx.g2]) g.system.attributes.hp.value = 7;   // earlier Applies left them at 0 (unticked, so unstamped)
   const targets = [{ token: `${ctx.s.uuid}.Token.${IDS.g1}`, actor: ctx.g1.uuid }, { actor: ctx.caven.uuid }];
   const msg = damage(W, ctx, { id: "dmgTargets000001", targets });
   const res = await R.resolve(msg.id, { regionId: null });
   assert.deepEqual([res.region, res.rows.map(r => r.id)], [null, [IDS.g1, IDS.cv]]);
+  assert.deepEqual(msg.system.targets, targets, "no area: the recorded targets are left as they were");
+  assert.equal(msg.flags[MODULE]?.areaTargets, undefined);
   const res2 = await R.resolve(msg.id, { regionId: "noSuchRegion0001" });
   assert.equal(res2.region, null);
+  assert.deepEqual(msg.system.targets, targets);
+  assert.equal(msg.flags[MODULE]?.areaTargets, undefined);
   const res3 = await R.resolve(msg.id, { regionId: IDS.region });
   assert.equal(res3.region, IDS.region);
+  // off the area: the ticked rows replace the recorded targets, and the flag marks it
+  assert.deepEqual(msg.system.targets.map(t => t.token.split(".").pop()), [IDS.g1, IDS.g2, IDS.cv]);
+  assert.equal(msg.flags[MODULE].areaTargets, true);
+  assert.deepEqual(msg.flags[MODULE].recordedTargets, targets, "the first stamp keeps the roller's targets as they were");
 });
 
 /* ── Careful Spell ───────────────────────────────────────────────────────────────────────────── */
@@ -304,6 +322,7 @@ test("Careful Spell used (postUseActivity on the caster's client): the player's 
 
 test("a declared Careful Spell protects exactly the chosen rows on the next save tray (golden/careful.json) and is cleared", async () => {
   reset();
+  for (const g of [ctx.g1, ctx.g2]) g.system.attributes.hp.value = 7;   // alive, so the stamp has rows to show Caven missing from
   const msg = damage(W, ctx, { id: "dmgCareful000001", hook: true });
   await advance(800);
   await flush(8);
@@ -312,6 +331,10 @@ test("a declared Careful Spell protects exactly the chosen rows on the next save
   assert.deepEqual(res.careful, { names: ["Caven"], ids: [IDS.cv] });
   assert.equal(ctx.wizard.flags[MODULE].careful, undefined, "one use per declaration");
   assert.equal(ops("create").filter(c => c.data.type === "request").length, 0, "the protected PC gets no request card");
+  // 0.6.4: Caven is protected on a half spell (×0), so dnd5e's own tray does not list him either
+  assert.equal(res.rows.find(r => r.id === IDS.cv).multiplier, 0);
+  assert.deepEqual(msg.system.targets.map(t => t.token.split(".").pop()), [IDS.g1, IDS.g2]);
+  assert.equal(msg.flags[MODULE].areaTargets, true);
 });
 
 test("carefulFor → null: setting off, no declaration, no caster", async () => {
@@ -343,6 +366,57 @@ test("-2 describeToken: the plain shape buildRows reads (golden/describe-token.j
   pinJSON("describe-token", shapes, import.meta.url);
   assert.equal(n, 4, "the handle actor itself short-circuits; every other token scans game.actors");
   assert.deepEqual(shapes.map(d => [d.isHandleActor, d.handle, d.isPile]), [[true, false, false], [false, false, false], [false, false, false], [false, false, true], [true, true, false]]);
+});
+
+test("0.6.4 review: a card the player's late targets filled before the GM's resolve landed is stamped off the area and its lateTargets cleared in the same write", async () => {
+  for (const g of [ctx.g1, ctx.g2]) g.system.attributes.hp.value = 7;   // earlier Applies left them at 0 (unticked, so unstamped)
+  ctx.caven.system.attributes.hp.value = 30;
+  // its own usage card: a tray under IDS.usage would inherit the Careful pick the test above used (usedBy)
+  const usage = W.message({ id: "usageLateStamp01", type: "usage", author: PLAYER_ID, system: { activity: { uuid: ctx.activity.uuid }, item: { uuid: ctx.item.uuid } }, speaker: { scene: ctx.s.id, actor: ctx.wizard.id } }).id;
+  const early = [{ token: `${ctx.s.uuid}.Token.${IDS.mr}`, actor: ctx.wizard.uuid, name: "Marrith" }];   // the player clicked Marrith
+  const msg = damage(W, ctx, { id: "dmgLateStamp0001", usage, targets: early, flags: { [MODULE]: { lateTargets: true } } });
+  reset();
+  const res = await R.resolve(msg.id);
+  assert.equal(res.region, IDS.region);
+  assert.deepEqual(msg.system.targets.map(t => t.token.split(".").pop()), [IDS.g1, IDS.g2, IDS.cv], "the area replaces the player's pick");
+  assert.deepEqual([msg.flags[MODULE].areaTargets, msg.flags[MODULE].lateTargets], [true, false]);
+  const stamp = ops("update").find(c => c.uuid === msg.uuid && "system.targets" in c.changes);
+  assert.deepEqual(Object.keys(stamp.changes), [`flags.${MODULE}.resolution`, "system.targets", `flags.${MODULE}.areaTargets`, `flags.${MODULE}.recordedTargets`, `flags.${MODULE}.lateTargets`]);
+  assert.deepEqual(msg.flags[MODULE].recordedTargets, early, "the late pick was the roller's own target, so it is what a regionId: null falls back to");
+  // a card late targets never touched gets no lateTargets key at all (the fireball golden's four-key write)
+  const plain = damage(W, ctx, { id: "dmgLateStamp0002", usage });
+  reset();
+  await R.resolve(plain.id);
+  const stamp2 = ops("update").find(c => c.uuid === plain.uuid && "system.targets" in c.changes);
+  assert.deepEqual(Object.keys(stamp2.changes), [`flags.${MODULE}.resolution`, "system.targets", `flags.${MODULE}.areaTargets`, `flags.${MODULE}.recordedTargets`]);
+  assert.equal(plain.flags[MODULE].lateTargets, undefined);
+});
+
+test("0.6.4 review: resolve(id, { regionId: null }) after an area stamp builds rows from the roller's recorded targets, not the stamped area", async () => {
+  for (const g of [ctx.g1, ctx.g2]) g.system.attributes.hp.value = 7;   // earlier Applies left them at 0 (unticked, so unstamped)
+  ctx.caven.system.attributes.hp.value = 30;
+  const usage = W.message({ id: "usageRecorded001", type: "usage", author: PLAYER_ID, system: { activity: { uuid: ctx.activity.uuid }, item: { uuid: ctx.item.uuid } }, speaker: { scene: ctx.s.id, actor: ctx.wizard.id } }).id;
+  // the player targeted g1 and Caven at use time; the area holds g1, g2 (and the untargeted rest)
+  const recorded = [{ token: `${ctx.s.uuid}.Token.${IDS.g1}`, actor: ctx.g1.uuid, name: "Goblin 1" }, { token: `${ctx.s.uuid}.Token.${IDS.cv}`, actor: ctx.caven.uuid, name: "Caven" }];
+  const msg = damage(W, ctx, { id: "dmgRecorded00001", usage, targets: recorded });
+  reset();
+  const res = await R.resolve(msg.id);
+  assert.equal(res.region, IDS.region);
+  assert.deepEqual(msg.system.targets.map(t => t.token.split(".").pop()), [IDS.g1, IDS.g2, IDS.cv], "the area is stamped");
+  assert.deepEqual(msg.flags[MODULE].recordedTargets, recorded, "and the roller's own targets are kept, as plain descriptors");
+  const stamp = ops("update").find(c => c.uuid === msg.uuid && "system.targets" in c.changes);
+  assert.deepEqual(Object.keys(stamp.changes), [`flags.${MODULE}.resolution`, "system.targets", `flags.${MODULE}.areaTargets`, `flags.${MODULE}.recordedTargets`]);
+  // a second stamp (another area, or the same one again) does not overwrite what was kept
+  reset();
+  await R.resolve(msg.id, { regionId: IDS.region });
+  const again = ops("update").find(c => c.uuid === msg.uuid && "system.targets" in c.changes);
+  assert.deepEqual(Object.keys(again.changes), [`flags.${MODULE}.resolution`, "system.targets", `flags.${MODULE}.areaTargets`], "recordedTargets is written once");
+  assert.deepEqual(msg.flags[MODULE].recordedTargets, recorded);
+  // null = the roller's targets: g1 and Caven, not the stamped g2
+  const res2 = await R.resolve(msg.id, { regionId: null });
+  assert.deepEqual([res2.region, res2.rows.map(r => r.id)], [null, [IDS.g1, IDS.cv]]);
+  assert.deepEqual(msg.system.targets.map(t => t.token.split(".").pop()), [IDS.g1, IDS.g2, IDS.cv], "no area: the card's targets are left as the last stamp wrote them");
+  assert.equal(msg.flags[MODULE].areaTargets, true);
 });
 
 test("isPile: Item Piles' API when present (a throw falls through to the flags), else the flags", () => {

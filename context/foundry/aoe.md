@@ -68,10 +68,16 @@ that cancels core's region placement before anything else (`escape.mjs`).
    The per-row dice icon re-rolls one monster. The shield icon rolls a save for an absent player.
 
 Every save is threaded under the spell's card the way dnd5e's own save button threads it, so the
-card's outcomes and dnd5e's damage tray (its half-damage pill) agree with this tray.
+card's outcomes and dnd5e's damage tray (its half-damage pill) agree with this tray. Since 0.6.4 the
+damage card's own targets are the creatures in the area too (the ticked rows: not the caster, nothing
+hidden, nobody at 0 HP), so dnd5e's own tray lists them instead of whatever the GM had selected; a
+player's Apply on that card does nothing for the monsters (the GM's tray does, and the player gets one
+toast saying so).
 Nothing is applied until **Apply** is pressed. Rows still waiting are skipped, and pressing
 Apply again later applies only the rows that have resolved since. A second Damage click on the
-same area greys out the older tray ("superseded"), so the same area can't be applied twice.
+same area greys out the older tray ("superseded"): the module's tray refuses to apply it, but dnd5e's
+own tray on that older card still lists the area's creatures, and a GM pressing it applies that damage
+by hand — so the newer tray is the one to use.
 The tray has no rule for Legendary Resistance, Evasion or cover. Set the multiplier on that row by hand.
 
 **Single-target save spells (Psionic Lash, Toll the Dead).** Using the spell at a target rolls its
@@ -186,7 +192,10 @@ game.pentaryn.aoe.applyRows(messageId[, rowIds])
   leftover areas from before the module was installed get handles the first time their scene is viewed.
 - **A moved area needs Damage clicked again.** Containment is read when the damage is rolled.
 - **A card follows your targets only while it is yours, untargeted and fresh** (under ten minutes,
-  not yet applied). A card the GM rolled lists selected tokens, as dnd5e always did.
+  not yet applied, and not a save spell's card the GM's client has resolved off an area — from then on
+  the area's creatures are its rows, whatever you target). A card the GM rolled lists selected tokens,
+  as dnd5e always did — except a save spell's damage card, whose dnd5e tray lists the creatures in the
+  area once the GM's client has resolved it (0.6.4).
 - The handle is one shared world actor, **"Area handle"**, in `Scene Props`. The module creates it
   on the GM's first ready. Don't delete it; if you do, it is recreated. It is `tiny`, hovers, and its
   tokens carry `flags.dnd5e.lockSize` (the GM's ready and `sweep` keep it so), because dnd5e 6

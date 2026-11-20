@@ -312,6 +312,34 @@ test("late targets at Apply time: a GM with nothing selected but a stale target 
   assert.deepEqual([ops("applyDamage"), ops("relay"), ops("update")], [[], [], []]);
 });
 
+test("0.6.4 area targets: a save spell's card the GM resolved off an area flips dnd5e's 'selected' memory to the recorded rows, once per message; a card the module did not fill stays as dnd5e left it", async () => {
+  const stamped = healCard("healCard00000031", { author: GM_ID, isAuthor: false, type: "fire", targets: [desc(tokG1, ctx.g1), desc(tokCv, ctx.caven)], flags: { [MODULE]: { areaTargets: true, resolution: { rows: [] } } } });
+  const c = card(stamped, [G1, CV], { mode: "selected", bare: [G1, CV] });
+  c.built();
+  assert.equal(c.recorded.targetingMode, "targeted", "the area's creatures, not the GM's selection");
+  c.recorded.targetingMode = "selected";
+  c.built();
+  assert.equal(c.recorded.targetingMode, "selected", "the user's own switch back is respected on this element");
+  // the card re-renders on the next write (a save, a tick, an apply): a fresh element that dnd5e brings up
+  // "selected" again from the message's _targetState — the user's switch back is kept, not flipped again
+  const again = card(stamped, [G1, CV], { mode: "selected", bare: [G1, CV] });
+  again.built();
+  assert.equal(again.recorded.targetingMode, "selected", "once per message, not once per rendered element");
+  // a different stamped message still gets its one flip
+  const second = healCard("healCard00000038", { author: GM_ID, isAuthor: false, type: "fire", targets: [desc(tokG1, ctx.g1), desc(tokCv, ctx.caven)], flags: { [MODULE]: { areaTargets: true, resolution: { rows: [] } } } });
+  const c4 = card(second, [G1, CV], { mode: "selected", bare: [G1, CV] });
+  c4.built();
+  assert.equal(c4.recorded.targetingMode, "targeted");
+  const plain = healCard("healCard00000032", { author: GM_ID, isAuthor: false, type: "fire", targets: [desc(tokG1, ctx.g1), desc(tokCv, ctx.caven)], flags: { [MODULE]: { resolution: { rows: [] } } } });
+  const c2 = card(plain, [G1, CV], { mode: "selected", bare: [G1, CV] });
+  c2.built();
+  assert.equal(c2.recorded.targetingMode, "selected", "a resolution alone is not a stamp");
+  const bare = healCard("healCard00000033", { targets: [desc(tokG1, ctx.g1), desc(tokCv, ctx.caven)] });
+  const c3 = card(bare, [G1, CV], { mode: "selected", bare: [G1, CV] });
+  c3.built();
+  assert.equal(c3.recorded.targetingMode, "selected");
+});
+
 test("late targets as they are targeted: the player's newest own card with no targets is filled, once per burst; the card is left alone once applied", async () => {
   const older = healCard("healCard00000007", { targets: [], at: Date.now() - 11 * 60_000 });   // outside the window
   const msg = healCard("healCard00000008", { targets: [], at: Date.now() - 1000 });
@@ -353,6 +381,28 @@ test("late targets as they are targeted: the player's newest own card with no ta
   player.targets = new Set();
   assert.deepEqual(ops("update"), [], "applied: it no longer follows (and the older card is past the window)");
   assert.deepEqual(msg.system.targets.map(t => t.token), [MR]);
+});
+
+test("0.6.4 review: once the GM's resolve has stamped the area into the player's card, their retargeting no longer rewrites system.targets — even on a card late targets had filled first", async () => {
+  // the player targeted a goblin before the stamp landed (lateTargets), then the GM's resolve wrote the area
+  const stamped = healCard("healCard00000035", { type: "fire", targets: [desc(tokG1, ctx.g1), desc(tokCv, ctx.caven)], at: Date.now() - 1000,
+    flags: { [MODULE]: { lateTargets: false, areaTargets: true, resolution: { rows: [] } } } });
+  const lateThenStamped = healCard("healCard00000036", { type: "fire", targets: [desc(tokG1, ctx.g1)], at: Date.now() - 500,
+    flags: { [MODULE]: { lateTargets: true, areaTargets: true, resolution: { rows: [] } } } });
+  reset();
+  player.targets = new Set([tokMr]);
+  F.fire("targetToken", player, tokMr, true);
+  await advance(200);
+  assert.deepEqual(ops("update"), [], "neither card follows: the area's creatures are its rows");
+  assert.deepEqual(stamped.system.targets.map(t => t.token), [G1, CV]);
+  assert.deepEqual(lateThenStamped.system.targets.map(t => t.token), [G1]);
+  // the same player's fresh untargeted card is still followed, so late targets as such are intact
+  const open = healCard("healCard00000037", { targets: [], at: Date.now() - 100 });
+  F.fire("targetToken", player, tokMr, true);
+  await advance(200);
+  assert.deepEqual(ops("update").map(c => c.uuid), [open.uuid]);
+  assert.deepEqual(open.system.targets.map(t => t.token), [MR]);
+  player.targets = new Set();
 });
 
 test("late targets: another user's targets, a GM, a card with targets, a card outside the window, or the setting off → nothing", async () => {
@@ -493,6 +543,28 @@ test("the GM owns everything: every row lands locally, nothing is relayed; a sav
   const c3 = card(saveCard, [MR, CV]);
   c3.built();
   assert.equal(c3.inputs().length, 2, "a player sees the totals on the same card");
+});
+
+test("0.6.4: a player's Apply on a save spell's card relays nothing — the GM's tray applies it; the owned row still lands here; one info toast names the rest", async () => {
+  F.become({ userId: PLAYER_ID });
+  const saveCard = game.messages.get("healCard00000024");   // the GM's card, a Part B resolution; the player owns its actor (Marrith)
+  const c = card(saveCard, [MR, CV], { bare: [CV] });
+  c.built();
+  reset();
+  ctx.wizard.system.attributes.hp.value = 25;
+  const ev = await c.apply();
+  assert.deepEqual([ev.defaultPrevented, ev.stopped], [true, true]);
+  assert.deepEqual(ops("applyDamage").map(c => c.actor), [ctx.wizard.uuid], "Marrith is the player's own: lands locally, as today");
+  assert.deepEqual(ops("relay"), [], "Caven is not relayed: the GM's Apply N would land the damage twice");
+  assert.deepEqual(ops("notify").map(n => [n.level, n.message]), [["info", game.i18n.format("PENTARYN_AOE.Apply.GmTray", { names: "Caven" })]]);
+  // a plain card (no resolution) still relays
+  const plain = healCard("healCard00000034");
+  const c2 = card(plain, [MR, CV]);
+  c2.built();
+  reset();
+  await c2.apply();
+  assert.deepEqual(ops("relay").map(r => r.data.rows.map(x => x.uuid)), [[CV]]);
+  assert.deepEqual(ops("notify"), []);
 });
 
 test("applyRelay (active GM): the card's damage, the sender's multiplier, typed total and pill choices; a token that is not there or ×0 is skipped; one audit line", async () => {

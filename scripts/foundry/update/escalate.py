@@ -648,10 +648,15 @@ def checks_for(files: list[str], rows: list[adj_mod.Adjustment] | tuple = ()) ->
     return sorted(set(out))
 
 
+LIB_DIR = "foundry/lib/"      # the kit: shared code vendored into every module's test/kit
+
+
 def area_of(path: str) -> str:
     parts = path.split("/")
     if len(parts) >= 3 and parts[0] == "foundry" and parts[1] == "module":
         return parts[2]
+    if path.startswith(LIB_DIR):
+        return "foundry/lib"
     if path.startswith("scripts/foundry/"):
         return "scripts/foundry"
     if path.startswith("automation/"):
@@ -660,8 +665,22 @@ def area_of(path: str) -> str:
 
 
 def _area_dir(area: str) -> str:
-    return {"scripts/foundry": "scripts/foundry/", "automation": "automation/"}.get(
-        area, f"foundry/module/{area}/")
+    return {"scripts/foundry": "scripts/foundry/", "automation": "automation/",
+            "foundry/lib": LIB_DIR}.get(area, f"foundry/module/{area}/")
+
+
+def _fix_path_allowed(fpath: str, area: str) -> bool:
+    """A fix file must live under its area's directory. One widening: a module area may
+    also fix the kit under ``foundry/lib/`` — it is shared code, vendored into every
+    module, and a core change that breaks a kit rule is fixed there, not in one module's
+    copy. (The 2026-11-19 core analysis cited ``foundry/lib/pull-rule.mjs`` and was
+    rejected for it.) ``..`` anywhere in the path is never allowed."""
+    if ".." in fpath.split("/"):
+        return False
+    area_dir = _area_dir(area)
+    if fpath.startswith(area_dir):
+        return True
+    return fpath.startswith(LIB_DIR) and area_dir.startswith("foundry/module/")
 
 
 def validate_analysis(data, *, pkg: str, row_ids: list[str], bundle_files: list[str],
@@ -704,9 +723,12 @@ def validate_analysis(data, *, pkg: str, row_ids: list[str], bundle_files: list[
             if not isinstance(fx, dict):
                 raise ValidationError(f"areas[{i}].fix[{j}] is not an object")
             fpath = clean_text(fx.get("file"), 160, field=f"areas[{i}].fix[{j}].file")
-            if ".." in fpath.split("/") or not fpath.startswith(_area_dir(area)):
+            if not _fix_path_allowed(fpath, area):
+                allowed = _area_dir(area)
+                if allowed.startswith("foundry/module/"):
+                    allowed += f" (or the shared kit, {LIB_DIR})"
                 raise ValidationError(f"areas[{i}].fix[{j}].file {fpath!r} is outside "
-                                      f"{_area_dir(area)}")
+                                      f"{allowed}")
             test = str(fx.get("test") or "none").strip()
             test = re.sub(r"^make foundry-pentaryn-", "make foundry-", test)
             if not TEST_RE.match(test) or (checks is not None and test != "none"

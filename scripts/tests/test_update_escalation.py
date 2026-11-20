@@ -576,6 +576,48 @@ def test_validate_analysis_rules():
             esc.validate_analysis(data, **args)
 
 
+def test_fix_file_under_the_shared_kit_is_allowed_for_a_module_area():
+    """``foundry/lib/`` is the kit vendored into every module, so a module area may fix
+    it. The 2026-11-19 core analysis was rejected for citing ``foundry/lib/pull-rule.mjs``
+    (reported as "outside foundry/module/foundry/" — the lib file in the bundle had been
+    reduced to the bogus area ``foundry``). Another module's directory and any ``..`` path
+    are still refused."""
+    lib = "foundry/lib/pull-rule.mjs"
+    args = dict(pkg="core", row_ids=[], bundle_files=[STUDY, lib], checks=[])
+
+    def area(**over):
+        return {"area": "pentaryn-ties", "impact": "latent", "what_breaks": "w",
+                "evidence": {"notes": "n", "ours": f"{STUDY}:12"}, "fix": [], **over}
+
+    def fix(path):
+        return [{"file": path, "change": "c", "test": "none"}]
+
+    # The kit file is accepted for a module area …
+    out = esc.validate_analysis(analysis("core", areas=[area(fix=fix(lib))]), **args)
+    assert out["areas"][0]["fix"][0]["file"] == lib
+    # … and for its own area, which the bundle now names "foundry/lib", not "foundry".
+    assert esc.area_of(lib) == "foundry/lib"
+    out = esc.validate_analysis(
+        analysis("core", areas=[area(area="foundry/lib",
+                                     evidence={"notes": "n", "ours": f"{lib}:1"},
+                                     fix=fix(lib))]), **args)
+    assert out["areas"][0]["fix"][0]["file"] == lib
+
+    for bad in ("foundry/module/pentaryn-portals/x.mjs",   # another module
+                "foundry/lib/../module/pentaryn-portals/x.mjs",
+                "foundry/libs/x.mjs",                        # a near miss, not the kit
+                "foundry/x.mjs"):
+        with pytest.raises(esc.ValidationError, match="is outside"):
+            esc.validate_analysis(analysis("core", areas=[area(fix=fix(bad))]), **args)
+
+    # A non-module area gets no kit exception.
+    args_py = dict(pkg="core", row_ids=[], bundle_files=[ADMIN, lib], checks=[])
+    with pytest.raises(esc.ValidationError, match="is outside"):
+        esc.validate_analysis(analysis("core", areas=[
+            area(area="scripts/foundry", evidence={"notes": "n", "ours": f"{ADMIN}:1"},
+                 fix=fix(lib))]), **args_py)
+
+
 def test_unattended_fix_ok_is_recomputed():
     args = dict(pkg="dice-so-nice", row_ids=[], bundle_files=[STUDY],
                 checks=["make foundry-ties-check"])
