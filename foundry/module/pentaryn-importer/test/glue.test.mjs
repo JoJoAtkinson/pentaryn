@@ -34,7 +34,7 @@ const F = await installFoundry({
   user: { isGM: true },
   // the real module.json flags, so the Wave 7 batch (step 9) cannot drop the gate's keys unseen
   modules: [{ id: MODULE, version: manifest.version, flags: manifest.flags }, { id: "pentaryn-zz" }],
-  system: { id: "dnd5e", version: "6.0.6" },
+  system: { id: "dnd5e", version: "6.1.1" },
   actors: [
     { id: "actorAlpha000001", name: "Alpha", flags: { pentaryn: { slug: "a", contentHash: "sha256:a-old" } } },
     { id: "actorCharl000001", name: "Charlie", flags: { pentaryn: { slug: "c", contentHash: "sha256:c-same" } } },
@@ -124,7 +124,7 @@ function pinKey(file, key, value) {
 }
 
 const valid = (actors = [], extra = {}) => ({
-  $contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.0", generation: 14,
+  $contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.1", generation: 14,
   generator: "build_actors.py", generatorVersion: "1.0.0", generatedAt: "2026-10-10T00:00:00Z", sourceRevision: "abc1234",
   actors, ...extra,
 });
@@ -284,8 +284,8 @@ test("version gate: targetSystemVersion 5.3 → PentarynAbort, both minor-versio
   assertShouted(o, "PentarynAbort");
   assert.equal(o.error.message, [
     "VERSION GATE FAILED — nothing was imported.",
-    '  • targetSystemVersion is "5.3" but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.',
-    '  • targetSystemVersion is "5.3" but module.json expects "6.0".',
+    '  • targetSystemVersion is "5.3" but the installed dnd5e is 6.1.1 (major.minor 6.1). dnd5e minor releases move the activity schema; refusing.',
+    '  • targetSystemVersion is "5.3" but module.json expects "6.1".',
   ].join("\n"));
   pinKey("refusals", "gateMinor", refusal(o));
   pinKey("console", "gateMinor", o.console);

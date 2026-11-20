@@ -92,7 +92,12 @@ How to run it: [`../../automation/README.md`](../../automation/README.md).
   BOSS run died there.
 - **Smoke on BOSS** runs headless with SwiftShader when there is no display (S4U at 03:00). The
   bot's chrome-headless-shell is a fallback browser, and `automation/smoke/node_modules` must be
-  installed (`npm install` in that folder).
+  installed (`npm install` in that folder). **`smoke.py` must hand `PENTARYN_HEADLESS_CHROME`
+  (and the libs path, as `LD_LIBRARY_PATH`) to `smoke.mjs` itself** — `~/.config/pentaryn/env`
+  is never exported to shells, so until 2026-11-19 the browser step saw no browser at all, every
+  world "failed" smoke, and the run rolled back modules and Node that were fine (2026-10-26,
+  2026-11-19). A failing smoke on all worlds at once is the harness, not the update: check its
+  `errors[]` text before trusting a rollback.
 - **Host dependencies.** `hostdeps.py` plans them into `plan["host"]`, a separate list so
   adjudication and escalation see only Foundry packages. They are applied in `_host_phase`
   after the packages, in the order apt, rclone, chrome, then node. Node restarts Foundry and the

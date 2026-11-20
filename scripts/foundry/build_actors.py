@@ -56,15 +56,19 @@ OVERRIDES_DIR = REPO_ROOT / "foundry/overrides"
 
 CONTRACT = "pentaryn/actors.json@1"
 GENERATOR = "scripts/foundry/build_actors.py"
-GENERATOR_VERSION = "1.0.1"
+GENERATOR_VERSION = "1.0.2"
 TARGET_SYSTEM = "dnd5e"
-TARGET_SYSTEM_VERSION = "6.0"
+TARGET_SYSTEM_VERSION = "6.1"
 GENERATION = 14
 
 # ---------------------------------------------------------------------------
-# dnd5e 6.0.6 enums, read out of module/config.mjs in the installed system. Unchanged
-# from 5.3.3 except AREA_TARGET_TYPES gaining "ring" (6.0). 6.0 also adds a "jump"
-# movement type; the legacy movement shape this contract writes has no jump key.
+# dnd5e 6.1.1 enums, read out of module/config.mjs (release-6.1.1 tag, 2026-11-20): every
+# set below is byte-identical to 6.0.6 (damageTypes, conditionTypes, creatureTypes,
+# abilities, senses, movementTypes, actorSizes, areaTargetTypes, limitedUsePeriods,
+# healingTypes). 6.1 adds damageResistanceTypes ("falling"), food properties and faction
+# actors, none of which this contract writes. Unchanged from 5.3.3 except
+# AREA_TARGET_TYPES gaining "ring" (6.0). 6.0 also added a "jump" movement type; the
+# legacy movement shape this contract writes has no jump key.
 # ---------------------------------------------------------------------------
 
 DAMAGE_TYPES = frozenset(

@@ -27,6 +27,7 @@ Two things about the sequencing matter more than the checks themselves:
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -331,9 +332,25 @@ def run_browser(fa: FoundryAdmin, world: str, *, dwell: int,
     for pattern in ignores:
         cmd += ["--ignore", pattern]
 
+    # smoke.mjs falls back to the headless GM's chrome-headless-shell, but it reads
+    # PENTARYN_HEADLESS_CHROME from its own environment and ~/.config/pentaryn/env is not
+    # exported to shells (host.py). Hand the env-file values over, else BOSS finds no browser
+    # and every world "fails" smoke (2026-10-26, 2026-11-19: three modules and Node rolled
+    # back for a browser that was installed all along).
+    env = os.environ.copy()
+    for key in ("PENTARYN_HEADLESS_CHROME", "PENTARYN_HEADLESS_LIBS", "CHROME_PATH"):
+        val = host.get(key)
+        if val and key not in env:
+            env[key] = val
+    # chrome-headless-shell links against the libs the bot unpacked beside it (watchdog.mjs
+    # does the same for the GM bot).
+    if env.get("PENTARYN_HEADLESS_LIBS"):
+        env["LD_LIBRARY_PATH"] = ":".join(
+            p for p in (env["PENTARYN_HEADLESS_LIBS"], env.get("LD_LIBRARY_PATH")) if p)
+
     try:
         # Registered, so a SIGTERM'd run terminates it rather than orphaning it (AC-6).
-        proc = children.run(cmd, timeout=dwell + 600)
+        proc = children.run(cmd, timeout=dwell + 600, env=env)
     except (subprocess.TimeoutExpired, OSError) as exc:
         return {"ok": False, "errors": [{"type": "fatal",
                                          "text": f"browser smoke test failed to run: {exc}"}]}

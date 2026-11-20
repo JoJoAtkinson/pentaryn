@@ -1,11 +1,11 @@
 {
   "gateMinor": {
     "name": "PentarynAbort",
-    "message": "VERSION GATE FAILED — nothing was imported.\n  • targetSystemVersion is \"5.3\" but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is \"5.3\" but module.json expects \"6.0\".",
+    "message": "VERSION GATE FAILED — nothing was imported.\n  • targetSystemVersion is \"5.3\" but the installed dnd5e is 6.1.1 (major.minor 6.1). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is \"5.3\" but module.json expects \"6.1\".",
     "toasts": [
       [
         "error",
-        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • targetSystemVersion is \"5.3\" but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is \"5.3\" but module.json expects \"6.0\".",
+        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • targetSystemVersion is \"5.3\" but the installed dnd5e is 6.1.1 (major.minor 6.1). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is \"5.3\" but module.json expects \"6.1\".",
         {
           "permanent": true,
           "console": false
@@ -16,11 +16,11 @@
   },
   "gateEmpty": {
     "name": "PentarynAbort",
-    "message": "VERSION GATE FAILED — nothing was imported.\n  • $contract is undefined, expected \"pentaryn/actors.json@1\". Regenerate with a build_actors.py that speaks this contract version.\n  • targetSystem is undefined but this world runs \"dnd5e\".\n  • targetSystem is undefined but module.json expects \"dnd5e\".\n  • targetSystemVersion is undefined but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is undefined but module.json expects \"6.0\".\n  • generation is undefined but this Foundry is generation 14 (14.369).\n  • generation is undefined but module.json expects 14.\n  • `actors` is missing or is not an array.",
+    "message": "VERSION GATE FAILED — nothing was imported.\n  • $contract is undefined, expected \"pentaryn/actors.json@1\". Regenerate with a build_actors.py that speaks this contract version.\n  • targetSystem is undefined but this world runs \"dnd5e\".\n  • targetSystem is undefined but module.json expects \"dnd5e\".\n  • targetSystemVersion is undefined but the installed dnd5e is 6.1.1 (major.minor 6.1). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is undefined but module.json expects \"6.1\".\n  • generation is undefined but this Foundry is generation 14 (14.369).\n  • generation is undefined but module.json expects 14.\n  • `actors` is missing or is not an array.",
     "toasts": [
       [
         "error",
-        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • $contract is undefined, expected \"pentaryn/actors.json@1\". Regenerate with a build_actors.py that speaks this contract version.\n  • targetSystem is undefined but this world runs \"dnd5e\".\n  • targetSystem is undefined but module.json expects \"dnd5e\".\n  • targetSystemVersion is undefined but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is undefined but module.json expects \"6.0\".\n  • generation is undefined but this Foundry is generation 14 (14.369).\n  • generation is undefined but module.json expects 14.\n  • `actors` is missing or is not an array.",
+        "[pentaryn-importer] VERSION GATE FAILED — nothing was imported.\n  • $contract is undefined, expected \"pentaryn/actors.json@1\". Regenerate with a build_actors.py that speaks this contract version.\n  • targetSystem is undefined but this world runs \"dnd5e\".\n  • targetSystem is undefined but module.json expects \"dnd5e\".\n  • targetSystemVersion is undefined but the installed dnd5e is 6.1.1 (major.minor 6.1). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is undefined but module.json expects \"6.1\".\n  • generation is undefined but this Foundry is generation 14 (14.369).\n  • generation is undefined but module.json expects 14.\n  • `actors` is missing or is not an array.",
         {
           "permanent": true,
           "console": false

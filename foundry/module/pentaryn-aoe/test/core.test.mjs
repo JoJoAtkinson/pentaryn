@@ -163,6 +163,12 @@ check("packApplyOptions: nothing chosen → {} (the row carries no options)", [p
 check("unpackApplyOptions: arrays back to Sets; junk (a number, a string list, an array where an object belongs) is dropped",
   (() => { const o = unpackApplyOptions({ ignore: { immunity: ["fire", 3], resistance: true, modification: "x", vulnerability: [] }, downgrade: ["cold", 7] }); return { ignore: Object.fromEntries(Object.entries(o.ignore).map(([k, v]) => [k, v === true ? true : [...v]])), downgrade: [...o.downgrade] }; })(),
   { ignore: { immunity: ["fire"], resistance: true }, downgrade: ["cold"] });
+check("packApplyOptions: dnd5e 6.1 `ignore: true` / `downgrade: true` (the card's ALL defaults merged by getDamageApplicationOptions) travel as `true`",
+  [packApplyOptions({ ignore: true, downgrade: true, multiplier: 1 }), packApplyOptions({ ignore: { resistance: new Set(["fire"]) }, downgrade: true })],
+  [{ ignore: true, downgrade: true }, { ignore: { resistance: ["fire"] }, downgrade: true }]);
+check("unpackApplyOptions: `true` stays `true` for both keys; a non-boolean, non-array downgrade is dropped",
+  [unpackApplyOptions({ ignore: true, downgrade: true }), (() => { const o = unpackApplyOptions({ ignore: { immunity: ["cold"] }, downgrade: 1 }); return { ignore: { immunity: [...o.ignore.immunity] }, downgrade: o.downgrade }; })()],
+  [{ ignore: true, downgrade: true }, { ignore: { immunity: ["cold"] }, downgrade: undefined }]);
 check("unpackApplyOptions: nothing, or junk → {} (dnd5e's defaults)", [unpackApplyOptions(), unpackApplyOptions(null), unpackApplyOptions({ ignore: ["immunity"], downgrade: "cold" })], [{}, {}, {}]);
 check("pack ∘ unpack is the identity on a real choice", (() => { const o = unpackApplyOptions(packApplyOptions({ ignore: { immunity: new Set(["fire", "cold"]) }, downgrade: new Set(["acid"]) })); return [[...o.ignore.immunity], [...o.downgrade]]; })(), [["fire", "cold"], ["acid"]]);
 const applyRows = [
@@ -379,10 +385,10 @@ check("player status line: waiting, applied, superseded, nothing to say",
 // 0.5.1 (2026-10-19, code review): a rotated cube clips from its new centre, monster auras stay attached,
 // areaWalls re-clips on change, an uninstalled wrapper passes through. 0.6.2 (2026-11-07, playtest): a healing
 // roll's card is dnd5e type `healing`; Part I accepts it (isApplyCard).
-test("module.json is pentaryn-aoe 0.6.2", () => {
+test("module.json is pentaryn-aoe 0.6.3", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.6.2");
+  assert.equal(manifest.version, "0.6.3");
 });
 
 test("VERSION === module.json version", () => {

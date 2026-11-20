@@ -1,12 +1,12 @@
 {
   "$contract": "pentaryn/actors.json@1",
   "generator": "scripts/foundry/build_actors.py",
-  "generatorVersion": "1.0.1",
+  "generatorVersion": "1.0.2",
   "targetSystem": "dnd5e",
-  "targetSystemVersion": "6.0",
+  "targetSystemVersion": "6.1",
   "generation": 14,
-  "generatedAt": "2026-10-10T08:54:41+00:00",
-  "sourceRevision": "f458ba1-dirty",
+  "generatedAt": "2026-11-20T13:45:42+00:00",
+  "sourceRevision": "f1f73d55-dirty",
   "skipped": [
     {
       "npc": "_global",

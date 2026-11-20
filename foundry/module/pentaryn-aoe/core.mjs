@@ -8,7 +8,7 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.6.2";                          // === module.json version (core.test pins it)
+export const VERSION = "0.6.3";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";
@@ -295,15 +295,19 @@ export function applyTargets({ listed = [], recorded = 0, targeted = [], isGM = 
 /**
  * Part I: the per-target apply options the relay carries (dnd5e's `DamageApplicationOptions` from the
  * sender's pill menu) as plain data for the socket: `ignore` maps each change (immunity, resistance,
- * vulnerability, modification) to `true` (every type) or the types ignored; `downgrade` is the immunity
- * types downgraded to resistance. Sets become arrays; nothing set → `{}` (the row carries no options).
- * @param {{ ignore?: Record<string, true|Set<string>|string[]>, downgrade?: Set<string>|string[] }} [options]
- * @returns {{ ignore?: Record<string, true|string[]>, downgrade?: string[] }}
+ * vulnerability, modification) to `true` (every type) or the types ignored, or is `true` outright
+ * (dnd5e 6.1: "ignore everything"); `downgrade` is the immunity types downgraded to resistance (and,
+ * since 6.1, resistance downgraded away), or `true` for every type (6.1: the card's own
+ * `applicationOptions` merged in by `getDamageApplicationOptions`, an "ALL" default). Sets become
+ * arrays; nothing set → `{}` (the row carries no options).
+ * @param {{ ignore?: true|Record<string, true|Set<string>|string[]>, downgrade?: true|Set<string>|string[] }} [options]
+ * @returns {{ ignore?: true|Record<string, true|string[]>, downgrade?: true|string[] }}
  */
 export function packApplyOptions(options) {
   const out = {};
   const ignore = options?.ignore;
-  if (ignore && typeof ignore === "object") {
+  if (ignore === true) out.ignore = true;
+  else if (ignore && typeof ignore === "object") {
     const packed = {};
     for (const [change, v] of Object.entries(ignore)) {
       if (v === true) packed[change] = true;
@@ -315,22 +319,27 @@ export function packApplyOptions(options) {
     if (Object.keys(packed).length) out.ignore = packed;
   }
   const dg = options?.downgrade;
-  const list = dg instanceof Set ? [...dg] : Array.isArray(dg) ? dg : [];
-  if (list.length) out.downgrade = [...list];
+  if (dg === true) out.downgrade = true;
+  else {
+    const list = dg instanceof Set ? [...dg] : Array.isArray(dg) ? dg : [];
+    if (list.length) out.downgrade = [...list];
+  }
   return out;
 }
 
 /**
  * Part I: the inverse of `packApplyOptions` on the GM: arrays back to the Sets dnd5e's
- * `calculateDamage` reads; anything that is not `true`, an array of strings or a string is dropped.
+ * `calculateDamage` reads, `true` kept as `true`; anything that is not `true`, an array of strings or
+ * a string is dropped.
  * @param {*} wire   the row's `options` from the request (untrusted)
- * @returns {{ ignore?: Record<string, true|Set<string>>, downgrade?: Set<string> }}
+ * @returns {{ ignore?: true|Record<string, true|Set<string>>, downgrade?: true|Set<string> }}
  */
 export function unpackApplyOptions(wire) {
   const out = {};
   const strings = v => new Set((Array.isArray(v) ? v : []).filter(t => typeof t === "string"));
   const ig = wire?.ignore;
-  if (ig && typeof ig === "object" && !Array.isArray(ig)) {
+  if (ig === true) out.ignore = true;
+  else if (ig && typeof ig === "object" && !Array.isArray(ig)) {
     const ignore = {};
     for (const [change, v] of Object.entries(ig)) {
       if (v === true) ignore[change] = true;
@@ -338,8 +347,11 @@ export function unpackApplyOptions(wire) {
     }
     if (Object.keys(ignore).length) out.ignore = ignore;
   }
-  const downgrade = strings(wire?.downgrade);
-  if (downgrade.size) out.downgrade = downgrade;
+  if (wire?.downgrade === true) out.downgrade = true;
+  else {
+    const downgrade = strings(wire?.downgrade);
+    if (downgrade.size) out.downgrade = downgrade;
+  }
   return out;
 }
 

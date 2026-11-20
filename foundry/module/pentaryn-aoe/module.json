@@ -2,11 +2,11 @@
   "id": "pentaryn-aoe",
   "title": "Pentaryn AoE",
   "description": "Spell areas everyone can move and delete: each dnd5e template region gets a small owned handle token it is attached to, so dragging the handle moves the area and deleting it deletes the area (an emanation dnd5e attaches to its caster is left alone); the spell card gets a Remove all templates icon next to Place Template. When a save spell's damage is rolled, the GM's client lists the creatures inside the area, rolls the monsters' saves (GM-only), asks players to roll their own through a request card, and applies full/half/none on a GM-only Apply; the saves land in the spell card's outcomes, so dnd5e's own damage tray agrees. Optionally rolls damage straight after an attack hits, and when a save activity is used at a target. Apply on any damage or healing card: rows for tokens the player does not own are relayed to the GM, a player's targets fill a card that recorded none, and each row's total can be typed from real dice. A spell's effects go onto the caster automatically when the caster is its only target, and an Effects tray that still has unapplied effects is highlighted. Escape cancels a spell-area placement on the first press, even with the sheet open. Only total cover (a wall that blocks movement and sight) clips a spell area; an instantaneous emanation stays where it was cast. dnd5e 6 only. Exposes game.pentaryn.aoe.",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],
     "recommends": [
       { "id": "enhancedcombathud", "type": "module", "reason": "Argon's HUD never binds to a spell-area handle when one is dragged; it stays on the caster." },
       { "id": "item-piles", "type": "module", "reason": "Item Piles piles are not caught in a spell area (aoe asks Item Piles, else reads its flag)." }

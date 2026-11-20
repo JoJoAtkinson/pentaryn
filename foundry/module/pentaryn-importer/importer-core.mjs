@@ -40,8 +40,9 @@
  *   Foundry v14.365 → /Applications/Foundry Virtual Tabletop.app/Contents/Resources/app/
  *   dnd5e 5.3.3     → Data/systems/dnd5e/dnd5e-compiled.mjs.map (`sourcesContent`, 350 files)
  *
- *   Target since 1.1.0 (2026-10-10): dnd5e **6.0** (verified 6.0.6). Only the version gate moved —
- *   module.json `targetSystemVersion` "6.0", compared against the live major.minor below. The
+ *   Target since 1.3.1 (2026-11-20): dnd5e **6.1** (verified 6.1.1); 1.1.0 (2026-10-10) targeted
+ *   6.0 (verified 6.0.6). Each move changed only the version gate —
+ *   module.json `targetSystemVersion` "6.1", compared against the live major.minor below. The
  *   payload shapes are still the 5.3 ones (see FORMULA_GLOBS); dnd5e 6 migrates them on create
  *   and update until 7.0. The dnd5e line citations below are from 5.3.3.
  *
@@ -111,7 +112,7 @@ export const MODULE = "pentaryn-importer";
 export const SHORT = "importer";
 export const NS = "importer";
 /** module.json `version`; test/version-gate.test.mjs pins them equal. */
-export const VERSION = "1.3.0";
+export const VERSION = "1.3.1";
 /**
  * The kit API contract of `game.pentaryn.importer` (describe(), buildApi). NOT the actors.json
  * contract — that is CONTRACT_ID below, which the generator and the version gate speak.

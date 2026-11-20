@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **0.6.3 (2026-11-20). dnd5e 6.1.1.** The Apply relay carries the two option shapes 6.1's damage tray
+  can hand `calculateDamage`: `ignore: true` and `downgrade: true` ("every type", which
+  `DamageMessageData#getDamageApplicationOptions` now produces when the card's own
+  `applicationOptions` — set by the new `dnd5e.damage.ignore.*` / `dnd5e.damage.downgrade` effect
+  changes — hold `ALL`), plus resistance downgrades. Until now `packApplyOptions` kept `true` only
+  under `ignore.<change>` and dropped a `true` downgrade, so a GM-relayed Apply for an unowned
+  target would have lost what the player's tray showed. Core `packApplyOptions` /
+  `unpackApplyOptions`; tests. No other 6.1 change touches this module: `getTargetOptions` /
+  `getMergedOptions`, `DamageApplicationOptions`, the chat message types and `placeRegions` are
+  unchanged (release-6.1.1 tag read 2026-11-20).
 - **0.6.2 (2026-11-07). Live playtest of Part I** (ZZ Talo: Heal, Healing Word on Caven; Marrith's Fire
   Bolt relayed fine). One root cause under all three findings: dnd5e 6 types a healing roll's card
   `healing` (`HealingMessageData`, the same damage-card template), and every Part I check asked for

@@ -25,9 +25,9 @@ test("VERSION === module.json version; the blueprint names", () => {
   assert.notEqual(core.CONTRACT, core.CONTRACT_ID, "the API contract is not the actors.json contract");
 });
 
-const EXPECTED = { contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.0", generation: 14 };
-const LIVE = { systemId: "dnd5e", systemVersion: "6.0.6", generation: 14, version: "14.369" };
-const MANIFEST = { $contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.0", generation: 14, actors: [] };
+const EXPECTED = { contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.1", generation: 14 };
+const LIVE = { systemId: "dnd5e", systemVersion: "6.1.1", generation: 14, version: "14.369" };
+const MANIFEST = { $contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.1", generation: 14, actors: [] };
 
 test("versionProblems: a matching manifest passes", () => {
   assert.deepEqual(core.versionProblems(MANIFEST, EXPECTED, LIVE), []);
@@ -35,8 +35,8 @@ test("versionProblems: a matching manifest passes", () => {
 
 test("versionProblems: targetSystemVersion 5.3 → both minor-version problems, today's text", () => {
   assert.deepEqual(core.versionProblems({ ...MANIFEST, targetSystemVersion: "5.3" }, EXPECTED, LIVE), [
-    'targetSystemVersion is "5.3" but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.',
-    'targetSystemVersion is "5.3" but module.json expects "6.0".',
+    'targetSystemVersion is "5.3" but the installed dnd5e is 6.1.1 (major.minor 6.1). dnd5e minor releases move the activity schema; refusing.',
+    'targetSystemVersion is "5.3" but module.json expects "6.1".',
   ]);
 });
 

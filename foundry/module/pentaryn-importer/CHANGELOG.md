@@ -1,5 +1,13 @@
 # Changelog — Pentaryn Importer (`pentaryn-importer`)
 
+## 1.3.1 — 2026-11-20 — retarget to dnd5e 6.1
+
+- **[declared] Target dnd5e 6.1** (verified 6.1.1): `module.json` `flags.pentaryn.targetSystemVersion`
+  `"6.1"`, dnd5e compatibility verified `6.1.1`; generator 1.0.2 emits `targetSystemVersion` `"6.1"`
+  (`foundry/CONTRACT.md` §1). The gate logic is unchanged. Every enum the generator hard-codes is
+  byte-identical between 6.0.6 and 6.1.1 (`module/config.mjs`, release tags read 2026-11-20), so the
+  emitted documents and every `contentHash` are unchanged: a re-import after the system upgrade
+  touches nothing. Tests and goldens now speak 6.1.1.
 ## 1.3.0 — 2026-11-07 — two DDB correction rules (feedback triage C2, D1)
 
 - **[declared] New rule `reaction-expiry`** (feedback `HdWHWk`, plan C2). An applied effect that lasts

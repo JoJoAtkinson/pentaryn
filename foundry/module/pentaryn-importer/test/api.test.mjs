@@ -16,7 +16,7 @@ const manifest = manifestOf(ROOT);
 const F = await installFoundry({
   user: { isGM: true },
   modules: [{ id: MODULE, version: manifest.version, flags: manifest.flags }],
-  system: { id: "dnd5e", version: "6.0.6" },
+  system: { id: "dnd5e", version: "6.1.1" },
 });
 const quiet = console.log;
 console.log = () => {};

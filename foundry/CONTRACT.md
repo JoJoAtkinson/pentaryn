@@ -63,9 +63,9 @@ Gate 1 meaningful).
 {
   "$contract": "pentaryn/actors.json@1",
   "generator": "scripts/foundry/build_actors.py",
-  "generatorVersion": "1.0.1",
+  "generatorVersion": "1.0.2",
   "targetSystem": "dnd5e",
-  "targetSystemVersion": "6.0",
+  "targetSystemVersion": "6.1",
   "generation": 14,
   "generatedAt": "2026-08-10T14:02:11+00:00",
   "sourceRevision": "9a4199f",
@@ -80,7 +80,7 @@ Gate 1 meaningful).
 | `generator` | string | Repo-relative path of the producing script. Informational. |
 | `generatorVersion` | string | SemVer of the generator. Bump the **minor** when emitted document shape changes; bump the **patch** for bugfixes that change no output. |
 | `targetSystem` | string | Literal `"dnd5e"`. |
-| `targetSystemVersion` | string | Literal `"6.0"` — `major.minor` only (was `"5.3"` until generator 1.0.1 / importer 1.1.0). |
+| `targetSystemVersion` | string | Literal `"6.1"` — `major.minor` only (was `"6.0"` until generator 1.0.2 / importer 1.3.1, and `"5.3"` until generator 1.0.1 / importer 1.1.0). |
 | `generation` | integer | Literal `14`, the Foundry generation. |
 | `generatedAt` | string | RFC 3339 UTC, `timespec="seconds"`, e.g. `2026-08-10T14:02:11+00:00`. Matches the `updated_at` convention already used in `actions.jsonl`. |
 | `sourceRevision` | string | Short git SHA of the tree the build read. `"dirty"` MAY be appended (`"9a4199f-dirty"`). |
@@ -94,7 +94,7 @@ Before creating anything the importer MUST verify **all** of:
 ```js
 manifest.$contract === "pentaryn/actors.json@1"
 manifest.targetSystem === game.system.id                                    // "dnd5e"
-manifest.targetSystemVersion === game.system.version.split(".").slice(0,2).join(".")   // "6.0"
+manifest.targetSystemVersion === game.system.version.split(".").slice(0,2).join(".")   // "6.1"
 manifest.generation === game.release.generation                             // 14
 ```
 

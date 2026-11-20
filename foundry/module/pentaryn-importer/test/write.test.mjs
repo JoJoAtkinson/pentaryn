@@ -24,7 +24,7 @@ const manifest = manifestOf(ROOT);
 const F = await installFoundry({
   user: { isGM: true },
   modules: [{ id: MODULE, version: manifest.version, flags: manifest.flags }],
-  system: { id: "dnd5e", version: "6.0.6" },
+  system: { id: "dnd5e", version: "6.1.1" },
 });
 game.release.generation = 14;
 game.world.id = "w";
@@ -46,7 +46,7 @@ for (const level of ["error", "warn", "info"]) {
 const consoleGolden = {};
 async function run(key, actors, options = {}) {
   body = {
-    $contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.0", generation: 14,
+    $contract: "pentaryn/actors.json@1", targetSystem: "dnd5e", targetSystemVersion: "6.1", generation: 14,
     generator: "build_actors.py", generatorVersion: "1.0.0", generatedAt: "2026-10-10T00:00:00Z", sourceRevision: "abc1234",
     actors,
   };
