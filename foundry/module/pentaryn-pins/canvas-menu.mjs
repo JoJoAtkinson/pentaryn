@@ -10,6 +10,12 @@
  *                                     drops it from the tracker). Toasts: gathered, not gathered, failed
  *   Teleport pinned character ▸       the logged-in players; picking one runs `pins.teleport`, which
  *                                     moves the character with its summons and pets (portals teleportToken)
+ *   Teleport single…                  (0.4.0) a dialog listing EVERY pinned character, its player and
+ *                                     whether they are logged in; 0.4.1: a checkbox per row, tick one
+ *                                     or many. Each tick runs the same `pins.teleport` to the clicked
+ *                                     point, in list order (an offline player's character moves too,
+ *                                     and lands there for them at login; portals' spreadArrivals
+ *                                     steps a later arrival off an occupied square)
  *
  * Event placement (plan §3 "GM canvas menu"): a passive capture `pointerdown` on WINDOW, filtered to
  * `target === board`, records the right press with its snapshot (a mouse manager already live, core's
@@ -24,7 +30,7 @@
  * Other modules are reached only through their published APIs.
  */
 
-import { gatherPlan, menuAllowed, menuTrigger, teleportChoices } from "./pins-core.mjs";
+import { gatherPlan, menuAllowed, menuTrigger, singleChoices, teleportChoices } from "./pins-core.mjs";
 import { gatherInputs, startedCombatTokens } from "./world-adapter.mjs";
 import { closeMenu, isOpen, menuContains, openMenu } from "./menu-ui.mjs";
 import { apiOf } from "./lib/publish.mjs";
@@ -66,14 +72,26 @@ function hitAt(pt) {
  */
 const pinsNow = () => gatherInputs();
 
-/** The submenu rows, from the menu's one read. */
-function choicesNow({ users, pinsByUser, actors, tokensByRoot }) {
-  const tokenInfo = Object.fromEntries(Object.entries(tokensByRoot).map(([root, cands]) =>
-    [root, { name: actors[root]?.name ?? null, token: cands.length === 1 }]));
-  return teleportChoices(users, pinsByUser, tokenInfo);
+/** root id → `{ name, token, count }` for the rows, from the menu's one read. */
+function tokenInfoOf({ actors, tokensByRoot }) {
+  return Object.fromEntries(Object.entries(tokensByRoot).map(([root, cands]) =>
+    [root, { name: actors[root]?.name ?? null, token: cands.length === 1, count: cands.length }]));
 }
 
-const REASON = Object.freeze({ NO_PIN: "PENTARYN_PINS.Menu.NoPin", NO_TOKEN: "PENTARYN_PINS.Menu.NoToken" });
+/** The Teleport ▸ submenu rows (logged-in players), from the menu's one read. */
+function choicesNow(now) {
+  return teleportChoices(now.users, now.pinsByUser, tokenInfoOf(now));
+}
+
+/** The Teleport single… rows (every pinned character), from the same read. */
+function singlesNow(now) {
+  return singleChoices(now.users, now.pinsByUser, tokenInfoOf(now));
+}
+
+const REASON = Object.freeze({ NO_PIN: "PENTARYN_PINS.Menu.NoPin", NO_TOKEN: "PENTARYN_PINS.Menu.NoToken", MANY_TOKENS: "PENTARYN_PINS.Menu.ManyTokens" });
+
+/** A disabled row's note: "no token", or "{n} tokens" for several. */
+const reasonText = c => (c.reason ? _loc(REASON[c.reason] ?? REASON.NO_TOKEN, { n: c.count ?? "" }) : null);
 
 async function teleportPick(choice, at) {
   const r = await C.api.teleport(choice.user, { x: at.x, y: at.y, scene: at.scene, level: at.level });
@@ -85,6 +103,58 @@ async function teleportPick(choice, at) {
     C.log.notify("warn", _loc("PENTARYN_PINS.Notify.TeleportFailed", { actor: choice.label, reason: r?.reason ?? r?.code ?? "?" }));
   }
   return r;
+}
+
+/**
+ * "Teleport single…": a DialogV2 listing every pinned character with a checkbox each (0.4.1; 0.4.0 was a
+ * dropdown). The GM ticks one or many and confirms; every tick goes through `teleportPick`, in list
+ * order — the same `pins.teleport` call as a Teleport ▸ row, so the destination, the company rule and
+ * the player's pull are the same (an offline player lands on the token's scene at login,
+ * pentaryn-resume), and portals' spreadArrivals steps each later arrival off the square the first one
+ * took. Names are escaped (blueprint §5.4). A cancelled or closed dialog, no tick, or only disabled
+ * rows moves nothing and returns null; otherwise the teleport results, in order.
+ */
+export function pickedUsers(form) {
+  // form.elements.user is one input, or a RadioNodeList when the list has several checkboxes
+  const el = form?.elements?.user;
+  if (!el) return [];
+  const list = typeof el.length === "number" && !("checked" in el) ? Array.from(el) : [el];
+  return list.filter(i => i?.checked && !i.disabled).map(i => i.value);
+}
+
+async function teleportSingle(singles, at) {
+  const esc = foundry.utils.escapeHTML;
+  const rows = singles.map(c => {
+    const state = _loc(c.online ? "PENTARYN_PINS.Single.Online" : "PENTARYN_PINS.Single.Offline");
+    const why = c.enabled ? "" : ` — ${reasonText(c)}`;
+    return `<label class="ppi-check${c.enabled ? "" : " ppi-disabled"}">`
+      + `<input type="checkbox" name="user" value="${esc(c.user)}"${c.enabled ? "" : " disabled"}>`
+      + `<span>${esc(`${c.label} (${state})${why}`)}</span></label>`;
+  }).join("");
+  const content = `<p>${esc(_loc("PENTARYN_PINS.Single.Body"))}</p>`
+    + `<div class="form-group stacked"><label>${esc(_loc("PENTARYN_PINS.Single.Label"))}</label>`
+    + `<div class="form-fields ppi-checks">${rows}</div></div>`;
+  let picked;
+  try {
+    picked = await foundry.applications.api.DialogV2.confirm({
+      window: { title: _loc("PENTARYN_PINS.Single.Title"), icon: "fa-solid fa-person-walking-dashed-line-arrow-right" },
+      classes: ["pentaryn-pins", "ppi-single"],
+      content,
+      yes: { label: _loc("PENTARYN_PINS.Single.Yes"), icon: "fa-solid fa-check", default: true,
+        callback: (event, button) => pickedUsers(button?.form) },
+      no: { label: _loc("PENTARYN_PINS.Single.No") },
+      rejectClose: false,
+    });
+  } catch (err) {
+    C.log.warn("teleport single dialog failed", err);
+    return null;
+  }
+  const ids = Array.isArray(picked) ? picked : (typeof picked === "string" && picked ? [picked] : []);
+  const choices = singles.filter(c => c.enabled && ids.includes(c.user));   // list order, disabled rows never move
+  if (!choices.length) return null;
+  const results = [];
+  for (const choice of choices) results.push(await teleportPick(choice, at));
+  return results;
 }
 
 /** Literal keys for a skipped gather member (the i18n gate proves each one); NO_PIN has its own. */
@@ -184,10 +254,16 @@ function openAt(release, pt) {
     run: () => gatherHere(plan, at) });
   const choices = choicesNow(now);
   const sub = choices.length
-    ? choices.map(c => ({ label: c.label, enabled: c.enabled, note: c.reason ? _loc(REASON[c.reason]) : null,
+    ? choices.map(c => ({ label: c.label, enabled: c.enabled, note: reasonText(c),
       run: () => teleportPick(c, at) }))
     : [{ label: _loc("PENTARYN_PINS.Menu.NoPlayers"), enabled: false }];
   items.push({ icon: "fa-person-walking-arrow-right", label: _loc("PENTARYN_PINS.Menu.Teleport"), sub });
+  // every pinned character, logged in or not: the note counts them ("no pinned characters" disables it)
+  const singles = singlesNow(now);
+  const k = singles.length;
+  items.push({ icon: "fa-person-walking-dashed-line-arrow-right", label: _loc("PENTARYN_PINS.Menu.TeleportSingle"), enabled: k > 0,
+    note: k ? _loc("PENTARYN_PINS.Menu.TeleportSingleCount", { n: k }) : _loc("PENTARYN_PINS.Menu.TeleportSingleNone"),
+    run: () => teleportSingle(singles, at) });
   return openMenu({ x: release.x, y: release.y, items }, { onError: err => C.log.error("canvas menu", err) });
 }
 

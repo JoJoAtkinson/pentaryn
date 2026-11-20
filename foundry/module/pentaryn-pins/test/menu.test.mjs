@@ -321,11 +321,12 @@ test("17 the menu closes on a canvas pan (wheel zoom, keyboard pan): its items a
 });
 
 test("17 near the window's edge: the menu is shifted inside and the submenu flips left and up", () => {
-  FakeElement.sizes.NAV = { w: 220, h: 60 };
+  FakeElement.sizes.NAV = { w: 220, h: 80 };          // four rows of 20 px (0.4.0: Teleport single… is the fourth)
+  game.users.set("zedUser000000001", makeUser({ id: "zedUser000000001", name: "Zed" }));   // a third Teleport ▸ row
   try {
     rightClick({ x: 1800, y: 1050 });
     const nav = menuEl();
-    assert.deepEqual([nav.style.left, nav.style.top], ["1696px", "1016px"]);
+    assert.deepEqual([nav.style.left, nav.style.top], ["1696px", "996px"]);
     assert.deepEqual(["ppi-flip-x", "ppi-flip-y"].map(c => nav.classList.contains(c)), [true, true]);
     close();
     rightClick({ x: 400, y: 300 });
@@ -334,6 +335,7 @@ test("17 near the window's edge: the menu is shifted inside and the submenu flip
     close();
   } finally {
     delete FakeElement.sizes.NAV;
+    game.users.delete("zedUser000000001");
   }
 });
 
@@ -469,16 +471,178 @@ function viewScene(id, level = null) {
 }
 const viewLighthouse = () => viewScene(IDS.sceneB, IDS.levelB2);
 
+/* ── Teleport single… (0.4.0): any pinned character, logged in or not ──── */
+
+const singleItem = () => items().filter(a => a.dataset.j === undefined).find(a => labelOf(a) === "Teleport single…");
+/** The dialog's checkbox rows as `{ value, disabled, text }` (the content is an HTML string; names are escaped, so the text is decoded here). 0.4.1: checkboxes, not `<option>`s. */
+const unescape = t => t.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+const optionsOf = dialog => [...String(dialog?.content ?? "").matchAll(/<input type="checkbox" name="user" value="([^"]*)"( disabled)?><span>([^<]*)<\/span>/g)]
+  .map(m => ({ value: m[1], disabled: !!m[2], text: unescape(m[3]) }));
+/** Open the menu, click Teleport single…, answer the dialog with `answer` (what the yes callback returned: the ticked user ids, false = Cancel, null = closed). */
+async function pickSingle(answer, at = { x: 700, y: 800 }) {
+  dialogAnswer = answer;
+  rightClick(at);
+  const item = singleItem();
+  assert.ok(item, "the item is there");
+  click(item);
+  assert.equal(menuEl(), null, "closed before the dialog opens");
+  for (let i = 0; i < 6; i++) await flush();
+  dialogAnswer = false;
+  return dialogs.at(-1);
+}
+
+test("single: the item follows Teleport ▸, its note counts EVERY pinned character (an offline one too); the dialog lists them by character name with the player and online/offline", async () => {
+  const talo = game.users.get(IDS.taloUser);
+  talo.active = false;                              // Talo's player logged off: Teleport ▸ loses them …
+  rightClick();
+  const top = items().filter(a => a.dataset.j === undefined);
+  assert.equal(labelOf(top.at(-1)), "Teleport single…", "the last item");
+  assert.ok(singleItem().querySelector("i.fa-person-walking-dashed-line-arrow-right"), "its icon");
+  assert.equal(singleItem().classList.contains("ppi-disabled"), false);
+  assert.equal(noteOf(singleItem()), "1", "Talo is pinned, offline or not");
+  const sub = menuEl().querySelector("div.ppi-sub").querySelectorAll("a.ppi-item").map(labelOf);
+  assert.deepEqual(sub, ["Mira's player"], "… Teleport ▸ keeps today's rule: logged-in players only");
+  close();
+  dialogs.length = 0;
+  teleported.length = 0;
+  const d = await pickSingle(null);                 // closed with the X: nothing moves
+  assert.equal(dialogs.length, 1, "one DialogV2.confirm");
+  assert.equal(d.window.title, "Teleport pinned characters");
+  assert.equal(d.rejectClose, false);
+  assert.equal(d.yes.label, "Teleport");
+  assert.equal(d.no.label, "Cancel");
+  assert.deepEqual(optionsOf(d), [{ value: IDS.taloUser, disabled: false, text: "Talo — Talo's player (offline)" }]);
+  assert.match(d.content, /class="form-fields ppi-checks"/);
+  assert.doesNotMatch(d.content, /<select/, "0.4.1: checkboxes, no dropdown");
+  // the yes callback reads the ticked boxes: one input, or a RadioNodeList-like list; unticked and disabled rows are left out
+  assert.deepEqual(d.yes.callback(null, { form: { elements: { user: { value: IDS.taloUser, checked: true } } } }), [IDS.taloUser], "one checkbox");
+  assert.deepEqual(d.yes.callback(null, { form: { elements: { user: { value: IDS.taloUser, checked: false } } } }), [], "one, unticked");
+  assert.deepEqual(d.yes.callback(null, { form: { elements: { user: [{ value: "a", checked: true }, { value: "b", checked: false }, { value: "c", checked: true, disabled: true }, { value: "d", checked: true }] } } }), ["a", "d"], "several");
+  assert.deepEqual(d.yes.callback(null, { form: { elements: {} } }), [], "no rows at all");
+  assert.deepEqual(teleported, []);
+  talo.active = true;
+});
+
+test("single: the pick is pins.teleport at the clicked point — an OFFLINE player's character moves with pull [] (lands there at login), an online one's with pull [the player]; Cancel moves nothing", async () => {
+  const talo = game.users.get(IDS.taloUser);
+  teleported.length = 0;
+  talo.active = false;
+  await pickSingle([IDS.taloUser], { x: 700, y: 800 });
+  assert.deepEqual(teleported, [[`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`,
+    { x: 700, y: 800, scene: IDS.sceneB, level: IDS.levelB2, pull: [], dryRun: false }]]);
+  assert.deepEqual(toasts().at(-1), ["info", "Talo (+1) → Lighthouse"]);
+  talo.active = true;
+  teleported.length = 0;
+  await pickSingle([IDS.taloUser], { x: 300, y: 200 });
+  assert.deepEqual(teleported, [[`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`,
+    { x: 300, y: 200, scene: IDS.sceneB, level: IDS.levelB2, pull: [IDS.taloUser], dryRun: false }]]);
+  assert.deepEqual(optionsOf(dialogs.at(-1)), [{ value: IDS.taloUser, disabled: false, text: "Talo — Talo's player (online)" }]);
+  teleported.length = 0;
+  await pickSingle(false);                          // Cancel
+  assert.deepEqual(teleported, []);
+  await pickSingle([]);                             // Teleport with nothing ticked: nothing
+  assert.deepEqual(teleported, []);
+  await pickSingle(["nobody0000000001"]);           // a value that is no row
+  assert.deepEqual(teleported, []);
+  await pickSingle(IDS.taloUser, { x: 300, y: 200 }); // a bare string (an older callback) still counts as one tick
+  assert.equal(teleported.length, 1);
+});
+
+test("single (0.4.1): several ticks move several characters, in list order, each to the clicked point with its own toast; a disabled row ticked by force is skipped", async () => {
+  const mira = game.users.get(IDS.miraUser);
+  mira.flags[MODULE] = { actor: IDS.mira };
+  mira.active = false;
+  const talo = game.users.get(IDS.taloUser);
+  try {
+    teleported.length = 0;
+    const d = await pickSingle([IDS.taloUser, IDS.miraUser], { x: 500, y: 600 });   // ticked Talo first; the list is Mira, Talo
+    assert.deepEqual(optionsOf(d).map(o => o.value), [IDS.miraUser, IDS.taloUser], "rows by character name");
+    assert.deepEqual(teleported.map(([uuid, o]) => [uuid, o.x, o.y, o.pull]), [
+      [`Scene.${IDS.sceneA}.Token.${IDS.miraTok}`, 500, 600, []],                    // Mira (offline): list order wins, pull []
+      [`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`, 500, 600, [IDS.taloUser]],        // Talo (online): pulled
+    ]);
+    const last2 = toasts().slice(-2);
+    assert.equal(last2.length, 2);
+    assert.ok(last2.every(([lvl]) => lvl === "info"), "one toast per character");
+    // Mira with two tokens is a disabled row: a forced tick of it moves only Talo
+    const A = game.scenes.get(IDS.sceneA);
+    const extra = makeToken({ id: "miraTok000000002", name: "Mira", actorId: IDS.mira, actorLink: true }, A);
+    A.tokens.set(extra.id, extra);
+    teleported.length = 0;
+    await pickSingle([IDS.miraUser, IDS.taloUser], { x: 500, y: 600 });
+    A.tokens.delete(extra.id);
+    assert.deepEqual(teleported.map(([uuid]) => uuid), [`Scene.${IDS.sceneB}.Token.${IDS.taloTok}`]);
+  } finally {
+    delete mira.flags[MODULE];
+    mira.active = true;
+    talo.active = true;
+  }
+});
+
+test("single: a second pinned character (its player offline, two tokens) is a disabled option saying why; rows sort by character name; a failed move toasts", async () => {
+  const mira = game.users.get(IDS.miraUser);
+  mira.flags[MODULE] = { actor: IDS.mira };
+  mira.active = false;
+  const A = game.scenes.get(IDS.sceneA);
+  const extra = makeToken({ id: "miraTok000000002", name: "Mira", actorId: IDS.mira, actorLink: true }, A);
+  A.tokens.set(extra.id, extra);
+  try {
+    rightClick();
+    assert.equal(noteOf(singleItem()), "2");
+    close();
+    teleported.length = 0;
+    const d = await pickSingle([IDS.miraUser]);   // a disabled row's value: refused, nothing moves
+    assert.deepEqual(optionsOf(d), [
+      { value: IDS.miraUser, disabled: true, text: "Mira — Mira's player (offline) — 2 tokens" },
+      { value: IDS.taloUser, disabled: false, text: "Talo — Talo's player (online)" },
+    ]);
+    assert.deepEqual(teleported, []);
+    A.tokens.delete(extra.id);
+    const d2 = await pickSingle(null);
+    assert.deepEqual(optionsOf(d2)[0], { value: IDS.miraUser, disabled: false, text: "Mira — Mira's player (offline)" });
+    portalsAnswer = { ok: false, code: "CONFLICT", reason: "another session moved it first" };
+    await pickSingle([IDS.miraUser]);
+    assert.deepEqual(toasts().at(-1), ["warn", "Mira — Mira's player not moved: another session moved it first"]);
+    portalsAnswer = null;
+    consoleLines.length = 0;                        // the expected warn toast, logged
+  } finally {
+    A.tokens.delete(extra.id);
+    delete mira.flags[MODULE];
+    mira.active = true;
+  }
+});
+
+test("single: with no pin anywhere the item is disabled with \"no pinned characters\" and a click does nothing", async () => {
+  const talo = game.users.get(IDS.taloUser);
+  const pin = talo.flags[MODULE];
+  delete talo.flags[MODULE];
+  dialogs.length = 0;
+  try {
+    rightClick();
+    const item = singleItem();
+    assert.equal(item.classList.contains("ppi-disabled"), true);
+    assert.equal(item.getAttribute("aria-disabled"), "true");
+    assert.equal(noteOf(item), "no pinned characters");
+    click(item);
+    assert.ok(menuEl(), "a disabled item does nothing");
+    await flush();
+    assert.deepEqual(dialogs, []);
+    close();
+  } finally {
+    talo.flags[MODULE] = pin;
+  }
+});
+
 test("gather: the item sits between Prompt note and Teleport ▸; without prompts it comes first", () => {
   rightClick();
-  assert.deepEqual(topItems().map(labelOf), ["Prompt note", "Gather logged-in players here", "Teleport pinned character"]);
+  assert.deepEqual(topItems().map(labelOf), ["Prompt note", "Gather logged-in players here", "Teleport pinned character", "Teleport single…"]);
   assert.ok(gatherItem().querySelector("i.fa-people-group"), "fa-people-group icon");
   close();
   const prompts = game.modules.get("pentaryn-prompts");
   game.modules.delete("pentaryn-prompts");
   try {
     rightClick();
-    assert.deepEqual(topItems().map(labelOf), ["Gather logged-in players here", "Teleport pinned character"]);
+    assert.deepEqual(topItems().map(labelOf), ["Gather logged-in players here", "Teleport pinned character", "Teleport single…"]);
     close();
   } finally {
     game.modules.set("pentaryn-prompts", prompts);
@@ -509,7 +673,7 @@ test("gather: enabled with the member count as its note; disabled with \"no one 
   }
 });
 
-test("gather: one read of the pin world per menu open (code review G9) — one tokensByRoots walk, each pin flag read once — shared by Gather's count and the Teleport ▸ rows", () => {
+test("gather: one read of the pin world per menu open (code review G9) — one tokensByRoots walk, each pin flag read once — shared by Gather's count, the Teleport ▸ rows and the Teleport single… rows (0.4.0)", () => {
   const tokens = game.scenes.get(IDS.sceneC).tokens;
   let reads = 0;
   Object.defineProperty(tokens, "contents", { configurable: true, get() { reads++; return [...this.values()]; } });

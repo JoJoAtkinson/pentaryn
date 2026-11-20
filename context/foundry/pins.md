@@ -1,7 +1,7 @@
 ---
 title: Pentaryn Pins
 status: active
-last_modified: 2026-10-17
+last_modified: 2026-11-19
 tags: [foundry, module, pentaryn-pins]
 ---
 
@@ -9,8 +9,9 @@ tags: [foundry, module, pentaryn-pins]
 
 **Read this when:** you want a player's view to follow their character instead of the active
 scene, a player says "activating a scene jumped me", you want the GM right-click canvas menu
-(Prompt note, Gather logged-in players here, Teleport pinned character), "bring everyone who's
-logged in to this spot", a shared steed did or did not come along, or a sheet says "Pinned to …".
+(Prompt note, Gather logged-in players here, Teleport pinned character, Teleport single…), "bring
+everyone who's logged in to this spot", "move Talo while his player is logged off", a shared steed
+did or did not come along, or a sheet says "Pinned to …".
 **Not this file:**
 `foundry/lib/pins.mjs` is unrelated (journal Note pins); grep for `pentaryn-pins` or
 `game.pentaryn.pins`, not `pins`. Code structure → the module README
@@ -106,6 +107,18 @@ anything: no follow, no badge, no menu, no toasts.
     summons, pets and connected tokens, exactly as portal travel carries them (pentaryn-portals
     `teleportToken`); portals pulls the player along. A companion several players co-own comes
     only from within 10 ft (below). Players with no pin or no single token are greyed out.
+  - **Teleport single…** (0.4.0; checkboxes since 0.4.1) — **every character that has a pin, whether or
+    not its player is logged in.** It opens a small dialog with a checkbox per pinned character, by
+    character name: "Talo — Talo's player (online)" / "(offline)". Tick one or many, click
+    **Teleport**, and each ticked character goes, one after another, to the clicked point on the scene you are viewing (another scene too), with its
+    summons, pets and connected tokens, exactly as Teleport pinned character does (the same
+    `pins.teleport`, the same co-owned companion rule). A logged-in player's view follows; an
+    offline player's character is moved now and the player lands on it at their next login
+    (pentaryn-resume). Two uses: moving a logged-off player's character, and moving just one person
+    while everyone is logged on. Its note is the number of pinned characters ("no pinned
+    characters" greys it out). A pin with no token or with several tokens is listed but cannot be
+    picked, with the reason ("no token", "2 tokens"). Cancel or the X moves nothing. Teleport pinned
+    character ▸ stays as it is for the logged-in case.
   - Right-drag still pans (from 10 px, as core); right-click on a token still opens its HUD; a
     portal badge keeps its own menu; a right-click that skips a summon preview opens nothing.
     Escape closes only the menu; a scroll or pan closes it too.
@@ -138,6 +151,20 @@ and Gather:
     characters.
   - It only ever comes from a scene its moving (or last gathered) owner stands on.
   - This replaces portals 0.7.0's rule "a co-owned steed comes when all its owners go together".
+
+## What changed in 0.4.1 (2026-11-19)
+
+1. **Teleport single…** lists with a **checkbox per character**: tick one or many. Each tick is its
+   own `teleport` call to the clicked point, in list order; with portals' *spreadArrivals* on, later
+   arrivals step off the first one's square. No tick or Cancel moves nothing.
+
+## What changed in 0.4.0 (2026-11-19)
+
+1. **Teleport single…**: the fourth menu item (above). No API change: it calls the existing
+   `teleport`, which already moved an offline player's character (`online: false`, no warning); the
+   menu only offered the logged-in players before. `describe().version` is `0.4.0`;
+   `game.modules.get("pentaryn-pins").version` shows it after the next Foundry restart
+   (`module.json` is read at startup), the menu itself after a reload.
 
 ## What changed in 0.3.0 (2026-10-17)
 
@@ -197,7 +224,7 @@ game.pentaryn.pins.pins()            // every pin with its tokens on every scene
 game.pentaryn.pins.audit()           // the switch-on audit, as data (the bot's own toast is unseen)
 game.pentaryn.pins.pinnedToken("Talo's player")   // { token, actor, scene, level, x, y } | null
 game.pentaryn.pins.pinnedTokens()    // { [userId]: pinnedToken } for every pinned player, one token walk
-await game.pentaryn.pins.teleport("Talo's player", { x: 1200, y: 800, scene: "<sceneId>" })   // … pulled, viewFollows
+await game.pentaryn.pins.teleport("Talo's player", { x: 1200, y: 800, scene: "<sceneId>" })   // … pulled, viewFollows; the player may be offline (online: false): what Teleport single… calls
 // every logged-in pinned player to one point; from the bridge always pass `scene` (the bot has no canvas)
 await game.pentaryn.pins.gather({ x: 1200, y: 800, scene: "<sceneId>", level: "<levelId>" })
 //   { ok, to, moved: [{ user, actor, token, from, followers, pulled, viewFollows, warnings }], skipped, offline, failed, warning? }

@@ -1,5 +1,48 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
+## 0.4.1 — 2026-11-19
+
+"Teleport single…" lists with checkboxes (Joe: "it shows the list, and a checkbox so I can select one
+or many"). Reload the GM tab; `module.json`'s version shows after the next restart. Additive, no API
+row changes.
+
+- **Changed** the Teleport single… dialog: a **checkbox per pinned character** instead of a dropdown
+  (same rows, same order, same disabled reasons). Tick one or many and click **Teleport**: each ticked
+  character runs the same `pins.teleport` to the clicked point, in list order, with its own toast;
+  portals' *spreadArrivals* steps a later arrival off the square the first one took. No tick, Cancel,
+  the X, or only disabled rows moves nothing. New pure helper `pickedUsers(form)` (exported from
+  `canvas-menu.mjs`) reads the ticked values from one input or a RadioNodeList.
+- Lang: `Single.Title` "Teleport pinned characters", `Single.Body`, `Single.Label` "Characters".
+- Styles: `.ppi-single .ppi-checks` / `.ppi-check` (a scrolling column, disabled rows dimmed).
+
+## 0.4.0 — 2026-11-19
+
+"Teleport single…" (Joe, 2026-11-19: move a logged-off player's character, or one person while
+everyone is logged on). Needs a Foundry restart for `module.json`'s version; the menu itself is a
+reload. Additive: `CONTRACT` stays `pentaryn-pins/api@1`; no API row changes (`describe()` is the
+same but for `version`).
+
+- **Added** canvas-menu item **Teleport single…** (`fa-person-walking-dashed-line-arrow-right`), after
+  Teleport pinned character ▸. Its note counts every pinned character ("no pinned characters"
+  disables it). A click opens a DialogV2 with a dropdown of **every character that has a pin,
+  whether or not its player is logged in**, as "{character} — {player} (online|offline)", by
+  character name; a pin with no token or with several is listed but disabled, with the reason. The
+  pick, confirmed with **Teleport**, runs the same `pins.teleport` as a Teleport ▸ row: same clicked
+  point on the scene the GM views (another scene too), same company rule (summons and pets, a
+  co-owned companion from within 10 ft; portals `teleportToken`), same pull for a logged-in player
+  (`viewFollows`); an offline player's character moves with `pull: []` and the player lands on it at
+  login (pentaryn-resume). Cancel, the X, or a disabled option moves nothing. Teleport ▸ keeps its
+  rule (logged-in players only) beside it.
+- **Added** pure rule `singleChoices(users, pinsByUser, tokenInfo)` in `pins-core.mjs` (the rows:
+  every non-GM user with a pin; `NO_TOKEN` / `MANY_TOKENS` from `tokenInfo[root].count`). The menu's
+  one read per open (`gatherInputs`, G9) now also feeds these rows; `tokenInfoOf` carries `count`.
+- Lang: `Menu.TeleportSingle`, `Menu.TeleportSingleCount`, `Menu.TeleportSingleNone`,
+  `Menu.ManyTokens` ("{n} tokens", also the Teleport ▸ note for a pin with several tokens, which
+  said "no token"), and the `Single.*` dialog strings.
+- Tests: `core.test` (singleChoices), `menu.test` (the item and its count, the dialog's rows and
+  callback, offline → `pull: []`, online → `pull: [user]`, Cancel/X/disabled, a failed move's toast,
+  no pins); the placement fixture is four rows tall.
+
 ## 0.3.0 — 2026-10-17
 
 "Gather logged-in players here" (plan `context/plans/pin-2026-10-gather.md`, with Joe's answers in

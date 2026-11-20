@@ -6,8 +6,9 @@ Pins a **character to a player** — not `foundry/lib/pins.mjs`, which is about 
 (grep `pentaryn-pins` or `game.pentaryn.pins`, never bare `pins`). With the world switch on, a
 pinned player's client shows whatever scene their pinned token is on and ignores GM scene
 activation; the sheet says "Pinned to {player}"; the GM gets a right-click canvas menu with Prompt
-note, Gather logged-in players here and Teleport pinned character (the character's summons and pets
-come along, through pentaryn-portals). Exposes `game.pentaryn.pins`.
+note, Gather logged-in players here, Teleport pinned character (the character's summons and pets
+come along, through pentaryn-portals) and Teleport single… (0.4.0: any pinned character, its player
+logged in or not; 0.4.1: tick one or many). Exposes `game.pentaryn.pins`.
 
 ## What the player sees
 
@@ -27,9 +28,13 @@ Unpinned players and GMs: stock. Switch off: everything is inert.
 The GM: right-click on **empty** canvas, token layer → **Prompt note** (pentaryn-prompts `place`
 at that point, hidden without prompts), **Gather logged-in players here** (`gather` at that point:
 every logged-in player whose pin has one token, each with its company; note = how many; a confirm
-only when a cross-scene member is in a started combat) and **Teleport pinned character ▸
-{logged-in player}**. Right-drag still pans; token right-click opens the HUD; a portal badge keeps
-its own menu.
+only when a cross-scene member is in a started combat), **Teleport pinned character ▸
+{logged-in player}** and **Teleport single…** (0.4.0, checkboxes since 0.4.1: a DialogV2 listing every
+pinned character, "{character} — {player} (online|offline)", logged in or not, a checkbox each; a
+pin with no token or several is listed disabled with the reason; every ticked row runs the same
+`teleport` as a Teleport ▸ row, in list order, so an offline player's character moves with `pull: []`
+and lands them there at login). Right-drag still
+pans; token right-click opens the HUD; a portal badge keeps its own menu.
 
 ## Settings
 
@@ -99,7 +104,7 @@ world settings beyond the switch.
 |---|---|---|
 | `flags.dnd5e.originalActor` (token, then actor) | dnd5e 6.0.6 `transformInto` (`dnd5e.mjs` ~45653-45665) | the root actor of a wild-shaped or polymorphed token |
 | `flags.dnd5e.previousActorIds` (actor; `[0]` is the first original) | dnd5e 6.0.6 `transformInto` (~45572) | the same, when `originalActor` is missing |
-| `api:pentaryn-portals.teleportToken` | pentaryn-portals ≥ 0.7.0 (`pull`, `pulled`; 0.6.0 works, without the pull); ≥ 0.8.0 for `gather` (an older portals rejects or ignores it, and a co-owned steed then follows the old rule) | Teleport pinned character and Gather (company follows, the player is pulled) |
+| `api:pentaryn-portals.teleportToken` | pentaryn-portals ≥ 0.7.0 (`pull`, `pulled`; 0.6.0 works, without the pull); ≥ 0.8.0 for `gather` (an older portals rejects or ignores it, and a co-owned steed then follows the old rule) | Teleport pinned character, Teleport single… and Gather (company follows, the player is pulled) |
 | `hook:pentaryn-portals.prePull` | pentaryn-portals ≥ 0.7.0 (≥ 0.8.0 for `data.gather`) | leave a pinned-elsewhere player out of portals' pull; a gather member's carry (`data.gather` set): every non-GM user |
 | `api:pentaryn-prompts.place` (`{ at }`) | pentaryn-prompts ≥ 0.4.6 | Prompt note at the clicked point |
 
@@ -202,13 +207,13 @@ only (`game.users.activeGM.isSelf`, normally the bot). Every GM-side pull goes t
 | File | Role |
 |---|---|
 | `pins.mjs` | entry (esmodules[0]): wiring, load order |
-| `pins-core.mjs` | pure: `pinOf`, `pickToken`, `activateDecision`, `netDecision`, `coreSwitchesLevel`, `levelFollow`, `replayDecision`, `tokenNotice`, `auditPins`, `gatherPlan` (who a gather moves, skips, leaves offline; the order), `menuTrigger`, `menuAllowed`, `menuPlacement`, `teleportChoices`, `pinnedName` |
+| `pins-core.mjs` | pure: `pinOf`, `pickToken`, `activateDecision`, `netDecision`, `coreSwitchesLevel`, `levelFollow`, `replayDecision`, `tokenNotice`, `auditPins`, `gatherPlan` (who a gather moves, skips, leaves offline; the order), `menuTrigger`, `menuAllowed`, `menuPlacement`, `teleportChoices`, `pinnedName`, `singleChoices` (the Teleport single… rows: every pinned player, online or not) |
 | `settings.mjs` | `pinning` and its onChange fan-out |
 | `world-adapter.mjs` | Foundry → plain data: pins, root actors (kit `lib/root-actor.mjs`, the rule portals uses), tokens across scenes, the audit, `pinInputs` (the one builder of the plain pin world: `auditWorld` with the GMs' pins, `gatherInputs` without; one token walk), `liveToken` (a walked record as it stands now, by id), `startedCombatTokens` (the COMBAT snapshot), `pullTargetOf` / `pullToPin` (where and how the GM pulls a player; a resolved token is reused), `listOf` (no canvas) |
 | `api-manifest.mjs` / `api.mjs` | API rows / implementations |
 | `follow.mjs` | the `_onActivate` patch, the deleteToken safety net, the moveToken level gap-filler (core's clause: kit `lib/pull-rule.mjs` `ownsOtherSighted`), the `pullToScene` replay attached at `ready` (player client) |
 | `sheet.mjs` | the "Pinned to" badge |
-| `canvas-menu.mjs` / `menu-ui.mjs` | the GM right-click menu (Prompt note, Gather with its count, combat confirm and toasts, Teleport ▸; one `gatherInputs` read per open feeds the count and the rows): event gating / DOM |
+| `canvas-menu.mjs` / `menu-ui.mjs` | the GM right-click menu (Prompt note, Gather with its count, combat confirm and toasts, Teleport ▸, Teleport single… with its DialogV2 checkbox list (`pickedUsers`); one `gatherInputs` read per open feeds the counts and every row): event gating / DOM |
 | `switch.mjs` | the switch-on audit toast and pull |
 | `watch.mjs` | GM toasts: a pinned character with no token left (Stranded) or a second one (Paused); the active GM pulls the online player when it is placed again (0 → 1) |
 | `prepull.mjs` | the `pentaryn-portals.prePull` listener: drops a player pinned to a token on another scene from portals' pull (one token walk, `pinTargets`); from a gather member's carry (`data.gather`), every non-GM user |

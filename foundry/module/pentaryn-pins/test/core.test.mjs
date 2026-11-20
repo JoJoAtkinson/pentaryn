@@ -19,7 +19,7 @@ test("core loads with no Foundry globals present", () => {
     assert.equal(name in globalThis, false, `${name} is defined in a bare node process`);
   }
   for (const fn of ["pinOf", "pickToken", "activateDecision", "netDecision", "coreSwitchesLevel", "levelFollow", "replayDecision",
-    "tokenNotice", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "pinnedName", "gatherPlan", "gatherRow", "gatherResult"]) assert.equal(typeof core[fn], "function", fn);
+    "tokenNotice", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "singleChoices", "pinnedName", "gatherPlan", "gatherRow", "gatherResult"]) assert.equal(typeof core[fn], "function", fn);
   for (const gone of ["viewDecision", "queueDecision", "followNeeded", "TOAST_EVERY_MS", "SETTLE_MS", "SETTLE_GIVE_UP_MS"]) {
     assert.equal(gone in core, false, `${gone} was deleted in 0.2.0 (core's own pull moves the player)`);
   }
@@ -273,6 +273,36 @@ test("teleportChoices: logged-in players by name; no pin, no token, a wild-shape
     { user: "u3", label: "Zed", enabled: false, reason: "NO_PIN" },
   ]);
   assert.deepEqual(core.teleportChoices([], {}, {}), []);
+});
+
+test("singleChoices (0.4.0): every pinned player, online or not, by character name; no token / several tokens disabled with the reason; GMs and unpinned players absent", () => {
+  const users = [
+    { id: "u3", name: "Zed", active: true, isGM: false },
+    { id: "u1", name: "Ana", active: false, isGM: false },
+    { id: "u2", name: "Bo", active: false, isGM: false },
+    { id: "gm", name: "GM", active: true, isGM: true },
+    { id: "u4", name: "Cy", active: true, isGM: false },
+    { id: "u5", name: "Dee", active: true, isGM: false },
+  ];
+  const pinsByUser = { u1: TALO, u2: MIRA, u3: null, u4: "manyActor0000001", u5: "goneActor0000001" };
+  const tokenInfo = {
+    [TALO]: { name: "Talo", token: true, count: 1 },
+    [MIRA]: { name: "Mira", token: false, count: 0 },
+    manyActor0000001: { name: "Bram", token: false, count: 2 },
+    // a deleted actor: no name, no record at all → listed under the player's name, no token
+  };
+  assert.deepEqual(core.singleChoices(users, pinsByUser, tokenInfo), [
+    { user: "u4", userName: "Cy", actor: "manyActor0000001", actorName: "Bram", label: "Bram — Cy", online: true, enabled: false, reason: "MANY_TOKENS", count: 2 },
+    { user: "u5", userName: "Dee", actor: "goneActor0000001", actorName: null, label: "Dee", online: true, enabled: false, reason: "NO_TOKEN", count: null },
+    { user: "u2", userName: "Bo", actor: MIRA, actorName: "Mira", label: "Mira — Bo", online: false, enabled: false, reason: "NO_TOKEN", count: 0 },
+    { user: "u1", userName: "Ana", actor: TALO, actorName: "Talo", label: "Talo — Ana", online: false, enabled: true, reason: null, count: 1 },
+  ]);
+  // teleportChoices' shape (no count): token true → 1, token false → NO_TOKEN
+  assert.deepEqual(core.singleChoices([users[1]], { u1: TALO }, { [TALO]: { name: "Talo", token: true } })[0].count, 1);
+  assert.equal(core.singleChoices([users[1]], { u1: TALO }, { [TALO]: { name: "Talo", token: false } })[0].reason, "NO_TOKEN");
+  // GM with a pin flag: never a row (the badge rule, pinnedName); nobody pinned: []
+  assert.deepEqual(core.singleChoices([{ id: "gm", name: "GM", active: true, isGM: true }], { gm: TALO }, tokenInfo), []);
+  assert.deepEqual(core.singleChoices([], {}, {}), []);
 });
 
 test("pinnedName: the user pinned to that root, else null", () => {

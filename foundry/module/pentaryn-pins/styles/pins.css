@@ -70,3 +70,9 @@
 .ppi-menu.ppi-flip-y .ppi-sub { top: auto; bottom: -0.25rem; }
 .ppi-menu .ppi-group:hover > .ppi-sub,
 .ppi-menu .ppi-group.ppi-open > .ppi-sub { display: flex; }
+
+/* Teleport single… (0.4.1): the checkbox list */
+.pentaryn-pins.ppi-single .ppi-checks { display: flex; flex-direction: column; gap: 0.25rem; max-height: 50vh; overflow-y: auto; }
+.pentaryn-pins.ppi-single .ppi-check { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.pentaryn-pins.ppi-single .ppi-check.ppi-disabled { opacity: 0.55; cursor: not-allowed; }
+.pentaryn-pins.ppi-single .ppi-check input { flex: 0 0 auto; margin: 0; }

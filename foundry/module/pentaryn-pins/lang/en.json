@@ -38,13 +38,26 @@
       "NoToken": "no token",
       "Gather": "Gather logged-in players here",
       "GatherCount": "{n}",
-      "GatherNone": "no one to gather"
+      "GatherNone": "no one to gather",
+      "ManyTokens": "{n} tokens",
+      "TeleportSingle": "Teleport single…",
+      "TeleportSingleCount": "{n}",
+      "TeleportSingleNone": "no pinned characters"
     },
     "Gather": {
       "NoPin": "{user}: no pin",
       "CombatTitle": "Gather during combat?",
       "CombatBody": "{names} will leave the combat tracker (moved to another scene).",
       "Yes": "Gather",
+      "No": "Cancel"
+    },
+    "Single": {
+      "Title": "Teleport pinned characters",
+      "Body": "Tick one or more. Each goes to the point you clicked (another scene too), with its summons and pets, one after another. A logged-in player's view follows; an offline player lands there at login.",
+      "Label": "Characters",
+      "Online": "online",
+      "Offline": "offline",
+      "Yes": "Teleport",
       "No": "Cancel"
     }
   }

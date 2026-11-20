@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-pins";
 export const SHORT = "pins";
 export const NS = "pins";
-export const VERSION = "0.3.0";                       // === module.json version (core.test pins it)
+export const VERSION = "0.4.1";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-pins/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_PINS";
 export const CSS = "ppi-";
@@ -262,6 +262,35 @@ export function teleportChoices(users = [], pinsByUser = {}, tokenInfo = {}) {
       if (!info?.token) return { user: u.id, label, enabled: false, reason: "NO_TOKEN" };
       return { user: u.id, label, enabled: true, reason: null };
     });
+}
+
+/**
+ * The "Teleport single…" picker's rows (0.4.0): EVERY pinned player, logged in or not, by character
+ * name (the GM picks a character, not a player). A pin whose token does not resolve is listed but
+ * disabled, with the reason: `NO_TOKEN` (none) or `MANY_TOKENS` (several; `tokenInfo[root].count`
+ * when given, else `token: false` reads as NO_TOKEN). An unpinned player is not a row (nothing to
+ * move); a GM carrying a pin flag is not a pinned player.
+ * @param {{id, name, active, isGM}[]} users
+ * @param {Record<string, string|null>} pinsByUser  userId → root actor id
+ * @param {Record<string, {name: string|null, token: boolean, count?: number}>} tokenInfo  root id → the
+ *   actor's name, whether exactly one token resolves and, optionally, how many there are
+ * @returns {{ user: string, userName: string, actor: string, actorName: string|null, label: string, online: boolean,
+ *   enabled: boolean, reason: "NO_TOKEN"|"MANY_TOKENS"|null, count: number|null }[]}
+ */
+export function singleChoices(users = [], pinsByUser = {}, tokenInfo = {}) {
+  return users
+    .filter(u => !u.isGM && pinsByUser[u.id])
+    .map(u => {
+      const root = pinsByUser[u.id];
+      const info = tokenInfo[root] ?? {};
+      const actorName = info.name ?? null;
+      const count = Number.isInteger(info.count) ? info.count : (info.token ? 1 : null);
+      const reason = info.token ? null : (count !== null && count > 1 ? "MANY_TOKENS" : "NO_TOKEN");
+      return { user: u.id, userName: u.name, actor: root, actorName, label: actorName ? `${actorName} — ${u.name}` : u.name,
+        online: !!u.active, enabled: reason === null, reason, count };
+    })
+    .sort((a, b) => String(a.actorName ?? a.userName).localeCompare(String(b.actorName ?? b.userName))
+      || String(a.userName).localeCompare(String(b.userName)));
 }
 
 /**
