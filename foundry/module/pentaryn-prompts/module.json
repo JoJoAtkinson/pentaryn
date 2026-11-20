@@ -9,7 +9,7 @@
   "styles": ["styles/prompts.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],
     "recommends": [
       { "id": "lib-wrapper", "type": "module", "reason": "Wraps Token#_onClickLeft2 so double-clicking a prompt marker opens its text; without it the method is wrapped by hand." },
       { "id": "item-piles", "type": "module", "reason": "Hotspot replacements clone the 'Hotspot · Look (template)' Item Piles container." }

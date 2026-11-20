@@ -9,7 +9,7 @@
   "styles": ["styles/creatures.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],
     "recommends": [
       { "id": "lib-wrapper", "type": "module", "reason": "Wraps Token#isVisible cleanly alongside other modules; without it the getter is patched directly." },
       { "id": "item-piles", "type": "module", "reason": "Item Piles piles are left out of the light and the strip." },

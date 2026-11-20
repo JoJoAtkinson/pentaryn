@@ -6,7 +6,7 @@
   "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],
     "recommends": [{ "id": "item-piles", "type": "module", "reason": "the bar on items opened from eye piles" }]
   },
   "esmodules": ["journal.mjs"],

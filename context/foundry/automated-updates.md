@@ -603,7 +603,7 @@ would otherwise have to go and rediscover.
 | | |
 |---|---|
 | Foundry core | **14.367** at the 2026-08 build (14.369 since the attended 2026-10-10 update) |
-| dnd5e | 5.3.3 at the 2026-08 build; 6.0.6 since 2026-10-10 |
+| dnd5e | 5.3.3 at the 2026-08 build; 6.0.6 since 2026-10-10; 6.1.1 since 2026-11-20 (by hand, after the importer/aoe retarget on branch `dnd5e-6.1`; the 2026-11-19 run's plan) |
 | Worlds | `space-journey` and `ardenhaven`, both migrated to 14.367, both smoke-clean |
 | Browser smoke | Re-verified live 2026-08-22 against `space-journey`: logged in as Gamemaster, `gameReady` and `canvasReady` true, scene "1. The Library (The Parley)", 28 modules active, zero client errors. It does get past the join screen and does exercise the world |
 | Server | **left down** — that is the new intended end state; `make vtt-up` to play |

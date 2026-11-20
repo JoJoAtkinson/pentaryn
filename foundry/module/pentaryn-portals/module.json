@@ -9,7 +9,7 @@
   "styles": ["styles/portals.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],
     "recommends": [{ "id": "item-piles", "type": "module", "reason": "A party teleport leaves no pile-PC behind: it asks Item Piles whether a token is a pile (no flag fallback)." }]
   },
   "socket": false,

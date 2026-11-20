@@ -9,7 +9,7 @@
   "styles": ["styles/riders.css", "lib/argon-tooltip.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
-    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],
     "recommends": [
       { "id": "enhancedcombathud", "type": "module", "reason": "Ritual Adept's Rituals group, the Longer casts group, shared-uses badges and panel collapse live on the Argon HUD" },
       { "id": "enhancedcombathud-dnd5e", "type": "module", "reason": "the Cast Spell panel the Rituals and Longer casts groups are added to; Metamagic buttons skip its target picker; its spell tooltips get the spell's roll data" }
