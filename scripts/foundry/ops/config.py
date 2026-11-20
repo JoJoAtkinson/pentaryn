@@ -33,6 +33,11 @@ CF_LOG = RUN_DIR / "cloudflared.log"
 # including /setup, /auth and /update. The config 403s those at the edge so server
 # administration is reachable only from the local port.
 CF_CONFIG = REPO_ROOT / "foundry/cloudflared/config.yml"
+# The deliberate off switch. While this file exists `tunnel-up` is a loud no-op, so the
+# nightly (which always runs vtt-up on the primary) leaves the tunnel down. Only
+# `make tunnel-disable` writes it and only `make tunnel-enable` removes it: `tunnel-down`
+# never does, because a tunnel taken down for the evening is meant to come back at 03:00.
+TUNNEL_DISABLED = REPO_ROOT / ".state/tunnel.disabled"
 
 # ── Update-run coordination ──
 # Both lifecycle commands refuse while an update run holds this. Starting the tunnel

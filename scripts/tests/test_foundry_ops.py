@@ -1567,3 +1567,72 @@ def test_handoff_prints_the_url_when_no_browser_opener_works(monkeypatch, capsys
     assert result == {"ok": False}
     out = capsys.readouterr()
     assert "http://localhost:" in out.out + out.err
+
+
+# ── the tunnel off switch (2026-11-19) ────────────────────────────────────────
+# A tunnel that dies outside the nightly used to stay dead: the nightly restored only what
+# it found up. Now the nightly always runs vtt-up, and the one way to keep the tunnel down
+# is the deliberate switch — tunnel-disable writes it, tunnel-enable removes it, and
+# tunnel-down never touches it.
+
+@pytest.fixture
+def switch(monkeypatch, tmp_path):
+    path = tmp_path / "state" / "tunnel.disabled"
+    monkeypatch.setattr(cfg, "TUNNEL_DISABLED", path)
+    return path
+
+
+def test_tunnel_up_declines_while_disabled_and_still_exits_zero(switch, monkeypatch, capsys):
+    switch.parent.mkdir(); switch.write_text("2026-11-19 — a test\n")
+    monkeypatch.setattr(service.host, "require_primary",
+                        lambda *a, **k: pytest.fail("the switch is checked before the role gate"))
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: pytest.fail("must not look at the pidfile"))
+    assert service.tunnel_up() == 0
+    out = capsys.readouterr().out
+    assert "tunnel NOT started — DISABLED 2026-11-19 — a test" in out
+    assert "make tunnel-enable" in out
+
+
+def test_tunnel_disable_then_enable_round_trip(switch, monkeypatch, capsys):
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: None)
+    assert service.tunnel_disable("night off") == 0
+    assert switch.exists() and "night off" in switch.read_text()
+    assert service.tunnel_disabled().endswith("— night off")
+    assert "the 03:00 nightly will leave it down" in capsys.readouterr().out
+    assert service.tunnel_enable() == 0
+    assert not switch.exists() and service.tunnel_disabled() is None
+    assert "tunnel ENABLED" in capsys.readouterr().out
+    assert service.tunnel_enable() == 0           # idempotent
+    assert "was not disabled" in capsys.readouterr().out
+
+
+def test_tunnel_disable_warns_when_the_tunnel_is_still_running(switch, monkeypatch, capsys):
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: 4242)
+    assert service.tunnel_disable() == 0
+    assert "still running — make tunnel-down" in capsys.readouterr().out
+
+
+def test_tunnel_down_never_sets_the_switch(switch, monkeypatch):
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: None)
+    assert service.tunnel_down() == 0
+    assert not switch.exists()
+
+
+def test_status_shows_the_switch(switch, monkeypatch, capsys):
+    switch.parent.mkdir(); switch.write_text("2026-11-19 — a test\n")
+    monkeypatch.setattr(service, "foundry_is_up", lambda *a: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: None)
+    monkeypatch.setattr(service, "_probe", lambda *a: (302, "https://x/cdn-cgi/access/login"))
+    assert service.status() == 0
+    out = capsys.readouterr().out
+    assert "tunnel:    DISABLED 2026-11-19 — a test — make tunnel-enable" in out
+    assert service.status_report()["tunnel"]["disabled"] == "2026-11-19 — a test"
+
+
+def test_tunnel_switch_subcommands_route(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli.service, "tunnel_disable", lambda reason: calls.append(("dis", reason)) or 0)
+    monkeypatch.setattr(cli.service, "tunnel_enable", lambda: calls.append(("en",)) or 0)
+    assert cli.main(["tunnel-disable", "--reason", "why"]) == 0
+    assert cli.main(["tunnel-enable"]) == 0
+    assert calls == [("dis", "why"), ("en",)]

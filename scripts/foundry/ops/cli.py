@@ -58,7 +58,11 @@ def build_parser() -> argparse.ArgumentParser:
                     help="print {foundry, tunnel, public} as JSON instead of prose")
     add("lock-check", "Fail if an auto-update run holds the lock.")
     add("tunnel-up", "Start the Cloudflare tunnel.")
-    add("tunnel-down", "Stop the Cloudflare tunnel.")
+    add("tunnel-down", "Stop the Cloudflare tunnel (it comes back on the next vtt-up or nightly).")
+    td = add("tunnel-disable", "The off switch: tunnel-up, vtt-up and the nightly leave the tunnel "
+                                "down until tunnel-enable. Does not stop a running tunnel.")
+    td.add_argument("--reason", default="", help="why, kept in the switch file and shown by status")
+    add("tunnel-enable", "Remove the off switch (does not start the tunnel).")
     add("tunnel-setup", "One-time: authenticate, create the tunnel, route DNS.")
     bs = add("bridge-status", "MCP bridge processes: which are live sessions, which are orphans, "
                               "and who holds the websocket ports.")
@@ -182,6 +186,8 @@ def main(argv: list[str] | None = None) -> int:
     if c == "lock-check":    return service.lock_check()
     if c == "tunnel-up":     return service.tunnel_up()
     if c == "tunnel-down":   return service.tunnel_down()
+    if c == "tunnel-disable": return service.tunnel_disable(args.reason)
+    if c == "tunnel-enable": return service.tunnel_enable()
     if c == "tunnel-setup":  return service.tunnel_setup()
     if c == "tunnel-logs":   return service.tunnel_logs(args.lines)
     if c == "bridge-status": return bridge.status(as_json=args.json)

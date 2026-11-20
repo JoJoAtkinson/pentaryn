@@ -2,7 +2,7 @@
 title: "Pentaryn — campaign state"
 status: active
 created: 2026-10-04
-last_modified: 2026-10-17
+last_modified: 2026-11-19
 tags: [context, campaign, pentaryn, campaign-state]
 ---
 
@@ -706,3 +706,14 @@ Drag, P, Shift+P, size chip, gather, dry run, replace and the `character` build 
 see no marker (canvas, sidebar). Nothing in the world was left behind (ZZ Arena, actors, user and
 journals deleted; Drow Prison active and paused). Details: `context/plans/usability-changes-2026-10.md`
 section "Area 9 re-run".
+
+## Brenfen Fen leg — options gathered (2026-11-19)
+
+The party goes into the swamps to Caven's home. Slain Town is now a night scene, so the orcs come
+first: a **peaceful** marsh tribe at a camp (Bazgar is Dakmar'nak, the Horde's marsh tribe), then the
+fen warden's cottage where Caven died. Map candidates (Island Village swamp, Snaketown, Lakeside Camp;
+Rainforest Cabin ext+int, Swamp), the reskin blocks (no 2024 orc stat block exists) and the orc token
+art on disk are in [`plans/brenfen-fen-2026-11.md`](plans/brenfen-fen-2026-11.md). **Ten candidate scenes imported** into `2. Swamp & Cottage` for Joe to review (ids in the plan). **The orc village is built (2026-11-19):** the Dakgar Hearth, 21 linked green-ring NPCs (nine warriors, 5,925 XP, just under a Low fight for 3 × L12) in `Encounters/Brenfen Fen/Island Village`, placed on both `Island Village (swamp)` (`5Gx5U3UI6RPYZwnU`) and `(swamp, night)` (`4FNFb4CCWVg2j2ol`); cast table and squares in the plan. Lights, walls and portals still to do.
+`Hags Den` (`UPeMjTotWtBQQxyz`, folder `2. Swamp & Cottage`) is the swamp hag's hovel, not the cottage.
+Scene folders `1. Dragon Cave` / `2. Swamp & Cottage` / `3. Slain Town` mirror the three leads in
+Caven's "Finding Raven" journal page.

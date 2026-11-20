@@ -36,6 +36,9 @@ help:
 	@echo "    make vtt-down          the tunnel down, then foundry-down: snapshot the world (~45 MB)"
 	@echo "                           + changed modules; upload in background (WAIT=1 waits)"
 	@echo "    make vtt               status: app, tunnel, public reachability"
+	@echo "    make tunnel-disable    keep the tunnel OFF (vtt-up and the nightly skip it) until"
+	@echo "                           make tunnel-enable; REASON=\"...\" is kept. tunnel-down alone"
+	@echo "                           is temporary: the 03:00 nightly brings the tunnel back"
 	@echo ""
 	@echo "  Content"
 	@echo "    make foundry-import    build actors -> stage -> import -> delete -> verify"
@@ -138,7 +141,7 @@ vtt-nightly-host-check:
 	@[ -x "$(POWERSHELL)" ] && command -v wslpath >/dev/null || { echo "  ✗ the nightly is a Windows Task Scheduler job — BOSS/WSL only"; exit 1; }
 
 # ─── The pieces: application, tunnel ────────────────────────────────────
-.PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-logs tunnel-setup foundry-boot
+.PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-disable tunnel-enable tunnel-logs tunnel-setup foundry-boot
 .PHONY: foundry-bridge-status foundry-bridge-clean foundry-eval-report
 .PHONY: foundry-headless-install foundry-headless-start foundry-headless-stop foundry-headless-restart
 .PHONY: foundry-headless-status foundry-headless-logs foundry-headless-ensure foundry-headless-test
@@ -162,6 +165,10 @@ foundry-down:
 	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown $(if $(WAIT),,BACKGROUND=1)
 tunnel-up:       ; @$(OPS) tunnel-up
 tunnel-down:     ; @$(OPS) tunnel-down
+# The off switch (.state/tunnel.disabled). Only these two targets touch it: tunnel-down does
+# not set it, so a tunnel taken down for the evening still comes back with the 03:00 nightly.
+tunnel-disable:  ; @$(OPS) tunnel-disable $(if $(REASON),--reason "$(REASON)")
+tunnel-enable:   ; @$(OPS) tunnel-enable
 tunnel-logs:     ; @$(OPS) tunnel-logs
 tunnel-setup:    ; @$(OPS) tunnel-setup
 

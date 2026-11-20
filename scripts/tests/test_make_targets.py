@@ -76,6 +76,8 @@ def test_every_registered_module_has_a_check_target(module):
     ("foundry-headless-logs", "journalctl --user -u foundry-headless-gm -n 60"),
     ("foundry-headless-ensure", "automation/headless-gm/watchdog.mjs --bootstrap-only"),
     ("foundry-headless-test", "--test automation/headless-gm/state.test.mjs"),
+    ("tunnel-disable", "scripts.foundry.ops tunnel-disable"),
+    ("tunnel-enable", "scripts.foundry.ops tunnel-enable"),
 ])
 def test_new_targets(target, expect):
     assert expect in _dry(target)
@@ -85,6 +87,7 @@ def test_parameterised_targets():
     def dry(*argv):
         return subprocess.run(["make", "-n", *argv], cwd=cfg.REPO_ROOT, capture_output=True,
                               text=True, timeout=30)
+    assert 'tunnel-disable --reason "night off"' in dry("tunnel-disable", "REASON=night off").stdout
     assert "module-vendor sync names" in dry("foundry-lib-vendor", "M=names").stdout
     assert "module-conformance --module names --markdown" in dry(
         "foundry-conformance", "M=names", "MD=1").stdout

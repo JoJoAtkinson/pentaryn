@@ -4,9 +4,12 @@
 #   Foundry up    → close the tunnel, stop Foundry (which disconnects anyone still in the
 #                   world — a forgotten open tab must not block the backup), take the shutdown
 #                   snapshot and WAIT for its upload (make vtt-down WAIT=1), start everything
-#                   again (make vtt-up FROM=local), relaunch the world that was active, prove
-#                   it serves. MONDAYS (VTT_UPDATE_DAY) it then runs the updater
-#                   (automation/bin/vtt-update.sh) with the headless GM stopped.
+#                   again (make vtt-up FROM=local — ALWAYS with the tunnel: a tunnel found
+#                   down is started too, unless `make tunnel-disable` set the off switch,
+#                   .state/tunnel.disabled, in which case tunnel-up itself declines),
+#                   relaunch the world that was active, prove it serves. MONDAYS
+#                   (VTT_UPDATE_DAY) it then runs the updater (automation/bin/vtt-update.sh)
+#                   with the headless GM stopped.
 #   Foundry down  → the stopped-server backup alone (make foundry-backup). Nothing starts.
 #
 # Started by Windows Task Scheduler through wsl.exe (automation/windows/register-vtt-nightly.ps1),
@@ -22,8 +25,8 @@
 #   - an admin password that cannot be resolved while a world is active — a world that is
 #     stopped and then cannot be relaunched leaves players at the setup screen;
 #   - this machine not being the primary (the tunnel would be skipped on the alt).
-# Once it has stopped anything, an EXIT trap brings Foundry (and the tunnel, if it was
-# up) back no matter which later step failed — service first, then the FAILED line.
+# Once it has stopped anything, an EXIT trap brings Foundry and the tunnel back no matter
+# which later step failed — service first, then the FAILED line.
 #
 # Log: .state/logs/vtt-nightly-YYYY-MM.log, one line per step; the last line of every run
 # is "finished rc=N" (0 ok, 1 failed, 75 refused/skipped). DRY=1 logs the plan, changes nothing.
@@ -78,8 +81,7 @@ finish() {
   trap 'log "! signal during recovery — ignored"' INT TERM HUP
   if [ -n "$STOPPED" ] && [ -z "$RESTARTED" ]; then
     log "! restoring service after a failure"
-    if [ -n "$TUNNEL_WAS_UP" ]; then step "recovery vtt-up" 600 make --no-print-directory vtt-up FROM=local
-    else step "recovery foundry-up" 600 make --no-print-directory foundry-up FROM=local; fi
+    step "recovery vtt-up" 600 make --no-print-directory vtt-up FROM=local
     [ $? -eq 0 ] || log "✗ FAILED: Foundry could not be brought back — run make vtt-up by hand"
     RC=1
   fi
@@ -137,7 +139,16 @@ EOF
 read -r FOUNDRY WORLD USERS <<<"${STATUS:-unknown - -}"
 PIDFILE="$REPO/.run/cloudflared.pid"
 if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then TUNNEL_WAS_UP=1; fi
-log "state: foundry=$FOUNDRY world=$WORLD users=$USERS tunnel=$([ -n "$TUNNEL_WAS_UP" ] && echo up || echo down)"
+# The tunnel's state decides only HOW we stop (vtt-down closes it first). The restart is
+# always vtt-up: a tunnel that died (a WSL restart killed it 2026-11-10 and nine nightlies
+# logged tunnel=down without starting it) comes back, unless the off switch says no.
+TUNNEL_STATE=$([ -n "$TUNNEL_WAS_UP" ] && echo up || echo down)
+if [ -f "$REPO/.state/tunnel.disabled" ]; then
+  TUNNEL_STATE="$TUNNEL_STATE,DISABLED($(head -c 80 "$REPO/.state/tunnel.disabled" | tr -d '\n')) — stays down (make tunnel-enable)"
+elif [ -z "$TUNNEL_WAS_UP" ]; then
+  TUNNEL_STATE="down — will be started with vtt-up"
+fi
+log "state: foundry=$FOUNDRY world=$WORLD users=$USERS tunnel=$TUNNEL_STATE"
 
 # No world active (a host reboot boots Foundry to /setup): launch the host's default world
 # after the restart instead of nothing. PENTARYN_DEFAULT_WORLD in ~/.config/pentaryn/env;
@@ -199,12 +210,8 @@ else
 fi
 [ $RC -eq 0 ] || log "✗ FAILED: stop or backup — restarting anyway"
 
-# ── start again ──
-if [ -n "$TUNNEL_WAS_UP" ]; then
-  step "start" 600 make --no-print-directory vtt-up FROM=local
-else
-  step "start" 600 make --no-print-directory foundry-up FROM=local
-fi
+# ── start again — always with the tunnel (tunnel-up declines by itself when disabled) ──
+step "start" 600 make --no-print-directory vtt-up FROM=local
 if [ $? -eq 0 ]; then RESTARTED=1; else RC=1; exit 1; fi   # the trap retries once
 
 # ── relaunch the world that was active, or the host's default (admin password from Infisical) ──

@@ -260,7 +260,47 @@ def _tunnel_exists() -> bool:
     return cfg.TUNNEL_NAME in (listed.stdout or "")
 
 
+def tunnel_disabled() -> str | None:
+    """The note inside the off switch (who, when, why), or None when the tunnel may run."""
+    try:
+        return cfg.TUNNEL_DISABLED.read_text().strip() or "(no reason given)"
+    except OSError:
+        return None
+
+
+def tunnel_disable(reason: str = "") -> int:
+    """Write the off switch. From now on tunnel-up (and so vtt-up and the nightly) leaves
+    the tunnel down until `make tunnel-enable`. Does NOT stop a running tunnel: that is
+    `make tunnel-down`, a separate decision."""
+    cfg.TUNNEL_DISABLED.parent.mkdir(parents=True, exist_ok=True)
+    note = time.strftime("%Y-%m-%d %H:%M %Z") + (f" — {reason.strip()}" if reason.strip() else "")
+    cfg.TUNNEL_DISABLED.write_text(note + "\n")
+    _say(f"✓ tunnel DISABLED ({note})")
+    _say("  tunnel-up, vtt-up and the 03:00 nightly will leave it down until: make tunnel-enable")
+    if _tunnel_pid() is not None:
+        _say("  ! the tunnel is still running — make tunnel-down to stop it now")
+    return OK
+
+
+def tunnel_enable() -> int:
+    """Remove the off switch. Does not start the tunnel: `make tunnel-up` (or the nightly)."""
+    note = tunnel_disabled()
+    if note is None:
+        _say("▸ tunnel was not disabled")
+        return OK
+    cfg.TUNNEL_DISABLED.unlink(missing_ok=True)
+    _say(f"✓ tunnel ENABLED (was disabled {note})")
+    _say("  it is not running yet: make tunnel-up, or the next nightly starts it")
+    return OK
+
+
 def tunnel_up() -> int:
+    # The off switch first: a deliberate `make tunnel-disable` beats everything below,
+    # and the nightly relies on this being a quiet exit 0 so vtt-up still succeeds.
+    if (note := tunnel_disabled()) is not None:
+        _say(f"▸ tunnel NOT started — DISABLED {note}")
+        _say("  (make tunnel-enable to allow it again; make tunnel-disable set this)")
+        return OK
     # The tunnel publishes this machine's Foundry as vtt.atjoseph.com; only the primary
     # does that (design §8). On the alt this is a loud no-op, not a failure: "Foundry up,
     # no tunnel" is exactly what the alt is for, so `vtt-up` still succeeds there.
@@ -393,7 +433,8 @@ def status_report() -> dict:
         verdict = f"unexpected HTTP {code}{f' → {location}' if location else ''}"
     return {
         "foundry": {"up": up, "url": cfg.FOUNDRY_URL},
-        "tunnel": {"up": bool(pid), "pid": pid, "host": cfg.TUNNEL_HOST},
+        "tunnel": {"up": bool(pid), "pid": pid, "host": cfg.TUNNEL_HOST,
+                   "disabled": tunnel_disabled()},
         "public": {"state": state, "code": code, "location": location, "verdict": verdict},
     }
 
@@ -407,7 +448,15 @@ def status(as_json: bool = False) -> int:
     print(f"  {'foundry:':<10} "
           + (f"UP   ({cfg.FOUNDRY_URL})" if r["foundry"]["up"] else "down"))
     pid = r["tunnel"]["pid"]
-    print(f"  {'tunnel:':<10} "
-          + (f"UP   (pid {pid}, https://{cfg.TUNNEL_HOST})" if pid else "down"))
+    disabled = r["tunnel"]["disabled"]
+    if pid:
+        line = f"UP   (pid {pid}, https://{cfg.TUNNEL_HOST})"
+        if disabled:
+            line += f"  — but DISABLED {disabled}: it will not come back after a stop (make tunnel-enable)"
+    elif disabled:
+        line = f"DISABLED {disabled} — make tunnel-enable, then make tunnel-up"
+    else:
+        line = "down (make tunnel-up; the 03:00 nightly also starts it)"
+    print(f"  {'tunnel:':<10} {line}")
     print(f"  {'public:':<10} {r['public']['verdict']}")
     return OK

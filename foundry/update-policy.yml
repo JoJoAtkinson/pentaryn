@@ -86,8 +86,12 @@ window:
   # stretch into the afternoon — the whole point is to refuse a run that launchd
   # deferred onto a wake hours later, which would take the tunnel down before a session.
   # BOSS (2026-10-17): the run starts inside the Monday 03:00 nightly, right after its
-  # backup (~03:06), so earliest is 03:00.
-  earliest: "03:00"
+  # backup (~03:06). 2026-11-19: Task Scheduler stored that 03:00 as 02:00-05:00 (the
+  # standard-time offset), so once daylight time ended the nightly fired at 02:00 and
+  # every Monday run since 2026-11-02 declined itself as "outside the window". earliest is
+  # now 02:00 so a one-hour DST shift either way still lands inside; re-registering the task
+  # (make vtt-nightly-register) puts the trigger back on 03:00 until the next shift.
+  earliest: "02:00"
   latest: "09:00"
 
 report:
