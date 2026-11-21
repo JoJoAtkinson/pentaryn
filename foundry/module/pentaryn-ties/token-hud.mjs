@@ -92,7 +92,7 @@ function injectTieHUD(app, element) {
       // one gesture, one cascade — the eye is disabled while it runs, so a double-click cannot queue two
       return guardClick("inspect", eye, async () => {
         const subject = subjectOfToken(token);
-        await examine(who, subject); // the player's page opens before the dice
+        await examine(who, subject, { token }); // the player's page opens before the dice
       }, CLICK);
     });
     col.appendChild(eye);

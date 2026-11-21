@@ -165,7 +165,7 @@ export async function bootWorld({
   before = () => {},
 } = {}) {
   installDom();
-  const F = await installFoundry({ user, users, settings, lang: { ...LANG, ...DND5E_LANG }, modules: [{ id: "pentaryn-ties", title: "Pentaryn NPC Ties", version: "0.19.4" }], activeScopes: ["item-piles"] });
+  const F = await installFoundry({ user, users, settings, lang: { ...LANG, ...DND5E_LANG }, modules: [{ id: "pentaryn-ties", title: "Pentaryn NPC Ties", version: "0.19.5" }], activeScopes: ["item-piles"] });
   F.rolls = [];
   F.dialogs = [];
   F.console = [];

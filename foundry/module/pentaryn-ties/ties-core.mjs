@@ -14,7 +14,7 @@
 export const MODULE = "pentaryn-ties";
 export const SHORT = "ties";
 export const NS = "ties";
-export const VERSION = "0.19.4"; // === module.json version (test/ties-core.test.mjs pins it)
+export const VERSION = "0.19.5"; // === module.json version (test/ties-core.test.mjs pins it)
 export const CONTRACT = "pentaryn-ties/api@1"; // bump the major on a published-shape change
 export const I18N = "PENTARYN_TIES";
 export const CSS = "pt-"; // flags.pentaryn.cssPrefix (Wave 7 batch); `pt-` is used by no other module

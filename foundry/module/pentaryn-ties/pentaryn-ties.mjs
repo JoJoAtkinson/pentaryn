@@ -100,7 +100,7 @@ onKeys({
     const subject = token?.actor ?? (token ? game.actors.get(token.document.actorId) : null);
     if (who && subject && subject.id !== who.id) {
       // the Look window first, before the dice — same moment, same frame, whatever follows
-      if (!game.user?.isGM) openLook(who, subject);
+      if (!game.user?.isGM) openLook(who, subject, { token });
       inspect(who, subject);
     }
   },

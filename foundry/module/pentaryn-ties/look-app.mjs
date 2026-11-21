@@ -80,6 +80,22 @@ const { ApplicationV2 } = foundry.applications.api;
 
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
+
+/**
+ * What the Look window shows as its subject: the actor's name and portrait, except for a DORMANT token
+ * (pentaryn-creatures disguises it as a prop until its combat starts: the token's name and art change,
+ * a linked actor's do not). Then the window shows the token's disguise, so it never names the creature
+ * the player is looking at a statue of (round-3 playtest R3, 2026-11-21). Pure.
+ * @param {{name?: string, img?: string}|null} subject
+ * @param {{name?: string, texture?: {src?: string}, flags?: object}|null} tokenDoc
+ */
+export function lookFace(subject, tokenDoc) {
+  if (tokenDoc?.flags?.["pentaryn-creatures"]?.dormant) {
+    return { name: tokenDoc.name ?? subject?.name ?? "?", img: tokenDoc.texture?.src ?? subject?.img ?? null, disguised: true };
+  }
+  return { name: subject?.name ?? "?", img: subject?.img ?? null, disguised: false };
+}
+
 /** One window per (character, subject) on this client. */
 const open = new Map();
 const pairKey = (character, subject) => `${character.id}:${subject.id}`;
@@ -100,22 +116,24 @@ export class LookWindow extends ApplicationV2 {
    * whose name and portrait head the window (they are already on the canvas). The DATA comes
    * from the world actor behind it, where grants are keyed and belief rows are written.
    */
-  static open(character, subject) {
+  static open(character, subject, { token = null } = {}) {
     if (game.user?.isGM) return null;
     if (!mayWrite()) return null;
     if (!character?.isOwner || !subject || subject.id === character.id) return null;
     const key = pairKey(character, subject);
     // the render is not awaited: a failed one is logged with the prefix rather than left unhandled
     return openOrFront(open.values(), w => w.pair === key, () => {
-      const win = new LookWindow(character, subject);
+      const win = new LookWindow(character, subject, { token });
       open.set(key, win);
       return win;
     }, { onError: err => log.error(`look window`, err) });
   }
 
-  constructor(character, subject, options = {}) {
+  constructor(character, subject, { token = null, ...options } = {}) {
     if (game.user?.isGM) throw new Error(`${MODULE} | the Look window is a player surface`);
     super(options);
+    // what the window shows: the token's disguise for a dormant token, else the actor (lookFace)
+    this.face = lookFace(subject, token?.document ?? token);
     // the actor the door passed — never re-derived from `game.user.character` later
     this.character = character;
     this.subject = subject;
@@ -126,7 +144,7 @@ export class LookWindow extends ApplicationV2 {
   }
 
   get title() {
-    return _loc("PENTARYN_TIES.known.look.title", { name: this.subject?.name ?? "?" });
+    return _loc("PENTARYN_TIES.known.look.title", { name: this.face?.name ?? this.subject?.name ?? "?" });
   }
 
   /* ------------------------------------------ the filter */
@@ -158,7 +176,7 @@ export class LookWindow extends ApplicationV2 {
   }
 
   groupLabel(group, base, kind) {
-    const name = this.subject?.name ?? base?.name ?? "?";
+    const name = this.face?.name ?? this.subject?.name ?? base?.name ?? "?";
     // a separate kind actor's study files under the KIND's page on the Known tab
     const key = groupLabelKey(group, "look", { kindPage: !!(kind && base && kind.id !== base.id) });
     // a group GROUP_LABEL does not know is headed with its own name, never another group's
@@ -168,13 +186,13 @@ export class LookWindow extends ApplicationV2 {
   /** The whole window body, as a string. Sync, so a live refresh can compare before it paints. */
   buildHTML() {
     const subject = this.subject;
-    const name = subject?.name ?? "?";
+    const name = this.face?.name ?? subject?.name ?? "?";
     const { base, kind, groups } = this.shownGroups();
     // the Known tab's own condition and key for the "Kind: X" line
     const kindLine = kind && base && kind.id !== base.id
       ? `<span class="pt-known-kind">${esc(_loc("PENTARYN_TIES.known.study.kindLine", { name: kind.name }))}</span>` : "";
     const head = `<div class="pt-summary pt-look-head">
-      <img class="pt-portrait" src="${esc(subject?.img || FALLBACK_ART)}" alt="">
+      <img class="pt-portrait" src="${esc(this.face?.img || subject?.img || FALLBACK_ART)}" alt="">
       <span class="pt-who"><span class="pt-name">${esc(name)}</span>${kindLine}</span>
     </div>`;
 
@@ -289,9 +307,9 @@ export class LookWindow extends ApplicationV2 {
 }
 
 /** The player's page on `subject`, as `character`. `null` for a GM or anyone it is not for. */
-export const openLook = (character, subject) => {
+export const openLook = (character, subject, opts = {}) => {
   try {
-    return LookWindow.open(character, subject);
+    return LookWindow.open(character, subject, opts);
   } catch (err) {
     // a window that fails to open must never stop the inspect that follows it
     log.error(`look window`, err);
@@ -305,7 +323,7 @@ export const openLook = (character, subject) => {
  * (point 1 above) — and then the inspection runs. For a GM `openLook` is null, so only the inspect
  * runs (ties-ui-EXT-10).
  */
-export async function examine(who, subject) {
-  openLook(who, subject);
+export async function examine(who, subject, opts = {}) {
+  openLook(who, subject, opts);
   return inspect(who, subject);
 }

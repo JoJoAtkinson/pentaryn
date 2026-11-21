@@ -64,11 +64,11 @@ function openLookMenu(token, ev) {
   if (who) {
     item("fa-eye", game.i18n.localize("PENTARYN_TIES.known.inspect.button"),
       game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name }), async () => {
-        await examine(who, subject);
+        await examine(who, subject, { token });
       });
     item("fa-book-open-reader", game.i18n.localize("PENTARYN_TIES.known.look.menu"),
       game.i18n.format("PENTARYN_TIES.known.look.menuTip", { name: token.name }), async () => {
-        openLook(who, subject);
+        openLook(who, subject, { token });
       });
   }
   /*

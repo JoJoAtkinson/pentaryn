@@ -39,8 +39,8 @@ const flush = async (n = 6) => {
 };
 const tok = id => canvas.tokens.get(id);
 
-test("VERSION: module.json says 0.19.4 (C41; re-pointed at ties-core.VERSION in S3)", () => {
-  assert.equal(manifestOf(new URL("..", import.meta.url)).version, "0.19.4");
+test("VERSION: module.json says 0.19.5 (C41; re-pointed at ties-core.VERSION in S3)", () => {
+  assert.equal(manifestOf(new URL("..", import.meta.url)).version, "0.19.5");
 });
 
 test("stub runs Foundry's own common/", () => {

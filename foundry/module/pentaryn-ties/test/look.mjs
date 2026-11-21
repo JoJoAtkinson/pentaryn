@@ -16,7 +16,7 @@
 
 import { StubActor, W } from "./fixtures/stubs.mjs";
 
-const { LookWindow } = await import("../look-app.mjs");
+const { LookWindow, lookFace } = await import("../look-app.mjs");
 const { buildKnownHTML, grantCard } = await import("../known-ui.mjs");
 const { loreOutcome, identMissKey } = await import("../known-core.mjs");
 
@@ -78,6 +78,17 @@ const look = (character, subject) => new LookWindow(character, subject).buildHTM
 const count = (html, needle) => html.split(needle).length - 1;
 
 export function register({ t, eq, ok }) {
+  t("look: a dormant token shows its disguise, never the creature's name or portrait (round-3 R3)", () => {
+    const { caven, marrith } = world();
+    const statue = { name: "Statue", texture: { src: "statue.webp" }, flags: { "pentaryn-creatures": { dormant: { name: "Caven Calderon" } } } };
+    const html = new LookWindow(marrith, caven, { token: statue }).buildHTML();
+    ok(html.includes(">Statue<") && !html.includes("Caven Calderon</span>"), "the header names the statue: ");
+    ok(html.includes("statue.webp"), "the statue's art heads the window");
+    eq(new LookWindow(marrith, caven, { token: statue }).title.includes("Caven"), false, "the title does not name Caven: ");
+    eq(lookFace(caven, { name: "Caven", flags: {} }).name, "Caven Calderon", "a token that is not dormant keeps the actor's name: ");
+    eq(lookFace(caven, null).disguised, false, "no token: the actor");
+  });
+
   t("look: a failed tell leaves no trace — no label, no header — and the two passes show", () => {
     const { caven, marrith } = world();
     const html = look(marrith, caven);

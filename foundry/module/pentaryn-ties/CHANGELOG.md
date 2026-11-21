@@ -3,6 +3,15 @@
 Newest first. The version is `module.json`'s; entries before the 2026-10 migration were collected from
 the old README's version-tagged sections.
 
+## 0.19.5 — 2026-11-21 (playtest round 3: a dormant statue's Look window)
+
+- [declared] **Fixed** the Look window naming a dormant creature. A token disguised by
+  pentaryn-creatures `dormant` (a statue until its combat starts) changes only the token's name and art,
+  not a linked actor's, so the window read "ZZ Bog A — what you know" over a "Statue" on the map (round-3
+  playtest R3). The window now takes the clicked token (`openLook` / `examine` `{ token }`, from the
+  Token HUD eye, the look menu and the inspect key) and shows a dormant token's name and art (pure
+  `lookFace`). Other tokens are unchanged: the actor's name and portrait, as before. Reload only.
+
 ## Unreleased — blueprint migration (2026-10, wave 3)
 
 - [declared] lore clean text (defect wave 3, Joe's ruling 2026-10-13): lore a player reads renders

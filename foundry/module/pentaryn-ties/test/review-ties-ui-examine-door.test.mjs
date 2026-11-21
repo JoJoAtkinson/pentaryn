@@ -40,7 +40,7 @@ test("ties-ui-EXT-10 subjectOfToken: the token's actor, else the world actor by 
 
 test("ties-ui-EXT-10 examine opens the Look window first, then inspects", () => {
   const body = src("look-app.mjs").match(/export (?:async function examine|const examine)[\s\S]*?\n\}/)?.[0] ?? "";
-  const o = body.indexOf("openLook(who, subject)");
+  const o = body.indexOf("openLook(who, subject");
   const i = body.indexOf("inspect(who, subject)");
   assert.ok(o > 0 && i > o, "openLook before inspect in examine");
 });
@@ -52,6 +52,6 @@ test("ties-ui-EXT-10 the HUD eye and the look menu call the shared pair, not the
     assert.doesNotMatch(s, /\binspect\(who, subject\)/, `${f} runs its own inspect`);
     assert.doesNotMatch(s, /from "\.\/study\.mjs"/, `${f} no longer reaches into the study conduit`);
     assert.match(s, /\bsubjectOfToken\(token\)/, `${f} uses subjectOfToken`);
-    assert.match(s, /\bexamine\(who, subject\)/, `${f} uses examine`);
+    assert.match(s, /\bexamine\(who, subject(, \{ token \})?\)/, `${f} uses examine`);
   }
 });
