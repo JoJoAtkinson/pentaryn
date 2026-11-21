@@ -811,6 +811,10 @@
       "label": "preCreateMeasuredTemplate(aim)"
     },
     {
+      "name": "preCreateChatMessage",
+      "label": "preCreateChatMessage(self)"
+    },
+    {
       "name": "dnd5e.renderChatMessage",
       "label": "renderChatMessage(apply)"
     },

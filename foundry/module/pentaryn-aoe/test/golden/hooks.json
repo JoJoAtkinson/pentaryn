@@ -109,6 +109,10 @@
   },
   {
     "kind": "on",
+    "name": "preCreateChatMessage"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.renderChatMessage"
   },
   {
