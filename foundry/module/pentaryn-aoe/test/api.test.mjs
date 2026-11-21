@@ -61,8 +61,8 @@ test("every pre-migration row is legacy with resolve: false params; the -10 read
 test("the flags contract: what aoe writes, what it reads", () => {
   const { flags } = api.describe();
   assert.ok(flags.writes.includes("flags.pentaryn-aoe.handle") && flags.writes.includes("flags.pentaryn-aoe.resolution"));
-  assert.equal(flags.writes.length, 15);
-  for (const f of ["flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets", "flags.pentaryn-aoe.applied"]) assert.ok(flags.writes.includes(f), f);
+  assert.equal(flags.writes.length, 16);
+  for (const f of ["flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets", "flags.pentaryn-aoe.applied", "flags.pentaryn-aoe.appliedLog"]) assert.ok(flags.writes.includes(f), f);
   assert.deepEqual(flags.reads, ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled", "flags.pentaryn-riders.empowered"]);
 });
 
@@ -170,7 +170,8 @@ test("inspect(…, { as: a player }): no tray summary; Careful Spell only on an 
 
 test("settings() is every SETTINGS row's live value", () => {
   const s = api.settings();
-  assert.equal(Object.keys(s).length, 21);
+  assert.equal(Object.keys(s).length, 22);
+  assert.equal(s.showAppliedBy, "owners");
   assert.deepEqual([s.autoDamageOnSave, s.applyFromCard], [true, true]);
   assert.equal(s.npcSaveRollMode, "gm");
   assert.equal(s.areaWalls, "cover");

@@ -26,6 +26,19 @@
     whatever was targeted. Never an area (a Self cone, line or emanation), a save or an attack
     activity; `areaTargets` / `recordedTargets` are never written. Gated by `applyFromCard`.
   - Tests: `test/self-target.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
+- **G2 [declared]. "Applied by Talo → Talo (+11)" under a damage or healing card** (feedback SvOaxr).
+  The plan's "the data is already there" was wrong: `stampApplied` stored `{ at, by, targets }`, no
+  amount, and only for untargeted or late-target cards; the GM tray and the relay wrote nothing.
+  - Every Apply now records one entry under its own random key of `flags.pentaryn-aoe.appliedLog`
+    (`{ at, by, byName, rows: [{ token, name, delta, pc }] }`, `delta` the HP change): the player's own
+    rows in the applied stamp (which now runs on every Apply from dnd5e's tray; targets are still
+    recorded only on a card that had none or followed late targets), the relayed rows by the GM's
+    `applyRelay` (`messages-adapter.logApplied`, the sender named), and the GM tray's `applyRows`.
+  - The card renders one line per entry under its tray (`renderAppliedBy` in `decorate`, render-only).
+    New world setting `showAppliedBy` = `gm` | `owners` (default) | `all` (`core.appliedByVisible`); a
+    player never reads a row for a creature no player owns (`core.appliedByLines`).
+  - Tests: `test/applied-by.test.mjs`; `card-apply.test.mjs` now expects the stamp on a card with
+    recorded targets (no `system.targets` rewrite). Goldens: `settings-register.json`, `describe.json`.
 
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM

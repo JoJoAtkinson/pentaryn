@@ -1725,3 +1725,14 @@ adjustments:
     native_when: dnd5e records the user as the target of a self-only activity's roll card
     retire_class: safe
     check: make foundry-aoe-check
+
+  - id: dnd5e-card-applied-by-line
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/messages-adapter.mjs, foundry/module/pentaryn-aoe/resolve.mjs]
+    markers: ["renderAppliedBy", "pa-applied-by", "appliedLog"]
+    what: on dnd5e.renderChatMessage a damage / healing card gets one "Applied by <user> → <token> (±n)" line per Apply, inserted right after dnd5e's <damage-application> element (else at the end of .message-content); every Apply (the player's own rows from dnd5e's tray, the GM relay, the GM save tray) writes one flags.pentaryn-aoe.appliedLog entry with the HP change read from actor.system.attributes.hp value + temp around actor.applyDamage (setting showAppliedBy)
+    why: dnd5e's tray never says who applied a card or what landed, and on an untargeted card each viewer's tray lists their own selection, so a heal read "Caven +11" for Talo's own Stone's Endurance (feedback SvOaxr, 2026-11-19)
+    native_when: dnd5e records and shows who applied a damage or healing card's rows, and the amount
+    retire_class: safe
+    check: make foundry-aoe-check

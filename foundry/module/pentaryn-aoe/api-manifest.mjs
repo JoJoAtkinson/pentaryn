@@ -77,7 +77,7 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-aoe.resolution", "flags.pentaryn-aoe.claims", "flags.pentaryn-aoe.effectsApplied",
       "flags.pentaryn-aoe.damageMessage", "flags.pentaryn-aoe.careful", "flags.pentaryn-aoe.npcSave",
       "flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets",
-      "flags.pentaryn-aoe.applied",
+      "flags.pentaryn-aoe.applied", "flags.pentaryn-aoe.appliedLog",
       "flags.dnd5e.lockSize", "flags.dnd5e.requestResult",
     ],
     // F0: an Empowered Spell card names the card it replaces (`from`); aoe reads nothing else of it.

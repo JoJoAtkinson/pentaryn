@@ -173,7 +173,13 @@ test("Apply as a player: the owned row lands here with the typed total; the row 
   assert.equal(relay.data.messageId, msg.id);
   assert.match(relay.data.requestId, /^[A-Za-z0-9]{16}$/);
   assert.deepEqual(ops("notify"), []);
-  assert.deepEqual(ops("update"), [], "a card with recorded targets is not rewritten");
+  // G2: every Apply is stamped, with this client's own rows for the "Applied by" line; a card with
+  // recorded targets keeps them (no system.targets write).
+  const updates = ops("update");
+  assert.equal(updates.length, 1);
+  assert.equal("system.targets" in updates[0].changes, false, "a card with recorded targets is not rewritten");
+  const entry = Object.entries(updates[0].changes).find(([k]) => k.startsWith(`flags.${MODULE}.appliedLog.`))?.[1];
+  assert.deepEqual(entry.rows.map(r => [r.token, r.delta, r.pc]), [[MR, -12, true]], "Marrith's own row; Caven's is the GM's to log");
   assert.equal(P.amounts.has(msg.id), false, "the typed totals are spent");
   assert.equal(ops("query")[0].name, RELAY);
 });

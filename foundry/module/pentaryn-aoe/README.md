@@ -126,6 +126,15 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   the caster's token as its one target. Never one that places an area (a Self cone, line or emanation:
   Burning Hands, Spirit Guardians), has a save, or is an attack; `areaTargets` and `recordedTargets`
   are never written, and late targets leave the card alone since it has targets.
+  **Applied by (G2).** Every Apply press is recorded on the card as one entry of
+  `flags.pentaryn-aoe.appliedLog` (`messages-adapter.logApplied`: who pressed it and, per token that took
+  it, the HP change and whether a player owns it), and the card shows "Applied by Talo → Talo (+11)" under
+  its tray, one line per press (`core.appliedByLines`). The rows that landed on the player's client are
+  in their own write (the applied stamp, now on every Apply); rows relayed to the GM, and the GM tray's
+  Apply, are written by the GM's client. Who reads it is `showAppliedBy` (`core.appliedByVisible`); a
+  player never reads a row for a creature no player owns (a monster's name or the damage it took after
+  resistances is GM data). A player's Apply on a card they neither rolled nor own the actor of cannot
+  write the card, so their own rows go unrecorded there.
 - **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
   including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
@@ -163,6 +172,7 @@ live through `setting()`, so a change applies without a reload).
 | `npcSaveRollMode` | `gm` | B | message mode of monster saves: `gm`, `blind` or `public` (a stored legacy `gmroll` is rewritten once by the active GM) |
 | `autoDamageOnSave` | on | C | J1: using a save activity with damage and a recorded target rolls the damage at once (not an area spell; not with no target) |
 | `applyFromCard` | on | I | Apply on a damage / healing card: unowned rows relayed to the active GM, late targets fill an untargeted card, a typed total per row |
+| `showAppliedBy` | `owners` | I | G2: who reads "Applied by <user> → <token> (±n)" under a card's tray: `gm`, `owners` (the GM, the card's roller, the owners of a row's token) or `all`; a player never reads a monster's row |
 | `areaWalls` | `cover` | H | which walls clip an area: `cover` (block movement and sight), `move` (dnd5e: every movement wall), `none` |
 
 ## API — game.pentaryn.aoe
@@ -208,7 +218,8 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `flags.pentaryn-aoe.lateTargets` | the author's own damage / healing message | `true` once the player's late targets filled its `system.targets` (dnd5e's own field, rewritten by the author; the Apply that recorded targets writes it too); `false` once an area resolve stamped the card over them |
 | `flags.pentaryn-aoe.areaTargets` | the damage message resolved off an area | `true` once `resolve()` wrote the area's creatures into its `system.targets` (dnd5e's own field; replaced on a re-resolve with another area) |
 | `flags.pentaryn-aoe.recordedTargets` | the damage message resolved off an area | the card's `system.targets` as they were before the first area stamp, a plain array of dnd5e descriptors (`[]` when the roller targeted nobody); written once, and what `resolve(id, { regionId: null })` builds its rows from after the stamp |
-| `flags.pentaryn-aoe.applied` | a damage / healing message that had no recorded targets, or followed late targets | `{ at, by, targets[] }` after its Apply, so late targets stop following it |
+| `flags.pentaryn-aoe.applied` | a damage / healing message, after any Apply from its dnd5e tray (G2; before, only one with no recorded targets or that followed late targets) | `{ at, by, targets[] }`, so late targets stop following it |
+| `flags.pentaryn-aoe.appliedLog.<id>` | a damage / healing message | G2: one entry per Apply press, `{ at, by, byName, rows: [{ token, name, delta, pc }] }` (`delta` the HP change, negative for damage; `pc` a player owns the creature); read by the "Applied by" line |
 | `flags.pentaryn-aoe.effectsApplied` | the usage card | `{ ids, auto, reason, actor, actorName, names }` |
 | `flags.pentaryn-aoe.npcSave` | a monster save message | `true` |
 | `flags.pentaryn-aoe.damageMessage` | the request card | the damage message id |
@@ -254,7 +265,7 @@ with a `move` restriction only) with `RegionDocument.prototype._computeShapeCons
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
-`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
+`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
 batch; only `scene-adapter.mjs` touches `game.itempiles`).
 
 ## Two sessions / who writes

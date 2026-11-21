@@ -99,6 +99,9 @@ save tray has the same total per row.
 A card from something that can only affect its user (Stone's Endurance, Second Wind) always lists the
 caster, whoever is targeted or selected, so nobody's Apply can heal the monster they had targeted. A
 Self-range area (Burning Hands, Spirit Guardians) is not one of them: its rows are the area's.
+After an Apply the card says who pressed it and what landed, one line per press: "Applied by Talo →
+Talo (+11)". The GM always sees it; by default a player sees it on a card they rolled or where they
+own who took it, and never a monster's row (setting *Who sees "Applied by" under a card*).
 
 **Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
 client. It also rolls when the target's AC is unknown, for example with no target selected.
@@ -160,6 +163,7 @@ mouse and the wheel turns it.
 | The same spell does not stack | on | |
 | Self cones and lines start at the caster | on | Part G |
 | Instantaneous areas stay where they were cast | on | Thunder Step's ring stays behind with a handle |
+| Who sees "Applied by" under a card | The GM, the card's roller and the owners of who took it | `gm` · `owners` · `all`; a player never sees a monster's row |
 | Walls that stop a spell area | Total cover | `cover` · `move` (dnd5e's default) · `none`; Part H |
 
 ## Console (`game.pentaryn.aoe`)

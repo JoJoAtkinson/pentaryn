@@ -339,6 +339,50 @@ export function selfTargetCard({ type = null, activityType = null, rangeUnits = 
   return rangeUnits === "self" && !affectsType;
 }
 
+/** G2: the `showAppliedBy` setting's choices: who sees "Applied by … → …" under a card's tray. */
+export const APPLIED_BY_MODES = Object.freeze(["gm", "owners", "all"]);
+
+/**
+ * G2: does this viewer see the "Applied by" line on a card? The GM always does. A player: never with
+ * `gm`; with `owners` (the default) on a card they wrote or where they own a row's token; with `all`
+ * on every card. An unknown mode reads as `owners`.
+ * @param {string} mode
+ * @param {{ isGM?: boolean, isAuthor?: boolean, ownsRow?: boolean }} viewer
+ */
+export function appliedByVisible(mode, { isGM = false, isAuthor = false, ownsRow = false } = {}) {
+  if (isGM) return true;
+  const m = APPLIED_BY_MODES.includes(mode) ? mode : "owners";
+  if (m === "gm") return false;
+  if (m === "all") return true;
+  return !!(isAuthor || ownsRow);
+}
+
+/**
+ * G2: the lines a viewer reads under a card's tray, from `flags.pentaryn-aoe.appliedLog` (one entry per
+ * Apply press, keyed by a random id: `{ at, by, byName, rows: [{ token, name, delta, pc }] }`, `delta`
+ * the HP change, negative for damage). Oldest first, one line per entry: `{ at, by, rows: [{ name, delta }] }`.
+ * A player (`isGM` false) never reads a row for a creature no player owns (`pc` false) unless they own
+ * its token: a monster's name or the damage it took after resistances is GM data, as the save tray is.
+ * An entry left with no rows is dropped.
+ * @param {Record<string, object>|null|undefined} log
+ * @param {{ isGM?: boolean, owns?: (tokenUuid: string) => boolean }} viewer
+ * @returns {{ at: number, by: string, rows: { name: string, delta: number }[] }[]}
+ */
+export function appliedByLines(log, { isGM = false, owns = () => false } = {}) {
+  const entries = Object.values(log ?? {}).filter(e => e && Array.isArray(e.rows));
+  entries.sort((a, b) => (Number(a.at) || 0) - (Number(b.at) || 0));
+  const out = [];
+  for (const e of entries) {
+    const rows = e.rows.filter(r => r && (isGM || r.pc || owns(r.token)))
+      .map(r => ({ name: String(r.name ?? ""), delta: Number(r.delta) || 0 }));
+    if (rows.length) out.push({ at: Number(e.at) || 0, by: String(e.byName ?? e.by ?? ""), rows });
+  }
+  return out;
+}
+
+/** G2: an HP change as the line shows it: `+11` healing, `-14` damage, `0`. */
+export const fmtDelta = n => (n > 0 ? `+${n}` : n < 0 ? `-${-n}` : "0");
+
 /**
  * Part I: which rows an Apply press on dnd5e's tray lands. The rows dnd5e lists (`listed`: the uuids
  * of its `<option>`s), always — what the tray shows is what Apply hits. The one fallback: dnd5e lists

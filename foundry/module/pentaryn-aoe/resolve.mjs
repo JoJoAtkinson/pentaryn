@@ -33,7 +33,7 @@ import { claimMessage } from "./lib/election.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { FEATURE_ROWS } from "./api-manifest.mjs";
 import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
-import { activityOf, usageIdOf, recordedTarget, targetDescriptors } from "./messages-adapter.mjs";
+import { activityOf, usageIdOf, recordedTarget, targetDescriptors, hpOf, logApplied } from "./messages-adapter.mjs";
 
 export const REQUEST_HANDLER = `${MODULE}.save`;
 /** pentaryn-riders' flag scope: its Empowered Spell card names the card it replaces (MANIFEST.flags.reads). */
@@ -561,6 +561,8 @@ async function applyRowsNow(messageId, rowIds) {
   const todo = applicableRows(res.rows, rowIds);
   const liveRow = id => aoeFlags(game.messages.get(messageId)).resolution?.rows.find(r => r.id === id);
   const failed = [];
+  const landed = [];   // G2: this press's rows for the "Applied by" line
+  const scene = game.scenes.get(res.scene);
   let out = null;
   for (const row of todo) {
     const live = liveRow(row.id);
@@ -568,6 +570,7 @@ async function applyRowsNow(messageId, rowIds) {
     const actor = fromUuidSync(row.actor);
     if (!actor) continue;
     const before = actor.system.attributes.hp.value;
+    const total = hpOf(actor);
     // B5: a total typed on the row (real dice) replaces the rolled one, each type keeping its share.
     const damages = hydrateDamages(scaleDamages(res.damages, row.amount));
     try {
@@ -579,6 +582,7 @@ async function applyRowsNow(messageId, rowIds) {
       continue;
     }
     const hp = { before, after: actor.system.attributes.hp.value };
+    landed.push({ token: scene?.tokens.get(row.id)?.uuid ?? null, name: row.name, delta: hpOf(actor) - total, pc: row.kind === "manual" });
     out = await mutate(messageId, r => {
       const x = r.rows.find(y => y.id === row.id);
       if (x) { x.applied = true; x.hp = hp; }
@@ -586,6 +590,7 @@ async function applyRowsNow(messageId, rowIds) {
     }) ?? out;
   }
   out ??= foundry.utils.deepClone(aoeFlags(game.messages.get(messageId)).resolution ?? null);
+  if (landed.length && game.messages.has(messageId)) await enqueue(messageId, () => logApplied(game.messages.get(messageId), landed, { log }));
   if (failed.length) {
     for (const { row, err } of failed.slice(1)) log.error("apply", row.name, err);   // the first is rethrown for the caller to log
     ui.notifications.warn(_loc("PENTARYN_AOE.Tray.ApplyFailed", { names: failed.map(f => f.row.name).join(", ") }));

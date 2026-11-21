@@ -60,6 +60,13 @@
         "Name": "Saves from the area",
         "Hint": "When a save spell's damage is rolled, list the creatures in its area, roll the monsters' saves and ask the players for theirs. Nothing is applied until the GM presses Apply."
       },
+      "showAppliedBy": {
+        "Name": "Who sees \"Applied by\" under a card",
+        "Hint": "Under a damage or healing card's Apply tray, one line per Apply: who pressed it, who took it and how much (\"Applied by Talo → Talo (+11)\"). The GM always sees it. Players never see a monster's row.",
+        "gm": "The GM only",
+        "owners": "The GM, the card's roller and the owners of who took it",
+        "all": "Everyone"
+      },
       "npcSaveRollMode": {
         "Name": "Monster save visibility",
         "Hint": "Roll mode for saves the GM's client rolls for monsters.",
@@ -163,7 +170,9 @@
       "AmountTip": "Total to apply to this target: pre-filled with the rolled total; type the number from real dice to use it instead. The multiplier still applies on top. A typed total lasts until Apply or a page reload.",
       "NoGm": "No GM is connected, so {names} did not take this. The GM can apply it from this card.",
       "RelayFailed": "The GM's client could not apply this to {names} ({reason}). The GM can apply it from this card.",
-      "GmTray": "Not from here for {names}: a save spell's damage lands from the GM's save tray, once the saves are in."
+      "GmTray": "Not from here for {names}: a save spell's damage lands from the GM's save tray, once the saves are in.",
+      "AppliedBy": "Applied by {user} → {rows}",
+      "AppliedRow": "{name} ({delta})"
     }
   }
 }
