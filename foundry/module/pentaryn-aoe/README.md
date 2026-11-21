@@ -71,6 +71,15 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   target (Psionic Lash at Caven) rolls its damage at once, threaded under the usage card with the
   card's targets, so the flow is Use → the target saves → Apply. A save spell that places an area
   waits for the area; a use with no target posts nothing extra.
+  **Hit or miss (D2, setting `hitMissLabels`).** With `dnd5e.attackRollVisibility` at `hideAC` (since
+  2026-11-20) players know hit or miss but not the AC, yet a miss still looked like nothing happening.
+  `dnd5e.renderChatMessage` on an attack card adds "— Hit" (blue) or "— Miss" (orange) to its title
+  (`.card-header .subtitle`) for one target, "Hit" / "Miss" on each `target-pill` for several, and a
+  rendered "Miss — no damage" line when every target was missed — never a posted message, which would
+  come once per client. Total cover (`ac === null`) is a miss; no recorded target, a private card or a
+  visibility of `none` shows nothing (`core.attackOutcome`, from `message.system.evaluatedTargets`, else
+  the pills' `data-hit` / `data-miss`). The damage card after a hit (the newest attack card of the same
+  activity before it) gets a blue title. Render-only; a re-render replaces the labels.
 - **Part D — effects meant for you** (`effects.mjs`). A usage card's one effect goes on its caster
   when the caster is its only target, the activity affects only `self` (Shield), or a touch spell
   for one willing creature was cast at nobody. A card with several effects is a choice and stays in
@@ -172,6 +181,7 @@ live through `setting()`, so a change applies without a reload).
 | `npcSaveRollMode` | `gm` | B | message mode of monster saves: `gm`, `blind` or `public` (a stored legacy `gmroll` is rewritten once by the active GM) |
 | `autoDamageOnSave` | on | C | J1: using a save activity with damage and a recorded target rolls the damage at once (not an area spell; not with no target) |
 | `applyFromCard` | on | I | Apply on a damage / healing card: unowned rows relayed to the active GM, late targets fill an untargeted card, a typed total per row |
+| `hitMissLabels` | on | C | D2: an attack card says Hit (blue) / Miss (orange) in its title (each pill with several targets), a "Miss — no damage" line on a miss, a blue title on the damage card after a hit; nothing while `dnd5e.attackRollVisibility` is `none` |
 | `showAppliedBy` | `owners` | I | G2: who reads "Applied by <user> → <token> (±n)" under a card's tray: `gm`, `owners` (the GM, the card's roller, the owners of a row's token) or `all`; a player never reads a monster's row |
 | `areaWalls` | `cover` | H | which walls clip an area: `cover` (block movement and sight), `move` (dnd5e: every movement wall), `none` |
 
@@ -249,7 +259,7 @@ replaced card, F0; nothing else of that flag), declared in `MANIFEST.flags.reads
 
 n/a — emits none of its own beyond the kit's `pentaryn-aoe.ready` and `pentaryn.ready`. The hooks
 it listens to, in order, are pinned in `test/golden/hooks.json`; order within a name is behaviour
-(four `dnd5e.renderChatMessage` decorators; Careful's `dnd5e.postUseActivity` before J1's damage roll
+(five `dnd5e.renderChatMessage` decorators; Careful's `dnd5e.postUseActivity` before J1's damage roll
 before refund's synchronous `false`). The one query, `pentaryn-aoe.applyRelay`, is registered from
 the contributed rows at ready on every client (`registerQueries`).
 
@@ -265,7 +275,7 @@ with a `move` restriction only) with `RegionDocument.prototype._computeShapeCons
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
-`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
+`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
 batch; only `scene-adapter.mjs` touches `game.itempiles`).
 
 ## Two sessions / who writes

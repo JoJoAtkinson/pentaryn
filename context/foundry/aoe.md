@@ -1,7 +1,7 @@
 ---
 title: "Spell areas, saves and damage (pentaryn-aoe)"
 status: active
-last_modified: 2026-11-07
+last_modified: 2026-11-21
 tags: [context, foundry, dnd5e, module]
 ---
 
@@ -106,8 +106,12 @@ own who took it, and never a monster's row (setting *Who sees "Applied by" under
 **Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
 client. It also rolls when the target's AC is unknown, for example with no target selected.
 A known miss or a natural 1 rolls nothing. The card's Damage button still works.
-Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setting it to
-`"hideAC"` shows hit/miss without the AC. That is Joe's call; this module does not change it.
+`dnd5e.attackRollVisibility` is `"hideAC"` (Joe, 2026-11-20): players see hit or miss, never the AC.
+The attack card then says so in words: "Attack — Hit" in blue or "Attack — Miss" in orange (with
+several targets, "Hit" / "Miss" on each target), a miss adds a "Miss — no damage" line so the turn
+visibly moves on, and the damage roll after a hit has a blue title. With the visibility back at
+`"none"` nothing is shown. Setting *Say Hit or Miss on attacks*; this module never changes dnd5e's
+visibility setting.
 
 **Careful Spell.** Metamagic is tracked, not forced onto a spell (Joe's ruling, 2026-10-12). When a
 sorcerer uses Careful Spell, a picker opens on their screen: the creatures on their scene by token
@@ -163,6 +167,7 @@ mouse and the wheel turns it.
 | The same spell does not stack | on | |
 | Self cones and lines start at the caster | on | Part G |
 | Instantaneous areas stay where they were cast | on | Thunder Step's ring stays behind with a handle |
+| Say Hit or Miss on attacks | on | the labels and the miss line; nothing while dnd5e's attack roll visibility is None |
 | Who sees "Applied by" under a card | The GM, the card's roller and the owners of who took it | `gm` · `owners` · `all`; a player never sees a monster's row |
 | Walls that stop a spell area | Total cover | `cover` · `move` (dnd5e's default) · `none`; Part H |
 

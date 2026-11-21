@@ -225,6 +225,28 @@ export function shouldAutoDamage(roll) {
 }
 
 /**
+ * D2 (feedback ORGqVN, hKDbzi): what an attack card says about hit or miss. `targets` are dnd5e's
+ * evaluated targets (`message.system.evaluatedTargets`: `{ isMiss, ac }`; `ac === null` is total cover,
+ * a miss); `visible` is whether this viewer may know the result (dnd5e's `attackRollVisibility` is not
+ * `none`, and the card's content is visible to them). Nothing (null) when hidden or with no recorded
+ * target (browser test T2's empty pane: no target, no claim). One target: its result goes in the card's
+ * title ("Attack — Hit" / "— Miss"). Several: each pill carries its own result, no title suffix. A miss
+ * line ("Miss — no damage") when every target was missed, so the turn visibly moves on; a following
+ * damage card's title is coloured as a hit when any target was hit.
+ * @param {{ targets?: {isMiss?: boolean, ac?: number|null}[], visible?: boolean }} o
+ * @returns {{ outcome: "hit"|"miss"|"mixed", title: "hit"|"miss"|null, pills: boolean, missLine: boolean, hit: boolean }|null}
+ */
+export function attackOutcome({ targets = [], visible = false } = {}) {
+  const list = (targets ?? []).filter(Boolean);
+  if (!visible || !list.length) return null;
+  const missed = list.map(t => !!t.isMiss || t.ac === null);
+  const misses = missed.filter(Boolean).length;
+  const outcome = misses === 0 ? "hit" : misses === list.length ? "miss" : "mixed";
+  const one = list.length === 1;
+  return { outcome, title: one ? outcome : null, pills: !one, missLine: outcome === "miss", hit: outcome !== "miss" };
+}
+
+/**
  * J1: should using a save activity roll its damage at once (the sibling of shouldAutoDamage)?
  * Only a save activity with damage parts and at least one recorded target; never one that places
  * an area (its damage waits for the area, Part B lists who is inside), and a narrated use with no

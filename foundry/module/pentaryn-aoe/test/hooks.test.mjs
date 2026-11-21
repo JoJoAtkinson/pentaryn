@@ -45,7 +45,7 @@ test("setup registers the feature hooks in Part order: areas, token areas, resol
     "on dnd5e.createMeasuredTemplate", "on renderTokenHUD",
     "on dnd5e.postUseActivity", "on createChatMessage", "on preDeleteChatMessage", "on deleteChatMessage", "on updateChatMessage",
     "on dnd5e.renderChatMessage",
-    "on dnd5e.postRollAttack", "on dnd5e.postUseActivity",
+    "on dnd5e.renderChatMessage", "on dnd5e.postRollAttack", "on dnd5e.postUseActivity",
     "on createChatMessage", "on dnd5e.renderChatMessage", "on preCreateActiveEffect",
     "on dnd5e.postUseActivity",
     "on dnd5e.preCreateMeasuredTemplate",
@@ -61,7 +61,7 @@ test("[declared] aoe-edge-3 ready (active GM, no ui.ARGON) adds no hook (the can
 test("after the lifecycle, every on() listener is live once", () => {
   const live = F.listeners();
   for (const name of ["init", "setup", "ready"]) assert.equal(live[name], undefined, name);
-  assert.equal(live["dnd5e.renderChatMessage"], 4);
+  assert.equal(live["dnd5e.renderChatMessage"], 5);
   assert.equal(live.createChatMessage, 2);
   assert.equal(live["dnd5e.postUseActivity"], 3);
   assert.equal(live.targetToken, 2);

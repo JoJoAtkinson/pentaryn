@@ -39,6 +39,16 @@
     player never reads a row for a creature no player owns (`core.appliedByLines`).
   - Tests: `test/applied-by.test.mjs`; `card-apply.test.mjs` now expects the stamp on a card with
     recorded targets (no `system.targets` rewrite). Goldens: `settings-register.json`, `describe.json`.
+- **D2 [declared]. Hit / Miss on attack cards** (feedback ORGqVN, hKDbzi). `attackRollVisibility` has
+  been `hideAC` since 2026-11-20, but a miss still read as nothing happening (browser test T2).
+  - `attacks.mjs` adds `dnd5e.renderChatMessage`: one target → "— Hit" (blue) / "— Miss" (orange) in the
+    card's title; several → "Hit" / "Miss" on each target pill, no title suffix; every target missed →
+    a rendered "Miss — no damage" line (no posted message). The damage card after a hit gets a blue
+    title. Pure `core.attackOutcome` (total cover is a miss; no target, a private card or visibility
+    `none` → nothing). Idempotent on a re-render.
+  - New world setting `hitMissLabels` (default on); `settings.dnd5eAttackVisibility()` reads dnd5e's.
+  - Tests: `test/hit-miss.test.mjs` (golden `hit-miss.json`). Goldens: `hooks.json`, `describe.json`,
+    `settings-register.json`.
 
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM

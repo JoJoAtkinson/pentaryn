@@ -1736,3 +1736,14 @@ adjustments:
     native_when: dnd5e records and shows who applied a damage or healing card's rows, and the amount
     retire_class: safe
     check: make foundry-aoe-check
+
+  - id: dnd5e-attack-card-hit-miss
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/settings.mjs]
+    markers: ["attackOutcome", "evaluatedTargets", "target-pill", "attackRollVisibility"]
+    what: on dnd5e.renderChatMessage an attack card (message.type "attack") reads message.system.evaluatedTargets (else the attack-card.hbs target-pill[data-hit] / [data-miss]) and appends "— Hit" / "— Miss" to .card-header .subtitle (one target), a "Hit" / "Miss" span inside each target-pill (several), or a .pa-miss-line paragraph to .message-content (every target missed); the damage card after a hit gets .pa-hit-title on its subtitle. Reads the world setting dnd5e.attackRollVisibility and shows nothing at "none" (setting hitMissLabels)
+    why: with attackRollVisibility at hideAC dnd5e shows only pill icons, and on a miss pentaryn-aoe rolls nothing, so a miss read as "nothing happened" (feedback ORGqVN, hKDbzi, browser test T2, 2026-11-20)
+    native_when: dnd5e's attack card names the result in words (a hit / miss label on the card or its title)
+    retire_class: safe
+    check: make foundry-aoe-check

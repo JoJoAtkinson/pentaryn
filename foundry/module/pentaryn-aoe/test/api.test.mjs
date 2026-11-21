@@ -170,7 +170,8 @@ test("inspect(…, { as: a player }): no tray summary; Careful Spell only on an 
 
 test("settings() is every SETTINGS row's live value", () => {
   const s = api.settings();
-  assert.equal(Object.keys(s).length, 22);
+  assert.equal(Object.keys(s).length, 23);
+  assert.equal(s.hitMissLabels, true);
   assert.equal(s.showAppliedBy, "owners");
   assert.deepEqual([s.autoDamageOnSave, s.applyFromCard], [true, true]);
   assert.equal(s.npcSaveRollMode, "gm");
