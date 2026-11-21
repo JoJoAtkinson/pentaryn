@@ -127,6 +127,12 @@ settings were copied on disk with classic-level while both worlds were closed.
   stay), Teleport pinned character. A companion several players co-own (a shared steed) now comes on
   a single move only from within 10 ft of the moving character, and always on a Gather. What is
   live: `game.pentaryn.pins.describe().version`. Details: [`foundry/pins.md`](foundry/pins.md).
+- **pentaryn-dice 0.1.0 (built 2026-11-21, branch `feedback/2026-11-21-dice`; not synced yet).**
+  Dice So Nice persistent-dice helpers for big physical-style rolls (Kyle's request, feedback
+  `Lzzlyq`): a count box and "+ ×" per die in the Dice So Nice tab (8 → 8d6 in one click), Select
+  all mine / all of one type, Clear selection, the Ctrl+click hint inline, **Alt+A** selects all your
+  dice. Requires dice-so-nice (now `review_always` in the updater). First install: restart, enable,
+  reload, then `game.pentaryn.dice.selftest()`. Use-doc: [`foundry/dice.md`](foundry/dice.md).
 - **The lobby: keep "Pentaryn — Entry" active** (scene `cCHpAUuiR4zGXusB`; its background is the world splash art,
   `assets/splash/pentaryn-splash.webp`, set on its level). With Pinning on,
   activating a play map does **not** move the pinned players: it only sets what they see for a moment

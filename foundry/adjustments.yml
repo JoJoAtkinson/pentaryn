@@ -39,7 +39,7 @@ aliases:
   enhancedcombathud: ["ui.ARGON", "CONFIG.ARGON", "ArgonComponent"]
   enhancedcombathud-dnd5e: ["CONFIG.ARGON", "ArgonComponent"]
   item-piles: ["game.itempiles", "itempiles"]
-  dice-so-nice: ["dice3d"]
+  dice-so-nice: ["dice3d", "DsnSidebarTab"]
   lib-wrapper: ["libWrapper"]
 
 adjustments:
@@ -1847,3 +1847,25 @@ adjustments:
     native_when: dnd5e ships a per-status visibility setting for non-owned tokens, or isConcealed's checks (OBSERVER, the Bloodied rule) or its consumers (isTemporary, the effects list, _displayScrollingStatus) change
     retire_class: guarded
     check: make foundry-creatures-check; live, as a player, a hostile token shows Prone and Bloodied but not Frightened, Concentrating or Mage Armor, and a dormant one shows nothing
+
+  - id: dsn-persistent-dice-select
+    packages: [dice-so-nice]
+    modules: [pentaryn-dice]
+    files: [foundry/module/pentaryn-dice/dsn-adapter.mjs, foundry/module/pentaryn-dice/dice-core.mjs]
+    markers: ["persistentDiceManager", "selectedPersistentDiceIds", "persistent.spawn", "onSelectionChanged", "clearPersistentSelection", "countPersistentDiceByOwner"]
+    what: pentaryn-dice spawns persistent dice through game.dice3d.persistent.spawn(type, null, { linkGroupId, digitPlace, linkGroupSecondary }) (a d100 as its linked pair, as DSN's sidebar + does) and selects them by adding mesh ids to game.dice3d.box.persistentDiceManager.selectedPersistentDiceIds, then calling its onSelectionChanged() so the outlines redraw; it reads persistentDiceList meshes (notation.type, userData.ownerUserId / linkGroupId / linkGroupSecondary / guest) and clears with clearPersistentSelection(); selftest() checks the six internals persistent.spawn, selectedPersistentDiceIds, togglePersistentSelection, clearPersistentSelection, getSelectedPersistentDice, countPersistentDiceByOwner (core INTERNALS)
+    why: Dice So Nice 6.4.5 has no select-all, no select-by-type and no multi-spawn for persistent dice, and none of the persistent-dice manager is a documented API (feedback Lzzlyq, triage M1)
+    native_when: Dice So Nice ships select-all / select-by-type / spawn-N for persistent dice, or a documented selection API
+    retire_class: guarded
+    check: make foundry-dice-check; live, game.pentaryn.dice.selftest().ok with DSN's persistent dice on
+
+  - id: dsn-sidebar-tab-dom
+    packages: [dice-so-nice]
+    modules: [pentaryn-dice]
+    files: [foundry/module/pentaryn-dice/sidebar.mjs]
+    markers: ["renderDsnSidebarTab", "dsn-toolbox-dice-row", "dsn-toolbox-dice-buttons", "dsn-toolbox-clear"]
+    what: on renderDsnSidebarTab (DSN's AppV2 DsnSidebarTab) adds a count box, a "+ ×" spawn button and a select-type button inside each li.dsn-toolbox-dice-row[data-type] .dsn-toolbox-dice-buttons, and a .pdi-actions section (Select all mine, Clear selection, the Ctrl+click hint) before section.dsn-toolbox-clear; the buttons carry no data-action, so DSN's action delegation ignores them; CSS styles only the .pdi-* elements the module creates
+    why: DSN's tab spawns one die per click and hides the Ctrl+click hint behind Help; it offers no extension point but its render hook and its template's classes (triage M1)
+    native_when: DSN's sidebar tab takes a spawn count or offers select buttons itself, or renames its dice-row classes
+    retire_class: safe
+    check: make foundry-dice-check

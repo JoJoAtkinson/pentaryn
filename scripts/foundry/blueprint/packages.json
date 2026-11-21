@@ -35,7 +35,8 @@
     },
     "dice-so-nice": {
       "aliases": [
-        "dice3d"
+        "dice3d",
+        "DsnSidebarTab"
       ]
     }
   },
