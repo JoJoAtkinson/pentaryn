@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import { boot, flush, MODULE } from "./fixtures/world.mjs";
 import { seams } from "./fixtures/seams.mjs";
+import { attackHitTargets } from "../core.mjs";
 
 const { F, W } = await boot({ entry: true });
 const { attacks: A } = await seams();
@@ -53,6 +54,39 @@ test("roll options win over the attack message; no origin → an empty message c
   assert.deepEqual([a.config.attackMode, a.config.ammunition, a.message], ["offhand", arrow.id, { data: { system: { origin: "u2" } } }]);
   const [b] = await roll([{ total: 20, options: {} }]);
   assert.deepEqual([b.config.attackMode, b.config.ammunition, b.message], [undefined, undefined, {}]);
+});
+
+/* ── 0.7.1 (playtest 2026-11-21): one roll, two targets, one hit — the miss is not in the damage tray ── */
+
+const gob = (id, ac) => ({ actor: `Actor.gob${id}`, token: `Scene.s.Token.gob${id}`, name: `Goblin ${id}`, ac });
+
+test("attackHitTargets: dnd5e's own rule — under the AC or a fumble misses, a crit hits, total cover (ac null) misses, an unknown AC hits", () => {
+  const ts = [gob(1, 12), gob(2, 18), gob(3, null), gob(4, undefined)];
+  assert.deepEqual(attackHitTargets(ts, { total: 15 }).map(t => t.name), ["Goblin 1", "Goblin 4"]);
+  assert.deepEqual(attackHitTargets(ts, { total: 5, isCritical: true }).map(t => t.name), ["Goblin 1", "Goblin 2", "Goblin 4"], "a crit hits, never through total cover");
+  assert.deepEqual(attackHitTargets(ts, { total: 25, isFumble: true }), [], "a fumble misses everyone, as dnd5e reads it");
+  assert.deepEqual(attackHitTargets([gob(1, 20)], { total: 3 }), [], "every target missed");
+  assert.equal(attackHitTargets([], { total: 3 }), null, "no recorded target: dnd5e's default stands");
+  assert.equal(attackHitTargets(undefined, {}), null);
+  const src = [gob(1, 10)];
+  const [copy] = attackHitTargets(src, { total: 15 });
+  assert.notEqual(copy, src[0], "descriptors are copied");
+});
+
+test("one attack roll against two targets, one hit: the auto damage card's targets are only the hit one", async () => {
+  // dnd5e gives a two-target roll no single AC (options.target undefined), so the decision is "roll"
+  const parent = { type: "attack", system: { targets: [gob(1, 12), gob(2, 18)] }, _source: { system: { origin: "usageCard000002" } } };
+  const [call] = await roll([{ total: 15, options: {}, parent }]);
+  assert.deepEqual(call.message, { data: { system: { origin: "usageCard000002", targets: [gob(1, 12)] } } }, "Goblin 2 (AC 18) was missed: not listed");
+});
+
+test("one attack roll against two targets, both missed: nothing rolls; both hit: both listed", async () => {
+  const both = { type: "attack", system: { targets: [gob(1, 16), gob(2, 18)] }, _source: { system: { origin: "u3" } } };
+  assert.deepEqual(await roll([{ total: 15, options: {}, parent: both }]), [], "every recorded target missed");
+  const [call] = await roll([{ total: 19, options: {}, parent: both }]);
+  assert.deepEqual(call.message.data.system.targets.map(t => t.name), ["Goblin 1", "Goblin 2"]);
+  const [noOrigin] = await roll([{ total: 19, options: {}, parent: { type: "attack", system: { targets: [gob(1, 10)] }, _source: { system: {} } } }]);
+  assert.deepEqual(noOrigin.message, { data: { system: { targets: [gob(1, 10)] } } }, "targets without an origin");
 });
 
 test("a roll that lost its parent: the last 10 messages are scanned for this activity's attack card", async () => {

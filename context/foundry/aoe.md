@@ -17,6 +17,8 @@ module internals → [`../../foundry/module/pentaryn-aoe/README.md`](../../found
 
 **Moving and deleting an area.** Every spell area (a dnd5e template, which is a Region on v14)
 gets a small target-icon **handle token** at its centre. For cones and lines it sits at the caster's end.
+A wall spell (Wall of Stone's panels, all one area) gets one handle at the start of its first panel;
+dragging it moves every panel, deleting it deletes the whole wall.
 Everyone owns the handle and the area.
 - Drag the handle to move the area. It ignores walls (movement action *displace*). When the area's
   centre is a grid corner (a 20 ft cube, a Fireball), the handle sits in the square just below and to
@@ -98,7 +100,10 @@ no target rolls nothing (narrate away).
 healing card. Pressing Apply does what the tray shows: your own tokens take it on your client; a row
 for a token you do not own (healing Caven) is applied by the GM's client for you, with the same
 multiplier, no confirmation on either side. You hear from the module only if no GM is connected (one
-short note; press Apply again when the GM is back). A card you rolled with nothing targeted fills with
+short note; press Apply again when the GM is back), or if the GM's client has not answered after
+about 23 seconds (8 s for the answer, then 15 s watching the card for the GM's "Applied by" line): then
+the note says to check the target's HP before pressing Apply again, because a slow GM client can still
+land it. A slow answer that lands inside that time says nothing. A card you rolled with nothing targeted fills with
 your targets as you target them, so the rows show who will take it; pressing Apply on an untargeted
 card while you hold targets goes to those targets. **Real dice:** every row has a small total,
 pre-filled with the rolled one; type the number your dice showed and Apply uses it (the ×0 ½ ×1 ×2
@@ -114,6 +119,8 @@ own who took it, and never a monster's row (setting *Who sees "Applied by" under
 **Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
 client. It also rolls when the target's AC is unknown, for example with no target selected.
 A known miss or a natural 1 rolls nothing. The card's Damage button still works.
+With several targets, the damage card lists only the ones the roll hit, so Apply never hurts a creature
+the attack missed; if it missed them all, no damage is rolled.
 `dnd5e.attackRollVisibility` is `"hideAC"` (Joe, 2026-11-20): players see hit or miss, never the AC.
 The attack card then says so in words: "Attack — Hit" in blue or "Attack — Miss" in orange (with
 several targets, "Hit" / "Miss" on each target), a miss adds a "Miss — no damage" line so the turn

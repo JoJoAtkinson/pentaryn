@@ -5,7 +5,10 @@
  * and leave the Damage button on the usage card above it, so a player who only clicks Attack never rolls
  * damage. With autoDamageOnHit on, the roller's own client rolls damage straight after a hit
  * (or after any attack whose target AC it can't know), exactly as clicking Damage would.
- * A known miss or a natural 1 rolls nothing. The manual Damage button stays.
+ * A known miss or a natural 1 rolls nothing. The manual Damage button stays. Since 0.7.1 the damage
+ * card's targets are only the attack card's targets this roll hit (core.attackHitTargets; an unknown AC
+ * counts as hit), not the roller's current targets dnd5e would record, so a missed creature is not in
+ * its Apply tray; when the card recorded targets and every one was missed, nothing rolls.
  *
  * J1 (feedback fs7q6K, Psionic Lash): a save activity has the same gap — Use posts the card, and the
  * damage waits for a Damage click. With autoDamageOnSave on, using a save activity that has damage
@@ -23,7 +26,7 @@
  * visibility is "none" (core.attackOutcome).
  */
 
-import { RECENT_MESSAGES, attackOutcome, shouldAutoDamage, shouldAutoDamageOnUse } from "./core.mjs";
+import { RECENT_MESSAGES, attackHitTargets, attackOutcome, shouldAutoDamage, shouldAutoDamageOnUse } from "./core.mjs";
 import { setting, dnd5eAttackVisibility } from "./settings.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 
@@ -46,7 +49,14 @@ export async function onPostRollAttack(rolls, { subject } = {}) {
   // Thread the damage roll under the same usage card, as the Damage button would. The live
   // system.origin is the resolved message; the source holds its id.
   const origin = roll.options?.originatingMessage ?? attackMsg?._source?.system?.origin ?? null;
-  const message = origin ? { data: { system: { origin } } } : {};
+  // 0.7.1 (playtest 2026-11-21): dnd5e records the roller's CURRENT targets on the damage card, so one
+  // roll against two targets that hit one listed both in the Apply tray. The card gets only the
+  // targets this roll hit (an unknown AC counts as hit); every one missed → no damage at all (with
+  // two or more targets dnd5e gives the roll no single AC, so shouldAutoDamage alone rolled).
+  const hits = attackHitTargets(attackMsg?.system?.targets, { total: roll.total, isCritical: roll.isCritical, isFumble: roll.isFumble });
+  if (hits && !hits.length) return;
+  const system = { ...(origin ? { origin } : {}), ...(hits ? { targets: hits } : {}) };
+  const message = Object.keys(system).length ? { data: { system } } : {};
   return subject.rollDamage({ attackMode, ammunition, isCritical: roll.isCritical }, { configure: false }, message);
 }
 

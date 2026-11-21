@@ -4,7 +4,7 @@
 // Esc to finish, right-click skips a panel" and the notice goes when the placement ends.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot } from "./fixtures/world.mjs";
+import { boot, flush, advance, MODULE } from "./fixtures/world.mjs";
 import { seams } from "./fixtures/seams.mjs";
 import { wallThickness, wallPanelOutline, wallSpellRegion, panelCounter, WALL_MIN_FRACTION } from "../core.mjs";
 
@@ -123,6 +123,57 @@ test("a redraw destroyed the overlay: the next refresh adds a fresh one; uninsta
   assert.equal(obj[WS.OVERLAY], undefined);
 });
 
+/* ── 0.7.1: a wall spell's region gets a handle (playtest 2026-11-21) ── */
+// dnd5e 6 combines every unattached shape of one cast into ONE region (TemplatePlacement.fromActivity:
+// combinedShapes), so Wall of Stone with two or more panels is one region of several line shapes.
+// Part A gave handles to one-shape regions only (since 2026-10-10), so the wall had no handle, no
+// pentaryn-aoe flags, and players could not drag or delete it from the map.
+
+test("0.7.1: a Wall of Stone region of three panels gets a handle at its first panel's start, attached; core's cascade then deletes the region with it", async () => {
+  const ws = W.scene({ id: "WallHandleScene1", grid: { size: 100, distance: 5 } });
+  F.canvas.scene = ws;
+  const three = [
+    { type: "line", x: 1500, y: 1200, length: 200, width: 5, rotation: 0 },
+    { type: "line", x: 1700, y: 1200, length: 200, width: 5, rotation: 90 },
+    { type: "line", x: 1700, y: 1400, length: 200, width: 5, rotation: 180 },
+  ];
+  const r = W.region(ws, { id: "regWallHandle001", shapes: three.map(p => ({ ...p })), ownership: { default: 0, [game.user.id]: 3 }, flags: { dnd5e: { activity: wallAct.uuid } } });
+  F.calls.length = 0;
+  F.fire("createRegion", r, {}, game.user.id);
+  await flush(8);
+  const handle = ws.tokens.get(r.id);
+  assert.ok(handle, "a handle, its id the region's id");
+  assert.equal(S.areas.handleFor(r), handle);
+  assert.deepEqual([handle.x, handle.y], [1500, 1200], "at the first panel's start (a grid corner: the square below-right of it)");
+  assert.deepEqual(r.attachment, { token: r.id }, "attached: dragging the handle moves every panel, deleting it deletes the wall");
+  assert.equal(r.flags[MODULE].handle, r.id, "the region carries pentaryn-aoe's flag");
+  assert.equal(r.shapes.length, 3, "the panels are untouched");
+
+  // the stone overlay follows a drag: core moves every shape of the attached region, refreshRegion redraws
+  const obj = placeable(r);
+  F.fire("refreshRegion", obj, { refreshShapes: true });
+  const at = () => obj.children[0].ops.filter(o => o[0] === "drawPolygon").map(o => o[1].slice(0, 2));
+  assert.deepEqual(at(), [[1500, 1205], [1695, 1200], [1700, 1395]], "each panel 10 px thick (the canvas grid is 50 px here)");
+  r.shapes = r.shapes.map(sh => ({ ...sh, x: sh.x + 300, y: sh.y + 100 }));   // the handle dragged 300 right, 100 down
+  F.fire("refreshRegion", obj, { refreshShapes: true });
+  assert.equal(obj.children.length, 1, "still one overlay");
+  assert.deepEqual(at(), [[1800, 1305], [1995, 1300], [2000, 1495]], "every panel drawn where it moved to");
+
+  // the region deleted any other way takes its handle with it (deleteHandlesOf)
+  F.calls.length = 0;
+  await ws.deleteEmbeddedDocuments("Region", [r.id]);
+  await advance(200);
+  assert.deepEqual(F.calls.filter(c => c.op === "deleteEmbedded").map(c => [c.documentName, c.ids]), [["Region", [r.id]], ["Token", [r.id]]]);
+});
+
+test("0.7.1: the GM's sweep gives an existing multi-panel wall (placed under 0.7.0) its handle", async () => {
+  const ws = W.scene({ id: "WallHandleScene2", grid: { size: 100, distance: 5 } });
+  const r = W.region(ws, { id: "regWallHandle002", shapes: [{ ...panels[0] }, { ...panels[1] }], ownership: { default: 3 }, flags: { dnd5e: { activity: wallAct.uuid } } });
+  const out = await S.areas.sweep(ws);
+  assert.equal(out.handlesCreated, 1);
+  assert.equal(S.areas.handleFor(r)?.id, r.id);
+});
+
 /* ── B3: the panel counter ───────────────────────────────────────────── */
 
 /** A notifications stub that records the notices and their updates. */
@@ -182,6 +233,38 @@ test("B3: an async preConfirm: a Promise of false counts nothing, a Promise of a
     assert.equal(notes[0].message, "Panel 1 of 3: Esc to finish, right-click skips a panel", "not before it settles");
     assert.equal(await kept, undefined);
     assert.equal(notes[0].message, "Panel 2 of 3: Esc to finish, right-click skips a panel");
+  } finally { restore(); }
+});
+
+test("0.7.1: the same shape's hook called twice (core's regionIndex / shapeIndex) counts once: one step, one count", () => {
+  const { notes, restore } = noticesStub();
+  try {
+    const { options, done } = S.aim.panelNotice(3, {});
+    options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
+    options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
+    assert.equal(notes.length, 1, "never a second notice");
+    assert.equal(notes[0].message, "Panel 2 of 3: Esc to finish, right-click skips a panel", "panel 1 counted once");
+    options.preSkip({ regionIndex: 1, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
+    assert.equal(notes[0].message, "Panel 3 of 3: Esc to finish, right-click skips a panel", "the next region's shape counts");
+    done();
+  } finally { restore(); }
+});
+
+test("0.7.1: one panel notice on screen at a time — a new multi-panel placement removes the earlier one still showing; uninstall removes it too", () => {
+  const { notes, restore } = noticesStub();
+  try {
+    const first = S.aim.panelNotice(10, {});
+    const second = S.aim.panelNotice(10, {});
+    assert.equal(notes.length, 2);
+    assert.deepEqual(notes.map(n => n.removed), [true, false], "the earlier notice is gone the moment the next placement starts");
+    first.done();
+    assert.equal(notes[1].removed, false, "the stale placement settling later does not remove the live notice");
+    second.done();
+    assert.equal(notes[1].removed, true);
+    S.aim.panelNotice(4, {});
+    S.aim.uninstall();
+    assert.equal(notes[2].removed, true, "uninstall takes the notice with it");
+    S.aim.wrapPlacement();
   } finally { restore(); }
 });
 

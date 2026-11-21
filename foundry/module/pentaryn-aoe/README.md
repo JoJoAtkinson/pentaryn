@@ -20,7 +20,13 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   handle to move the area (it keeps its direction: a handle never auto-rotates), delete it to
   delete the area; deleting the area deletes the handle. On a square grid the handle sits where
   core's half-square snapping can return it (`core.handleTopLeft`): an area centred on a grid corner
-  gets its handle in the square below-right of it, so a drag can put the area back on the grid. An
+  gets its handle in the square below-right of it, so a drag can put the area back on the grid. A
+  region of several shapes gets one handle too, at its first shape (since 0.7.1: dnd5e combines a
+  cast's unattached shapes into one region, so Wall of Stone's panels are one region of line shapes,
+  and until then a region needed exactly one shape to get a handle; the wall had none, no
+  `pentaryn-aoe` flags, and could not be dragged or deleted from the map). For a panel (a line) that
+  is the panel's start; core moves every shape of an attached region with the token, and
+  `wall-spells.mjs` redraws the stone overlay on the `refreshRegion` that follows. An
   emanation dnd5e attached to its caster gets no handle; the caster's Token HUD gets an eraser,
   "Remove the spell areas on this token". An instantaneous spell's emanation (Thunder Step) is
   created unattached (a monster feature's "inst" aura, a ghast's Stench, is not: `core.instantSpellArea`) (`dnd5e.createMeasuredTemplate`, setting `stationaryInstantAreas`), so it stays
@@ -67,7 +73,12 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   own save, or a monster rolls one and a player row waits.
 - **Part C — damage on a hit, or on a save spell's use** (`attacks.mjs`). The roller's client rolls
   damage after a hit (or an attack whose target AC it can't know). A known miss or a natural 1 rolls
-  nothing. J1 (`autoDamageOnSave`): using a save activity that has damage and at least one recorded
+  nothing. Since 0.7.1 the damage card's `system.targets` are only the attack card's targets this roll
+  hit (`core.attackHitTargets`, dnd5e's own `evaluatedTargets` rule; an unknown AC counts as hit), passed
+  as `message.data.system.targets` to `rollDamage`, instead of the roller's current targets dnd5e would
+  record, so a missed creature is not in the Apply tray; an attack card whose recorded targets were all
+  missed rolls nothing (a two-target roll has no single AC, so `shouldAutoDamage` alone rolled).
+  J1 (`autoDamageOnSave`): using a save activity that has damage and at least one recorded
   target (Psionic Lash at Caven) rolls its damage at once, threaded under the usage card with the
   card's targets, so the flow is Use → the target saves → Apply. A save spell that places an area
   waits for the area; a use with no target posts nothing extra.
@@ -95,7 +106,10 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   permanent notice for a placement of several shapes (Wall of Stone's ten panels): "Panel n of N: Esc to
   finish, right-click skips a panel" (`core.panelCounter`), advanced by each confirmed or skipped shape
   (the caller's own `preConfirm` / `preSkip` run first; a `false` from them counts nothing) and removed
-  when the placement ends. Escape is the real "finish": core resolves the placement null, and dnd5e's
+  when the placement ends. Since 0.7.1 (the notice showed twice per step at the table) only one panel
+  notice is ever on screen (a new placement removes an earlier one still showing; uninstall removes it),
+  and a shape is counted once by core's `regionIndex:shapeIndex`, however often its hook runs.
+  Escape is the real "finish": core resolves the placement null, and dnd5e's
   `preConfirm` has already kept the panels placed so far, so those are created. Right-click skips the
   shape under the mouse (core's `#skipPlacement`); for a one-shape area that is the same as cancelling.
 - **Part I — Apply from the card** (`apply.mjs`, setting `applyFromCard`). dnd5e's own Apply tray
@@ -112,7 +126,11 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   one query, `pentaryn-aoe.applyRelay`, with the same multiplier and the pill menu's ignore / downgrade
   choices, and the GM's client applies them — the click is the decision, no confirmation anywhere, and
   the player hears from the module only when the relay did not land (one toast: `NoGm` when no GM is
-  connected or none answered in time; `RelayFailed`, with the reason, when the GM's client refused or
+  connected; on a `TIMEOUT` (no answer in `RELAY_TIMEOUT_MS`, 8 s) the player's client watches the card
+  for up to `RELAY_LATE_WAIT_MS` (15 s) for a new `appliedLog` entry naming a relayed token
+  (`core.relayLanded`) and says nothing if one appears, else `Late` ("not confirmed yet, check their HP
+  before pressing Apply again"), since 0.7.1: a slow GM client landed a heal after "No GM" had been
+  said, inviting a double heal; `RelayFailed`, with the reason, when the GM's client refused or
   failed — a silent refusal read as a heal that had landed; a losing GM tab's `claimed: false` is not a
   failure). A player may relay only on a card
   they authored or whose actor they own; on the GM's breath-weapon card listing two PCs the ally's row

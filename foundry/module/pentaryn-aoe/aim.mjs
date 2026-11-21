@@ -20,7 +20,8 @@
  * shows one permanent notice, "Panel n of N: Esc to finish, right-click skips a panel"
  * (core.panelCounter), advanced by each confirmed or skipped shape (the caller's own preConfirm /
  * preSkip run first; a `false` from them confirms nothing and the count stays) and removed when the
- * placement ends. Escape is the real "finish": core resolves the placement null, while dnd5e's own
+ * placement ends. 0.7.1: one notice on screen at a time (a new placement replaces a stale one), and
+ * each shape counted once by core's regionIndex / shapeIndex. Escape is the real "finish": core resolves the placement null, while dnd5e's own
  * preConfirm has already kept every panel placed so far, so those are created.
  *
  * Setting: aimSelfAreas (world, default on). Row aoe-self-area-aim.
@@ -37,6 +38,8 @@ const WRAPPED = Symbol.for(`${MODULE}.aimWrapped`);
 /** The placeRegions wrap (kit wrapMethod); a second copy reuses the first copy's record. */
 let placement = null;
 let log = makeLog(MODULE);   // the entry's ctx.log once installed
+/** B3: the panel notice on screen now ({ done }), or null. */
+let shown = null;
 
 function casterToken(activity) {
   let token = null;
@@ -88,27 +91,41 @@ function panelNotice(total, options) {
   };
   const first = text(0);
   if (!first) return { options, done: () => {} };
-  let placed = 0;
+  // 0.7.1 (playtest 2026-11-21: the notice showed twice per step): one notice on screen, ever. A new
+  // placement replaces any earlier one still showing (core cancels an earlier placement when another
+  // starts, and its notice would otherwise stay until that call settles).
+  shown?.done();
+  const counted = new Set();   // "regionIndex:shapeIndex" of every shape already counted
+  let keyless = 0;
   let note = null;
   try { note = ui.notifications?.info?.(first, { permanent: true, console: false }) ?? null; } catch (err) { log.debug("panel notice", err); }
-  const advance = () => {
-    placed += 1;
-    const next = text(placed);
-    try { if (next) note?.update?.({ message: next }); } catch (err) { log.debug("panel notice", err); }
+  // 0.7.1: a shape is counted once, by the indexes core passes, however many times its hook is called
+  const advance = args => {
+    const key = Number.isInteger(args?.shapeIndex) ? `${args.regionIndex ?? 0}:${args.shapeIndex}` : null;
+    if (key !== null) {
+      if (counted.has(key)) return;
+      counted.add(key);
+    } else keyless += 1;
+    const next = text(counted.size + keyless);
+    try { if (next && note) note.update?.({ message: next }); } catch (err) { log.debug("panel notice", err); }
   };
   // the caller's hook may be async (a Promise of false refuses too): count only once it has said yes
   const step = fn => args => {
     const r = fn?.(args);
-    if (typeof r?.then === "function") return r.then(v => { if (v !== false) advance(); return v; });
+    if (typeof r?.then === "function") return r.then(v => { if (v !== false) advance(args); return v; });
     if (r === false) return false;
-    advance();
+    advance(args);
     return r;
   };
-  const done = () => {
-    try { note?.remove?.(); } catch (err) { log.debug("panel notice", err); }
-    note = null;
+  const handle = {
+    done: () => {
+      try { note?.remove?.(); } catch (err) { log.debug("panel notice", err); }
+      note = null;
+      if (shown === handle) shown = null;
+    },
   };
-  return { options: { ...options, preConfirm: step(options.preConfirm), preSkip: step(options.preSkip) }, done };
+  shown = handle;
+  return { options: { ...options, preConfirm: step(options.preConfirm), preSkip: step(options.preSkip) }, done: handle.done };
 }
 
 function wrapPlacement() {
@@ -157,6 +174,7 @@ export function install(reg, ctx) {
  */
 export function uninstall() {
   armed = null;
+  shown?.done();
   placement?.unwrap();
   placement = null;
 }

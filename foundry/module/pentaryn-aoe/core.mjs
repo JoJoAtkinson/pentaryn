@@ -8,7 +8,7 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.7.0";                          // === module.json version (core.test pins it)
+export const VERSION = "0.7.1";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";
@@ -60,6 +60,12 @@ export const RECENT_MESSAGES = 60;
 
 /** Part I: how long a player's Apply waits for the active GM to land the rows they do not own (ms). */
 export const RELAY_TIMEOUT_MS = 8000;
+
+/**
+ * Part I (0.7.1): after a relay TIMEOUT, how long the player's client keeps watching the card for the
+ * GM's own "Applied by" entry (ms). A slow GM client lands the rows late; the toast waits for that.
+ */
+export const RELAY_LATE_WAIT_MS = 15_000;
 
 /** Part I: how long after a damage or healing card is posted its author's new targets still fill it (ms). */
 export const LATE_TARGET_WINDOW_MS = 10 * 60_000;
@@ -222,6 +228,24 @@ export function shouldAutoDamage(roll) {
   if (roll.isCritical) return true;
   const known = Number.isFinite(roll.target);
   return !(known && roll.total < roll.target);
+}
+
+/**
+ * Part C (0.7.1, playtest 2026-11-21): which of an attack card's recorded targets the roll HIT, as the
+ * auto-rolled damage card's targets. dnd5e's own rule (AttackMessageData#evaluatedTargets): `ac === null`
+ * (total cover) is a miss; else a critical hits; else a fumble or a total under the AC misses. An unknown
+ * AC (no number) is a hit, as dnd5e reads it, unless the roll fumbled. `null` when the card recorded no targets (the damage card
+ * then keeps dnd5e's default: the roller's current targets); `[]` when every target was missed.
+ * Pure: the descriptors are copied, never changed.
+ * @param {{ac?: number|null}[]|null|undefined} targets   the attack card's system.targets
+ * @param {{ total?: number, isCritical?: boolean, isFumble?: boolean }} roll
+ * @returns {object[]|null}
+ */
+export function attackHitTargets(targets, { total = 0, isCritical = false, isFumble = false } = {}) {
+  const list = [...(targets ?? [])].filter(Boolean);
+  if (!list.length) return null;
+  const missed = t => t.ac === null || (!isCritical && (!!isFumble || (Number.isFinite(t.ac) && Number(total) < t.ac)));
+  return list.filter(t => !missed(t)).map(t => ({ ...t }));
 }
 
 /**
@@ -402,6 +426,22 @@ export function appliedByLines(log, { isGM = false, owns = () => false } = {}) {
     if (rows.length) out.push({ at: Number(e.at) || 0, by: String(e.byName ?? e.by ?? ""), rows });
   }
   return out;
+}
+
+/**
+ * Part I (0.7.1): did the GM's client land a relayed Apply after the query timed out? True when the
+ * card's `appliedLog` holds an entry whose key was not there before the query (`before`) and whose rows
+ * name any of the relayed token uuids. Pure.
+ * @param {Record<string, object>|null|undefined} log   the card's flags.pentaryn-aoe.appliedLog now
+ * @param {Iterable<string>} before                     the entry keys before the query
+ * @param {Iterable<string>} uuids                      the relayed rows' token uuids
+ */
+export function relayLanded(log, before = [], uuids = []) {
+  const seen = new Set(before);
+  const wanted = new Set(uuids);
+  if (!wanted.size) return false;
+  return Object.entries(log ?? {}).some(([key, e]) => !seen.has(key) && Array.isArray(e?.rows)
+    && e.rows.some(r => wanted.has(r?.token)));
 }
 
 /** G2: an HP change as the line shows it: `+11` healing, `-14` damage, `0`. */

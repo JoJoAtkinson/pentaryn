@@ -2,6 +2,50 @@
 
 ## Unreleased
 
+- **0.7.1 (2026-11-21). Browser playtest of 0.7.0** (four findings, live on BOSS).
+  - **[declared] A relay that timed out is no longer reported as "no GM".** The GM's client was slow
+    (over `RELAY_TIMEOUT_MS`, 8 s), the heal landed late, and the player had been told "No GM is
+    connected, so Caven did not take this", which invites a second Apply and a double heal.
+    - `apply.mjs relayRows`: `NO_GM` keeps `Apply.NoGm`. On `TIMEOUT` the player's client notes the
+      card's `flags.pentaryn-aoe.appliedLog` keys before the query and watches the card (a 250 ms poll)
+      for up to `RELAY_LATE_WAIT_MS` (15 s, core) for a new entry whose rows name any relayed token
+      (`core.relayLanded`, pure). Found: nothing is said (an info log line). Not found: the new
+      `Apply.Late` toast, "The GM's client has not confirmed {names} yet. Check their HP before pressing
+      Apply again; the GM can apply it from this card." The wait is a test seam (`_internals.lateWait`).
+    - Tests: `card-apply.test.mjs` (relayLanded; a late entry → silence; no entry → `Late`, never `NoGm`).
+  - **[declared] The auto damage card after a hit lists only the targets the roll hit.** One attack roll
+    against two targets, one hit and one missed: the auto-rolled damage card's Apply tray listed both,
+    because dnd5e's `rollDamage` records the roller's current targets (`TargetsField.getDescriptors()`).
+    - `attacks.mjs onPostRollAttack` passes `message.data.system.targets` = the attack card's targets
+      this roll hit (`core.attackHitTargets`: dnd5e's `AttackMessageData#evaluatedTargets` rule; an
+      unknown AC counts as hit, total cover and a fumble miss). An attack card whose recorded targets
+      were all missed now rolls nothing: a two-target roll has no single AC (`options.target`
+      undefined), so `shouldAutoDamage` alone had rolled. A card that recorded no targets keeps dnd5e's
+      default. Tests: `attacks.test.mjs`. No golden change (the pinned rolls record no targets).
+  - **B3 [declared]. The panel notice shows once.** "Panel n of N" appeared twice per step while placing
+    Wall of Stone. Core 14.370 (`RegionLayer#placeRegions`, `#confirmPlacement`, `#skipPlacement`) and
+    dnd5e 6.1.1 (`TemplatePlacement#_place`) were read: one `placeRegions` call per cast, one
+    `preConfirm` per click, so the duplicate could not be tied to one line without the live client. The
+    fix makes a second notice impossible either way: `panelNotice` keeps the notice it shows in module
+    state, a new multi-panel placement removes an earlier one still on screen (core cancels the earlier
+    placement anyway), a stale placement settling later never removes the live one, `uninstall()`
+    removes it, and each shape advances the count once, keyed by core's `regionIndex:shapeIndex`,
+    however often its hook runs. Tests: `wall-spells.test.mjs`.
+  - **[declared] A wall spell's region gets a handle.** Live, a Wall of Stone region had no
+    `pentaryn-aoe` flags and `aoe.handleFor(region)` was null, so players could not drag or delete it.
+    Pre-existing since the first Part A (2026-10-10): `createRegion` and the sweep gave handles to
+    one-shape regions only. Template detection was fine (`flags.dnd5e.activity`; a Lightning Bolt or a
+    one-panel wall always got one), but dnd5e 6 combines a cast's unattached shapes into ONE region
+    (`TemplatePlacement.fromActivity`, `combinedShapes`), so a wall of two or more panels is one
+    region of several lines.
+    - Every template region with a shape gets a handle; a multi-shape region's handle sits at its
+      FIRST shape's anchor (a panel's start), not the region's centre, which on a bent wall can lie on
+      no panel. Core moves every shape of an attached region with its token
+      (`TokenDocument#computeAttachedRegionUpdates`); `wall-spells.mjs` redraws the stone overlay on the
+      `refreshRegion` that follows; the delete cascades are the existing ones.
+    - Tests: `wall-spells.test.mjs` (create, attach, the overlay after a drag, delete, the sweep);
+      `areas.test.mjs` and `findings.test.mjs` updated for the two-shape regions they already used.
+
 - **0.7.0 (2026-11-21). Feedback triage 2026-11-19** (F0, G1, G2, D2, B1, B3; plan feedback-triage-2026-11-19 §H2).
   - **F0 [declared]. Empowered Spell keeps the saves** (feedback GDJJdi; plan feedback-triage-2026-11-19 §H2).
     Browser test T4: one Empower click rolled the target's Dexterity save a second time, because the GM's

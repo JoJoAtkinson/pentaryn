@@ -12,6 +12,10 @@
  *  - adds a "Remove all templates" icon next to the spell card's Place Template icon;
  *  - removes a concentration spell's areas when concentration ends.
  *
+ * A region of several shapes (a wall spell's panels) gets one handle too, at its first shape (0.7.1:
+ * until then only one-shape regions did, so Wall of Stone with two or more panels could not be dragged
+ * or deleted from the map).
+ *
  * Only template regions (core.isTemplateRegion) are ever touched — portal/scene-link regions are
  * not. A template dnd5e attached to a token itself (an emanation such as Spirit Guardians follows
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
@@ -165,6 +169,10 @@ const wantsHandle = region => isTemplateRegion(region) && !attachedElsewhere(reg
  * IS the region's id (tokens and regions are separate collections). Two clients logged in as the
  * same user — the GM bridge tab plus a GM browser tab — both create it; the server serialises
  * creates and refuses a second token with an existing _id, so exactly one wins.
+ * 0.7.1: a region of several shapes (dnd5e combines every unattached shape of one cast into ONE region:
+ * Wall of Stone's panels) gets its handle at its FIRST shape's anchor — for a wall panel (a line) that is
+ * the panel's start, the end the caster placed first — never the region's centre, which on a bent wall
+ * can lie on no panel at all. Core moves every shape of an attached region with the token.
  */
 function handleData(region, actor) {
   const scene = region.parent;
@@ -338,7 +346,7 @@ export async function sweep(scene = canvas.scene) {
     out.ownershipFixed = unshared.length;
   }
   if (setting("handleTokens")) {
-    const bare = scene.regions.filter(r => isTemplateRegion(r) && r.shapes.length === 1);
+    const bare = scene.regions.filter(r => isTemplateRegion(r) && r.shapes.length > 0);
     out.handlesCreated = (await createHandles(scene, bare)).length;
   }
   return out;
@@ -430,7 +438,7 @@ export function install(reg, ctx) {
     if (!isTemplateRegion(region)) return;
     const gm = game.users.activeGM?.isSelf;
     if (gm && region.ownership.default !== OWNER) await region.update({ "ownership.default": OWNER });
-    if (!setting("handleTokens") || region.shapes.length !== 1 || attachedElsewhere(region)) return;
+    if (!setting("handleTokens") || !region.shapes.length || attachedElsewhere(region)) return;
     if (userId === game.user.id) await createHandle(region);
     else if (gm) {
       // Backstop for a creator whose client has no module (or no handle actor): wait, then repair.
