@@ -12,6 +12,7 @@ import { boot, advance, flush, out, lines, MODULE, GM_ID, PLAYER_ID, makeUser } 
 import { fireball, IDS } from "./fixtures/fireball.mjs";
 import { root, dispatch } from "./fixtures/dom.mjs";
 import { seams } from "./fixtures/seams.mjs";
+import { relayLanded, RELAY_LATE_WAIT_MS } from "../core.mjs";
 
 const { F, W } = await boot({ entry: true });
 const S = await seams();
@@ -239,6 +240,67 @@ test("F3: the GM's client refusing or failing the relay is logged AND the player
   } finally {
     relayAnswer = data => ({ ok: true, applied: data.rows.map(r => r.uuid) });
   }
+});
+
+/* 0.7.1 (playtest 2026-11-21): a relay that TIMED OUT is not "no GM". The GM's client was slow (> 8 s)
+   and the heal landed late, so "No GM is connected" was false and invited a second press. */
+
+test("0.7.1: relayLanded — a new appliedLog entry naming a relayed token; an entry that was already there, or names others, does not count", () => {
+  const log = { old: { rows: [{ token: CV }] }, fresh: { rows: [{ token: MR }] } };
+  assert.equal(relayLanded(log, ["old"], [CV]), false, "Caven's entry predates the press; the new one is Marrith's");
+  assert.equal(relayLanded(log, ["old"], [MR, CV]), true);
+  assert.equal(relayLanded(log, [], [CV]), true);
+  assert.equal(relayLanded(null, [], [CV]), false);
+  assert.equal(relayLanded(log, [], []), false, "nothing relayed: nothing to confirm");
+  assert.equal(relayLanded({ bad: { rows: "x" } }, [], [CV]), false);
+});
+
+test("0.7.1: a relay TIMEOUT watches the card; the GM's late entry for the relayed token arrives → no toast at all", async () => {
+  const msg = healCard("healCard00000030", { flags: { [MODULE]: { appliedLog: { before01: { at: 1, by: GM_ID, rows: [{ token: CV, name: "Caven", delta: 3, pc: true }] } } } } });
+  const c = card(msg, [MR, CV]);
+  c.built();
+  reset();
+  const wait = { ...P.lateWait };
+  Object.assign(P.lateWait, { ms: 1000, poll: 100 });
+  relayAnswer = () => { throw new Error(`TIMEOUT: ${RELAY}`); };
+  try {
+    const pressed = c.apply();
+    await advance(300);
+    assert.deepEqual(ops("notify"), [], "nothing said while the GM's client may still answer (an older Caven entry is not an answer)");
+    msg.flags[MODULE].appliedLog.late0001 = { at: 2, by: PLAYER_ID, byName: "Player", rows: [{ token: CV, name: "Caven", delta: 8, pc: true }] };
+    await advance(300);
+    await pressed;
+    assert.deepEqual(ops("notify"), [], "the GM landed it late: no 'No GM', no 'not confirmed'");
+    assert.ok(lines().some(l => l.startsWith(`info: ${MODULE} | apply relay landed after the timeout`)));
+    assert.deepEqual(ops("applyDamage").map(c => c.actor), [ctx.wizard.uuid], "Marrith's own row still landed here, once");
+  } finally {
+    Object.assign(P.lateWait, wait);
+    relayAnswer = data => ({ ok: true, applied: data.rows.map(r => r.uuid) });
+  }
+});
+
+test("0.7.1: a relay TIMEOUT with no late entry inside the wait → the 'not confirmed yet, check HP' toast, never NoGm; NO_GM keeps NoGm", async () => {
+  const msg = healCard("healCard00000031");
+  const c = card(msg, [MR, CV]);
+  c.built();
+  reset();
+  const wait = { ...P.lateWait };
+  Object.assign(P.lateWait, { ms: 1000, poll: 100 });
+  relayAnswer = () => { throw new Error(`TIMEOUT: ${RELAY}`); };
+  try {
+    const pressed = c.apply();
+    await advance(500);
+    assert.deepEqual(ops("notify"), [], "not before the wait runs out");
+    await advance(700);
+    await pressed;
+    assert.deepEqual(ops("notify").map(c => [c.level, c.message]), [["warn", game.i18n.format("PENTARYN_AOE.Apply.Late", { names: "Caven" })]]);
+    assert.notEqual(game.i18n.format("PENTARYN_AOE.Apply.Late", { names: "Caven" }), "PENTARYN_AOE.Apply.Late", "the string exists");
+  } finally {
+    Object.assign(P.lateWait, wait);
+    relayAnswer = data => ({ ok: true, applied: data.rows.map(r => r.uuid) });
+  }
+  assert.equal(P.lateWait.ms, RELAY_LATE_WAIT_MS, "the real wait is ~15 s");
+  assert.equal(RELAY_LATE_WAIT_MS, 15_000);
 });
 
 test("the GM's card listing two PCs (a breath weapon): the player's own row lands, the ally's row is skipped silently — no rows relayed, no toast", async () => {

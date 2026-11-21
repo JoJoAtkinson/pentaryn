@@ -98,7 +98,10 @@ no target rolls nothing (narrate away).
 healing card. Pressing Apply does what the tray shows: your own tokens take it on your client; a row
 for a token you do not own (healing Caven) is applied by the GM's client for you, with the same
 multiplier, no confirmation on either side. You hear from the module only if no GM is connected (one
-short note; press Apply again when the GM is back). A card you rolled with nothing targeted fills with
+short note; press Apply again when the GM is back), or if the GM's client has not answered after
+about 23 seconds (8 s for the answer, then 15 s watching the card for the GM's "Applied by" line): then
+the note says to check the target's HP before pressing Apply again, because a slow GM client can still
+land it. A slow answer that lands inside that time says nothing. A card you rolled with nothing targeted fills with
 your targets as you target them, so the rows show who will take it; pressing Apply on an untargeted
 card while you hold targets goes to those targets. **Real dice:** every row has a small total,
 pre-filled with the rolled one; type the number your dice showed and Apply uses it (the ×0 ½ ×1 ×2

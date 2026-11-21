@@ -35,9 +35,9 @@
  */
 
 import {
-  MODULE, RECENT_MESSAGES, RELAY_TIMEOUT_MS, LATE_TARGET_WINDOW_MS, aoeFlags, damageTotal, scaleDamages, rowAmount,
+  MODULE, RECENT_MESSAGES, RELAY_TIMEOUT_MS, RELAY_LATE_WAIT_MS, LATE_TARGET_WINDOW_MS, aoeFlags, damageTotal, scaleDamages, rowAmount,
   splitApplyRows, lateTargetCard, hydrateDamages, applyTargets, packApplyOptions, unpackApplyOptions, isApplyCard,
-  moduleFilledTargets, selfTargetCard, appliedByVisible, appliedByLines, fmtDelta
+  moduleFilledTargets, selfTargetCard, appliedByVisible, appliedByLines, fmtDelta, relayLanded
 } from "./core.mjs";
 import { setting, dnd5eTrayCollapse } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -331,11 +331,35 @@ export async function applyCard(message, el) {
 }
 
 /**
+ * After a relay TIMEOUT, how long to watch the card for the GM's late entry, and how often to look (ms).
+ * A test seam (`_internals.lateWait`) shortens it.
+ */
+const lateWait = { ms: RELAY_LATE_WAIT_MS, poll: 250 };
+
+/**
+ * 0.7.1: the GM's client may still land a relay that timed out (live 2026-11-21: a heal landed after
+ * the 8 s wait). Watch the card for a new `appliedLog` entry naming any relayed token, up to
+ * `lateWait.ms`; true as soon as one appears, false when the wait runs out or the card is gone.
+ */
+async function landedLate(messageId, before, uuids) {
+  const until = Date.now() + lateWait.ms;
+  for (;;) {
+    const m = game.messages?.get?.(messageId);
+    if (!m) return false;
+    if (relayLanded(aoeFlags(m).appliedLog, before, uuids)) return true;
+    if (Date.now() >= until) return false;
+    await new Promise(r => setTimeout(r, lateWait.poll));
+  }
+}
+
+/**
  * The rows this user does not own, as one query to the active GM. The one thing a player hears from
- * this module is one toast when the relay did not land: no GM connected or none answered in time
- * (`NoGm`), or the GM's client refused or failed (`RelayFailed`, with its reason). A losing GM tab's
- * `claimed: false` is not a failure (the winner lands it). Silence meant a dropped heal looked applied
- * (playtest 2026-11-07).
+ * this module is one toast when the relay did not land: no GM connected (`NoGm`), the GM's client
+ * refused or failed (`RelayFailed`, with its reason), or (0.7.1) no answer in time and no late
+ * "Applied by" entry from the GM within `RELAY_LATE_WAIT_MS` after it (`Late`: check HP before pressing
+ * again). A timeout the GM's entry then confirms says nothing. A losing GM tab's `claimed: false` is
+ * not a failure (the winner lands it). Silence meant a dropped heal looked applied (playtest
+ * 2026-11-07); "No GM" on a slow GM invited a double heal (playtest 2026-11-21).
  */
 async function relayRows(message, relay, landed = []) {
   const names = relay.map(r => r.token?.name ?? r.uuid).join(", ");
@@ -353,6 +377,8 @@ async function relayRows(message, relay, landed = []) {
     }),
     ...(landed.length ? { landed } : {})
   };
+  // the card's entries before this press: a late entry is one that is not among them
+  const before = Object.keys(aoeFlags(game.messages?.get?.(message.id) ?? message).appliedLog ?? {});
   try {
     const out = await queryGM(RELAY_QUERY, data, { timeout: RELAY_TIMEOUT_MS });
     if (out && out.ok === false) {
@@ -363,7 +389,14 @@ async function relayRows(message, relay, landed = []) {
   } catch (err) {
     log.warn("apply relay", err);
     const code = errorCode(err);
-    if (code === "NO_GM" || code === "TIMEOUT") log.notify("warn", _loc("PENTARYN_AOE.Apply.NoGm", { names }));
+    if (code === "NO_GM") log.notify("warn", _loc("PENTARYN_AOE.Apply.NoGm", { names }));
+    else if (code === "TIMEOUT") {
+      if (await landedLate(message.id, before, relay.map(r => r.uuid))) {
+        log.info("apply relay landed after the timeout", { uuid: message.uuid, ids: relay.map(r => r.uuid) });
+        return { ok: true, late: true };
+      }
+      log.notify("warn", _loc("PENTARYN_AOE.Apply.Late", { names }));
+    }
     else failed(err?.message ?? err);
     return null;
   }
@@ -598,4 +631,4 @@ export function uninstall() {
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only. Not part of the API.
-export const _internals = { renderAppliedBy, onPreCreate, casterTokenOf, decorate, onRowsBuilt, addAmountInputs, refreshEffective, refreshTyped, onAmountInput, onClick, relayRows, logThroughGm, handedRows, collapse, stampApplied, describeRecent, onTargetToken, mayApply, amounts };
+export const _internals = { lateWait, landedLate, renderAppliedBy, onPreCreate, casterTokenOf, decorate, onRowsBuilt, addAmountInputs, refreshEffective, refreshTyped, onAmountInput, onClick, relayRows, logThroughGm, handedRows, collapse, stampApplied, describeRecent, onTargetToken, mayApply, amounts };

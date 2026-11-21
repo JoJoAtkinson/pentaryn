@@ -112,7 +112,11 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   one query, `pentaryn-aoe.applyRelay`, with the same multiplier and the pill menu's ignore / downgrade
   choices, and the GM's client applies them — the click is the decision, no confirmation anywhere, and
   the player hears from the module only when the relay did not land (one toast: `NoGm` when no GM is
-  connected or none answered in time; `RelayFailed`, with the reason, when the GM's client refused or
+  connected; on a `TIMEOUT` (no answer in `RELAY_TIMEOUT_MS`, 8 s) the player's client watches the card
+  for up to `RELAY_LATE_WAIT_MS` (15 s) for a new `appliedLog` entry naming a relayed token
+  (`core.relayLanded`) and says nothing if one appears, else `Late` ("not confirmed yet, check their HP
+  before pressing Apply again"), since 0.7.1: a slow GM client landed a heal after "No GM" had been
+  said, inviting a double heal; `RelayFailed`, with the reason, when the GM's client refused or
   failed — a silent refusal read as a heal that had landed; a losing GM tab's `claimed: false` is not a
   failure). A player may relay only on a card
   they authored or whose actor they own; on the GM's breath-weapon card listing two PCs the ally's row

@@ -61,6 +61,12 @@ export const RECENT_MESSAGES = 60;
 /** Part I: how long a player's Apply waits for the active GM to land the rows they do not own (ms). */
 export const RELAY_TIMEOUT_MS = 8000;
 
+/**
+ * Part I (0.7.1): after a relay TIMEOUT, how long the player's client keeps watching the card for the
+ * GM's own "Applied by" entry (ms). A slow GM client lands the rows late; the toast waits for that.
+ */
+export const RELAY_LATE_WAIT_MS = 15_000;
+
 /** Part I: how long after a damage or healing card is posted its author's new targets still fill it (ms). */
 export const LATE_TARGET_WINDOW_MS = 10 * 60_000;
 
@@ -402,6 +408,22 @@ export function appliedByLines(log, { isGM = false, owns = () => false } = {}) {
     if (rows.length) out.push({ at: Number(e.at) || 0, by: String(e.byName ?? e.by ?? ""), rows });
   }
   return out;
+}
+
+/**
+ * Part I (0.7.1): did the GM's client land a relayed Apply after the query timed out? True when the
+ * card's `appliedLog` holds an entry whose key was not there before the query (`before`) and whose rows
+ * name any of the relayed token uuids. Pure.
+ * @param {Record<string, object>|null|undefined} log   the card's flags.pentaryn-aoe.appliedLog now
+ * @param {Iterable<string>} before                     the entry keys before the query
+ * @param {Iterable<string>} uuids                      the relayed rows' token uuids
+ */
+export function relayLanded(log, before = [], uuids = []) {
+  const seen = new Set(before);
+  const wanted = new Set(uuids);
+  if (!wanted.size) return false;
+  return Object.entries(log ?? {}).some(([key, e]) => !seen.has(key) && Array.isArray(e?.rows)
+    && e.rows.some(r => wanted.has(r?.token)));
 }
 
 /** G2: an HP change as the line shows it: `+11` healing, `-14` damage, `0`. */
