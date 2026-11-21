@@ -1759,7 +1759,7 @@ adjustments:
     retire_class: guarded
     check: make foundry-riders-check
 
-  - id: dnd5e-riders-duration-left
+  - id: riders-duration-left
     packages: [dnd5e, core]
     modules: [pentaryn-riders]
     files: [foundry/module/pentaryn-riders/patches.mjs, foundry/module/pentaryn-riders/table-core.mjs]

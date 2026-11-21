@@ -65,7 +65,7 @@ F.fire("ready");
 mock.timers.tick(0);
 
 test("ready wraps ActiveEffect5e#getDurationParts once, listed with its marker and adjustments row", () => {
-  const rec = patchRecords().filter(p => p.adjustments === "dnd5e-riders-duration-left");
+  const rec = patchRecords().filter(p => p.adjustments === "riders-duration-left");
   assert.deepEqual(rec.map(({ label, marker, via }) => ({ label, marker, via })), [{ label: "dnd5e ActiveEffect5e#getDurationParts", marker: "_prDurationLeft", via: "direct" }]);
   assert.notEqual(ActiveEffect5e.prototype.getDurationParts, original);
   assert.equal(ActiveEffect5e.prototype.getDurationParts._prDurationLeft, true);

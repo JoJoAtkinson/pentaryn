@@ -46,7 +46,7 @@
   Left alone: start- / end-of-turn specials, an expiry dnd5e does not time, nothing left ("Now"), an expired
   effect (core's "… ago"). Pure `durationLeftParts` in table-core (under `rules`); new lang key
   `duration.left`; new test `test/duration-left.test.mjs`. Golden: `lang-keys.json`. Adjustments row
-  `dnd5e-riders-duration-left`.
+  `riders-duration-left`.
 
 ## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
 

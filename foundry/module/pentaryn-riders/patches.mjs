@@ -13,7 +13,7 @@
  *     4. dnd5e `SummonActivity#getPlacement`         a wildcard summon image previews as a real one
  *        marker _prWildcard                                    row riders-summon-wildcard-preview
  *     7. dnd5e `ActiveEffect5e#getDurationParts`     a duration that counts down says "left" (VDalcb)
- *        marker _prDurationLeft                                row dnd5e-riders-duration-left
+ *        marker _prDurationLeft                                row riders-duration-left
  *   lazily, per prototype, from argon-tidy's `renderItemButtonArgonComponent` (wrapItemButton) —
  *   Argon dnd5e's item-button class is closure-private, reachable only through a rendered button:
  *     5. its `targets` getter        a Metamagic button opens no target picker
@@ -134,7 +134,7 @@ function patchDurationLeft(ctx) {
   if (typeof proto?.getDurationParts !== "function" || proto.getDurationParts._prDurationLeft) return;
   keep(wrapMethod(MODULE, {
     target: proto, name: "getDurationParts", label: "dnd5e ActiveEffect5e#getDurationParts",
-    marker: "_prDurationLeft", adjustments: "dnd5e-riders-duration-left",
+    marker: "_prDurationLeft", adjustments: "riders-duration-left",
   }, function (wrapped, ...args) {
     const parts = wrapped(...args);
     try {

@@ -167,7 +167,7 @@ Every wrap is in `patches.mjs`, through the kit's `wrapMethod`, listed by `descr
 | `TextEditor.implementation.enrichHTML` (tooltip roll data) | `_prItemRollData` | `riders-argon-tooltip-item-rolldata` |
 | dnd5e `SummonActivity#_prepareUsageConfig` (Place Summons) | `_prPlaceDefault` | `riders-summon-place-default` |
 | dnd5e `SummonActivity#getPlacement` (wildcard preview) | `_prWildcard` | `riders-summon-wildcard-preview` |
-| dnd5e `ActiveEffect5e#getDurationParts` (durations say "left": the Effects tab and the effect tooltip) | `_prDurationLeft` | `dnd5e-riders-duration-left` |
+| dnd5e `ActiveEffect5e#getDurationParts` (durations say "left": the Effects tab and the effect tooltip) | `_prDurationLeft` | `riders-duration-left` |
 | Argon dnd5e item button `targets` getter (per prototype, at first render) | `_prTargets` | `riders-argon-metamagic-no-picker` |
 | Argon dnd5e item button `getTooltipData` (per prototype) | `_prTooltip` | `riders-argon-tooltip-item-rolldata` |
 
