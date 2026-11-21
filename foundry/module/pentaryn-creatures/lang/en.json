@@ -22,11 +22,29 @@
       "summonLibrary": {
         "name": "Summon library for players",
         "hint": "Players whose role may not create actors can still summon from a compendium (Mage Hand, Find Familiar, a steed): the GM's client makes the creature for them, owned by them, in \"PC Summons & Forms / <name> — summons & forms\", and every later summon reuses it. Needs a GM logged in the first time each creature is summoned. Players who may create actors import their summons themselves; those copies are filed into the same folder after the summon. Off: such a summon fails with dnd5e's Create New Actors message, and nothing is filed."
+      },
+      "markers": {
+        "name": "Public and hidden token markers",
+        "hint": "Players see a status marker on a creature they do not own or observe only when its row in Token markers is Public (Prone, Bloodied, Grappled…); Charmed, Poisoned, Concentrating and an enemy's spell effects stay with the GM. A dormant token shows no markers until it wakes. The GM, owners and observers always see everything. Off: dnd5e's own rule only (its Bloodied setting). With this on, Bloodied follows its own row, so set dnd5e's Bloodied setting to \"All creatures\"."
+      },
+      "markerMenu": {
+        "name": "Token markers",
+        "label": "Public / GM only",
+        "hint": "Choose, per status, whether players see it on creatures they do not own: Public (you could see it across the table) or GM only (you learn it from the GM)."
       }
     },
     "summon": {
       "failed": "Could not summon: {reason}",
       "noGM": "a GM must be logged in to add this creature to your summon library (only the first time)"
+    },
+    "markers": {
+      "intro": "What a player sees on a creature they do not own or observe. Owners, observers and the GM always see every marker; a dormant token shows none until it wakes.",
+      "friendlyAll": "Friendly tokens show every marker",
+      "other": "Other spell and item effects on enemies",
+      "statuses": "Statuses",
+      "public": "Public",
+      "gm": "GM only",
+      "save": "Save"
     }
   }
 }

@@ -85,11 +85,13 @@ export const MANIFEST = Object.freeze({
     {
       path: "status",
       params: [],
-      returns: "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, summonLibrary, summonPatched, writer, lit, version }",
+      returns: "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, summonLibrary, summonPatched, markers, markerTable, markersPatched, writer, lit, version }",
       gm: false, writes: false, since: "0.1.1",
       doc: "One read of this client's state: how Token#isVisible is wrapped (patchedWith), the settings as "
         + "this client reads them (showStrip is per client), how dnd5e's Actor5e.fetchExisting is wrapped for the summon "
-        + "library (summonPatched: libWrapper, direct or null), whether this client writes the lights (writer: the "
+        + "library (summonPatched: libWrapper, direct or null), the public and hidden markers switch and the Token markers "
+        + "menu's stored overrides (markers, markerTable), how dnd5e's ActiveEffect5e#isConcealed is wrapped (markersPatched: "
+        + "libWrapper, direct or null), whether this client writes the lights (writer: the "
         + "active GM), and how many tokens on every scene carry our light flag (lit).",
     },
     {

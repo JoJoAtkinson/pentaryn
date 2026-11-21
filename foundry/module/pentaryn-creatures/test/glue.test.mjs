@@ -53,10 +53,10 @@ const reset = (...ids) => {
 const ROWS = [
   "on:createToken", "on:updateToken", "on:updateActor", "on:createUser", "on:updateUser", "on:deleteUser",
   "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
-  "on:controlToken", "once:init", "once:setup", "once:setup", "on:dnd5e.postSummon", "on:updateCombat", "on:createCombatant", "once:ready", "once:ready",   // [declared] 0.2.0: the 2nd setup wraps Actor5e.fetchExisting; 0.3.0: postSummon files dnd5e's own copies; 0.4.0: dormant until combat
+  "on:controlToken", "once:init", "once:setup", "once:setup", "on:dnd5e.postSummon", "on:updateCombat", "on:createCombatant", "once:setup", "on:updateToken", "once:ready", "once:ready",   // [declared] 0.2.0: the 2nd setup wraps Actor5e.fetchExisting; 0.3.0: postSummon files dnd5e's own copies; 0.4.0: dormant until combat; unit N: the 3rd setup wraps ActiveEffect5e#isConcealed, updateToken redraws markers
 ];
 
-test("registration manifest: 21 rows in source order (golden/hooks.json)", () => {
+test("registration manifest: 23 rows in source order (golden/hooks.json)", () => {
   pinJSON("hooks", F.hooks, import.meta.url);
   assert.deepEqual(F.hooks.map(h => `${h.kind}:${h.name}`), ROWS);
 });
@@ -70,10 +70,11 @@ test("import alone: no settings, no writes, no patch, no namespace, no DOM", () 
   assert.deepEqual(W.lines(), []);
 });
 
-test("init registers lightRadius, ownerSees, floatOverHud, showStrip, summonLibrary — option objects key by key", () => {
+test("init registers lightRadius, ownerSees, floatOverHud, showStrip, summonLibrary, markers, markerTable — option objects key by key", () => {
   F.fire("init");
   // [declared] 0.2.0 (feedback Swrl5M): summonLibrary, the summon library's world switch
-  assert.deepEqual(F.calls, ["lightRadius", "ownerSees", "floatOverHud", "showStrip", "summonLibrary"].map(k => ({ op: "settings.register", id: `${MODULE}.${k}` })));
+  // [declared] unit N: markers (the switch) and markerTable (the Token markers menu's store row)
+  assert.deepEqual(F.calls, ["lightRadius", "ownerSees", "floatOverHud", "showStrip", "summonLibrary", "markers", "markerTable"].map(k => ({ op: "settings.register", id: `${MODULE}.${k}` })));
   const opts = key => {
     const { namespace, key: _k, ...rest } = F.game.settings.settings.get(`${MODULE}.${key}`);
     assert.equal(namespace, MODULE);
@@ -109,16 +110,26 @@ test("init registers lightRadius, ownerSees, floatOverHud, showStrip, summonLibr
   assert.deepEqual(Object.keys(summonLibrary), ["name", "hint", "scope", "config", "type", "default", "onChange"]);
   const { onChange: _e, ...sl } = summonLibrary;
   assert.deepEqual(sl, { ...label("summonLibrary"), scope: "world", config: true, type: Boolean, default: true });
+
+  const markers = opts("markers");
+  assert.deepEqual(Object.keys(markers), ["name", "hint", "scope", "config", "type", "default", "onChange"]);
+  const { onChange: _f, ...mk } = markers;
+  assert.deepEqual(mk, { ...label("markers"), scope: "world", config: true, type: Boolean, default: true });
+
+  const markerTable = opts("markerTable");
+  assert.deepEqual(Object.keys(markerTable), ["scope", "config", "type", "default", "onChange"]);
+  const { onChange: _g, ...mt } = markerTable;
+  assert.deepEqual(mt, { scope: "world", config: false, type: Object, default: {} });
   assert.equal(F.game.pentaryn, undefined, "nothing published at init");
 });
 
 test("every registered name/hint and the strip's two keys resolve in lang/en.json", () => {
   for (const [id, s] of F.game.settings.settings) {
-    if (!id.startsWith(`${MODULE}.`)) continue;
+    if (!id.startsWith(`${MODULE}.`) || s.config === false) continue;   // a store row has no label
     for (const k of [s.name, s.hint]) assert.ok(F.game.i18n.has(k), k);
   }
   for (const k of ["PENTARYN_CREATURES.label", "PENTARYN_CREATURES.hint"]) assert.ok(F.game.i18n.has(k), k);
-  assert.deepEqual(Object.keys(LANG.PENTARYN_CREATURES.settings).sort(), ["floatOverHud", "lightRadius", "ownerSees", "showStrip", "summonLibrary"]);
+  assert.deepEqual(Object.keys(LANG.PENTARYN_CREATURES.settings).sort(), ["floatOverHud", "lightRadius", "markerMenu", "markers", "ownerSees", "showStrip", "summonLibrary"]);
 });
 
 test("setup: lib-wrapper active without its global → Token#isVisible replaced directly; the GM is never overridden", () => {

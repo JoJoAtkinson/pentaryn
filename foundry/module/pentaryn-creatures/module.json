@@ -1,7 +1,7 @@
 {
   "id": "pentaryn-creatures",
   "title": "Pentaryn Creatures",
-  "description": "Players can always find the creatures they control. Every token a player owns whose actor is a creature (summons, familiars, skeletons, Arcane Eye, a steed; never a PC or its Wild Shape form) carries a small bright light, set by the active GM's client and flagged so only that light is ever removed. Owners always see their own tokens, even Invisible ones in the dark (a per-client Token#isVisible override that never shows GM-hidden tokens). A 'Your creatures' strip above the hotbar shows a portrait of each token the player owns on the scene, their character first: click to select it and pan to it, double-click to open its sheet. A player whose role may not create actors can still summon from a compendium (Mage Hand, Find Familiar): the active GM's client makes the creature for them, owned by them, in their 'PC Summons & Forms/<name> — summons & forms' library folder, and dnd5e reuses it on every later summon. Exposes game.pentaryn.creatures.",
+  "description": "Players can always find the creatures they control. Every token a player owns whose actor is a creature (summons, familiars, skeletons, Arcane Eye, a steed; never a PC or its Wild Shape form) carries a small bright light, set by the active GM's client and flagged so only that light is ever removed. Owners always see their own tokens, even Invisible ones in the dark (a per-client Token#isVisible override that never shows GM-hidden tokens). A 'Your creatures' strip above the hotbar shows a portrait of each token the player owns on the scene, their character first: click to select it and pan to it, double-click to open its sheet. A player whose role may not create actors can still summon from a compendium (Mage Hand, Find Familiar): the active GM's client makes the creature for them, owned by them, in their 'PC Summons & Forms/<name> — summons & forms' library folder, and dnd5e reuses it on every later summon. Public and hidden token markers: a player sees a status marker on a creature they do not own only when the GM's Token markers menu calls it Public (Prone, Bloodied); Charmed, Concentrating and an enemy's spell effects stay GM only, and a dormant token shows none. Exposes game.pentaryn.creatures.",
   "version": "0.4.1",
   "compatibility": { "minimum": "14", "verified": "14.370" },
   "authors": [{ "name": "Joseph Atkinson" }],
@@ -11,7 +11,7 @@
   "relationships": {
     "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.1.1" } }],
     "recommends": [
-      { "id": "lib-wrapper", "type": "module", "reason": "Wraps Token#isVisible cleanly alongside other modules; without it the getter is patched directly." },
+      { "id": "lib-wrapper", "type": "module", "reason": "Wraps Token#isVisible and dnd5e's ActiveEffect5e#isConcealed cleanly alongside other modules; without it the getters are patched directly." },
       { "id": "item-piles", "type": "module", "reason": "Item Piles piles are left out of the light and the strip." },
       { "id": "enhancedcombathud", "type": "module", "reason": "The strip floats above Argon's Combat HUD while it is open (setting floatOverHud)." }
     ]

@@ -1714,3 +1714,15 @@ adjustments:
     native_when: dnd5e lets a card's targets be set after the roll, or applies to the user's current targets on an untargeted card
     retire_class: guarded
     check: make foundry-aoe-check
+
+  # pentaryn-creatures unit N (2026-11-21, context/plans/feedback-triage-2026-11-19.md cluster N).
+  - id: creatures-dnd5e-effect-isconcealed
+    packages: [dnd5e, lib-wrapper]
+    modules: [pentaryn-creatures]
+    files: [foundry/module/pentaryn-creatures/markers.mjs, foundry/module/pentaryn-creatures/creatures-core.mjs]
+    markers: ["isConcealed", "__pentarynCreaturesConcealed", "BLOODIED", "concealFor", "redrawEffects"]
+    what: dnd5e's ActiveEffect5e#isConcealed getter wrapped through wrapMethod (libWrapper WRAPPER on CONFIG.ActiveEffect.documentClass.prototype.isConcealed when lib-wrapper is active, else the getter is replaced on the prototype, marker __pentarynCreaturesConcealed); for a player who does not observe the creature it adds the Token markers table (Public / GM only per CONFIG.statusEffects id, one row for other spell and item effects, friendly tokens show all; a dormant token conceals everything) and replaces dnd5e's Bloodied rule (dnd5e.bloodied = "player", detected through ActiveEffect5e.ID.BLOODIED) with the table's Bloodied row; dnd5e's other reasons (system.isConcealed, a disabled dependent origin, an unidentified item) and the GM / OBSERVER answers are kept; redraws token effects (redrawEffects) on a setting change and on a dormant flag or disposition change (settings markers, markerTable; menu markerMenu)
+    why: Joe wants public and hidden markers (2026-11-20, triage cluster N, follows C jz6tqK); dnd5e 6.1.1's only per-viewer rule is Bloodied, so every other status and every spell icon on an enemy (Charmed, Concentrating, Mage Armor) is public, and a damaged dormant statue would show Bloodied under dnd5e.bloodied = "all"
+    native_when: dnd5e ships a per-status visibility setting for non-owned tokens, or isConcealed's checks (OBSERVER, the Bloodied rule) or its consumers (isTemporary, the effects list, _displayScrollingStatus) change
+    retire_class: guarded
+    check: make foundry-creatures-check; live, as a player, a hostile token shows Prone and Bloodied but not Frightened, Concentrating or Mage Armor, and a dormant one shows nothing
