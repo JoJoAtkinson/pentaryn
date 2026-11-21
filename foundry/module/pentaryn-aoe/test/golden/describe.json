@@ -829,6 +829,10 @@
       "label": "preCreateMeasuredTemplate(aim)"
     },
     {
+      "name": "refreshRegion",
+      "label": "refreshRegion(wall)"
+    },
+    {
       "name": "preCreateChatMessage",
       "label": "preCreateChatMessage(self)"
     },

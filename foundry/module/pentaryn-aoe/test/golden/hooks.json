@@ -113,6 +113,10 @@
   },
   {
     "kind": "on",
+    "name": "refreshRegion"
+  },
+  {
+    "kind": "on",
     "name": "preCreateChatMessage"
   },
   {
