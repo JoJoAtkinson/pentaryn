@@ -28,6 +28,9 @@
 tunnel: ardenhaven
 credentials-file: ~/.cloudflared/3f188349-3bfb-4674-bde1-b4eb61b872f0.json
 
+# QUIC precheck fails on BOSS (WSL2 NAT'd UDP), seen daily since 2026-11-02; brief synchronized client drops. Delete to go back to quic.
+protocol: http2
+
 # Foundry's world load is chatty; the defaults are tuned for short requests.
 originRequest:
   connectTimeout: 30s

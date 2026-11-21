@@ -135,3 +135,105 @@ export function empowerRolls(rolls, picks, rng) {
   changes.sort((a, b) => a.roll - b.roll || a.term - b.term || a.result - b.result);
   return { rolls: out, changes, delta };
 }
+
+/* ── after the reroll: the totals, the new faces (F1, F2; feedback GDJJdi) ── */
+
+/** A card's total as dnd5e's damage card shows it: each roll's total, floored at 0, summed. */
+export function rollsTotal(rolls) {
+  return (rolls ?? []).reduce((sum, r) => sum + Math.max(0, Number(r?.total) || 0), 0);
+}
+
+/**
+ * Where each change landed in the rerolled rolls (`empowerRolls(...).rolls`): the old face's index and
+ * the new face's right after it (the change's `result` is the OLD position; every earlier change in the
+ * same term put one more result ahead of it), with both raw faces as the tooltip prints them, the die's
+ * class and flavor. A change that does not point at an old-then-new pair is skipped.
+ * @returns {{ roll: number, term: number, faces: number, oldIndex: number, newIndex: number, old: number, fresh: number, cls: string, flavor: string|null }[]}
+ */
+export function rerolledFaces(rolls, changes) {
+  const out = [];
+  const list = Array.isArray(changes) ? changes : [];
+  for (const c of list) {
+    const earlier = list.filter(o => o !== c && o.roll === c.roll && o.term === c.term && o.result < c.result).length;
+    const term = rolls?.[c.roll]?.terms?.[c.term];
+    const oldIndex = Number(c.result) + earlier;
+    const was = term?.results?.[oldIndex], now = term?.results?.[oldIndex + 1];
+    if (!was || !now || was.active !== false || now.active === false) continue;
+    out.push({
+      roll: c.roll, term: c.term, faces: Number(term.faces), oldIndex, newIndex: oldIndex + 1,
+      old: Number(was.result), fresh: Number(now.result), cls: String(term.class ?? "Die"), flavor: term.options?.flavor ?? null,
+    });
+  }
+  return out;
+}
+
+/**
+ * Which tooltip chips are the rerolled pairs (F1: they stand out more than dnd5e's grey strike-through).
+ * `chips` are the rendered `li.roll` results in page order, `{ list, faces, label, rerolled }` (`list`:
+ * which `ol.dice-rolls` holds it). A die's results sit together in its list and each new face follows its
+ * old one, so each rerolled face (`rerolledFaces`) takes the first unused adjacent pair in one list that
+ * reads old (marked rerolled) then new, on its die size. Returns `[oldIndex, newIndex]` pairs into `chips`.
+ */
+export function matchChips(chips, faces) {
+  const used = new Set();
+  const pairs = [];
+  const all = Array.isArray(chips) ? chips : [];
+  for (const f of faces ?? []) {
+    for (let i = 0; i + 1 < all.length; i++) {
+      const a = all[i], b = all[i + 1];
+      if (used.has(i) || used.has(i + 1) || a.list !== b.list) continue;
+      if (!a.rerolled || a.faces !== f.faces || b.faces !== f.faces) continue;
+      if (String(a.label).trim() !== String(f.old) || String(b.label).trim() !== String(f.fresh)) continue;
+      used.add(i);
+      used.add(i + 1);
+      pairs.push([i, i + 1]);
+      break;
+    }
+  }
+  return pairs;
+}
+
+/**
+ * F2: a roll (plain `Roll#toJSON` shape) of only the new faces, for Dice So Nice to throw instead of the
+ * whole card: one die term per die class, size and flavor, in first-seen order, joined by `+`. Null with
+ * nothing rerolled.
+ * @param {ReturnType<typeof rerolledFaces>} faces
+ */
+export function rerolledRollData(faces) {
+  const groups = new Map();
+  for (const f of faces ?? []) {
+    if (!Number.isInteger(f?.faces) || f.faces < 2 || !Number.isFinite(f.fresh)) continue;
+    const key = `${f.cls}|${f.faces}|${f.flavor ?? ""}`;
+    if (!groups.has(key)) groups.set(key, { cls: f.cls || "Die", faces: f.faces, flavor: f.flavor ?? null, results: [] });
+    groups.get(key).results.push(f.fresh);
+  }
+  if (!groups.size) return null;
+  const terms = [];
+  const parts = [];
+  let total = 0;
+  for (const g of groups.values()) {
+    if (terms.length) terms.push({ class: "OperatorTerm", operator: "+", options: {}, evaluated: true });
+    const options = g.flavor ? { flavor: g.flavor } : {};
+    terms.push({ class: g.cls, number: g.results.length, faces: g.faces, modifiers: [], results: g.results.map(result => ({ result, active: true })), options, evaluated: true });
+    parts.push(`${g.results.length}d${g.faces}${g.flavor ? `[${g.flavor}]` : ""}`);
+    total += g.results.reduce((a, b) => a + b, 0);
+  }
+  return { class: "Roll", options: {}, formula: parts.join(" + "), terms, total, evaluated: true };
+}
+
+/**
+ * F3: the card a sheet / HUD use of Empowered Spell should act on: the caster's newest card that could
+ * show the Empower button (`eligible`), posted within `windowMs` (10 minutes) of `now`. `cards` are
+ * `{ id, actorId, timestamp, eligible }`; a superseded, empowered or applied card is never eligible.
+ * Returns its id, or null (then the use is stopped and nothing is spent).
+ */
+export function waitingCardId(cards, { actorId, now, windowMs = 10 * 60 * 1000 } = {}) {
+  let best = null;
+  for (const c of cards ?? []) {
+    if (!c?.eligible || !c.id || c.actorId !== actorId) continue;
+    const t = Number(c.timestamp);
+    if (!Number.isFinite(t) || now - t > windowMs || t - now > 60 * 1000) continue;
+    if (!best || t > best.t) best = { id: c.id, t };
+  }
+  return best?.id ?? null;
+}

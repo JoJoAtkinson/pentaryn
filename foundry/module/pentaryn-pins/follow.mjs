@@ -15,6 +15,10 @@
  *                        view it. A loading canvas is waited out, never given up on.
  *   moveToken            a level gap-filler (§5.2): the token moved to another level of the viewed
  *                        scene and core's own level switch will not follow (a sighted pet left behind).
+ *   renderSceneNavigation  the way back (triage A): while the player views another scene and core
+ *                        draws no tab for the token's (a map with `navigation: false`), a
+ *                        "⟵ {character}" tab; a click views the token's scene and level with the
+ *                        token controlled. Client DOM only, no document write.
  *   "pullToScene"        a second listener on core's socket event (§5.3), attached at "ready" after
  *                        core's own: a pull that lands while the canvas is loading (core drops it with
  *                        a toast) is viewed, as sent, once it clears — unless the canvas then already
@@ -28,12 +32,14 @@
  * with the same `this` and arguments and every listener returns at once.
  */
 
-import { MODULE, NET_GRACE_MS, NET_POLL_MS, activateDecision, coreSwitchesLevel, levelFollow, netDecision,
-  replayDecision } from "./pins-core.mjs";
+import { CSS, MODULE, NET_GRACE_MS, NET_POLL_MS, activateDecision, coreSwitchesLevel, levelFollow, netDecision,
+  pinnedNavTab, replayDecision } from "./pins-core.mjs";
 import { levelOn, pinOfUser, resolvePin, rootOfToken, tokenPermits } from "./world-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { ownsOtherSighted } from "./lib/pull-rule.mjs";
 import { libWrapperRoute } from "./lib/patch-libwrapper.mjs";
+import { htmlRoot } from "./lib/api.mjs";
+import { onPinningChange } from "./settings.mjs";
 
 let C = null;
 const handles = [];
@@ -54,6 +60,8 @@ let lastPull = 0;
 /** The seq of the delete that (re)armed the safety net. */
 let netSince = 0;
 let pullListener = null;
+/** onPinningChange's unsubscribe: the switch redraws the nav (the tab comes and goes with it). */
+let navUnsubscribe = null;
 
 const enabled = () => C?.setting("pinning") === true;
 const isGM = () => !!game.user?.isGM;
@@ -217,6 +225,70 @@ async function onMoveToken(doc, movement, user) {
   }, "the level gap-filler");
 }
 
+/* ── triage A: the "⟵ {character}" tab back to the pinned token ─────────── */
+
+const NAV_TAB = `${CSS}nav-back`;
+
+/**
+ * pinnedNavTab's input for this client: `{ user, viewedId, scene }`, `scene` describing the pinned
+ * token's scene (null: off, a GM, no pin, no single token).
+ */
+function navInput() {
+  const viewedId = canvas?.scene?.id ?? null;
+  const user = { isGM: isGM(), pinned: !!myRoot() };
+  const t = safeTarget("renderSceneNavigation");
+  const scene = t ? game.scenes.get(t.scene) : null;
+  if (!scene) return { user, viewedId, scene: null };
+  const character = game.actors?.get?.(pinOfUser(game.user))?.name ?? t.token.doc?.name ?? null;
+  return {
+    user, viewedId,
+    scene: { id: scene.id, active: !!scene.active, navigation: !!scene.navigation, visible: !!scene.visible, character },
+  };
+}
+
+/**
+ * The tab's click: the token's scene and level with the token controlled (core pans to it) — the
+ * view onActivate asks for. `scene.view()` directly, never viewTo(): a held or newer pull must not
+ * drop a click the player made. The pin is resolved again here (the token may have moved since the
+ * render); with no target left the nav is redrawn, without the tab.
+ */
+function onNavClick(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  const t = safeTarget("scene nav: back to my character");
+  const scene = t ? game.scenes.get(t.scene) : null;
+  if (!scene) return void globalThis.ui?.nav?.render?.();
+  const options = { ...followOptions(t) };
+  if (t.level) options.level = t.level;
+  Promise.resolve(scene.view(options)).catch(err => C.log.error("view failed", err));
+}
+
+/** Add (or drop) the tab on a SceneNavigation render. */
+function decorateNav(app, element) {
+  const root = htmlRoot(element) ?? app?.element;
+  if (!root?.querySelectorAll) return;
+  for (const old of root.querySelectorAll(`.${NAV_TAB}`)) old.remove();
+  const { user, viewedId, scene } = navInput();
+  const tab = pinnedNavTab(user, viewedId, scene);
+  if (!tab) return;
+  if (root.querySelector(`[data-scene-id="${tab.sceneId}"]`)) return;   // a tab for it is already drawn
+  const menu = root.querySelector("#scene-navigation-active") ?? root;
+  const li = document.createElement("li");
+  // core's tab look (ui-control scene) but no data-action: core's viewScene would draw the scene's
+  // initial level with nothing controlled. No data-scene-id either: it is not core's tab.
+  li.className = `ui-control flexrow scene ${NAV_TAB}`;
+  li.dataset.ppiScene = tab.sceneId;
+  const hint = _loc("PENTARYN_PINS.Nav.BackHint", { name: tab.character });
+  li.setAttribute("aria-label", hint);
+  li.dataset.tooltip = "";
+  const label = document.createElement("span");
+  label.className = "ellipsis";
+  label.textContent = _loc("PENTARYN_PINS.Nav.Back", { name: tab.character });   // text: a name cannot inject markup
+  li.append(label);
+  li.addEventListener("click", onNavClick);
+  menu.insertBefore(li, menu.children?.[0] ?? null);
+}
+
 /* ── §5.3 a pull core dropped while loading is replayed ────────────────── */
 
 /** Does the canvas already show what `viewOptions` on `sceneId` asks for (core's Scene#view would draw nothing)? */
@@ -273,12 +345,17 @@ export function install(reg, ctx) {
   installPatches(ctx);
   reg.on("deleteToken", doc => onDeleteToken(doc), { label: "deleteToken: safety net" });
   reg.on("moveToken", (doc, movement, _operation, user) => onMoveToken(doc, movement, user), { label: "moveToken: level gap" });
+  reg.on("renderSceneNavigation", (app, element) => decorateNav(app, element), { label: "renderSceneNavigation: back tab" });
+  navUnsubscribe = onPinningChange(() => globalThis.ui?.nav?.render?.());
   if (globalThis.game?.ready) attachPullReplay(ctx);              // a hot re-import after ready
   else reg.once("ready", () => attachPullReplay(ctx), { label: "ready: pull replay" });
 }
 
 export function uninstall() {
   for (const h of handles.splice(0)) h.unwrap();
+  navUnsubscribe?.();
+  navUnsubscribe = null;
+  for (const old of globalThis.document?.querySelectorAll?.(`.${NAV_TAB}`) ?? []) old.remove();
   if (pullListener) globalThis.game?.socket?.off?.("pullToScene", pullListener);
   pullListener = null;
   clearTimeout(netTimer);

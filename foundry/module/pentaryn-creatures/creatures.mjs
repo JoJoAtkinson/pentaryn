@@ -16,6 +16,8 @@
  *   summons-adapter.mjs  dnd5e summon activity / source / copy → plain data, the library copy's create data
  *   summons.mjs          feature: the summon library (Actor5e.fetchExisting wrap + the GM relay, dnd5e.postSummon filing)
  *   dormant.mjs          feature: dormant until combat (a token disguised as a prop wakes when its combat starts)
+ *   markers.mjs          feature: public and hidden token markers (the ActiveEffect5e#isConcealed wrap)
+ *   markers-menu.mjs     UI: the Token markers settings menu (Public / GM only per status)
  *   api-manifest.mjs     PURE API rows (describe() reads them)
  *   api.mjs              implementations over ctx.exposed, buildApiFor(ctx)
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
@@ -23,7 +25,7 @@
  * Lifecycle: the light and strip features install synchronously in this body (where their
  * module-scope Hooks.on calls always ran, so listener order is unchanged) · init → settings ·
  * setup → owner-sees wraps Token#isVisible, summons wraps Actor5e.fetchExisting (its dnd5e.postSummon
- * listener is registered at load) · the relay queries (manifest rows summonActor, fileLibrary) are
+ * listener is registered at load), markers wraps ActiveEffect5e#isConcealed · the relay queries (manifest rows summonActor, fileLibrary) are
  * registered at load on every client (a player's queryGM needs them) · ready → the active GM syncs every light, the strip
  * draws, then the API is built (a drift throw stops there) and published synchronously as
  * game.modules.get("pentaryn-creatures").api and game.pentaryn.creatures.
@@ -46,9 +48,11 @@ import * as creatureStrip from "./creature-strip.mjs";
 import * as ownerSees from "./owner-sees.mjs";
 import * as summons from "./summons.mjs";
 import * as dormant from "./dormant.mjs";
+import * as markers from "./markers.mjs";
+import { markersMenuClass } from "./markers-menu.mjs";
 
 /** Features, in install order (uninstall runs them in reverse). */
-const FEATURES = [light, creatureStrip, ownerSees, summons, dormant];
+const FEATURES = [light, creatureStrip, ownerSees, summons, dormant, markers];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -77,7 +81,7 @@ function uninstall() {
 }
 
 function onInit() {
-  registerSettings();
+  registerSettings({ menuClass: markersMenuClass });
 }
 
 /** The active GM brings every light in line; every client draws its strip. */
@@ -104,7 +108,7 @@ registerQueries(MANIFEST, () => ctx.api, { log });
 
 // Registration order is the module's historic one (golden/hooks.json): the light's and the strip's
 // hooks, init, owner-sees' setup, the summon library's setup and its dnd5e.postSummon, dormant's updateCombat and
-// createCombatant (0.4.0), then the two ready handlers.
+// createCombatant (0.4.0), markers' setup and updateToken (unit N), then the two ready handlers.
 if (ctx.late) {
   onInit();
   for (const feature of FEATURES) feature.install(reg, ctx);
@@ -117,6 +121,7 @@ if (ctx.late) {
   ownerSees.install(reg, ctx);
   summons.install(reg, ctx);
   dormant.install(reg, ctx);
+  markers.install(reg, ctx);
   Hooks.once("ready", onReadyStartup);
   Hooks.once("ready", onReadyPublish);
 }

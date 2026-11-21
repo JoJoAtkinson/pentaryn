@@ -84,3 +84,15 @@ effect-application.pentaryn-aoe-unapplied > .card-tray > label::after {
    element inside dnd5e's list; dnd5e's DOM is not styled: a typed total's result is written into
    dnd5e's own per-row number). */
 .pa-card-amount { width: 3.4em; height: 20px; min-height: 20px; padding: 0 2px; margin-left: 4px; text-align: right; font-size: var(--font-size-12, 12px); }
+
+/* G2: "Applied by Talo → Talo (+11)" under a damage or healing card's tray (apply.mjs renderAppliedBy). */
+.pa-applied-by { margin: 2px 0 0; font-size: var(--font-size-12, 12px); opacity: 0.85; }
+.pa-applied-by p { margin: 0; }
+.pa-applied-by i { margin-right: 3px; }
+
+/* D2: Hit (blue) / Miss (orange) on attack cards; the damage card after a hit (attacks.mjs). */
+.pa-hit { color: #2f6fd6; font-weight: 600; }
+.pa-miss { color: #d9822b; font-weight: 600; }
+.pa-hit-title { color: #2f6fd6; }
+.pa-pill-result { margin-left: 4px; font-size: var(--font-size-11, 11px); }
+.pa-miss-line { margin: 4px 0 0; }

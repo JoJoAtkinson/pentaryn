@@ -39,7 +39,7 @@ aliases:
   enhancedcombathud: ["ui.ARGON", "CONFIG.ARGON", "ArgonComponent"]
   enhancedcombathud-dnd5e: ["CONFIG.ARGON", "ArgonComponent"]
   item-piles: ["game.itempiles", "itempiles"]
-  dice-so-nice: ["dice3d"]
+  dice-so-nice: ["dice3d", "DsnSidebarTab"]
   lib-wrapper: ["libWrapper"]
 
 adjustments:
@@ -1714,3 +1714,158 @@ adjustments:
     native_when: dnd5e lets a card's targets be set after the roll, or applies to the user's current targets on an untargeted card
     retire_class: guarded
     check: make foundry-aoe-check
+
+  - id: dnd5e-self-card-targets-caster
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["selfTargetCard", "preCreateChatMessage(self)"]
+    what: on preCreateChatMessage (the roller's client), a dnd5e "healing" card (never "damage") from an activity whose target.affects.type is "self", or whose range is Self with no other affects type, and that places no template, has no save and is not an attack (core.selfTargetCard), gets message.system.targets = the caster's token as dnd5e TargetsField descriptors (updateSource), replacing whatever the roller had targeted
+    why: dnd5e's rollDamage / rollHealing record the user's current targets (TargetsField.getDescriptors()), and its tray lists selected tokens on a card with none, so Stone's Endurance offered to heal an enemy (browser test T3, feedback SvOaxr, 2026-11-19)
+    native_when: dnd5e records the user as the target of a self-only activity's roll card
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: dnd5e-card-applied-by-line
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/messages-adapter.mjs, foundry/module/pentaryn-aoe/resolve.mjs]
+    markers: ["renderAppliedBy", "pa-applied-by", "appliedLog"]
+    what: on dnd5e.renderChatMessage a damage / healing card gets one "Applied by <user> → <token> (±n)" line per Apply, inserted right after dnd5e's <damage-application> element (else at the end of .message-content); every Apply (the player's own rows from dnd5e's tray, the GM relay, the GM save tray) writes one flags.pentaryn-aoe.appliedLog entry with the HP change read from actor.system.attributes.hp value + temp around actor.applyDamage (setting showAppliedBy)
+    why: dnd5e's tray never says who applied a card or what landed, and on an untargeted card each viewer's tray lists their own selection, so a heal read "Caven +11" for Talo's own Stone's Endurance (feedback SvOaxr, 2026-11-19)
+    native_when: dnd5e records and shows who applied a damage or healing card's rows, and the amount
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: dnd5e-attack-card-hit-miss
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/settings.mjs]
+    markers: ["attackOutcome", "evaluatedTargets", "target-pill", "attackRollVisibility"]
+    what: on dnd5e.renderChatMessage an attack card (message.type "attack") reads message.system.evaluatedTargets (else the attack-card.hbs target-pill[data-hit] / [data-miss]) and appends "— Hit" / "— Miss" to .card-header .subtitle (one target), a "Hit" / "Miss" span inside each target-pill (several), or a .pa-miss-line paragraph to .message-content (every target missed); the damage card after a hit gets .pa-hit-title on its subtitle. Reads the world setting dnd5e.attackRollVisibility and shows nothing at "none" (setting hitMissLabels)
+    why: with attackRollVisibility at hideAC dnd5e shows only pill icons, and on a miss pentaryn-aoe rolls nothing, so a miss read as "nothing happened" (feedback ORGqVN, hKDbzi, browser test T2, 2026-11-20)
+    native_when: dnd5e's attack card names the result in words (a hit / miss label on the card or its title)
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: core-region-wall-panels
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/wall-spells.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["refreshRegion(wall)", "wallSpellRegion", "wallPanelOutline"]
+    what: on core's refreshRegion hook (PlaceableObject#applyRenderFlags), a dnd5e wall-spell template region (every shape a line; flags.dnd5e.activity's target.template.type "wall", else flags.dnd5e.dimensions.height) gets one PIXI.Graphics child added at index 0 of the Region placeable, each LineShapeData (x, y, length along rotation, width centred) drawn max(width, grid/5) thick in neutral stone; core's RegionMesh highlight and the shapes are untouched
+    why: dnd5e 6 maps the wall area type to a ray, so Wall of Stone's 0.25 ft panels were a 2.5 px coverage-mode line in the caster's user colour on a 50 px grid and "disappeared" (feedback 8t6Nn1, 2026-11-19)
+    native_when: dnd5e or core draws thin wall-type template regions with a minimum visible thickness
+    retire_class: safe
+    check: make foundry-aoe-check; live, Wall of Stone on a 50 px grid is visible in a dark user colour
+
+  - id: core-region-placement-panel-counter
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/aim.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["panelNotice", "panelCounter", "preSkip"]
+    what: inside the RegionLayer#placeRegions wrap (row aoe-self-area-aim), a call placing two or more shapes gets its preConfirm / preSkip options wrapped (the caller's run first; a false return counts nothing) to advance one permanent ui.notifications.info notice ("Panel n of N", Notification#update), removed (Notification#remove) when the returned promise settles; dnd5e's TemplatePlacement passes one region per wall panel and keeps placed panels through its own preConfirm, so Escape (core resolves null) finishes the wall
+    why: Wall of Stone places ten panels one by one with no indication of progress, and right-click (skip a shape) was mistaken for "finish" (browser test T5, feedback 8t6Nn1)
+    native_when: core's or dnd5e's multi-shape placement shows its own progress or hint
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: dnd5e-riders-omen-die-decides
+    packages: [dnd5e, enhancedcombathud-dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/rest.mjs, foundry/module/pentaryn-riders/riders-core.mjs]
+    markers: ["renderActivityChoiceDialog", "button[data-activity-id]", "pr-omen-decides", "pr-omen-die", "unread"]
+    what: with no Cosmic Omen stored for the day, renderActivityChoiceDialog puts one .pr-omen-decides line ("Read the stars (1d6) — the die decides") right above the list holding dnd5e's "which activity?" button[data-activity-id] rows (the closest menu / ul / ol) and badges each omen's button .pr-omen-die "the die decides", nothing disabled; renderItemButtonArgonComponent badges Argon's Cosmic Omen button(s) the same (omenButtonMark's unread mark); the redirect notice names the rolled face ("You picked Woe (Odd), but the stars rolled 2 — Weal (even)"). Module elements and classes only; nothing in dnd5e's or Argon's files is edited
+    why: with no omen stored both choices looked selectable, then the roll overrode the click (d3rePk — Talo picked Woe, the die rolled 2, Weal ran; RAW, but the UI misled); dnd5e's choice dialog and Argon's button have no hint slot of their own (triage E)
+    native_when: dnd5e's activity choice dialog offers a per-row hint or note, or Cosmic Omen rolls its omen itself
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-riders-empower-chips
+    packages: [dnd5e, core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs]
+    markers: ["ol.dice-rolls", "li.roll", "rerolled", "pr-emp-old", "pr-emp-new", "oldTotal"]
+    what: on dnd5e.renderChatMessage of an empowered damage card (flags.pentaryn-riders.empowered), the rerolled pairs among the dice tooltip's ol.dice-rolls > li.roll chips (dnd5e's damage-breakdown.hbs, one li per term result in result order with core's DiceTerm#getResultCSS classes — d<faces>, rerolled) are marked pr-emp-old / pr-emp-new (core rerolledFaces + matchChips match each old-then-new face pair on its die size and printed face); the card's line adds the totals before and after from empowered.oldTotal (new key, beside the unchanged from / cost / changes). Module classes only
+    why: dnd5e only strikes the old face through in grey and leaves the new one plain, and the card never said the old total, so a player could not see what one Empower click changed (GDJJdi — Disintegrate 77 → 83 read as a new 14-die roll; triage F1)
+    native_when: dnd5e marks rerolled-and-replaced dice in its damage breakdown, or offers a reroll flow that reports the change
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dsn-riders-empower-new-dice
+    packages: [dice-so-nice]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs, foundry/module/pentaryn-riders/module.json]
+    markers: ["diceSoNiceMessagePreProcess", "willTrigger3DRoll", "game.dice3d", "showForRoll"]
+    what: every client's diceSoNiceMessagePreProcess (messageId, { willTrigger3DRoll }) sets willTrigger3DRoll false for an empowered damage card (flags.pentaryn-riders.empowered), and the clicking client throws a Roll.fromData of only the rerolled faces (core rerolledRollData; one die term per class, size and flavor) with game.dice3d.showForRoll(roll, game.user, true, whisper ids or null, blind, messageId, speaker), synchronised to the other clients; module.json recommends dice-so-nice with a reason. No DSN, nothing is thrown (the hook never fires)
+    why: DSN re-animated every die of the new damage card, so one Empower click looked like a fresh 14-die roll (GDJJdi, Disintegrate; triage F2). DSN 6.4.5 reads its decision after diceSoNiceMessagePreProcess; diceSoNiceMessageProcessed is observation-only since 6.0 and logs a compatibility warning when mutated
+    native_when: DSN animates only the dice that changed between two linked messages, or dnd5e / a reroll API marks replaced dice for it
+    retire_class: guarded
+    check: make foundry-riders-check; live, Empower with Dice So Nice on — only the rerolled dice are thrown, on every client that sees the card
+
+  - id: dnd5e-riders-empower-sheet-use
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs, foundry/module/pentaryn-riders/api.mjs]
+    markers: ["dnd5e.preUseActivity", "pentaryn?.empower", "Empowered Spell: only from a damage card", "waitingCardId"]
+    what: dnd5e.preUseActivity (sync, a literal false, on the using client, before dnd5e's dialog and consumption) on the Empowered Spell feat's activity (shapes empoweredSpellOf) — the module's own spend (usage.pentaryn.empower, empower.mjs part 2) goes through; any other use (the sheet, Argon) is stopped, and the caster's waiting card (their own spell damage card from the last 10 minutes that could show the Empower button, editable by this user; core waitingCardId over message.timestamp) is empowered instead, or one notice says to use the card's button and nothing is spent; joins selftest's "usage vetoes run first" (api.mjs VETO_LABELS)
+    why: dnd5e's Empowered Spell activity spends a Font of Magic use and does nothing else, so a sheet use with no damage card to act on wasted a Sorcery Point (GDJJdi — two sheet uses, 2 SP gone; triage F3)
+    native_when: dnd5e's Empowered Spell activity rerolls damage dice on a card itself, or Metamagic gains a target-the-card flow
+    retire_class: guarded
+    check: make foundry-riders-check
+
+  - id: riders-duration-left
+    packages: [dnd5e, core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/patches.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["getDurationParts", "_prDurationLeft", "expirySupportsDuration", "specialDuration", "duration.left"]
+    what: at ready, wrapMethod on CONFIG.ActiveEffect.documentClass.prototype.getDurationParts (dnd5e ActiveEffect5e, dnd5e.mjs ~7800; its parts are core's remaining-duration label split on ", ") words the last printed part "<part> left" when expirySupportsDuration() is true, duration.remaining is finite and above 0 and specialDuration is null (table-core durationLeftParts); the sheet's templates/shared/active-effects.hbs (getSheetContext) and the effect tooltip (richTooltip, effect-tooltip.hbs) both print it, parts [0] and [1]; removePatches restores it
+    why: the Effects tab and the effect tooltip showed the remaining time unlabelled, so a player could not tell time left from time passed (VDalcb, Caven; triage K); dnd5e has no wording hook for the duration parts
+    native_when: dnd5e or core labels a remaining duration as time left (e.g. a "{duration} remaining" string)
+    retire_class: safe
+    check: make foundry-riders-check; live, an effect with rounds left reads "N rounds left" on the Effects tab and in its tooltip
+
+  - id: core-pins-scene-nav-tab
+    packages: [core]
+    modules: [pentaryn-pins]
+    files: [foundry/module/pentaryn-pins/follow.mjs, foundry/module/pentaryn-pins/pins-core.mjs]
+    markers: ["renderSceneNavigation", "pinnedNavTab", "scene-navigation-active"]
+    what: on a pinned player's client (switch on) a renderSceneNavigation listener adds a "⟵ {character}" li (classes ui-control flexrow scene ppi-nav-back, no data-action, no data-scene-id) first in core's #scene-navigation-active menu while the player views another scene and core draws no tab for the pinned token's scene — pinnedNavTab copies SceneNavigation#prepareScenes' player rule (active, viewed, or navigation && visible); its own click listener calls Scene#view({ level, controlledTokens }) for the token, as the _onActivate wrap does; DOM only, no document write; GMs and unpinned players untouched (triage A, fpnsNR)
+    why: a map with navigation false has a nav tab only while it is viewed, so a pinned player who clicked the active lobby had no way back but a reload; setting navigation true would list every map to every player
+    native_when: core's scene navigation lists a player's own token's scene, or lets a module add an entry to prepareScenes' context
+    retire_class: guarded
+    check: make foundry-pins-check
+
+  # pentaryn-creatures unit N (2026-11-21, context/plans/feedback-triage-2026-11-19.md cluster N).
+  - id: creatures-dnd5e-effect-isconcealed
+    packages: [dnd5e, lib-wrapper]
+    modules: [pentaryn-creatures]
+    files: [foundry/module/pentaryn-creatures/markers.mjs, foundry/module/pentaryn-creatures/creatures-core.mjs]
+    markers: ["isConcealed", "__pentarynCreaturesConcealed", "BLOODIED", "concealFor", "redrawEffects"]
+    what: dnd5e's ActiveEffect5e#isConcealed getter wrapped through wrapMethod (libWrapper WRAPPER on CONFIG.ActiveEffect.documentClass.prototype.isConcealed when lib-wrapper is active, else the getter is replaced on the prototype, marker __pentarynCreaturesConcealed); for a player who does not observe the creature it adds the Token markers table (Public / GM only per CONFIG.statusEffects id, one row for other spell and item effects, friendly tokens show all; a dormant token conceals everything) and replaces dnd5e's Bloodied rule (dnd5e.bloodied = "player", detected through ActiveEffect5e.ID.BLOODIED) with the table's Bloodied row; dnd5e's other reasons (system.isConcealed, a disabled dependent origin, an unidentified item) and the GM / OBSERVER answers are kept; redraws token effects (redrawEffects) on a setting change and on a dormant flag or disposition change (settings markers, markerTable; menu markerMenu)
+    why: Joe wants public and hidden markers (2026-11-20, triage cluster N, follows C jz6tqK); dnd5e 6.1.1's only per-viewer rule is Bloodied, so every other status and every spell icon on an enemy (Charmed, Concentrating, Mage Armor) is public, and a damaged dormant statue would show Bloodied under dnd5e.bloodied = "all"
+    native_when: dnd5e ships a per-status visibility setting for non-owned tokens, or isConcealed's checks (OBSERVER, the Bloodied rule) or its consumers (isTemporary, the effects list, _displayScrollingStatus) change
+    retire_class: guarded
+    check: make foundry-creatures-check; live, as a player, a hostile token shows Prone and Bloodied but not Frightened, Concentrating or Mage Armor, and a dormant one shows nothing
+
+  - id: dsn-persistent-dice-select
+    packages: [dice-so-nice]
+    modules: [pentaryn-dice]
+    files: [foundry/module/pentaryn-dice/dsn-adapter.mjs, foundry/module/pentaryn-dice/dice-core.mjs]
+    markers: ["persistentDiceManager", "selectedPersistentDiceIds", "persistent.spawn", "onSelectionChanged", "clearPersistentSelection", "countPersistentDiceByOwner"]
+    what: pentaryn-dice spawns persistent dice through game.dice3d.persistent.spawn(type, null, { linkGroupId, digitPlace, linkGroupSecondary }) (a d100 as its linked pair, as DSN's sidebar + does) and selects them by adding mesh ids to game.dice3d.box.persistentDiceManager.selectedPersistentDiceIds, then calling its onSelectionChanged() so the outlines redraw; it reads persistentDiceList meshes (notation.type, userData.ownerUserId / linkGroupId / linkGroupSecondary / guest) and clears with clearPersistentSelection(); selftest() checks the six internals persistent.spawn, selectedPersistentDiceIds, togglePersistentSelection, clearPersistentSelection, getSelectedPersistentDice, countPersistentDiceByOwner (core INTERNALS)
+    why: Dice So Nice 6.4.5 has no select-all, no select-by-type and no multi-spawn for persistent dice, and none of the persistent-dice manager is a documented API (feedback Lzzlyq, triage M1)
+    native_when: Dice So Nice ships select-all / select-by-type / spawn-N for persistent dice, or a documented selection API
+    retire_class: guarded
+    check: make foundry-dice-check; live, game.pentaryn.dice.selftest().ok with DSN's persistent dice on
+
+  - id: dsn-sidebar-tab-dom
+    packages: [dice-so-nice]
+    modules: [pentaryn-dice]
+    files: [foundry/module/pentaryn-dice/sidebar.mjs]
+    markers: ["renderDsnSidebarTab", "dsn-toolbox-dice-row", "dsn-toolbox-dice-buttons", "dsn-toolbox-clear"]
+    what: on renderDsnSidebarTab (DSN's AppV2 DsnSidebarTab) adds a count box, a "+ ×" spawn button and a select-type button inside each li.dsn-toolbox-dice-row[data-type] .dsn-toolbox-dice-buttons, and a .pdi-actions section (Select all mine, Clear selection, the Ctrl+click hint) before section.dsn-toolbox-clear; the buttons carry no data-action, so DSN's action delegation ignores them; CSS styles only the .pdi-* elements the module creates
+    why: DSN's tab spawns one die per click and hides the Ctrl+click hint behind Help; it offers no extension point but its render hook and its template's classes (triage M1)
+    native_when: DSN's sidebar tab takes a spawn count or offers select buttons itself, or renames its dice-row classes
+    retire_class: safe
+    check: make foundry-dice-check

@@ -263,7 +263,7 @@ const argonItemButton = (item = omenItem()) => ({ _item: item, isActivity: false
 const badgeText = b => b.element.querySelector(".pr-omen-badge")?.textContent ?? null;
 const choiceEl = () => W.html(`<section><menu class="unlist"><li><button type="button" data-action="choose" data-activity-id="${WEAL}"><span class="name">Weal (Even)</span></button></li><li><button type="button" data-action="choose" data-activity-id="${WOE}"><span class="name">Woe (Odd)</span></button></li></menu></section>`);
 
-test("Argon, one button per item (the default for a feat; 0.7.2, Talo live): never greyed, the badge names the stored omen although Argon's `activity` is the first (Weal); re-rendered not doubled; no omen or the setting off → bare", async () => {
+test("Argon, one button per item (the default for a feat; 0.7.2, Talo live): never greyed, the badge names the stored omen although Argon's `activity` is the first (Weal); re-rendered not doubled; the setting off → bare; no omen → the die decides (d3rePk)", async () => {
   await omenItem().setFlag(MODULE, "omen", "woe");
   const one = argonItemButton();
   assert.equal(omenOfActivityName(one.activity), "weal", "Argon's getter answers the item's first activity");
@@ -282,7 +282,14 @@ test("Argon, one button per item (the default for a feat; 0.7.2, Talo live): nev
   await F.game.settings.set(MODULE, "restCard", true);
   await unsetOmen();
   F.fire("renderItemButtonArgonComponent", one);
-  assert.equal(one.element.outerHTML, buttonEl().outerHTML);
+  assert.equal(badgeText(one), "the die decides", "the stars not read: the die decides, nothing greyed");
+  assert.equal(one.element.classList.contains("pr-omen-off"), false);
+  F.fire("renderItemButtonArgonComponent", one);
+  assert.equal(one.element.querySelectorAll(".pr-omen-badge").length, 1, "re-rendered, not doubled");
+  await F.game.settings.set(MODULE, "restCard", false);
+  F.fire("renderItemButtonArgonComponent", one);
+  assert.equal(one.element.outerHTML, buttonEl().outerHTML, "the setting off: bare");
+  await F.game.settings.set(MODULE, "restCard", true);
   assert.deepEqual(W.take(), []);
 });
 
@@ -299,7 +306,7 @@ test("a button that does not say `isActivity` (another HUD, a double): `_item` t
   await unsetOmen();
 });
 
-test("Argon, one button per activity (the item split): with Woe stored the Woe button gets the badge and the Weal button is greyed; no omen or the setting off clears both; other items untouched", async () => {
+test("Argon, one button per activity (the item split): with Woe stored the Woe button gets the badge and the Weal button is greyed; the setting off clears both; no omen → both the die decides; other items untouched", async () => {
   await omenItem().setFlag(MODULE, "omen", "woe");
   const weal = argonButton(act(WEAL)), woe = argonButton(act(WOE));
   F.fire("renderItemButtonArgonComponent", weal);
@@ -318,7 +325,9 @@ test("Argon, one button per activity (the item split): with Woe stored the Woe b
   await F.game.settings.set(MODULE, "restCard", true);
   await unsetOmen();
   F.fire("renderItemButtonArgonComponent", weal);
+  F.fire("renderItemButtonArgonComponent", woe);
   assert.equal(weal.element.classList.contains("pr-omen-off"), false);
+  assert.deepEqual([badgeText(weal), badgeText(woe)], ["the die decides", "the die decides"]);
   const sword = W.actor(IDS.sorc).items.get("longsword0000001");
   const other = argonButton(sword.system.activities.contents[0], sword);
   F.fire("renderItemButtonArgonComponent", other);
@@ -327,7 +336,7 @@ test("Argon, one button per activity (the item split): with Woe stored the Woe b
   assert.deepEqual(W.take(), []);
 });
 
-test("the activity choice dialog: today's omen marked, the other disabled; no omen stored → untouched", async () => {
+test("the activity choice dialog: today's omen marked, the other disabled; no omen stored → one 'the die decides' line above the buttons and both badged, none disabled (d3rePk)", async () => {
   await omenItem().setFlag(MODULE, "omen", "weal");
   const el = choiceEl();
   F.fire("renderActivityChoiceDialog", { item: omenItem() }, el, {}, { isFirstRender: true });
@@ -340,8 +349,22 @@ test("the activity choice dialog: today's omen marked, the other disabled; no om
   await unsetOmen();
   const plain = choiceEl();
   F.fire("renderActivityChoiceDialog", { item: omenItem() }, plain);
-  assert.equal(plain.querySelectorAll(".pr-omen-off, .pr-omen-today, .pr-omen-badge").length, 0);
-  F.fire("renderActivityChoiceDialog", { item: W.actor(IDS.sorc).items.get("fireball00000001") }, plain);
+  F.fire("renderActivityChoiceDialog", { item: omenItem() }, plain, {}, { isFirstRender: false });
+  assert.equal(plain.querySelectorAll(".pr-omen-off, .pr-omen-today").length, 0, "nothing greyed or picked");
+  const lines = plain.querySelectorAll(".pr-omen-decides");
+  assert.equal(lines.length, 1, "one line, re-rendered not doubled");
+  assert.equal(lines[0].textContent, "Read the stars (1d6): the die decides. Even is Weal, odd is Woe.");
+  const kids = lines[0].parentElement.children;
+  assert.equal(kids[kids.indexOf(lines[0]) + 1], plain.querySelector("menu"), "right above the buttons");
+  const [w1, w2] = plain.querySelectorAll("button");
+  for (const b of [w1, w2]) {
+    assert.ok(b.classList.contains("pr-omen-die") && !b.disabled);
+    assert.equal(b.querySelectorAll(".pr-omen-badge").length, 1);
+    assert.equal(b.querySelector(".pr-omen-badge").textContent, "the die decides");
+  }
+  const other = choiceEl();
+  F.fire("renderActivityChoiceDialog", { item: W.actor(IDS.sorc).items.get("fireball00000001") }, other);
+  assert.equal(other.querySelectorAll(".pr-omen-decides, .pr-omen-badge").length, 0, "another item: untouched");
   assert.deepEqual(W.take(), []);
 });
 
@@ -357,7 +380,7 @@ test("the stored omen's activity goes through; the other is stopped and the day'
   assert.equal(use(WOE, { event: { type: "click" }, legacy: false, consume: { resources: [0] } }, { configure: true }), false, "Woe on a Weal day: stopped");
   await drain();
   assert.deepEqual(uses, [[WEAL, { event: { type: "click" }, legacy: false, consume: { resources: [0] }, pentaryn: { omen: true } }, { configure: true }, {}]], "the click's own usage and dialog config, plus the re-call mark");
-  assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["info", "The stars read Weal (even) today: Weal (Even) it is."]]);
+  assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["info", "The stars read Weal (even) today: Weal (Even) it is."]], "an omen already stored: nothing rolled, no face to name");
   assert.notEqual(use(WEAL, { pentaryn: { omen: true } }), false, "the re-call is never stopped again");
   assert.deepEqual(W.take().filter(l => l[0] !== "info"), []);
 });
@@ -373,7 +396,7 @@ test("no omen stored (offline for the rest, or the card closed): the first use r
   assert.equal(omenItem().flags[MODULE].omen, "woe", "3 is odd");
   assert.deepEqual(W.takeLog().map(l => l.op), ["roll", "roll.toMessage"]);
   assert.deepEqual(uses, [[WOE, { pentaryn: { omen: true } }, {}, {}]], "no event, no dialog choice: dnd5e's defaults (the JSON copy drops undefined)");
-  assert.equal(F.calls.filter(c => c.op === "notify").length, 1, "clicked Weal, got Woe: one notice");
+  assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["info", "You picked Weal (Even), but the stars rolled 3: Woe (odd)."]], "clicked Weal, got Woe: one notice naming the face (d3rePk)");
   await unsetOmen();
   uses.length = 0;
   F.calls.length = 0;

@@ -580,12 +580,20 @@
       "label": "Cosmic Omen HUD mark"
     },
     {
+      "name": "dnd5e.preUseActivity",
+      "label": "Empowered Spell: only from a damage card"
+    },
+    {
       "name": "dnd5e.renderChatMessage",
       "label": "Empower button"
     },
     {
       "name": "dnd5e.applyDamage",
       "label": "Empower: applied card"
+    },
+    {
+      "name": "diceSoNiceMessagePreProcess",
+      "label": "Empower: Dice So Nice throws the new dice only"
     }
   ],
   "patches": [

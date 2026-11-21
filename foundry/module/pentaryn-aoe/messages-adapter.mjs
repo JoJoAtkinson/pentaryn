@@ -5,6 +5,8 @@
  * under, a usage card's effects, a recorded target, and the spell an applied effect came from.
  */
 
+import { MODULE } from "./core.mjs";
+
 /** A ChatMessage given as itself or by id (an unknown id → null). */
 export const messageFrom = m => (typeof m === "string" ? game.messages.get(m) ?? null : m);
 
@@ -93,4 +95,40 @@ export function spellOf(effect) {
     if (item?.type === "spell") return item.system?.identifier || item.name;
   }
   return null;
+}
+
+/** G2: an actor's hit points as Apply moves them: current plus temporary. */
+export const hpOf = actor => (Number(actor?.system?.attributes?.hp?.value) || 0) + (Number(actor?.system?.attributes?.hp?.temp) || 0);
+
+/**
+ * G2: one row of an "Applied by" entry — the token that took it, its name, the HP change (`after -
+ * before`, negative for damage) and whether a player owns the creature (`pc`: a player may read the row).
+ * @param {object|null} token   the TokenDocument (or placeable) that took it
+ * @param {object} actor
+ * @param {number} before       hpOf(actor) before the Apply
+ */
+export function landedRow(token, actor, before) {
+  const doc = token?.document ?? token;
+  return { token: doc?.uuid ?? null, name: doc?.name ?? actor?.name ?? "", delta: hpOf(actor) - before, pc: !!actor?.hasPlayerOwner };
+}
+
+/**
+ * G2: record one Apply press on the card, under its own random key of `flags.pentaryn-aoe.appliedLog`
+ * so two writers (a player's own rows, the GM's relayed ones) never overwrite each other:
+ * `{ at, by, byName, rows: landedRow[] }`. Only a GM or the card's author can write a message; for
+ * anyone else (and for no rows) nothing is written. Never throws: a refused write is logged by the caller.
+ * @returns {Promise<object|null>}
+ */
+export async function logApplied(message, rows, { user = game.user, log = null } = {}) {
+  if (!message || !rows?.length) return null;
+  const me = game.user;
+  const author = message.author?.id ?? message.author ?? null;
+  if (!(me?.isGM || (author && author === me?.id) || message.isAuthor === true)) return null;
+  const id = foundry.utils.randomID();
+  try {
+    return await message.update({ [`flags.${MODULE}.appliedLog.${id}`]: { at: Date.now(), by: user?.id ?? null, byName: user?.name ?? "", rows } });
+  } catch (err) {
+    log?.warn?.("applied-by line", err);
+    return null;
+  }
 }

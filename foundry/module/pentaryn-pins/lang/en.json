@@ -30,6 +30,10 @@
     "Sheet": {
       "PinnedTo": "Pinned to {name}"
     },
+    "Nav": {
+      "Back": "⟵ {name}",
+      "BackHint": "Back to {name}: the map your character is on"
+    },
     "Menu": {
       "PromptNote": "Prompt note",
       "Teleport": "Teleport pinned character",

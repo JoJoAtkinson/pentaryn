@@ -1,0 +1,56 @@
+{
+  "id": "pentaryn-dice",
+  "title": "Pentaryn Dice",
+  "description": "Dice So Nice persistent dice, made easier for big physical-style rolls: a count box on each die in the Dice So Nice tab (\"+ ×8\" puts 8d6 on the table in one click), Select all mine, Select all of one type, Clear selection, the Ctrl+click hint shown inline, and Alt+A to select all your dice (rebindable; not Ctrl+A, which selects tokens). Per-client; drives Dice So Nice's own persistent-dice state and writes nothing of its own. Exposes game.pentaryn.dice.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.370"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "relationships": {
+    "systems": [],
+    "requires": [
+      {
+        "id": "dice-so-nice",
+        "type": "module",
+        "compatibility": {
+          "minimum": "6.4",
+          "verified": "6.4.5"
+        },
+        "reason": "Every helper drives Dice So Nice's persistent dice (game.dice3d.persistent, the box's persistentDiceManager) and its sidebar tab."
+      }
+    ]
+  },
+  "esmodules": [
+    "dice.mjs"
+  ],
+  "styles": [
+    "styles/dice.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": false,
+  "flags": {
+    "pentaryn": {
+      "tier": "small",
+      "namespace": "dice",
+      "flagScope": "pentaryn-dice",
+      "cssPrefix": "pdi-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Dice' (core.moduleConfiguration[\"pentaryn-dice\"] = true), then reload.",
+        "  game.pentaryn.dice.selftest()   // the six Dice So Nice internals; needs DSN's persistent dice setting on"
+      ]
+    }
+  }
+}

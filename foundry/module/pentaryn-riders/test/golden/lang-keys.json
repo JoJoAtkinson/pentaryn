@@ -70,6 +70,7 @@
   "PENTARYN_RIDERS.spellView.allTip",
   "PENTARYN_RIDERS.spellView.hiddenNote",
   "PENTARYN_RIDERS.usage.staleConcentration",
+  "PENTARYN_RIDERS.duration.left",
   "PENTARYN_RIDERS.rest.title",
   "PENTARYN_RIDERS.rest.omen.label",
   "PENTARYN_RIDERS.rest.omen.read",
@@ -81,7 +82,10 @@
   "PENTARYN_RIDERS.rest.omen.wealShort",
   "PENTARYN_RIDERS.rest.omen.woeShort",
   "PENTARYN_RIDERS.rest.omen.redirect",
+  "PENTARYN_RIDERS.rest.omen.redirectStored",
   "PENTARYN_RIDERS.rest.omen.gone",
+  "PENTARYN_RIDERS.rest.omen.decides",
+  "PENTARYN_RIDERS.rest.omen.decidesLine",
   "PENTARYN_RIDERS.rest.spells.label",
   "PENTARYN_RIDERS.rest.spells.review",
   "PENTARYN_RIDERS.rest.spells.reviewTip",
@@ -95,9 +99,11 @@
   "PENTARYN_RIDERS.empower.die",
   "PENTARYN_RIDERS.empower.none",
   "PENTARYN_RIDERS.empower.note",
+  "PENTARYN_RIDERS.empower.noteTotal",
   "PENTARYN_RIDERS.empower.change",
   "PENTARYN_RIDERS.empower.superseded",
   "PENTARYN_RIDERS.empower.noUse",
   "PENTARYN_RIDERS.empower.createFailed",
-  "PENTARYN_RIDERS.empower.retireFailed"
+  "PENTARYN_RIDERS.empower.retireFailed",
+  "PENTARYN_RIDERS.empower.useCard"
 ]

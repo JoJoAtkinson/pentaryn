@@ -148,6 +148,9 @@
 }
 .activity-choice button.pr-omen-today { border-color: var(--dnd5e-color-gold, #9f9275); }
 .activity-choice button.pr-omen-today .pr-omen-badge { position: static; margin-left: auto; }
+/* No omen stored yet (d3rePk): the die decides — one line above the choices, each omen's button badged. */
+.pr-omen-decides { margin: 0 0 0.5rem; font-style: italic; }
+.activity-choice button.pr-omen-die .pr-omen-badge { position: static; margin-left: auto; background: var(--dnd5e-color-light-gray, #c8c3b6); }
 
 /* Empowered Spell on a damage card (empower.mjs): the button, the note, the retired card. */
 .chat-message .pr-empower { margin-top: 0.375rem; display: flex; }
@@ -155,6 +158,9 @@
 .chat-message p.pr-empower-note { margin: 0.25rem 0 0; text-align: center; }
 .chat-message p.pr-superseded { margin: 0.25rem 0 0; text-align: center; font-style: italic; opacity: 0.8; }
 .chat-message.pr-superseded-card .dice-roll .total { text-decoration: line-through; opacity: 0.6; }
+/* The empowered card's rerolled dice (F1, GDJJdi): the old face fainter, the new one ringed in gold. */
+.chat-message .dice-rolls li.roll.pr-emp-old { opacity: 0.45; }
+.chat-message .dice-rolls li.roll.pr-emp-new { outline: 2px solid var(--dnd5e-color-gold, #9f9275); outline-offset: -2px; font-weight: bold; }
 .pr-emp-row .pr-emp-dice { justify-content: flex-start; gap: 0.5rem; flex-wrap: wrap; }
 .pr-emp-row .pr-emp-dice label { display: inline-flex; align-items: center; gap: 0.25rem; }
 .pr-emp-total { text-align: right; font-weight: bold; }

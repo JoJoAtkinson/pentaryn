@@ -60,6 +60,13 @@
         "Name": "Saves from the area",
         "Hint": "When a save spell's damage is rolled, list the creatures in its area, roll the monsters' saves and ask the players for theirs. Nothing is applied until the GM presses Apply."
       },
+      "showAppliedBy": {
+        "Name": "Who sees \"Applied by\" under a card",
+        "Hint": "Under a damage or healing card's Apply tray, one line per Apply: who pressed it, who took it and how much (\"Applied by Talo → Talo (+11)\"). The GM always sees it. Players never see a monster's row.",
+        "gm": "The GM only",
+        "owners": "The GM, the card's roller and the owners of who took it",
+        "all": "Everyone"
+      },
       "npcSaveRollMode": {
         "Name": "Monster save visibility",
         "Hint": "Roll mode for saves the GM's client rolls for monsters.",
@@ -129,6 +136,10 @@
       "applyFromCard": {
         "Name": "Apply from the card",
         "Hint": "Apply on a damage or healing card does three more things. A row for a token the player does not own (healing an ally) is applied by the GM's client for them, with the same multiplier; a short note appears only if no GM is connected. A card that recorded no targets fills with the player's current targets as they target. Every row has a small total, pre-filled with the rolled total: type the number from real dice and that is what Apply uses, with the multiplier on top."
+      },
+      "hitMissLabels": {
+        "Name": "Say Hit or Miss on attacks",
+        "Hint": "An attack card says Hit (blue) or Miss (orange) in its title (on each target when there are several), a miss adds a \"Miss — no damage\" line, and the damage roll after a hit gets a blue title. Shown only when dnd5e's attack roll visibility lets players know hit or miss (not when it is None); the AC stays hidden with \"Hide AC\"."
       }
     },
     "Keybinding": {
@@ -163,7 +174,19 @@
       "AmountTip": "Total to apply to this target: pre-filled with the rolled total; type the number from real dice to use it instead. The multiplier still applies on top. A typed total lasts until Apply or a page reload.",
       "NoGm": "No GM is connected, so {names} did not take this. The GM can apply it from this card.",
       "RelayFailed": "The GM's client could not apply this to {names} ({reason}). The GM can apply it from this card.",
-      "GmTray": "Not from here for {names}: a save spell's damage lands from the GM's save tray, once the saves are in."
+      "GmTray": "Not from here for {names}: a save spell's damage lands from the GM's save tray, once the saves are in.",
+      "AppliedBy": "Applied by {user} → {rows}",
+      "AppliedRow": "{name} ({delta})"
+    },
+    "Attack": {
+      "Hit": "Hit",
+      "Miss": "Miss",
+      "TitleHit": "— Hit",
+      "TitleMiss": "— Miss",
+      "MissLine": "Miss — no damage"
+    },
+    "Panels": {
+      "Counter": "Panel {n} of {total}: Esc to finish, right-click skips a panel"
     }
   }
 }

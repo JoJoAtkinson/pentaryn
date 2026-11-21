@@ -151,6 +151,28 @@ export function sourceActorFor(p = {}) {
 }
 
 /**
+ * Durations say "left" (VDalcb, triage K: Caven could not tell time left from time passed). dnd5e's
+ * `ActiveEffect5e#getDurationParts` answers core's remaining-duration label split on ", " ("9 rounds",
+ * "1 hr", "30 min"); the sheet's Effects tab and the effect tooltip print the first two parts. Only a
+ * duration that counts down gets the word: one dnd5e times (`supportsDuration`), with time still left
+ * (`remaining` finite and above 0), and not a start- or end-of-turn special (dnd5e draws those as an icon
+ * and "Start" / "End"). Core already says "… ago" once an effect has run out, and "Now" at 0.
+ * @param {string[]} parts  what getDurationParts answered
+ * @param {{ supportsDuration?: boolean, remaining?: number, special?: string|null }} state
+ * @param {(part: string) => string} left  "9 rounds" → "9 rounds left" (the localized wording)
+ * @returns {string[]}  a new array with the last printed part worded, or `parts` itself, untouched
+ */
+export function durationLeftParts(parts, { supportsDuration = false, remaining = NaN, special = null } = {}, left) {
+  if (!Array.isArray(parts) || !parts.length || typeof left !== "function") return parts;
+  if (supportsDuration !== true || special) return parts;
+  const r = Number(remaining);
+  if (!Number.isFinite(r) || r <= 0) return parts;
+  const at = Math.min(parts.length, 2) - 1;   // the templates print parts [0] and [1]
+  if (typeof parts[at] !== "string" || !parts[at].trim()) return parts;
+  return parts.map((p, i) => (i === at ? left(p) : p));
+}
+
+/**
  * Does this item have an activity that spends another item's uses (`itemUses` consumption)?
  * Argon's badge on such a button shows the other item's uses, but Argon only re-renders the
  * button when its OWN item changes.

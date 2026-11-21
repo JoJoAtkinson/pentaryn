@@ -12,6 +12,8 @@
  *        marker _prPlaceDefault                                row riders-summon-place-default
  *     4. dnd5e `SummonActivity#getPlacement`         a wildcard summon image previews as a real one
  *        marker _prWildcard                                    row riders-summon-wildcard-preview
+ *     7. dnd5e `ActiveEffect5e#getDurationParts`     a duration that counts down says "left" (VDalcb)
+ *        marker _prDurationLeft                                row riders-duration-left
  *   lazily, per prototype, from argon-tidy's `renderItemButtonArgonComponent` (wrapItemButton) —
  *   Argon dnd5e's item-button class is closure-private, reachable only through a rendered button:
  *     5. its `targets` getter        a Metamagic button opens no target picker
@@ -25,7 +27,7 @@
  */
 
 import { MODULE } from "./riders-core.mjs";
-import { isWildcardPath, placeSummonsDefault, skipsTargetPicker } from "./table-core.mjs";
+import { durationLeftParts, isWildcardPath, placeSummonsDefault, skipsTargetPicker } from "./table-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { buttonPanelButtonClass } from "./argon.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -122,12 +124,39 @@ function patchWildcard(ctx) {
   }, { log: ctx.log }));
 }
 
-/** At `ready`: patches 1-4, in today's order. A failure is warned and the rest still install. */
+/* ── 7. durations say "left" ─────────────────────────────────────────────── */
+
+// The sheet's Effects tab (templates/shared/active-effects.hbs, through getSheetContext) and the effect
+// tooltip (richTooltip) both print getDurationParts: one wrap covers both. Pure rule: table-core
+// durationLeftParts. A CONFIG-level class, so every effect (actor, item, condition) gets it.
+function patchDurationLeft(ctx) {
+  const proto = CONFIG.ActiveEffect?.documentClass?.prototype;
+  if (typeof proto?.getDurationParts !== "function" || proto.getDurationParts._prDurationLeft) return;
+  keep(wrapMethod(MODULE, {
+    target: proto, name: "getDurationParts", label: "dnd5e ActiveEffect5e#getDurationParts",
+    marker: "_prDurationLeft", adjustments: "riders-duration-left",
+  }, function (wrapped, ...args) {
+    const parts = wrapped(...args);
+    try {
+      return durationLeftParts(parts, {
+        supportsDuration: this.expirySupportsDuration?.() === true,
+        remaining: this.duration?.remaining,
+        special: this.specialDuration ?? null,
+      }, duration => _loc("PENTARYN_RIDERS.duration.left", { duration }));
+    } catch (err) {
+      ctx.log.debug("duration left as dnd5e worded it", err);
+      return parts;
+    }
+  }, { log: ctx.log }));
+}
+
+/** At `ready`: patches 1-4 in today's order, then 7. A failure is warned and the rest still install. */
 export function installPatches(ctx) {
   try { patchRituals(ctx); } catch (err) { ctx.log.warn("Rituals group not installed", err); }
   try { patchEnrich(ctx); } catch (err) { ctx.log.warn("tooltip roll data skipped", err); }
   try { patchPlaceDefault(ctx); } catch (err) { ctx.log.warn("Place Summons default not installed", err); }
   try { patchWildcard(ctx); } catch (err) { ctx.log.warn("summon wildcard preview skipped", err); }
+  try { patchDurationLeft(ctx); } catch (err) { ctx.log.warn("durations left as dnd5e words them", err); }
 }
 
 /* ── 5 + 6: Argon dnd5e's item button, per prototype, when a button renders ── */

@@ -410,7 +410,7 @@ check("player status line: waiting, applied, superseded, nothing to say",
 test("module.json is pentaryn-aoe 0.6.4", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.6.4");
+  assert.equal(manifest.version, "0.7.0");
 });
 
 test("VERSION === module.json version", () => {

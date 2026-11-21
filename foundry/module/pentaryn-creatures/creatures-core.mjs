@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-creatures";
 export const SHORT = "creatures";
 export const NS = "creatures";
-export const VERSION = "0.4.1";
+export const VERSION = "0.5.0";
 export const CONTRACT = "pentaryn-creatures/api@1";
 export const I18N = "PENTARYN_CREATURES";
 export const CSS = "pcr-";
@@ -630,4 +630,163 @@ export function combatantRelabels(combatants, tokenId, flag) {
     if ("name" in u || "img" in u) out.push(u);
   }
   return out;
+}
+
+/* -------------------------------------------- */
+/*  Public and hidden markers (unit N)          */
+/* -------------------------------------------- */
+
+/*
+ * Which status markers a player sees on a creature they do not observe. dnd5e decides per effect
+ * and per viewer with ActiveEffect5e#isConcealed (a concealed effect draws no token icon, no sheet
+ * row, no combat-tracker icon and no scrolling text); markers.mjs wraps it and asks concealFor. The
+ * line is "what you could see across a real table": a prone or bloodied goblin is visible, a charmed
+ * or poisoned one is not, and an enemy's Mage Armor or Bless is the GM's to describe. The effect data
+ * still reaches every client; only the drawing is hidden.
+ *
+ * Stored in the world setting `markerTable` as overrides only: { statuses: { id: "public"|"gm" },
+ * other: "public"|"gm", friendlyAll: boolean }. A status the stored value does not name falls back
+ * to MARKER_PUBLIC_DEFAULTS (Public) or GM only.
+ */
+
+export const MARKER_PUBLIC = "public";
+export const MARKER_GM = "gm";
+export const MARKER_VALUES = Object.freeze([MARKER_PUBLIC, MARKER_GM]);
+
+/** The statuses Public by default (Joe, 2026-11-21); every other status is GM only on a non-friendly token. */
+export const MARKER_PUBLIC_DEFAULTS = Object.freeze([
+  "bloodied", "dead", "unconscious", "prone", "grappled", "restrained", "paralyzed", "petrified", "stunned",
+  "incapacitated", "sleeping", "burning", "bleeding", "flying", "hovering", "burrowing", "dodging",
+  "transformed", "invisible",
+]);
+
+/** The defaults of the two rows that are not a status. */
+export const MARKER_DEFAULTS = Object.freeze({ other: MARKER_GM, friendlyAll: true });
+
+const markerValue = (v, fallback) => (MARKER_VALUES.includes(v) ? v : fallback);
+const statusDefault = id => (MARKER_PUBLIC_DEFAULTS.includes(id) ? MARKER_PUBLIC : MARKER_GM);
+
+/**
+ * The effective table: one Public / GM only per status id the world has (CONFIG.statusEffects), the
+ * "other spell and item effects" row and the friendly toggle. Junk in the stored value is ignored.
+ * @param {string[]} statusIds  every CONFIG.statusEffects id, in the world's order
+ * @param {object} [stored]     the `markerTable` setting
+ * @returns {{ statuses: Record<string, "public"|"gm">, other: "public"|"gm", friendlyAll: boolean }}
+ */
+export function markerTable(statusIds, stored = {}) {
+  const s = stored && typeof stored === "object" ? stored : {};
+  const overrides = s.statuses && typeof s.statuses === "object" ? s.statuses : {};
+  const statuses = {};
+  for (const id of statusIds ?? []) {
+    if (typeof id !== "string" || !id) continue;
+    statuses[id] = markerValue(overrides[id], statusDefault(id));
+  }
+  return {
+    statuses,
+    other: markerValue(s.other, MARKER_DEFAULTS.other),
+    friendlyAll: typeof s.friendlyAll === "boolean" ? s.friendlyAll : MARKER_DEFAULTS.friendlyAll,
+  };
+}
+
+/**
+ * The value to store for an effective table: only the rows that differ from the defaults, so a
+ * status added later by dnd5e or a module picks up its own default.
+ * @param {{ statuses?: object, other?: string, friendlyAll?: boolean }} table
+ */
+export function markerOverrides(table = {}) {
+  const statuses = {};
+  for (const [id, v] of Object.entries(table?.statuses ?? {})) {
+    if (MARKER_VALUES.includes(v) && v !== statusDefault(id)) statuses[id] = v;
+  }
+  const out = { statuses };
+  if (MARKER_VALUES.includes(table?.other) && table.other !== MARKER_DEFAULTS.other) out.other = table.other;
+  if (typeof table?.friendlyAll === "boolean" && table.friendlyAll !== MARKER_DEFAULTS.friendlyAll) out.friendlyAll = table.friendlyAll;
+  return out;
+}
+
+/**
+ * Should this effect's marker be hidden from this viewer?
+ *
+ * - A GM, or a viewer who owns or observes the creature, sees everything (dnd5e's own OBSERVER rule).
+ * - A dormant token (disguised as a prop) shows nothing at all until it wakes.
+ * - A friendly token shows everything while `friendlyAll` is on.
+ * - An effect that carries at least one status the table knows is shown when any of those statuses
+ *   is Public (a Hold Person effect carrying `paralyzed` shows: the paralysis is visible).
+ * - An effect with no known status (Mage Armor, Bless, Hex) follows the `other` row.
+ *
+ * @param {Iterable<string>} statusIds  the effect's statuses
+ * @param {{ isGM?: boolean, isObserver?: boolean }} viewer
+ * @param {{ dormant?: boolean, friendly?: boolean }} token
+ * @param {{ statuses: object, other: string, friendlyAll: boolean }} settings  markerTable()'s result
+ */
+export function concealFor(statusIds, viewer = {}, token = {}, settings = {}) {
+  if (viewer?.isGM || viewer?.isObserver) return false;
+  if (token?.dormant) return true;
+  if (token?.friendly && settings?.friendlyAll !== false) return false;
+  const table = settings?.statuses ?? {};
+  const known = [...(statusIds ?? [])].filter(id => Object.hasOwn(table, id));
+  if (!known.length) return (settings?.other ?? MARKER_DEFAULTS.other) !== MARKER_PUBLIC;
+  return !known.some(id => table[id] === MARKER_PUBLIC);
+}
+
+/**
+ * Combine dnd5e's answer with ours. dnd5e's own reasons (an unidentified item, a disabled origin,
+ * `system.isConcealed`) always stand; its Bloodied rule (`dnd5e.bloodied = "player"`) is replaced by
+ * the table, so Bloodied follows its own row whatever that setting says.
+ * @param {{ base: boolean, bloodiedRuleOnly?: boolean, ours?: boolean }} s
+ */
+export function finalConceal({ base, bloodiedRuleOnly = false, ours = false } = {}) {
+  return (!!base && !bloodiedRuleOnly) || !!ours;
+}
+
+/**
+ * The status ids of a CONFIG.statusEffects value: dnd5e keeps an object keyed by id, core an array
+ * of `{ id }`. Entries without an id are skipped.
+ */
+export function statusIdsOf(statusEffects) {
+  if (Array.isArray(statusEffects)) return statusEffects.map(s => s?.id).filter(id => typeof id === "string" && id);
+  if (!statusEffects || typeof statusEffects !== "object") return [];
+  return Object.entries(statusEffects).map(([k, s]) => s?.id ?? k).filter(id => typeof id === "string" && id);
+}
+
+/**
+ * The menu's status rows: `{ id, name, img, value }` per CONFIG.statusEffects entry, in the
+ * world's order. `name` is the raw label (an i18n key or text); the menu localizes it.
+ */
+export function markerMenuRows(statusEffects, table) {
+  const list = Array.isArray(statusEffects)
+    ? statusEffects
+    : Object.entries(statusEffects ?? {}).map(([k, s]) => ({ ...s, id: s?.id ?? k }));
+  return list
+    .filter(s => typeof s?.id === "string" && s.id)
+    .map(s => ({
+      id: s.id,
+      name: s.name ?? s.label ?? s.id,
+      img: s.img ?? s.icon ?? null,
+      value: table?.statuses?.[s.id] ?? statusDefault(s.id),
+    }));
+}
+
+/**
+ * The effective table from the menu's submitted form (flat keys): `status.<id>` → "public"|"gm",
+ * `other` → "public"|"gm", `friendlyAll` → boolean (absent = an unchecked box = false). Status or
+ * `other` rows the form leaves out keep their default.
+ */
+export function markerTableFromForm(flat, statusIds) {
+  const f = flat && typeof flat === "object" ? flat : {};
+  const statuses = {};
+  for (const id of statusIds ?? []) statuses[id] = markerValue(f[`status.${id}`], statusDefault(id));
+  return {
+    statuses,
+    other: markerValue(f.other, MARKER_DEFAULTS.other),
+    friendlyAll: typeof f.friendlyAll === "boolean" ? f.friendlyAll : f.friendlyAll === "true" || f.friendlyAll === "on",
+  };
+}
+
+/** Does a token update change what concealFor answers (the dormant flag, the disposition)? */
+export function markersMayChange(changes) {
+  if (!changes || typeof changes !== "object") return false;
+  if ("disposition" in changes) return true;
+  const f = changes.flags?.[MODULE];
+  return !!f && typeof f === "object" && (DORMANT_FLAG in f || `-=${DORMANT_FLAG}` in f);
 }

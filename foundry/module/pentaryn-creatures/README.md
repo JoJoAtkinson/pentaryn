@@ -5,7 +5,9 @@ Arcane Eye, steed), a creature glows when it shouldn't (or doesn't when it shoul
 "Your creatures" strip is missing or wrong, a player can't summon ("You must have 'Create New
 Actors' permission in order to summon directly from a compendium"), or summon copies pile up loose
 in "Player Characters" or the Actors root. Also: a monster that should look like a statue (a prop)
-until the fight starts — **dormant until combat** (0.4.0).
+until the fight starts — **dormant until combat** (0.4.0). Also: players see too much (Charmed,
+Concentrating, an enemy's Mage Armor) or too little (Bloodied) on a monster's token, or a statue gives
+itself away with a marker — **public and hidden token markers** (unit N, Unreleased).
 
 Table feedback 2026-10-08, item C3. Four parts, one module: a creature light, owners always see
 their own tokens, the "Your creatures" strip, and the summon library (0.2.0, feedback
@@ -115,6 +117,40 @@ wake puts them back: shrink the statue (`texture.scaleX/Y`) or turn it (rotation
 like, and the creature still wakes at its own size and upright. To wake it bigger or smaller, set
 `flags.pentaryn-creatures.dormant.look.texture.scaleX` and `scaleY` on the armed token.
 
+**No markers while dormant (unit N).** With public and hidden markers on (below), a dormant token
+shows players no status marker at all — not Bloodied, not Prone — until it wakes, so a damaged statue
+does not give itself away.
+
+### Public and hidden token markers
+
+The line is **what you could see across a real table**. On a creature a player does not own or
+observe, a status marker shows only when its row in **Configure Settings → Pentaryn Creatures →
+Token markers** (GM only) is **Public**; the rest is the GM's to describe.
+
+| Default | Statuses |
+|---|---|
+| **Public** | Bloodied, Dead, Unconscious, Prone, Grappled, Restrained, Paralyzed, Petrified, Stunned, Incapacitated, Sleeping, Burning, Bleeding, Flying, Hovering, Burrowing, Dodging, Transformed, Invisible |
+| **GM only** | every other status: Charmed, Frightened, Poisoned, Exhaustion, Cursed, Surprised, Stable, Deafened, Blinded, Silenced, Suffocation, Hiding, Ethereal, Marked, **Concentrating**, and any status a module adds |
+
+- **Other spell and item effects on enemies** (Mage Armor, Shield of Faith, Bless, Hex: an effect
+  with no status the table knows): one row, **GM only** by default.
+- **Friendly tokens show every marker**: on by default. Off: a friendly token follows the table too.
+- An effect that carries several statuses shows when **any** of them is Public (Hold Person's effect
+  with `paralyzed` shows).
+- **A dormant token shows nothing**, friendly or not, until it wakes.
+- **The GM, owners and observers always see everything**; a player always sees their own character.
+
+It works through dnd5e's own per-viewer check (`ActiveEffect5e#isConcealed`), so a hidden marker is
+missing everywhere dnd5e draws one: the token icon, the combat tracker, the sheet's effects list and
+the scrolling status text. The effect data still reaches every client; only the drawing is hidden.
+dnd5e's own reasons to hide an effect (an unidentified item, a disabled origin) still apply.
+
+**Bloodied and dnd5e's setting.** With this on, Bloodied follows its own row (Public by default)
+whatever dnd5e's *Bloodied* setting says, but dnd5e only **applies** Bloodied to monsters under
+`dnd5e.bloodied = "all"`. So set that once: `game.settings.set("dnd5e", "bloodied", "all")` ("none"
+applies it to nobody). Switch *Public and hidden token markers* off and dnd5e's rule is back
+exactly as before (under "player", Bloodied hides on non-friendly tokens; every other marker public).
+
 ## Settings
 
 | Setting | Key | Scope | Default | What |
@@ -124,6 +160,8 @@ like, and the creature still wakes at its own size and upright. To wake it bigge
 | Strip floats above the Combat HUD | `floatOverHud` | world | on | off: stays above the hotbar |
 | Show the "Your creatures" strip | `showStrip` | client | on | this client's strip |
 | Summon library for players | `summonLibrary` | world | on | the relay and the filing; off: dnd5e's refusal, nothing filed |
+| Public and hidden token markers | `markers` | world | on | the marker table; off: dnd5e's own rule only |
+| Token markers (menu, GM only) | `markerTable` | world, hidden | `{}` | the menu's rows, overrides only: `{ statuses: { <id>: "public"\|"gm" }, other, friendlyAll }`; edit through the menu |
 
 Every read is live: a change applies without a reload. Labels: `PENTARYN_CREATURES.settings.<key>.name/hint`.
 
@@ -208,7 +246,8 @@ None of its own; the kit fires `pentaryn-creatures.ready` `(api)` and `pentaryn.
 `controlToken` (the strip); `init`, `setup` (owner-sees), `setup` (the wrap), `dnd5e.postSummon`
 (filing; dnd5e fires it on the summoning client only), `updateCombat`, `createCombatant` (dormant
 until combat: core fires `combatStart` only on the client that began the combat, so the round change
-is the trigger), `ready`, `ready`. Queries, registered on
+is the trigger), `setup` (the markers wrap), `updateToken` (a dormant flag or disposition change
+redraws that token's markers), `ready`, `ready`. Queries, registered on
 every client (relay: any sender, the active GM answers): `pentaryn-creatures.summonActor`,
 `pentaryn-creatures.fileLibrary`.
 
@@ -218,6 +257,7 @@ every client (relay: any sender, the active GM answers): `pentaryn-creatures.sum
 |---|---|---|
 | `Actor5e.fetchExisting` (dnd5e, static) | `creatures-summon-library` | libWrapper `WRAPPER` on `dnd5e.documents.Actor5e.fetchExisting`, else direct; marker `__pentarynCreaturesSummon`. dnd5e runs first; only its Create New Actors refusal, on a player during a summon, goes to the GM. The row also covers the `dnd5e.postSummon` filing |
 | `Token#isVisible` (getter) | `creatures-libwrapper` | libWrapper `WRAPPER` when lib-wrapper is active, else the getter is replaced; marker `__pentarynCreaturesVisible`. Reads private `_preview._previewType`, `isFilteredOut`, `_testCulled()` |
+| `ActiveEffect5e#isConcealed` (dnd5e, getter) | `creatures-dnd5e-effect-isconcealed` | libWrapper `WRAPPER` on `CONFIG.ActiveEffect.documentClass.prototype.isConcealed`, else the getter is replaced; marker `__pentarynCreaturesConcealed`. dnd5e runs first; for a non-observing player its Bloodied rule is replaced by the table and `concealFor` is added. Never throws (a failure answers dnd5e's value and warns once, `marker check failed`) |
 | — (not patches) | `argon-creatures-strip-float`, `itempiles-creatures-pile-flag` | the Argon DOM read in `strip.mjs`; the Item Piles flag read |
 
 ## Two sessions / who writes
@@ -268,6 +308,7 @@ module's flag → a predicate in core, read through an adapter, listed in `MANIF
 | `light.mjs` · `owner-sees.mjs` · `creature-strip.mjs` | features: the light queue · the `isVisible` wrap · when the strip redraws |
 | `summons.mjs` | feature: the library (the `fetchExisting` wrap, the GM relay, `postSummon` filing, the sweep, `library`) |
 | `dormant.mjs` | feature: dormant until combat (`arm`/`wake`, the combat triggers) |
+| `markers.mjs` · `markers-menu.mjs` | feature: public and hidden markers (the `isConcealed` wrap, the redraws) · UI: the Token markers menu |
 | `summons-adapter.mjs` | dnd5e summon activities / source / copy → plain data; the copy's create data |
 | `strip.mjs` | UI: the strip's DOM and the Combat HUD dock |
 | `api-manifest.mjs`, `api.mjs` | the published API |
@@ -278,7 +319,9 @@ module's flag → a predicate in core, read through an adapter, listed in `MANIF
 `node test/run.mjs` from this folder: the legacy core suite, core seams, the glue on a GM and a
 player client (each declared change's pin moved in its own commit), the patch paths, the dock poll,
 the hook manifest, the API goldens, the summon library (`test/summons.test.mjs`: relay, refusals,
-the two-tab race, filing, the sweep), i18n and CSS scope. Synthetic fixtures (`test/` ships with the
+the two-tab race, filing, the sweep), the markers (`test/markers.test.mjs`: `concealFor` pinned in
+`test/golden/conceal.json`; `test/glue-markers*.test.mjs`: the wrap against dnd5e 6.1.1's rule, both
+patch routes, the menu), i18n and CSS scope. Synthetic fixtures (`test/` ships with the
 module). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, then review the diff.
 Gates: `vendor.py check creatures`, `conformance.py --module creatures`.
 
@@ -286,6 +329,9 @@ Gates: `vendor.py check creatures`, `conformance.py --module creatures`.
 drawn; `status().patchedWith` is not `null`. **Library:** cast Mage Hand as a Trusted player with a
 GM online: the copy lands in `PC Summons & Forms/<name> — summons & forms`; cast again: no new actor.
 As the GM: `await game.pentaryn.creatures.fileLibrary({ dryRun: true })` lists loose copies.
+**Markers:** as the GM put Prone, Frightened, Concentrating and Mage Armor on a monster; as a player
+only Prone shows on its token and in the combat tracker; make it dormant: no markers at all;
+`status().markersPatched` is not `null`.
 
 ## Sync
 

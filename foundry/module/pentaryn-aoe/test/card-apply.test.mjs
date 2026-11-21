@@ -173,7 +173,13 @@ test("Apply as a player: the owned row lands here with the typed total; the row 
   assert.equal(relay.data.messageId, msg.id);
   assert.match(relay.data.requestId, /^[A-Za-z0-9]{16}$/);
   assert.deepEqual(ops("notify"), []);
-  assert.deepEqual(ops("update"), [], "a card with recorded targets is not rewritten");
+  // G2: every Apply is stamped, with this client's own rows for the "Applied by" line; a card with
+  // recorded targets keeps them (no system.targets write).
+  const updates = ops("update");
+  assert.equal(updates.length, 1);
+  assert.equal("system.targets" in updates[0].changes, false, "a card with recorded targets is not rewritten");
+  const entry = Object.entries(updates[0].changes).find(([k]) => k.startsWith(`flags.${MODULE}.appliedLog.`))?.[1];
+  assert.deepEqual(entry.rows.map(r => [r.token, r.delta, r.pc]), [[MR, -12, true]], "Marrith's own row; Caven's is the GM's to log");
   assert.equal(P.amounts.has(msg.id), false, "the typed totals are spent");
   assert.equal(ops("query")[0].name, RELAY);
 });
@@ -235,14 +241,20 @@ test("F3: the GM's client refusing or failing the relay is logged AND the player
   }
 });
 
-test("the GM's card listing two PCs (a breath weapon): the player's own row lands, the ally's row is skipped silently — no query, no toast", async () => {
+test("the GM's card listing two PCs (a breath weapon): the player's own row lands, the ally's row is skipped silently — no rows relayed, no toast", async () => {
   const msg = healCard("healCard00000020", { author: GM_ID, isAuthor: false, type: "fire", total: 8 });   // no associated actor: the dragon is nobody's
   const c = card(msg, [MR, CV], { bare: [CV] });
   c.built();
   reset();
   await c.apply();
   assert.deepEqual(ops("applyDamage").map(c => c.actor), [ctx.wizard.uuid]);
-  assert.deepEqual([ops("relay"), ops("query"), ops("notify")], [[], [], []]);
+  assert.deepEqual(ops("notify"), []);
+  // G2: the player may not write the GM's card, so the one query is log-only: no rows, Marrith's landed row
+  const [relayed, ...more] = ops("relay");
+  assert.equal(more.length, 0);
+  assert.deepEqual(relayed.data.rows, [], "the ally's row is not relayed");
+  assert.deepEqual(relayed.data.landed.map(r => [r.token, r.delta]), [[MR, -8]]);
+  reset();
   const result = await P.applyCard(msg, c.el);
   assert.deepEqual([result.local, result.relay, result.skipped], [[MR], [], [CV]], "the same press, as the function reports it");
   assert.deepEqual(ops("update"), [], "not the author: the card is not written");

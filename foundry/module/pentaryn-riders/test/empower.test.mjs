@@ -105,6 +105,69 @@ test("empowerRolls: junk picks (an inactive face, a non-linear die, out of range
   assert.deepEqual(core.empowerRolls(null, [], () => 1), { rolls: [], changes: [], delta: 0 });
 });
 
+test("F1 rollsTotal: each roll's total floored at 0, summed (dnd5e's card total); junk reads 0", () => {
+  assert.equal(core.rollsTotal([{ total: 35 }, { total: 6 }]), 41);
+  assert.equal(core.rollsTotal([{ total: -3 }, { total: 4 }]), 4);
+  assert.equal(core.rollsTotal([{ total: "x" }, null]), 0);
+  assert.equal(core.rollsTotal(null), 0);
+});
+
+test("F1 rerolledFaces: each change's old and new face where they landed (earlier changes in the term shift it), raw faces, class and flavor; a change that points at no pair is skipped", () => {
+  const faces = [6, 4, 1, 3];
+  const out = core.empowerRolls([fireball()], core.empowerPlan([fireball()], 5), () => faces.shift());
+  const got = core.rerolledFaces(out.rolls, out.changes);
+  assert.deepEqual(got.map(f => [f.oldIndex, f.newIndex, f.old, f.fresh]), [[0, 1, 1, 3], [2, 3, 2, 1], [4, 5, 3, 4], [10, 11, 2, 6]], "the 1 under min2 prints 1; the new 1 under min2 prints 1 too");
+  assert.deepEqual([got[0].faces, got[0].cls, got[0].flavor, got[0].roll, got[0].term], [6, "BasicDie", "fire", 0, 0]);
+  assert.deepEqual(core.rerolledFaces(out.rolls, [{ roll: 0, term: 2, result: 0 }, { roll: 4, term: 0, result: 0 }]), [], "a number term, a missing roll");
+  assert.deepEqual(core.rerolledFaces([fireball()], [{ roll: 0, term: 0, result: 0 }]), [], "not rerolled: the face after is not new");
+  assert.deepEqual(core.rerolledFaces(null, null), []);
+});
+
+test("F1 matchChips: each rerolled face takes the first unused adjacent old-then-new pair in one list on its die size; a min2 die that only reads rerolled is passed over", () => {
+  const chip = (list, faces, label, rerolled = false) => ({ list, faces, label, rerolled });
+  const chips = [
+    chip(0, 6, "1", true),          // Elemental Adept's min2 1: rerolled, active — followed by an unrelated 5
+    chip(0, 6, "5"),
+    chip(0, 6, "1", true), chip(0, 6, "4"),   // the reroll: 1 → 4
+    chip(0, 6, "3", true), chip(1, 6, "3"),   // split across lists: never a pair
+    chip(1, 8, "2", true), chip(1, 8, "7"),   // a d8: 2 → 7
+  ];
+  assert.deepEqual(core.matchChips(chips, [{ faces: 6, old: 1, fresh: 4 }, { faces: 8, old: 2, fresh: 7 }]), [[2, 3], [6, 7]]);
+  assert.deepEqual(core.matchChips(chips, [{ faces: 6, old: 1, fresh: 4 }, { faces: 6, old: 1, fresh: 4 }]), [[2, 3]], "a pair is used once");
+  assert.deepEqual(core.matchChips(chips, [{ faces: 6, old: 3, fresh: 3 }]), [], "not in one list");
+  assert.deepEqual(core.matchChips(null, [{ faces: 6, old: 1, fresh: 4 }]), []);
+  assert.deepEqual(core.matchChips(chips, null), []);
+});
+
+test("F2 rerolledRollData: only the new faces, one term per die class, size and flavor, joined by +; null with nothing rerolled", () => {
+  const f = (faces, fresh, flavor = "fire", cls = "Die") => ({ faces, fresh, flavor, cls });
+  const data = core.rerolledRollData([f(6, 4), f(6, 3), f(8, 7, "cold"), f(6, 6)]);
+  assert.equal(data.class, "Roll");
+  assert.equal(data.formula, "3d6[fire] + 1d8[cold]");
+  assert.equal(data.total, 4 + 3 + 6 + 7);
+  assert.equal(data.evaluated, true);
+  assert.deepEqual(data.terms.map(t => t.class), ["Die", "OperatorTerm", "Die"]);
+  assert.deepEqual(data.terms[0], { class: "Die", number: 3, faces: 6, modifiers: [], results: [{ result: 4, active: true }, { result: 3, active: true }, { result: 6, active: true }], options: { flavor: "fire" }, evaluated: true });
+  assert.deepEqual(core.rerolledRollData([f(6, 2, null)]).terms[0].options, {}, "no flavor, no options");
+  assert.equal(core.rerolledRollData([]), null);
+  assert.equal(core.rerolledRollData([{ faces: 1, fresh: 1 }, { faces: 6, fresh: NaN }]), null, "junk is skipped");
+  assert.equal(core.rerolledRollData(null), null);
+});
+
+test("F3 waitingCardId: the caster's newest eligible card within 10 minutes; another actor's, an ineligible, a stale or a future card is never it", () => {
+  const now = 1_000_000_000;
+  const c = (id, timestamp, eligible = true, actorId = "a") => ({ id, actorId, timestamp, eligible });
+  assert.equal(core.waitingCardId([c("old", now - 120_000), c("new", now - 5_000), c("mid", now - 60_000)], { actorId: "a", now }), "new");
+  assert.equal(core.waitingCardId([c("x", now - 5_000, false), c("y", now - 9 * 60_000)], { actorId: "a", now }), "y", "the ineligible newest is skipped");
+  assert.equal(core.waitingCardId([c("stale", now - 10 * 60_000 - 1)], { actorId: "a", now }), null, "older than 10 minutes");
+  assert.equal(core.waitingCardId([c("edge", now - 10 * 60_000)], { actorId: "a", now }), "edge", "exactly 10 minutes still counts");
+  assert.equal(core.waitingCardId([c("theirs", now, true, "b")], { actorId: "a", now }), null);
+  assert.equal(core.waitingCardId([c("ahead", now + 5 * 60_000)], { actorId: "a", now }), null, "a clock far ahead is not trusted");
+  assert.equal(core.waitingCardId([c("nots", undefined), { timestamp: now, eligible: true, actorId: "a" }], { actorId: "a", now }), null, "no timestamp, no id");
+  assert.equal(core.waitingCardId([c("w", now - 70_000)], { actorId: "a", now, windowMs: 60_000 }), null, "the window is a parameter");
+  assert.equal(core.waitingCardId(null, { actorId: "a", now }), null);
+});
+
 /* ── the card ────────────────────────────────────────────────────────────── */
 
 const MAR = "marrith000000001", FONT = "fontofmagic00001", EMP = "empowered0000001", EMPACT = "empact0000000001", FIREBALL = "fireball00000009";
@@ -236,12 +299,67 @@ test("one click: the point through the feat's activity (no dialog, no card), the
   assert.deepEqual(card.flags[MODULE].empowered, { from: message.id, cost: 1, changes: [
     { roll: 0, term: 0, result: 0, faces: 6, from: 2, to: 3 }, { roll: 0, term: 0, result: 1, faces: 6, from: 2, to: 2 },
     { roll: 0, term: 0, result: 2, faces: 6, from: 3, to: 4 }, { roll: 0, term: 0, result: 7, faces: 6, from: 2, to: 6 },
-  ] });
+  ], oldTotal: 35 }, "F1: the card's total before the reroll joins the flag; from / cost / changes unchanged");
+  assert.deepEqual(Object.keys(card.flags[MODULE].empowered), ["from", "cost", "changes", "oldTotal"], "the flag's keys: pentaryn-aoe reads `from`");
   assert.equal(card.flags.core, undefined, "only our flags are copied");
   assert.equal(message.flags[MODULE].supersededBy, "newdmg0000000001");
   assert.deepEqual(F.calls.filter(c => c.op === "update").map(c => [c.uuid, c.changes]), [[`ChatMessage.${message.id}`, { [`flags.${MODULE}.supersededBy`]: "newdmg0000000001" }]]);
   assert.deepEqual(F.calls.filter(c => c.op === "notify"), []);
   assert.deepEqual(W.take().filter(l => l[0] !== "info"), []);
+});
+
+test("F2 Dice So Nice: every client stops DSN throwing an empowered card's whole roll (diceSoNiceMessagePreProcess); the clicking client throws the new faces alone, synchronised, with the card's whisper list and blind flag", async () => {
+  const thrown = [];
+  F.game.dice3d = { showForRoll: async (...args) => { thrown.push(args); return true; } };
+  globalThis.Roll.fromData = data => ({ fromData: JSON.parse(JSON.stringify(data)) });
+  const points = font().system.uses.value;
+  try {
+    const message = damageCard({ id: "dmg0000000000021" });
+    message.whisper = ["gmuser0000000001"];
+    message.toObject = () => ({ ...JSON.parse(JSON.stringify({ speaker: message.speaker, flavor: message.flavor, system: message.system, flags: message.flags })), whisper: ["gmuser0000000001"], blind: true });
+    const el = render(message);
+    created.length = 0;
+    uniforms.push(0.1, 0.4, 0.9, 0.5);    // the four low dice → 6, 4, 1, 3 (results 7, 2, 1, 0)
+    await button(el).click();
+    await drain();
+    assert.equal(created.length, 1);
+    const fresh = F.game.messages.get("newdmg0000000" + String(created.length).padStart(3, "0"));
+    assert.equal(thrown.length, 1, "one throw, from the clicking client");
+    const [roll, user, sync, whisper, blind, messageId] = thrown[0];
+    assert.equal(roll.fromData.formula, "4d6[fire]", "only the four rerolled dice");
+    assert.deepEqual(roll.fromData.terms[0].results.map(r => r.result), [3, 1, 4, 6], "raw faces, in roll order (the 1 that min2 reads as 2 is thrown as a 1)");
+    assert.deepEqual([user, sync, whisper, blind, messageId], [F.game.user, true, ["gmuser0000000001"], true, fresh.id]);
+    // every client's DSN decision for the empowered card: not thrown; any other card is left to DSN
+    const decide = id => { const d = { willTrigger3DRoll: true }; F.fire("diceSoNiceMessagePreProcess", id, d); return d.willTrigger3DRoll; };
+    assert.equal(decide(fresh.id), false, "the empowered card's whole roll is not animated");
+    assert.equal(decide(message.id), true, "the old card: untouched");
+    assert.equal(decide("nosuchmessage001"), true);
+    await F.game.settings.set(MODULE, "empoweredSpell", false);
+    assert.equal(decide(fresh.id), true, "the setting off: DSN as usual");
+    await F.game.settings.set(MODULE, "empoweredSpell", true);
+    // no Dice So Nice: nothing thrown, nothing warned
+    delete F.game.dice3d;
+    const other = damageCard({ id: "dmg0000000000022" });
+    const el2 = render(other);
+    uniforms.push(0.1, 0.4, 0.9, 0.5);
+    await button(el2).click();
+    await drain();
+    assert.equal(thrown.length, 1);
+    // a throw that fails is warned, never thrown; the cards stand
+    F.game.dice3d = { showForRoll: async () => { throw new Error("no webgl"); } };
+    const third = damageCard({ id: "dmg0000000000023" });
+    const el3 = render(third);
+    uniforms.push(0.1, 0.4, 0.9, 0.5);
+    W.take();
+    await button(el3).click();
+    await drain();
+    assert.ok(third.flags[MODULE].supersededBy, "the old card is retired all the same");
+    assert.deepEqual(W.take().filter(l => l[0] !== "info").map(l => l.slice(0, 3)), [["warn", `${MODULE} | Dice So Nice: the rerolled dice were not thrown`, "no webgl"]]);
+  } finally {
+    delete F.game.dice3d;
+    delete globalThis.Roll.fromData;
+    font().system.uses.value = points;   // the later tests count from here
+  }
 });
 
 test("the retired card: no apply tray, no button, one line; the new card: the note, no button", () => {
@@ -256,9 +374,26 @@ test("the retired card: no apply tray, no button, one line; the new card: the no
   Object.defineProperty(fresh, "getAssociatedItem", { value: () => mar.items.get(FIREBALL) });
   Object.defineProperty(fresh, "getAssociatedActor", { value: () => mar });
   const el2 = render(fresh);
-  assert.equal(el2.querySelector(".pr-empower-note").textContent, "Empowered Spell (1 SP): 2 → 3, 2 → 2, 3 → 4, 2 → 6");
+  assert.equal(el2.querySelector(".pr-empower-note").textContent, "Empowered Spell (1 SP): 2 → 3, 2 → 2, 3 → 4, 2 → 6 (35 → 41)", "F1: the totals before and after");
   assert.equal(button(el2), null, "once per spell");
   assert.ok(el2.querySelector("damage-application"), "the new card is the one to apply");
+  assert.deepEqual(W.take(), []);
+});
+
+test("F1: the empowered card's rerolled chips stand out (pr-emp-old, then pr-emp-new) in dnd5e's dice tooltip, once per render; the min2 1 that was not rerolled stays plain; a card from before oldTotal shows no totals", () => {
+  const fresh = F.game.messages.get("newdmg0000000001");
+  const tooltip = faces => `<div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls">${faces.map(([f, cls]) => `<li class="roll basicdie d6 ${cls}">${f}</li>`).join("")}</ol></div></section></div>`;
+  // dnd5e prints each result in term order: the old face (rerolled), then its new one
+  const list = [["1", "rerolled min"], ["3", ""], ["2", "rerolled"], ["1", "min"], ["3", "rerolled"], ["4", ""], ["4", ""], ["5", ""], ["6", "max"], ["6", "max"], ["2", "rerolled"], ["6", "max"]];
+  const el = W.html(`<li class="chat-message" data-message-id="${fresh.id}"><div class="message-content"><div class="dice-roll">${tooltip(list)}</div><section class="icon-row"></section></div></li>`);
+  render(fresh, el);
+  render(fresh, el);
+  const lis = el.querySelectorAll("li.roll");
+  const marks = lis.map(li => (li.classList.contains("pr-emp-old") ? "old" : li.classList.contains("pr-emp-new") ? "new" : "-"));
+  assert.deepEqual(marks, ["old", "new", "old", "new", "old", "new", "-", "-", "-", "-", "old", "new"]);
+  assert.equal(el.querySelectorAll(".pr-empower-note").length, 1);
+  const legacy = damageCard({ id: "dmg0000000000025", flags: { empowered: { from: "dmg0000000000024", cost: 1, changes: [{ roll: 0, term: 0, result: 0, faces: 6, from: 2, to: 5 }] } } });
+  assert.equal(render(legacy).querySelector(".pr-empower-note").textContent, "Empowered Spell (1 SP): 2 → 5", "no oldTotal stored: the line as before");
   assert.deepEqual(W.take(), []);
 });
 
@@ -404,6 +539,70 @@ test("after the point is spent: a new card that fails to post is one warning nam
   const stuck = "Empowered Spell: the new damage card is posted, but the old card could not be marked as superseded. Apply only the new one.";
   assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["warn", stuck]]);
   assert.deepEqual(W.take().map(l => l[1]), [`${MODULE} | ${stuck}`, `${MODULE} | Empowered Spell: the new card is posted but the old card was not retired`]);
+});
+
+test("F3: Empowered Spell used from the sheet or HUD never wastes a point — the module's own spend goes through; a waiting card is empowered instead; with none the use is stopped, one notice, nothing spent", async () => {
+  const points = font().system.uses.value;
+  const use = (usage = {}) => F.fireCall("dnd5e.preUseActivity", empAct, usage, {}, {});
+  const notices = () => F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]);
+  const refused = "Use the Empower button on your spell's damage card: no Sorcery Point was spent.";
+  try {
+    // the internal spend (part 2's activity.use) is never stopped, or Empower itself would break
+    assert.notEqual(use({ pentaryn: { empower: true } }), false, "the internal empower use still goes through");
+    // nothing waiting: every card so far has no timestamp, is superseded or applied
+    uses.length = 0;
+    created.length = 0;
+    F.calls.length = 0;
+    W.take();
+    assert.equal(use({ event: { type: "click" } }), false, "stopped before dnd5e spends anything");
+    await drain();
+    assert.deepEqual([uses.length, created.length, font().system.uses.value], [0, 0, points], "nothing spent, nothing posted");
+    assert.deepEqual(notices(), [["warn", refused]]);
+    // a card from 11 minutes ago is not waiting
+    const stale = damageCard({ id: "dmg0000000000100" });
+    stale.timestamp = Date.now() - 11 * 60_000;
+    F.calls.length = 0;
+    assert.equal(use(), false);
+    assert.deepEqual(notices(), [["warn", refused]]);
+    assert.equal(stale.flags[MODULE].supersededBy, undefined);
+    // a waiting card (two minutes old, live): it is empowered as one click would, the sheet's use stopped
+    const waiting = damageCard({ id: "dmg0000000000101" });
+    waiting.timestamp = Date.now() - 2 * 60_000;
+    const newer = damageCard({ id: "dmg0000000000102", flags: { trayApplied: true } });
+    newer.timestamp = Date.now() - 30_000;   // newer, but applied: not waiting
+    uses.length = 0;
+    created.length = 0;
+    F.calls.length = 0;
+    uniforms.push(0.1, 0.4, 0.9, 0.5);
+    assert.equal(use({ event: { type: "click" } }), false, "the sheet's own use is stopped");
+    await drain();
+    assert.deepEqual(uses, [[{ pentaryn: { empower: true } }, { configure: false }, { create: false }]], "one point, through the module's own spend");
+    assert.equal(font().system.uses.value, points - 1);
+    assert.equal(created.length, 1);
+    assert.equal(created[0].flags[MODULE].empowered.from, waiting.id);
+    assert.ok(waiting.flags[MODULE].supersededBy, "the waiting card is retired");
+    assert.equal(newer.flags[MODULE].supersededBy, undefined, "the applied card is left alone");
+    assert.deepEqual(notices(), []);
+    // a card this user cannot edit is not theirs to empower
+    F.become({ userId: IDS.player });
+    try {
+      const gmCard = damageCard({ id: "dmg0000000000103", isAuthor: false });
+      gmCard.timestamp = Date.now() - 1_000;
+      F.calls.length = 0;
+      assert.equal(use(), false);
+      assert.deepEqual(notices(), [["warn", refused]]);
+      assert.equal(gmCard.flags[MODULE].supersededBy, undefined);
+    } finally { F.become({ userId: IDS.gm }); }
+    // left to dnd5e: another activity of the caster, the setting off
+    assert.notEqual(F.fireCall("dnd5e.preUseActivity", mar.items.get(FIREBALL).system.activities.contents[0], {}, {}, {}), false);
+    await F.game.settings.set(MODULE, "empoweredSpell", false);
+    assert.notEqual(use(), false, "the setting off: dnd5e's own activity as before");
+    await F.game.settings.set(MODULE, "empoweredSpell", true);
+    // a throwing activity is warned, never a veto
+    W.take();
+    assert.notEqual(F.fireCall("dnd5e.preUseActivity", { get item() { throw new Error("odd activity"); } }, {}, {}, {}), false);
+    assert.ok(W.take().some(l => l[1] === `${MODULE} | Empowered Spell use check skipped`));
+  } finally { font().system.uses.value = points; }
 });
 
 test("a broken card root or origin is warned, never thrown; non-damage roots are left alone", () => {

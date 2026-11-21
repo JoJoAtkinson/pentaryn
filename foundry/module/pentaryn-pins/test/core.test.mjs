@@ -19,7 +19,7 @@ test("core loads with no Foundry globals present", () => {
     assert.equal(name in globalThis, false, `${name} is defined in a bare node process`);
   }
   for (const fn of ["pinOf", "pickToken", "activateDecision", "netDecision", "coreSwitchesLevel", "levelFollow", "replayDecision",
-    "tokenNotice", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "singleChoices", "pinnedName", "gatherPlan", "gatherRow", "gatherResult"]) assert.equal(typeof core[fn], "function", fn);
+    "tokenNotice", "pinnedNavTab", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "singleChoices", "pinnedName", "gatherPlan", "gatherRow", "gatherResult"]) assert.equal(typeof core[fn], "function", fn);
   for (const gone of ["viewDecision", "queueDecision", "followNeeded", "TOAST_EVERY_MS", "SETTLE_MS", "SETTLE_GIVE_UP_MS"]) {
     assert.equal(gone in core, false, `${gone} was deleted in 0.2.0 (core's own pull moves the player)`);
   }
@@ -192,6 +192,26 @@ test("activateDecision: skip another scene's activation and the token scene's de
     ["deactivating the viewed scene that is not the token's", { ...base, viewedId: "C", active: false, sceneId: "C" }, "call"],
   ];
   for (const [why, input, want] of table) assert.equal(core.activateDecision(input), want, why);
+});
+
+test("pinnedNavTab (triage A): a tab back only for a pinned player away from a scene core lists no tab for", () => {
+  const player = { isGM: false, pinned: true };
+  const B = { id: "B", active: false, navigation: false, visible: true, character: "Talo" };
+  const tab = { sceneId: "B", character: "Talo" };
+  const table = [
+    ["a pinned player viewing another scene", [player, "A", B], tab],
+    ["a pinned player on a blank canvas", [player, null, B], tab],
+    ["navigation on but not visible to them: core draws no tab", [player, "A", { ...B, navigation: true, visible: false }], tab],
+    ["a GM", [{ isGM: true, pinned: true }, "A", B], null],
+    ["an unpinned player", [{ isGM: false, pinned: false }, "A", B], null],
+    ["no user", [null, "A", B], null],
+    ["no single token (or the switch off)", [player, "A", null], null],
+    ["already viewing the pinned scene", [player, "B", B], null],
+    ["the pinned scene is active: core lists it", [player, "A", { ...B, active: true }], null],
+    ["navigation on and visible: core lists it", [player, "A", { ...B, navigation: true, visible: true }], null],
+    ["no character name", [player, "A", { ...B, character: null }], { sceneId: "B", character: "?" }],
+  ];
+  for (const [why, args, want] of table) assert.deepEqual(core.pinnedNavTab(...args), want, why);
 });
 
 test("auditPins: every code; a form-only token is ok", () => {

@@ -3,8 +3,9 @@
  * game.settings.register/get/set.
  *
  * Every row carries LITERAL `name` and `hint` keys (C51). Rows register in table order, which is
- * the order of the settings menu: the 19 booleans first (the old BOOLS order, then
- * stationaryInstantAreas, autoDamageOnSave, applyFromCard), then npcSaveRollMode, then areaWalls —
+ * the order of the settings menu: the 20 booleans first (the old BOOLS order, then
+ * stationaryInstantAreas, autoDamageOnSave, applyFromCard, hitMissLabels), then showAppliedBy (G2), then
+ * npcSaveRollMode, then areaWalls —
  * golden/settings-register.json pins it.
  *
  * `setting(key)` falls back to the row default. That matters twice: while the module is
@@ -94,6 +95,17 @@ export const SETTINGS = Object.freeze([
   { key: "applyFromCard", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.applyFromCard.Name", hint: "PENTARYN_AOE.Setting.applyFromCard.Hint",
     doc: "Part I: Apply on a damage or healing card goes through this module: rows for tokens the user does not own are relayed to the active GM, a player's targets fill a card that recorded none, and every row has a total the player can type (B relay, late targets, B5)." },
+  { key: "hitMissLabels", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_AOE.Setting.hitMissLabels.Name", hint: "PENTARYN_AOE.Setting.hitMissLabels.Hint",
+    doc: "Part C (D2): an attack card says Hit (blue) or Miss (orange) in its title, or on each target with several, a miss adds a \"Miss — no damage\" line, and the damage card after a hit has a blue title; nothing while dnd5e.attackRollVisibility is none." },
+  { key: "showAppliedBy", scope: "world", config: true, type: String, default: "owners",
+    name: "PENTARYN_AOE.Setting.showAppliedBy.Name", hint: "PENTARYN_AOE.Setting.showAppliedBy.Hint",
+    choices: {
+      gm: "PENTARYN_AOE.Setting.showAppliedBy.gm",
+      owners: "PENTARYN_AOE.Setting.showAppliedBy.owners",
+      all: "PENTARYN_AOE.Setting.showAppliedBy.all",
+    },
+    doc: "Part I (G2): who reads \"Applied by <user> → <token> (±n)\" under a damage or healing card's tray: gm (the GM only), owners (the GM, the card's author and the owners of a row's token) or all. Players never read a monster's row." },
   { key: "npcSaveRollMode", scope: "world", config: true, type: String, default: "gm",
     name: "PENTARYN_AOE.Setting.npcSaveRollMode.Name", hint: "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",
     // Core v14 message modes. dnd5e 6 hands the roll mode to core as messageMode, and core
@@ -152,6 +164,14 @@ export const setting = settingReader(MODULE, SETTINGS);
  */
 export function dnd5eTrayCollapse() {
   return log.swallow("autoCollapseChatTrays", () => game.settings.get("dnd5e", "autoCollapseChatTrays"), "manual");
+}
+
+/**
+ * D2: dnd5e's own `attackRollVisibility` ("none", "hideAC" or "all"); "none" when it cannot be read,
+ * so a hit or miss is never shown by mistake.
+ */
+export function dnd5eAttackVisibility() {
+  return log.swallow("attackRollVisibility", () => game.settings.get("dnd5e", "attackRollVisibility"), "none");
 }
 
 /** `{ key: liveValue }` for every row (the API's settings() member). */

@@ -81,6 +81,10 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.postRollAttack"
   },
   {
@@ -106,6 +110,14 @@
   {
     "kind": "on",
     "name": "dnd5e.preCreateMeasuredTemplate"
+  },
+  {
+    "kind": "on",
+    "name": "refreshRegion"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateChatMessage"
   },
   {
     "kind": "on",

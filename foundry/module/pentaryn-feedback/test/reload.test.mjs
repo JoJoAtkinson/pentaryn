@@ -7,9 +7,23 @@ import assert from "node:assert/strict";
 import { IDS, WORLD, installClient, settle } from "./fixtures/world.mjs";
 import { MODULE, ringsKey, ringsToStore } from "../feedback-core.mjs";
 
+// Node 22-24 expose sessionStorage only under --experimental-webstorage (unflagged from 25); the
+// module-check runner passes no flags, so stand in a minimal in-memory Storage when it is absent.
+if (typeof globalThis.sessionStorage?.setItem !== "function") {
+  const data = new Map();
+  globalThis.sessionStorage = {
+    getItem: k => (data.has(String(k)) ? data.get(String(k)) : null),
+    setItem: (k, v) => { data.set(String(k), String(v)); },
+    removeItem: k => { data.delete(String(k)); },
+    clear: () => data.clear(),
+    key: i => [...data.keys()][i] ?? null,
+    get length() { return data.size; },
+  };
+}
+
 const F = await installClient();
 const KEY = ringsKey(WORLD, IDS.gm);
-assert.equal(typeof globalThis.sessionStorage?.setItem, "function", "node ≥ 22 has an in-memory sessionStorage");
+assert.equal(typeof globalThis.sessionStorage?.setItem, "function", "an in-memory sessionStorage (node's, or the stand-in above)");
 
 // what the previous page stored before the player pressed F5
 const before = { actions: [{ t: 1000, kind: "click", action: "lootAll", text: "Loot all" }], errors: [{ t: 1001, source: "hooks", message: "transferEverything" }] };
