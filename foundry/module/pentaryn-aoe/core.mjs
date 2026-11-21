@@ -606,6 +606,60 @@ export function handleVertical({ regionLevels = [], sceneHasLevel = () => true, 
   return { level, elevation };
 }
 
+/* -------------------------------------------- */
+/*  B1 — wall spells                            */
+/* -------------------------------------------- */
+
+/** B1: the thinnest a wall panel is drawn, as a fraction of a grid square (a fifth: 10 px on a 50 px grid). */
+export const WALL_MIN_FRACTION = 1 / 5;
+
+/**
+ * B1 (feedback 8t6Nn1): how thick a wall spell's panel is DRAWN, in pixels: its real width, or a fifth
+ * of a grid square when that is thinner. Wall of Stone's Long Panels are 0.25 ft thick, a 2.5 px line on
+ * a 50 px grid, and Talo's dark green user colour on a dark map made the wall "disappear". The drawing
+ * only: the shape's own width (which creatures the area holds) is never changed.
+ * @param {number} width     the line shape's width (px)
+ * @param {number} gridSize  the scene's grid size (px)
+ */
+export function wallThickness(width, gridSize) {
+  return Math.max(Number(width) || 0, (Number(gridSize) || 0) * WALL_MIN_FRACTION);
+}
+
+/**
+ * B1: a wall panel's outline as polygon points `[x0, y0, … x3, y3]`: core's line shape (it starts at
+ * `x, y` and runs `length` px along `rotation` degrees, its width centred on that axis) drawn
+ * `wallThickness` thick. Rounded to 1/1000 px.
+ * @param {{x: number, y: number, length: number, width: number, rotation?: number}} line
+ * @param {number} gridSize
+ * @returns {number[]}
+ */
+export function wallPanelOutline({ x = 0, y = 0, length = 0, width = 0, rotation = 0 } = {}, gridSize = 0) {
+  const t = wallThickness(width, gridSize) / 2;
+  const a = (Number(rotation) || 0) * Math.PI / 180;
+  const ux = Math.cos(a), uy = Math.sin(a);      // along the wall
+  const nx = -uy, ny = ux;                       // across it
+  const L = Number(length) || 0;
+  const r = v => Math.round(v * 1000) / 1000 + 0;
+  const pts = [
+    [x + nx * t, y + ny * t], [x + ux * L + nx * t, y + uy * L + ny * t],
+    [x + ux * L - nx * t, y + uy * L - ny * t], [x - nx * t, y - ny * t],
+  ];
+  return pts.flatMap(([px, py]) => [r(px), r(py)]);
+}
+
+/**
+ * B1: is this region a wall spell's area (Wall of Stone, Wall of Fire, Blade Barrier)? A template
+ * region whose every shape is a line, from an activity whose area type is dnd5e's `wall`. When the
+ * activity cannot be read (`templateType` null: a deleted item, an unresolvable uuid), dnd5e's own
+ * `flags.dnd5e.dimensions.height` decides: a wall has a height, a line spell (Lightning Bolt) none.
+ * @param {{ template?: boolean, shapeTypes?: string[], templateType?: string|null, height?: number|null }} r
+ */
+export function wallSpellRegion({ template = false, shapeTypes = [], templateType = null, height = null } = {}) {
+  if (!template || !shapeTypes?.length || !shapeTypes.every(t => t === "line")) return false;
+  if (templateType) return templateType === "wall";
+  return Number(height) > 0;
+}
+
 /** Is this region the area of exactly this activity (Part B: whose area is the damage for)? */
 export function regionOfActivity(flags5e, activityUuid) {
   if (!flags5e || !activityUuid) return false;

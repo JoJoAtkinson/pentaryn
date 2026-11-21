@@ -49,6 +49,15 @@
   - New world setting `hitMissLabels` (default on); `settings.dnd5eAttackVisibility()` reads dnd5e's.
   - Tests: `test/hit-miss.test.mjs` (golden `hit-miss.json`). Goldens: `hooks.json`, `describe.json`,
     `settings-register.json`.
+- **B1 [declared]. Wall spells are drawn thick enough to see** (feedback 8t6Nn1). Wall of Stone's Long
+  Panels are a 0.25 ft line, 2.5 px on a 50 px grid, in the caster's user colour; Talo's dark green wall
+  on a dark map "disappeared".
+  - New feature file `wall-spells.mjs` (after `walls.mjs` in `FEATURES`): on `refreshRegion`, a wall
+    spell's region (`core.wallSpellRegion`) gets one `PIXI.Graphics` child on the Region placeable, each
+    line shape drawn `core.wallThickness` = `max(width, grid / 5)` thick (`core.wallPanelOutline`) in a
+    neutral stone fill and dark stroke. The shape's width is never changed (which creatures the area
+    holds stays exact); no Wall documents (B2 is out of this run). Uninstall removes every overlay.
+  - Tests: `test/wall-spells.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
 
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM

@@ -144,6 +144,15 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   player never reads a row for a creature no player owns (a monster's name or the damage it took after
   resistances is GM data). A player's Apply on a card they neither rolled nor own the actor of cannot
   write the card, so their own rows go unrecorded there.
+- **Wall spells you can see (B1)** (`wall-spells.mjs`). dnd5e 6 maps the `wall` area type to a ray, so
+  a wall spell's region is line shapes as thin as the wall (Wall of Stone's Long Panels: 0.25 ft, a
+  2.5 px line on a 50 px grid), drawn as grid coverage in the caster's user colour — Talo's dark green
+  wall "disappeared" (feedback 8t6Nn1). On `refreshRegion`, a wall spell's region (`core.wallSpellRegion`:
+  every shape a line, from an activity whose area type is `wall`, else one with dnd5e's
+  `dimensions.height`) gets one `PIXI.Graphics` child on the Region placeable: every panel drawn
+  `core.wallThickness` thick (its width, or a fifth of a square when thinner) in neutral stone grey with
+  a dark stroke. Drawing only: the shapes (who is in the area) never change, and no Wall documents are
+  made (B2 is a separate decision).
 - **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
   including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
@@ -275,7 +284,7 @@ with a `move` restriction only) with `RegionDocument.prototype._computeShapeCons
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
-`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
+`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, `core-region-wall-panels`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
 batch; only `scene-adapter.mjs` touches `game.itempiles`).
 
 ## Two sessions / who writes
@@ -360,7 +369,7 @@ feature's function is reached through `ctx.exposed`, never an import.
 | `settings.mjs` | SETTINGS, `setting()`, the roll-mode migration |
 | `api-manifest.mjs`, `api.mjs` | API rows; own implementations, `inspect`, `buildApiFor` |
 | `scene-adapter.mjs`, `messages-adapter.mjs`, `argon.mjs` | adapters: scenes/regions/Item Piles, dnd5e messages, Argon |
-| `areas.mjs`, `token-areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs`, `walls.mjs`, `apply.mjs` | features (Parts A–I) |
+| `areas.mjs`, `token-areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs`, `walls.mjs`, `wall-spells.mjs`, `apply.mjs` | features (Parts A–I; `wall-spells.mjs` is B1, wall spells drawn visible) |
 | `styles/aoe.css`, `lang/en.json`, `lib/` | styles; strings; vendored kit |
 | `test/` | node:test suites, goldens, fixtures (`seams.mjs` maps the checkpoint names) |
 

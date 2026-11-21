@@ -37,6 +37,11 @@ Everyone owns the handle and the area.
 - Areas clean themselves up. An instantaneous spell's area (Fireball) is deleted once every ticked
   row has been applied. A concentration spell's areas go when the caster stops concentrating.
 
+**Wall spells (Wall of Stone, Wall of Fire, Blade Barrier).** Each panel is drawn in solid stone grey,
+at least a fifth of a square thick, whatever the caster's user colour or the grid size, so a 3-inch
+Wall of Stone panel no longer vanishes on a 50 px map. Only the drawing is thicker: who is inside the
+area is measured on the real panel. The panels do not block movement or sight yet (no Wall documents).
+
 **Which walls stop an area.** The PHB's rule is that an area spreads from its point of origin, and
 only total cover blocks it. On the map, total cover is a wall that blocks **both movement and
 sight**: normal walls, closed doors, terrain walls and windows clip an area. **Invisible walls**

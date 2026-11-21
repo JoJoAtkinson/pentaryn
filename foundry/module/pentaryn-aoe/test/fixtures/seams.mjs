@@ -51,12 +51,12 @@ export async function freshAim(tag) {
 }
 
 export async function seams() {
-  const [settings, areas, resolve, tray, attacks, effects, escape, refund, aim, scene, messages, argon, core, careful, tokenAreas, apply] = await Promise.all([
+  const [settings, areas, resolve, tray, attacks, effects, escape, refund, aim, scene, messages, argon, core, careful, tokenAreas, apply, wallSpells] = await Promise.all([
     import("../../settings.mjs"), import("../../areas.mjs"), import("../../resolve.mjs"),
     import("../../tray.mjs"), import("../../attacks.mjs"), import("../../effects.mjs"), import("../../escape.mjs"),
     import("../../refund.mjs"), import("../../aim.mjs"), import("../../scene-adapter.mjs"), import("../../messages-adapter.mjs"),
     import("../../argon.mjs"), import("../../core.mjs"), import("../../careful.mjs"), import("../../token-areas.mjs"),
-    import("../../apply.mjs"),
+    import("../../apply.mjs"), import("../../wall-spells.mjs"),
   ]);
   const { isHandle, isTemplateRegion, multiplierFor } = core;
   const { activityOf, usageIdOf, cardEffects, spellOf } = messages;
@@ -68,5 +68,6 @@ export async function seams() {
     effects: { cardEffects, spellOf, ...group(effects) },
     escape: group(escape), refund: group(refund), aim: aimGroup(aim),
     apply: { targetDescriptors: messages.targetDescriptors, cardDamages: messages.cardDamages, ...group(apply) },
+    wallSpells: group(wallSpells),
   };
 }

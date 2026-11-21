@@ -1747,3 +1747,14 @@ adjustments:
     native_when: dnd5e's attack card names the result in words (a hit / miss label on the card or its title)
     retire_class: safe
     check: make foundry-aoe-check
+
+  - id: core-region-wall-panels
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/wall-spells.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["refreshRegion(wall)", "wallSpellRegion", "wallPanelOutline"]
+    what: on core's refreshRegion hook (PlaceableObject#applyRenderFlags), a dnd5e wall-spell template region (every shape a line; flags.dnd5e.activity's target.template.type "wall", else flags.dnd5e.dimensions.height) gets one PIXI.Graphics child added at index 0 of the Region placeable, each LineShapeData (x, y, length along rotation, width centred) drawn max(width, grid/5) thick in neutral stone; core's RegionMesh highlight and the shapes are untouched
+    why: dnd5e 6 maps the wall area type to a ray, so Wall of Stone's 0.25 ft panels were a 2.5 px coverage-mode line in the caster's user colour on a 50 px grid and "disappeared" (feedback 8t6Nn1, 2026-11-19)
+    native_when: dnd5e or core draws thin wall-type template regions with a minimum visible thickness
+    retire_class: safe
+    check: make foundry-aoe-check; live, Wall of Stone on a 50 px grid is visible in a dark user colour
