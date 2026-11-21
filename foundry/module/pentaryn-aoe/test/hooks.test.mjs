@@ -49,7 +49,7 @@ test("setup registers the feature hooks in Part order: areas, token areas, resol
     "on createChatMessage", "on dnd5e.renderChatMessage", "on preCreateActiveEffect",
     "on dnd5e.postUseActivity",
     "on dnd5e.preCreateMeasuredTemplate",
-    "on dnd5e.renderChatMessage", "on targetToken", "on deleteChatMessage",
+    "on preCreateChatMessage", "on dnd5e.renderChatMessage", "on targetToken", "on deleteChatMessage",
   ]);
 });
 

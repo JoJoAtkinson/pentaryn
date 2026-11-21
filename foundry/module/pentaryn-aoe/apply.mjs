@@ -37,7 +37,7 @@
 import {
   MODULE, RECENT_MESSAGES, RELAY_TIMEOUT_MS, LATE_TARGET_WINDOW_MS, aoeFlags, damageTotal, scaleDamages, rowAmount,
   splitApplyRows, lateTargetCard, hydrateDamages, applyTargets, packApplyOptions, unpackApplyOptions, isApplyCard,
-  moduleFilledTargets
+  moduleFilledTargets, selfTargetCard
 } from "./core.mjs";
 import { setting, dnd5eTrayCollapse } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -45,7 +45,7 @@ import { claimMessage } from "./lib/election.mjs";
 import { queryGM } from "./lib/queries.mjs";
 import { ok, fail, errorCode } from "./lib/errors.mjs";
 import { FEATURE_ROWS } from "./api-manifest.mjs";
-import { cardDamages, targetDescriptors } from "./messages-adapter.mjs";
+import { activityOf, cardDamages, targetDescriptors } from "./messages-adapter.mjs";
 
 /** The relay query's name (`<module>.<row path>`, as the kit registers it). */
 export const RELAY_QUERY = `${MODULE}.applyRelay`;
@@ -378,6 +378,52 @@ function onTargetToken(user) {
 }
 
 /* -------------------------------------------- */
+/*  Self-only cards target the caster (G1)      */
+/* -------------------------------------------- */
+
+/**
+ * The caster's token for a roll card: the activity's own usage token, else the speaker's token, else
+ * the caster's one token on the speaker's (or viewed) scene. A TokenDocument, or null.
+ */
+function casterTokenOf(message, activity) {
+  let usage = null;
+  try { usage = activity?.getUsageToken?.() ?? null; } catch { usage = null; }
+  if (usage) return usage.document ?? usage;
+  const sp = message?.speaker ?? {};
+  const scene = game.scenes?.get(sp.scene) ?? canvas?.scene ?? null;
+  const bySpeaker = sp.token ? scene?.tokens?.get(sp.token) ?? null : null;
+  if (bySpeaker) return bySpeaker;
+  const actor = activity?.actor ?? null;
+  const tokens = actor?.getActiveTokens?.(false, true) ?? [];
+  return actor?.token ?? tokens.find(t => (t.document ?? t).parent === scene) ?? tokens[0] ?? null;
+}
+
+/**
+ * G1: preCreateChatMessage on the roller's client. A damage or healing card from an activity that
+ * can only affect its user (core.selfTargetCard: Stone's Endurance, Second Wind) records the caster's
+ * token as its one target, whatever the roller had targeted, so every viewer's dnd5e tray reads
+ * "Talo +11" and never offers the heal to an enemy or to their own selection. Written into the
+ * pending card (`updateSource`), dnd5e's own descriptors; `areaTargets` and `recordedTargets` are
+ * never written. Late targets then leave the card alone (it has targets). Never vetoes.
+ */
+function onPreCreate(message, data, options, userId) {
+  if (!setting("applyFromCard") || userId !== game.user?.id || !isApplyCard(message?.type)) return;
+  const activity = activityOf(message);
+  if (!activity) return;
+  const go = selfTargetCard({
+    type: message.type, activityType: activity.type ?? null, rangeUnits: activity.range?.units ?? null,
+    affectsType: activity.target?.affects?.type ?? null, templateType: activity.target?.template?.type || null,
+    hasSave: !!activity.save && activity.type === "save",
+  });
+  if (!go) return;
+  const token = casterTokenOf(message, activity);
+  if (!token) return;
+  const targets = targetDescriptors([token]);
+  if (!targets.length) return;
+  message.updateSource({ "system.targets": targets });
+}
+
+/* -------------------------------------------- */
 /*  The GM relay                                */
 /* -------------------------------------------- */
 
@@ -441,6 +487,8 @@ export function install(reg, ctx) {
   log = ctx.log;
   context = ctx;
   scheduleFollow = foundry.utils.debounce(() => followTargets().catch(err => log.warn("late targets", err)), FOLLOW_DEBOUNCE_MS);
+  // G1: synchronous and never false (a pre-hook's false would veto the card).
+  reg.on("preCreateChatMessage", reg.guardSwallowAsync("preCreateChatMessage(self)", onPreCreate), { guard: false, label: "preCreateChatMessage(self)" });
   reg.on("dnd5e.renderChatMessage", reg.guardSwallowAsync("renderChatMessage(apply)", decorate), { guard: false, label: "renderChatMessage(apply)" });
   reg.on("targetToken", reg.guardSwallowAsync("targetToken(late)", onTargetToken), { guard: false, label: "targetToken(late)" });
   // §5.4: the session's typed totals go with their card
@@ -455,4 +503,4 @@ export function uninstall() {
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only. Not part of the API.
-export const _internals = { decorate, onRowsBuilt, addAmountInputs, refreshEffective, refreshTyped, onAmountInput, onClick, relayRows, collapse, stampApplied, describeRecent, onTargetToken, mayApply, amounts };
+export const _internals = { onPreCreate, casterTokenOf, decorate, onRowsBuilt, addAmountInputs, refreshEffective, refreshTyped, onAmountInput, onClick, relayRows, collapse, stampApplied, describeRecent, onTargetToken, mayApply, amounts };

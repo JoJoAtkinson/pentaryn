@@ -1714,3 +1714,14 @@ adjustments:
     native_when: dnd5e lets a card's targets be set after the roll, or applies to the user's current targets on an untargeted card
     retire_class: guarded
     check: make foundry-aoe-check
+
+  - id: dnd5e-self-card-targets-caster
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["selfTargetCard", "preCreateChatMessage(self)"]
+    what: on preCreateChatMessage (the roller's client), a dnd5e "damage" / "healing" card from an activity whose target.affects.type is "self", or whose range is Self with no other affects type, and that places no template, has no save and is not an attack (core.selfTargetCard), gets message.system.targets = the caster's token as dnd5e TargetsField descriptors (updateSource), replacing whatever the roller had targeted
+    why: dnd5e's rollDamage / rollHealing record the user's current targets (TargetsField.getDescriptors()), and its tray lists selected tokens on a card with none, so Stone's Endurance offered to heal an enemy (browser test T3, feedback SvOaxr, 2026-11-19)
+    native_when: dnd5e records the user as the target of a self-only activity's roll card
+    retire_class: safe
+    check: make foundry-aoe-check

@@ -16,6 +16,16 @@
     do), so pentaryn-riders' `dnd5e.applyDamage` listener marks the card applied and the Empower button
     goes: a GM Apply followed by Empower could otherwise land the damage twice.
   - Tests: `test/empower-carry.test.mjs`. Golden: `describe.json` (`flags.reads`).
+- **G1 [declared]. A self-only damage or healing card targets its caster** (feedback SvOaxr). dnd5e
+  records the roller's current targets on every roll card, so Stone's Endurance with an enemy targeted
+  offered to heal the enemy (browser test T3), and with nothing targeted each viewer's tray listed
+  their own selection ("Caven +11").
+  - `apply.mjs` adds `preCreateChatMessage` (roller's client, never a veto): a `damage` / `healing`
+    card from an activity that affects only `self`, or has Self range and no other affects type
+    (`core.selfTargetCard`, pure), gets `system.targets` = the caster's token (`targetDescriptors`),
+    whatever was targeted. Never an area (a Self cone, line or emanation), a save or an attack
+    activity; `areaTargets` / `recordedTargets` are never written. Gated by `applyFromCard`.
+  - Tests: `test/self-target.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
 
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM

@@ -118,6 +118,14 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   carries a resolution the GM gets no typed totals on dnd5e's tray, and the Part B tray's own totals are used.
   A player's Apply on such a card relays nothing (the GM's tray applies it; one info toast says so) — their
   own rows still land.
+  **Self-only cards target the caster (G1).** dnd5e records the roller's current targets on every roll
+  card, so Stone's Endurance rolled with an enemy targeted offered to heal the enemy, and with nothing
+  targeted each viewer's tray listed their own selection ("Caven +11"). On the roller's client
+  (`preCreateChatMessage`, `updateSource`), a damage or healing card from an activity whose affects
+  type is `self`, or whose range is Self with no other affects type (`core.selfTargetCard`), records
+  the caster's token as its one target. Never one that places an area (a Self cone, line or emanation:
+  Burning Hands, Spirit Guardians), has a save, or is an attack; `areaTargets` and `recordedTargets`
+  are never written, and late targets leave the card alone since it has targets.
 - **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
   including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
@@ -246,7 +254,7 @@ with a `move` restriction only) with `RegionDocument.prototype._computeShapeCons
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
-`dnd5e-cancelled-area-refund`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
+`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
 batch; only `scene-adapter.mjs` touches `game.itempiles`).
 
 ## Two sessions / who writes

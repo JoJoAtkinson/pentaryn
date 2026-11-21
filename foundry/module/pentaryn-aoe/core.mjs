@@ -321,6 +321,25 @@ export function lateTargetCard(messages, { userId, now, windowMs = LATE_TARGET_W
 }
 
 /**
+ * G1 (feedback SvOaxr): is this damage or healing card from an activity that can only affect its user,
+ * so its one target is the caster? dnd5e records the roller's current targets on every roll card
+ * (`TargetsField.getDescriptors()`), or none, so Stone's Endurance with an enemy targeted offered to
+ * heal the enemy (browser test T3), and with nothing targeted every viewer's tray listed their own
+ * selection ("Caven +11"). True for an activity whose affects type is `self`, or whose range is Self
+ * with no other affects type — and never for one that places an area (a Self-range cone, line or
+ * emanation: Burning Hands, Thunderwave, Spirit Guardians, `aimsFromCaster`), has a save, or is an
+ * attack (Booming Blade's Self range is the weapon's reach). Plain description:
+ * `{ type, activityType, rangeUnits, affectsType, templateType, hasSave }`.
+ * @returns {boolean}
+ */
+export function selfTargetCard({ type = null, activityType = null, rangeUnits = null, affectsType = null, templateType = null, hasSave = false } = {}) {
+  if (!isApplyCard(type)) return false;
+  if (templateType || hasSave || activityType === "attack" || activityType === "save") return false;
+  if (affectsType === "self") return true;
+  return rangeUnits === "self" && !affectsType;
+}
+
+/**
  * Part I: which rows an Apply press on dnd5e's tray lands. The rows dnd5e lists (`listed`: the uuids
  * of its `<option>`s), always — what the tray shows is what Apply hits. The one fallback: dnd5e lists
  * nobody (the card recorded no targets and nothing is selected) and a player holds targets, then those
