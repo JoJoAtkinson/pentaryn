@@ -27,6 +27,9 @@
  *    flags (the card note and the tray preset carry over). The old card is marked
  *    `flags.pentaryn-riders.supersededBy = <new id>`: its apply tray is removed on render and a line
  *    says so, so the GM applies the new roll and never both. A new roll is kept even when it is lower.
+ *    The new card's line names each change and the card's total before and after ("1 → 4, 3 → 3
+ *    (77 → 83)", from `empowered.oldTotal`; GDJJdi, F1), and its rerolled chips in the dice tooltip are
+ *    marked (`pr-emp-old` / `pr-emp-new`) so they stand out from dnd5e's grey strike-through.
  *    Shift-click opens a small picker listing each die with its face, the one-click choice pre-ticked.
  *    The point is spent first; should the new card then fail to post, one warning names the lost point
  *    and the old card stays live (a posted card whose old card fails to retire gets its own line).
@@ -43,7 +46,7 @@
  * batch file.
  */
 
-import { MODULE, empowerCandidates, empowerPlan, empowerRolls } from "./riders-core.mjs";
+import { MODULE, empowerCandidates, empowerPlan, empowerRolls, matchChips, rerolledFaces, rollsTotal } from "./riders-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { empoweredSpellOf, fontUsesLeft } from "./shapes.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -64,6 +67,7 @@ const T = Object.freeze({
   die: "PENTARYN_RIDERS.empower.die",
   none: "PENTARYN_RIDERS.empower.none",
   note: "PENTARYN_RIDERS.empower.note",
+  noteTotal: "PENTARYN_RIDERS.empower.noteTotal",
   change: "PENTARYN_RIDERS.empower.change",
   superseded: "PENTARYN_RIDERS.empower.superseded",
   noUse: "PENTARYN_RIDERS.empower.noUse",
@@ -120,6 +124,37 @@ function changesText(changes) {
   return (changes ?? []).map(c => _loc(T.change, { from: c.from, to: c.to })).join(", ");
 }
 
+/** "Empowered Spell (1 SP): 1 → 4, 3 → 3 (77 → 83)"; a card empowered before `oldTotal` was stored has no totals. */
+function noteText(message, empowered) {
+  const changes = changesText(empowered.changes);
+  const before = Number(empowered.oldTotal);
+  if (empowered.oldTotal === undefined || empowered.oldTotal === null || !Number.isFinite(before)) return _loc(T.note, { changes });
+  return _loc(T.noteTotal, { changes, old: before, new: rollsTotal(rollsJson(message)) });
+}
+
+/**
+ * The rerolled dice stand out (F1): each old chip in the dice tooltip gets `pr-emp-old`, the new face
+ * after it `pr-emp-new` (dnd5e alone strikes the old one through in grey and leaves the new one plain).
+ */
+function markChips(message, html, empowered) {
+  const lists = [...html.querySelectorAll("ol.dice-rolls")];
+  const nodes = [];
+  const chips = [];
+  lists.forEach((ol, list) => {
+    for (const li of ol.querySelectorAll("li.roll")) {
+      li.classList.remove("pr-emp-old", "pr-emp-new");
+      const size = /(?:^|\s)d(\d+)(?:\s|$)/.exec(li.className);
+      nodes.push(li);
+      chips.push({ list, faces: size ? Number(size[1]) : NaN, label: li.textContent, rerolled: li.classList.contains("rerolled") });
+    }
+  });
+  if (!chips.length) return;
+  for (const [a, b] of matchChips(chips, rerolledFaces(rollsJson(message), empowered.changes))) {
+    nodes[a].classList.add("pr-emp-old");
+    nodes[b].classList.add("pr-emp-new");
+  }
+}
+
 function render(message, html) {
   if (!html?.querySelector) return;
   html.querySelector(".pr-empower")?.remove();
@@ -146,8 +181,9 @@ function render(message, html) {
     if (message.isContentVisible === false) return;
     const p = document.createElement("p");
     p.className = "supplement pr-empower-note";
-    p.textContent = _loc(T.note, { changes: changesText(flags.empowered.changes) });
+    p.textContent = noteText(message, flags.empowered);
     place(p);
+    markChips(message, html, flags.empowered);
     return;
   }
   if (!enabled()) return;
@@ -252,7 +288,7 @@ async function empower(message, { pick = false } = {}) {
       blind: !!src.blind,
       rolls: rolls.map(r => JSON.stringify(r)),
       system: { activity: sys.activity ?? null, item: sys.item ?? null, origin: sys.origin ?? null, targets: sys.targets ?? [], onSave: sys.onSave ?? null },
-      flags: { [MODULE]: { ...ours, empowered: { from: message.id, cost: 1, changes } } },
+      flags: { [MODULE]: { ...ours, empowered: { from: message.id, cost: 1, changes, oldTotal: rollsTotal(card.rolls) } } },
     });
   } catch (err) {
     // the point is gone and the old card stays live: say so, with what was spent and for what

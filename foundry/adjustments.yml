@@ -1725,3 +1725,14 @@ adjustments:
     native_when: dnd5e's activity choice dialog offers a per-row hint or note, or Cosmic Omen rolls its omen itself
     retire_class: safe
     check: make foundry-riders-check
+
+  - id: dnd5e-riders-empower-chips
+    packages: [dnd5e, core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs]
+    markers: ["ol.dice-rolls", "li.roll", "rerolled", "pr-emp-old", "pr-emp-new", "oldTotal"]
+    what: on dnd5e.renderChatMessage of an empowered damage card (flags.pentaryn-riders.empowered), the rerolled pairs among the dice tooltip's ol.dice-rolls > li.roll chips (dnd5e's damage-breakdown.hbs, one li per term result in result order with core's DiceTerm#getResultCSS classes — d<faces>, rerolled) are marked pr-emp-old / pr-emp-new (core rerolledFaces + matchChips match each old-then-new face pair on its die size and printed face); the card's line adds the totals before and after from empowered.oldTotal (new key, beside the unchanged from / cost / changes). Module classes only
+    why: dnd5e only strikes the old face through in grey and leaves the new one plain, and the card never said the old total, so a player could not see what one Empower click changed (GDJJdi — Disintegrate 77 → 83 read as a new 14-die roll; triage F1)
+    native_when: dnd5e marks rerolled-and-replaced dice in its damage breakdown, or offers a reroll flow that reports the change
+    retire_class: safe
+    check: make foundry-riders-check

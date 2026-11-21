@@ -158,6 +158,7 @@
       "die": "d{faces}: {value}",
       "none": "Choose at least one die.",
       "note": "Empowered Spell (1 SP): {changes}",
+      "noteTotal": "Empowered Spell (1 SP): {changes} ({old} → {new})",
       "change": "{from} → {to}",
       "superseded": "Superseded by Empowered Spell: apply the new roll below.",
       "noUse": "Empowered Spell was not used (no Sorcery Points left?). Nothing was rerolled.",

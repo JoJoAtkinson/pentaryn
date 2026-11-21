@@ -19,7 +19,7 @@ const flat = (node, prefix = "", out = []) => {
 const KEYS = flat(lang);
 
 test("lang/en.json: the key list (golden/lang-keys.json), every value a non-empty string", () => {
-  assert.equal(KEYS.length, 104);   // d3rePk: rest.omen.redirectStored + decides + decidesLine (the die decides); 0.7.2: rest.omen.wealShort + woeShort (the badge on Argon's one button per feat); LdPm43: + arcaneRecovery.left, have, grimoire, open; projectiles +9; spellView +8; 0.5.1: usage.staleConcentration; 0.5.2: settings.projectileChatTab name + hint; 0.6.0: concentration.summonFell (TwPCoB); 0.7.0: settings restCard + empoweredSpell (4), rest.* (13), empower.* (13) = +30; 0.7.1: empower.createFailed + retireFailed
+  assert.equal(KEYS.length, 105);   // GDJJdi: empower.noteTotal; d3rePk: rest.omen.redirectStored + decides + decidesLine (the die decides); 0.7.2: rest.omen.wealShort + woeShort (the badge on Argon's one button per feat); LdPm43: + arcaneRecovery.left, have, grimoire, open; projectiles +9; spellView +8; 0.5.1: usage.staleConcentration; 0.5.2: settings.projectileChatTab name + hint; 0.6.0: concentration.summonFell (TwPCoB); 0.7.0: settings restCard + empoweredSpell (4), rest.* (13), empower.* (13) = +30; 0.7.1: empower.createFailed + retireFailed
   pinJSON("lang-keys", KEYS, import.meta.url);
   for (const k of KEYS) assert.ok(typeof k === "string" && String(k.split(".").reduce((o, p) => o[p], lang)).trim(), k);
 });

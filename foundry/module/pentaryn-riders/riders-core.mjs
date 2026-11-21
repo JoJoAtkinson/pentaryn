@@ -755,7 +755,7 @@ export function clampHeal(amount, faces, prof) {
 import { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow } from "./core/hit-dice.mjs";
 import { relayClaimWinner, relayPrune, relayRequestId } from "./core/relay.mjs";
 import { SPELL_VIEWS, inPreparedView, spellViewCounts, spellViewOf } from "./core/spell-view.mjs";
-import { dieValue, empowerCandidates, empowerPlan, empowerRolls, minimumOf } from "./core/empower.mjs";
+import { dieValue, empowerCandidates, empowerPlan, empowerRolls, matchChips, minimumOf, rerolledFaces, rerolledRollData, rollsTotal, waitingCardId } from "./core/empower.mjs";
 export { battleMedicBlockReason, hdPoolsFrom, hdSummaryOf, reportRow, relayClaimWinner, relayPrune, relayRequestId };
 export { SPELL_VIEWS, inPreparedView, spellViewCounts, spellViewOf };
-export { dieValue, empowerCandidates, empowerPlan, empowerRolls, minimumOf };
+export { dieValue, empowerCandidates, empowerPlan, empowerRolls, matchChips, minimumOf, rerolledFaces, rerolledRollData, rollsTotal, waitingCardId };

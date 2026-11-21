@@ -105,6 +105,40 @@ test("empowerRolls: junk picks (an inactive face, a non-linear die, out of range
   assert.deepEqual(core.empowerRolls(null, [], () => 1), { rolls: [], changes: [], delta: 0 });
 });
 
+test("F1 rollsTotal: each roll's total floored at 0, summed (dnd5e's card total); junk reads 0", () => {
+  assert.equal(core.rollsTotal([{ total: 35 }, { total: 6 }]), 41);
+  assert.equal(core.rollsTotal([{ total: -3 }, { total: 4 }]), 4);
+  assert.equal(core.rollsTotal([{ total: "x" }, null]), 0);
+  assert.equal(core.rollsTotal(null), 0);
+});
+
+test("F1 rerolledFaces: each change's old and new face where they landed (earlier changes in the term shift it), raw faces, class and flavor; a change that points at no pair is skipped", () => {
+  const faces = [6, 4, 1, 3];
+  const out = core.empowerRolls([fireball()], core.empowerPlan([fireball()], 5), () => faces.shift());
+  const got = core.rerolledFaces(out.rolls, out.changes);
+  assert.deepEqual(got.map(f => [f.oldIndex, f.newIndex, f.old, f.fresh]), [[0, 1, 1, 3], [2, 3, 2, 1], [4, 5, 3, 4], [10, 11, 2, 6]], "the 1 under min2 prints 1; the new 1 under min2 prints 1 too");
+  assert.deepEqual([got[0].faces, got[0].cls, got[0].flavor, got[0].roll, got[0].term], [6, "BasicDie", "fire", 0, 0]);
+  assert.deepEqual(core.rerolledFaces(out.rolls, [{ roll: 0, term: 2, result: 0 }, { roll: 4, term: 0, result: 0 }]), [], "a number term, a missing roll");
+  assert.deepEqual(core.rerolledFaces([fireball()], [{ roll: 0, term: 0, result: 0 }]), [], "not rerolled: the face after is not new");
+  assert.deepEqual(core.rerolledFaces(null, null), []);
+});
+
+test("F1 matchChips: each rerolled face takes the first unused adjacent old-then-new pair in one list on its die size; a min2 die that only reads rerolled is passed over", () => {
+  const chip = (list, faces, label, rerolled = false) => ({ list, faces, label, rerolled });
+  const chips = [
+    chip(0, 6, "1", true),          // Elemental Adept's min2 1: rerolled, active — followed by an unrelated 5
+    chip(0, 6, "5"),
+    chip(0, 6, "1", true), chip(0, 6, "4"),   // the reroll: 1 → 4
+    chip(0, 6, "3", true), chip(1, 6, "3"),   // split across lists: never a pair
+    chip(1, 8, "2", true), chip(1, 8, "7"),   // a d8: 2 → 7
+  ];
+  assert.deepEqual(core.matchChips(chips, [{ faces: 6, old: 1, fresh: 4 }, { faces: 8, old: 2, fresh: 7 }]), [[2, 3], [6, 7]]);
+  assert.deepEqual(core.matchChips(chips, [{ faces: 6, old: 1, fresh: 4 }, { faces: 6, old: 1, fresh: 4 }]), [[2, 3]], "a pair is used once");
+  assert.deepEqual(core.matchChips(chips, [{ faces: 6, old: 3, fresh: 3 }]), [], "not in one list");
+  assert.deepEqual(core.matchChips(null, [{ faces: 6, old: 1, fresh: 4 }]), []);
+  assert.deepEqual(core.matchChips(chips, null), []);
+});
+
 /* ── the card ────────────────────────────────────────────────────────────── */
 
 const MAR = "marrith000000001", FONT = "fontofmagic00001", EMP = "empowered0000001", EMPACT = "empact0000000001", FIREBALL = "fireball00000009";
@@ -236,7 +270,8 @@ test("one click: the point through the feat's activity (no dialog, no card), the
   assert.deepEqual(card.flags[MODULE].empowered, { from: message.id, cost: 1, changes: [
     { roll: 0, term: 0, result: 0, faces: 6, from: 2, to: 3 }, { roll: 0, term: 0, result: 1, faces: 6, from: 2, to: 2 },
     { roll: 0, term: 0, result: 2, faces: 6, from: 3, to: 4 }, { roll: 0, term: 0, result: 7, faces: 6, from: 2, to: 6 },
-  ] });
+  ], oldTotal: 35 }, "F1: the card's total before the reroll joins the flag; from / cost / changes unchanged");
+  assert.deepEqual(Object.keys(card.flags[MODULE].empowered), ["from", "cost", "changes", "oldTotal"], "the flag's keys: pentaryn-aoe reads `from`");
   assert.equal(card.flags.core, undefined, "only our flags are copied");
   assert.equal(message.flags[MODULE].supersededBy, "newdmg0000000001");
   assert.deepEqual(F.calls.filter(c => c.op === "update").map(c => [c.uuid, c.changes]), [[`ChatMessage.${message.id}`, { [`flags.${MODULE}.supersededBy`]: "newdmg0000000001" }]]);
@@ -256,9 +291,26 @@ test("the retired card: no apply tray, no button, one line; the new card: the no
   Object.defineProperty(fresh, "getAssociatedItem", { value: () => mar.items.get(FIREBALL) });
   Object.defineProperty(fresh, "getAssociatedActor", { value: () => mar });
   const el2 = render(fresh);
-  assert.equal(el2.querySelector(".pr-empower-note").textContent, "Empowered Spell (1 SP): 2 → 3, 2 → 2, 3 → 4, 2 → 6");
+  assert.equal(el2.querySelector(".pr-empower-note").textContent, "Empowered Spell (1 SP): 2 → 3, 2 → 2, 3 → 4, 2 → 6 (35 → 41)", "F1: the totals before and after");
   assert.equal(button(el2), null, "once per spell");
   assert.ok(el2.querySelector("damage-application"), "the new card is the one to apply");
+  assert.deepEqual(W.take(), []);
+});
+
+test("F1: the empowered card's rerolled chips stand out (pr-emp-old, then pr-emp-new) in dnd5e's dice tooltip, once per render; the min2 1 that was not rerolled stays plain; a card from before oldTotal shows no totals", () => {
+  const fresh = F.game.messages.get("newdmg0000000001");
+  const tooltip = faces => `<div class="dice-tooltip"><section class="tooltip-part"><div class="dice"><ol class="dice-rolls">${faces.map(([f, cls]) => `<li class="roll basicdie d6 ${cls}">${f}</li>`).join("")}</ol></div></section></div>`;
+  // dnd5e prints each result in term order: the old face (rerolled), then its new one
+  const list = [["1", "rerolled min"], ["3", ""], ["2", "rerolled"], ["1", "min"], ["3", "rerolled"], ["4", ""], ["4", ""], ["5", ""], ["6", "max"], ["6", "max"], ["2", "rerolled"], ["6", "max"]];
+  const el = W.html(`<li class="chat-message" data-message-id="${fresh.id}"><div class="message-content"><div class="dice-roll">${tooltip(list)}</div><section class="icon-row"></section></div></li>`);
+  render(fresh, el);
+  render(fresh, el);
+  const lis = el.querySelectorAll("li.roll");
+  const marks = lis.map(li => (li.classList.contains("pr-emp-old") ? "old" : li.classList.contains("pr-emp-new") ? "new" : "-"));
+  assert.deepEqual(marks, ["old", "new", "old", "new", "old", "new", "-", "-", "-", "-", "old", "new"]);
+  assert.equal(el.querySelectorAll(".pr-empower-note").length, 1);
+  const legacy = damageCard({ id: "dmg0000000000025", flags: { empowered: { from: "dmg0000000000024", cost: 1, changes: [{ roll: 0, term: 0, result: 0, faces: 6, from: 2, to: 5 }] } } });
+  assert.equal(render(legacy).querySelector(".pr-empower-note").textContent, "Empowered Spell (1 SP): 2 → 5", "no oldTotal stored: the line as before");
   assert.deepEqual(W.take(), []);
 });
 

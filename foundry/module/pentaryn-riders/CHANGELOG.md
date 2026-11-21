@@ -10,6 +10,16 @@
   stars rolled 2: Weal (even)." (`rest.omen.redirect`); an omen already stored keeps the old wording under
   `rest.omen.redirectStored`. Three new lang keys (`redirectStored`, `decides`, `decidesLine`); golden
   `lang-keys.json`; fixture riders-core 9f. Adjustments row `dnd5e-riders-omen-die-decides`.
+- [declared] **Empowered Spell: the card says what changed** (GDJJdi, triage F1). The empowered card's line
+  ends with the total before and after: "Empowered Spell (1 SP): 1 → 4, 3 → 3, 1 → 1, 1 → 4 (77 → 83)"
+  (new lang key `empower.noteTotal`). The flag `flags.pentaryn-riders.empowered` gains `oldTotal` beside
+  `{ from, cost, changes }`, which are unchanged (pentaryn-aoe reads `from`; the README's "Flags other
+  modules read" now says so). A card empowered before `oldTotal` keeps the old line. In dnd5e's dice tooltip
+  the rerolled dice stand out: the old face fainter (`pr-emp-old`), the new one ringed in gold
+  (`pr-emp-new`), matched by the pure `rerolledFaces` / `matchChips`. New pure exports `rollsTotal`,
+  `rerolledFaces`, `matchChips` (core/empower.mjs, re-exported from riders-core; `rerolledRollData` and
+  `waitingCardId` too, for F2 / F3). Goldens: `lang-keys.json`, `surface.json` (+5 `core.*`). Adjustments row
+  `dnd5e-riders-empower-chips`.
 
 ## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
 
