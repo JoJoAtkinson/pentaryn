@@ -191,6 +191,16 @@
   },
   {
     "ns": "pentaryn-aoe",
+    "key": "hitMissLabels",
+    "name": "PENTARYN_AOE.Setting.hitMissLabels.Name",
+    "hint": "PENTARYN_AOE.Setting.hitMissLabels.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
     "key": "showAppliedBy",
     "name": "PENTARYN_AOE.Setting.showAppliedBy.Name",
     "hint": "PENTARYN_AOE.Setting.showAppliedBy.Hint",

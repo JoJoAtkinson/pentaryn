@@ -698,6 +698,13 @@
       "doc": "Part I: Apply on a damage or healing card goes through this module: rows for tokens the user does not own are relayed to the active GM, a player's targets fill a card that recorded none, and every row has a total the player can type (B relay, late targets, B5)."
     },
     {
+      "key": "hitMissLabels",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part C (D2): an attack card says Hit (blue) or Miss (orange) in its title, or on each target with several, a miss adds a \"Miss — no damage\" line, and the damage card after a hit has a blue title; nothing while dnd5e.attackRollVisibility is none."
+    },
+    {
       "key": "showAppliedBy",
       "scope": "world",
       "type": "String",
@@ -788,6 +795,10 @@
     {
       "name": "dnd5e.renderChatMessage",
       "label": "renderChatMessage(tray)"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "renderChatMessage(hit-miss)"
     },
     {
       "name": "dnd5e.postRollAttack",

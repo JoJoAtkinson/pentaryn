@@ -81,6 +81,10 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.postRollAttack"
   },
   {

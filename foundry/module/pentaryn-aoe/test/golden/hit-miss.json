@@ -1,0 +1,70 @@
+[
+  [
+    "one hit",
+    {
+      "outcome": "hit",
+      "title": "hit",
+      "pills": false,
+      "missLine": false,
+      "hit": true
+    }
+  ],
+  [
+    "one miss",
+    {
+      "outcome": "miss",
+      "title": "miss",
+      "pills": false,
+      "missLine": true,
+      "hit": false
+    }
+  ],
+  [
+    "total cover",
+    {
+      "outcome": "miss",
+      "title": "miss",
+      "pills": false,
+      "missLine": true,
+      "hit": false
+    }
+  ],
+  [
+    "two hits",
+    {
+      "outcome": "hit",
+      "title": null,
+      "pills": true,
+      "missLine": false,
+      "hit": true
+    }
+  ],
+  [
+    "mixed",
+    {
+      "outcome": "mixed",
+      "title": null,
+      "pills": true,
+      "missLine": false,
+      "hit": true
+    }
+  ],
+  [
+    "two misses",
+    {
+      "outcome": "miss",
+      "title": null,
+      "pills": true,
+      "missLine": true,
+      "hit": false
+    }
+  ],
+  [
+    "no target",
+    null
+  ],
+  [
+    "hidden",
+    null
+  ]
+]
