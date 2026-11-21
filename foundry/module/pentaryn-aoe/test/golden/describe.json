@@ -862,7 +862,8 @@
     "reads": [
       "flags.dnd5e.*",
       "flags.core.MeasuredTemplate",
-      "flags.item-piles.data.enabled"
+      "flags.item-piles.data.enabled",
+      "flags.pentaryn-riders.empowered"
     ]
   },
   "errors": [
