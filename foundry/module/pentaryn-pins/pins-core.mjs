@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-pins";
 export const SHORT = "pins";
 export const NS = "pins";
-export const VERSION = "0.4.1";                       // === module.json version (core.test pins it)
+export const VERSION = "0.5.0";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-pins/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_PINS";
 export const CSS = "ppi-";

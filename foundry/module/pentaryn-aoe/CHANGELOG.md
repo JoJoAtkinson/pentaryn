@@ -2,80 +2,81 @@
 
 ## Unreleased
 
-- **F0 [declared]. Empowered Spell keeps the saves** (feedback GDJJdi; plan feedback-triage-2026-11-19 §H2).
-  Browser test T4: one Empower click rolled the target's Dexterity save a second time, because the GM's
-  `createChatMessage` hook resolved pentaryn-riders' new damage card as a fresh tray. PHB 2024 rerolls
-  "a number of the damage dice" only, so the save stands.
-  - `resolve()` reads `flags.pentaryn-riders.empowered.from` (declared in `MANIFEST.flags.reads`); when
-    that card carries a resolution for the same activity, the new tray takes over its rows' saves,
-    multipliers, ticks and GM edits, its area, Careful Spell and request card (`core.carryResolution`,
-    pure), keeps its own damages, rolls no saves it already has, skips `fillEarlierSaves` and
-    `carefulFor`, and posts no request card. A pending player save answers the new card (`matchSave`
-    on `request`). Refused when the replaced tray is `areaLocked` (superseded, or a row applied).
-  - The GM tray's Apply passes `origin: message` to `actor.applyDamage` (as the relay and dnd5e's tray
-    do), so pentaryn-riders' `dnd5e.applyDamage` listener marks the card applied and the Empower button
-    goes: a GM Apply followed by Empower could otherwise land the damage twice.
-  - Tests: `test/empower-carry.test.mjs`. Golden: `describe.json` (`flags.reads`).
-- **G1 [declared]. A self-only healing card targets its caster** (feedback SvOaxr). dnd5e
-  records the roller's current targets on every roll card, so Stone's Endurance with an enemy targeted
-  offered to heal the enemy (browser test T3), and with nothing targeted each viewer's tray listed
-  their own selection ("Caven +11").
-  - `apply.mjs` adds `preCreateChatMessage` (roller's client, never a veto): a `healing`
-    card from an activity that affects only `self`, or has Self range and no other affects type
-    (`core.selfTargetCard`, pure), gets `system.targets` = the caster's token (`targetDescriptors`),
-    whatever was targeted. Never an area (a Self cone, line or emanation), a save or an attack
-    activity, and never a damage card (a Self-range damage activity such as Armor of Agathys hurts the
-    attacker); `areaTargets` / `recordedTargets` are never written. Gated by `applyFromCard`.
-  - Tests: `test/self-target.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
-- **G2 [declared]. "Applied by Talo → Talo (+11)" under a damage or healing card** (feedback SvOaxr).
-  The plan's "the data is already there" was wrong: `stampApplied` stored `{ at, by, targets }`, no
-  amount, and only for untargeted or late-target cards; the GM tray and the relay wrote nothing.
-  - Every Apply now records one entry under its own random key of `flags.pentaryn-aoe.appliedLog`
-    (`{ at, by, byName, rows: [{ token, name, delta, pc }] }`, `delta` the HP change): the player's own
-    rows in the applied stamp (which now runs on every Apply from dnd5e's tray; targets are still
-    recorded only on a card that had none or followed late targets), the relayed rows by the GM's
-    `applyRelay` (`messages-adapter.logApplied`, the sender named), and the GM tray's `applyRows`.
-  - The card renders one line per entry under its tray (`renderAppliedBy` in `decorate`, render-only).
-    New world setting `showAppliedBy` = `gm` | `owners` (default) | `all` (`core.appliedByVisible`); a
-    player never reads a row for a creature no player owns (`core.appliedByLines`).
-  - Tests: `test/applied-by.test.mjs`; `card-apply.test.mjs` now expects the stamp on a card with
-    recorded targets (no `system.targets` rewrite). Goldens: `settings-register.json`, `describe.json`.
-  - A player who did not roll the card (Caven pressing Apply on Talo's Cure Wounds and landing it on
-    Caven) cannot write the card, so their client hands the rows it landed to the active GM: on the
-    relay query when it also relays rows, else on a log-only `applyRelay` (`rows: []`, new `landed`
-    field). The GM writes the entry named for the sender, keeping only tokens the sender owns and
-    reading name and `pc` itself; a log-only request applies nothing, so it needs no author check. A
-    failed log-only query is a log line, never a toast (the HP already changed). Tests:
-    `applied-by.test.mjs` (non-author Apply, log-only validation); `card-apply.test.mjs` (the GM's
-    breath-weapon card now sends one log-only query). Golden: `describe.json` (`applyRelay` params).
-- **D2 [declared]. Hit / Miss on attack cards** (feedback ORGqVN, hKDbzi). `attackRollVisibility` has
-  been `hideAC` since 2026-11-20, but a miss still read as nothing happening (browser test T2).
-  - `attacks.mjs` adds `dnd5e.renderChatMessage`: one target → "— Hit" (blue) / "— Miss" (orange) in the
-    card's title; several → "Hit" / "Miss" on each target pill, no title suffix; every target missed →
-    a rendered "Miss — no damage" line (no posted message). The damage card after a hit gets a blue
-    title. Pure `core.attackOutcome` (total cover is a miss; no target, a private card or visibility
-    `none` → nothing). Idempotent on a re-render.
-  - New world setting `hitMissLabels` (default on); `settings.dnd5eAttackVisibility()` reads dnd5e's.
-  - Tests: `test/hit-miss.test.mjs` (golden `hit-miss.json`). Goldens: `hooks.json`, `describe.json`,
-    `settings-register.json`.
-- **B1 [declared]. Wall spells are drawn thick enough to see** (feedback 8t6Nn1). Wall of Stone's Long
-  Panels are a 0.25 ft line, 2.5 px on a 50 px grid, in the caster's user colour; Talo's dark green wall
-  on a dark map "disappeared".
-  - New feature file `wall-spells.mjs` (after `walls.mjs` in `FEATURES`): on `refreshRegion`, a wall
-    spell's region (`core.wallSpellRegion`) gets one `PIXI.Graphics` child on the Region placeable, each
-    line shape drawn `core.wallThickness` = `max(width, grid / 5)` thick (`core.wallPanelOutline`) in a
-    neutral stone fill and dark stroke. The shape's width is never changed (which creatures the area
-    holds stays exact); no Wall documents (B2 is out of this run). Uninstall removes every overlay.
-  - Tests: `test/wall-spells.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
-- **B3 [declared]. A panel counter while placing a multi-panel wall** (feedback 8t6Nn1; browser test T5:
-  right-click did not end placement, Escape did). The `placeRegions` wrap in `aim.mjs` shows one
-  permanent notice for a placement of two or more shapes, "Panel n of N: Esc to finish, right-click
-  skips a panel" (`core.panelCounter`), counted by each confirmed or skipped shape after the caller's
-  own `preConfirm` / `preSkip` (a refusal counts nothing), removed when the placement settles. The
-  wrap passes core the same data list. `aim.mjs`'s header no longer says right-click cancels: it skips a
-  shape (core's `#skipPlacement`), and Escape finishes, keeping the panels already placed. An async
-  `preConfirm` / `preSkip` is awaited before counting: a Promise of `false` counts nothing.
-  - Tests: `test/wall-spells.test.mjs` (panelCounter, panelNotice incl. an async refusal, the wrap). No golden changes.
+- **0.7.0 (2026-11-21). Feedback triage 2026-11-19** (F0, G1, G2, D2, B1, B3; plan feedback-triage-2026-11-19 §H2).
+  - **F0 [declared]. Empowered Spell keeps the saves** (feedback GDJJdi; plan feedback-triage-2026-11-19 §H2).
+    Browser test T4: one Empower click rolled the target's Dexterity save a second time, because the GM's
+    `createChatMessage` hook resolved pentaryn-riders' new damage card as a fresh tray. PHB 2024 rerolls
+    "a number of the damage dice" only, so the save stands.
+    - `resolve()` reads `flags.pentaryn-riders.empowered.from` (declared in `MANIFEST.flags.reads`); when
+      that card carries a resolution for the same activity, the new tray takes over its rows' saves,
+      multipliers, ticks and GM edits, its area, Careful Spell and request card (`core.carryResolution`,
+      pure), keeps its own damages, rolls no saves it already has, skips `fillEarlierSaves` and
+      `carefulFor`, and posts no request card. A pending player save answers the new card (`matchSave`
+      on `request`). Refused when the replaced tray is `areaLocked` (superseded, or a row applied).
+    - The GM tray's Apply passes `origin: message` to `actor.applyDamage` (as the relay and dnd5e's tray
+      do), so pentaryn-riders' `dnd5e.applyDamage` listener marks the card applied and the Empower button
+      goes: a GM Apply followed by Empower could otherwise land the damage twice.
+    - Tests: `test/empower-carry.test.mjs`. Golden: `describe.json` (`flags.reads`).
+  - **G1 [declared]. A self-only healing card targets its caster** (feedback SvOaxr). dnd5e
+    records the roller's current targets on every roll card, so Stone's Endurance with an enemy targeted
+    offered to heal the enemy (browser test T3), and with nothing targeted each viewer's tray listed
+    their own selection ("Caven +11").
+    - `apply.mjs` adds `preCreateChatMessage` (roller's client, never a veto): a `healing`
+      card from an activity that affects only `self`, or has Self range and no other affects type
+      (`core.selfTargetCard`, pure), gets `system.targets` = the caster's token (`targetDescriptors`),
+      whatever was targeted. Never an area (a Self cone, line or emanation), a save or an attack
+      activity, and never a damage card (a Self-range damage activity such as Armor of Agathys hurts the
+      attacker); `areaTargets` / `recordedTargets` are never written. Gated by `applyFromCard`.
+    - Tests: `test/self-target.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
+  - **G2 [declared]. "Applied by Talo → Talo (+11)" under a damage or healing card** (feedback SvOaxr).
+    The plan's "the data is already there" was wrong: `stampApplied` stored `{ at, by, targets }`, no
+    amount, and only for untargeted or late-target cards; the GM tray and the relay wrote nothing.
+    - Every Apply now records one entry under its own random key of `flags.pentaryn-aoe.appliedLog`
+      (`{ at, by, byName, rows: [{ token, name, delta, pc }] }`, `delta` the HP change): the player's own
+      rows in the applied stamp (which now runs on every Apply from dnd5e's tray; targets are still
+      recorded only on a card that had none or followed late targets), the relayed rows by the GM's
+      `applyRelay` (`messages-adapter.logApplied`, the sender named), and the GM tray's `applyRows`.
+    - The card renders one line per entry under its tray (`renderAppliedBy` in `decorate`, render-only).
+      New world setting `showAppliedBy` = `gm` | `owners` (default) | `all` (`core.appliedByVisible`); a
+      player never reads a row for a creature no player owns (`core.appliedByLines`).
+    - Tests: `test/applied-by.test.mjs`; `card-apply.test.mjs` now expects the stamp on a card with
+      recorded targets (no `system.targets` rewrite). Goldens: `settings-register.json`, `describe.json`.
+    - A player who did not roll the card (Caven pressing Apply on Talo's Cure Wounds and landing it on
+      Caven) cannot write the card, so their client hands the rows it landed to the active GM: on the
+      relay query when it also relays rows, else on a log-only `applyRelay` (`rows: []`, new `landed`
+      field). The GM writes the entry named for the sender, keeping only tokens the sender owns and
+      reading name and `pc` itself; a log-only request applies nothing, so it needs no author check. A
+      failed log-only query is a log line, never a toast (the HP already changed). Tests:
+      `applied-by.test.mjs` (non-author Apply, log-only validation); `card-apply.test.mjs` (the GM's
+      breath-weapon card now sends one log-only query). Golden: `describe.json` (`applyRelay` params).
+  - **D2 [declared]. Hit / Miss on attack cards** (feedback ORGqVN, hKDbzi). `attackRollVisibility` has
+    been `hideAC` since 2026-11-20, but a miss still read as nothing happening (browser test T2).
+    - `attacks.mjs` adds `dnd5e.renderChatMessage`: one target → "— Hit" (blue) / "— Miss" (orange) in the
+      card's title; several → "Hit" / "Miss" on each target pill, no title suffix; every target missed →
+      a rendered "Miss — no damage" line (no posted message). The damage card after a hit gets a blue
+      title. Pure `core.attackOutcome` (total cover is a miss; no target, a private card or visibility
+      `none` → nothing). Idempotent on a re-render.
+    - New world setting `hitMissLabels` (default on); `settings.dnd5eAttackVisibility()` reads dnd5e's.
+    - Tests: `test/hit-miss.test.mjs` (golden `hit-miss.json`). Goldens: `hooks.json`, `describe.json`,
+      `settings-register.json`.
+  - **B1 [declared]. Wall spells are drawn thick enough to see** (feedback 8t6Nn1). Wall of Stone's Long
+    Panels are a 0.25 ft line, 2.5 px on a 50 px grid, in the caster's user colour; Talo's dark green wall
+    on a dark map "disappeared".
+    - New feature file `wall-spells.mjs` (after `walls.mjs` in `FEATURES`): on `refreshRegion`, a wall
+      spell's region (`core.wallSpellRegion`) gets one `PIXI.Graphics` child on the Region placeable, each
+      line shape drawn `core.wallThickness` = `max(width, grid / 5)` thick (`core.wallPanelOutline`) in a
+      neutral stone fill and dark stroke. The shape's width is never changed (which creatures the area
+      holds stays exact); no Wall documents (B2 is out of this run). Uninstall removes every overlay.
+    - Tests: `test/wall-spells.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
+  - **B3 [declared]. A panel counter while placing a multi-panel wall** (feedback 8t6Nn1; browser test T5:
+    right-click did not end placement, Escape did). The `placeRegions` wrap in `aim.mjs` shows one
+    permanent notice for a placement of two or more shapes, "Panel n of N: Esc to finish, right-click
+    skips a panel" (`core.panelCounter`), counted by each confirmed or skipped shape after the caller's
+    own `preConfirm` / `preSkip` (a refusal counts nothing), removed when the placement settles. The
+    wrap passes core the same data list. `aim.mjs`'s header no longer says right-click cancels: it skips a
+    shape (core's `#skipPlacement`), and Escape finishes, keeping the panels already placed. An async
+    `preConfirm` / `preSkip` is awaited before counting: a Promise of `false` counts nothing.
+    - Tests: `test/wall-spells.test.mjs` (panelCounter, panelNotice incl. an async refusal, the wrap). No golden changes.
 
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM

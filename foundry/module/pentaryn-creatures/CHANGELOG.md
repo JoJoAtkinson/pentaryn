@@ -1,6 +1,6 @@
 # Changelog — pentaryn-creatures
 
-## Unreleased
+## 0.5.0 — 2026-11-21
 
 - **[declared] Public and hidden token markers (triage unit N, follows C `jz6tqK`).** On a creature a
   player does not own or observe, a status marker shows only when its row in the new GM menu

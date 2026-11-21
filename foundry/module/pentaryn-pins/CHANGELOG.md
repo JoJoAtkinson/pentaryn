@@ -1,6 +1,6 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
-## Unreleased
+## 0.5.0 — 2026-11-21
 
 - **Added [declared]** a way back from a peek (triage A, `fpnsNR`: Marrith's player viewed the lobby
   and had to reload to get back). While a pinned player views another scene, the scene navigation

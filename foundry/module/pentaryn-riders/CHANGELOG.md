@@ -1,6 +1,6 @@
 # Changelog — pentaryn-riders
 
-## Unreleased
+## 0.8.0 — 2026-11-21 (feedback triage 2026-11-19: E, F1, F2, F3, K)
 
 - [declared] **Cosmic Omen: the die decides, and the UI says so** (d3rePk, triage E). With no omen stored for
   the day, dnd5e's "which activity?" dialog gets one line above its buttons, "Read the stars (1d6): the die

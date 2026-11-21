@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-creatures";
 export const SHORT = "creatures";
 export const NS = "creatures";
-export const VERSION = "0.4.1";
+export const VERSION = "0.5.0";
 export const CONTRACT = "pentaryn-creatures/api@1";
 export const I18N = "PENTARYN_CREATURES";
 export const CSS = "pcr-";
