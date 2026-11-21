@@ -100,7 +100,10 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   permanent notice for a placement of several shapes (Wall of Stone's ten panels): "Panel n of N: Esc to
   finish, right-click skips a panel" (`core.panelCounter`), advanced by each confirmed or skipped shape
   (the caller's own `preConfirm` / `preSkip` run first; a `false` from them counts nothing) and removed
-  when the placement ends. Escape is the real "finish": core resolves the placement null, and dnd5e's
+  when the placement ends. Since 0.7.1 (the notice showed twice per step at the table) only one panel
+  notice is ever on screen (a new placement removes an earlier one still showing; uninstall removes it),
+  and a shape is counted once by core's `regionIndex:shapeIndex`, however often its hook runs.
+  Escape is the real "finish": core resolves the placement null, and dnd5e's
   `preConfirm` has already kept the panels placed so far, so those are created. Right-click skips the
   shape under the mouse (core's `#skipPlacement`); for a one-shape area that is the same as cancelling.
 - **Part I — Apply from the card** (`apply.mjs`, setting `applyFromCard`). dnd5e's own Apply tray

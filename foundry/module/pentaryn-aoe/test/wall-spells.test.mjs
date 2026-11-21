@@ -185,6 +185,38 @@ test("B3: an async preConfirm: a Promise of false counts nothing, a Promise of a
   } finally { restore(); }
 });
 
+test("0.7.1: the same shape's hook called twice (core's regionIndex / shapeIndex) counts once: one step, one count", () => {
+  const { notes, restore } = noticesStub();
+  try {
+    const { options, done } = S.aim.panelNotice(3, {});
+    options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
+    options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
+    assert.equal(notes.length, 1, "never a second notice");
+    assert.equal(notes[0].message, "Panel 2 of 3: Esc to finish, right-click skips a panel", "panel 1 counted once");
+    options.preSkip({ regionIndex: 1, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
+    assert.equal(notes[0].message, "Panel 3 of 3: Esc to finish, right-click skips a panel", "the next region's shape counts");
+    done();
+  } finally { restore(); }
+});
+
+test("0.7.1: one panel notice on screen at a time — a new multi-panel placement removes the earlier one still showing; uninstall removes it too", () => {
+  const { notes, restore } = noticesStub();
+  try {
+    const first = S.aim.panelNotice(10, {});
+    const second = S.aim.panelNotice(10, {});
+    assert.equal(notes.length, 2);
+    assert.deepEqual(notes.map(n => n.removed), [true, false], "the earlier notice is gone the moment the next placement starts");
+    first.done();
+    assert.equal(notes[1].removed, false, "the stale placement settling later does not remove the live notice");
+    second.done();
+    assert.equal(notes[1].removed, true);
+    S.aim.panelNotice(4, {});
+    S.aim.uninstall();
+    assert.equal(notes[2].removed, true, "uninstall takes the notice with it");
+    S.aim.wrapPlacement();
+  } finally { restore(); }
+});
+
 test("B3: through the placeRegions wrap — the counter is shown for Wall of Stone's ten regions, core gets the same list, the notice goes when placement returns", () => {
   const { notes, restore } = noticesStub();
   try {
