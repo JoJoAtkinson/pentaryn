@@ -76,3 +76,11 @@
 .pentaryn-pins.ppi-single .ppi-check { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
 .pentaryn-pins.ppi-single .ppi-check.ppi-disabled { opacity: 0.55; cursor: not-allowed; }
 .pentaryn-pins.ppi-single .ppi-check input { flex: 0 0 auto; margin: 0; }
+
+/* the "⟵ {character}" scene-nav tab (an li pins creates in #scene-navigation-active): core's tab
+   look, with the sheet badge's accent on its left edge so a player finds the way back */
+.ppi-nav-back {
+  cursor: pointer;
+  border-left: 3px solid #5b3fb0;
+  font-style: italic;
+}

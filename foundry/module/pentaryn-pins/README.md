@@ -21,7 +21,10 @@ across scenes (nobody pulls) is caught by a safety net after 1.5 s, a level chan
 switch will not follow is followed, and a pull that lands while their map is still loading (core
 drops it with "cannot switch Scenes") is carried out when the load ends. Activating the token's own
 scene while they look elsewhere lands them on the token's floor, controlling it. They may click the
-scene nav to look at another map (nothing redirects them); a GM "Pull to Scene" moves them too. The
+scene nav to look at another map (nothing redirects them); while they do, the nav shows a
+**"⟵ {character}"** tab (unreleased, triage A) that takes them back to the token's scene and floor
+with the token selected — drawn only when core shows no tab for that scene (a map with
+`navigation: false` that is not active). A GM "Pull to Scene" moves them too. The
 sheet of the pinned actor (and of its wild-shape form) shows "Pinned to {player}" in the title bar.
 Unpinned players and GMs: stock. Switch off: everything is inert.
 
@@ -121,7 +124,7 @@ before each pull it sends, and pins' `prepull.mjs` answers it.
 | `pentaryn-pins.audited` | `(result)` | the switch went on; on the GM client whose user changed it |
 | `pentaryn-pins.ready` | `(api)` | the API is published |
 
-Listens to: `deleteToken`, `moveToken`, `createToken`, `renderBaseActorSheet`, `updateUser`, `deleteUser`,
+Listens to: `deleteToken`, `moveToken`, `renderSceneNavigation`, `createToken`, `renderBaseActorSheet`, `updateUser`, `deleteUser`,
 `canvasReady`, `canvasTearDown`, `canvasPan`, `ready` and `pentaryn-portals.prePull` (pinned in
 `test/golden/hooks.json`), and core's own `pullToScene` socket event (`game.socket.on`, attached at
 `ready`, after core's `Game#activateSocketListeners`; never emitted by pins).
@@ -211,7 +214,7 @@ only (`game.users.activeGM.isSelf`, normally the bot). Every GM-side pull goes t
 | `settings.mjs` | `pinning` and its onChange fan-out |
 | `world-adapter.mjs` | Foundry → plain data: pins, root actors (kit `lib/root-actor.mjs`, the rule portals uses), tokens across scenes, the audit, `pinInputs` (the one builder of the plain pin world: `auditWorld` with the GMs' pins, `gatherInputs` without; one token walk), `liveToken` (a walked record as it stands now, by id), `startedCombatTokens` (the COMBAT snapshot), `pullTargetOf` / `pullToPin` (where and how the GM pulls a player; a resolved token is reused), `listOf` (no canvas) |
 | `api-manifest.mjs` / `api.mjs` | API rows / implementations |
-| `follow.mjs` | the `_onActivate` patch, the deleteToken safety net, the moveToken level gap-filler (core's clause: kit `lib/pull-rule.mjs` `ownsOtherSighted`), the `pullToScene` replay attached at `ready` (player client) |
+| `follow.mjs` | the `_onActivate` patch, the deleteToken safety net, the moveToken level gap-filler (core's clause: kit `lib/pull-rule.mjs` `ownsOtherSighted`), the "⟵ {character}" scene-nav tab (`renderSceneNavigation`, rule `pinnedNavTab`), the `pullToScene` replay attached at `ready` (player client) |
 | `sheet.mjs` | the "Pinned to" badge |
 | `canvas-menu.mjs` / `menu-ui.mjs` | the GM right-click menu (Prompt note, Gather with its count, combat confirm and toasts, Teleport ▸, Teleport single… with its DialogV2 checkbox list (`pickedUsers`); one `gatherInputs` read per open feeds the counts and every row): event gating / DOM |
 | `switch.mjs` | the switch-on audit toast and pull |
@@ -231,7 +234,8 @@ make foundry-pins-check
 `glue.test.mjs` replays core's activation, token hooks (`moveToken` fired directly) and
 `pullToScene` socket event on a stub whose `Scene#view` toasts core's loading warning when called
 while loading, with mock timers for the grace window and the polls; `menu.test.mjs` drives the
-right-click sequence in Windows and macOS order.
+right-click sequence in Windows and macOS order; `nav.test.mjs` renders core's scene-navigation
+markup and clicks the "⟵ {character}" tab.
 
 ## Sync
 

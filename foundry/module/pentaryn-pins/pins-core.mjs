@@ -165,6 +165,27 @@ export function activateDecision({ enabled, isGM, target, active, sceneId, viewe
 }
 
 /**
+ * Does this client's scene navigation get a "⟵ {character}" tab back to the pinned token's scene
+ * (triage A, `fpnsNR`)? Core v14's SceneNavigation#prepareScenes shows a player a scene only when it
+ * is active, is the one viewed, or has `navigation && visible`; a pinned map with `navigation: false`
+ * therefore has a tab only while it is viewed, and a player who clicked away has no way back.
+ * → `{ sceneId, character }` for a pinned player (switch on: the caller passes `pinTokenScene` null
+ * otherwise) viewing another scene, when core draws no tab for the token's scene; else null — a GM,
+ * an unpinned player, no single token, already viewing that scene, or a scene core already lists.
+ * @param {{ isGM: boolean, pinned: boolean }|null} user
+ * @param {string|null} viewedSceneId
+ * @param {{ id: string, active?: boolean, navigation?: boolean, visible?: boolean, character?: string|null }|null} pinTokenScene
+ * @returns {{ sceneId: string, character: string }|null}
+ */
+export function pinnedNavTab(user, viewedSceneId, pinTokenScene) {
+  if (!user || user.isGM || !user.pinned) return null;
+  if (!pinTokenScene?.id) return null;
+  if (pinTokenScene.id === (viewedSceneId ?? null)) return null;
+  if (pinTokenScene.active || (pinTokenScene.navigation && pinTokenScene.visible)) return null;
+  return { sceneId: pinTokenScene.id, character: pinTokenScene.character || "?" };
+}
+
+/**
  * The switch-on audit: each pinned actor has exactly one token across all scenes. A pin whose
  * player cannot observe the actor (`observes: false`) is a NOT_OWNER warning: the view follows a
  * token the player gets no vision from.
