@@ -40,6 +40,14 @@
     player never reads a row for a creature no player owns (`core.appliedByLines`).
   - Tests: `test/applied-by.test.mjs`; `card-apply.test.mjs` now expects the stamp on a card with
     recorded targets (no `system.targets` rewrite). Goldens: `settings-register.json`, `describe.json`.
+  - A player who did not roll the card (Caven pressing Apply on Talo's Cure Wounds and landing it on
+    Caven) cannot write the card, so their client hands the rows it landed to the active GM: on the
+    relay query when it also relays rows, else on a log-only `applyRelay` (`rows: []`, new `landed`
+    field). The GM writes the entry named for the sender, keeping only tokens the sender owns and
+    reading name and `pc` itself; a log-only request applies nothing, so it needs no author check. A
+    failed log-only query is a log line, never a toast (the HP already changed). Tests:
+    `applied-by.test.mjs` (non-author Apply, log-only validation); `card-apply.test.mjs` (the GM's
+    breath-weapon card now sends one log-only query). Golden: `describe.json` (`applyRelay` params).
 - **D2 [declared]. Hit / Miss on attack cards** (feedback ORGqVN, hKDbzi). `attackRollVisibility` has
   been `hideAC` since 2026-11-20, but a miss still read as nothing happening (browser test T2).
   - `attacks.mjs` adds `dnd5e.renderChatMessage`: one target → "— Hit" (blue) / "— Miss" (orange) in the
@@ -65,8 +73,9 @@
   skips a panel" (`core.panelCounter`), counted by each confirmed or skipped shape after the caller's
   own `preConfirm` / `preSkip` (a refusal counts nothing), removed when the placement settles. The
   wrap passes core the same data list. `aim.mjs`'s header no longer says right-click cancels: it skips a
-  shape (core's `#skipPlacement`), and Escape finishes, keeping the panels already placed.
-  - Tests: `test/wall-spells.test.mjs` (panelCounter, panelNotice, the wrap). No golden changes.
+  shape (core's `#skipPlacement`), and Escape finishes, keeping the panels already placed. An async
+  `preConfirm` / `preSkip` is awaited before counting: a Promise of `false` counts nothing.
+  - Tests: `test/wall-spells.test.mjs` (panelCounter, panelNotice incl. an async refusal, the wrap). No golden changes.
 
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM

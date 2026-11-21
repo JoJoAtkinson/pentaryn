@@ -77,6 +77,69 @@ test("applyRelay (the GM's side) logs the rows it landed, named for the sender",
   assert.equal(entry.rows[0].pc, true);
 });
 
+test("a non-author's Apply on their own token: their client cannot write the card, so the GM writes the entry, named for them", async () => {
+  // Caven's player presses Apply on another player's Cure Wounds card and lands it on Caven
+  const card = W.message({
+    id: "healAppliedBy005", type: "healing", author: "plUser0000000009", isAuthor: false, rolls: [{ total: 11, options: { type: "healing" } }],
+    system: { targets: [] }, speaker: { scene: ctx.s.id, actor: ctx.wizard.id },
+  });
+  const cv = ctx.s.tokens.get(IDS.cv);
+  const ownership = cv.ownership;
+  cv.ownership = { default: 0, [PLAYER_ID]: 3 };       // the token's ownership follows its actor (the player's)
+  ctx.caven.system.attributes.hp.value = 10;
+  const sent = [];
+  const handler = CONFIG.queries[`${MODULE}.applyRelay`];
+  CONFIG.queries[`${MODULE}.applyRelay`] = async data => {
+    sent.push(JSON.parse(JSON.stringify(data)));
+    F.become({ userId: GM_ID });                       // the active GM's client answers
+    try { return await handler(data, { user: game.users.get(PLAYER_ID) }); } finally { F.become({ userId: PLAYER_ID }); }
+  };
+  const host = root(`<div class="message-content"><damage-application><div class="card-tray damage-tray"><recorded-targets><ul class="targets unlist pills"><li><target-pill><label>${cv.uuid}</label><datalist><option value="${cv.uuid}" data-checked>${cv.uuid}</option></datalist></target-pill></li></ul></recorded-targets><button class="apply-button" type="button">Apply</button></div></damage-application></div>`);
+  const el = host.querySelector("damage-application");
+  el.multiplier = 1;
+  el.getMergedOptions = () => ({ multiplier: 1, originatingMessage: card });
+  F.become({ userId: PLAYER_ID });
+  try {
+    const pending = S.apply.applyCard(card, el);
+    await advance(800);                                // the request claim settles
+    const result = await pending;
+    assert.deepEqual([result.local, result.relay], [[cv.uuid], []], "Caven is the player's: applied on their own client, nothing to relay");
+  } finally {
+    CONFIG.queries[`${MODULE}.applyRelay`] = handler;
+    cv.ownership = ownership;
+    F.become({ userId: GM_ID });
+  }
+  assert.equal(sent.length, 1, "one log-only query");
+  assert.deepEqual(sent[0].rows, []);
+  const [entry, ...more] = logOf(card.id);
+  assert.equal(more.length, 0);
+  assert.deepEqual([entry.by, entry.byName], [PLAYER_ID, game.users.get(PLAYER_ID).name]);
+  assert.deepEqual(entry.rows.map(r => [r.token, r.name, r.pc]), [[cv.uuid, "Caven", true]]);
+  assert.equal(entry.rows[0].delta, ctx.caven.system.attributes.hp.value - 10, "the HP change the player's client saw");
+});
+
+test("applyRelay log-only: rows the sender does not own are dropped; nothing to log and nothing to apply is BAD_ARGS", async () => {
+  const card = W.message({
+    id: "healAppliedBy006", type: "healing", author: GM_ID, rolls: [{ total: 5, options: { type: "healing" } }],
+    system: { targets: [] }, speaker: { scene: ctx.s.id },
+  });
+  const g1 = ctx.s.tokens.get(IDS.g1);
+  const cv = ctx.s.tokens.get(IDS.cv);
+  const pending = S.apply.applyRelay({
+    messageId: card.id, requestId: "reqAppliedBy0006", rows: [],
+    landed: [{ token: g1.uuid, name: "Goblin 1", delta: 5 }, { token: cv.uuid, name: "Forged", delta: 4, pc: false }, { token: cv.uuid, delta: "x" }],
+  }, { user: game.users.get(PLAYER_ID) });
+  await advance(800);
+  const out = await pending;
+  assert.equal(out.ok, true, "a log-only request needs no author check: it applies nothing");
+  assert.deepEqual(out.applied, []);
+  const [entry] = logOf(card.id);
+  assert.deepEqual(entry.rows, [{ token: cv.uuid, name: "Caven", delta: 4, pc: true }], "the goblin is not the sender's; name and pc are read here");
+  const bad = await S.apply.applyRelay({ messageId: card.id, requestId: "reqAppliedBy0007", rows: [] }, { user: game.users.get(PLAYER_ID) });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "BAD_ARGS");
+});
+
 /* ── the line ────────────────────────────────────────────────────────── */
 
 function rendered(message) {

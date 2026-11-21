@@ -121,11 +121,11 @@ export const FEATURE_ROWS = Object.freeze({
   ],
   apply: [
     {
-      path: "applyRelay", params: [p("data", "{ messageId, requestId, rows: { uuid, multiplier, amount?, options? }[] }", { doc: "messageId: the damage or healing card; requestId: one id per Apply press, required (two GM tabs land it once; BAD_ARGS without one); rows: the target token uuids the sender does not own, each with the tray's multiplier, when typed the total to use instead of the rolled one, and the pill menu's ignore / downgrade choices as plain data" })],
+      path: "applyRelay", params: [p("data", "{ messageId, requestId, rows: { uuid, multiplier, amount?, options? }[], landed?: { token, delta }[] }", { doc: "messageId: the damage or healing card; requestId: one id per Apply press, required (two GM tabs land it once; BAD_ARGS without one); rows: the target token uuids the sender does not own, each with the tray's multiplier, when typed the total to use instead of the rolled one, and the pill menu's ignore / downgrade choices as plain data; landed: the rows the sender's own client already applied, when the sender may not write the card (not its author): the GM writes them into the card's Applied-by entry, only for tokens the sender owns (rows may then be empty)" })],
       returns: "{ ok: true, applied: string[], claimed?: false } | { ok: false, code, reason }",
       gm: true, writes: true, query: true, relay: true, since: "0.6.0",
-      sideEffects: ["Actor hp (applyDamage, on the active GM's client)", "flags.pentaryn-aoe.claims"],
-      doc: "Part I relay: the active GM applies a damage or healing card's rows to tokens the sender does not own, with the sender's multiplier, typed total and ignore / downgrade choices. The sender must be the card's author or own its actor (REFUSED otherwise; the sender checks the same rule first and skips such rows silently); the damage is read from the card, never from the request.",
+      sideEffects: ["Actor hp (applyDamage, on the active GM's client)", "flags.pentaryn-aoe.claims", "flags.pentaryn-aoe.appliedLog"],
+      doc: "Part I relay: the active GM applies a damage or healing card's rows to tokens the sender does not own, with the sender's multiplier, typed total and ignore / downgrade choices. The sender must be the card's author or own its actor (REFUSED otherwise; the sender checks the same rule first and skips such rows silently); the damage is read from the card, never from the request. G2: also writes the press's `appliedLog` entry, named for the sender, with the rows it landed plus `landed` (a log-only request, rows empty, needs no author check: it applies nothing).",
     },
   ],
   effects: [

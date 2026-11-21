@@ -315,7 +315,13 @@ export async function applyCard(message, el) {
     landed.push(landedRow(r.token, actor, before));
   }
   collapse(el);
-  const relayed = relay.length ? await relayRows(message, relay) : null;
+  // G2: a user who may not write this card (not its author, not a GM: Caven's Apply on Talo's card)
+  // hands the rows that landed here to the active GM, who writes their "Applied by" entry for them;
+  // with rows to relay they ride on that query, else on a log-only one.
+  const canWrite = isMine(message) || !!game.user?.isGM;
+  const handOver = canWrite ? [] : landed;
+  const relayed = relay.length ? await relayRows(message, relay, handOver) : null;
+  if (!relay.length && handOver.length) await logThroughGm(message, handOver);
   // G2: every Apply is stamped (the applied marker, and this user's own rows for the "Applied by" line);
   // the relayed rows are logged by the GM's client that landed them. Targets are recorded only for a
   // card that had none, or followed late targets.
@@ -331,7 +337,7 @@ export async function applyCard(message, el) {
  * `claimed: false` is not a failure (the winner lands it). Silence meant a dropped heal looked applied
  * (playtest 2026-11-07).
  */
-async function relayRows(message, relay) {
+async function relayRows(message, relay, landed = []) {
   const names = relay.map(r => r.token?.name ?? r.uuid).join(", ");
   const failed = reason => log.notify("warn", _loc("PENTARYN_AOE.Apply.RelayFailed", { names, reason: String(reason ?? "") }));
   const data = {
@@ -344,7 +350,8 @@ async function relayRows(message, relay) {
         ...(r.amount === null || r.amount === undefined ? {} : { amount: r.amount }),
         ...(Object.keys(options).length ? { options } : {})
       };
-    })
+    }),
+    ...(landed.length ? { landed } : {})
   };
   try {
     const out = await queryGM(RELAY_QUERY, data, { timeout: RELAY_TIMEOUT_MS });
@@ -358,6 +365,23 @@ async function relayRows(message, relay) {
     const code = errorCode(err);
     if (code === "NO_GM" || code === "TIMEOUT") log.notify("warn", _loc("PENTARYN_AOE.Apply.NoGm", { names }));
     else failed(err?.message ?? err);
+    return null;
+  }
+}
+
+/**
+ * G2: the rows a non-author's Apply landed on their own tokens, as a log-only relay (no rows to apply):
+ * the active GM writes the "Applied by" entry, named for this user. The HP already changed here, so a
+ * failure is only a missing line: logged, never a toast.
+ */
+async function logThroughGm(message, landed) {
+  const data = { messageId: message.id, requestId: foundry.utils.randomID(), rows: [], landed };
+  try {
+    const out = await queryGM(RELAY_QUERY, data, { timeout: RELAY_TIMEOUT_MS });
+    if (out && out.ok === false) log.warn("applied-by relay refused", { ...out, uuid: message.uuid });
+    return out ?? null;
+  } catch (err) {
+    log.warn("applied-by relay", err);
     return null;
   }
 }
@@ -500,12 +524,13 @@ export async function applyRelay(data = {}, { user = null } = {}) {
   if (!message || !isApplyCard(message.type)) return fail("NOT_FOUND", `damage or healing message ${data?.messageId}`);
   const sender = user ?? null;
   const who = { uuid: message.uuid, by: game.user.id, for: sender?.id ?? null };
-  if (sender && !sender.isGM && !mayApply(message, sender)) {
+  const rows = Array.isArray(data?.rows) ? data.rows : [];
+  const handed = Array.isArray(data?.landed) ? data.landed : [];
+  if (!rows.length && !handed.length) return fail("BAD_ARGS", "no rows");
+  if (rows.length && sender && !sender.isGM && !mayApply(message, sender)) {
     log.warn("apply relay refused: not the card's author", who);
     return fail("REFUSED", "only the card's author, or the owner of its actor, may apply it through the GM");
   }
-  const rows = Array.isArray(data?.rows) ? data.rows : [];
-  if (!rows.length) return fail("BAD_ARGS", "no rows");
   if (typeof data?.requestId !== "string" || !/^[A-Za-z0-9]{1,32}$/.test(data.requestId)) return fail("BAD_ARGS", "requestId (one id per Apply press) is required");
   if (!(await claimMessage(message, `relay-${data.requestId}`, { scope: MODULE }))) return ok({ applied: [], claimed: false });
   const damages = cardDamages(message);
@@ -525,9 +550,28 @@ export async function applyRelay(data = {}, { user = null } = {}) {
     landed.push(landedRow(token, actor, before));
   }
   log.info("apply relay", { ...who, ids: applied });
-  // G2: the sender pressed Apply; the GM's client landed these rows, so it writes their line.
-  await logApplied(message, landed, { user: sender ?? game.user, log });
+  // G2: the sender pressed Apply; the GM's client landed these rows, so it writes their line, together
+  // with the rows the sender landed on their own tokens when they may not write the card themselves.
+  await logApplied(message, [...handedRows(handed, sender), ...landed], { user: sender ?? game.user, log });
   return ok({ applied });
+}
+
+/**
+ * G2: the rows a sender says their own client landed (`data.landed`, messages-adapter.landedRow), as the
+ * GM will log them: only tokens that resolve here and whose actor the sender owns (a GM sender: any),
+ * with a finite HP change; name and `pc` are read from the token here, never taken from the request.
+ */
+function handedRows(handed, sender) {
+  const out = [];
+  for (const row of handed) {
+    const token = typeof row?.token === "string" ? fromUuidSync(row.token, { strict: false }) : null;
+    const actor = token?.actor ?? null;
+    const delta = Number(row?.delta);
+    if (!actor || !Number.isFinite(delta)) continue;
+    if (sender && !sender.isGM && actor.testUserPermission?.(sender, "OWNER") !== true) continue;
+    out.push({ token: token.uuid, name: token.name ?? actor.name ?? "", delta, pc: !!actor.hasPlayerOwner });
+  }
+  return out;
 }
 
 /* -------------------------------------------- */
@@ -554,4 +598,4 @@ export function uninstall() {
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only. Not part of the API.
-export const _internals = { renderAppliedBy, onPreCreate, casterTokenOf, decorate, onRowsBuilt, addAmountInputs, refreshEffective, refreshTyped, onAmountInput, onClick, relayRows, collapse, stampApplied, describeRecent, onTargetToken, mayApply, amounts };
+export const _internals = { renderAppliedBy, onPreCreate, casterTokenOf, decorate, onRowsBuilt, addAmountInputs, refreshEffective, refreshTyped, onAmountInput, onClick, relayRows, logThroughGm, handedRows, collapse, stampApplied, describeRecent, onTargetToken, mayApply, amounts };
