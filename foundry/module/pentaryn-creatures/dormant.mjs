@@ -10,7 +10,7 @@
  */
 
 import { combatantRelabels, disguiseUpdate, readDormant, wakeUpdate } from "./creatures-core.mjs";
-import { fail, ok } from "./lib/errors.mjs";
+import { errorCode, fail, ok } from "./lib/errors.mjs";
 import { isActiveGM } from "./lib/election.mjs";
 import { refOf } from "./lib/resolve.mjs";
 
@@ -20,6 +20,10 @@ let log = null;
 const waking = new Set();
 
 const sourceOf = doc => doc?._source ?? doc;
+
+/** A write Foundry refused (validation, permission, a dead socket) as a fail(), never ok:true (0.5.1). */
+const refused = (doc, what, err) =>
+  fail(errorCode(err) ?? "INTERNAL", `${doc?.name ?? doc?.id ?? "token"}: ${what} was not written: ${err?.message ?? err}`);
 
 /** Arm (or re-arm) one token: store its look once, put the disguise on. */
 export async function arm(doc, opts = {}) {
@@ -32,7 +36,11 @@ export async function arm(doc, opts = {}) {
   }
   const res = { token: refOf(doc), name: update.name, img: update["texture.src"], disposition: update.disposition };
   if (opts?.dryRun) return ok({ dryRun: true, ...res });
-  await doc.update(update, { pentarynCreatures: true });
+  try {
+    await doc.update(update, { pentarynCreatures: true });
+  } catch (err) {
+    return refused(doc, "the disguise", err);
+  }
   return ok({ dryRun: false, ...res });
 }
 
@@ -43,13 +51,23 @@ export async function wake(doc, opts = {}) {
   const update = wakeUpdate(sourceOf(doc));
   if (!update) return ok({ dryRun: !!opts?.dryRun, woke: false, token: refOf(doc) });
   if (opts?.dryRun) return ok({ dryRun: true, woke: true, token: refOf(doc), name: update.name });
-  await doc.update(update, { pentarynCreatures: true });
+  try {
+    await doc.update(update, { pentarynCreatures: true });
+  } catch (err) {
+    return refused(doc, "the wake", err);
+  }
+  const warnings = [];
   for (const combat of game.combats ?? []) {
     const rows = [...combat.combatants].map(c => ({ id: c.id, tokenId: c.tokenId, name: c._source?.name, img: c._source?.img }));
     const ups = combatantRelabels(rows, doc.id, flag);
-    if (ups.length) await combat.updateEmbeddedDocuments("Combatant", ups);
+    if (!ups.length) continue;
+    try {
+      await combat.updateEmbeddedDocuments("Combatant", ups);
+    } catch (err) {
+      warnings.push(`combat ${combat.id}: combatants not relabelled: ${err?.message ?? err}`);
+    }
   }
-  return ok({ dryRun: false, woke: true, token: refOf(doc), name: update.name });
+  return ok({ dryRun: false, woke: true, token: refOf(doc), name: update.name, ...(warnings.length ? { warnings } : {}) });
 }
 
 /** Wake every dormant token fighting in a started combat (active GM only). */
@@ -60,6 +78,10 @@ function wakeCombat(combat) {
     if (!t || !readDormant(sourceOf(t)) || waking.has(t.uuid)) continue;
     waking.add(t.uuid);
     wake(t)
+      .then(res => {
+        if (!res?.ok) log.warn(`waking ${t.name} failed: ${res?.reason}`);
+        else if (res.warnings) log.warn(`waking ${t.name}: ${res.warnings.join("; ")}`);
+      })
       .catch(err => log.warn(`waking ${t.name} failed`, err))
       .finally(() => waking.delete(t.uuid));
   }

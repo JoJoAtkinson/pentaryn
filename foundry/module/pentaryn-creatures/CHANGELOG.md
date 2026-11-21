@@ -1,5 +1,29 @@
 # Changelog — pentaryn-creatures
 
+## 0.5.1 — 2026-11-21 (playtest round 2: linked dormant tokens, Bloodied marker)
+
+- **[declared] `dormant` works on a linked token.** Playtest 2026-11-21 (Assistant GM, linked copy
+  *ZZ Bog A*): `dormant(tokenDoc)` threw `DataModelValidationError … delta: _id may not be undefined,
+  system: …, items: …` from `TokenDocument5e#updateSource`, and nothing changed. Cause: the disguise
+  always wrote `delta.name`/`delta.img`, and a linked token's source delta is null, so core built a
+  new ActorDelta from just `{ name, img }` and refused it. New pure `hasOwnDelta(src)` (unlinked and a
+  delta object): `disguiseUpdate` writes the delta only then, `lookOf` stores `delta: null` for a
+  linked token, and `wakeUpdate` restores the delta only when the look stored one and the token still
+  has its own (a token linked between arm and wake is left alone). A linked token's world actor is
+  shared, so it is never renamed: its sheet and the Look window keep the real name and portrait.
+  Unlinked tokens (the Hags Den Vessels) are unchanged and still round-trip exactly.
+- **[declared] `dormant` and `wake` answer `{ ok: false, code, reason }` when the token update
+  throws** (code `INTERNAL`, or the error's own code), never `ok: true` or an uncaught throw. A wake
+  whose token update landed but whose combatant relabel failed is `ok: true` with `warnings`; the
+  combat trigger logs either through the kit logger.
+- **[declared] Bloodied gets its own marker row** (round-2 playtest M2, `cc88553b`): dnd5e keeps
+  Bloodied in `CONFIG.DND5E.bloodied`, outside `CONFIG.statusEffects`, so the 0.5.0 table had no row
+  for it and a Bloodied monster fell to "other effects" (GM only) and showed players no icon. New pure
+  `markerStatusEffects()` adds it to the table and the *Token markers* menu.
+- Tests: `test/dormant.test.mjs` (linked and unlinked disguise/wake, a Foundry-like token that throws
+  on a linked delta write, the failure returns, relabel warnings), `test/markers.test.mjs`. Goldens:
+  `surface.json` (`markerStatusEffects`, `hasOwnDelta`), `describe.json` (dormant/wake docs).
+
 ## 0.5.0 — 2026-11-21
 
 - **[declared] Public and hidden token markers (triage unit N, follows C `jz6tqK`).** On a creature a

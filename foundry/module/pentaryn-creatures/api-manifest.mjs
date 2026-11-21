@@ -164,7 +164,9 @@ export const MANIFEST = Object.freeze({
         + "art, ring, the unlinked actor's name and portrait; hidden for the record) is stored in the dormant flag, then "
         + "it gets the prop art with the ring off, the prop name on the token and its unlinked actor, no nameplate or bars "
         + "and SECRET disposition. Visibility (hidden) is never touched. When a combat it is in starts (or it joins a running "
-        + "one) the active GM wakes it. GM only (NOT_GM); a missing token is NOT_FOUND, bad options BAD_ARGS.",
+        + "one) the active GM wakes it. GM only (NOT_GM); a missing token is NOT_FOUND, bad options BAD_ARGS, a token "
+        + "update Foundry refuses ok:false (INTERNAL unless the error is coded). A linked token gets no delta write: "
+        + "only the token is disguised, never the shared world actor.",
     },
     {
       path: "wake",
@@ -172,12 +174,14 @@ export const MANIFEST = Object.freeze({
         { name: "ref", kind: "token", type: "Token | TokenDocument | uuid | id | exact name" },
         { name: "opts", type: "{ sceneId?, dryRun? }", optional: true },
       ],
-      returns: "Promise<{ ok: true, dryRun, woke, token, name? } | { ok: false, code, reason }>",
+      returns: "Promise<{ ok: true, dryRun, woke, token, name?, warnings? } | { ok: false, code, reason }>",
       gm: true, writes: true, dryRun: true, since: "0.4.0",
       sideEffects: ["token name/displayName/displayBars/disposition/texture.src/ring", "token delta.name/delta.img",
         "flags.pentaryn-creatures.dormant (null)", "Combatant name/img (those still showing the disguise)"],
       doc: "Undo a dormant disguise now: write the stored look back, set the flag to null and relabel the token's combatants "
-        + "that still show the disguise. A token that is not dormant answers woke: false and writes nothing. GM only (NOT_GM).",
+        + "that still show the disguise. A token that is not dormant answers woke: false and writes nothing. GM only (NOT_GM). "
+        + "A refused token update is ok:false; a failed combatant relabel after a good wake is listed in warnings. "
+        + "A linked token's delta is never written.",
     },
   ],
   flags: {

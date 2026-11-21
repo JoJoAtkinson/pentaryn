@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-creatures";
 export const SHORT = "creatures";
 export const NS = "creatures";
-export const VERSION = "0.5.0";
+export const VERSION = "0.5.1";
 export const CONTRACT = "pentaryn-creatures/api@1";
 export const I18N = "PENTARYN_CREATURES";
 export const CSS = "pcr-";
@@ -534,7 +534,8 @@ const nonEmpty = v => typeof v === "string" && v.trim() !== "";
  * The token's own look, from its source data: everything a disguise changes, plus `hidden` (kept for
  * the record, never restored), plus the art scale and rotation lock, so a prop shrunk or turned by hand
  * wakes at the creature's own size and upright. `delta` is the unlinked actor's override of name and
- * portrait (null = the world actor's).
+ * portrait (null = the world actor's); a linked token has no delta of its own, so its look stores
+ * `delta: null` and neither the disguise nor the wake writes one (0.5.1).
  */
 export function lookOf(src) {
   return {
@@ -546,8 +547,20 @@ export function lookOf(src) {
     texture: { src: src?.texture?.src ?? null, scaleX: src?.texture?.scaleX ?? 1, scaleY: src?.texture?.scaleY ?? 1 },
     lockRotation: src?.lockRotation === true,
     ring: plainCopy(src?.ring ?? {}),
-    delta: { name: src?.delta?.name ?? null, img: src?.delta?.img ?? null },
+    delta: hasOwnDelta(src) ? { name: src.delta.name ?? null, img: src.delta.img ?? null } : null,
   };
+}
+
+/**
+ * Does this token carry an actor delta a disguise may write to? Only an unlinked token with a delta
+ * object in its source. A linked token's source delta is null (0.5.1, playtest 2026-11-21): a
+ * `delta.name` write there makes core build a new ActorDelta from just `{ name, img }`, and
+ * TokenDocument#updateSource throws (`delta: _id may not be undefined, system: …`). The world actor
+ * of a linked token is shared, so a disguise never renames it either.
+ */
+export function hasOwnDelta(src) {
+  const d = src?.delta;
+  return src?.actorLink !== true && !!d && typeof d === "object" && !Array.isArray(d);
 }
 
 /** The dormant flag `{ look, disguise }` from a token (document or source), or null. Never throws. */
@@ -579,15 +592,16 @@ export function disguiseUpdate(src, opts = {}) {
     disposition: disguise.disposition,
     "texture.src": disguise.img,
     "ring.enabled": false,
-    "delta.name": disguise.name,
-    "delta.img": disguise.img,
+    ...(hasOwnDelta(src) ? { "delta.name": disguise.name, "delta.img": disguise.img } : {}),
     [`flags.${MODULE}.${DORMANT_FLAG}`]: { look, disguise },
   };
 }
 
 /**
  * The flattened update that puts the stored look back and clears the flag, or null when not dormant.
- * Scale and rotation lock are restored only when the look has them (looks stored before 0.4.1 do not).
+ * Scale and rotation lock are restored only when the look has them (looks stored before 0.4.1 do not);
+ * the delta name and portrait only when the look stored a delta and the token still has one of its own
+ * (never on a linked token, 0.5.1).
  */
 export function wakeUpdate(src) {
   const d = readDormant(src);
@@ -603,8 +617,8 @@ export function wakeUpdate(src) {
     ...(typeof L.texture?.scaleY === "number" ? { "texture.scaleY": L.texture.scaleY } : {}),
     ...(typeof L.lockRotation === "boolean" ? { lockRotation: L.lockRotation } : {}),
     ring: plainCopy(L.ring ?? {}),
-    "delta.name": L.delta?.name ?? null,
-    "delta.img": L.delta?.img ?? null,
+    ...(hasOwnDelta(src) && L.delta && typeof L.delta === "object"
+      ? { "delta.name": L.delta.name ?? null, "delta.img": L.delta.img ?? null } : {}),
     [`flags.${MODULE}.${DORMANT_FLAG}`]: null,
   };
 }

@@ -37,6 +37,7 @@
   "core.dockKey": "dockKey",
   "core.filingRefusal": "filingRefusal",
   "core.finalConceal": "finalConceal",
+  "core.hasOwnDelta": "hasOwnDelta",
   "core.isAoeHandle": "isAoeHandle",
   "core.isItemPile": "isItemPile",
   "core.isPlayerCreature": "isPlayerCreature",
