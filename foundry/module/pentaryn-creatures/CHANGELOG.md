@@ -1,5 +1,30 @@
 # Changelog — pentaryn-creatures
 
+## Unreleased
+
+- **[declared] Public and hidden token markers (triage unit N, follows C `jz6tqK`).** On a creature a
+  player does not own or observe, a status marker shows only when its row in the new GM menu
+  *Token markers* (Configure Settings) is Public. Defaults (Joe, 2026-11-21): Bloodied, Dead,
+  Unconscious, Prone, Grappled, Restrained, Paralyzed, Petrified, Stunned, Incapacitated, Sleeping,
+  Burning, Bleeding, Flying, Hovering, Burrowing, Dodging, Transformed and Invisible Public; every
+  other status (Concentrating included) GM only; "other spell and item effects on enemies" GM only;
+  "friendly tokens show every marker" on. A dormant token shows no marker at all until it wakes. GM,
+  owners and observers are unchanged. Works through dnd5e's `ActiveEffect5e#isConcealed` (new feature
+  `markers.mjs`, UI `markers-menu.mjs`; wrap through the kit's wrapMethod, libWrapper or direct, marker
+  `__pentarynCreaturesConcealed`, adjustments row `creatures-dnd5e-effect-isconcealed`), so a hidden
+  marker is missing from the token, the combat tracker, the sheet and the scrolling text.
+- **[declared] Bloodied follows its row whatever `dnd5e.bloodied` says** while the switch is on (dnd5e's
+  "player" rule is replaced, its other reasons kept). dnd5e still applies Bloodied to monsters only
+  under `dnd5e.bloodied = "all"`: set that live. Switch off: dnd5e's own behaviour, pinned.
+- New settings `markers` (world, on) and `markerTable` (store row, overrides only), the menu
+  `markerMenu` (restricted); `status()` gains `markers`, `markerTable`, `markersPatched`. Hook manifest
+  gains `setup` (the wrap) and `updateToken` (redraw markers on a dormant flag or disposition change),
+  23 rows. Core gains `concealFor`, `markerTable`, `markerOverrides`, `finalConceal`, `statusIdsOf`,
+  `markerMenuRows`, `markerTableFromForm`, `markersMayChange` and the `MARKER_*` constants. Tests:
+  `test/markers.test.mjs` (golden `conceal.json`), `test/glue-markers.test.mjs`,
+  `test/glue-markers-libwrapper.test.mjs`. module.json: description and the lib-wrapper reason
+  (restart to pick up).
+
 ## 0.4.1 — 2026-11-05
 
 - **[declared] A dormant token wakes at its own size, upright.** The stored look now keeps the art

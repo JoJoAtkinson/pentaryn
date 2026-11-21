@@ -52,12 +52,14 @@ test("registry labels (describe().hooks), in order; the lifecycle hooks are the 
     { name: "dnd5e.postSummon", label: "dnd5e.postSummon: file the copy in the library" },   // [declared] 0.3.0 filing
     { name: "updateCombat", label: "updateCombat: wake dormant combatants" },   // [declared] 0.4.0 dormant until combat
     { name: "createCombatant", label: "createCombatant: wake dormant combatants" },
+    { name: "setup", label: "setup: wrap ActiveEffect5e#isConcealed" },   // [declared] unit N: public and hidden markers
+    { name: "updateToken", label: "updateToken: redraw markers" },
   ]);
 });
 
 test("every feature file exports install and uninstall", async () => {
   const files = featureFiles();
-  assert.deepEqual(files, ["light.mjs", "creature-strip.mjs", "owner-sees.mjs", "summons.mjs", "dormant.mjs"]);
+  assert.deepEqual(files, ["light.mjs", "creature-strip.mjs", "owner-sees.mjs", "summons.mjs", "dormant.mjs", "markers.mjs"]);
   for (const f of files) {
     const mod = await import(new URL(f, ROOT));
     assert.equal(typeof mod.install, "function", `${f}: install`);
@@ -113,6 +115,7 @@ test("hot patch: after uninstall(), re-importing the entry re-wires hooks, the w
     "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
     "on:controlToken", "on:dnd5e.postSummon",   // [declared] 0.3.0
     "on:updateCombat", "on:createCombatant",   // [declared] 0.4.0
+    "on:updateToken",   // [declared] unit N
   ], "the feature hooks again; no lifecycle hooks (they already fired), the wrap is applied at once");
   assert.equal(api2.patchedWith(), "direct");
   assert.notEqual(Object.getOwnPropertyDescriptor(W.TokenClass.prototype, "isVisible").get, W.coreGetter);

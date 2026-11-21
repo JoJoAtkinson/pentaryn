@@ -130,13 +130,13 @@
     {
       "path": "status",
       "params": [],
-      "returns": "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, summonLibrary, summonPatched, writer, lit, version }",
+      "returns": "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, summonLibrary, summonPatched, markers, markerTable, markersPatched, writer, lit, version }",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "since": "0.1.1",
-      "doc": "One read of this client's state: how Token#isVisible is wrapped (patchedWith), the settings as this client reads them (showStrip is per client), how dnd5e's Actor5e.fetchExisting is wrapped for the summon library (summonPatched: libWrapper, direct or null), whether this client writes the lights (writer: the active GM), and how many tokens on every scene carry our light flag (lit)."
+      "doc": "One read of this client's state: how Token#isVisible is wrapped (patchedWith), the settings as this client reads them (showStrip is per client), how dnd5e's Actor5e.fetchExisting is wrapped for the summon library (summonPatched: libWrapper, direct or null), the public and hidden markers switch and the Token markers menu's stored overrides (markers, markerTable), how dnd5e's ActiveEffect5e#isConcealed is wrapped (markersPatched: libWrapper, direct or null), whether this client writes the lights (writer: the active GM), and how many tokens on every scene carry our light flag (lit)."
     },
     {
       "path": "inspect",
@@ -334,6 +334,21 @@
       "type": "Boolean",
       "default": true,
       "doc": "A player without Create New Actors who summons from a compendium gets a copy made by the active GM, owned by them, in PC Summons & Forms/<First name> — summons & forms; dnd5e reuses it next time. Off: dnd5e's own refusal."
+    },
+    {
+      "key": "markers",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Public and hidden markers: a player sees a status marker on a creature they do not observe only when its row in the Token markers menu is Public; a dormant token shows none. Off: dnd5e's own rule (dnd5e.bloodied) only."
+    },
+    {
+      "key": "markerTable",
+      "scope": "world",
+      "type": "Object",
+      "default": {},
+      "store": true,
+      "doc": "The Token markers menu's rows, overrides only: { statuses: { <status id>: \"public\"|\"gm\" }, other, friendlyAll }. Edit it through the menu (Configure Settings → Pentaryn Creatures → Token markers)."
     }
   ],
   "events": [],
@@ -409,6 +424,14 @@
     {
       "name": "createCombatant",
       "label": "createCombatant: wake dormant combatants"
+    },
+    {
+      "name": "setup",
+      "label": "setup: wrap ActiveEffect5e#isConcealed"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: redraw markers"
     }
   ],
   "patches": [

@@ -23,7 +23,7 @@ function litCount() {
   return countLit(flags);
 }
 
-/** One read of this client's state (transform-creatures-31): wrap, settings, writer, lit tokens. */
+/** One read of this client's state (transform-creatures-31): wraps, settings, writer, lit tokens. */
 function status(ctx) {
   return {
     patchedWith: ctx.exposed.patchedWith(),
@@ -33,6 +33,9 @@ function status(ctx) {
     floatOverHud: setting("floatOverHud"),
     summonLibrary: setting("summonLibrary"),
     summonPatched: ctx.exposed.summonPatched(),
+    markers: setting("markers"),
+    markerTable: setting("markerTable"),
+    markersPatched: ctx.exposed.markersPatched?.() ?? null,
     writer: isActiveGM(),
     lit: litCount(),
     version: VERSION,
