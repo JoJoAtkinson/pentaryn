@@ -29,6 +29,16 @@
   registrations (+1, `diceSoNiceMessagePreProcess`). **`module.json` change: `relationships.recommends`
   gains `dice-so-nice` (with a reason; blueprint C09), so this release needs a Foundry restart.** Goldens:
   `hooks.json`. Adjustments row `dsn-riders-empower-new-dice`.
+- [declared] **Empowered Spell from the sheet or the HUD can't waste a Sorcery Point** (GDJJdi, triage F3:
+  two sheet uses, 2 SP gone, nothing rerolled). A `dnd5e.preUseActivity` veto on the feat's activity (label
+  "Empowered Spell: only from a damage card"): the module's own spend (`usage.pentaryn.empower`) goes through;
+  otherwise the use is stopped before dnd5e spends anything, and the caster's waiting card (their own spell
+  damage card from the last 10 minutes that could show the button, this user able to edit it; pure
+  `waitingCardId`) is empowered as one click would, or, with none, one notice: "Use the Empower button on
+  your spell's damage card: no Sorcery Point was spent." (new key `empower.useCard`). It joins
+  `selftest()`'s "usage vetoes run first" check (api.mjs `VETO_LABELS`). Hooks: 45 non-lifecycle
+  registrations (+1 `dnd5e.preUseActivity`). Goldens: `hooks.json`, `lang-keys.json`. Adjustments row
+  `dnd5e-riders-empower-sheet-use`.
 
 ## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
 

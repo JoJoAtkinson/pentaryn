@@ -26,7 +26,7 @@ test("registration manifest (non-lifecycle) equals golden/hooks.json", () => {
   pinJSON("hooks", atLoad.filter(h => !LIFECYCLE.has(h.name)), import.meta.url);
 });
 
-test("the 44 non-lifecycle registrations, in order (guide S1 list; 0.6.0: + summon fell, its prune, the self-cast expiry guard; 0.7.0: + the rest card's five and Empower's two; 0.7.1: + the rest card refresh; GDJJdi F2: + Empower's Dice So Nice decision)", () => {
+test("the 45 non-lifecycle registrations, in order (guide S1 list; 0.6.0: + summon fell, its prune, the self-cast expiry guard; 0.7.0: + the rest card's five and Empower's two; 0.7.1: + the rest card refresh; GDJJdi: + Empower's sheet-use veto (F3) and Dice So Nice decision (F2))", () => {
   assert.deepEqual(atLoad.filter(h => !LIFECYCLE.has(h.name)).map(h => h.name), [
     "dnd5e.preUseActivity",                 // rituals: slot unticked
     "dnd5e.summonToken",                    // concentration: stamp
@@ -69,6 +69,7 @@ test("the 44 non-lifecycle registrations, in order (guide S1 list; 0.6.0: + summ
     "dnd5e.preUseActivity",                 // rest: Cosmic Omen used with no omen (or the wrong one) rolls / redirects (G3)
     "renderActivityChoiceDialog",           // rest: today's omen marked, the other greyed
     "renderItemButtonArgonComponent",       // rest: the same on Argon's reaction buttons
+    "dnd5e.preUseActivity",                 // empower: the sheet's / HUD's Empowered Spell spends nothing without a card (GDJJdi F3)
     "dnd5e.renderChatMessage",              // empower: the Empower (1 SP) button, the note, the retired card (WUiaAA, 0.7.0)
     "dnd5e.applyDamage",                    // empower: an applied card loses its button
     "diceSoNiceMessagePreProcess",          // empower: DSN does not throw an empowered card's whole roll (GDJJdi F2)
@@ -137,7 +138,7 @@ test("before init: the try/catch readers give false, the direct readers throw in
 test("the shared hooks run their listeners in manifest order (rituals → cast-flow ×4 → Battle Medic)", () => {
   const { init: _i, ready: _r, ...counts } = F.listeners();
   assert.deepEqual(counts, {
-    "dnd5e.preUseActivity": 7, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 6,
+    "dnd5e.preUseActivity": 8, "dnd5e.summonToken": 1, deleteActiveEffect: 1, "dnd5e.renderChatMessage": 6,
     createChatMessage: 1, updateItem: 2, "dnd5e.preCreateMeasuredTemplate": 1, "dnd5e.preSummon": 2,
     renderItemButtonArgonComponent: 2, changeSidebarTab: 1, "dnd5e.postSummon": 1, renderActivityUsageDialog: 1,
     renderActivityChoiceDialog: 2, "dnd5e.postUseActivity": 3, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,

@@ -49,12 +49,22 @@
  *    whisper list and blind flag, so DSN shows them to whom it would have shown the card's dice. No DSN,
  *    nothing to throw.
  *
+ * 5. The feat's own activity, used from the sheet or the HUD, can't waste a point (F3, GDJJdi: Marrith
+ *    opened it twice from the sheet, 2 Sorcery Points gone, nothing rerolled). A `dnd5e.preUseActivity`
+ *    veto (sync, a literal `false`, before dnd5e spends anything) on the Empowered Spell activity: the
+ *    module's own spend (`usage.pentaryn.empower`, part 2) goes through; otherwise, when the caster has a
+ *    waiting card — their own spell damage card from the last 10 minutes that could show the button (not
+ *    superseded, empowered or applied; a point left, a die below its average; this user can edit it) —
+ *    the use is stopped and that card is empowered as one click would; with none, the use is stopped
+ *    with "Use the Empower button on your spell's damage card" and nothing is spent. It is one of the
+ *    vetoes `selftest()` checks run before other packages' listeners (api.mjs).
+ *
  * Setting pentaryn-riders.empoweredSpell (world, default on). Rows dnd5e-riders-empowered-spell (the
  * damage message shape, `Roll#toJSON` term results, the `damage-application` element) waiting in the
  * batch file.
  */
 
-import { MODULE, empowerCandidates, empowerPlan, empowerRolls, matchChips, rerolledFaces, rerolledRollData, rollsTotal } from "./riders-core.mjs";
+import { MODULE, empowerCandidates, empowerPlan, empowerRolls, matchChips, rerolledFaces, rerolledRollData, rollsTotal, waitingCardId } from "./riders-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { empoweredSpellOf, fontUsesLeft } from "./shapes.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -81,7 +91,12 @@ const T = Object.freeze({
   noUse: "PENTARYN_RIDERS.empower.noUse",
   createFailed: "PENTARYN_RIDERS.empower.createFailed",
   retireFailed: "PENTARYN_RIDERS.empower.retireFailed",
+  useCard: "PENTARYN_RIDERS.empower.useCard",
 });
+
+/** The veto's label: api.mjs's "usage vetoes run first" check finds it by this literal (api.mjs may not
+ *  import a feature file; selftest's check fails with -1 should the two drift). */
+const SHEET_USE_LABEL = "Empowered Spell: only from a damage card";
 
 /* ── reading a damage card ─────────────────────────────────────────────── */
 
@@ -366,10 +381,46 @@ function onApplied(actor, amount, options) {
   } catch (err) { log.warn("applied damage check skipped", err); }
 }
 
+/* ── 5. the sheet's / HUD's Empowered Spell can't waste a point ─────────── */
+
+/** The newest card this user could empower for `actor` now (part 1's button rules), or null. */
+function waitingCard(actor) {
+  const cards = [];
+  for (const message of game.messages?.contents ?? [...(game.messages?.values?.() ?? [])]) {
+    if (message?.type !== "damage") continue;
+    const card = empowerCard(message);
+    if (!card || card.actor.id !== actor.id) continue;
+    cards.push({ id: message.id, actorId: actor.id, timestamp: message.timestamp, eligible: !!card.actor.isOwner && canEdit(message) });
+  }
+  const id = waitingCardId(cards, { actorId: actor.id, now: Date.now() });
+  return id ? game.messages.get(id) ?? null : null;
+}
+
+// Synchronous, a literal `false` (dnd5e.preUseActivity is a Hooks.call); never GM-gated: the owner's click.
+function sheetUseCheck(activity, usageConfig) {
+  try {
+    if (!enabled() || usageConfig?.pentaryn?.empower) return;
+    const item = activity?.item;
+    const actor = item?.actor;
+    if (!actor) return;
+    const emp = empoweredSpellOf(actor);
+    if (!emp?.activity || emp.item?.id !== item.id || emp.activity.id !== activity.id) return;
+    const message = waitingCard(actor);
+    if (message) {
+      log.info("Empowered Spell used from the sheet: the waiting card is empowered", { card: message.id, by: game.user.id });
+      empower(message).catch(err => log.warn("Empowered Spell failed", err));
+    } else {
+      log.notify("warn", _loc(T.useCard));
+    }
+    return false;
+  } catch (err) { log.warn("Empowered Spell use check skipped", err); }
+}
+
 /* ── wiring ────────────────────────────────────────────────────────────── */
 
 export function install(reg, ctx) {
   log = ctx.log;
+  reg.on("dnd5e.preUseActivity", sheetUseCheck, { guard: false, label: SHEET_USE_LABEL });
   reg.on("dnd5e.renderChatMessage", onRender, { guard: false, label: "Empower button" });
   reg.on("dnd5e.applyDamage", onApplied, { guard: false, label: "Empower: applied card" });
   reg.on("diceSoNiceMessagePreProcess", onDicePreProcess, { guard: false, label: "Empower: Dice So Nice throws the new dice only" });

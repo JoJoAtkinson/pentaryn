@@ -1747,3 +1747,14 @@ adjustments:
     native_when: DSN animates only the dice that changed between two linked messages, or dnd5e / a reroll API marks replaced dice for it
     retire_class: guarded
     check: make foundry-riders-check; live, Empower with Dice So Nice on — only the rerolled dice are thrown, on every client that sees the card
+
+  - id: dnd5e-riders-empower-sheet-use
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs, foundry/module/pentaryn-riders/api.mjs]
+    markers: ["dnd5e.preUseActivity", "pentaryn?.empower", "Empowered Spell: only from a damage card", "waitingCardId"]
+    what: dnd5e.preUseActivity (sync, a literal false, on the using client, before dnd5e's dialog and consumption) on the Empowered Spell feat's activity (shapes empoweredSpellOf) — the module's own spend (usage.pentaryn.empower, empower.mjs part 2) goes through; any other use (the sheet, Argon) is stopped, and the caster's waiting card (their own spell damage card from the last 10 minutes that could show the Empower button, editable by this user; core waitingCardId over message.timestamp) is empowered instead, or one notice says to use the card's button and nothing is spent; joins selftest's "usage vetoes run first" (api.mjs VETO_LABELS)
+    why: dnd5e's Empowered Spell activity spends a Font of Magic use and does nothing else, so a sheet use with no damage card to act on wasted a Sorcery Point (GDJJdi — two sheet uses, 2 SP gone; triage F3)
+    native_when: dnd5e's Empowered Spell activity rerolls damage dice on a card itself, or Metamagic gains a target-the-card flow
+    retire_class: guarded
+    check: make foundry-riders-check

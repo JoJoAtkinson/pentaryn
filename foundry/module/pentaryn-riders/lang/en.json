@@ -163,7 +163,8 @@
       "superseded": "Superseded by Empowered Spell: apply the new roll below.",
       "noUse": "Empowered Spell was not used (no Sorcery Points left?). Nothing was rerolled.",
       "createFailed": "Empowered Spell: the Sorcery Point was spent but the new damage card could not be posted. The old card stays live; tell the GM.",
-      "retireFailed": "Empowered Spell: the new damage card is posted, but the old card could not be marked as superseded. Apply only the new one."
+      "retireFailed": "Empowered Spell: the new damage card is posted, but the old card could not be marked as superseded. Apply only the new one.",
+      "useCard": "Use the Empower button on your spell's damage card: no Sorcery Point was spent."
     }
   }
 }

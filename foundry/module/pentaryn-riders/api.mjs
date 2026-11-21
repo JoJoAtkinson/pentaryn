@@ -165,8 +165,9 @@ export function patchRecords() {
 
 const LIFECYCLE = new Set(["init", "setup", "ready"]);
 
-/** cast-flow's dnd5e.preUseActivity vetoes (one usage dialog, one Arcane Recovery picker), by label. */
-const VETO_LABELS = new Set(["one usage dialog", "one Arcane Recovery picker"]);
+/** The dnd5e.preUseActivity vetoes, by label: cast-flow's two (one usage dialog, one Arcane Recovery
+ *  picker) and empower's (the sheet's Empowered Spell spends nothing without a card, GDJJdi F3). */
+const VETO_LABELS = new Set(["one usage dialog", "one Arcane Recovery picker", "Empowered Spell: only from a damage card"]);
 
 /**
  * The vetoes run before every other package's dnd5e.preUseActivity listener (finding 2: a veto

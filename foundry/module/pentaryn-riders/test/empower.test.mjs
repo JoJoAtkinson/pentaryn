@@ -154,6 +154,20 @@ test("F2 rerolledRollData: only the new faces, one term per die class, size and 
   assert.equal(core.rerolledRollData(null), null);
 });
 
+test("F3 waitingCardId: the caster's newest eligible card within 10 minutes; another actor's, an ineligible, a stale or a future card is never it", () => {
+  const now = 1_000_000_000;
+  const c = (id, timestamp, eligible = true, actorId = "a") => ({ id, actorId, timestamp, eligible });
+  assert.equal(core.waitingCardId([c("old", now - 120_000), c("new", now - 5_000), c("mid", now - 60_000)], { actorId: "a", now }), "new");
+  assert.equal(core.waitingCardId([c("x", now - 5_000, false), c("y", now - 9 * 60_000)], { actorId: "a", now }), "y", "the ineligible newest is skipped");
+  assert.equal(core.waitingCardId([c("stale", now - 10 * 60_000 - 1)], { actorId: "a", now }), null, "older than 10 minutes");
+  assert.equal(core.waitingCardId([c("edge", now - 10 * 60_000)], { actorId: "a", now }), "edge", "exactly 10 minutes still counts");
+  assert.equal(core.waitingCardId([c("theirs", now, true, "b")], { actorId: "a", now }), null);
+  assert.equal(core.waitingCardId([c("ahead", now + 5 * 60_000)], { actorId: "a", now }), null, "a clock far ahead is not trusted");
+  assert.equal(core.waitingCardId([c("nots", undefined), { timestamp: now, eligible: true, actorId: "a" }], { actorId: "a", now }), null, "no timestamp, no id");
+  assert.equal(core.waitingCardId([c("w", now - 70_000)], { actorId: "a", now, windowMs: 60_000 }), null, "the window is a parameter");
+  assert.equal(core.waitingCardId(null, { actorId: "a", now }), null);
+});
+
 /* ── the card ────────────────────────────────────────────────────────────── */
 
 const MAR = "marrith000000001", FONT = "fontofmagic00001", EMP = "empowered0000001", EMPACT = "empact0000000001", FIREBALL = "fireball00000009";
@@ -525,6 +539,70 @@ test("after the point is spent: a new card that fails to post is one warning nam
   const stuck = "Empowered Spell: the new damage card is posted, but the old card could not be marked as superseded. Apply only the new one.";
   assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["warn", stuck]]);
   assert.deepEqual(W.take().map(l => l[1]), [`${MODULE} | ${stuck}`, `${MODULE} | Empowered Spell: the new card is posted but the old card was not retired`]);
+});
+
+test("F3: Empowered Spell used from the sheet or HUD never wastes a point — the module's own spend goes through; a waiting card is empowered instead; with none the use is stopped, one notice, nothing spent", async () => {
+  const points = font().system.uses.value;
+  const use = (usage = {}) => F.fireCall("dnd5e.preUseActivity", empAct, usage, {}, {});
+  const notices = () => F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]);
+  const refused = "Use the Empower button on your spell's damage card: no Sorcery Point was spent.";
+  try {
+    // the internal spend (part 2's activity.use) is never stopped, or Empower itself would break
+    assert.notEqual(use({ pentaryn: { empower: true } }), false, "the internal empower use still goes through");
+    // nothing waiting: every card so far has no timestamp, is superseded or applied
+    uses.length = 0;
+    created.length = 0;
+    F.calls.length = 0;
+    W.take();
+    assert.equal(use({ event: { type: "click" } }), false, "stopped before dnd5e spends anything");
+    await drain();
+    assert.deepEqual([uses.length, created.length, font().system.uses.value], [0, 0, points], "nothing spent, nothing posted");
+    assert.deepEqual(notices(), [["warn", refused]]);
+    // a card from 11 minutes ago is not waiting
+    const stale = damageCard({ id: "dmg0000000000100" });
+    stale.timestamp = Date.now() - 11 * 60_000;
+    F.calls.length = 0;
+    assert.equal(use(), false);
+    assert.deepEqual(notices(), [["warn", refused]]);
+    assert.equal(stale.flags[MODULE].supersededBy, undefined);
+    // a waiting card (two minutes old, live): it is empowered as one click would, the sheet's use stopped
+    const waiting = damageCard({ id: "dmg0000000000101" });
+    waiting.timestamp = Date.now() - 2 * 60_000;
+    const newer = damageCard({ id: "dmg0000000000102", flags: { trayApplied: true } });
+    newer.timestamp = Date.now() - 30_000;   // newer, but applied: not waiting
+    uses.length = 0;
+    created.length = 0;
+    F.calls.length = 0;
+    uniforms.push(0.1, 0.4, 0.9, 0.5);
+    assert.equal(use({ event: { type: "click" } }), false, "the sheet's own use is stopped");
+    await drain();
+    assert.deepEqual(uses, [[{ pentaryn: { empower: true } }, { configure: false }, { create: false }]], "one point, through the module's own spend");
+    assert.equal(font().system.uses.value, points - 1);
+    assert.equal(created.length, 1);
+    assert.equal(created[0].flags[MODULE].empowered.from, waiting.id);
+    assert.ok(waiting.flags[MODULE].supersededBy, "the waiting card is retired");
+    assert.equal(newer.flags[MODULE].supersededBy, undefined, "the applied card is left alone");
+    assert.deepEqual(notices(), []);
+    // a card this user cannot edit is not theirs to empower
+    F.become({ userId: IDS.player });
+    try {
+      const gmCard = damageCard({ id: "dmg0000000000103", isAuthor: false });
+      gmCard.timestamp = Date.now() - 1_000;
+      F.calls.length = 0;
+      assert.equal(use(), false);
+      assert.deepEqual(notices(), [["warn", refused]]);
+      assert.equal(gmCard.flags[MODULE].supersededBy, undefined);
+    } finally { F.become({ userId: IDS.gm }); }
+    // left to dnd5e: another activity of the caster, the setting off
+    assert.notEqual(F.fireCall("dnd5e.preUseActivity", mar.items.get(FIREBALL).system.activities.contents[0], {}, {}, {}), false);
+    await F.game.settings.set(MODULE, "empoweredSpell", false);
+    assert.notEqual(use(), false, "the setting off: dnd5e's own activity as before");
+    await F.game.settings.set(MODULE, "empoweredSpell", true);
+    // a throwing activity is warned, never a veto
+    W.take();
+    assert.notEqual(F.fireCall("dnd5e.preUseActivity", { get item() { throw new Error("odd activity"); } }, {}, {}, {}), false);
+    assert.ok(W.take().some(l => l[1] === `${MODULE} | Empowered Spell use check skipped`));
+  } finally { font().system.uses.value = points; }
 });
 
 test("a broken card root or origin is warned, never thrown; non-damage roots are left alone", () => {
