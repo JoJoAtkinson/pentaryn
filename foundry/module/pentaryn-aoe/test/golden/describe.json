@@ -542,9 +542,9 @@
       "params": [
         {
           "name": "data",
-          "type": "{ messageId, requestId, rows: { uuid, multiplier, amount?, options? }[] }",
+          "type": "{ messageId, requestId, rows: { uuid, multiplier, amount?, options? }[], landed?: { token, delta }[] }",
           "resolve": false,
-          "doc": "messageId: the damage or healing card; requestId: one id per Apply press, required (two GM tabs land it once; BAD_ARGS without one); rows: the target token uuids the sender does not own, each with the tray's multiplier, when typed the total to use instead of the rolled one, and the pill menu's ignore / downgrade choices as plain data"
+          "doc": "messageId: the damage or healing card; requestId: one id per Apply press, required (two GM tabs land it once; BAD_ARGS without one); rows: the target token uuids the sender does not own, each with the tray's multiplier, when typed the total to use instead of the rolled one, and the pill menu's ignore / downgrade choices as plain data; landed: the rows the sender's own client already applied, when the sender may not write the card (not its author): the GM writes them into the card's Applied-by entry, only for tokens the sender owns (rows may then be empty)"
         }
       ],
       "returns": "{ ok: true, applied: string[], claimed?: false } | { ok: false, code, reason }",
@@ -554,10 +554,11 @@
       "relay": true,
       "sideEffects": [
         "Actor hp (applyDamage, on the active GM's client)",
-        "flags.pentaryn-aoe.claims"
+        "flags.pentaryn-aoe.claims",
+        "flags.pentaryn-aoe.appliedLog"
       ],
       "since": "0.6.0",
-      "doc": "Part I relay: the active GM applies a damage or healing card's rows to tokens the sender does not own, with the sender's multiplier, typed total and ignore / downgrade choices. The sender must be the card's author or own its actor (REFUSED otherwise; the sender checks the same rule first and skips such rows silently); the damage is read from the card, never from the request."
+      "doc": "Part I relay: the active GM applies a damage or healing card's rows to tokens the sender does not own, with the sender's multiplier, typed total and ignore / downgrade choices. The sender must be the card's author or own its actor (REFUSED otherwise; the sender checks the same rule first and skips such rows silently); the damage is read from the card, never from the request. G2: also writes the press's `appliedLog` entry, named for the sender, with the rows it landed plus `landed` (a log-only request, rows empty, needs no author check: it applies nothing)."
     }
   ],
   "queries": [
@@ -698,6 +699,20 @@
       "doc": "Part I: Apply on a damage or healing card goes through this module: rows for tokens the user does not own are relayed to the active GM, a player's targets fill a card that recorded none, and every row has a total the player can type (B relay, late targets, B5)."
     },
     {
+      "key": "hitMissLabels",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Part C (D2): an attack card says Hit (blue) or Miss (orange) in its title, or on each target with several, a miss adds a \"Miss — no damage\" line, and the damage card after a hit has a blue title; nothing while dnd5e.attackRollVisibility is none."
+    },
+    {
+      "key": "showAppliedBy",
+      "scope": "world",
+      "type": "String",
+      "default": "owners",
+      "doc": "Part I (G2): who reads \"Applied by <user> → <token> (±n)\" under a damage or healing card's tray: gm (the GM only), owners (the GM, the card's author and the owners of a row's token) or all. Players never read a monster's row."
+    },
+    {
       "key": "npcSaveRollMode",
       "scope": "world",
       "type": "String",
@@ -783,6 +798,10 @@
       "label": "renderChatMessage(tray)"
     },
     {
+      "name": "dnd5e.renderChatMessage",
+      "label": "renderChatMessage(hit-miss)"
+    },
+    {
       "name": "dnd5e.postRollAttack",
       "label": "postRollAttack"
     },
@@ -809,6 +828,14 @@
     {
       "name": "dnd5e.preCreateMeasuredTemplate",
       "label": "preCreateMeasuredTemplate(aim)"
+    },
+    {
+      "name": "refreshRegion",
+      "label": "refreshRegion(wall)"
+    },
+    {
+      "name": "preCreateChatMessage",
+      "label": "preCreateChatMessage(self)"
     },
     {
       "name": "dnd5e.renderChatMessage",
@@ -856,13 +883,15 @@
       "flags.pentaryn-aoe.areaTargets",
       "flags.pentaryn-aoe.recordedTargets",
       "flags.pentaryn-aoe.applied",
+      "flags.pentaryn-aoe.appliedLog",
       "flags.dnd5e.lockSize",
       "flags.dnd5e.requestResult"
     ],
     "reads": [
       "flags.dnd5e.*",
       "flags.core.MeasuredTemplate",
-      "flags.item-piles.data.enabled"
+      "flags.item-piles.data.enabled",
+      "flags.pentaryn-riders.empowered"
     ]
   },
   "errors": [

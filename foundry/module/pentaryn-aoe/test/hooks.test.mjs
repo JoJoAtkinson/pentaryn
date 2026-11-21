@@ -38,18 +38,19 @@ test("registration manifest (init + setup + ready as the active GM) equals golde
   pinJSON("hooks", golden, import.meta.url);
 });
 
-test("setup registers the feature hooks in Part order: areas, token areas, resolve, tray, attacks, effects, refund, aim, escape, walls, apply", () => {
+test("setup registers the feature hooks in Part order: areas, token areas, resolve, tray, attacks, effects, refund, aim, escape, walls, wall spells, apply", () => {
   assert.deepEqual(atSetup.map(h => `${h.kind} ${h.name}`), [
     "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken", "on preMoveToken",
     "on dnd5e.renderChatMessage", "on deleteActiveEffect", "on canvasReady",
     "on dnd5e.createMeasuredTemplate", "on renderTokenHUD",
     "on dnd5e.postUseActivity", "on createChatMessage", "on preDeleteChatMessage", "on deleteChatMessage", "on updateChatMessage",
     "on dnd5e.renderChatMessage",
-    "on dnd5e.postRollAttack", "on dnd5e.postUseActivity",
+    "on dnd5e.renderChatMessage", "on dnd5e.postRollAttack", "on dnd5e.postUseActivity",
     "on createChatMessage", "on dnd5e.renderChatMessage", "on preCreateActiveEffect",
     "on dnd5e.postUseActivity",
     "on dnd5e.preCreateMeasuredTemplate",
-    "on dnd5e.renderChatMessage", "on targetToken", "on deleteChatMessage",
+    "on refreshRegion",
+    "on preCreateChatMessage", "on dnd5e.renderChatMessage", "on targetToken", "on deleteChatMessage",
   ]);
 });
 
@@ -61,7 +62,7 @@ test("[declared] aoe-edge-3 ready (active GM, no ui.ARGON) adds no hook (the can
 test("after the lifecycle, every on() listener is live once", () => {
   const live = F.listeners();
   for (const name of ["init", "setup", "ready"]) assert.equal(live[name], undefined, name);
-  assert.equal(live["dnd5e.renderChatMessage"], 4);
+  assert.equal(live["dnd5e.renderChatMessage"], 5);
   assert.equal(live.createChatMessage, 2);
   assert.equal(live["dnd5e.postUseActivity"], 3);
   assert.equal(live.targetToken, 2);

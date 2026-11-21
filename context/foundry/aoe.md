@@ -1,7 +1,7 @@
 ---
 title: "Spell areas, saves and damage (pentaryn-aoe)"
 status: active
-last_modified: 2026-11-07
+last_modified: 2026-11-21
 tags: [context, foundry, dnd5e, module]
 ---
 
@@ -37,6 +37,11 @@ Everyone owns the handle and the area.
 - Areas clean themselves up. An instantaneous spell's area (Fireball) is deleted once every ticked
   row has been applied. A concentration spell's areas go when the caster stops concentrating.
 
+**Wall spells (Wall of Stone, Wall of Fire, Blade Barrier).** Each panel is drawn in solid stone grey,
+at least a fifth of a square thick, whatever the caster's user colour or the grid size, so a 3-inch
+Wall of Stone panel no longer vanishes on a 50 px map. Only the drawing is thicker: who is inside the
+area is measured on the real panel. The panels do not block movement or sight yet (no Wall documents).
+
 **Which walls stop an area.** The PHB's rule is that an area spreads from its point of origin, and
 only total cover blocks it. On the map, total cover is a wall that blocks **both movement and
 sight**: normal walls, closed doors, terrain walls and windows clip an area. **Invisible walls**
@@ -49,8 +54,11 @@ user who may edit it is viewing its level (core picks that user to write); any o
 old outline until it is moved, or a wall on its level changes while such a user views it. A cube that is rotated (Shift- or Ctrl-scroll
 its handle) or resized is clipped from its new centre.
 
-**Cancelling a placement.** While a template follows the mouse, **Escape or right-click** cancels it,
-on the first press even when the sheet you cast from is open. Core's own Escape would close every open
+**Cancelling a placement.** While a template follows the mouse, **Escape** cancels it, on the first
+press even when the sheet you cast from is open. **Right-click** skips the shape under the mouse; for a
+one-shape area that is the same as cancelling. A spell with several panels (Wall of Stone's ten) shows
+"Panel 2 of 10: Esc to finish, right-click skips a panel" while you place them: Escape *finishes* the
+wall with the panels placed so far, and right-click leaves one out. Core's own Escape would close every open
 window first (dnd5e minimises the sheet during placement), so the module keeps a small Escape binding
 that cancels core's region placement before anything else (`escape.mjs`).
 
@@ -96,12 +104,22 @@ card while you hold targets goes to those targets. **Real dice:** every row has 
 pre-filled with the rolled one; type the number your dice showed and Apply uses it (the ×0 ½ ×1 ×2
 multipliers still apply on top). The number that would land shows beside it while it differs. The GM's
 save tray has the same total per row.
+A healing card from something that can only affect its user (Stone's Endurance, Second Wind) always lists the
+caster, whoever is targeted or selected, so nobody's Apply can heal the monster they had targeted. A
+Self-range area (Burning Hands, Spirit Guardians) is not one of them: its rows are the area's.
+After an Apply the card says who pressed it and what landed, one line per press: "Applied by Talo →
+Talo (+11)". The GM always sees it; by default a player sees it on a card they rolled or where they
+own who took it, and never a monster's row (setting *Who sees "Applied by" under a card*).
 
 **Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
 client. It also rolls when the target's AC is unknown, for example with no target selected.
 A known miss or a natural 1 rolls nothing. The card's Damage button still works.
-Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setting it to
-`"hideAC"` shows hit/miss without the AC. That is Joe's call; this module does not change it.
+`dnd5e.attackRollVisibility` is `"hideAC"` (Joe, 2026-11-20): players see hit or miss, never the AC.
+The attack card then says so in words: "Attack — Hit" in blue or "Attack — Miss" in orange (with
+several targets, "Hit" / "Miss" on each target), a miss adds a "Miss — no damage" line so the turn
+visibly moves on, and the damage roll after a hit has a blue title. With the visibility back at
+`"none"` nothing is shown. Setting *Say Hit or Miss on attacks*; this module never changes dnd5e's
+visibility setting.
 
 **Careful Spell.** Metamagic is tracked, not forced onto a spell (Joe's ruling, 2026-10-12). When a
 sorcerer uses Careful Spell, a picker opens on their screen: the creatures on their scene by token
@@ -124,8 +142,8 @@ several effects (Guidance's skills) is a choice and stays in the tray. An Effect
 applied yet is outlined "Not applied yet" for an hour. The same spell's effect from another source
 replaces the old one instead of stacking.
 
-**Cancelling refunds the cast (Part F).** When an area placement is cancelled (Escape or
-right-click), the slot, charge or uses it spent come back, the concentration it began ends, and its
+**Cancelling refunds the cast (Part F).** When an area placement is cancelled before any shape was
+placed (Escape, or right-clicking a one-shape area), the slot, charge or uses it spent come back, the concentration it began ends, and its
 card is removed, as the card's Refund button would.
 
 **Self cones and lines start at the caster (Part G).** Placing a Self-range cone or line (Cone of
@@ -157,6 +175,8 @@ mouse and the wheel turns it.
 | The same spell does not stack | on | |
 | Self cones and lines start at the caster | on | Part G |
 | Instantaneous areas stay where they were cast | on | Thunder Step's ring stays behind with a handle |
+| Say Hit or Miss on attacks | on | the labels and the miss line; nothing while dnd5e's attack roll visibility is None |
+| Who sees "Applied by" under a card | The GM, the card's roller and the owners of who took it | `gm` · `owners` · `all`; a player never sees a monster's row |
 | Walls that stop a spell area | Total cover | `cover` · `move` (dnd5e's default) · `none`; Part H |
 
 ## Console (`game.pentaryn.aoe`)

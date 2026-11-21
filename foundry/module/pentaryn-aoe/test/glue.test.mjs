@@ -51,13 +51,13 @@ test("module scope registers only once init, once setup, once ready", () => {
   assert.deepEqual(atLoad, [{ kind: "once", name: "init" }, { kind: "once", name: "setup" }, { kind: "once", name: "ready" }]);
 });
 
-test("settings register at init in BOOLS order, then npcSaveRollMode (golden/settings-register.json)", () => {
+test("settings register at init in BOOLS order, then showAppliedBy and npcSaveRollMode (golden/settings-register.json)", () => {
   pinJSON("settings-register", registered, import.meta.url);
   assert.deepEqual(registered.map(r => r.key), [
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
     "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "autoDamageOnSave",
-    "applyFromCard", "npcSaveRollMode", "areaWalls",
+    "applyFromCard", "hitMissLabels", "showAppliedBy", "npcSaveRollMode", "areaWalls",
   ]);
 });
 
@@ -70,12 +70,13 @@ test("the Escape keybinding registers once at init: PRIORITY, editable Escape, l
       editable: [{ key: "Escape" }], precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY, onDown: "function" });
 });
 
-test("-13 BOOLS is the literal 19-name list; DEFAULTS has 21 keys; npcSaveRollMode and areaWalls stay out of BOOLS", () => {
+test("-13 BOOLS is the literal 20-name list; DEFAULTS has 23 keys; showAppliedBy, npcSaveRollMode and areaWalls stay out of BOOLS", () => {
   const { BOOLS, DEFAULTS } = S.settings;
   assert.deepEqual(BOOLS, [
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
     "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "autoDamageOnSave", "applyFromCard",
+    "hitMissLabels",
   ]);
   assert.equal(typeof DEFAULTS.npcSaveRollMode, "string");
   assert.deepEqual({ ...DEFAULTS }, {
@@ -83,6 +84,7 @@ test("-13 BOOLS is the literal 19-name list; DEFAULTS has 21 keys; npcSaveRollMo
     npcSaveRollMode: "gm", autoApplyNpc: false, promptPlayers: true, autoDamageOnHit: true, autoApplySelf: true,
     highlightUnapplied: true, carefulSpell: true, refundCancelledArea: true, playerStatus: true, untargetedSelf: true,
     noSpellStacking: true, aimSelfAreas: true, stationaryInstantAreas: true, autoDamageOnSave: true, applyFromCard: true, areaWalls: "cover",
+    showAppliedBy: "owners", hitMissLabels: true,
   });
   assert.deepEqual(S.settings.LEGACY_ROLL_MODES, ["gmroll", "blindroll", "publicroll"]);
 });

@@ -46,6 +46,14 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   out: the module's tray on it refuses, but dnd5e's own tray on that older card still lists the
   area's creatures (its stamp is kept), and a GM who presses it applies that damage by hand. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
+  **Empowered Spell keeps the saves** (F0, PHB 2024: only damage dice are rerolled): a damage card
+  pentaryn-riders posts for Empower (`flags.pentaryn-riders.empowered.from` names the card it replaces)
+  takes over that card's tray — each row's save, multiplier, tick and the GM's edits, the area, Careful
+  Spell and the players' request card (`core.carryResolution`) — so no save is rolled again and no second
+  request card is posted; a save still pending answers the new card. The new card keeps its own damage.
+  The replaced tray greys out as any re-roll does. Refused (a fresh resolve, as before) when the replaced
+  tray is superseded or already has an applied row. The tray's Apply passes the card as `origin` (as
+  dnd5e's own tray does), so riders retires the Empower button once the card is applied.
 - **Careful Spell** (`careful.mjs`). Metamagic is tracked, not forced onto a spell (Joe's ruling,
   2026-10-12). Using it opens a picker on the caster's client: the creatures on their scene they
   can see, by token name, the current targets ticked, up to their CHA mod (min 1). A public card
@@ -63,6 +71,15 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   target (Psionic Lash at Caven) rolls its damage at once, threaded under the usage card with the
   card's targets, so the flow is Use → the target saves → Apply. A save spell that places an area
   waits for the area; a use with no target posts nothing extra.
+  **Hit or miss (D2, setting `hitMissLabels`).** With `dnd5e.attackRollVisibility` at `hideAC` (since
+  2026-11-20) players know hit or miss but not the AC, yet a miss still looked like nothing happening.
+  `dnd5e.renderChatMessage` on an attack card adds "— Hit" (blue) or "— Miss" (orange) to its title
+  (`.card-header .subtitle`) for one target, "Hit" / "Miss" on each `target-pill` for several, and a
+  rendered "Miss — no damage" line when every target was missed — never a posted message, which would
+  come once per client. Total cover (`ac === null`) is a miss; no recorded target, a private card or a
+  visibility of `none` shows nothing (`core.attackOutcome`, from `message.system.evaluatedTargets`, else
+  the pills' `data-hit` / `data-miss`). The damage card after a hit (the newest attack card of the same
+  activity before it) gets a blue title. Render-only; a re-render replaces the labels.
 - **Part D — effects meant for you** (`effects.mjs`). A usage card's one effect goes on its caster
   when the caster is its only target, the activity affects only `self` (Shield), or a touch spell
   for one willing creature was cast at nobody. A card with several effects is a choice and stays in
@@ -74,7 +91,13 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   spent, ends the concentration it began and removes the card. A cast that spent nothing but began
   concentration counts as cancelled too: its concentration ends and its card goes.
 - **Part G — aim** (`aim.mjs`). A Self-range cone or line keeps its point on the caster's token
-  edge and turns toward the mouse while placing.
+  edge and turns toward the mouse while placing. **B3:** the same `placeRegions` wrap shows one
+  permanent notice for a placement of several shapes (Wall of Stone's ten panels): "Panel n of N: Esc to
+  finish, right-click skips a panel" (`core.panelCounter`), advanced by each confirmed or skipped shape
+  (the caller's own `preConfirm` / `preSkip` run first; a `false` from them counts nothing) and removed
+  when the placement ends. Escape is the real "finish": core resolves the placement null, and dnd5e's
+  `preConfirm` has already kept the panels placed so far, so those are created. Right-click skips the
+  shape under the mouse (core's `#skipPlacement`); for a one-shape area that is the same as cancelling.
 - **Part I — Apply from the card** (`apply.mjs`, setting `applyFromCard`). dnd5e's own Apply tray
   (`<damage-application>`) is on every damage and healing card for players too (world setting
   `dnd5e.allowPlayerDamageTray`, on since 2026-11-06). dnd5e 6 types a damage roll's card `damage`
@@ -110,6 +133,33 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   carries a resolution the GM gets no typed totals on dnd5e's tray, and the Part B tray's own totals are used.
   A player's Apply on such a card relays nothing (the GM's tray applies it; one info toast says so) — their
   own rows still land.
+  **Self-only cards target the caster (G1).** dnd5e records the roller's current targets on every roll
+  card, so Stone's Endurance rolled with an enemy targeted offered to heal the enemy, and with nothing
+  targeted each viewer's tray listed their own selection ("Caven +11"). On the roller's client
+  (`preCreateChatMessage`, `updateSource`), a healing card from an activity whose affects
+  type is `self`, or whose range is Self with no other affects type (`core.selfTargetCard`), records
+  the caster's token as its one target. Never one that places an area (a Self cone, line or emanation:
+  Burning Hands, Spirit Guardians), has a save, or is an attack, and never a damage card (a Self-range
+  damage activity usually hurts someone else: Armor of Agathys, Fire Shield); `areaTargets` and `recordedTargets`
+  are never written, and late targets leave the card alone since it has targets.
+  **Applied by (G2).** Every Apply press is recorded on the card as one entry of
+  `flags.pentaryn-aoe.appliedLog` (`messages-adapter.logApplied`: who pressed it and, per token that took
+  it, the HP change and whether a player owns it), and the card shows "Applied by Talo → Talo (+11)" under
+  its tray, one line per press (`core.appliedByLines`). The rows that landed on the player's client are
+  in their own write (the applied stamp, now on every Apply); rows relayed to the GM, and the GM tray's
+  Apply, are written by the GM's client. Who reads it is `showAppliedBy` (`core.appliedByVisible`); a
+  player never reads a row for a creature no player owns (a monster's name or the damage it took after
+  resistances is GM data). A player's Apply on a card they neither rolled nor own the actor of cannot
+  write the card, so their own rows go unrecorded there.
+- **Wall spells you can see (B1)** (`wall-spells.mjs`). dnd5e 6 maps the `wall` area type to a ray, so
+  a wall spell's region is line shapes as thin as the wall (Wall of Stone's Long Panels: 0.25 ft, a
+  2.5 px line on a 50 px grid), drawn as grid coverage in the caster's user colour — Talo's dark green
+  wall "disappeared" (feedback 8t6Nn1). On `refreshRegion`, a wall spell's region (`core.wallSpellRegion`:
+  every shape a line, from an activity whose area type is `wall`, else one with dnd5e's
+  `dimensions.height`) gets one `PIXI.Graphics` child on the Region placeable: every panel drawn
+  `core.wallThickness` thick (its width, or a fifth of a square when thinner) in neutral stone grey with
+  a dark stroke. Drawing only: the shapes (who is in the area) never change, and no Wall documents are
+  made (B2 is a separate decision).
 - **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
   including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
@@ -147,6 +197,8 @@ live through `setting()`, so a change applies without a reload).
 | `npcSaveRollMode` | `gm` | B | message mode of monster saves: `gm`, `blind` or `public` (a stored legacy `gmroll` is rewritten once by the active GM) |
 | `autoDamageOnSave` | on | C | J1: using a save activity with damage and a recorded target rolls the damage at once (not an area spell; not with no target) |
 | `applyFromCard` | on | I | Apply on a damage / healing card: unowned rows relayed to the active GM, late targets fill an untargeted card, a typed total per row |
+| `hitMissLabels` | on | C | D2: an attack card says Hit (blue) / Miss (orange) in its title (each pill with several targets), a "Miss — no damage" line on a miss, a blue title on the damage card after a hit; nothing while `dnd5e.attackRollVisibility` is `none` |
+| `showAppliedBy` | `owners` | I | G2: who reads "Applied by <user> → <token> (±n)" under a card's tray: `gm`, `owners` (the GM, the card's roller, the owners of a row's token) or `all`; a player never reads a monster's row |
 | `areaWalls` | `cover` | H | which walls clip an area: `cover` (block movement and sight), `move` (dnd5e: every movement wall), `none` |
 
 ## API — game.pentaryn.aoe
@@ -192,7 +244,8 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `flags.pentaryn-aoe.lateTargets` | the author's own damage / healing message | `true` once the player's late targets filled its `system.targets` (dnd5e's own field, rewritten by the author; the Apply that recorded targets writes it too); `false` once an area resolve stamped the card over them |
 | `flags.pentaryn-aoe.areaTargets` | the damage message resolved off an area | `true` once `resolve()` wrote the area's creatures into its `system.targets` (dnd5e's own field; replaced on a re-resolve with another area) |
 | `flags.pentaryn-aoe.recordedTargets` | the damage message resolved off an area | the card's `system.targets` as they were before the first area stamp, a plain array of dnd5e descriptors (`[]` when the roller targeted nobody); written once, and what `resolve(id, { regionId: null })` builds its rows from after the stamp |
-| `flags.pentaryn-aoe.applied` | a damage / healing message that had no recorded targets, or followed late targets | `{ at, by, targets[] }` after its Apply, so late targets stop following it |
+| `flags.pentaryn-aoe.applied` | a damage / healing message, after any Apply from its dnd5e tray (G2; before, only one with no recorded targets or that followed late targets) | `{ at, by, targets[] }`, so late targets stop following it |
+| `flags.pentaryn-aoe.appliedLog.<id>` | a damage / healing message | G2: one entry per Apply press, `{ at, by, byName, rows: [{ token, name, delta, pc }] }` (`delta` the HP change, negative for damage; `pc` a player owns the creature); read by the "Applied by" line |
 | `flags.pentaryn-aoe.effectsApplied` | the usage card | `{ ids, auto, reason, actor, actorName, names }` |
 | `flags.pentaryn-aoe.npcSave` | a monster save message | `true` |
 | `flags.pentaryn-aoe.damageMessage` | the request card | the damage message id |
@@ -215,11 +268,14 @@ handle is not spread on arrival), pentaryn-senses (a handle is never offered a c
 `shapes.isAoeHandle`). `test/fixtures/handle-oracle.json` is the shared row
 set every copy pins against; prefer `apiOf("pentaryn-aoe").isHandle(x)` in new code.
 
+Read from other modules: `flags.pentaryn-riders.empowered.from` (an Empowered Spell damage card's
+replaced card, F0; nothing else of that flag), declared in `MANIFEST.flags.reads`.
+
 ## Events
 
 n/a — emits none of its own beyond the kit's `pentaryn-aoe.ready` and `pentaryn.ready`. The hooks
 it listens to, in order, are pinned in `test/golden/hooks.json`; order within a name is behaviour
-(four `dnd5e.renderChatMessage` decorators; Careful's `dnd5e.postUseActivity` before J1's damage roll
+(five `dnd5e.renderChatMessage` decorators; Careful's `dnd5e.postUseActivity` before J1's damage roll
 before refund's synchronous `false`). The one query, `pentaryn-aoe.applyRelay`, is registered from
 the contributed rows at ready on every client (`registerQueries`).
 
@@ -235,7 +291,7 @@ with a `move` restriction only) with `RegionDocument.prototype._computeShapeCons
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
-`dnd5e-cancelled-area-refund`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
+`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, `core-region-wall-panels`, `core-region-placement-panel-counter`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
 batch; only `scene-adapter.mjs` touches `game.itempiles`).
 
 ## Two sessions / who writes
@@ -320,7 +376,7 @@ feature's function is reached through `ctx.exposed`, never an import.
 | `settings.mjs` | SETTINGS, `setting()`, the roll-mode migration |
 | `api-manifest.mjs`, `api.mjs` | API rows; own implementations, `inspect`, `buildApiFor` |
 | `scene-adapter.mjs`, `messages-adapter.mjs`, `argon.mjs` | adapters: scenes/regions/Item Piles, dnd5e messages, Argon |
-| `areas.mjs`, `token-areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs`, `walls.mjs`, `apply.mjs` | features (Parts A–I) |
+| `areas.mjs`, `token-areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs`, `walls.mjs`, `wall-spells.mjs`, `apply.mjs` | features (Parts A–I; `wall-spells.mjs` is B1, wall spells drawn visible) |
 | `styles/aoe.css`, `lang/en.json`, `lib/` | styles; strings; vendored kit |
 | `test/` | node:test suites, goldens, fixtures (`seams.mjs` maps the checkpoint names) |
 

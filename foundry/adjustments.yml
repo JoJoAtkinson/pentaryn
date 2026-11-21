@@ -1714,3 +1714,58 @@ adjustments:
     native_when: dnd5e lets a card's targets be set after the roll, or applies to the user's current targets on an untargeted card
     retire_class: guarded
     check: make foundry-aoe-check
+
+  - id: dnd5e-self-card-targets-caster
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["selfTargetCard", "preCreateChatMessage(self)"]
+    what: on preCreateChatMessage (the roller's client), a dnd5e "healing" card (never "damage") from an activity whose target.affects.type is "self", or whose range is Self with no other affects type, and that places no template, has no save and is not an attack (core.selfTargetCard), gets message.system.targets = the caster's token as dnd5e TargetsField descriptors (updateSource), replacing whatever the roller had targeted
+    why: dnd5e's rollDamage / rollHealing record the user's current targets (TargetsField.getDescriptors()), and its tray lists selected tokens on a card with none, so Stone's Endurance offered to heal an enemy (browser test T3, feedback SvOaxr, 2026-11-19)
+    native_when: dnd5e records the user as the target of a self-only activity's roll card
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: dnd5e-card-applied-by-line
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/apply.mjs, foundry/module/pentaryn-aoe/messages-adapter.mjs, foundry/module/pentaryn-aoe/resolve.mjs]
+    markers: ["renderAppliedBy", "pa-applied-by", "appliedLog"]
+    what: on dnd5e.renderChatMessage a damage / healing card gets one "Applied by <user> → <token> (±n)" line per Apply, inserted right after dnd5e's <damage-application> element (else at the end of .message-content); every Apply (the player's own rows from dnd5e's tray, the GM relay, the GM save tray) writes one flags.pentaryn-aoe.appliedLog entry with the HP change read from actor.system.attributes.hp value + temp around actor.applyDamage (setting showAppliedBy)
+    why: dnd5e's tray never says who applied a card or what landed, and on an untargeted card each viewer's tray lists their own selection, so a heal read "Caven +11" for Talo's own Stone's Endurance (feedback SvOaxr, 2026-11-19)
+    native_when: dnd5e records and shows who applied a damage or healing card's rows, and the amount
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: dnd5e-attack-card-hit-miss
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/settings.mjs]
+    markers: ["attackOutcome", "evaluatedTargets", "target-pill", "attackRollVisibility"]
+    what: on dnd5e.renderChatMessage an attack card (message.type "attack") reads message.system.evaluatedTargets (else the attack-card.hbs target-pill[data-hit] / [data-miss]) and appends "— Hit" / "— Miss" to .card-header .subtitle (one target), a "Hit" / "Miss" span inside each target-pill (several), or a .pa-miss-line paragraph to .message-content (every target missed); the damage card after a hit gets .pa-hit-title on its subtitle. Reads the world setting dnd5e.attackRollVisibility and shows nothing at "none" (setting hitMissLabels)
+    why: with attackRollVisibility at hideAC dnd5e shows only pill icons, and on a miss pentaryn-aoe rolls nothing, so a miss read as "nothing happened" (feedback ORGqVN, hKDbzi, browser test T2, 2026-11-20)
+    native_when: dnd5e's attack card names the result in words (a hit / miss label on the card or its title)
+    retire_class: safe
+    check: make foundry-aoe-check
+
+  - id: core-region-wall-panels
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/wall-spells.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["refreshRegion(wall)", "wallSpellRegion", "wallPanelOutline"]
+    what: on core's refreshRegion hook (PlaceableObject#applyRenderFlags), a dnd5e wall-spell template region (every shape a line; flags.dnd5e.activity's target.template.type "wall", else flags.dnd5e.dimensions.height) gets one PIXI.Graphics child added at index 0 of the Region placeable, each LineShapeData (x, y, length along rotation, width centred) drawn max(width, grid/5) thick in neutral stone; core's RegionMesh highlight and the shapes are untouched
+    why: dnd5e 6 maps the wall area type to a ray, so Wall of Stone's 0.25 ft panels were a 2.5 px coverage-mode line in the caster's user colour on a 50 px grid and "disappeared" (feedback 8t6Nn1, 2026-11-19)
+    native_when: dnd5e or core draws thin wall-type template regions with a minimum visible thickness
+    retire_class: safe
+    check: make foundry-aoe-check; live, Wall of Stone on a 50 px grid is visible in a dark user colour
+
+  - id: core-region-placement-panel-counter
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/aim.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["panelNotice", "panelCounter", "preSkip"]
+    what: inside the RegionLayer#placeRegions wrap (row aoe-self-area-aim), a call placing two or more shapes gets its preConfirm / preSkip options wrapped (the caller's run first; a false return counts nothing) to advance one permanent ui.notifications.info notice ("Panel n of N", Notification#update), removed (Notification#remove) when the returned promise settles; dnd5e's TemplatePlacement passes one region per wall panel and keeps placed panels through its own preConfirm, so Escape (core resolves null) finishes the wall
+    why: Wall of Stone places ten panels one by one with no indication of progress, and right-click (skip a shape) was mistaken for "finish" (browser test T5, feedback 8t6Nn1)
+    native_when: core's or dnd5e's multi-shape placement shows its own progress or hint
+    retire_class: safe
+    check: make foundry-aoe-check

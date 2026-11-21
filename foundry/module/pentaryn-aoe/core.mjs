@@ -142,6 +142,47 @@ export function areaLocked(res) {
   return !!res && (!!res.superseded || (res.rows ?? []).some(r => r.applied));
 }
 
+/**
+ * F0 (feedback GDJJdi): Empowered Spell rerolls damage dice only (PHB 2024), so the save stands. An
+ * empowered damage card (pentaryn-riders' `flags.pentaryn-riders.empowered.from`) takes over the
+ * superseded card's tray state instead of rolling new saves: each new row whose token was on the old
+ * tray gets back its save, multiplier, tick and the GM's own edits (an overridden multiplier, Careful
+ * Spell's protection); the area, the Careful Spell record and the players' request card come with
+ * it, so a player's save still pending answers the new card (matchSave reads `request`). The new
+ * card keeps its own damages: the caller never takes them from here. A row the old tray did not have
+ * stays as built. Refused (null) when there is no old resolution or it is areaLocked (superseded,
+ * or a row already applied): carrying it would revive a dead tray or apply the same save twice.
+ * Never mutates its inputs.
+ * @param {object|null|undefined} oldRes   the superseded card's resolution
+ * @param {object[]} newRows               buildRows' rows for the new card
+ * @returns {{ rows: object[], region: string|null, careful: object|null, request: string|null }|null}
+ */
+export function carryResolution(oldRes, newRows) {
+  if (!oldRes || areaLocked(oldRes)) return null;
+  const old = new Map((oldRes.rows ?? []).map(r => [r.id, r]));
+  const rows = (newRows ?? []).map(row => {
+    const was = old.get(row.id);
+    const out = { ...row };
+    if (!was) return out;
+    out.save = was.save ? { ...was.save } : null;
+    out.multiplier = was.multiplier ?? null;
+    out.apply = !!was.apply;
+    for (const k of ["overridden", "protected"]) {
+      if (was[k]) out[k] = true;
+      else delete out[k];
+    }
+    if (was.unprotected) out.unprotected = { save: was.unprotected.save ? { ...was.unprotected.save } : null, multiplier: was.unprotected.multiplier ?? null };
+    else delete out.unprotected;
+    return out;
+  });
+  return {
+    rows,
+    region: oldRes.region ?? null,
+    careful: oldRes.careful ? { ...oldRes.careful } : null,
+    request: oldRes.request ?? null,
+  };
+}
+
 /** True once every ticked row has been applied (instantaneous areas are then removed). */
 export function allApplied(rows) {
   const ticked = rows.filter(r => r.apply);
@@ -181,6 +222,28 @@ export function shouldAutoDamage(roll) {
   if (roll.isCritical) return true;
   const known = Number.isFinite(roll.target);
   return !(known && roll.total < roll.target);
+}
+
+/**
+ * D2 (feedback ORGqVN, hKDbzi): what an attack card says about hit or miss. `targets` are dnd5e's
+ * evaluated targets (`message.system.evaluatedTargets`: `{ isMiss, ac }`; `ac === null` is total cover,
+ * a miss); `visible` is whether this viewer may know the result (dnd5e's `attackRollVisibility` is not
+ * `none`, and the card's content is visible to them). Nothing (null) when hidden or with no recorded
+ * target (browser test T2's empty pane: no target, no claim). One target: its result goes in the card's
+ * title ("Attack — Hit" / "— Miss"). Several: each pill carries its own result, no title suffix. A miss
+ * line ("Miss — no damage") when every target was missed, so the turn visibly moves on; a following
+ * damage card's title is coloured as a hit when any target was hit.
+ * @param {{ targets?: {isMiss?: boolean, ac?: number|null}[], visible?: boolean }} o
+ * @returns {{ outcome: "hit"|"miss"|"mixed", title: "hit"|"miss"|null, pills: boolean, missLine: boolean, hit: boolean }|null}
+ */
+export function attackOutcome({ targets = [], visible = false } = {}) {
+  const list = (targets ?? []).filter(Boolean);
+  if (!visible || !list.length) return null;
+  const missed = list.map(t => !!t.isMiss || t.ac === null);
+  const misses = missed.filter(Boolean).length;
+  const outcome = misses === 0 ? "hit" : misses === list.length ? "miss" : "mixed";
+  const one = list.length === 1;
+  return { outcome, title: one ? outcome : null, pills: !one, missLine: outcome === "miss", hit: outcome !== "miss" };
 }
 
 /**
@@ -278,6 +341,71 @@ export function lateTargetCard(messages, { userId, now, windowMs = LATE_TARGET_W
   }
   return null;
 }
+
+/**
+ * G1 (feedback SvOaxr): is this healing card from an activity that can only affect its user,
+ * so its one target is the caster? dnd5e records the roller's current targets on every roll card
+ * (`TargetsField.getDescriptors()`), or none, so Stone's Endurance with an enemy targeted offered to
+ * heal the enemy (browser test T3), and with nothing targeted every viewer's tray listed their own
+ * selection ("Caven +11"). True for an activity whose affects type is `self`, or whose range is Self
+ * with no other affects type — and never for one that places an area (a Self-range cone, line or
+ * emanation: Burning Hands, Thunderwave, Spirit Guardians, `aimsFromCaster`), has a save, or is an
+ * attack (Booming Blade's Self range is the weapon's reach). Healing cards only: a Self-range DAMAGE
+ * activity usually hurts someone else (Armor of Agathys and Fire Shield damage the attacker), so a damage
+ * card keeps what dnd5e recorded. Plain description:
+ * `{ type, activityType, rangeUnits, affectsType, templateType, hasSave }`.
+ * @returns {boolean}
+ */
+export function selfTargetCard({ type = null, activityType = null, rangeUnits = null, affectsType = null, templateType = null, hasSave = false } = {}) {
+  if (type !== "healing") return false;
+  if (templateType || hasSave || activityType === "attack" || activityType === "save") return false;
+  if (affectsType === "self") return true;
+  return rangeUnits === "self" && !affectsType;
+}
+
+/** G2: the `showAppliedBy` setting's choices: who sees "Applied by … → …" under a card's tray. */
+export const APPLIED_BY_MODES = Object.freeze(["gm", "owners", "all"]);
+
+/**
+ * G2: does this viewer see the "Applied by" line on a card? The GM always does. A player: never with
+ * `gm`; with `owners` (the default) on a card they wrote or where they own a row's token; with `all`
+ * on every card. An unknown mode reads as `owners`.
+ * @param {string} mode
+ * @param {{ isGM?: boolean, isAuthor?: boolean, ownsRow?: boolean }} viewer
+ */
+export function appliedByVisible(mode, { isGM = false, isAuthor = false, ownsRow = false } = {}) {
+  if (isGM) return true;
+  const m = APPLIED_BY_MODES.includes(mode) ? mode : "owners";
+  if (m === "gm") return false;
+  if (m === "all") return true;
+  return !!(isAuthor || ownsRow);
+}
+
+/**
+ * G2: the lines a viewer reads under a card's tray, from `flags.pentaryn-aoe.appliedLog` (one entry per
+ * Apply press, keyed by a random id: `{ at, by, byName, rows: [{ token, name, delta, pc }] }`, `delta`
+ * the HP change, negative for damage). Oldest first, one line per entry: `{ at, by, rows: [{ name, delta }] }`.
+ * A player (`isGM` false) never reads a row for a creature no player owns (`pc` false) unless they own
+ * its token: a monster's name or the damage it took after resistances is GM data, as the save tray is.
+ * An entry left with no rows is dropped.
+ * @param {Record<string, object>|null|undefined} log
+ * @param {{ isGM?: boolean, owns?: (tokenUuid: string) => boolean }} viewer
+ * @returns {{ at: number, by: string, rows: { name: string, delta: number }[] }[]}
+ */
+export function appliedByLines(log, { isGM = false, owns = () => false } = {}) {
+  const entries = Object.values(log ?? {}).filter(e => e && Array.isArray(e.rows));
+  entries.sort((a, b) => (Number(a.at) || 0) - (Number(b.at) || 0));
+  const out = [];
+  for (const e of entries) {
+    const rows = e.rows.filter(r => r && (isGM || r.pc || owns(r.token)))
+      .map(r => ({ name: String(r.name ?? ""), delta: Number(r.delta) || 0 }));
+    if (rows.length) out.push({ at: Number(e.at) || 0, by: String(e.byName ?? e.by ?? ""), rows });
+  }
+  return out;
+}
+
+/** G2: an HP change as the line shows it: `+11` healing, `-14` damage, `0`. */
+export const fmtDelta = n => (n > 0 ? `+${n}` : n < 0 ? `-${-n}` : "0");
 
 /**
  * Part I: which rows an Apply press on dnd5e's tray lands. The rows dnd5e lists (`listed`: the uuids
@@ -478,6 +606,72 @@ export function handleVertical({ regionLevels = [], sceneHasLevel = () => true, 
   const base = level ? levelBase(level) : undefined;
   const elevation = Number.isFinite(sourceBottom) ? sourceBottom : (Number.isFinite(base) ? base : 0);
   return { level, elevation };
+}
+
+/* -------------------------------------------- */
+/*  B1 / B3 — wall spells                       */
+/* -------------------------------------------- */
+
+/** B1: the thinnest a wall panel is drawn, as a fraction of a grid square (a fifth: 10 px on a 50 px grid). */
+export const WALL_MIN_FRACTION = 1 / 5;
+
+/**
+ * B1 (feedback 8t6Nn1): how thick a wall spell's panel is DRAWN, in pixels: its real width, or a fifth
+ * of a grid square when that is thinner. Wall of Stone's Long Panels are 0.25 ft thick, a 2.5 px line on
+ * a 50 px grid, and Talo's dark green user colour on a dark map made the wall "disappear". The drawing
+ * only: the shape's own width (which creatures the area holds) is never changed.
+ * @param {number} width     the line shape's width (px)
+ * @param {number} gridSize  the scene's grid size (px)
+ */
+export function wallThickness(width, gridSize) {
+  return Math.max(Number(width) || 0, (Number(gridSize) || 0) * WALL_MIN_FRACTION);
+}
+
+/**
+ * B1: a wall panel's outline as polygon points `[x0, y0, … x3, y3]`: core's line shape (it starts at
+ * `x, y` and runs `length` px along `rotation` degrees, its width centred on that axis) drawn
+ * `wallThickness` thick. Rounded to 1/1000 px.
+ * @param {{x: number, y: number, length: number, width: number, rotation?: number}} line
+ * @param {number} gridSize
+ * @returns {number[]}
+ */
+export function wallPanelOutline({ x = 0, y = 0, length = 0, width = 0, rotation = 0 } = {}, gridSize = 0) {
+  const t = wallThickness(width, gridSize) / 2;
+  const a = (Number(rotation) || 0) * Math.PI / 180;
+  const ux = Math.cos(a), uy = Math.sin(a);      // along the wall
+  const nx = -uy, ny = ux;                       // across it
+  const L = Number(length) || 0;
+  const r = v => Math.round(v * 1000) / 1000 + 0;
+  const pts = [
+    [x + nx * t, y + ny * t], [x + ux * L + nx * t, y + uy * L + ny * t],
+    [x + ux * L - nx * t, y + uy * L - ny * t], [x - nx * t, y - ny * t],
+  ];
+  return pts.flatMap(([px, py]) => [r(px), r(py)]);
+}
+
+/**
+ * B1: is this region a wall spell's area (Wall of Stone, Wall of Fire, Blade Barrier)? A template
+ * region whose every shape is a line, from an activity whose area type is dnd5e's `wall`. When the
+ * activity cannot be read (`templateType` null: a deleted item, an unresolvable uuid), dnd5e's own
+ * `flags.dnd5e.dimensions.height` decides: a wall has a height, a line spell (Lightning Bolt) none.
+ * @param {{ template?: boolean, shapeTypes?: string[], templateType?: string|null, height?: number|null }} r
+ */
+export function wallSpellRegion({ template = false, shapeTypes = [], templateType = null, height = null } = {}) {
+  if (!template || !shapeTypes?.length || !shapeTypes.every(t => t === "line")) return false;
+  if (templateType) return templateType === "wall";
+  return Number(height) > 0;
+}
+
+/**
+ * B3: the placement counter for a multi-panel area (Wall of Stone's ten panels), or null for one shape.
+ * `placed` counts the panels confirmed or skipped so far; the counter names the one being placed.
+ * @returns {{ n: number, total: number }|null}
+ */
+export function panelCounter(placed, total) {
+  const N = Number(total) || 0;
+  const n = (Number(placed) || 0) + 1;
+  if (N < 2 || n > N) return null;
+  return { n, total: N };
 }
 
 /** Is this region the area of exactly this activity (Part B: whose area is the damage for)? */
