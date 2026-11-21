@@ -264,7 +264,7 @@
         "flags.pentaryn-creatures.dormant"
       ],
       "since": "0.4.0",
-      "doc": "Dormant until combat: disguise a token as a prop. Its real look (name, nameplate and bars modes, disposition, art, ring, the unlinked actor's name and portrait; hidden for the record) is stored in the dormant flag, then it gets the prop art with the ring off, the prop name on the token and its unlinked actor, no nameplate or bars and SECRET disposition. Visibility (hidden) is never touched. When a combat it is in starts (or it joins a running one) the active GM wakes it. GM only (NOT_GM); a missing token is NOT_FOUND, bad options BAD_ARGS."
+      "doc": "Dormant until combat: disguise a token as a prop. Its real look (name, nameplate and bars modes, disposition, art, ring, the unlinked actor's name and portrait; hidden for the record) is stored in the dormant flag, then it gets the prop art with the ring off, the prop name on the token and its unlinked actor, no nameplate or bars and SECRET disposition. Visibility (hidden) is never touched. When a combat it is in starts (or it joins a running one) the active GM wakes it. GM only (NOT_GM); a missing token is NOT_FOUND, bad options BAD_ARGS, a token update Foundry refuses ok:false (INTERNAL unless the error is coded). A linked token gets no delta write: only the token is disguised, never the shared world actor."
     },
     {
       "path": "wake",
@@ -280,7 +280,7 @@
           "optional": true
         }
       ],
-      "returns": "Promise<{ ok: true, dryRun, woke, token, name? } | { ok: false, code, reason }>",
+      "returns": "Promise<{ ok: true, dryRun, woke, token, name?, warnings? } | { ok: false, code, reason }>",
       "gm": true,
       "writes": true,
       "query": false,
@@ -292,7 +292,7 @@
         "Combatant name/img (those still showing the disguise)"
       ],
       "since": "0.4.0",
-      "doc": "Undo a dormant disguise now: write the stored look back, set the flag to null and relabel the token's combatants that still show the disguise. A token that is not dormant answers woke: false and writes nothing. GM only (NOT_GM)."
+      "doc": "Undo a dormant disguise now: write the stored look back, set the flag to null and relabel the token's combatants that still show the disguise. A token that is not dormant answers woke: false and writes nothing. GM only (NOT_GM). A refused token update is ok:false; a failed combatant relabel after a good wake is listed in warnings. A linked token's delta is never written."
     }
   ],
   "queries": [
