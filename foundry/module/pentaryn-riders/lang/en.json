@@ -123,6 +123,9 @@
     "usage": {
       "staleConcentration": "Your concentration changed while this window was open, so nothing was cast. Close it and use the spell again to choose which concentration it ends."
     },
+    "duration": {
+      "left": "{duration} left"
+    },
     "rest": {
       "title": "Long rest: {name}",
       "omen": {

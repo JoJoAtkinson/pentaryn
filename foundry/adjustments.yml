@@ -1758,3 +1758,14 @@ adjustments:
     native_when: dnd5e's Empowered Spell activity rerolls damage dice on a card itself, or Metamagic gains a target-the-card flow
     retire_class: guarded
     check: make foundry-riders-check
+
+  - id: dnd5e-riders-duration-left
+    packages: [dnd5e, core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/patches.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["getDurationParts", "_prDurationLeft", "expirySupportsDuration", "specialDuration", "duration.left"]
+    what: at ready, wrapMethod on CONFIG.ActiveEffect.documentClass.prototype.getDurationParts (dnd5e ActiveEffect5e, dnd5e.mjs ~7800; its parts are core's remaining-duration label split on ", ") words the last printed part "<part> left" when expirySupportsDuration() is true, duration.remaining is finite and above 0 and specialDuration is null (table-core durationLeftParts); the sheet's templates/shared/active-effects.hbs (getSheetContext) and the effect tooltip (richTooltip, effect-tooltip.hbs) both print it, parts [0] and [1]; removePatches restores it
+    why: the Effects tab and the effect tooltip showed the remaining time unlabelled, so a player could not tell time left from time passed (VDalcb, Caven; triage K); dnd5e has no wording hook for the duration parts
+    native_when: dnd5e or core labels a remaining duration as time left (e.g. a "{duration} remaining" string)
+    retire_class: safe
+    check: make foundry-riders-check; live, an effect with rounds left reads "N rounds left" on the Effects tab and in its tooltip

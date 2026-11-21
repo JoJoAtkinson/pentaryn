@@ -39,6 +39,14 @@
   `selftest()`'s "usage vetoes run first" check (api.mjs `VETO_LABELS`). Hooks: 45 non-lifecycle
   registrations (+1 `dnd5e.preUseActivity`). Goldens: `hooks.json`, `lang-keys.json`. Adjustments row
   `dnd5e-riders-empower-sheet-use`.
+- [declared] **Durations say "left"** (VDalcb, triage K). A wrap of dnd5e's `ActiveEffect5e#getDurationParts`
+  (patches.mjs, patch 7, marker `_prDurationLeft`, at `ready`) words the last printed part of a timed,
+  counting-down duration: "9 rounds left", "1 hr, 30 min left". Both the sheet's Effects tab and the effect
+  tooltip print that method, so one wrap covers both; no token or Argon tooltip of the module's own exists.
+  Left alone: start- / end-of-turn specials, an expiry dnd5e does not time, nothing left ("Now"), an expired
+  effect (core's "… ago"). Pure `durationLeftParts` in table-core (under `rules`); new lang key
+  `duration.left`; new test `test/duration-left.test.mjs`. Golden: `lang-keys.json`. Adjustments row
+  `dnd5e-riders-duration-left`.
 
 ## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
 
