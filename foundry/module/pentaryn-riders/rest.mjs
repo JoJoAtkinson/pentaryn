@@ -34,6 +34,9 @@
  *    0.7.0–0.7.1 read `button.activity` on the single button — Argon's getter answers the item's FIRST
  *    activity there (Weal) — and greyed it against a stored Woe (live 2026-11-07, Talo). The pure rule
  *    is `omenButtonMark` (riders-core). Every mark goes when the next long rest clears the flag.
+ *    With no omen stored yet (d3rePk: Talo clicked Woe, the die rolled 2 and Weal ran), the die decides:
+ *    the HUD button(s) get a "the die decides" badge, and the choice dialog one "Read the stars (1d6): the
+ *    die decides" line above its buttons, each omen's button badged the same; nothing is greyed.
  *
  * 3. Use it and the stars decide (G3). On `dnd5e.preUseActivity` (sync, a `Hooks.call`) a Cosmic
  *    Omen activity used by an owner is checked against the stored omen: a match goes through. No omen
@@ -41,6 +44,8 @@
  *    literal `false`, the omen is rolled and stored as the button would, and the activity of that
  *    omen is used in its place (`usage.pentaryn.omen` marks the re-call so it is not stopped again).
  *    The wrong activity with an omen stored → stopped and redirected the same way, with one notice.
+ *    When this use rolled the omen, the notice names the face: "You picked Woe (Odd), but the stars
+ *    rolled 2: Weal (even)".
  *    The redirected use keeps the click's event and dialog choice; the chosen activity's own uses and
  *    dialog apply as on a direct click.
  *
@@ -70,6 +75,9 @@ const T = Object.freeze({
   wealShort: "PENTARYN_RIDERS.rest.omen.wealShort",
   woeShort: "PENTARYN_RIDERS.rest.omen.woeShort",
   redirect: "PENTARYN_RIDERS.rest.omen.redirect",
+  redirectStored: "PENTARYN_RIDERS.rest.omen.redirectStored",
+  decides: "PENTARYN_RIDERS.rest.omen.decides",
+  decidesLine: "PENTARYN_RIDERS.rest.omen.decidesLine",
   gone: "PENTARYN_RIDERS.rest.omen.gone",
   spellsLabel: "PENTARYN_RIDERS.rest.spells.label",
   review: "PENTARYN_RIDERS.rest.spells.review",
@@ -282,10 +290,32 @@ function markArgonButton(button) {
     if (!el || item?.documentName !== "Item" || !isCosmicOmen(item)) return;
     el.querySelector(":scope > .pr-omen-badge")?.remove();
     const activity = argonButtonActivity(button);
-    const mark = omenButtonMark({ omen: enabled() ? storedOmen(item) : null, perActivity: !!activity, kind: omenOfActivity(activity) });
+    const on = enabled();
+    const omen = on ? storedOmen(item) : null;
+    const mark = omenButtonMark({ omen, perActivity: !!activity, kind: omenOfActivity(activity), unread: on && !omen });
     el.classList.toggle("pr-omen-off", mark.off);
-    if (mark.badge) el.append(badge(mark.named ? _loc(mark.badge === "weal" ? T.wealShort : T.woeShort) : _loc(T.today)));
+    if (mark.badge === "die") el.append(badge(_loc(T.decides)));
+    else if (mark.badge) el.append(badge(mark.named ? _loc(mark.badge === "weal" ? T.wealShort : T.woeShort) : _loc(T.today)));
   } catch (err) { log.warn("Cosmic Omen HUD mark skipped", err); }
+}
+
+/**
+ * No omen stored (d3rePk): both choices would look selectable, then one is overridden by the roll. The
+ * dialog says the die decides instead: one line above the buttons, and each omen's button badged. The
+ * dialog itself stays (a click still rolls and runs the day's activity, part 3).
+ */
+function markUnread(root, buttons) {
+  root.querySelector?.(".pr-omen-decides")?.remove();
+  if (!buttons.length) return;
+  for (const b of buttons) {
+    b.classList.add("pr-omen-die");
+    if (!b.querySelector(".pr-omen-badge")) b.append(badge(_loc(T.decides)));
+  }
+  const line = document.createElement("p");
+  line.className = "pr-omen-decides";
+  line.textContent = _loc(T.decidesLine);
+  const list = buttons[0].closest?.("menu, ul, ol") ?? buttons[0];
+  list.before(line);
 }
 
 function markChoiceDialog(app, element) {
@@ -293,11 +323,12 @@ function markChoiceDialog(app, element) {
     const item = app?.item;
     if (!enabled() || !isCosmicOmen(item)) return;
     const omen = storedOmen(item);
-    if (!omen) return;
     const root = element instanceof HTMLElement ? element : app.element;
-    for (const b of root?.querySelectorAll?.("button[data-activity-id]") ?? []) {
+    const omenButtons = [...(root?.querySelectorAll?.("button[data-activity-id]") ?? [])]
+      .filter(b => omenOfActivity(item.system?.activities?.get?.(b.dataset.activityId)));
+    if (!omen) { if (root) markUnread(root, omenButtons); return; }
+    for (const b of omenButtons) {
       const kind = omenOfActivity(item.system?.activities?.get?.(b.dataset.activityId));
-      if (!kind) continue;
       if (kind === omen) {
         b.classList.add("pr-omen-today");
         if (!b.querySelector(".pr-omen-badge")) b.append(badge());
@@ -313,12 +344,21 @@ function markChoiceDialog(app, element) {
 
 async function redirect(actor, item, clicked, stored, usageConfig, dialogConfig) {
   let omen = stored;
-  if (!omen) omen = (await readOmen(actor, item))?.omen ?? null;
+  let face = null;   // the die's face when this use read the stars (kept for the notice, d3rePk)
+  if (!omen) {
+    const read = await readOmen(actor, item);
+    omen = read?.omen ?? null;
+    face = read?.rolled ? read.face : null;
+  }
   if (!omen) return;
   const live = actor.items.get(item.id) ?? item;
   const target = omenActivityFor(live.system?.activities ?? [], omen);
   if (!target) { log.notify("warn", _loc(T.gone)); return; }
-  if (target.id !== clicked.id) log.notify("info", _loc(T.redirect, { omen: omenLabel(omen), activity: target.name }));
+  if (target.id !== clicked.id) {
+    log.notify("info", face !== null
+      ? _loc(T.redirect, { clicked: clicked.name, face, omen: omenLabel(omen) })
+      : _loc(T.redirectStored, { omen: omenLabel(omen), activity: target.name }));
+  }
   // the click's own usage and dialog config, so the day's activity is used exactly as the clicked one would have been
   const usage = { ...(usageConfig ?? {}), pentaryn: { ...(usageConfig?.pentaryn ?? {}), omen: true } };
   await target.use(usage, { ...(dialogConfig ?? {}) }, {});
@@ -358,7 +398,7 @@ export function install(reg, ctx) {
 export function uninstall() {
   try {
     const doc = globalThis.document;
-    for (const el of doc?.querySelectorAll?.(".pr-rest, .pr-omen-badge") ?? []) el.remove();
-    for (const el of doc?.querySelectorAll?.(".pr-omen-off") ?? []) el.classList.remove("pr-omen-off");
+    for (const el of doc?.querySelectorAll?.(".pr-rest, .pr-omen-badge, .pr-omen-decides") ?? []) el.remove();
+    for (const el of doc?.querySelectorAll?.(".pr-omen-off, .pr-omen-die") ?? []) el.classList.remove("pr-omen-off", "pr-omen-die");
   } catch (err) { log?.debug?.("rest card rows left on rendered cards", err); }
 }

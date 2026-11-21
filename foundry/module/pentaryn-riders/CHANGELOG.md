@@ -1,5 +1,53 @@
 # Changelog — pentaryn-riders
 
+## Unreleased
+
+- [declared] **Cosmic Omen: the die decides, and the UI says so** (d3rePk, triage E). With no omen stored for
+  the day, dnd5e's "which activity?" dialog gets one line above its buttons, "Read the stars (1d6): the die
+  decides. Even is Weal, odd is Woe.", and both omen buttons a "the die decides" badge (none disabled; the
+  dialog stays). Argon's Cosmic Omen button gets the same badge (`omenButtonMark`'s new `unread` flag, badge
+  `"die"`; the old marks are unchanged). The redirect keeps the rolled face: "You picked Woe (Odd), but the
+  stars rolled 2: Weal (even)." (`rest.omen.redirect`); an omen already stored keeps the old wording under
+  `rest.omen.redirectStored`. Three new lang keys (`redirectStored`, `decides`, `decidesLine`); golden
+  `lang-keys.json`; fixture riders-core 9f. Adjustments row `dnd5e-riders-omen-die-decides`.
+- [declared] **Empowered Spell: the card says what changed** (GDJJdi, triage F1). The empowered card's line
+  ends with the total before and after: "Empowered Spell (1 SP): 1 → 4, 3 → 3, 1 → 1, 1 → 4 (77 → 83)"
+  (new lang key `empower.noteTotal`). The flag `flags.pentaryn-riders.empowered` gains `oldTotal` beside
+  `{ from, cost, changes }`, which are unchanged (pentaryn-aoe reads `from`; the README's "Flags other
+  modules read" now says so). A card empowered before `oldTotal` keeps the old line. In dnd5e's dice tooltip
+  the rerolled dice stand out: the old face fainter (`pr-emp-old`), the new one ringed in gold
+  (`pr-emp-new`), matched by the pure `rerolledFaces` / `matchChips`. New pure exports `rollsTotal`,
+  `rerolledFaces`, `matchChips` (core/empower.mjs, re-exported from riders-core; `rerolledRollData` and
+  `waitingCardId` too, for F2 / F3). Goldens: `lang-keys.json`, `surface.json` (+5 `core.*`). Adjustments row
+  `dnd5e-riders-empower-chips`.
+- [declared] **Empowered Spell: Dice So Nice throws only the rerolled dice** (GDJJdi, triage F2). Every
+  client's `diceSoNiceMessagePreProcess` sets `willTrigger3DRoll = false` for an empowered card (the plan
+  named `diceSoNiceMessageProcessed`, but DSN 6.4.5 made that one observation-only and warns when it is
+  mutated), and the clicking client throws a roll of the new faces alone (`rerolledRollData`) with
+  `game.dice3d.showForRoll(roll, user, true, whisper, blind, messageId, speaker)`: synchronised, with the
+  card's whisper list and blind flag. No Dice So Nice, nothing thrown. Hooks: 44 non-lifecycle
+  registrations (+1, `diceSoNiceMessagePreProcess`). **`module.json` change: `relationships.recommends`
+  gains `dice-so-nice` (with a reason; blueprint C09), so this release needs a Foundry restart.** Goldens:
+  `hooks.json`. Adjustments row `dsn-riders-empower-new-dice`.
+- [declared] **Empowered Spell from the sheet or the HUD can't waste a Sorcery Point** (GDJJdi, triage F3:
+  two sheet uses, 2 SP gone, nothing rerolled). A `dnd5e.preUseActivity` veto on the feat's activity (label
+  "Empowered Spell: only from a damage card"): the module's own spend (`usage.pentaryn.empower`) goes through;
+  otherwise the use is stopped before dnd5e spends anything, and the caster's waiting card (their own spell
+  damage card from the last 10 minutes that could show the button, this user able to edit it; pure
+  `waitingCardId`) is empowered as one click would, or, with none, one notice: "Use the Empower button on
+  your spell's damage card: no Sorcery Point was spent." (new key `empower.useCard`). It joins
+  `selftest()`'s "usage vetoes run first" check (api.mjs `VETO_LABELS`). Hooks: 45 non-lifecycle
+  registrations (+1 `dnd5e.preUseActivity`). Goldens: `hooks.json`, `lang-keys.json`. Adjustments row
+  `dnd5e-riders-empower-sheet-use`.
+- [declared] **Durations say "left"** (VDalcb, triage K). A wrap of dnd5e's `ActiveEffect5e#getDurationParts`
+  (patches.mjs, patch 7, marker `_prDurationLeft`, at `ready`) words the last printed part of a timed,
+  counting-down duration: "9 rounds left", "1 hr, 30 min left". Both the sheet's Effects tab and the effect
+  tooltip print that method, so one wrap covers both; no token or Argon tooltip of the module's own exists.
+  Left alone: start- / end-of-turn specials, an expiry dnd5e does not time, nothing left ("Now"), an expired
+  effect (core's "… ago"). Pure `durationLeftParts` in table-core (under `rules`); new lang key
+  `duration.left`; new test `test/duration-left.test.mjs`. Golden: `lang-keys.json`. Adjustments row
+  `riders-duration-left`.
+
 ## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
 
 Hooks: 43 non-lifecycle registrations, unchanged. Two new lang keys (`rest.omen.wealShort`, `rest.omen.woeShort`).

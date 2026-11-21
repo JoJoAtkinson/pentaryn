@@ -1769,3 +1769,58 @@ adjustments:
     native_when: core's or dnd5e's multi-shape placement shows its own progress or hint
     retire_class: safe
     check: make foundry-aoe-check
+
+  - id: dnd5e-riders-omen-die-decides
+    packages: [dnd5e, enhancedcombathud-dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/rest.mjs, foundry/module/pentaryn-riders/riders-core.mjs]
+    markers: ["renderActivityChoiceDialog", "button[data-activity-id]", "pr-omen-decides", "pr-omen-die", "unread"]
+    what: with no Cosmic Omen stored for the day, renderActivityChoiceDialog puts one .pr-omen-decides line ("Read the stars (1d6) — the die decides") right above the list holding dnd5e's "which activity?" button[data-activity-id] rows (the closest menu / ul / ol) and badges each omen's button .pr-omen-die "the die decides", nothing disabled; renderItemButtonArgonComponent badges Argon's Cosmic Omen button(s) the same (omenButtonMark's unread mark); the redirect notice names the rolled face ("You picked Woe (Odd), but the stars rolled 2 — Weal (even)"). Module elements and classes only; nothing in dnd5e's or Argon's files is edited
+    why: with no omen stored both choices looked selectable, then the roll overrode the click (d3rePk — Talo picked Woe, the die rolled 2, Weal ran; RAW, but the UI misled); dnd5e's choice dialog and Argon's button have no hint slot of their own (triage E)
+    native_when: dnd5e's activity choice dialog offers a per-row hint or note, or Cosmic Omen rolls its omen itself
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-riders-empower-chips
+    packages: [dnd5e, core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs]
+    markers: ["ol.dice-rolls", "li.roll", "rerolled", "pr-emp-old", "pr-emp-new", "oldTotal"]
+    what: on dnd5e.renderChatMessage of an empowered damage card (flags.pentaryn-riders.empowered), the rerolled pairs among the dice tooltip's ol.dice-rolls > li.roll chips (dnd5e's damage-breakdown.hbs, one li per term result in result order with core's DiceTerm#getResultCSS classes — d<faces>, rerolled) are marked pr-emp-old / pr-emp-new (core rerolledFaces + matchChips match each old-then-new face pair on its die size and printed face); the card's line adds the totals before and after from empowered.oldTotal (new key, beside the unchanged from / cost / changes). Module classes only
+    why: dnd5e only strikes the old face through in grey and leaves the new one plain, and the card never said the old total, so a player could not see what one Empower click changed (GDJJdi — Disintegrate 77 → 83 read as a new 14-die roll; triage F1)
+    native_when: dnd5e marks rerolled-and-replaced dice in its damage breakdown, or offers a reroll flow that reports the change
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dsn-riders-empower-new-dice
+    packages: [dice-so-nice]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs, foundry/module/pentaryn-riders/module.json]
+    markers: ["diceSoNiceMessagePreProcess", "willTrigger3DRoll", "game.dice3d", "showForRoll"]
+    what: every client's diceSoNiceMessagePreProcess (messageId, { willTrigger3DRoll }) sets willTrigger3DRoll false for an empowered damage card (flags.pentaryn-riders.empowered), and the clicking client throws a Roll.fromData of only the rerolled faces (core rerolledRollData; one die term per class, size and flavor) with game.dice3d.showForRoll(roll, game.user, true, whisper ids or null, blind, messageId, speaker), synchronised to the other clients; module.json recommends dice-so-nice with a reason. No DSN, nothing is thrown (the hook never fires)
+    why: DSN re-animated every die of the new damage card, so one Empower click looked like a fresh 14-die roll (GDJJdi, Disintegrate; triage F2). DSN 6.4.5 reads its decision after diceSoNiceMessagePreProcess; diceSoNiceMessageProcessed is observation-only since 6.0 and logs a compatibility warning when mutated
+    native_when: DSN animates only the dice that changed between two linked messages, or dnd5e / a reroll API marks replaced dice for it
+    retire_class: guarded
+    check: make foundry-riders-check; live, Empower with Dice So Nice on — only the rerolled dice are thrown, on every client that sees the card
+
+  - id: dnd5e-riders-empower-sheet-use
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs, foundry/module/pentaryn-riders/api.mjs]
+    markers: ["dnd5e.preUseActivity", "pentaryn?.empower", "Empowered Spell: only from a damage card", "waitingCardId"]
+    what: dnd5e.preUseActivity (sync, a literal false, on the using client, before dnd5e's dialog and consumption) on the Empowered Spell feat's activity (shapes empoweredSpellOf) — the module's own spend (usage.pentaryn.empower, empower.mjs part 2) goes through; any other use (the sheet, Argon) is stopped, and the caster's waiting card (their own spell damage card from the last 10 minutes that could show the Empower button, editable by this user; core waitingCardId over message.timestamp) is empowered instead, or one notice says to use the card's button and nothing is spent; joins selftest's "usage vetoes run first" (api.mjs VETO_LABELS)
+    why: dnd5e's Empowered Spell activity spends a Font of Magic use and does nothing else, so a sheet use with no damage card to act on wasted a Sorcery Point (GDJJdi — two sheet uses, 2 SP gone; triage F3)
+    native_when: dnd5e's Empowered Spell activity rerolls damage dice on a card itself, or Metamagic gains a target-the-card flow
+    retire_class: guarded
+    check: make foundry-riders-check
+
+  - id: riders-duration-left
+    packages: [dnd5e, core]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/patches.mjs, foundry/module/pentaryn-riders/table-core.mjs]
+    markers: ["getDurationParts", "_prDurationLeft", "expirySupportsDuration", "specialDuration", "duration.left"]
+    what: at ready, wrapMethod on CONFIG.ActiveEffect.documentClass.prototype.getDurationParts (dnd5e ActiveEffect5e, dnd5e.mjs ~7800; its parts are core's remaining-duration label split on ", ") words the last printed part "<part> left" when expirySupportsDuration() is true, duration.remaining is finite and above 0 and specialDuration is null (table-core durationLeftParts); the sheet's templates/shared/active-effects.hbs (getSheetContext) and the effect tooltip (richTooltip, effect-tooltip.hbs) both print it, parts [0] and [1]; removePatches restores it
+    why: the Effects tab and the effect tooltip showed the remaining time unlabelled, so a player could not tell time left from time passed (VDalcb, Caven; triage K); dnd5e has no wording hook for the duration parts
+    native_when: dnd5e or core labels a remaining duration as time left (e.g. a "{duration} remaining" string)
+    retire_class: safe
+    check: make foundry-riders-check; live, an effect with rounds left reads "N rounds left" on the Effects tab and in its tooltip

@@ -57,7 +57,7 @@ test("describe() equals golden/describe.json (version, kit, published and patch 
   assert.deepEqual(d.queries, [`${MODULE}.battleMedic`]);
   assert.deepEqual(d.settings.map(s => s.key), ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView", "restCard", "empoweredSpell", "projectileChatTab"]);
   assert.deepEqual(d.events, []);
-  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 43);   // 0.7.1: + the rest card refresh (updateItem); 0.7.0: + the rest card's five (restCompleted, renderChatMessage, preUseActivity, renderActivityChoiceDialog, renderItemButtonArgonComponent) and Empower's two (renderChatMessage, applyDamage); 0.6.0: + summon fell (updateActor, deleteToken), self-cast expiry (preCreateActiveEffect); 0.5.2: + projectiles' postUseActivity (5wv0Iq)
+  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 45);   // GDJJdi: + Empower's sheet-use veto (preUseActivity, F3) and Dice So Nice decision (diceSoNiceMessagePreProcess, F2); 0.7.1: + the rest card refresh (updateItem); 0.7.0: + the rest card's five (restCompleted, renderChatMessage, preUseActivity, renderActivityChoiceDialog, renderItemButtonArgonComponent) and Empower's two (renderChatMessage, applyDamage); 0.6.0: + summon fell (updateActor, deleteToken), self-cast expiry (preCreateActiveEffect); 0.5.2: + projectiles' postUseActivity (5wv0Iq)
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
 });
 
@@ -133,20 +133,22 @@ test("selftest(): 'usage vetoes run first' fails when another package's dnd5e.pr
   const { buildApiFor } = await import("../api.mjs");
   // The stub world has riders' listeners only, in install order: rituals' slot default, restore-slot
   // default, cast defaults, one usage dialog, one Arcane Recovery picker, Battle Medic veto, then the
-  // Cosmic Omen check (0.7.0; after the vetoes, so it never counts as "ahead").
+  // Cosmic Omen check (0.7.0; after the vetoes, so it never counts as "ahead"), then Empower's sheet-use
+  // veto (GDJJdi F3; a veto too: no foreign listener may run before it).
   const order = F.Hooks.events["dnd5e.preUseActivity"].map(e => e.id);
-  assert.equal(order.length, 7);
+  assert.equal(order.length, 8);
   const rec = (id, label) => ({ kind: "on", name: "dnd5e.preUseActivity", id, label });
   const check = records => {
     const ctx = { reg: { ids: () => records }, contributions: [], exposed: {}, log: { traces: () => [] }, uninstall() {}, setting: () => true };
     ctx.api = buildApiFor(ctx);
     return ctx.api.selftest().checks.find(c => c.label === "usage vetoes run first");
   };
-  const vetoes = [rec(order[3], "one usage dialog"), rec(order[4], "one Arcane Recovery picker")];
+  const vetoes = [rec(order[3], "one usage dialog"), rec(order[4], "one Arcane Recovery picker"), rec(order[7], "Empowered Spell: only from a damage card")];
   const others = [order[1], order[2], order[5], order[6]].map(id => rec(id, "x"));
   assert.deepEqual(check([rec(order[0], "x"), ...others, ...vetoes]), { label: "usage vetoes run first", ok: true, detail: 0 });
   assert.deepEqual(check([...others, ...vetoes]), { label: "usage vetoes run first", ok: false, detail: 1 }, "the first listener is not ours: it runs before the veto");
   assert.deepEqual(check([...others, vetoes[0]]), { label: "usage vetoes run first", ok: false, detail: -1 }, "a veto missing");
+  assert.deepEqual(check([rec(order[0], "x"), ...others, vetoes[0], vetoes[1]]), { label: "usage vetoes run first", ok: false, detail: -1 }, "Empower's veto missing (its label drifted from api.mjs's)");
 });
 
 test("selftest(): 'hooks registered' passes for any non-zero hook count, the count in detail (riders-ext-4) [declared]", async () => {

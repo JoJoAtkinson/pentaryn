@@ -165,10 +165,18 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.renderChatMessage"
   },
   {
     "kind": "on",
     "name": "dnd5e.applyDamage"
+  },
+  {
+    "kind": "on",
+    "name": "diceSoNiceMessagePreProcess"
   }
 ]

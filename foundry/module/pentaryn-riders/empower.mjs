@@ -27,6 +27,9 @@
  *    flags (the card note and the tray preset carry over). The old card is marked
  *    `flags.pentaryn-riders.supersededBy = <new id>`: its apply tray is removed on render and a line
  *    says so, so the GM applies the new roll and never both. A new roll is kept even when it is lower.
+ *    The new card's line names each change and the card's total before and after ("1 → 4, 3 → 3
+ *    (77 → 83)", from `empowered.oldTotal`; GDJJdi, F1), and its rerolled chips in the dice tooltip are
+ *    marked (`pr-emp-old` / `pr-emp-new`) so they stand out from dnd5e's grey strike-through.
  *    Shift-click opens a small picker listing each die with its face, the one-click choice pre-ticked.
  *    The point is spent first; should the new card then fail to post, one warning names the lost point
  *    and the old card stays live (a posted card whose old card fails to retire gets its own line).
@@ -38,12 +41,30 @@
  *    regardless: a card applied at 0 points must not grow the button when Font of Magic converts a
  *    slot later in the day.
  *
+ * 4. Dice So Nice throws only the rerolled dice (F2, GDJJdi: it re-animated all 14 dice of Disintegrate).
+ *    Every client's `diceSoNiceMessagePreProcess` (DSN 6.x, the hook that may change its decision; the
+ *    later `diceSoNiceMessageProcessed` is observation-only since DSN 6.0) sets `willTrigger3DRoll`
+ *    false for an empowered card, and the clicking client throws a roll of the new faces alone
+ *    (`rerolledRollData`) with `game.dice3d.showForRoll`, synchronised to the others with the card's
+ *    whisper list and blind flag, so DSN shows them to whom it would have shown the card's dice. No DSN,
+ *    nothing to throw.
+ *
+ * 5. The feat's own activity, used from the sheet or the HUD, can't waste a point (F3, GDJJdi: Marrith
+ *    opened it twice from the sheet, 2 Sorcery Points gone, nothing rerolled). A `dnd5e.preUseActivity`
+ *    veto (sync, a literal `false`, before dnd5e spends anything) on the Empowered Spell activity: the
+ *    module's own spend (`usage.pentaryn.empower`, part 2) goes through; otherwise, when the caster has a
+ *    waiting card — their own spell damage card from the last 10 minutes that could show the button (not
+ *    superseded, empowered or applied; a point left, a die below its average; this user can edit it) —
+ *    the use is stopped and that card is empowered as one click would; with none, the use is stopped
+ *    with "Use the Empower button on your spell's damage card" and nothing is spent. It is one of the
+ *    vetoes `selftest()` checks run before other packages' listeners (api.mjs).
+ *
  * Setting pentaryn-riders.empoweredSpell (world, default on). Rows dnd5e-riders-empowered-spell (the
  * damage message shape, `Roll#toJSON` term results, the `damage-application` element) waiting in the
  * batch file.
  */
 
-import { MODULE, empowerCandidates, empowerPlan, empowerRolls } from "./riders-core.mjs";
+import { MODULE, empowerCandidates, empowerPlan, empowerRolls, matchChips, rerolledFaces, rerolledRollData, rollsTotal, waitingCardId } from "./riders-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { empoweredSpellOf, fontUsesLeft } from "./shapes.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -64,12 +85,18 @@ const T = Object.freeze({
   die: "PENTARYN_RIDERS.empower.die",
   none: "PENTARYN_RIDERS.empower.none",
   note: "PENTARYN_RIDERS.empower.note",
+  noteTotal: "PENTARYN_RIDERS.empower.noteTotal",
   change: "PENTARYN_RIDERS.empower.change",
   superseded: "PENTARYN_RIDERS.empower.superseded",
   noUse: "PENTARYN_RIDERS.empower.noUse",
   createFailed: "PENTARYN_RIDERS.empower.createFailed",
   retireFailed: "PENTARYN_RIDERS.empower.retireFailed",
+  useCard: "PENTARYN_RIDERS.empower.useCard",
 });
+
+/** The veto's label: api.mjs's "usage vetoes run first" check finds it by this literal (api.mjs may not
+ *  import a feature file; selftest's check fails with -1 should the two drift). */
+const SHEET_USE_LABEL = "Empowered Spell: only from a damage card";
 
 /* ── reading a damage card ─────────────────────────────────────────────── */
 
@@ -120,6 +147,37 @@ function changesText(changes) {
   return (changes ?? []).map(c => _loc(T.change, { from: c.from, to: c.to })).join(", ");
 }
 
+/** "Empowered Spell (1 SP): 1 → 4, 3 → 3 (77 → 83)"; a card empowered before `oldTotal` was stored has no totals. */
+function noteText(message, empowered) {
+  const changes = changesText(empowered.changes);
+  const before = Number(empowered.oldTotal);
+  if (empowered.oldTotal === undefined || empowered.oldTotal === null || !Number.isFinite(before)) return _loc(T.note, { changes });
+  return _loc(T.noteTotal, { changes, old: before, new: rollsTotal(rollsJson(message)) });
+}
+
+/**
+ * The rerolled dice stand out (F1): each old chip in the dice tooltip gets `pr-emp-old`, the new face
+ * after it `pr-emp-new` (dnd5e alone strikes the old one through in grey and leaves the new one plain).
+ */
+function markChips(message, html, empowered) {
+  const lists = [...html.querySelectorAll("ol.dice-rolls")];
+  const nodes = [];
+  const chips = [];
+  lists.forEach((ol, list) => {
+    for (const li of ol.querySelectorAll("li.roll")) {
+      li.classList.remove("pr-emp-old", "pr-emp-new");
+      const size = /(?:^|\s)d(\d+)(?:\s|$)/.exec(li.className);
+      nodes.push(li);
+      chips.push({ list, faces: size ? Number(size[1]) : NaN, label: li.textContent, rerolled: li.classList.contains("rerolled") });
+    }
+  });
+  if (!chips.length) return;
+  for (const [a, b] of matchChips(chips, rerolledFaces(rollsJson(message), empowered.changes))) {
+    nodes[a].classList.add("pr-emp-old");
+    nodes[b].classList.add("pr-emp-new");
+  }
+}
+
 function render(message, html) {
   if (!html?.querySelector) return;
   html.querySelector(".pr-empower")?.remove();
@@ -146,8 +204,9 @@ function render(message, html) {
     if (message.isContentVisible === false) return;
     const p = document.createElement("p");
     p.className = "supplement pr-empower-note";
-    p.textContent = _loc(T.note, { changes: changesText(flags.empowered.changes) });
+    p.textContent = noteText(message, flags.empowered);
     place(p);
+    markChips(message, html, flags.empowered);
     return;
   }
   if (!enabled()) return;
@@ -252,7 +311,7 @@ async function empower(message, { pick = false } = {}) {
       blind: !!src.blind,
       rolls: rolls.map(r => JSON.stringify(r)),
       system: { activity: sys.activity ?? null, item: sys.item ?? null, origin: sys.origin ?? null, targets: sys.targets ?? [], onSave: sys.onSave ?? null },
-      flags: { [MODULE]: { ...ours, empowered: { from: message.id, cost: 1, changes } } },
+      flags: { [MODULE]: { ...ours, empowered: { from: message.id, cost: 1, changes, oldTotal: rollsTotal(card.rolls) } } },
     });
   } catch (err) {
     // the point is gone and the old card stays live: say so, with what was spent and for what
@@ -269,6 +328,38 @@ async function empower(message, { pick = false } = {}) {
     return;
   }
   log.info("Empowered Spell", { from: message.id, to: created?.id ?? null, rerolled: changes.length, by: game.user.id });
+  throwNewDice(created, rolls, changes);
+}
+
+/* ── 4. Dice So Nice throws only the new dice ──────────────────────────── */
+
+/** Dice So Nice's API, when it is on this client. */
+function dice3d() {
+  const api = game.dice3d;
+  return typeof api?.showForRoll === "function" ? api : null;
+}
+
+// Every client: DSN asks before it animates a new message's rolls; an empowered card's whole roll is not thrown.
+function onDicePreProcess(messageId, decision) {
+  try {
+    if (!decision || !enabled()) return;
+    const message = game.messages?.get?.(messageId);
+    if (message?.type === "damage" && message.flags?.[MODULE]?.empowered) decision.willTrigger3DRoll = false;
+  } catch (err) { log.warn("Dice So Nice check skipped", err); }
+}
+
+/** The clicking client: the new faces alone, thrown for the card's audience (its whisper list, blind or not). */
+function throwNewDice(created, rolls, changes) {
+  try {
+    const api = dice3d();
+    if (!api || !created) return;
+    const data = rerolledRollData(rerolledFaces(rolls, changes));
+    if (!data) return;
+    const roll = Roll.fromData(data);
+    const whisper = Array.isArray(created.whisper) && created.whisper.length ? [...created.whisper] : null;
+    Promise.resolve(api.showForRoll(roll, game.user, true, whisper, !!created.blind, created.id ?? null, created.speaker ?? null))
+      .catch(err => log.warn("Dice So Nice: the rerolled dice were not thrown", err));
+  } catch (err) { log.warn("Dice So Nice: the rerolled dice were not thrown", err); }
 }
 
 /* ── 3. applied means done ─────────────────────────────────────────────── */
@@ -290,12 +381,49 @@ function onApplied(actor, amount, options) {
   } catch (err) { log.warn("applied damage check skipped", err); }
 }
 
+/* ── 5. the sheet's / HUD's Empowered Spell can't waste a point ─────────── */
+
+/** The newest card this user could empower for `actor` now (part 1's button rules), or null. */
+function waitingCard(actor) {
+  const cards = [];
+  for (const message of game.messages?.contents ?? [...(game.messages?.values?.() ?? [])]) {
+    if (message?.type !== "damage") continue;
+    const card = empowerCard(message);
+    if (!card || card.actor.id !== actor.id) continue;
+    cards.push({ id: message.id, actorId: actor.id, timestamp: message.timestamp, eligible: !!card.actor.isOwner && canEdit(message) });
+  }
+  const id = waitingCardId(cards, { actorId: actor.id, now: Date.now() });
+  return id ? game.messages.get(id) ?? null : null;
+}
+
+// Synchronous, a literal `false` (dnd5e.preUseActivity is a Hooks.call); never GM-gated: the owner's click.
+function sheetUseCheck(activity, usageConfig) {
+  try {
+    if (!enabled() || usageConfig?.pentaryn?.empower) return;
+    const item = activity?.item;
+    const actor = item?.actor;
+    if (!actor) return;
+    const emp = empoweredSpellOf(actor);
+    if (!emp?.activity || emp.item?.id !== item.id || emp.activity.id !== activity.id) return;
+    const message = waitingCard(actor);
+    if (message) {
+      log.info("Empowered Spell used from the sheet: the waiting card is empowered", { card: message.id, by: game.user.id });
+      empower(message).catch(err => log.warn("Empowered Spell failed", err));
+    } else {
+      log.notify("warn", _loc(T.useCard));
+    }
+    return false;
+  } catch (err) { log.warn("Empowered Spell use check skipped", err); }
+}
+
 /* ── wiring ────────────────────────────────────────────────────────────── */
 
 export function install(reg, ctx) {
   log = ctx.log;
+  reg.on("dnd5e.preUseActivity", sheetUseCheck, { guard: false, label: SHEET_USE_LABEL });
   reg.on("dnd5e.renderChatMessage", onRender, { guard: false, label: "Empower button" });
   reg.on("dnd5e.applyDamage", onApplied, { guard: false, label: "Empower: applied card" });
+  reg.on("diceSoNiceMessagePreProcess", onDicePreProcess, { guard: false, label: "Empower: Dice So Nice throws the new dice only" });
 }
 
 /** The drawn buttons leave every rendered card; the notes and flags stay. */

@@ -67,6 +67,11 @@ check("9e omenButtonMark (0.7.2): an item button (Argon's default for a feat) is
    omenButtonMark({ omen: "woe", perActivity: true, kind: null }), omenButtonMark({ omen: null, perActivity: true, kind: "weal" }), omenButtonMark({ omen: "x", perActivity: false }), omenButtonMark()],
   [{ badge: "woe", named: true, off: false }, { badge: "woe", named: false, off: false }, { badge: null, named: false, off: true },
    { badge: null, named: false, off: false }, { badge: null, named: false, off: false }, { badge: null, named: false, off: false }, { badge: null, named: false, off: false }]);
+check("9f omenButtonMark unread (d3rePk): the stars not read → the die decides on the item button and either omen's button, a third activity bare, nothing greyed; a stored omen wins over unread",
+  [omenButtonMark({ omen: null, perActivity: false, unread: true }), omenButtonMark({ omen: null, perActivity: true, kind: "weal", unread: true }), omenButtonMark({ omen: null, perActivity: true, kind: "woe", unread: true }),
+   omenButtonMark({ omen: null, perActivity: true, kind: null, unread: true }), omenButtonMark({ omen: "weal", perActivity: true, kind: "woe", unread: true }), omenButtonMark({ omen: null, unread: "yes" })],
+  [{ badge: "die", named: false, off: false }, { badge: "die", named: false, off: false }, { badge: "die", named: false, off: false },
+   { badge: null, named: false, off: false }, { badge: null, named: false, off: true }, { badge: null, named: false, off: false }]);
 ok("9d Empowered Spell matched by identifier, source or name; not the Font of Magic",
   matchRule(EMPOWERED_SPELL, { identifier: "empowered-spell", name: "x", type: "feat" }) && matchRule(EMPOWERED_SPELL, { source: "Compendium.dnd-players-handbook.classes.Item.phbmmoEmpoweredS", name: "x", type: "feat" })
   && matchRule(EMPOWERED_SPELL, { name: "Empowered Spell", type: "feat" }) && !matchRule(EMPOWERED_SPELL, { identifier: "font-of-magic", name: "Font of Magic", type: "feat" }));
