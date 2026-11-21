@@ -231,6 +231,24 @@ export function shouldAutoDamage(roll) {
 }
 
 /**
+ * Part C (0.7.1, playtest 2026-11-21): which of an attack card's recorded targets the roll HIT, as the
+ * auto-rolled damage card's targets. dnd5e's own rule (AttackMessageData#evaluatedTargets): `ac === null`
+ * (total cover) is a miss; else a critical hits; else a fumble or a total under the AC misses. An unknown
+ * AC (no number) is a hit, as dnd5e reads it, unless the roll fumbled. `null` when the card recorded no targets (the damage card
+ * then keeps dnd5e's default: the roller's current targets); `[]` when every target was missed.
+ * Pure: the descriptors are copied, never changed.
+ * @param {{ac?: number|null}[]|null|undefined} targets   the attack card's system.targets
+ * @param {{ total?: number, isCritical?: boolean, isFumble?: boolean }} roll
+ * @returns {object[]|null}
+ */
+export function attackHitTargets(targets, { total = 0, isCritical = false, isFumble = false } = {}) {
+  const list = [...(targets ?? [])].filter(Boolean);
+  if (!list.length) return null;
+  const missed = t => t.ac === null || (!isCritical && (!!isFumble || (Number.isFinite(t.ac) && Number(total) < t.ac)));
+  return list.filter(t => !missed(t)).map(t => ({ ...t }));
+}
+
+/**
  * D2 (feedback ORGqVN, hKDbzi): what an attack card says about hit or miss. `targets` are dnd5e's
  * evaluated targets (`message.system.evaluatedTargets`: `{ isMiss, ac }`; `ac === null` is total cover,
  * a miss); `visible` is whether this viewer may know the result (dnd5e's `attackRollVisibility` is not

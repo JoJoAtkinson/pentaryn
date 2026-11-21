@@ -117,6 +117,8 @@ own who took it, and never a monster's row (setting *Who sees "Applied by" under
 **Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
 client. It also rolls when the target's AC is unknown, for example with no target selected.
 A known miss or a natural 1 rolls nothing. The card's Damage button still works.
+With several targets, the damage card lists only the ones the roll hit, so Apply never hurts a creature
+the attack missed; if it missed them all, no damage is rolled.
 `dnd5e.attackRollVisibility` is `"hideAC"` (Joe, 2026-11-20): players see hit or miss, never the AC.
 The attack card then says so in words: "Attack — Hit" in blue or "Attack — Miss" in orange (with
 several targets, "Hit" / "Miss" on each target), a miss adds a "Miss — no damage" line so the turn

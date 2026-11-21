@@ -67,7 +67,12 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   own save, or a monster rolls one and a player row waits.
 - **Part C — damage on a hit, or on a save spell's use** (`attacks.mjs`). The roller's client rolls
   damage after a hit (or an attack whose target AC it can't know). A known miss or a natural 1 rolls
-  nothing. J1 (`autoDamageOnSave`): using a save activity that has damage and at least one recorded
+  nothing. Since 0.7.1 the damage card's `system.targets` are only the attack card's targets this roll
+  hit (`core.attackHitTargets`, dnd5e's own `evaluatedTargets` rule; an unknown AC counts as hit), passed
+  as `message.data.system.targets` to `rollDamage`, instead of the roller's current targets dnd5e would
+  record, so a missed creature is not in the Apply tray; an attack card whose recorded targets were all
+  missed rolls nothing (a two-target roll has no single AC, so `shouldAutoDamage` alone rolled).
+  J1 (`autoDamageOnSave`): using a save activity that has damage and at least one recorded
   target (Psionic Lash at Caven) rolls its damage at once, threaded under the usage card with the
   card's targets, so the flow is Use → the target saves → Apply. A save spell that places an area
   waits for the area; a use with no target posts nothing extra.
