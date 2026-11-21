@@ -1327,9 +1327,12 @@ def test_real_exposure_has_no_known_false_positives():
                                            "foundry/module/pentaryn-prompts/sight-adapter.mjs"]
     # pentaryn-dice (2026-11-21) is real exposure: its adapter and api drive game.dice3d, its core
     # names the internals, and its sidebar feature hangs on renderDsnSidebarTab (alias DsnSidebarTab).
+    # pentaryn-riders 0.8.0 (F2) is real exposure too: Empower throws only the rerolled dice through
+    # diceSoNiceMessageProcessed and game.dice3d.showForRoll.
     assert reg.exposure("dice-so-nice") == [
         "foundry/module/pentaryn-dice/api.mjs", "foundry/module/pentaryn-dice/dice-core.mjs",
-        "foundry/module/pentaryn-dice/dsn-adapter.mjs", "foundry/module/pentaryn-dice/sidebar.mjs", STUDY]
+        "foundry/module/pentaryn-dice/dsn-adapter.mjs", "foundry/module/pentaryn-dice/sidebar.mjs",
+        "foundry/module/pentaryn-riders/empower.mjs", STUDY]
 
 
 # KNOWN (wave-1 baseline, 2026-10-11; unfiled — see addon-blueprint-2026-10/wave-1-report.md
