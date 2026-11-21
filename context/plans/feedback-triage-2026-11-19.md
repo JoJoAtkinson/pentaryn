@@ -1,6 +1,6 @@
 ---
 title: Feedback triage — the 2026-11-19 session's reports
-status: live
+status: shipped
 last_modified: 2026-11-20
 tags: [foundry, feedback, triage, plan]
 ---
@@ -636,3 +636,35 @@ Use the 2026-11-20 sandbox pattern: setup with `eval-js` on BOSS, clicks by the 
 6. Restart the tunnel (http2).
 7. Run the §H6 browser play test (P1–P9).
 8. Close the reports (§H5).
+
+---
+
+## Shipped (2026-11-21)
+
+**Live:**
+- **Merged to main** (`d6278497`). Synced aoe 0.7.0, riders 0.8.0, pins 0.5.0, creatures 0.5.0 and pentaryn-dice 0.1.0 (new, enabled).
+- **Restarted** Foundry and the tunnel (`make vtt-down` / `vtt-up`). The world was relaunched through the admin API, because `vtt-up` came back on `/setup`.
+- **Settings:** `dnd5e.bloodied = all`, `attackRollVisibility = hideAC`.
+- **Tunnel:** on `http2`; `.run/cloudflared.log` shows "Initial protocol http2".
+
+**Browser play test (§H6)** on the Mac (home-pro, real Chrome), with ZZ Talo, ZZ Marrith and ZZ GM: **P1–P9 all PASS**, no red console errors.
+
+- P4's mismatch path was not hit on the Mac (the die matched the pick). BOSS covered it from a headless browser with the d6 forced to 2: "You picked Woe (Odd), but the stars rolled 2: Weal (even)."
+- The sandbox was removed the same day: 2 scenes, 5 actors and their folder, 3 users, 29 test chat cards. The originals were checked: Hags Den still has 369 walls, and the PCs are unchanged.
+
+**Side findings from the play test:**
+- **Look window says "Kind: Statue" on Bog A.** Not a bug: the world's Bog Vessel actor is `kindOf` the "Statue" actor (`HC3pAqn47VeTe4TW`, folder "2. Swamp & Cottage"), and the copies inherited it.
+- **Players could not switch sidebar tabs** (Mac session, ZZ Marrith). Not reproduced on BOSS in a fresh player session, nor right after a cast (`ui.sidebar.changeTab` and tab clicks both worked). Watch for it at the table.
+- **Damage card after a hit:** only the subtitle ("Attack • Damage Roll") turns blue, not the item title. That matches Marrith's ask ("Damage Roll" in blue).
+- **Wall of Stone panels block nothing**, as expected: B2 is not built.
+
+**Reports:**
+- 9 resolved: `fpnsNR`, `jz6tqK`, `hKDbzi`, `d3rePk`, `GDJJdi`, `SvOaxr`, `VDalcb`, `sREUaG`, `Lzzlyq`.
+- `ORGqVN` was resolved on 2026-11-20.
+- `BhfpXW` wontfix.
+- 3 stay triaged:
+  - `8t6Nn1`: B2 real walls, after Joe confirms the §H4 table;
+  - `kmuABM`: resolve after the next session if no synchronized drops;
+  - `xQ9tdh`: pathfinding, which needs its own plan.
+
+**Bridge on BOSS:** the foundry MCP server needs `node` on Claude Code's PATH. `~/.local/bin/node` was linked to nvm's v24.22.3 on 2026-11-21. Re-point it if the updater moves Node.
