@@ -135,8 +135,11 @@
         "today": "today's omen",
         "wealShort": "Weal",
         "woeShort": "Woe",
-        "redirect": "The stars read {omen} today: {activity} it is.",
-        "gone": "Cosmic Omen is no longer on the sheet."
+        "redirect": "You picked {clicked}, but the stars rolled {face}: {omen}.",
+        "redirectStored": "The stars read {omen} today: {activity} it is.",
+        "gone": "Cosmic Omen is no longer on the sheet.",
+        "decides": "the die decides",
+        "decidesLine": "Read the stars (1d6): the die decides. Even is Weal, odd is Woe."
       },
       "spells": {
         "label": "Prepared spells",

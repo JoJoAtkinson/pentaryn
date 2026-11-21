@@ -1,5 +1,16 @@
 # Changelog — pentaryn-riders
 
+## Unreleased
+
+- [declared] **Cosmic Omen: the die decides, and the UI says so** (d3rePk, triage E). With no omen stored for
+  the day, dnd5e's "which activity?" dialog gets one line above its buttons, "Read the stars (1d6): the die
+  decides. Even is Weal, odd is Woe.", and both omen buttons a "the die decides" badge (none disabled; the
+  dialog stays). Argon's Cosmic Omen button gets the same badge (`omenButtonMark`'s new `unread` flag, badge
+  `"die"`; the old marks are unchanged). The redirect keeps the rolled face: "You picked Woe (Odd), but the
+  stars rolled 2: Weal (even)." (`rest.omen.redirect`); an omen already stored keeps the old wording under
+  `rest.omen.redirectStored`. Three new lang keys (`redirectStored`, `decides`, `decidesLine`); golden
+  `lang-keys.json`; fixture riders-core 9f. Adjustments row `dnd5e-riders-omen-die-decides`.
+
 ## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
 
 Hooks: 43 non-lifecycle registrations, unchanged. Two new lang keys (`rest.omen.wealShort`, `rest.omen.woeShort`).

@@ -697,12 +697,17 @@ export function omenActivityFor(activities, omen) {
  * splits the item (weapons only, by default — never a feat): an item button stands for both activities,
  * so it is never greyed and its badge must NAME the omen (`named`); a per-activity button (`kind`, read
  * off the activity's name) gets the plain badge when it is the omen's and is greyed when it is the
- * other's; a third, unnamed activity is left alone. No omen → nothing.
- * @param {{ omen?: string|null, perActivity?: boolean, kind?: string|null }} p
- * @returns {{ badge: "weal"|"woe"|null, named: boolean, off: boolean }}
+ * other's; a third, unnamed activity is left alone. No omen → nothing, unless `unread` (the feature on and
+ * the stars not read today, feedback d3rePk): then the die decides, so the item button and either omen's
+ * button get the `"die"` badge ("the die decides") and nothing is greyed; a third activity stays bare.
+ * @param {{ omen?: string|null, perActivity?: boolean, kind?: string|null, unread?: boolean }} p
+ * @returns {{ badge: "weal"|"woe"|"die"|null, named: boolean, off: boolean }}
  */
-export function omenButtonMark({ omen = null, perActivity = false, kind = null } = {}) {
-  if (!OMENS.includes(omen)) return { badge: null, named: false, off: false };
+export function omenButtonMark({ omen = null, perActivity = false, kind = null, unread = false } = {}) {
+  if (!OMENS.includes(omen)) {
+    const die = unread === true && (!perActivity || OMENS.includes(kind));
+    return { badge: die ? "die" : null, named: false, off: false };
+  }
   if (!perActivity) return { badge: omen, named: true, off: false };
   if (kind === omen) return { badge: omen, named: false, off: false };
   return { badge: null, named: false, off: OMENS.includes(kind) };

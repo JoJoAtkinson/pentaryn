@@ -1714,3 +1714,14 @@ adjustments:
     native_when: dnd5e lets a card's targets be set after the roll, or applies to the user's current targets on an untargeted card
     retire_class: guarded
     check: make foundry-aoe-check
+
+  - id: dnd5e-riders-omen-die-decides
+    packages: [dnd5e, enhancedcombathud-dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/rest.mjs, foundry/module/pentaryn-riders/riders-core.mjs]
+    markers: ["renderActivityChoiceDialog", "button[data-activity-id]", "pr-omen-decides", "pr-omen-die", "unread"]
+    what: with no Cosmic Omen stored for the day, renderActivityChoiceDialog puts one .pr-omen-decides line ("Read the stars (1d6) — the die decides") right above the list holding dnd5e's "which activity?" button[data-activity-id] rows (the closest menu / ul / ol) and badges each omen's button .pr-omen-die "the die decides", nothing disabled; renderItemButtonArgonComponent badges Argon's Cosmic Omen button(s) the same (omenButtonMark's unread mark); the redirect notice names the rolled face ("You picked Woe (Odd), but the stars rolled 2 — Weal (even)"). Module elements and classes only; nothing in dnd5e's or Argon's files is edited
+    why: with no omen stored both choices looked selectable, then the roll overrode the click (d3rePk — Talo picked Woe, the die rolled 2, Weal ran; RAW, but the UI misled); dnd5e's choice dialog and Argon's button have no hint slot of their own (triage E)
+    native_when: dnd5e's activity choice dialog offers a per-row hint or note, or Cosmic Omen rolls its omen itself
+    retire_class: safe
+    check: make foundry-riders-check
