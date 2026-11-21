@@ -57,7 +57,7 @@ test("describe() equals golden/describe.json (version, kit, published and patch 
   assert.deepEqual(d.queries, [`${MODULE}.battleMedic`]);
   assert.deepEqual(d.settings.map(s => s.key), ["rituals", "longCasts", "concentrationSummons", "concentrationAutoBreak", "castDefaults", "arcaneRecovery", "enabled", "hdControls", "projectiles", "spellView", "restCard", "empoweredSpell", "projectileChatTab"]);
   assert.deepEqual(d.events, []);
-  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 43);   // 0.7.1: + the rest card refresh (updateItem); 0.7.0: + the rest card's five (restCompleted, renderChatMessage, preUseActivity, renderActivityChoiceDialog, renderItemButtonArgonComponent) and Empower's two (renderChatMessage, applyDamage); 0.6.0: + summon fell (updateActor, deleteToken), self-cast expiry (preCreateActiveEffect); 0.5.2: + projectiles' postUseActivity (5wv0Iq)
+  assert.equal(d.hooks.filter(h => !["init", "ready"].includes(h.name)).length, 45);   // GDJJdi: + Empower's sheet-use veto (preUseActivity, F3) and Dice So Nice decision (diceSoNiceMessagePreProcess, F2); 0.7.1: + the rest card refresh (updateItem); 0.7.0: + the rest card's five (restCompleted, renderChatMessage, preUseActivity, renderActivityChoiceDialog, renderItemButtonArgonComponent) and Empower's two (renderChatMessage, applyDamage); 0.6.0: + summon fell (updateActor, deleteToken), self-cast expiry (preCreateActiveEffect); 0.5.2: + projectiles' postUseActivity (5wv0Iq)
   pinJSON("describe", normaliseDescribe(d), import.meta.url);
 });
 
