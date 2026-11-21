@@ -43,6 +43,14 @@ never by copying it. A **pin** binds a character (Actor) to a player (User). Wit
   "cannot switch Scenes" warning once, then is carried out when the load ends.
 - They may **click the scene nav to look at another map**; nothing sends them back until their
   token moves, its scene is activated, or the GM pulls them.
+- **The way back** (triage A, `fpnsNR`; unreleased): while they look at another map, the scene nav
+  shows a **"⟵ {character}"** tab first in its active list. A click lands them on the token's scene
+  and floor with the token selected and the camera on it. Core v14 lists a scene for a player only
+  when it is active, viewed, or has navigation on and is visible, so a map with
+  `navigation: false` (all four Pentaryn maps) loses its tab once they click away; the pins tab is
+  drawn only then, never as a second tab beside a core one. Client-side only, no document write;
+  GMs and unpinned players see core's nav unchanged. The world hotbar macro "Back to my character"
+  still works as a fallback.
 - A GM **"Pull users to scene"** moves a pinned player too: a pull is how a move reaches them.
 - The character sheet shows **Pinned to {player}** in its title bar (also on a wild-shaped form's
   sheet).
@@ -186,7 +194,8 @@ behaviour changes:
    reaches the player.
 2. A pinned player **may click the scene nav** to look at another map: nothing redirects them and
    the "Your view follows" note is gone. Their next token move, an activation of their token's
-   scene, or a GM pull brings them back. (`scene.navigation = false` on a scene stops browsing to it.)
+   scene, or a GM pull brings them back, and so does their own click on the "⟵ {character}" nav
+   tab. (`scene.navigation = false` on a scene stops browsing to it.)
 3. **Login**: Foundry draws the active scene first, then pentaryn-resume draws the token's scene
    (one extra draw when they differ). A pinned player with no saved view, or with no active
    scene, still lands on the token's scene.
@@ -327,6 +336,7 @@ error. The `foundry/adjustments.yml` row is what the nightly updater's adjustmen
 | A hop creates the new token before it deletes the old one (core `RegionDocument#teleportTokens`' one modifyBatch, applied in order; portals `carryTo`; dnd5e transform and revert): `watch.mjs` placed-again pull and its toast debounce | no row | **Silent:** with delete-first every hop looks like 0 → 1 token, and the active GM pulls the player too, even one core left behind on purpose |
 | The canvas menu's reading of `canvas.currentMouseManager`, the protected `canvas.tokens._placementContext` / `canvas.regions._placementContext`, `MENU_SLOP` = `MouseInteractionManager.DEFAULT_DRAG_RESISTANCE_PX` (10), PIXI's capture listener order on `#board`, `PlaceableObject.visible`, `Wall.doorControl` | no row | **Visible, no error:** the menu does not open, or opens over a pan or a placement |
 | The sheet badge: dnd5e's `renderBaseActorSheet` hook, `.window-header` and `[data-action="toggleControls"]` | no row | **Silent:** the badge is gone |
+| The "⟵ {character}" nav tab: core's `renderSceneNavigation` hook, `#scene-navigation-active`, the `ui-control flexrow scene` tab classes, and `SceneNavigation#prepareScenes`' rule for which scenes a player sees (active, viewed, or `navigation && visible`), copied into `pinnedNavTab` | `core-pins-scene-nav-tab` | **Silent:** no tab (a renamed hook or menu id puts it at the nav's end, or nowhere), or a second tab beside a core one if core's rule changes |
 | Public, no row needed: `SceneViewOptions.controlledTokens` (board.mjs:1575), the lag of the GM's copy of `User#viewedScene` / `viewedLevel` (it changes only when the player's draw ends), `Hooks.call` returning false vetoing a pull, `Scenes#current` (Gather's default scene; the headless bot's watchdog redefines it) | — | Silent; covered by the module tests |
 
 The three "no row" items are the review's suggested rows (`core-pins-create-before-delete`,

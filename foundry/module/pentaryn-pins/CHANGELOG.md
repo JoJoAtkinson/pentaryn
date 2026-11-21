@@ -1,5 +1,22 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
+## Unreleased
+
+- **Added [declared]** a way back from a peek (triage A, `fpnsNR`: Marrith's player viewed the lobby
+  and had to reload to get back). While a pinned player views another scene, the scene navigation
+  shows a **"⟵ {character}"** tab, first in its active list; a click views the pinned token's scene
+  and level with the token controlled (core pans to it), the same view an activation of the token's
+  scene gives (`Scene#view` directly, so a pull received earlier never drops it). Drawn only when
+  core draws no tab for that scene (not active, and not `navigation && visible`: the Pentaryn maps
+  have navigation off), never on the pinned scene itself. GMs, unpinned players and the switch off:
+  core's nav unchanged. Client DOM only, no document write; the pin is resolved again at the click.
+  The world macro "Back to my character" stays as a fallback.
+- New pure rule `pinnedNavTab(user, viewedSceneId, pinTokenScene)` in `pins-core.mjs`; follow.mjs
+  registers `renderSceneNavigation` (label "renderSceneNavigation: back tab") and redraws `ui.nav` when
+  the switch changes. Adjustments row `core-pins-scene-nav-tab`.
+- Lang: `Nav.Back` "⟵ {name}", `Nav.BackHint`. Styles: `.ppi-nav-back`.
+- Tests: `test/nav.test.mjs`; the fake DOM (`test/fixtures/dom.mjs`) reads `#id` selectors.
+
 ## 0.4.1 — 2026-11-19
 
 "Teleport single…" lists with checkboxes (Joe: "it shows the list, and a checkbox so I can select one

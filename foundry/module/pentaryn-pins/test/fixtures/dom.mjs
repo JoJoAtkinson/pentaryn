@@ -1,6 +1,6 @@
 /**
  * A small DOM stand-in for node: elements with classes, data attributes, children, simple selectors
- * (`tag`, `.a`, `.a.b`, `tag.a`, `[data-x]`, `[data-x="v"]`, `tag[data-x]`), and events dispatched
+ * (`tag`, `#id`, `.a`, `.a.b`, `tag.a`, `[data-x]`, `[data-x="v"]`, `tag[data-x]`), and events dispatched
  * with a capture phase (document → target) and a bubble phase (target → document) that honour
  * stopPropagation. Enough for the sheet badge and the canvas menu; never a browser.
  */
@@ -20,10 +20,11 @@ class FakeEvent {
 }
 
 function parseSelector(sel) {
-  const m = /^([a-z0-9]*)((?:\.[\w-]+)*)((?:\[[\w-]+(?:="[^"]*")?\])*)$/i.exec(sel.trim());
+  const m = /^([a-z0-9]*)(?:#([\w-]+))?((?:\.[\w-]+)*)((?:\[[\w-]+(?:="[^"]*")?\])*)$/i.exec(sel.trim());
   if (!m) throw new Error(`fake dom: unsupported selector ${sel}`);
-  const classes = m[2] ? m[2].split(".").filter(Boolean) : [];
-  const attrs = [...m[3].matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)].map(a => [a[1], a[2]]);
+  const classes = m[3] ? m[3].split(".").filter(Boolean) : [];
+  const attrs = [...m[4].matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)].map(a => [a[1], a[2]]);
+  if (m[2]) attrs.push(["id", m[2]]);
   return { tag: m[1].toUpperCase(), classes, attrs };
 }
 

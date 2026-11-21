@@ -1824,3 +1824,14 @@ adjustments:
     native_when: dnd5e or core labels a remaining duration as time left (e.g. a "{duration} remaining" string)
     retire_class: safe
     check: make foundry-riders-check; live, an effect with rounds left reads "N rounds left" on the Effects tab and in its tooltip
+
+  - id: core-pins-scene-nav-tab
+    packages: [core]
+    modules: [pentaryn-pins]
+    files: [foundry/module/pentaryn-pins/follow.mjs, foundry/module/pentaryn-pins/pins-core.mjs]
+    markers: ["renderSceneNavigation", "pinnedNavTab", "scene-navigation-active"]
+    what: on a pinned player's client (switch on) a renderSceneNavigation listener adds a "⟵ {character}" li (classes ui-control flexrow scene ppi-nav-back, no data-action, no data-scene-id) first in core's #scene-navigation-active menu while the player views another scene and core draws no tab for the pinned token's scene — pinnedNavTab copies SceneNavigation#prepareScenes' player rule (active, viewed, or navigation && visible); its own click listener calls Scene#view({ level, controlledTokens }) for the token, as the _onActivate wrap does; DOM only, no document write; GMs and unpinned players untouched (triage A, fpnsNR)
+    why: a map with navigation false has a nav tab only while it is viewed, so a pinned player who clicked the active lobby had no way back but a reload; setting navigation true would list every map to every player
+    native_when: core's scene navigation lists a player's own token's scene, or lets a module add an entry to prepareScenes' context
+    retire_class: guarded
+    check: make foundry-pins-check

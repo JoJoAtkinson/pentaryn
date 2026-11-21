@@ -20,6 +20,10 @@
     "name": "moveToken"
   },
   {
+    "kind": "on",
+    "name": "renderSceneNavigation"
+  },
+  {
     "kind": "once",
     "name": "ready"
   },
