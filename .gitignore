@@ -63,6 +63,7 @@ package-lock.json
 
 # Python / uv
 .venv/
+.venv
 venv/
 __pycache__/
 *.pyc
