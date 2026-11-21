@@ -1,0 +1,110 @@
+{
+  "module": "pentaryn-dice",
+  "namespace": "dice",
+  "contract": "pentaryn-dice/api@1",
+  "flagScope": "pentaryn-dice",
+  "methods": [
+    {
+      "path": "spawn",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ type: string, count?: number, dryRun?: boolean }",
+          "optional": true,
+          "doc": "type: a die name (\"d6\", \"d20\", \"d100\"); count: 1..30, default 1; dryRun: only say what would spawn"
+        }
+      ],
+      "returns": "{ ok, requested, spawned, stopped } | { ok: false, code, reason }",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "dryRun": true,
+      "sideEffects": [
+        "Dice So Nice persistent dice (its own user flags, broadcast to every client)"
+      ],
+      "doc": "Spawn count persistent dice of one type for the calling user, through Dice So Nice's own persistent.spawn (so they sync and are saved). A d100 spawns as its linked pair. Stops at Dice So Nice's dice cap."
+    },
+    {
+      "path": "selectMine",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ type?: string }",
+          "optional": true,
+          "doc": "type: only dice of this type (a d100 pair counts as a d100)"
+        }
+      ],
+      "returns": "number",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Add the calling user's persistent dice (all, or one type) to Dice So Nice's selection on this client and redraw the outlines. Returns how many dice are selected now."
+    },
+    {
+      "path": "clearSelection",
+      "params": [],
+      "returns": "number",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Clear Dice So Nice's persistent-dice selection on this client. Returns how many were selected."
+    },
+    {
+      "path": "status",
+      "params": [],
+      "returns": "{ enabled, dsnActive, persistentDice, mine, selected, shortcut, internals }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Read-only diagnosis: the setting, whether Dice So Nice and its persistent dice are on, how many dice this user has, the selection by type, the shortcut's label and the internals check."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: { name, ok, detail }[] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Check that the six Dice So Nice internals this module uses still exist (run after a Dice So Nice update). Needs Dice So Nice's persistent dice setting on."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "enabled",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Per browser: the count boxes, the select buttons and the hint line in Dice So Nice's sidebar tab, and the select-all shortcut. Read live; the tab redraws on change, so no reload."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "renderDsnSidebarTab",
+      "label": "renderDsnSidebarTab: helpers"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [],
+    "reads": []
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "clearSelection": "clearSelection",
+  "contract": "string",
+  "describe": "function",
+  "selectMine": "selectMine",
+  "selftest": "selftest",
+  "settings": "settings",
+  "spawn": "spawn",
+  "status": "status",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}
