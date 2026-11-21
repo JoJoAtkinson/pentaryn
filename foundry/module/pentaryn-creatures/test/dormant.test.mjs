@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  DORMANT_DEFAULTS, DORMANT_FLAG, MODULE, combatantRelabels, disguiseUpdate, lookOf, readDormant, wakeUpdate,
+  DORMANT_DEFAULTS, DORMANT_FLAG, MODULE, combatantRelabels, disguiseUpdate, hasOwnDelta, lookOf, readDormant, wakeUpdate,
 } from "../creatures-core.mjs";
 
 const FK = `flags.${MODULE}.${DORMANT_FLAG}`;
@@ -118,6 +118,64 @@ test("combatantRelabels: only this token's combatants still showing the disguise
   ]);
 });
 
+/* ---------------- linked tokens (0.5.1) ---------------- */
+
+/** A linked token (a copied world actor), as Foundry stores it: actorLink true, no delta of its own. */
+const linkedBog = () => ({
+  _id: "tokBogLinked0001", name: "ZZ Bog A", actorLink: true, displayName: 30, displayBars: 30, disposition: -1, hidden: false,
+  lockRotation: true,
+  texture: { src: "modules/mm/tokens/bog.webp", scaleX: 1, scaleY: 1 },
+  ring: { enabled: true, colors: { ring: "#d8433a", background: null }, effects: 1, subject: { scale: 1, texture: "modules/mm/subjects/bog.webp" } },
+  delta: null,
+  flags: {},
+});
+const deltaKeys = u => Object.keys(u).filter(k => k === "delta" || k.startsWith("delta."));
+
+test("hasOwnDelta: only an unlinked token with a delta object", () => {
+  assert.equal(hasOwnDelta(golem()), true);
+  assert.equal(hasOwnDelta(linkedBog()), false);
+  assert.equal(hasOwnDelta({ ...linkedBog(), delta: { name: null, img: null } }), false, "linked: never, whatever the source holds");
+  assert.equal(hasOwnDelta({ ...golem(), delta: null }), false);
+  assert.equal(hasOwnDelta({ ...golem(), delta: [] }), false);
+  assert.equal(hasOwnDelta(null), false);
+});
+
+test("linked token: the disguise writes no delta key, the look stores delta: null (the playtest throw)", () => {
+  const src = linkedBog();
+  assert.equal(lookOf(src).delta, null);
+  const u = disguiseUpdate(src);
+  assert.deepEqual(deltaKeys(u), [], "a delta.* write on a linked token makes core build a bare ActorDelta and throw");
+  assert.equal(u.name, "Statue");
+  assert.equal(u["texture.src"], DORMANT_DEFAULTS.img);
+  assert.equal(u[FK].look.delta, null);
+});
+
+test("linked token: wake writes no delta key and round-trips the look exactly", () => {
+  const armed = apply(linkedBog(), disguiseUpdate(linkedBog()));
+  const u = wakeUpdate(armed);
+  assert.deepEqual(deltaKeys(u), []);
+  const { flags, ...rest } = apply(armed, u);
+  const { flags: _f, ...want } = linkedBog();
+  assert.deepEqual(rest, want);
+  assert.equal(flags[MODULE][DORMANT_FLAG], null);
+});
+
+test("unlinked token: disguise and wake still write the delta, restoring exactly what was there", () => {
+  const src = { ...golem(), actorLink: false, delta: { _id: "tokGolem00000001", name: "Vessel (own)", img: "own.webp", system: {} } };
+  const u = disguiseUpdate(src);
+  assert.equal(u["delta.name"], "Statue");
+  assert.equal(u["delta.img"], DORMANT_DEFAULTS.img);
+  const armed = apply(src, u);
+  const woke = apply(armed, wakeUpdate(armed));
+  assert.deepEqual(woke.delta, src.delta);
+});
+
+test("armed unlinked, linked before the wake: the wake leaves the delta alone", () => {
+  const armed = apply(golem(), disguiseUpdate(golem()));
+  const relinked = { ...armed, actorLink: true, delta: null };
+  assert.deepEqual(deltaKeys(wakeUpdate(relinked)), []);
+});
+
 /* ---------------- the feature, over a minimal stub ---------------- */
 
 function stubWorld({ activeGM = true, isGM = true } = {}) {
@@ -215,6 +273,84 @@ test("arm/wake: GM only, dryRun writes nothing, a non-dormant wake is woke:false
   globalThis.game.user.isGM = false;
   assert.equal((await W.ctx.arm(plain)).code, "NOT_GM");
   assert.equal((await W.ctx.wake(plain)).code, "NOT_GM");
+  feature.uninstall();
+  delete globalThis.game;
+});
+
+/* ---------------- a write Foundry refuses (0.5.1) ---------------- */
+
+/** A token whose update behaves like core's: a delta.* key on a linked token throws, as in the playtest. */
+function foundryLikeToken(src, { throwWith } = {}) {
+  const writes = [];
+  return {
+    writes, id: src._id, documentName: "Token", uuid: `Scene.s.Token.${src._id}`, name: src.name, _source: src,
+    async update(u, o) {
+      if (throwWith) throw throwWith;
+      if (this._source.delta == null && Object.keys(u).some(k => k.startsWith("delta."))) {
+        throw new Error("TokenDocument5e validation errors: SchemaField#_updateDiff delta: _id: may not be undefined");
+      }
+      writes.push({ u, o });
+      this._source = apply(this._source, u);
+    },
+  };
+}
+
+test("arm/wake on a linked token: both write, no throw, the look comes back", async () => {
+  const feature = await import("../dormant.mjs");
+  const W = stubWorld();
+  feature.install(W.reg, W.ctx);
+  const tok = foundryLikeToken(linkedBog());
+  const armed = await W.ctx.arm(tok);
+  assert.equal(armed.ok, true, armed.reason);
+  assert.equal(tok._source.name, "Statue");
+  assert.equal(tok._source.delta, null);
+  const woke = await W.ctx.wake(tok);
+  assert.equal(woke.ok, true, woke.reason);
+  assert.equal(woke.woke, true);
+  assert.equal(tok._source.name, "ZZ Bog A");
+  assert.equal(tok._source.ring.enabled, true);
+  assert.equal(tok.writes.length, 2);
+  feature.uninstall();
+  delete globalThis.game;
+});
+
+test("arm/wake answer ok:false (never ok:true) when the token update throws", async () => {
+  const feature = await import("../dormant.mjs");
+  const W = stubWorld();
+  feature.install(W.reg, W.ctx);
+  const tok = foundryLikeToken(golem(), { throwWith: new Error("TokenDocument5e validation errors: something") });
+  const a = await W.ctx.arm(tok);
+  assert.equal(a.ok, false);
+  assert.equal(a.code, "INTERNAL");
+  assert.match(a.reason, /disguise was not written: TokenDocument5e validation errors/);
+  const coded = foundryLikeToken(apply(golem(), disguiseUpdate(golem())), { throwWith: Object.assign(new Error("no"), { code: "REFUSED" }) });
+  const w = await W.ctx.wake(coded);
+  assert.equal(w.ok, false);
+  assert.equal(w.code, "REFUSED", "a coded error keeps its code");
+  assert.match(w.reason, /wake was not written/);
+  feature.uninstall();
+  delete globalThis.game;
+});
+
+test("wake: token woke but a combatant relabel failed → ok with warnings; the trigger logs a failed wake", async () => {
+  const feature = await import("../dormant.mjs");
+  const W = stubWorld();
+  W.combat.updateEmbeddedDocuments = async () => { throw new Error("socket closed"); };
+  feature.install(W.reg, W.ctx);
+  const res = await W.ctx.wake(W.token);
+  assert.equal(res.ok, true);
+  assert.equal(res.woke, true);
+  assert.match(res.warnings[0], /combatants not relabelled: socket closed/);
+  feature.uninstall();
+
+  const F = stubWorld();
+  F.token.update = async () => { throw new Error("validation"); };
+  feature.install(F.reg, F.ctx);
+  F.combat.started = true;
+  F.handlers.updateCombat(F.combat, { round: 1 });
+  await settle();
+  await settle();
+  assert.ok(F.writes.some(w => w.warn && /failed: .*wake was not written: validation/.test(w.warn[0])), JSON.stringify(F.writes));
   feature.uninstall();
   delete globalThis.game;
 });

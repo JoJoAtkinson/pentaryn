@@ -117,6 +117,17 @@ wake puts them back: shrink the statue (`texture.scaleX/Y`) or turn it (rotation
 like, and the creature still wakes at its own size and upright. To wake it bigger or smaller, set
 `flags.pentaryn-creatures.dormant.look.texture.scaleX` and `scaleY` on the armed token.
 
+**Linked tokens (0.5.1).** A linked token (`actorLink: true`, one world actor behind it) works too,
+with one difference: it has no actor delta of its own, so the disguise renames and re-arts the token
+only, never the world actor (which other tokens and scenes share). Its sheet and a player's
+double-click Look window still show the real actor's name and portrait, so prefer an unlinked token
+for a statue players may inspect. Before 0.5.1 a linked token made `dormant` throw a
+`DataModelValidationError` (`delta: _id may not be undefined …`) and nothing changed.
+**A refused write answers `ok: false`** (0.5.1): when Foundry rejects the token update, `dormant` and
+`wake` return `{ ok: false, code, reason }` (`INTERNAL` unless the error carries a code) instead of
+throwing or reporting success. A wake whose token update landed but whose combatant relabel failed
+answers `ok: true` with `warnings`.
+
 **No markers while dormant (unit N).** With public and hidden markers on (below), a dormant token
 shows players no status marker at all — not Bloodied, not Prone — until it wakes, so a damaged statue
 does not give itself away.
@@ -203,9 +214,11 @@ read; every write runs only on the active GM's client.
   copies flagged for it and everything in its folder), as this client sees it.
 - `dormant(ref, { name?, img?, disposition?, sceneId?, dryRun? })` → `{ ok, dryRun, token, name,
   img, disposition }` (0.4.0): arm or re-arm one token (above). Re-arming keeps the look stored the
-  first time. GM only (`NOT_GM`); bad options `BAD_ARGS`.
-- `wake(ref, { sceneId?, dryRun? })` → `{ ok, dryRun, woke, token, name? }` (0.4.0): put the stored
-  look back now; `woke: false` when the token is not dormant. GM only.
+  first time. GM only (`NOT_GM`); bad options `BAD_ARGS`; a token update Foundry refuses
+  `{ ok: false, code: "INTERNAL", reason }` (0.5.1). Linked tokens: no delta write (above).
+- `wake(ref, { sceneId?, dryRun? })` → `{ ok, dryRun, woke, token, name?, warnings? }` (0.4.0): put the stored
+  look back now; `woke: false` when the token is not dormant. GM only. A refused token update is
+  `ok: false` (0.5.1); a failed combatant relabel after a good wake is `warnings`.
 - `core`: a frozen copy of the pure module.
 
 ## Data written
@@ -217,7 +230,7 @@ read; every write runs only on the active GM's client.
 | Actor (relay copy) | made by the active GM: the source's data, `ownership` = `default: 0` + the character's owners + the sender, `folder`, `_stats.compendiumSource` (or `duplicateSource`), `flags.dnd5e.isAutoImported`, `flags.dnd5e.summon.origin` (linked source: the item's uuid), `flags.pentaryn-creatures.library` = the character's id |
 | Actor (dnd5e's own copy, filed) | `folder`, `ownership.<owner>` = 3 for the character's owners (never removed), `flags.pentaryn-creatures.library`, `flags.dnd5e.summon.origin` (linked copy, item known) |
 | Folder `PC Summons & Forms`, `<First name> — summons & forms` | made only when missing (an existing folder of that name is used) |
-| token `name`, `displayName`, `displayBars`, `disposition`, `texture.src`, `ring`, `delta.name`, `delta.img` | the dormant disguise, and on waking the stored look |
+| token `name`, `displayName`, `displayBars`, `disposition`, `texture.src`, `ring`, `delta.name`, `delta.img` | the dormant disguise, and on waking the stored look (`delta.*` on unlinked tokens only, 0.5.1) |
 | token `texture.scaleX/Y`, `lockRotation` | on waking only, from the stored look (0.4.1) |
 | token `flags.pentaryn-creatures.dormant` | `{ look, disguise }` while dormant · `null` once awake |
 | Combatant `name`, `img` | on waking, only where they still show the disguise (core derives them once) |
