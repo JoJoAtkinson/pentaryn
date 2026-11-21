@@ -20,6 +20,12 @@ Foundry world id **`pentaryn`**, title **Pentaryn**, dnd5e 6.1.1 (since 2026-11-
 `modern` (2024). This is Joe's main Pentaryn world build. First use: a 3200 A.F. Underdark
 one-shot with PCs Marrith, Caven and Talo (built to level 12, 2026-10-04).
 
+## Table settings and token markers (2026-11-21)
+
+- **`dnd5e.attackRollVisibility` = `hideAC`** (set live 2026-11-20, Joe's decision): players see whether an attack hit, never the target's AC. pentaryn-aoe 0.7.0's Hit / Miss labels ride on it and show nothing under `none`. Leave it at `hideAC`.
+- **`dnd5e.bloodied` should be set to `"all"` (pending, live world)** once aoe 0.7.0, riders 0.8.0, pins 0.5.0, creatures 0.5.0 and dice 0.1.0 are synced and the world restarted (branch `feedback/2026-11-21`, plan `context/plans/feedback-triage-2026-11-19.md` §H3). Not applied yet: dnd5e applies Bloodied to monsters only under `"all"`, and creatures 0.5.0's marker table then decides who sees it.
+- **pentaryn-creatures 0.5.0 token-marker defaults** (Joe, 2026-11-21; GM menu *Token markers* in Configure Settings): on a creature a player does not own or observe, these show (Public): Bloodied, Dead, Unconscious, Prone, Grappled, Restrained, Paralyzed, Petrified, Stunned, Incapacitated, Sleeping, Burning, Bleeding, Flying, Hovering, Burrowing, Dodging, Transformed, Invisible. Everything else is GM only, Concentrating included, and so are spell and item effects on enemies. Friendly tokens show every marker (on). A dormant token shows no marker until it wakes (on).
+
 ## Backups — per-module bundles live (2026-10-12)
 
 Backups are now a ~19 MB world snapshot plus shared module/system bundles in OneDrive
