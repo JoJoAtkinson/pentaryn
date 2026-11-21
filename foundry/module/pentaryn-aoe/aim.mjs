@@ -91,12 +91,17 @@ function panelNotice(total, options) {
   let placed = 0;
   let note = null;
   try { note = ui.notifications?.info?.(first, { permanent: true, console: false }) ?? null; } catch (err) { log.debug("panel notice", err); }
-  const step = fn => args => {
-    const r = fn?.(args);
-    if (r === false) return false;
+  const advance = () => {
     placed += 1;
     const next = text(placed);
     try { if (next) note?.update?.({ message: next }); } catch (err) { log.debug("panel notice", err); }
+  };
+  // the caller's hook may be async (a Promise of false refuses too): count only once it has said yes
+  const step = fn => args => {
+    const r = fn?.(args);
+    if (typeof r?.then === "function") return r.then(v => { if (v !== false) advance(); return v; });
+    if (r === false) return false;
+    advance();
     return r;
   };
   const done = () => {

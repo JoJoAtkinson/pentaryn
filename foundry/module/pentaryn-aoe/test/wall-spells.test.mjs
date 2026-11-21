@@ -168,6 +168,23 @@ test("B3: a caller's preConfirm that refuses (false) does not advance the counte
   } finally { restore(); }
 });
 
+test("B3: an async preConfirm: a Promise of false counts nothing, a Promise of anything else advances once it settles", async () => {
+  const { notes, restore } = noticesStub();
+  try {
+    let answer = false;
+    const { options } = S.aim.panelNotice(3, { preConfirm: async () => answer });
+    const refused = options.preConfirm({});
+    assert.equal(typeof refused?.then, "function", "the caller's promise is handed back");
+    assert.equal(await refused, false);
+    assert.equal(notes[0].message, "Panel 1 of 3: Esc to finish, right-click skips a panel", "the refusal counts nothing");
+    answer = undefined;
+    const kept = options.preConfirm({});
+    assert.equal(notes[0].message, "Panel 1 of 3: Esc to finish, right-click skips a panel", "not before it settles");
+    assert.equal(await kept, undefined);
+    assert.equal(notes[0].message, "Panel 2 of 3: Esc to finish, right-click skips a panel");
+  } finally { restore(); }
+});
+
 test("B3: through the placeRegions wrap — the counter is shown for Wall of Stone's ten regions, core gets the same list, the notice goes when placement returns", () => {
   const { notes, restore } = noticesStub();
   try {
