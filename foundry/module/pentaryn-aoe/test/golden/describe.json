@@ -698,6 +698,13 @@
       "doc": "Part I: Apply on a damage or healing card goes through this module: rows for tokens the user does not own are relayed to the active GM, a player's targets fill a card that recorded none, and every row has a total the player can type (B relay, late targets, B5)."
     },
     {
+      "key": "showAppliedBy",
+      "scope": "world",
+      "type": "String",
+      "default": "owners",
+      "doc": "Part I (G2): who reads \"Applied by <user> → <token> (±n)\" under a damage or healing card's tray: gm (the GM only), owners (the GM, the card's author and the owners of a row's token) or all. Players never read a monster's row."
+    },
+    {
       "key": "npcSaveRollMode",
       "scope": "world",
       "type": "String",
@@ -860,6 +867,7 @@
       "flags.pentaryn-aoe.areaTargets",
       "flags.pentaryn-aoe.recordedTargets",
       "flags.pentaryn-aoe.applied",
+      "flags.pentaryn-aoe.appliedLog",
       "flags.dnd5e.lockSize",
       "flags.dnd5e.requestResult"
     ],

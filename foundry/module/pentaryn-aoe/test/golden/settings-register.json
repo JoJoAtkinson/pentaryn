@@ -191,6 +191,21 @@
   },
   {
     "ns": "pentaryn-aoe",
+    "key": "showAppliedBy",
+    "name": "PENTARYN_AOE.Setting.showAppliedBy.Name",
+    "hint": "PENTARYN_AOE.Setting.showAppliedBy.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "default": "owners",
+    "choices": {
+      "gm": "PENTARYN_AOE.Setting.showAppliedBy.gm",
+      "owners": "PENTARYN_AOE.Setting.showAppliedBy.owners",
+      "all": "PENTARYN_AOE.Setting.showAppliedBy.all"
+    }
+  },
+  {
+    "ns": "pentaryn-aoe",
     "key": "npcSaveRollMode",
     "name": "PENTARYN_AOE.Setting.npcSaveRollMode.Name",
     "hint": "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",
