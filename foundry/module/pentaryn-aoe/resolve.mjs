@@ -26,7 +26,7 @@
 import {
   MODULE, RECENT_MESSAGES, aoeFlags, doesNotExist, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion,
   supersedes, isHandle, isTemplateRegion, hydrateDamages, protectRows, unprotectRow, areaLocked, MULTIPLIERS, scaleDamages,
-  areaTargetRows
+  areaTargetRows, carryResolution
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
 import { claimMessage } from "./lib/election.mjs";
@@ -36,6 +36,8 @@ import { areasFor, removeArea, handleActor, isPile } from "./scene-adapter.mjs";
 import { activityOf, usageIdOf, recordedTarget, targetDescriptors } from "./messages-adapter.mjs";
 
 export const REQUEST_HANDLER = `${MODULE}.save`;
+/** pentaryn-riders' flag scope: its Empowered Spell card names the card it replaces (MANIFEST.flags.reads). */
+const RIDERS = "pentaryn-riders";
 const abilityLabel = a => CONFIG.DND5E.abilities[a]?.label ?? a;
 
 /* -------------------------------------------- */
@@ -201,8 +203,11 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
 
   const scene = game.scenes.get(message.speaker?.scene) ?? canvas.scene;
   const candidates = scene ? areasFor(activity.uuid, scene) : [];
-  const region = regionId !== undefined
-    ? (regionId ? scene?.regions.get(regionId) ?? null : null)
+  // F0: an Empowered Spell card takes over the card it replaces (its area, saves and request card).
+  const source = empoweredSource(message, activity);
+  const pick = regionId !== undefined ? regionId : source ? source.res.region ?? null : undefined;
+  const region = pick !== undefined
+    ? (pick ? scene?.regions.get(pick) ?? null : null)
     : newestRegion(candidates);
 
   // No area: the roller's own targets — the ones kept at the first stamp when an area has since
@@ -217,12 +222,23 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
   const casterActorId = activity.actor?.id ?? null;
   const handleActorId = handleActor()?.id ?? null;   // once, not once per token (-2)
   const described = tokens.map(tk => describeToken(tk, { handleActorId }));
-  const rows = buildRows(described, { casterActorId });
+  let rows = buildRows(described, { casterActorId });
   const usage = usageIdOf(message);
-  // J2: a save already rolled from the usage card's own button fills its row before anyone is asked.
-  fillEarlierSaves(rows, { usage, ability, dc, onSave, before: message.timestamp ?? Date.now(), exclude: message.id });
-  // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
-  const careful = (await context?.exposed.carefulFor?.(activity.actor, { usage, onSave, rows })) ?? null;
+  // F0: the rules keep the save through Empowered Spell — the old tray's saves, Careful Spell and
+  // request card carry over (core.carryResolution), and nothing is rolled or asked for again.
+  const carry = source ? carryResolution(source.res, rows) : null;
+  if (source && !carry) why("resolve", message.id, "empowered, but the replaced tray is superseded or applied: resolved afresh");
+  let careful = null;
+  if (carry) {
+    rows = carry.rows;
+    careful = carry.careful;
+    why("resolve", message.id, "empowered: saves carried over", { from: source.message.id });
+  } else {
+    // J2: a save already rolled from the usage card's own button fills its row before anyone is asked.
+    fillEarlierSaves(rows, { usage, ability, dc, onSave, before: message.timestamp ?? Date.now(), exclude: message.id });
+    // Careful Spell is its own feature (careful.mjs); it reaches this one through ctx.exposed.
+    careful = (await context?.exposed.carefulFor?.(activity.actor, { usage, onSave, rows })) ?? null;
+  }
   if (vanished(message.id)) return cancelled(message.id);
 
   const res = {
@@ -236,7 +252,7 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     ability, dc, onSave,
     careful,
     damages: damagesOf(message),
-    request: null,
+    request: carry?.request ?? null,
     created: message.timestamp ?? Date.now(),
     superseded: false,
     rows
@@ -259,7 +275,9 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     const stamp = new Set(areaTargetRows(rows).map(r => r.id));
     update["system.targets"] = targetDescriptors(tokens.filter(tk => stamp.has(tk.id)));
     update[`flags.${MODULE}.areaTargets`] = true;
-    if (!flags.areaTargets) update[`flags.${MODULE}.recordedTargets`] = Array.from(message.system?.targets ?? [], t => ({ ...t }));
+    // F0: an empowered card copied its targets from a stamped card; what that card recorded is the truth.
+    const kept = carry ? aoeFlags(source.message).recordedTargets : undefined;
+    if (!flags.areaTargets) update[`flags.${MODULE}.recordedTargets`] = Array.from(kept ?? message.system?.targets ?? [], t => ({ ...t }));
     if (flags.lateTargets) update[`flags.${MODULE}.lateTargets`] = false;
   }
   const failed = await enqueue(message.id, () => message.update(update).then(() => null, err => err));
@@ -270,7 +288,8 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
 
   await rollNpcSaves(message.id);
   if (vanished(message.id)) return cancelled(message.id);
-  if (setting("promptPlayers") && rows.some(r => r.kind === "manual" && r.apply && !r.save)) {
+  // F0: an empowered card never asks again: the replaced card's request (carried) is still the one.
+  if (!carry && setting("promptPlayers") && rows.some(r => r.kind === "manual" && r.apply && !r.save)) {
     await postRequest(message, activity, res);
   }
   if (setting("autoApplyNpc")) {
@@ -278,6 +297,20 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     if (ids.length) await applyRows(message.id, ids);
   }
   return aoeFlags(game.messages.get(message.id)).resolution;
+}
+
+/**
+ * F0: the card an Empowered Spell card replaces, when it carries a resolution for the same activity:
+ * `{ message, res }`, else null. pentaryn-riders writes `flags.pentaryn-riders.empowered = { from, … }`
+ * on the new card (only `from` is read here; declared in MANIFEST.flags.reads).
+ */
+function empoweredSource(message, activity) {
+  const from = message?.flags?.[RIDERS]?.empowered?.from;
+  if (typeof from !== "string" || !from || from === message.id) return null;
+  const old = game.messages.get(from);
+  const res = aoeFlags(old).resolution;
+  if (!res || res.activity !== activity?.uuid) return null;
+  return { message: old, res };
 }
 
 /**
@@ -538,7 +571,9 @@ async function applyRowsNow(messageId, rowIds) {
     // B5: a total typed on the row (real dice) replaces the rolled one, each type keeping its share.
     const damages = hydrateDamages(scaleDamages(res.damages, row.amount));
     try {
-      await actor.applyDamage(damages, { multiplier: row.multiplier, originatingMessage: message });
+      // F0: `origin` as dnd5e's own tray and the relay pass it, so dnd5e.applyDamage listeners know
+      // the card (pentaryn-riders retires its Empower button once the card is applied).
+      await actor.applyDamage(damages, { multiplier: row.multiplier, origin: message, originatingMessage: message });
     } catch (err) {
       failed.push({ row, err });   // R1: the rows that landed are already marked, so a retry skips them
       continue;
@@ -662,4 +697,4 @@ export function uninstall() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
 // so the blueprint refactor edits that shim, not the frozen tests. Not part of the API.
-export const _internals = { tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, fillEarlierSaves, queues, applying };
+export const _internals = { empoweredSource, tokensForTargets, keysOnly, saveSystem, damagesOf, supersedeOlder, rollOne, postRequest, onSaveMessage, cleanupInstant, isAbilitySave, fillEarlierSaves, queues, applying };

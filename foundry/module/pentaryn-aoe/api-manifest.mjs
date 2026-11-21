@@ -80,7 +80,8 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-aoe.applied",
       "flags.dnd5e.lockSize", "flags.dnd5e.requestResult",
     ],
-    reads: ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled"],
+    // F0: an Empowered Spell card names the card it replaces (`from`); aoe reads nothing else of it.
+    reads: ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled", "flags.pentaryn-riders.empowered"],
   },
   unlisted: [],
 });

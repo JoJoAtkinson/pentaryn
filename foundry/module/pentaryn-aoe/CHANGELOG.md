@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **F0 [declared]. Empowered Spell keeps the saves** (feedback GDJJdi; plan feedback-triage-2026-11-19 §H2).
+  Browser test T4: one Empower click rolled the target's Dexterity save a second time, because the GM's
+  `createChatMessage` hook resolved pentaryn-riders' new damage card as a fresh tray. PHB 2024 rerolls
+  "a number of the damage dice" only, so the save stands.
+  - `resolve()` reads `flags.pentaryn-riders.empowered.from` (declared in `MANIFEST.flags.reads`); when
+    that card carries a resolution for the same activity, the new tray takes over its rows' saves,
+    multipliers, ticks and GM edits, its area, Careful Spell and request card (`core.carryResolution`,
+    pure), keeps its own damages, rolls no saves it already has, skips `fillEarlierSaves` and
+    `carefulFor`, and posts no request card. A pending player save answers the new card (`matchSave`
+    on `request`). Refused when the replaced tray is `areaLocked` (superseded, or a row applied).
+  - The GM tray's Apply passes `origin: message` to `actor.applyDamage` (as the relay and dnd5e's tray
+    do), so pentaryn-riders' `dnd5e.applyDamage` listener marks the card applied and the Empower button
+    goes: a GM Apply followed by Empower could otherwise land the damage twice.
+  - Tests: `test/empower-carry.test.mjs`. Golden: `describe.json` (`flags.reads`).
+
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM
   who applied from it (the module's tray sits right under it) hit the selected character, not the

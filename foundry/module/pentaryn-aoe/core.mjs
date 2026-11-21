@@ -142,6 +142,47 @@ export function areaLocked(res) {
   return !!res && (!!res.superseded || (res.rows ?? []).some(r => r.applied));
 }
 
+/**
+ * F0 (feedback GDJJdi): Empowered Spell rerolls damage dice only (PHB 2024), so the save stands. An
+ * empowered damage card (pentaryn-riders' `flags.pentaryn-riders.empowered.from`) takes over the
+ * superseded card's tray state instead of rolling new saves: each new row whose token was on the old
+ * tray gets back its save, multiplier, tick and the GM's own edits (an overridden multiplier, Careful
+ * Spell's protection); the area, the Careful Spell record and the players' request card come with
+ * it, so a player's save still pending answers the new card (matchSave reads `request`). The new
+ * card keeps its own damages: the caller never takes them from here. A row the old tray did not have
+ * stays as built. Refused (null) when there is no old resolution or it is areaLocked (superseded,
+ * or a row already applied): carrying it would revive a dead tray or apply the same save twice.
+ * Never mutates its inputs.
+ * @param {object|null|undefined} oldRes   the superseded card's resolution
+ * @param {object[]} newRows               buildRows' rows for the new card
+ * @returns {{ rows: object[], region: string|null, careful: object|null, request: string|null }|null}
+ */
+export function carryResolution(oldRes, newRows) {
+  if (!oldRes || areaLocked(oldRes)) return null;
+  const old = new Map((oldRes.rows ?? []).map(r => [r.id, r]));
+  const rows = (newRows ?? []).map(row => {
+    const was = old.get(row.id);
+    const out = { ...row };
+    if (!was) return out;
+    out.save = was.save ? { ...was.save } : null;
+    out.multiplier = was.multiplier ?? null;
+    out.apply = !!was.apply;
+    for (const k of ["overridden", "protected"]) {
+      if (was[k]) out[k] = true;
+      else delete out[k];
+    }
+    if (was.unprotected) out.unprotected = { save: was.unprotected.save ? { ...was.unprotected.save } : null, multiplier: was.unprotected.multiplier ?? null };
+    else delete out.unprotected;
+    return out;
+  });
+  return {
+    rows,
+    region: oldRes.region ?? null,
+    careful: oldRes.careful ? { ...oldRes.careful } : null,
+    request: oldRes.request ?? null,
+  };
+}
+
 /** True once every ticked row has been applied (instantaneous areas are then removed). */
 export function allApplied(rows) {
   const ticked = rows.filter(r => r.apply);

@@ -63,7 +63,7 @@ test("the flags contract: what aoe writes, what it reads", () => {
   assert.ok(flags.writes.includes("flags.pentaryn-aoe.handle") && flags.writes.includes("flags.pentaryn-aoe.resolution"));
   assert.equal(flags.writes.length, 15);
   for (const f of ["flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets", "flags.pentaryn-aoe.applied"]) assert.ok(flags.writes.includes(f), f);
-  assert.deepEqual(flags.reads, ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled"]);
+  assert.deepEqual(flags.reads, ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled", "flags.pentaryn-riders.empowered"]);
 });
 
 test("EXT-1: the flags contract names the dnd5e flags aoe writes and core's template flag it reads", () => {

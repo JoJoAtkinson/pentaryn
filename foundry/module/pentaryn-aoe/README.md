@@ -46,6 +46,14 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   out: the module's tray on it refuses, but dnd5e's own tray on that older card still lists the
   area's creatures (its stamp is kept), and a GM who presses it applies that damage by hand. Players see one status line on their own card (waiting / applied / re-rolled), never
   monster numbers; the GM-only monster saves are hidden from their chat.
+  **Empowered Spell keeps the saves** (F0, PHB 2024: only damage dice are rerolled): a damage card
+  pentaryn-riders posts for Empower (`flags.pentaryn-riders.empowered.from` names the card it replaces)
+  takes over that card's tray — each row's save, multiplier, tick and the GM's edits, the area, Careful
+  Spell and the players' request card (`core.carryResolution`) — so no save is rolled again and no second
+  request card is posted; a save still pending answers the new card. The new card keeps its own damage.
+  The replaced tray greys out as any re-roll does. Refused (a fresh resolve, as before) when the replaced
+  tray is superseded or already has an applied row. The tray's Apply passes the card as `origin` (as
+  dnd5e's own tray does), so riders retires the Empower button once the card is applied.
 - **Careful Spell** (`careful.mjs`). Metamagic is tracked, not forced onto a spell (Joe's ruling,
   2026-10-12). Using it opens a picker on the caster's client: the creatures on their scene they
   can see, by token name, the current targets ticked, up to their CHA mod (min 1). A public card
@@ -214,6 +222,9 @@ handle is not spread on arrival), pentaryn-senses (a handle is never offered a c
 (no turn for a helper token, `turnflow/helper-token.mjs` through
 `shapes.isAoeHandle`). `test/fixtures/handle-oracle.json` is the shared row
 set every copy pins against; prefer `apiOf("pentaryn-aoe").isHandle(x)` in new code.
+
+Read from other modules: `flags.pentaryn-riders.empowered.from` (an Empowered Spell damage card's
+replaced card, F0; nothing else of that flag), declared in `MANIFEST.flags.reads`.
 
 ## Events
 
