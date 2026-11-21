@@ -1,0 +1,37 @@
+/* Pentaryn Dice — helpers inside Dice So Nice's sidebar tab. Every selector is under .pdi-. */
+
+.pdi-count {
+  width: 3.2em;
+  height: 1.8em;
+  padding: 0 0.2em;
+  text-align: center;
+  font-size: var(--font-size-12, 12px);
+}
+
+.pdi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  min-width: 1.8em;
+  height: 1.8em;
+  padding: 0 0.4em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pdi-actions .pdi-row {
+  display: flex;
+  gap: 0.4em;
+}
+
+.pdi-actions .pdi-row .pdi-btn {
+  flex: 1;
+  height: 2em;
+}
+
+.pdi-hint {
+  margin: 0.4em 0 0;
+  font-size: var(--font-size-12, 12px);
+  opacity: 0.8;
+}

@@ -324,6 +324,12 @@ MODULES = {
         # _onActivate patches, the view queue, the sheet badge and the GM canvas menu in node.
         check=ALL_GATES,
     ),
+    "dice": ModuleSpec(
+        "pentaryn-dice",
+        # node-test: dice-core.mjs (spawn groups, which dice to select, the internals probe) is
+        # pure; the glue suites drive the Dice So Nice sidebar helpers on a synthetic tab and dice3d.
+        check=ALL_GATES,
+    ),
     # The actor pipeline stages this one, not module-sync (which refuses it by name) —
     # but the static gates are free and it is real code, so it gets them.
     # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites

@@ -1,0 +1,29 @@
+{
+  "PENTARYN_DICE": {
+    "Setting": {
+      "enabled": {
+        "Name": "Dice helpers in the Dice So Nice tab",
+        "Hint": "Adds a count box and a \"+ ×\" button to each die in the Dice So Nice sidebar tab (type 8 and click to put 8 dice on the table), buttons to select all your dice or all of one type, Clear selection, and the select-all shortcut. Only affects this browser."
+      }
+    },
+    "Keybind": {
+      "selectAll": {
+        "Name": "Select all my dice",
+        "Hint": "Select every persistent die of yours on the table, so you can pick them up and throw them together. Does nothing (and passes the key on) when you have no dice out."
+      }
+    },
+    "Sidebar": {
+      "countTitle": "How many {type} to add",
+      "spawn": "+ ×",
+      "spawnTitle": "Add that many {type} to the table",
+      "selectTypeTitle": "Select all my {type}",
+      "selectAll": "Select all mine",
+      "clear": "Clear selection",
+      "hint": "Ctrl+click a die to select it, or press {key} to select all of yours. Grab one selected die to move and throw them all; Delete removes them.",
+      "hintNoKey": "Ctrl+click a die to select it. Grab one selected die to move and throw them all; Delete removes them."
+    },
+    "Notify": {
+      "stopped": "Added {spawned} of {requested} {type}: Dice So Nice's dice limit was reached."
+    }
+  }
+}
