@@ -103,5 +103,6 @@
   "PENTARYN_RIDERS.empower.superseded",
   "PENTARYN_RIDERS.empower.noUse",
   "PENTARYN_RIDERS.empower.createFailed",
-  "PENTARYN_RIDERS.empower.retireFailed"
+  "PENTARYN_RIDERS.empower.retireFailed",
+  "PENTARYN_RIDERS.empower.useCard"
 ]

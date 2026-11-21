@@ -165,6 +165,10 @@
   },
   {
     "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
     "name": "dnd5e.renderChatMessage"
   },
   {
