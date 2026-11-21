@@ -231,6 +231,10 @@
       "label": "moveToken: level gap"
     },
     {
+      "name": "renderSceneNavigation",
+      "label": "renderSceneNavigation: back tab"
+    },
+    {
       "name": "ready",
       "label": "ready: pull replay"
     },
