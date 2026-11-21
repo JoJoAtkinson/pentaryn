@@ -54,8 +54,11 @@ user who may edit it is viewing its level (core picks that user to write); any o
 old outline until it is moved, or a wall on its level changes while such a user views it. A cube that is rotated (Shift- or Ctrl-scroll
 its handle) or resized is clipped from its new centre.
 
-**Cancelling a placement.** While a template follows the mouse, **Escape or right-click** cancels it,
-on the first press even when the sheet you cast from is open. Core's own Escape would close every open
+**Cancelling a placement.** While a template follows the mouse, **Escape** cancels it, on the first
+press even when the sheet you cast from is open. **Right-click** skips the shape under the mouse; for a
+one-shape area that is the same as cancelling. A spell with several panels (Wall of Stone's ten) shows
+"Panel 2 of 10: Esc to finish, right-click skips a panel" while you place them: Escape *finishes* the
+wall with the panels placed so far, and right-click leaves one out. Core's own Escape would close every open
 window first (dnd5e minimises the sheet during placement), so the module keeps a small Escape binding
 that cancels core's region placement before anything else (`escape.mjs`).
 
@@ -139,8 +142,8 @@ several effects (Guidance's skills) is a choice and stays in the tray. An Effect
 applied yet is outlined "Not applied yet" for an hour. The same spell's effect from another source
 replaces the old one instead of stacking.
 
-**Cancelling refunds the cast (Part F).** When an area placement is cancelled (Escape or
-right-click), the slot, charge or uses it spent come back, the concentration it began ends, and its
+**Cancelling refunds the cast (Part F).** When an area placement is cancelled before any shape was
+placed (Escape, or right-clicking a one-shape area), the slot, charge or uses it spent come back, the concentration it began ends, and its
 card is removed, as the card's Refund button would.
 
 **Self cones and lines start at the caster (Part G).** Placing a Self-range cone or line (Cone of

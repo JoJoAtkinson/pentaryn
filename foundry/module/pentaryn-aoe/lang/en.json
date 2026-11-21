@@ -184,6 +184,9 @@
       "TitleHit": "— Hit",
       "TitleMiss": "— Miss",
       "MissLine": "Miss — no damage"
+    },
+    "Panels": {
+      "Counter": "Panel {n} of {total}: Esc to finish, right-click skips a panel"
     }
   }
 }

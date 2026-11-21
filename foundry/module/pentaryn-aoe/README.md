@@ -91,7 +91,13 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   spent, ends the concentration it began and removes the card. A cast that spent nothing but began
   concentration counts as cancelled too: its concentration ends and its card goes.
 - **Part G — aim** (`aim.mjs`). A Self-range cone or line keeps its point on the caster's token
-  edge and turns toward the mouse while placing.
+  edge and turns toward the mouse while placing. **B3:** the same `placeRegions` wrap shows one
+  permanent notice for a placement of several shapes (Wall of Stone's ten panels): "Panel n of N: Esc to
+  finish, right-click skips a panel" (`core.panelCounter`), advanced by each confirmed or skipped shape
+  (the caller's own `preConfirm` / `preSkip` run first; a `false` from them counts nothing) and removed
+  when the placement ends. Escape is the real "finish": core resolves the placement null, and dnd5e's
+  `preConfirm` has already kept the panels placed so far, so those are created. Right-click skips the
+  shape under the mouse (core's `#skipPlacement`); for a one-shape area that is the same as cancelling.
 - **Part I — Apply from the card** (`apply.mjs`, setting `applyFromCard`). dnd5e's own Apply tray
   (`<damage-application>`) is on every damage and healing card for players too (world setting
   `dnd5e.allowPlayerDamageTray`, on since 2026-11-06). dnd5e 6 types a damage roll's card `damage`
@@ -284,7 +290,7 @@ with a `move` restriction only) with `RegionDocument.prototype._computeShapeCons
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
-`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, `core-region-wall-panels`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
+`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, `core-region-wall-panels`, `core-region-placement-panel-counter`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
 batch; only `scene-adapter.mjs` touches `game.itempiles`).
 
 ## Two sessions / who writes

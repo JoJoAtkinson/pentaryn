@@ -607,7 +607,7 @@ export function handleVertical({ regionLevels = [], sceneHasLevel = () => true, 
 }
 
 /* -------------------------------------------- */
-/*  B1 — wall spells                            */
+/*  B1 / B3 — wall spells                       */
 /* -------------------------------------------- */
 
 /** B1: the thinnest a wall panel is drawn, as a fraction of a grid square (a fifth: 10 px on a 50 px grid). */
@@ -658,6 +658,18 @@ export function wallSpellRegion({ template = false, shapeTypes = [], templateTyp
   if (!template || !shapeTypes?.length || !shapeTypes.every(t => t === "line")) return false;
   if (templateType) return templateType === "wall";
   return Number(height) > 0;
+}
+
+/**
+ * B3: the placement counter for a multi-panel area (Wall of Stone's ten panels), or null for one shape.
+ * `placed` counts the panels confirmed or skipped so far; the counter names the one being placed.
+ * @returns {{ n: number, total: number }|null}
+ */
+export function panelCounter(placed, total) {
+  const N = Number(total) || 0;
+  const n = (Number(placed) || 0) + 1;
+  if (N < 2 || n > N) return null;
+  return { n, total: N };
 }
 
 /** Is this region the area of exactly this activity (Part B: whose area is the damage for)? */

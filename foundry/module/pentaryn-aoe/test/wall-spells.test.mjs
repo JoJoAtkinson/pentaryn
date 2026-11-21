@@ -1,11 +1,12 @@
-// B1 (feedback 8t6Nn1, plan feedback-triage-2026-11-19 §H2): a wall spell's panels are drawn at least a
-// fifth of a square thick, in neutral stone, on the Region placeable only — the shape's width (which
-// creatures the area holds) never changes.
+// B1 / B3 (feedback 8t6Nn1, plan feedback-triage-2026-11-19 §H2): a wall spell's panels are drawn at
+// least a fifth of a square thick, in neutral stone, on the Region placeable only — the shape's width
+// (which creatures the area holds) never changes. B3: a multi-panel placement shows "Panel n of N:
+// Esc to finish, right-click skips a panel" and the notice goes when the placement ends.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { boot } from "./fixtures/world.mjs";
 import { seams } from "./fixtures/seams.mjs";
-import { wallThickness, wallPanelOutline, wallSpellRegion, WALL_MIN_FRACTION } from "../core.mjs";
+import { wallThickness, wallPanelOutline, wallSpellRegion, panelCounter, WALL_MIN_FRACTION } from "../core.mjs";
 
 /** Just enough PIXI.Graphics to record what is drawn. */
 class FakeGraphics {
@@ -47,6 +48,13 @@ test("wallSpellRegion: lines from a `wall` activity; height decides when the act
   assert.equal(wallSpellRegion({ template: true, shapeTypes: ["line", "circle"], templateType: "wall" }), false);
   assert.equal(wallSpellRegion({ template: false, shapeTypes: ["line"], templateType: "wall" }), false, "a scene region");
   assert.equal(wallSpellRegion({ template: true, shapeTypes: [], templateType: "wall" }), false);
+});
+
+test("panelCounter: the panel being placed of the total; nothing for one shape or past the end", () => {
+  assert.deepEqual(panelCounter(0, 10), { n: 1, total: 10 });
+  assert.deepEqual(panelCounter(9, 10), { n: 10, total: 10 });
+  assert.equal(panelCounter(10, 10), null);
+  assert.equal(panelCounter(0, 1), null);
 });
 
 /* ── the drawing ─────────────────────────────────────────────────────── */
@@ -113,4 +121,63 @@ test("a redraw destroyed the overlay: the next refresh adds a fresh one; uninsta
   WS.uninstall();
   assert.equal(obj.children.length, 0);
   assert.equal(obj[WS.OVERLAY], undefined);
+});
+
+/* ── B3: the panel counter ───────────────────────────────────────────── */
+
+/** A notifications stub that records the notices and their updates. */
+function noticesStub() {
+  const notes = [];
+  const info = ui.notifications.info;
+  ui.notifications.info = (message, opts) => {
+    const n = { message, opts, removed: false, update(u) { this.message = u.message; }, remove() { this.removed = true; } };
+    notes.push(n);
+    return n;
+  };
+  return { notes, restore: () => { ui.notifications.info = info; } };
+}
+
+test("B3: panelNotice counts each placed or skipped panel on one permanent notice, and done() removes it", () => {
+  const { notes, restore } = noticesStub();
+  try {
+    const confirmed = [];
+    const { options, done } = S.aim.panelNotice(10, { preConfirm: a => { confirmed.push(a); }, onMove: "keep" });
+    assert.equal(options.onMove, "keep", "the other options pass through");
+    assert.equal(notes.length, 1);
+    assert.equal(notes[0].message, "Panel 1 of 10: Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].opts.permanent, true);
+    options.preConfirm({ index: 0 });
+    assert.equal(notes[0].message, "Panel 2 of 10: Esc to finish, right-click skips a panel");
+    options.preSkip({ index: 0 });
+    assert.equal(notes[0].message, "Panel 3 of 10: Esc to finish, right-click skips a panel", "a skipped panel counts too");
+    assert.equal(confirmed.length, 1, "dnd5e's own preConfirm still runs");
+    done();
+    assert.equal(notes[0].removed, true);
+  } finally { restore(); }
+});
+
+test("B3: a caller's preConfirm that refuses (false) does not advance the counter; one shape shows nothing", () => {
+  const { notes, restore } = noticesStub();
+  try {
+    const one = S.aim.panelNotice(1, {});
+    assert.equal(notes.length, 0, "one shape: no counter");
+    assert.equal(one.options.preConfirm, undefined, "and the options are untouched");
+    const { options } = S.aim.panelNotice(2, { preConfirm: () => false });
+    assert.equal(options.preConfirm({}), false);
+    assert.equal(notes[0].message, "Panel 1 of 2: Esc to finish, right-click skips a panel");
+  } finally { restore(); }
+});
+
+test("B3: through the placeRegions wrap — the counter is shown for Wall of Stone's ten regions, core gets the same list, the notice goes when placement returns", () => {
+  const { notes, restore } = noticesStub();
+  try {
+    const data = Array.from({ length: 10 }, () => ({ shapes: [{ type: "line" }] }));
+    const r = new F.RegionLayer().placeRegions(data, {});
+    assert.equal(r, "placed");
+    assert.equal(notes.length, 1);
+    assert.match(notes[0].message, /^Panel 1 of 10/);
+    assert.equal(notes[0].removed, true, "the stub's placement returned at once");
+    assert.equal(typeof F.lastPlacement.preSkip, "function");
+    assert.equal(S.aim.shapeCount([{ shapes: [{}, {}] }, {}]), 3, "a region's shapes each count; a shapeless one is one");
+  } finally { restore(); }
 });

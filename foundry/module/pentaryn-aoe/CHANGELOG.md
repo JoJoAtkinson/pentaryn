@@ -58,6 +58,14 @@
     neutral stone fill and dark stroke. The shape's width is never changed (which creatures the area
     holds stays exact); no Wall documents (B2 is out of this run). Uninstall removes every overlay.
   - Tests: `test/wall-spells.test.mjs`. Goldens: `hooks.json`, `describe.json` (the new hook).
+- **B3 [declared]. A panel counter while placing a multi-panel wall** (feedback 8t6Nn1; browser test T5:
+  right-click did not end placement, Escape did). The `placeRegions` wrap in `aim.mjs` shows one
+  permanent notice for a placement of two or more shapes, "Panel n of N: Esc to finish, right-click
+  skips a panel" (`core.panelCounter`), counted by each confirmed or skipped shape after the caller's
+  own `preConfirm` / `preSkip` (a refusal counts nothing), removed when the placement settles. The
+  wrap passes core the same data list. `aim.mjs`'s header no longer says right-click cancels: it skips a
+  shape (core's `#skipPlacement`), and Escape finishes, keeping the panels already placed.
+  - Tests: `test/wall-spells.test.mjs` (panelCounter, panelNotice, the wrap). No golden changes.
 
 - **0.6.4 (2026-11-20). dnd5e's own tray lists the area.** Live (BOSS, dnd5e 6.1.1): a Fireball damage
   card's native `<damage-application>` said "No Targets" and, with a PC selected, listed that PC — a GM

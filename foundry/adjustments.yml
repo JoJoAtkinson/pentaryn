@@ -1758,3 +1758,14 @@ adjustments:
     native_when: dnd5e or core draws thin wall-type template regions with a minimum visible thickness
     retire_class: safe
     check: make foundry-aoe-check; live, Wall of Stone on a 50 px grid is visible in a dark user colour
+
+  - id: core-region-placement-panel-counter
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/aim.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["panelNotice", "panelCounter", "preSkip"]
+    what: inside the RegionLayer#placeRegions wrap (row aoe-self-area-aim), a call placing two or more shapes gets its preConfirm / preSkip options wrapped (the caller's run first; a false return counts nothing) to advance one permanent ui.notifications.info notice ("Panel n of N", Notification#update), removed (Notification#remove) when the returned promise settles; dnd5e's TemplatePlacement passes one region per wall panel and keeps placed panels through its own preConfirm, so Escape (core resolves null) finishes the wall
+    why: Wall of Stone places ten panels one by one with no indication of progress, and right-click (skip a shape) was mistaken for "finish" (browser test T5, feedback 8t6Nn1)
+    native_when: core's or dnd5e's multi-shape placement shows its own progress or hint
+    retire_class: safe
+    check: make foundry-aoe-check
