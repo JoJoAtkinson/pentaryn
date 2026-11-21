@@ -34,7 +34,12 @@ packages:
   # dnd5e 6.0.6 went in by hand on 2026-10-10, ahead of the Argon / Item Piles adapters
   # (context/plans/dnd5e-6-upgrade.md); the 6.x go/no-go gate no longer applies. The updater stays paused
   # (.state/vtt-update.pause) until Joe resumes it; dnd5e is not in `hold:`.
-  review_always: []
+  # dice-so-nice: pentaryn-dice (2026-11-21) rides Dice So Nice's undocumented persistent-dice
+  # internals (game.dice3d.persistent.spawn, box.persistentDiceManager) and its sidebar tab's DOM
+  # (adjustments rows dsn-persistent-dice-select, dsn-sidebar-tab-dom). Any DSN bump, even a patch,
+  # goes to the adjudicator; after it lands run game.pentaryn.dice.selftest(). Review, not `hold`:
+  # a hold would freeze Dice So Nice for good (triage plan 2026-11-19, H4 item 3, recommended).
+  review_always: [dice-so-nice]
 
 retention:
   # Every run backs up the packages it is about to change (Foundry's per-package

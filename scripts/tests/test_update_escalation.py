@@ -1325,7 +1325,11 @@ def test_real_exposure_has_no_known_false_positives():
     # the read (`flags.reads: ["flags.wall-height", ...]`) — both are real exposure.
     assert reg.exposure("wall-height") == ["foundry/module/pentaryn-prompts/api-manifest.mjs",
                                            "foundry/module/pentaryn-prompts/sight-adapter.mjs"]
-    assert reg.exposure("dice-so-nice") == [STUDY]
+    # pentaryn-dice (2026-11-21) is real exposure: its adapter and api drive game.dice3d, its core
+    # names the internals, and its sidebar feature hangs on renderDsnSidebarTab (alias DsnSidebarTab).
+    assert reg.exposure("dice-so-nice") == [
+        "foundry/module/pentaryn-dice/api.mjs", "foundry/module/pentaryn-dice/dice-core.mjs",
+        "foundry/module/pentaryn-dice/dsn-adapter.mjs", "foundry/module/pentaryn-dice/sidebar.mjs", STUDY]
 
 
 # KNOWN (wave-1 baseline, 2026-10-11; unfiled — see addon-blueprint-2026-10/wave-1-report.md
@@ -1562,7 +1566,7 @@ def test_a_malformed_policy_never_crashes_the_run(block, on):
 MAKE_CHECKS_PIN = [
     "make foundry-adjustments-check", "make foundry-admin-check", "make foundry-aoe-check",
     "make foundry-attunement-check", "make foundry-combat-check",
-    "make foundry-creatures-check", "make foundry-cursors-check",
+    "make foundry-creatures-check", "make foundry-cursors-check", "make foundry-dice-check",
     "make foundry-dropbin-check", "make foundry-feedback-check", "make foundry-journal-check",
     "make foundry-lookup-check",
     "make foundry-movement-check", "make foundry-names-check", "make foundry-pings-check",

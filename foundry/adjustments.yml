@@ -39,7 +39,7 @@ aliases:
   enhancedcombathud: ["ui.ARGON", "CONFIG.ARGON", "ArgonComponent"]
   enhancedcombathud-dnd5e: ["CONFIG.ARGON", "ArgonComponent"]
   item-piles: ["game.itempiles", "itempiles"]
-  dice-so-nice: ["dice3d"]
+  dice-so-nice: ["dice3d", "DsnSidebarTab"]
   lib-wrapper: ["libWrapper"]
 
 adjustments:
