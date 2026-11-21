@@ -445,15 +445,15 @@ function casterTokenOf(message, activity) {
 }
 
 /**
- * G1: preCreateChatMessage on the roller's client. A damage or healing card from an activity that
- * can only affect its user (core.selfTargetCard: Stone's Endurance, Second Wind) records the caster's
+ * G1: preCreateChatMessage on the roller's client. A healing card from an activity that can only
+ * affect its user (core.selfTargetCard: Stone's Endurance, Second Wind) records the caster's
  * token as its one target, whatever the roller had targeted, so every viewer's dnd5e tray reads
  * "Talo +11" and never offers the heal to an enemy or to their own selection. Written into the
  * pending card (`updateSource`), dnd5e's own descriptors; `areaTargets` and `recordedTargets` are
  * never written. Late targets then leave the card alone (it has targets). Never vetoes.
  */
 function onPreCreate(message, data, options, userId) {
-  if (!setting("applyFromCard") || userId !== game.user?.id || !isApplyCard(message?.type)) return;
+  if (!setting("applyFromCard") || userId !== game.user?.id || message?.type !== "healing") return;
   const activity = activityOf(message);
   if (!activity) return;
   const go = selfTargetCard({

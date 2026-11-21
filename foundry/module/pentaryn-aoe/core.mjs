@@ -343,19 +343,21 @@ export function lateTargetCard(messages, { userId, now, windowMs = LATE_TARGET_W
 }
 
 /**
- * G1 (feedback SvOaxr): is this damage or healing card from an activity that can only affect its user,
+ * G1 (feedback SvOaxr): is this healing card from an activity that can only affect its user,
  * so its one target is the caster? dnd5e records the roller's current targets on every roll card
  * (`TargetsField.getDescriptors()`), or none, so Stone's Endurance with an enemy targeted offered to
  * heal the enemy (browser test T3), and with nothing targeted every viewer's tray listed their own
  * selection ("Caven +11"). True for an activity whose affects type is `self`, or whose range is Self
  * with no other affects type — and never for one that places an area (a Self-range cone, line or
  * emanation: Burning Hands, Thunderwave, Spirit Guardians, `aimsFromCaster`), has a save, or is an
- * attack (Booming Blade's Self range is the weapon's reach). Plain description:
+ * attack (Booming Blade's Self range is the weapon's reach). Healing cards only: a Self-range DAMAGE
+ * activity usually hurts someone else (Armor of Agathys and Fire Shield damage the attacker), so a damage
+ * card keeps what dnd5e recorded. Plain description:
  * `{ type, activityType, rangeUnits, affectsType, templateType, hasSave }`.
  * @returns {boolean}
  */
 export function selfTargetCard({ type = null, activityType = null, rangeUnits = null, affectsType = null, templateType = null, hasSave = false } = {}) {
-  if (!isApplyCard(type)) return false;
+  if (type !== "healing") return false;
   if (templateType || hasSave || activityType === "attack" || activityType === "save") return false;
   if (affectsType === "self") return true;
   return rangeUnits === "self" && !affectsType;

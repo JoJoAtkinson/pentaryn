@@ -136,10 +136,11 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   **Self-only cards target the caster (G1).** dnd5e records the roller's current targets on every roll
   card, so Stone's Endurance rolled with an enemy targeted offered to heal the enemy, and with nothing
   targeted each viewer's tray listed their own selection ("Caven +11"). On the roller's client
-  (`preCreateChatMessage`, `updateSource`), a damage or healing card from an activity whose affects
+  (`preCreateChatMessage`, `updateSource`), a healing card from an activity whose affects
   type is `self`, or whose range is Self with no other affects type (`core.selfTargetCard`), records
   the caster's token as its one target. Never one that places an area (a Self cone, line or emanation:
-  Burning Hands, Spirit Guardians), has a save, or is an attack; `areaTargets` and `recordedTargets`
+  Burning Hands, Spirit Guardians), has a save, or is an attack, and never a damage card (a Self-range
+  damage activity usually hurts someone else: Armor of Agathys, Fire Shield); `areaTargets` and `recordedTargets`
   are never written, and late targets leave the card alone since it has targets.
   **Applied by (G2).** Every Apply press is recorded on the card as one entry of
   `flags.pentaryn-aoe.appliedLog` (`messages-adapter.logApplied`: who pressed it and, per token that took

@@ -104,7 +104,7 @@ card while you hold targets goes to those targets. **Real dice:** every row has 
 pre-filled with the rolled one; type the number your dice showed and Apply uses it (the ×0 ½ ×1 ×2
 multipliers still apply on top). The number that would land shows beside it while it differs. The GM's
 save tray has the same total per row.
-A card from something that can only affect its user (Stone's Endurance, Second Wind) always lists the
+A healing card from something that can only affect its user (Stone's Endurance, Second Wind) always lists the
 caster, whoever is targeted or selected, so nobody's Apply can heal the monster they had targeted. A
 Self-range area (Burning Hands, Spirit Guardians) is not one of them: its rows are the area's.
 After an Apply the card says who pressed it and what landed, one line per press: "Applied by Talo →

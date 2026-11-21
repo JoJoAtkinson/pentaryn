@@ -1,4 +1,4 @@
-// G1 (feedback SvOaxr, plan feedback-triage-2026-11-19 §H2): a damage or healing card from an activity
+// G1 (feedback SvOaxr, plan feedback-triage-2026-11-19 §H2): a healing card from an activity
 // that can only affect its user (Stone's Endurance) records the caster as its one target on the
 // roller's client (preCreateChatMessage → updateSource), so dnd5e's tray reads "Talo +11" for every
 // viewer and never offers the heal to an enemy the roller had targeted (browser test T3). A Self-range
@@ -16,7 +16,7 @@ test("selfTargetCard: affects self, or Self range with no other affects; never a
   const card = over => selfTargetCard({ type: "healing", activityType: "heal", rangeUnits: "self", affectsType: null, templateType: null, hasSave: false, ...over });
   assert.equal(card({}), true, "Stone's Endurance: Self range, nothing else");
   assert.equal(card({ rangeUnits: null, affectsType: "self" }), true, "affects: self");
-  assert.equal(card({ type: "damage", activityType: "damage" }), true, "a damage card too");
+  assert.equal(card({ type: "damage", activityType: "damage" }), false, "never a damage card: Armor of Agathys' Self-range cold damage is the attacker's");
   assert.equal(card({ templateType: "cone" }), false, "Burning Hands: a Self-range cone");
   assert.equal(card({ templateType: "radius", affectsType: "self" }), false, "Spirit Guardians: an emanation");
   assert.equal(card({ hasSave: true }), false, "a save activity");
@@ -81,7 +81,11 @@ test("affects: self also counts; the usage token wins over the speaker", () => {
   assert.deepEqual(m.system.targets.map(t => t.token), [taloTok.uuid]);
 });
 
-test("Burning Hands (Self cone), Spirit Guardians (Self emanation), a save, an attack, Cure Wounds (touch): targets untouched", () => {
+test("Burning Hands (Self cone), Spirit Guardians (Self emanation), a save, an attack, Cure Wounds (touch), Armor of Agathys' damage: targets untouched", () => {
+  const agathys = activity({ id: "actAgathys000001", type: "damage" });
+  const dmg = pending(agathys, { type: "damage", targets: enemy });
+  F.fire("preCreateChatMessage", dmg, {}, {}, PLAYER_ID);
+  assert.deepEqual(dmg.system.targets, enemy, "a Self-range damage card keeps the attacker");
   const cases = [
     activity({ id: "actBurnHands0001", type: "damage", template: "cone" }),
     activity({ id: "actSpiritGuard01", type: "damage", affects: "self", template: "radius" }),
