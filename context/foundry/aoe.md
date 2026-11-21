@@ -17,6 +17,8 @@ module internals → [`../../foundry/module/pentaryn-aoe/README.md`](../../found
 
 **Moving and deleting an area.** Every spell area (a dnd5e template, which is a Region on v14)
 gets a small target-icon **handle token** at its centre. For cones and lines it sits at the caster's end.
+A wall spell (Wall of Stone's panels, all one area) gets one handle at the start of its first panel;
+dragging it moves every panel, deleting it deletes the whole wall.
 Everyone owns the handle and the area.
 - Drag the handle to move the area. It ignores walls (movement action *displace*). When the area's
   centre is a grid corner (a 20 ft cube, a Fireball), the handle sits in the square just below and to

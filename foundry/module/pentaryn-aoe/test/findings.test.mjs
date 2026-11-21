@@ -189,7 +189,10 @@ test("8.5 sweep: every unshared template region in ONE Region update (was one wr
   F.calls.length = 0;
   const outcome = await S.areas.sweep(s);
   assert.equal(outcome.ownershipFixed, 3);
-  const writes = F.calls.filter(c => c.documentName === "Region" && ["update", "updateEmbedded"].includes(c.op));
+  // 0.7.1: these two-shape regions now get handles too, attached in their own single batch; the
+  // ownership writes are what this pins
+  const writes = F.calls.filter(c => c.documentName === "Region" && ["update", "updateEmbedded"].includes(c.op)
+    && (c.updates ?? [c.changes]).some(u => u && "ownership.default" in u));
   assert.deepEqual(writes.map(c => [c.op, c.updates?.map(u => u._id)]), [["updateEmbedded", ["regionBatch00001", "regionBatch00002", "regionBatch00003"]]]);
   assert.equal(s.regions.get("regionBatchPort1").ownership.default, 0, "a portal region is never touched");
 });

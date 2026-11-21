@@ -20,7 +20,13 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   handle to move the area (it keeps its direction: a handle never auto-rotates), delete it to
   delete the area; deleting the area deletes the handle. On a square grid the handle sits where
   core's half-square snapping can return it (`core.handleTopLeft`): an area centred on a grid corner
-  gets its handle in the square below-right of it, so a drag can put the area back on the grid. An
+  gets its handle in the square below-right of it, so a drag can put the area back on the grid. A
+  region of several shapes gets one handle too, at its first shape (since 0.7.1: dnd5e combines a
+  cast's unattached shapes into one region, so Wall of Stone's panels are one region of line shapes,
+  and until then a region needed exactly one shape to get a handle; the wall had none, no
+  `pentaryn-aoe` flags, and could not be dragged or deleted from the map). For a panel (a line) that
+  is the panel's start; core moves every shape of an attached region with the token, and
+  `wall-spells.mjs` redraws the stone overlay on the `refreshRegion` that follows. An
   emanation dnd5e attached to its caster gets no handle; the caster's Token HUD gets an eraser,
   "Remove the spell areas on this token". An instantaneous spell's emanation (Thunder Step) is
   created unattached (a monster feature's "inst" aura, a ghast's Stench, is not: `core.instantSpellArea`) (`dnd5e.createMeasuredTemplate`, setting `stationaryInstantAreas`), so it stays

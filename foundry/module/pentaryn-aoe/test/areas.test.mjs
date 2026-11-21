@@ -137,7 +137,7 @@ test("createRegion by another user: the active GM repairs after 2.5 s if the cre
   assert.deepEqual(lines(), [`error: ${MODULE} | backstop handle`]);
 });
 
-test("createRegion skips: not a template, handleTokens off, several shapes, attached elsewhere", async () => {
+test("createRegion skips: not a template, handleTokens off, attached elsewhere (several shapes is not a skip since 0.7.1: wall-spells.test)", async () => {
   const s = W.scene({ id: "SkipScene0000001" });
   const caster = W.token(s, { id: "casterSkip000001" });
   const regions = [
@@ -434,9 +434,10 @@ test("sweep: orphans deleted, old handles size-locked, ownership fixed, missing 
   W.region(s, template({ id: "regionSweep00001", ownership: { default: 0 } }));
   W.region(s, template({ id: "regionSweep00002", ownership: { default: 3 } }));
   W.token(s, { id: "regionSweep00002", flags: { [MODULE]: { handle: true, region: "regionSweep00002" } } });
+  // 0.7.1: a region of several shapes (Wall of Stone's panels, one region) gets its handle too
   W.region(s, template({ id: "regionSweep00003", shapes: [{}, {}], ownership: { default: 3 } }));
   reset();
-  assert.deepEqual(await A.sweep(s), { orphansDeleted: 1, ownershipFixed: 1, handlesCreated: 1, sizeLocked: 1 });
+  assert.deepEqual(await A.sweep(s), { orphansDeleted: 1, ownershipFixed: 1, handlesCreated: 2, sizeLocked: 1 });
   assert.deepEqual(await A.sweep(s), { orphansDeleted: 0, ownershipFixed: 0, handlesCreated: 0, sizeLocked: 0 }, "idempotent");
   assert.deepEqual(await A.sweep(null), { orphansDeleted: 0, ownershipFixed: 0, handlesCreated: 0, sizeLocked: 0 });
   F.canvas.scene = s;
