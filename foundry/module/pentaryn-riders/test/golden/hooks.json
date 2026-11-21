@@ -170,5 +170,9 @@
   {
     "kind": "on",
     "name": "dnd5e.applyDamage"
+  },
+  {
+    "kind": "on",
+    "name": "diceSoNiceMessagePreProcess"
   }
 ]
