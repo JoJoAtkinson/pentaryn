@@ -77,6 +77,14 @@
   },
   {
     "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "once",
     "name": "ready"
   },
   {
