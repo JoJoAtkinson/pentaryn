@@ -26,7 +26,7 @@ test("registration manifest (non-lifecycle) equals golden/hooks.json", () => {
   pinJSON("hooks", atLoad.filter(h => !LIFECYCLE.has(h.name)), import.meta.url);
 });
 
-test("the 43 non-lifecycle registrations, in order (guide S1 list; 0.6.0: + summon fell, its prune, the self-cast expiry guard; 0.7.0: + the rest card's five and Empower's two; 0.7.1: + the rest card refresh)", () => {
+test("the 44 non-lifecycle registrations, in order (guide S1 list; 0.6.0: + summon fell, its prune, the self-cast expiry guard; 0.7.0: + the rest card's five and Empower's two; 0.7.1: + the rest card refresh; GDJJdi F2: + Empower's Dice So Nice decision)", () => {
   assert.deepEqual(atLoad.filter(h => !LIFECYCLE.has(h.name)).map(h => h.name), [
     "dnd5e.preUseActivity",                 // rituals: slot unticked
     "dnd5e.summonToken",                    // concentration: stamp
@@ -71,6 +71,7 @@ test("the 43 non-lifecycle registrations, in order (guide S1 list; 0.6.0: + summ
     "renderItemButtonArgonComponent",       // rest: the same on Argon's reaction buttons
     "dnd5e.renderChatMessage",              // empower: the Empower (1 SP) button, the note, the retired card (WUiaAA, 0.7.0)
     "dnd5e.applyDamage",                    // empower: an applied card loses its button
+    "diceSoNiceMessagePreProcess",          // empower: DSN does not throw an empowered card's whole roll (GDJJdi F2)
   ]);
   assert.ok(atLoad.filter(h => !LIFECYCLE.has(h.name)).every(h => h.kind === "on"));
 });
@@ -142,5 +143,6 @@ test("the shared hooks run their listeners in manifest order (rituals → cast-f
     renderActivityChoiceDialog: 2, "dnd5e.postUseActivity": 3, "dnd5e.postDamageRollConfiguration": 1, "dnd5e.preCalculateDamage": 1,
     renderCharacterActorSheet: 2, "dnd5e.preActivityConsumption": 1, updateActiveEffect: 1, "dnd5e.filterItem": 1,
     updateActor: 1, deleteToken: 1, preCreateActiveEffect: 1, "dnd5e.restCompleted": 1, "dnd5e.applyDamage": 1,
+    diceSoNiceMessagePreProcess: 1,
   });
 });

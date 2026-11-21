@@ -139,6 +139,21 @@ test("F1 matchChips: each rerolled face takes the first unused adjacent old-then
   assert.deepEqual(core.matchChips(chips, null), []);
 });
 
+test("F2 rerolledRollData: only the new faces, one term per die class, size and flavor, joined by +; null with nothing rerolled", () => {
+  const f = (faces, fresh, flavor = "fire", cls = "Die") => ({ faces, fresh, flavor, cls });
+  const data = core.rerolledRollData([f(6, 4), f(6, 3), f(8, 7, "cold"), f(6, 6)]);
+  assert.equal(data.class, "Roll");
+  assert.equal(data.formula, "3d6[fire] + 1d8[cold]");
+  assert.equal(data.total, 4 + 3 + 6 + 7);
+  assert.equal(data.evaluated, true);
+  assert.deepEqual(data.terms.map(t => t.class), ["Die", "OperatorTerm", "Die"]);
+  assert.deepEqual(data.terms[0], { class: "Die", number: 3, faces: 6, modifiers: [], results: [{ result: 4, active: true }, { result: 3, active: true }, { result: 6, active: true }], options: { flavor: "fire" }, evaluated: true });
+  assert.deepEqual(core.rerolledRollData([f(6, 2, null)]).terms[0].options, {}, "no flavor, no options");
+  assert.equal(core.rerolledRollData([]), null);
+  assert.equal(core.rerolledRollData([{ faces: 1, fresh: 1 }, { faces: 6, fresh: NaN }]), null, "junk is skipped");
+  assert.equal(core.rerolledRollData(null), null);
+});
+
 /* ── the card ────────────────────────────────────────────────────────────── */
 
 const MAR = "marrith000000001", FONT = "fontofmagic00001", EMP = "empowered0000001", EMPACT = "empact0000000001", FIREBALL = "fireball00000009";
@@ -277,6 +292,60 @@ test("one click: the point through the feat's activity (no dialog, no card), the
   assert.deepEqual(F.calls.filter(c => c.op === "update").map(c => [c.uuid, c.changes]), [[`ChatMessage.${message.id}`, { [`flags.${MODULE}.supersededBy`]: "newdmg0000000001" }]]);
   assert.deepEqual(F.calls.filter(c => c.op === "notify"), []);
   assert.deepEqual(W.take().filter(l => l[0] !== "info"), []);
+});
+
+test("F2 Dice So Nice: every client stops DSN throwing an empowered card's whole roll (diceSoNiceMessagePreProcess); the clicking client throws the new faces alone, synchronised, with the card's whisper list and blind flag", async () => {
+  const thrown = [];
+  F.game.dice3d = { showForRoll: async (...args) => { thrown.push(args); return true; } };
+  globalThis.Roll.fromData = data => ({ fromData: JSON.parse(JSON.stringify(data)) });
+  const points = font().system.uses.value;
+  try {
+    const message = damageCard({ id: "dmg0000000000021" });
+    message.whisper = ["gmuser0000000001"];
+    message.toObject = () => ({ ...JSON.parse(JSON.stringify({ speaker: message.speaker, flavor: message.flavor, system: message.system, flags: message.flags })), whisper: ["gmuser0000000001"], blind: true });
+    const el = render(message);
+    created.length = 0;
+    uniforms.push(0.1, 0.4, 0.9, 0.5);    // the four low dice → 6, 4, 1, 3 (results 7, 2, 1, 0)
+    await button(el).click();
+    await drain();
+    assert.equal(created.length, 1);
+    const fresh = F.game.messages.get("newdmg0000000" + String(created.length).padStart(3, "0"));
+    assert.equal(thrown.length, 1, "one throw, from the clicking client");
+    const [roll, user, sync, whisper, blind, messageId] = thrown[0];
+    assert.equal(roll.fromData.formula, "4d6[fire]", "only the four rerolled dice");
+    assert.deepEqual(roll.fromData.terms[0].results.map(r => r.result), [3, 1, 4, 6], "raw faces, in roll order (the 1 that min2 reads as 2 is thrown as a 1)");
+    assert.deepEqual([user, sync, whisper, blind, messageId], [F.game.user, true, ["gmuser0000000001"], true, fresh.id]);
+    // every client's DSN decision for the empowered card: not thrown; any other card is left to DSN
+    const decide = id => { const d = { willTrigger3DRoll: true }; F.fire("diceSoNiceMessagePreProcess", id, d); return d.willTrigger3DRoll; };
+    assert.equal(decide(fresh.id), false, "the empowered card's whole roll is not animated");
+    assert.equal(decide(message.id), true, "the old card: untouched");
+    assert.equal(decide("nosuchmessage001"), true);
+    await F.game.settings.set(MODULE, "empoweredSpell", false);
+    assert.equal(decide(fresh.id), true, "the setting off: DSN as usual");
+    await F.game.settings.set(MODULE, "empoweredSpell", true);
+    // no Dice So Nice: nothing thrown, nothing warned
+    delete F.game.dice3d;
+    const other = damageCard({ id: "dmg0000000000022" });
+    const el2 = render(other);
+    uniforms.push(0.1, 0.4, 0.9, 0.5);
+    await button(el2).click();
+    await drain();
+    assert.equal(thrown.length, 1);
+    // a throw that fails is warned, never thrown; the cards stand
+    F.game.dice3d = { showForRoll: async () => { throw new Error("no webgl"); } };
+    const third = damageCard({ id: "dmg0000000000023" });
+    const el3 = render(third);
+    uniforms.push(0.1, 0.4, 0.9, 0.5);
+    W.take();
+    await button(el3).click();
+    await drain();
+    assert.ok(third.flags[MODULE].supersededBy, "the old card is retired all the same");
+    assert.deepEqual(W.take().filter(l => l[0] !== "info").map(l => l.slice(0, 3)), [["warn", `${MODULE} | Dice So Nice: the rerolled dice were not thrown`, "no webgl"]]);
+  } finally {
+    delete F.game.dice3d;
+    delete globalThis.Roll.fromData;
+    font().system.uses.value = points;   // the later tests count from here
+  }
 });
 
 test("the retired card: no apply tray, no button, one line; the new card: the note, no button", () => {

@@ -1736,3 +1736,14 @@ adjustments:
     native_when: dnd5e marks rerolled-and-replaced dice in its damage breakdown, or offers a reroll flow that reports the change
     retire_class: safe
     check: make foundry-riders-check
+
+  - id: dsn-riders-empower-new-dice
+    packages: [dice-so-nice]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/empower.mjs, foundry/module/pentaryn-riders/core/empower.mjs, foundry/module/pentaryn-riders/module.json]
+    markers: ["diceSoNiceMessagePreProcess", "willTrigger3DRoll", "game.dice3d", "showForRoll"]
+    what: every client's diceSoNiceMessagePreProcess (messageId, { willTrigger3DRoll }) sets willTrigger3DRoll false for an empowered damage card (flags.pentaryn-riders.empowered), and the clicking client throws a Roll.fromData of only the rerolled faces (core rerolledRollData; one die term per class, size and flavor) with game.dice3d.showForRoll(roll, game.user, true, whisper ids or null, blind, messageId, speaker), synchronised to the other clients; module.json recommends dice-so-nice with a reason. No DSN, nothing is thrown (the hook never fires)
+    why: DSN re-animated every die of the new damage card, so one Empower click looked like a fresh 14-die roll (GDJJdi, Disintegrate; triage F2). DSN 6.4.5 reads its decision after diceSoNiceMessagePreProcess; diceSoNiceMessageProcessed is observation-only since 6.0 and logs a compatibility warning when mutated
+    native_when: DSN animates only the dice that changed between two linked messages, or dnd5e / a reroll API marks replaced dice for it
+    retire_class: guarded
+    check: make foundry-riders-check; live, Empower with Dice So Nice on — only the rerolled dice are thrown, on every client that sees the card

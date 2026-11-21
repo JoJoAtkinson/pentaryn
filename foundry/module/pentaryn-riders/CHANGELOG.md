@@ -20,6 +20,15 @@
   `rerolledFaces`, `matchChips` (core/empower.mjs, re-exported from riders-core; `rerolledRollData` and
   `waitingCardId` too, for F2 / F3). Goldens: `lang-keys.json`, `surface.json` (+5 `core.*`). Adjustments row
   `dnd5e-riders-empower-chips`.
+- [declared] **Empowered Spell: Dice So Nice throws only the rerolled dice** (GDJJdi, triage F2). Every
+  client's `diceSoNiceMessagePreProcess` sets `willTrigger3DRoll = false` for an empowered card (the plan
+  named `diceSoNiceMessageProcessed`, but DSN 6.4.5 made that one observation-only and warns when it is
+  mutated), and the clicking client throws a roll of the new faces alone (`rerolledRollData`) with
+  `game.dice3d.showForRoll(roll, user, true, whisper, blind, messageId, speaker)`: synchronised, with the
+  card's whisper list and blind flag. No Dice So Nice, nothing thrown. Hooks: 44 non-lifecycle
+  registrations (+1, `diceSoNiceMessagePreProcess`). **`module.json` change: `relationships.recommends`
+  gains `dice-so-nice` (with a reason; blueprint C09), so this release needs a Foundry restart.** Goldens:
+  `hooks.json`. Adjustments row `dsn-riders-empower-new-dice`.
 
 ## 0.7.2 — 2026-11-07 (live playtest of 0.7.1: Caven's barrier at the round turnover, Talo's one greyed button)
 

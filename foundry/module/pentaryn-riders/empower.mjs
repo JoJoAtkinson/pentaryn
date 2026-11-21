@@ -41,12 +41,20 @@
  *    regardless: a card applied at 0 points must not grow the button when Font of Magic converts a
  *    slot later in the day.
  *
+ * 4. Dice So Nice throws only the rerolled dice (F2, GDJJdi: it re-animated all 14 dice of Disintegrate).
+ *    Every client's `diceSoNiceMessagePreProcess` (DSN 6.x, the hook that may change its decision; the
+ *    later `diceSoNiceMessageProcessed` is observation-only since DSN 6.0) sets `willTrigger3DRoll`
+ *    false for an empowered card, and the clicking client throws a roll of the new faces alone
+ *    (`rerolledRollData`) with `game.dice3d.showForRoll`, synchronised to the others with the card's
+ *    whisper list and blind flag, so DSN shows them to whom it would have shown the card's dice. No DSN,
+ *    nothing to throw.
+ *
  * Setting pentaryn-riders.empoweredSpell (world, default on). Rows dnd5e-riders-empowered-spell (the
  * damage message shape, `Roll#toJSON` term results, the `damage-application` element) waiting in the
  * batch file.
  */
 
-import { MODULE, empowerCandidates, empowerPlan, empowerRolls, matchChips, rerolledFaces, rollsTotal } from "./riders-core.mjs";
+import { MODULE, empowerCandidates, empowerPlan, empowerRolls, matchChips, rerolledFaces, rerolledRollData, rollsTotal } from "./riders-core.mjs";
 import { settingOr } from "./settings.mjs";
 import { empoweredSpellOf, fontUsesLeft } from "./shapes.mjs";
 import { flagPath } from "./lib/flags.mjs";
@@ -305,6 +313,38 @@ async function empower(message, { pick = false } = {}) {
     return;
   }
   log.info("Empowered Spell", { from: message.id, to: created?.id ?? null, rerolled: changes.length, by: game.user.id });
+  throwNewDice(created, rolls, changes);
+}
+
+/* ── 4. Dice So Nice throws only the new dice ──────────────────────────── */
+
+/** Dice So Nice's API, when it is on this client. */
+function dice3d() {
+  const api = game.dice3d;
+  return typeof api?.showForRoll === "function" ? api : null;
+}
+
+// Every client: DSN asks before it animates a new message's rolls; an empowered card's whole roll is not thrown.
+function onDicePreProcess(messageId, decision) {
+  try {
+    if (!decision || !enabled()) return;
+    const message = game.messages?.get?.(messageId);
+    if (message?.type === "damage" && message.flags?.[MODULE]?.empowered) decision.willTrigger3DRoll = false;
+  } catch (err) { log.warn("Dice So Nice check skipped", err); }
+}
+
+/** The clicking client: the new faces alone, thrown for the card's audience (its whisper list, blind or not). */
+function throwNewDice(created, rolls, changes) {
+  try {
+    const api = dice3d();
+    if (!api || !created) return;
+    const data = rerolledRollData(rerolledFaces(rolls, changes));
+    if (!data) return;
+    const roll = Roll.fromData(data);
+    const whisper = Array.isArray(created.whisper) && created.whisper.length ? [...created.whisper] : null;
+    Promise.resolve(api.showForRoll(roll, game.user, true, whisper, !!created.blind, created.id ?? null, created.speaker ?? null))
+      .catch(err => log.warn("Dice So Nice: the rerolled dice were not thrown", err));
+  } catch (err) { log.warn("Dice So Nice: the rerolled dice were not thrown", err); }
 }
 
 /* ── 3. applied means done ─────────────────────────────────────────────── */
@@ -332,6 +372,7 @@ export function install(reg, ctx) {
   log = ctx.log;
   reg.on("dnd5e.renderChatMessage", onRender, { guard: false, label: "Empower button" });
   reg.on("dnd5e.applyDamage", onApplied, { guard: false, label: "Empower: applied card" });
+  reg.on("diceSoNiceMessagePreProcess", onDicePreProcess, { guard: false, label: "Empower: Dice So Nice throws the new dice only" });
 }
 
 /** The drawn buttons leave every rendered card; the notes and flags stay. */
