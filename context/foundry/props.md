@@ -35,6 +35,7 @@ home game; **never** ship either in a shared module, scene-packer export or publ
 ## Placing props
 
 - **FA Nexus** (scene controls → the FA Nexus button): search "chair", drag onto the map.
+- **Keep FA Nexus's "Wait for Nexus layers when a Scene is drawn" (`fa-nexus.adjustSceneDraw`) off.** With it on, its second scene draw left a pinned player's first-ever login with a sidebar whose tabs never switch (core's placeables tab waits on the abandoned first draw). Off, Nexus layers just appear a moment after the map. Re-test a pinned first login after any FA Nexus update before turning it back on.
 - **Anything in the packs**: Tiles layer → Browse, `assets/tiles/tiles-03/fa/…`, drag in.
 - Props are **tiles at elevation 0**; stack with `sort` (floor < rug < table < chairs). Keep them
   out of the overhead/roof range so BetterRoofs and Levels never fade them.
