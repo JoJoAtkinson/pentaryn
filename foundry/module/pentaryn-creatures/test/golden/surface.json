@@ -52,6 +52,7 @@
   "core.makeCoalescer": "makeCoalescer",
   "core.markerMenuRows": "markerMenuRows",
   "core.markerOverrides": "markerOverrides",
+  "core.markerStatusEffects": "markerStatusEffects",
   "core.markerTable": "markerTable",
   "core.markerTableFromForm": "markerTableFromForm",
   "core.markersMayChange": "markersMayChange",

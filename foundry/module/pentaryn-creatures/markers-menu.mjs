@@ -9,7 +9,7 @@
  */
 
 import {
-  MARKER_GM, MARKER_PUBLIC, MODULE, markerMenuRows, markerOverrides, markerTable, markerTableFromForm, statusIdsOf,
+  MARKER_GM, MARKER_PUBLIC, MODULE, markerMenuRows, markerStatusEffects, markerOverrides, markerTable, markerTableFromForm, statusIdsOf,
 } from "./creatures-core.mjs";
 import { saveSetting, setting } from "./settings.mjs";
 
@@ -59,7 +59,7 @@ export function markersMenuClass() {
     };
 
     async _renderHTML() {
-      const statusEffects = CONFIG.statusEffects;
+      const statusEffects = markerStatusEffects(CONFIG.statusEffects, CONFIG.DND5E);
       const table = markerTable(statusIdsOf(statusEffects), setting("markerTable"));
       return menuHTML(statusEffects, table, k => game.i18n.localize(k));
     }
@@ -69,7 +69,7 @@ export function markersMenuClass() {
     }
 
     static async #onSubmit(event, form, formData) {
-      const table = markerTableFromForm(formData.object, statusIdsOf(CONFIG.statusEffects));
+      const table = markerTableFromForm(formData.object, statusIdsOf(markerStatusEffects(CONFIG.statusEffects, CONFIG.DND5E)));
       await saveSetting("markerTable", markerOverrides(table));
     }
   };

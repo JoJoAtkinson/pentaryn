@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import {
-  MARKER_DEFAULTS, MARKER_PUBLIC_DEFAULTS, MODULE, concealFor, finalConceal, markerMenuRows, markerOverrides,
+  MARKER_DEFAULTS, MARKER_PUBLIC_DEFAULTS, MODULE, concealFor, finalConceal, markerMenuRows, markerOverrides, markerStatusEffects,
   markerTable, markerTableFromForm, markersMayChange, statusIdsOf,
 } from "../creatures-core.mjs";
 
@@ -130,4 +130,13 @@ test("markersMayChange: the dormant flag (set or removed) and the disposition, n
   assert.equal(markersMayChange({ flags: { [MODULE]: { light: { bright: 5 } } } }), false);
   assert.equal(markersMayChange({ x: 1, y: 2 }), false);
   assert.equal(markersMayChange(null), false);
+});
+
+test("markerStatusEffects adds dnd5e's Bloodied (kept outside CONFIG.statusEffects) so it gets its Public row", () => {
+  const list = markerStatusEffects([{ id: "prone", name: "Prone" }], { bloodied: { name: "Bloodied", img: "b.svg", threshold: 0.5 } });
+  assert.deepEqual(list.map(s => s.id), ["prone", "bloodied"]);
+  assert.deepEqual(markerStatusEffects({ prone: { name: "Prone" } }, {}).map(s => s.id), ["prone"]);
+  assert.deepEqual(markerStatusEffects([{ id: "bloodied" }], { bloodied: { name: "B" } }).map(s => s.id), ["bloodied"], "no duplicate");
+  const table = markerTable(statusIdsOf(markerStatusEffects([], { bloodied: {} })), {});
+  assert.equal(concealFor(["bloodied"], {}, { friendly: false }, table), false, "a monster's Bloodied is public by default");
 });

@@ -740,6 +740,21 @@ export function finalConceal({ base, bloodiedRuleOnly = false, ours = false } = 
 }
 
 /**
+ * The status list the marker table covers: CONFIG.statusEffects (array or object) plus dnd5e's Bloodied,
+ * which dnd5e keeps outside CONFIG.statusEffects (`CONFIG.DND5E.bloodied`, effect id "bloodied"). Without
+ * it Bloodied had no row and fell to the "other effects" row (GM only), so players never saw it on a
+ * monster (round-2 playtest M2, 2026-11-21). Returns an array of `{ id, name, img }`-like entries.
+ */
+export function markerStatusEffects(statusEffects, dnd5eConfig) {
+  const list = Array.isArray(statusEffects)
+    ? [...statusEffects]
+    : Object.entries(statusEffects ?? {}).map(([k, s]) => ({ ...s, id: s?.id ?? k }));
+  const b = dnd5eConfig?.bloodied;
+  if (b && !list.some(s => s?.id === "bloodied")) list.push({ id: "bloodied", name: b.name ?? "Bloodied", img: b.img ?? null });
+  return list;
+}
+
+/**
  * The status ids of a CONFIG.statusEffects value: dnd5e keeps an object keyed by id, core an array
  * of `{ id }`. Entries without an id are skipped.
  */

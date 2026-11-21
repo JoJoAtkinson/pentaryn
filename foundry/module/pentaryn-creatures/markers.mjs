@@ -20,7 +20,7 @@
  */
 
 import {
-  DISPOSITIONS, MODULE, concealFor, finalConceal, markerTable, markersMayChange, readDormant, safely, statusIdsOf,
+  DISPOSITIONS, MODULE, concealFor, finalConceal, markerStatusEffects, markerTable, markersMayChange, readDormant, safely, statusIdsOf,
 } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -37,7 +37,7 @@ let patchedWith = null;
 
 /** The effective table now (cached until a setting changes). */
 export function currentTable() {
-  return (table ??= markerTable(statusIdsOf(globalThis.CONFIG?.statusEffects), setting("markerTable")));
+  return (table ??= markerTable(statusIdsOf(markerStatusEffects(globalThis.CONFIG?.statusEffects, globalThis.CONFIG?.DND5E)), setting("markerTable")));
 }
 
 const sourceOf = doc => doc?._source ?? doc;
