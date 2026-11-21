@@ -668,3 +668,44 @@ Use the 2026-11-20 sandbox pattern: setup with `eval-js` on BOSS, clicks by the 
   - `xQ9tdh`: pathfinding, which needs its own plan.
 
 **Bridge on BOSS:** the foundry MCP server needs `node` on Claude Code's PATH. `~/.local/bin/node` was linked to nvm's v24.22.3 on 2026-11-21. Re-point it if the updater moves Node.
+
+---
+
+## Edge-case rounds 2–3 (2026-11-21)
+
+**Method:**
+- **Round 2:** the Mac (home-pro, real Chrome) ran M1–M7 as ZZ Caven and ZZ GM. At the same time a BOSS headless harness ran H1–H3 with several users logged in at once (ZZ Talo, ZZ Marrith, ZZ GM2), driven over 127.0.0.1:31999. The headless GM stayed on as a second GM client.
+- **Round 3:** the Mac re-tested each fix (R1–R7).
+- **The sandbox was removed after each round.**
+
+**Defects found and fixed (all live, all re-verified):**
+
+| Defect | Fixed in | Cause |
+|---|---|---|
+| A slow GM reply on a relayed heal toasted "No GM is connected… did not take this" although the heal landed late, which invites a double heal | aoe 0.7.1 | TIMEOUT was treated like NO_GM. Now the player's client waits up to 15 s for the GM's `appliedLog` entry and stays quiet if it lands, else shows "Apply.Late". Unit-tested; live it was seen only as the bad toast. |
+| A missed target stayed in the auto-damage tray of a multi-target attack | aoe 0.7.1 | dnd5e records the roller's targets on the damage card; now only the hit ones are passed. R2: hit/miss mixed, all miss and all hit all pass. |
+| Wall-spell "Panel n of N" notice doubled | aoe 0.7.1 | Cause not found; made single-instance defensively. R5 and R7: once per panel. |
+| Multi-panel wall regions had no handle (no drag, no delete) | aoe 0.7.1 | `areas.mjs` gave handles only to one-shape regions, a rule since Part A (2026-10-10). The handle now sits at the first panel's start. R5 and R7: drag moves the whole wall and its band (players too); deleting the handle deletes the wall. |
+| Bloodied never drew on monsters for players | creatures 0.5.1 | dnd5e keeps Bloodied out of `CONFIG.statusEffects`, so it had no marker row and fell to "other effects" (GM only). |
+| `dormant()` on a linked token threw a validation error but answered ok:true | creatures 0.5.1 | `disguiseUpdate` always wrote a token delta; a linked token has none. A refused update now answers `{ok:false}`. Live: arm, wake and re-arm all worked. |
+| The Look window named a dormant statue's real creature ("ZZ Bog A — what you know") | ties 0.19.5 | The window used the actor's name. It now takes the clicked token and shows a dormant token's disguise (`lookFace`). Live: "Statue — what you know". |
+
+**Passed with no change:**
+- H1: Healing Word on an ally with two GM clients online applied exactly once; a second Apply added exactly one more log entry. H1b: the target's owner online made no double apply.
+- M4: the marker settings screen. Its layout and defaults are right, Frightened → Public worked from a player's browser, and Cancel discards.
+- M5: Bandit Captain Full Attack, two swings with correct Hit/Miss.
+- M6(d) and R5: ending concentration removes the wall and its handle.
+- Friendly tokens show every marker.
+
+**Not bugs:**
+- The round-2 Argon "You lack permission to use an item" error: a copied actor keeps Argon `weaponSets` pointing at the source actor's items. R1 passed after re-pointing them. It would affect only an actor duplicated in Foundry.
+- "Kind: Statue": world data. The Bog Vessel actor is `kindOf` the "Statue" actor.
+- No tooltips on token status icons: core draws none.
+
+**Known, not fixed:**
+- **First-login sidebar lock:** seen on the Mac twice (ZZ Marrith, ZZ Caven) and again in R4 (ZZ Fresh3). On a user's FIRST-EVER login the sidebar tabs never switch, because ApplicationV2's lock stays held: a sidebar render started at the first ready never finished, and `changeTab` queues behind it. A reload clears it for good. It happens together with Dice So Nice's first-time welcome card. Not reproduced in a headless browser on BOSS, including a pinned player's first login. Workaround: a new player reloads once.
+- **No-target attack, natural 20:** damage auto-rolls, and dnd5e's tray falls back to the viewer's selected token (the attacker, or any viewer's own token). Fix later in aoe: don't auto-roll with no target, or stamp no fallback.
+- **Deleting a wall's handle or region leaves "Concentrating: Wall of Stone"**, which matches dnd5e for templates. A dormant statue can't be targeted with the T key (`interactive: false`), by design.
+- **Multiattack "in any combination"** (Bandit Captain: Scimitar or Pistol): the Full Attack swing bar can't switch a swing's weapon. A pentaryn-combat gap from before this work.
+
+**Live versions after these rounds:** aoe 0.7.1, creatures 0.5.1, ties 0.19.5 (riders 0.8.0, pins 0.5.0, dice 0.1.0 unchanged).
