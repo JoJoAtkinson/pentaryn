@@ -84,9 +84,7 @@ export function restWalkable(member, c, s) {
   const rect = globalThis.canvas?.dimensions?.rect;
   const p = { x: c.x * s, y: c.y * s };
   if (rect && !rect.contains(p.x, p.y)) return false;
-  // Its box, not 90 % of its circle (live R7-4: a click-stop in an open doorway rested 5 px across the door's
-  // line, the body at x 1405-1505 over a line at 1500). Touching the line is fine.
-  const rr = member.r * s - 0.5;
+  const rr = member.r * s * 0.9;
   const z = member.token.document?._source?.elevation ?? 0;
   for (let k = 0; k < 8; k++) {
     const a = (k * Math.PI) / 4;
