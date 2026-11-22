@@ -69,7 +69,7 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   or a double click for the sheet, is a plain click). In a fight it stops at the next square, so dnd5e's
   spent movement stays exact; a GM may stop anyone's move.
 - **A door shut or a wall raised across a move** (0.4.6) stops each token walking toward it on its own free
-  whole square before it, the nearest one first; out of combat it walks on to that square from where it is
+  whole square before it, the nearest one first; out of combat it stops at once where it is drawn (0.4.7) and walks on to that square from where it is
   drawn, in a fight it finishes its square and walks on, costed. `status().group.cut`.
 - **Out of combat** movement is free-form and smooth; **in combat** it stays on the grid (no arcs, a
   checkpoint at every square) so the cost is exact. Ghost and the GM's *Unconstrained Movement* tool

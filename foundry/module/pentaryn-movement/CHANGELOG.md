@@ -1,5 +1,31 @@
 # Changelog — pentaryn-movement
 
+## 0.4.7 — 2026-11-22
+
+Live play-test round 7 (a Mac browser through the tunnel, the BOSS harness).
+
+- **[declared] A door shut, or a wall raised, mid-walk out of combat stops the drawn token at once (R7-1,
+  blocker).** 0.4.6 cut the move with one animated update ("displace to where it is drawn, then walk to the
+  square before the wall"). Core chains an animated movement after the one being drawn, so every client
+  drew the old walk to its end, through the shut door, then jumped back 1100-1775 px and walked again. The
+  cut is now two writes: an unanimated displace to where the token is drawn (this client stops its tween
+  before the write, every other client when the update lands, as a click-stop does), then, once the server
+  has it, the walk to its square before the wall.
+- **[declared] No stop races a segment already on its way to the server (R7-2).** In a fight each square is
+  its own update; a stopMovement sent while the next one was in flight let that segment land as the
+  continuation of a movement core had settled: the member walked on, was walked back by the cut and
+  forward again (cost 95 where 40-50 was due), and core's next stop of it threw "Cannot destructure
+  property 'resolve' of '#movementPromisesWithResolvers.get(...)'". Every stop this module makes (the
+  cut, a click, the relay, the GM's stopOwn, a turn change) now waits until that segment has landed
+  (`_movementContinuation.continued`, at most 1.5 s) and stops the movement it started; a click-stop's
+  displace out of combat no longer calls stopMovement first in that window (the displace supersedes it).
+- **[declared] A press on a door's icon right beside a moving token stops the token (R7-3).** The door
+  precedence check now counts 0.4 square beyond the token's drawn circle (the door shut in 2 of 5 runs with
+  the centre 50-80 px short of the icon).
+- **[declared] A click-stop never rests with its box across a door's line (R7-4).** The door-line test used
+  90 % of the token's circle, so a stop rested 5 px across an open doorway's line; it uses the whole box
+  now (touching is fine).
+
 ## 0.4.6 — 2026-11-22
 
 Live play-test round 6 (a Mac browser through the tunnel, the BOSS harness).

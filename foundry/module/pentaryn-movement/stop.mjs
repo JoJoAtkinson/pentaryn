@@ -37,7 +37,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop } from "./motion-core.mjs";
-import { clearOfWalls, drawnPosition, gridSize, inCombat, movementFacts } from "./group-adapter.mjs";
+import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, inCombat, movementFacts } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
@@ -148,7 +148,9 @@ function displace(token) {
   // animation promise the continuation waits on, and that continuation would otherwise race the
   // displace to the server and carry the token on past where it was clicked (review-correctness).
   const m = doc.movement;
-  if (m?.user?.isSelf && (m.state === "pending" || m.state === "paused")) {
+  // With its next segment already on the way to the server, no stopMovement (it would race that segment,
+  // live R7-2): the displace is a newer movement and core stops the arriving segment itself.
+  if (m?.user?.isSelf && (m.state === "pending" || m.state === "paused") && !continuationInFlight(doc)) {
     try { doc.stopMovement(); } catch (err) { log.debug?.("stopMovement before displace", err); }
   }
   defuse(token);
@@ -234,11 +236,39 @@ function onUnanimatedMove(doc, changes, options) {
   watch(token);
 }
 
+/** How long a stop waits for this client's in-flight continuation to land, and how often it looks (ms). */
+const SAFE_WAIT_MS = 1500;
+const SAFE_POLL_MS = 25;
+
+/**
+ * stopMovement, but never while this client's next segment of the move is on its way to the server
+ * (continuationInFlight, live R7-2: a door shut mid-walk in a fight sent a member forward, back five
+ * squares and forward again, and core logged "Cannot destructure property 'resolve'"). It waits for that
+ * segment to land (at most SAFE_WAIT_MS), then stops the movement it started. `after(result)` runs as soon
+ * as the stop is made (in the same call when nothing is in flight). Resolves true when stopped.
+ */
+function stopSafely(doc, after = null) {
+  return new Promise(resolve => {
+    const done = r => {
+      try { after?.(r); } catch (err) { log?.debug?.("after a stop", err); }
+      resolve(r);
+    };
+    const attempt = left => {
+      if (!doc) return done(false);
+      if (continuationInFlight(doc) && left > 0) { setTimeout(() => attempt(left - 1), SAFE_POLL_MS); return; }
+      let ok = false;
+      try { ok = doc.stopMovement() === true; } catch (err) { log?.debug?.("stopMovement", err); }
+      done(ok);
+    };
+    attempt(Math.ceil(SAFE_WAIT_MS / SAFE_POLL_MS));
+  });
+}
+
 /** Stop one token by the table's decision. */
 function act(token, how) {
   const doc = token.document;
   if (how === "displace") return displace(token);
-  if (how === "stop") return Promise.resolve(doc.stopMovement());
+  if (how === "stop") return stopSafely(doc);
   if (how === "query") {
     // A GM asks whoever started the move (Fable's verdict: the GM may stop any move in combat).
     const starter = doc.movement?.user ?? null;
@@ -299,7 +329,7 @@ function onClick(token, event) {
  * (its derived x / y: where the tween has it now) holds `p` and that the click table stops.
  * @returns {{ token, how } | null}
  */
-export function movingTokenAt(p, { modifiers = false } = {}) {
+export function movingTokenAt(p, { modifiers = false, slack = 0 } = {}) {
   let best = null, bestD = Infinity;
   for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
     const doc = t?.document;
@@ -308,7 +338,7 @@ export function movingTokenAt(p, { modifiers = false } = {}) {
     const w = doc._source?.width ?? doc.width ?? 1, h = doc._source?.height ?? doc.height ?? 1;
     const at = drawnPosition(t);
     const d = Math.hypot(p.x - (at.x + (w * s) / 2), p.y - (at.y + (h * s) / 2));
-    if (d > (Math.max(w, h) * s) / 2 || d >= bestD) continue;
+    if (d > (Math.max(w, h) * s) / 2 + slack * s || d >= bestD) continue;
     const how = decide(t, { modifiers });
     if (!how) continue;
     best = { token: t, how };
@@ -395,7 +425,9 @@ function onDoorDown(event) {
     let p = null;
     try { p = event.getLocalPosition?.(tokens) ?? null; } catch { p = null; }
     if (!p && Number.isFinite(event?.clientX)) p = globalThis.canvas?.canvasCoordinatesFromClient?.({ x: event.clientX, y: event.clientY }) ?? null;
-    const hit = p ? movingTokenAt(p, { modifiers: !!(event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) }) : null;
+    // Right beside it counts too (live R7-3: a press on the icon with the token's centre 50-80 px short
+    // of it, under a tween a frame ahead of the pointer, still shut the door in 2 of 5 runs).
+    const hit = p ? movingTokenAt(p, { modifiers: !!(event.shiftKey || event.ctrlKey || event.metaKey || event.altKey), slack: DOOR_SLACK }) : null;
     if (!hit) return;
     event.stopPropagation?.();                    // the icon's own handler never sees it: no toggle
     lastNative = event.nativeEvent ?? null;       // the board fallback leaves this press alone
@@ -403,6 +435,9 @@ function onDoorDown(event) {
     if (!hit.token.controlled) hit.token.control?.({ releaseOthers: true });
   } catch (err) { log.warnOnce("stop-door", "click to stop over a door skipped (further errors suppressed)", err); }
 }
+
+/** How far beyond a moving token's drawn circle a press on a door icon still stops it (squares). */
+const DOOR_SLACK = 0.4;
 
 /** The stage this client listens on for door icon presses. */
 let doorLayer = null;
@@ -449,7 +484,7 @@ async function stop(doc, opts = {}, qctx = null) {
     if (!doc?.testUserPermission?.(qctx.user, "OWNER")) return { ok: false, code: "NOT_OWNER", reason: "the sender does not own that token" };
     if (!doc.movement?.user?.isSelf) return { ok: false, code: "NOT_INITIATOR", reason: "this client did not start that move" };
     feature.exposed.groupCancel?.(doc.id, { only: true });
-    return { ok: doc.stopMovement() === true, how: "stop", tokenId: doc.id };
+    return { ok: await stopSafely(doc), how: "stop", tokenId: doc.id };
   }
   const token = doc?.object;
   if (!token) return { ok: false, code: "NOT_DRAWN", reason: "the token is not drawn on this canvas" };
@@ -477,7 +512,7 @@ async function stopOwn(data = {}, qctx = {}) {
   for (const id of new Set([doc.id, ...ids])) {
     const d = id === doc.id ? doc : doc.parent?.tokens?.get(id);
     if (!d?.movement?.user?.isSelf) continue;
-    try { if (d.stopMovement() === true && id === doc.id) ok = true; } catch (err) { log?.debug?.("stopOwn", err); }
+    if ((await stopSafely(d)) && id === doc.id) ok = true;
   }
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how: "stopOwn", by: sender.id ?? null };
   return { ok, how: "stop", tokenId: doc.id };
@@ -504,7 +539,7 @@ export function install(reg, ctx) {
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).
   if (globalThis.CONFIG?.queries) globalThis.CONFIG.queries[STOP_OWN] = stopOwn;
-  ctx.expose({ stop, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), noteDrop });
+  ctx.expose({ stop, stopSafely, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), noteDrop });
 }
 
 export function uninstall() {

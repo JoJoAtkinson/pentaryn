@@ -746,6 +746,65 @@ test("R5-3: a click-stop in an open doorway, its body across the door's line, re
   }
 });
 
+test("R7-3: a press on a door's icon right beside a moving token (its centre 50-80 px short) stops the token, not the door", () => {
+  combatFlag = false;
+  const DoorControl = F.foundry.canvas.containers.DoorControl;
+  const listeners = [];
+  const stageBefore = F.canvas.stage;
+  F.canvas.stage = { addEventListener: (type, fn, opts) => listeners.push({ type, fn, opts }), removeEventListener() {} };
+  F.fire("canvasReady");
+  const capture = listeners.find(l => l.type === "pointerdown" && l.opts?.capture);
+  const t = makeToken("doorNear0000001", 400, 100);
+  t.document._source = { ...t.document._source, x: 400, y: 600 };
+  t.document.x = 400; t.document.y = 225;                        // drawn centre (450, 275): 75 px short of the door at y 400
+  t.animationContexts.set(t.movementAnimationName, {});
+  t.control = () => { t.controlled = true; };
+  const control = new DoorControl();
+  const layerBefore = F.canvas.tokens;
+  F.canvas.tokens = { ...layerBefore, active: true, placeables: [t] };
+  const press = (x, y) => {
+    let stopped = false;
+    const ev = { button: 0, target: control, getLocalPosition: () => ({ x, y }), stopPropagation: () => { stopped = true; }, nativeEvent: { type: "pointerdown", timeStamp: y } };
+    capture.fn(ev);
+    if (!stopped) control._onMouseDown(ev);
+    return stopped;
+  };
+  try {
+    const n = doors.length;
+    assert.equal(press(450, 350), true, "75 px from its centre: still the token's press");
+    assert.equal(doors.length, n, "the door is not toggled");
+    t.document.movement = { state: "completed", user: { isSelf: true } };
+    t.animationContexts.clear();
+    t.animationContexts.set(t.movementAnimationName, {});
+    t.document.x = 400; t.document.y = 100;                      // centre (450, 150): 200 px away
+    t.document.movement = { state: "pending", user: { isSelf: true } };
+    assert.equal(press(450, 350), false, "a token well away from the icon leaves the door to core");
+    assert.equal(doors.length, n + 1);
+  } finally {
+    t.animationContexts.clear();
+    F.canvas.tokens = layerBefore;
+    F.canvas.stage = stageBefore;
+  }
+});
+
+test("R7-4: a click-stop whose box would rest 5 px across an open door's line rests on a whole cell beside it", () => {
+  combatFlag = false;
+  const t = makeToken("clkOpen000000002", 400, 100);
+  t.document._source = { ...t.document._source, x: 400, y: 600 };
+  t.document.x = 400; t.document.y = 305;                           // centre (450, 355): the box (y 305-405) crosses y 400 by 5 px
+  t.animationContexts.set(t.movementAnimationName, {});
+  sceneDoc.walls = [{ door: 1, ds: 1, c: [400, 400, 500, 400] }];
+  try {
+    const from = F.calls.length;
+    t._onClickLeft({});
+    const p = F.calls.slice(from).find(c => c.op === "move").waypoints[0];
+    assert.deepEqual([p.x, p.y], [400, 300], "the whole cell before the line");
+  } finally {
+    delete sceneDoc.walls;
+    t.animationContexts.clear();
+  }
+});
+
 test("R4-4: core's own stopAnimation (an unanimated update seen by another client) empties each tween's queued links first", () => {
   assert.equal(Token5e.prototype.stopAnimation.__pentarynMovementDefuse, true, "stopAnimation is wrapped");
   const t = makeToken("dfuA000000000001", 100, 100);
@@ -1444,7 +1503,10 @@ function walking(id, drawn, src, path, { combat = false, pending = [] } = {}) {
 }
 const doorWall = { id: "doorWall00000001", parent: sceneDoc, _source: { c: [400, 400, 500, 400], move: 20, sight: 20, door: 1, ds: 0 } };
 
-test("R6-3: a door shut across a move this client started out of combat cuts it on a free whole square before the door, one per token", () => {
+/** Let the cut's chained writes run (each awaits the one before it). */
+const settleWrites = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
+
+test("R6-3 / R7-1: a door shut across a move out of combat stops the drawn walk at once (an unanimated displace), then walks to a free square before the door", async () => {
   combatFlag = false;
   const saved = new Map(sceneTokens);
   sceneTokens.clear();
@@ -1458,16 +1520,29 @@ test("R6-3: a door shut across a move this client started out of combat cuts it 
   const from = F.calls.length;
   try {
     F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
-    const moves = F.calls.slice(from).filter(c => c.op === "move");
-    assert.deepEqual(moves.map(m => m.id).sort(), [a.document.id, b.document.id].sort(), "only the two whose route crosses the shut door");
-    const end = id => moves.find(m => m.id === id).waypoints.at(-1);
-    assert.deepEqual([end(a.document.id).x, end(a.document.id).y], [400, 300], "the nearest takes the last square before the door");
-    assert.deepEqual([end(b.document.id).x, end(b.document.id).y], [400, 200], "the next one the square behind it");
-    for (const m of moves) {
-      assert.equal(m.waypoints[0].action, "displace", "from where it is drawn");
-      assert.ok(m.waypoints.slice(1).every(w => w.y < 400), "never across the door");
+    const first = F.calls.slice(from).filter(c => c.op === "move");
+    assert.deepEqual(first.map(m => m.id).sort(), [a.document.id, b.document.id].sort(), "only the two whose route crosses the shut door");
+    for (const m of first) {
+      // Live R7-1: core chains an animated move after the one being drawn; only an unanimated write stops it.
+      assert.equal(m.options?.animate, false, "the first write is unanimated (stops the drawn tween on every client)");
+      assert.equal(m.waypoints.length, 1);
+      assert.equal(m.waypoints[0].action, "displace", "to where it is drawn");
+      const sa = F.calls.slice(from).findIndex(c => c.op === "stopAnimation" && c.id === m.id && c.opts?.reset === false);
+      assert.ok(sa >= 0 && sa < F.calls.slice(from).indexOf(m), "this client stops its own tween before the write");
     }
-    assert.deepEqual(moves.find(m => m.id === a.document.id).waypoints[0].y, 150);
+    assert.equal(first.find(m => m.id === a.document.id).waypoints[0].y, 150);
+    await settleWrites();
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    const walk = id => moves.filter(m => m.id === id)[1];
+    for (const t of [a, b]) {
+      const w = walk(t.document.id);
+      assert.ok(w, "then a walk");
+      assert.notEqual(w.options?.animate, false, "the walk is animated");
+      assert.ok(w.waypoints.every(p => p.y < 400 && p.action !== "displace"), "never across the door");
+    }
+    const end = t => walk(t.document.id).waypoints.at(-1);
+    assert.deepEqual([end(a).x, end(a).y], [400, 300], "the nearest takes the last square before the door");
+    assert.deepEqual([end(b).x, end(b).y], [400, 200], "the next one the square behind it");
     assert.equal(game.pentaryn.movement.status().group.cut?.members, 2);
   } finally {
     world.walls.pop();
@@ -1476,7 +1551,7 @@ test("R6-3: a door shut across a move this client started out of combat cuts it 
   }
 });
 
-test("R6-3: a new wall raised across a route cuts it too; a wall that crosses no route, or an opened door, cuts nothing", () => {
+test("R6-3: a new wall raised across a route cuts it too; a wall that crosses no route, or an opened door, cuts nothing", async () => {
   combatFlag = false;
   const saved = new Map(sceneTokens);
   sceneTokens.clear();
@@ -1489,12 +1564,47 @@ test("R6-3: a new wall raised across a route cuts it too; a wall that crosses no
     world.walls.push([{ x: 600, y: 0 }, { x: 600, y: 300 }]);
     try {
       F.fire("createWall", { id: "newWall000000001", parent: sceneDoc, _source: { c: [600, 0, 600, 300], move: 20 } }, {}, "gm");
+      await settleWrites();
     } finally { world.walls.pop(); }
     const moves = F.calls.slice(from).filter(c => c.op === "move");
-    assert.equal(moves.length, 1);
-    assert.equal(moves[0].id, a.document.id);
-    assert.deepEqual([moves[0].waypoints.at(-1).x, moves[0].waypoints.at(-1).y], [500, 100], "the square before the new wall");
+    assert.equal(moves.length, 2, "a displace where it is drawn, then the walk");
+    assert.ok(moves.every(m => m.id === a.document.id));
+    assert.equal(moves[0].options?.animate, false);
+    assert.deepEqual([moves[1].waypoints.at(-1).x, moves[1].waypoints.at(-1).y], [500, 100], "the square before the new wall");
   } finally {
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("R7-2: in a fight, a cut never calls stopMovement while the member's next square is on its way to the server", () => {
+  combatFlag = true;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const a = walking("cutG000000000001", { x: 400, y: 120 }, { x: 400, y: 200 }, [{ x: 400, y: 100 }, { x: 400, y: 200 }],
+    { combat: true, pending: [{ x: 400, y: 300 }, { x: 400, y: 400 }, { x: 400, y: 500 }] });
+  // Core's continuation for the next square has been sent and not yet landed.
+  a.document._movementContinuation = { continued: true };
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  const from = F.calls.length;
+  try {
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    const stops = () => F.calls.slice(from).filter(c => c.op === "stopMovement" && c.id === a.document.id).length;
+    assert.equal(stops(), 0, "no stop while the continuation is in flight (core would file it under a settled movement)");
+    mock.timers.tick(100);
+    assert.equal(stops(), 0, "still waiting");
+    // The continuation lands: core clears the flag. Now the stop goes out, once.
+    a.document._movementContinuation.continued = false;
+    mock.timers.tick(30);
+    assert.equal(stops(), 1, "stopped once it landed");
+    a.animationContexts.clear(); a.document.movement.state = "stopped";
+    mock.timers.tick(200);
+    const moves = F.calls.slice(from).filter(c => c.op === "move" && c.id === a.document.id);
+    assert.equal(moves.length, 1, "then walks on to its square");
+    assert.deepEqual([moves[0].waypoints.at(-1).x, moves[0].waypoints.at(-1).y], [400, 300]);
+  } finally {
+    world.walls.pop();
+    combatFlag = false;
     sceneTokens.clear();
     for (const [k, v] of saved) sceneTokens.set(k, v);
   }

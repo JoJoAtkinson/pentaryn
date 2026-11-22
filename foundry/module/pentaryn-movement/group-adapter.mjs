@@ -84,7 +84,9 @@ export function restWalkable(member, c, s) {
   const rect = globalThis.canvas?.dimensions?.rect;
   const p = { x: c.x * s, y: c.y * s };
   if (rect && !rect.contains(p.x, p.y)) return false;
-  const rr = member.r * s * 0.9;
+  // Its box, not 90 % of its circle (live R7-4: a click-stop in an open doorway rested 5 px across the door's
+  // line, the body at x 1405-1505 over a line at 1500). Touching the line is fine.
+  const rr = member.r * s - 0.5;
   const z = member.token.document?._source?.elevation ?? 0;
   for (let k = 0; k < 8; k++) {
     const a = (k * Math.PI) / 4;
@@ -169,6 +171,20 @@ export function movementFacts(token) {
 }
 
 /**
+ * Has this client sent the next segment of its own move (core's continuation after a checkpoint) and not
+ * yet seen it come back? Core sets `_movementContinuation.continued` before that update goes out and clears
+ * it when the update lands. A stopMovement in that window races it (live R7-2): core settles the movement,
+ * then files the arriving continuation under an id it already dropped, the token walks on, and the next
+ * stop of it throws core's "Cannot destructure property 'resolve' of ... #movementPromisesWithResolvers
+ * .get(...)" before it broadcasts. Reads only.
+ */
+export function continuationInFlight(doc) {
+  const m = doc?.movement;
+  if (!m?.user?.isSelf || m.state === "stopped" || m.state === "completed") return false;
+  return doc?._movementContinuation?.continued === true;
+}
+
+/**
  * A later wave's waypoints, cut where a wall now blocks them (live R2-5: the GM closed a door after the
  * drop, core then cut the member's path at the door and left it straddling the door line). Each segment
  * from `origin` is tested against move-blocking walls as they are now; at the first blocked one the path
@@ -239,7 +255,9 @@ export function clearOfWalls(token, p) {
   // Its body across a door's line, open or shut (live R5-3: stopped in an open doorway, it rested across
   // the door line, and anyone shutting the door then left it inside the wall): not a place to rest either.
   const doors = doorSegments(token);
-  const rr = member.r * s * 0.9;
+  // Its box, not 90 % of its circle (live R7-4: a click-stop in an open doorway rested 5 px across the door's
+  // line, the body at x 1405-1505 over a line at 1500). Touching the line is fine.
+  const rr = member.r * s - 0.5;
   const straddles = q => {
     if (!doors.length) return false;
     const c = { x: q.x + (w * s) / 2, y: q.y + (h * s) / 2 };

@@ -23,7 +23,7 @@ import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
 import { GROUP_LIMITS, flood, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
 import { skipReason } from "./pathfind-core.mjs";
-import { clearOfWalls, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { clearOfWalls, continuationInFlight, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -760,7 +760,7 @@ function onHistoryCleared(doc, options) {
     const d = doc.parent?.tokens?.get(id);
     const m = d?.movement;
     if (!m?.user?.isSelf || m.state === "completed" || m.state === "stopped") continue;
-    try { d.stopMovement(); } catch (err) { log?.debug?.("stop a member at a turn change", err); }
+    try { stopSafely(d); } catch (err) { log?.debug?.("stop a member at a turn change", err); }
   }
   if (ids.length) {
     stoppedAt = { at: new Date().toISOString(), why: "turnChange", members: ids.length };
@@ -775,6 +775,16 @@ const DOOR_OPEN = 1;
 /** How long a combat cut waits for its stopped token to finish its square before it walks on (ms). */
 const CUT_WAIT_MS = 3000;
 const CUT_POLL_MS = 50;
+
+/** stop.mjs's stopSafely when it is installed (never a stopMovement racing an in-flight segment, live R7-2), else core's. */
+function stopSafely(doc, after = null) {
+  const fn = feature?.exposed?.stopSafely;
+  if (typeof fn === "function") return fn(doc, after);
+  let ok = false;
+  try { ok = doc.stopMovement() === true; } catch (err) { log?.debug?.("stopMovement", err); }
+  try { after?.(ok); } catch (err) { log?.debug?.("after a stop", err); }
+  return Promise.resolve(ok);
+}
 
 /** Does this wall block movement as it stands now? */
 function blocksMove(wall) {
@@ -843,7 +853,7 @@ function walkOnAfterStop(doc, waypoints, left = Math.ceil(CUT_WAIT_MS / CUT_POLL
   const token = doc.object;
   if (!feature || !token || token.destroyed) return;
   const st = doc.movement?.state;
-  if ((movementFacts(token).animating || st === "pending") && left > 0) {
+  if ((movementFacts(token).animating || st === "pending" || continuationInFlight(doc)) && left > 0) {
     setTimeout(() => walkOnAfterStop(doc, waypoints, left - 1), CUT_POLL_MS);
     return;
   }
@@ -904,13 +914,25 @@ function cutAcross(wall) {
     claims.push({ id: doc.id, x: end.x + (w * s) / 2, y: end.y + (h * s) / 2, r: radiusOf(w, h) * s });
     try {
       if (combat) {
-        doc.stopMovement();
-        if (kept.length) walkOnAfterStop(doc, kept);
+        // Never while its next square is on the way to the server (live R7-2); walk on once stopped.
+        stopSafely(doc, () => { if (kept.length) walkOnAfterStop(doc, kept); });
       } else {
+        // Two writes (live R7-1): core chains an animated movement after the one being drawn, so a single
+        // "displace here, then walk" update was drawn only after the old walk had reached its end, through
+        // the shut door, and every client then jumped back 1100-1775 px. An unanimated displace stops the
+        // tween on every client where it is drawn now (this one first, before the write); the walk to the
+        // square before the wall follows once the server has it.
         const z = doc._source.elevation ?? 0;
         const here = kept.length ? route.from : clearOfWalls(token, route.from);
-        const wps = [{ x: here.x, y: here.y, elevation: z, action: "displace", snapped: false, explicit: true, checkpoint: !kept.length }, ...kept];
-        Promise.resolve(doc.move(wps, { method: "api", animate: kept.length > 0 })).catch(err => log?.debug?.("cut: move", err));
+        const disp = [{ x: here.x, y: here.y, elevation: z, action: "displace", snapped: false, explicit: true, checkpoint: true }];
+        try { token.stopAnimation?.({ reset: false }); } catch (err) { log?.debug?.("cut: stopAnimation", err); }
+        Promise.resolve(doc.move(disp, { method: "api", animate: false }))
+          .then(moved => {
+            if (moved === false) { try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log?.debug?.("cut: reset", err); } return null; }
+            if (!kept.length || !feature || token.destroyed) return null;
+            return doc.move(kept, { method: "api" });
+          })
+          .catch(err => log?.debug?.("cut: move", err));
       }
       out.push({ id: doc.id, x: end.x, y: end.y, combat });
     } catch (err) { log?.debug?.("cut", err); }
