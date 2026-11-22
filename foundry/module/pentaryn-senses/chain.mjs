@@ -152,17 +152,31 @@ function dropLayer() {
   }
 }
 
-/** Where a token is drawn right now: its drag preview if dragged, the animating mesh, else the document. */
+/**
+ * Where a token is drawn right now: the real token's mesh (it follows the walk), else the document. Never the
+ * drag preview (Joe's decision 6, 2026-11-22: the chain follows the token itself while it walks, not the ghost
+ * being dragged; it is drawn again once the move is done).
+ */
 function liveCentre(doc) {
   const p = doc?.object;
   if (!p) {
     const g = canvas.grid?.size || 100;
     return { x: doc.x + (doc.width * g) / 2, y: doc.y + (doc.height * g) / 2 };
   }
-  const live = p._preview && !p._preview.destroyed ? p._preview : p;
-  const m = live.mesh;
+  const m = p.mesh;
   if (m && !m.destroyed && m.transform && Number.isFinite(m.x) && Number.isFinite(m.y)) return { x: m.x, y: m.y };
-  return live.center;
+  return p.center;
+}
+
+/** A chained token moved: draw again now, and once its walk is done (the last frame's refresh can come early). */
+function afterMove(doc) {
+  schedule();
+  try {
+    const done = doc?.object?.movementAnimationPromise;
+    if (done && typeof done.then === "function") done.then(() => schedule(), () => schedule());
+  } catch (e) {
+    warn("after move", e);
+  }
 }
 
 /** Put a sprite where a linkSpriteSpecs half says. */
@@ -320,7 +334,7 @@ export function install(reg, ctx) {
   on("refreshToken", () => {
     if (state.layer || cachedPairs(canvas?.scene).length) schedule();   // hot: pairsCache
   });
-  on("destroyToken", () => schedule()); // a drag preview ending
+  on("destroyToken", () => schedule()); // a token's object going (a scene redraw)
   on("createToken", (doc) => {
     forgetPairs(doc);
     schedule();
@@ -334,6 +348,7 @@ export function install(reg, ctx) {
     const ourFlagsChanged = foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined;
     if (ourFlagsChanged) forgetPairs(doc);
     if (ourFlagsChanged || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
+    if (("x" in (changes ?? {}) || "y" in (changes ?? {})) && cachedPairs(doc?.parent).length) afterMove(doc);
   });
   on("renderTokenHUD", (app, element) => injectHUD(app, element));
 

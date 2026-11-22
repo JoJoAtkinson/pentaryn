@@ -175,14 +175,14 @@ test("drawing: what triggers a repaint", () => {
   rows.updateToken_flag = fire("updateToken", {}, { flags: { [MODULE]: { chain: null } } });
   rows.updateToken_hidden = fire("updateToken", {}, { hidden: true });
   rows.updateToken_elevation = fire("updateToken", {}, { elevation: 5 });
-  rows.updateToken_x = fire("updateToken", {}, { x: 5 });
+  rows.updateToken_x = fire("updateToken", {}, { x: 5 });   // decision 6: a chained token moved, drawn again (and once its walk is done)
   rows.updateToken_otherFlag = fire("updateToken", {}, { flags: { core: {} } });
   rows.updateToken_noChanges = fire("updateToken", {});
   rows.repaintApi = (C().repaint(), F.frames.pending());
   F.frames.flush();
   assert.deepEqual(rows, {
     refreshToken_withLayer: 1, destroyToken: 1, createToken: 1, deleteToken: 1, updateToken_flag: 1, updateToken_hidden: 1,
-    updateToken_elevation: 1, updateToken_x: 0, updateToken_otherFlag: 0, updateToken_noChanges: 0, repaintApi: 1,
+    updateToken_elevation: 1, updateToken_x: 1, updateToken_otherFlag: 0, updateToken_noChanges: 0, repaintApi: 1,
   });
 });
 
@@ -237,7 +237,7 @@ test("drawing: refreshToken with no layer and no chain does not repaint; canvasT
   assert.equal(F.canvas.primary.children[0].children.length, 2);
 });
 
-test("drawing: live centres — the mesh while animating, the drag preview while dragged, else the document", () => {
+test("drawing: live centres — the real token's mesh (also while a drag preview is out: decision 6), else the document", () => {
   F.frames.flush();
   const hulk = tok(ID.tHulk), stake = tok(ID.tStake);
   hulk.object = { mesh: { x: 1000, y: 2000, transform: {}, destroyed: false }, center: { x: 1, y: 1 } };
@@ -247,8 +247,8 @@ test("drawing: live centres — the mesh while animating, the drag preview while
   const [shadow, link] = F.canvas.primary.children[0].children;
   delete hulk.object;
   delete stake.object;
-  assert.deepEqual([link.position.x, link.position.y, link.width], [77, 88, Math.hypot(1000 - 77, 2000 - 88)]);
-  assert.deepEqual([shadow.position.x, shadow.position.y], [77 + 28 * 0.1, 88 + 28 * 0.16]);
+  assert.deepEqual([link.position.x, link.position.y, link.width], [5, 5, Math.hypot(1000 - 5, 2000 - 5)]);
+  assert.deepEqual([shadow.position.x, shadow.position.y], [5 + 28 * 0.1, 5 + 28 * 0.16]);
 });
 
 test("drawing: a missing texture warns and draws nothing; a paint error warns", async t => {

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **0.5.1 (2026-11-22). [declared] Chains follow the real token, not the drag preview (Joe's decision 6).**
+  While a chained token is dragged the chain stays on the token itself; while it walks the chain follows it,
+  and it is drawn again once the walk is done. Adjustment row `core-token-preview-private` retired (no read of
+  `Token#_preview` is left).
+
 - **[declared senses-edge-4, FIX-3 forward fix] normalise() works on a copy** (2026-10-13):
   Foundry's LightData cleans the object it is handed in place, so senses-edge-4's convergence
   check filled the shard item's own light flag with every LightData default; syncLight then wrote

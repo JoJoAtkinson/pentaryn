@@ -1445,17 +1445,6 @@ adjustments:
     retire_class: never
     check: make foundry-senses-check
 
-  - id: core-token-preview-private
-    packages: [core]
-    modules: [pentaryn-senses]
-    files: [foundry/module/pentaryn-senses/chain.mjs]
-    markers: ["_preview"]
-    what: a chain is drawn to a dragged token's live position by reading the private Token#_preview (the drag preview) and its mesh
-    why: core exposes no public accessor for where a token is drawn mid-drag
-    native_when: core offers a public drag-preview or drawn-position accessor
-    retire_class: guarded
-    check: make foundry-senses-check
-
   - id: core-primary-sort-layers
     packages: [core]
     modules: [pentaryn-senses]

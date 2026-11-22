@@ -66,7 +66,7 @@ repeat, mostly small, now and then swelling. The radius really changes (vision f
 client computes the same wave from the server clock.
 
 **Token chains.** An iron chain drawn from an anchor token's centre to a chained token's, just
-under the tokens (fog and vision hide it like the map); it follows drags and moves. Graphics only:
+under the tokens (fog and vision hide it like the map); it follows the token itself as it walks, never the drag preview, and is drawn again once the move is done (0.5.1). Graphics only:
 the GM judges the reach. Token HUD (GM): **Break chain** on either end; **Chain to <anchor>** on an
 unchained token while exactly one other token is targeted. A chain with either end hidden (the
 chained token or its anchor) shows to the GM only.
