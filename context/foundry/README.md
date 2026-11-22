@@ -68,7 +68,7 @@ The table is generated from each `module.json`, the module's code and its
 
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
-| `aoe` | `pentaryn-aoe` | 0.8.5 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+20) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
+| `aoe` | `pentaryn-aoe` | 0.8.6 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+20) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
 | `attunement` | `pentaryn-attunement` | 0.3.0 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
 | `combat` | `pentaryn-combat` | 0.3.3 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.5.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` … (+5) | [README](../../foundry/module/pentaryn-creatures/README.md) |

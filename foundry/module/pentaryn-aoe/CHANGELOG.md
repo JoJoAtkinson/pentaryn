@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **0.8.6 (2026-11-22). canvasReady chain.**
+  - **[declared] Two canvasReady handlers no longer stop every later one.** Foundry fires canvasReady with
+    `Hooks.call`, which stops at the first handler returning `false`. The area sweep (`isLeadGM() && sweep()`)
+    and the spell-wall sync (`isActiveGM() && syncScene()`) returned `false` on every client that was not the
+    lead GM, every player included, so the handlers after them never ran there: pentaryn-pins never bound
+    the GM canvas menu on a second GM's client (found on the Mac, live round 6). Both now return nothing
+    unless they start work. `scripts/tests/test_hook_bodies_never_return_false.py` guards every module.
 - **0.8.5 (2026-11-22). Live play-test round 5.**
   - **[declared] The wall panel hint names the gesture that rotates (R5-7).** A plain mouse wheel zooms the
     canvas during placement; Shift+wheel turns the panel (15° a notch). The counter now reads "Panel n of N:

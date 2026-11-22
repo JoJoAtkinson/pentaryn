@@ -508,7 +508,7 @@ export function install(reg, ctx) {
 
   // A new scene is swept by whoever is the active GM then ([declared] aoe-edge-3): wired here on
   // every client, not after readyAreas' awaits, so a failed startup or a GM handover keeps it.
-  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady", c => isLeadGM() && sweep(c.scene)), { guard: false, label: "canvasReady" });
+  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady", c => { if (isLeadGM()) return sweep(c.scene); }), { guard: false, label: "canvasReady" });
 
   // The lead taken late (a new session settling, or an older one gone, R2-2): its startup work now.
   onBecomeLead(() => readyAreas());

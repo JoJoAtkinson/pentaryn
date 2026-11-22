@@ -413,10 +413,10 @@ check("player status line: waiting, applied, superseded, nothing to say",
 // 0.8.3 (2026-11-22): live play-test round 2 (one GM account in two sessions writes once; overlapping panels' breaks listed).
 // 0.8.4 (2026-11-22): live play-test round 4 (wall panels keep the last placed panel's rotation; the hint says the wheel rotates).
 // 0.8.5 (2026-11-22): live play-test round 5 (the wall panel hint names Shift+wheel).
-test("module.json is pentaryn-aoe 0.8.5", () => {
+test("module.json is pentaryn-aoe 0.8.6", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.8.5");
+  assert.equal(manifest.version, "0.8.6");
 });
 
 test("VERSION === module.json version", () => {

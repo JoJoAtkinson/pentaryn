@@ -458,7 +458,7 @@ export function install(reg, ctx) {
   reg.on("refreshRegion", reg.guardSwallowAsync("refreshRegion(wall controls)", drawControls), { guard: false, label: "refreshRegion(wall controls)" });
   reg.on("destroyRegion", reg.guardSwallowAsync("destroyRegion(wall controls)", region => (region?.isPreview ? null : dropControls(region?.document?.id))), { guard: false, label: "destroyRegion(wall controls)" });
   reg.on("canvasTearDown", reg.guardSwallowAsync("canvasTearDown(wall controls)", dropAllControls), { guard: false, label: "canvasTearDown(wall controls)" });
-  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady(walls)", c => isActiveGM() && syncScene(c?.scene)), { guard: false, label: "canvasReady(walls)" });
+  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady(walls)", c => { if (isActiveGM()) return syncScene(c?.scene); }), { guard: false, label: "canvasReady(walls)" });
   // The lead taken late (a new session settling, or an older one gone): catch up on the viewed scene.
   onBecomeLead(() => syncScene(canvas?.scene));
   onSettingChange("spellWalls", () => {
