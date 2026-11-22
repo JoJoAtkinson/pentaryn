@@ -398,6 +398,24 @@ test("click to stop out of combat: displaced where drawn (animate false), then c
   assert.equal(clicks.at(-1).token, t);
 });
 
+test("R2-9: another client that receives a stop's displace and still draws the token elsewhere puts it where the server has it", () => {
+  combatFlag = false;
+  const t = makeToken("rsyA000000000001", 100, 100);
+  t.document._source = { ...t.document._source, x: 900, y: 200 };   // the displace landed: the server holds (900, 200)
+  t.document.x = 1190; t.document.y = 1600;                         // this client still draws the old tween's last frame
+  t.animationContexts.clear();                                      // and no tween runs any more
+  const from = F.calls.length;
+  F.fire("updateToken", t.document, { x: 900, y: 200 }, { animate: false }, "otherUser0000001");
+  mock.timers.tick(0);
+  assert.ok(F.calls.slice(from).some(c => c.op === "stopAnimation" && c.id === t.document.id && !c.opts), "reset to the source (a full stopAnimation)");
+  // An animated update, or one that moves nothing, is left to core.
+  const n = F.calls.length;
+  F.fire("updateToken", t.document, { x: 900, y: 200 }, {}, "otherUser0000001");
+  F.fire("updateToken", t.document, { name: "x" }, { animate: false }, "otherUser0000001");
+  mock.timers.tick(1000);
+  assert.equal(F.calls.slice(n).filter(c => c.op === "stopAnimation" && c.id === t.document.id).length, 1, "only the R2-9 resync's own second check, 250 ms on");
+});
+
 test("click to stop in combat: the initiator calls stopMovement, another client asks the GM", () => {
   combatFlag = true;
   const t = makeToken("clkB000000000001", 100, 100);

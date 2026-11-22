@@ -172,6 +172,15 @@ function displace(token) {
     });
 }
 
+/** updateToken, every client: after an unanimated move (a stop's displace), check the drawn position now and again shortly. */
+function onUnanimatedMove(doc, changes, options) {
+  if (options?.animate !== false || !changes || !("x" in changes || "y" in changes)) return;
+  const token = doc?.object;
+  if (!token) return;
+  setTimeout(() => resync(token), 0);
+  setTimeout(() => resync(token), RESYNC_MS);
+}
+
 /** Stop one token by the table's decision. */
 function act(token, how) {
   const doc = token.document;
@@ -364,6 +373,10 @@ export function install(reg, ctx) {
   if (ctx.late) clickPatched = patchClick();
   else reg.once("setup", () => { clickPatched = patchClick(); }, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
   reg.on("moveToken", (doc, movement) => onMoveToken(doc, movement), { label: "moveToken: when a move started (click-to-stop arming)" });
+  // Every client: a stop's displace (an unanimated position write) must leave the token drawn where the
+  // server has it here too, not only on the client that clicked (live R2-9: both clients showed it away
+  // from its document after a stop; seen on a 3 FPS harness only). resync is a no-op when they agree.
+  reg.on("updateToken", (doc, changes, options) => onUnanimatedMove(doc, changes, options), { label: "updateToken: resync after an unanimated move (stop)" });
   // After PIXI's own pointerdown listener (added when the app was made), so the wrap sees a click first.
   reg.on("canvasReady", () => listenBoard(), { label: "canvasReady: board pointerdown (click to stop, fallback)" });
   if (ctx.late) listenBoard();

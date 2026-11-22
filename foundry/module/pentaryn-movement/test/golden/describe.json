@@ -454,6 +454,10 @@
       "label": "moveToken: when a move started (click-to-stop arming)"
     },
     {
+      "name": "updateToken",
+      "label": "updateToken: resync after an unanimated move (stop)"
+    },
+    {
       "name": "canvasReady",
       "label": "canvasReady: board pointerdown (click to stop, fallback)"
     }
