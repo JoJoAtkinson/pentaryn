@@ -143,3 +143,134 @@ The corner rule has no setting. A diagonal squeeze through a wall joint is a ray
 - A straight drag core allows is never changed, even for a large token. That keeps "no worse than today".
 - There is no budget-aware routing in combat. The cheapest route is shown, and dnd5e's colours do the rest.
 - ALTERNATING diagonal rules are approximate: no history parity, since Pentaryn uses EQUIDISTANT.
+
+## 12. pentaryn-movement 0.4.0 design (group movement, click to stop)
+
+Joe's requirements (DM, 2026-11-22):
+
+1. Seamless: a user just drags their character; it finds a smooth path if anything blocks. No new UI to learn.
+2. If the drop needs a wild detour (a path exists, so it starts the long way), the user can CLICK THEIR CHARACTER to stop it where it is.
+3. GM multi-select drag: each character follows its own ideal path — unless ghost is on, then straight to the point.
+4. Group members must not overlap while moving or at rest, so they look like they move together. Not 5-ft-square movement ("that's a combat box, not how people move"): each walks its A* path like a human; tokens are circles, collision = distance < r1+r2.
+
+Working interpretation: OUT of combat free-form smooth movement; IN combat keep exact grid costs for dnd5e movement tracking (click-to-stop and group pathing still apply). GM unconstrainedMovement and ghost stay straight-line. If planning fails, behave exactly like core.
+
+The design below is as approved, verbatim (headings one level down). The builder's notes on where the source forced a deviation follow it in §13.
+
+### pentaryn-movement 0.4.0 design
+
+`[V]` marks something the builder must verify in source before relying on it.
+
+#### 1. Principles
+
+1. **Nothing reacts at runtime.** Every trajectory is fixed at drop time, so deadlock is impossible by construction; the only planning failure is "no feasible slot or delay", and that degrades in a fixed order (§4).
+2. **Rest non-overlap is a hard guarantee; in-motion non-overlap is best effort** and is the first thing relaxed.
+3. **Two regimes, one pipeline.** Out of combat: free-form geometry, one committed path, stop by displace. In started combat: grid cell centres, exact cost, stop by `stopMovement()`.
+4. **Any throw, timeout or unverifiable state means core's own updates, untouched**, with one `console.warn`.
+
+#### 2. Behaviour per scenario
+
+| Scenario | Out of combat | In started combat |
+|---|---|---|
+| Single drag, clear line | Core straight line | Same |
+| Single drag, blocked | 0.3.0 route, string-pulled and filleted, unsnapped interior points; destination snaps as core (Shift = unsnapped) | Grid route; arcs only where cost ≤ grid optimum (0.3.0 rule) |
+| Click the moving token | Stops where drawn, then selects | Finishes to the next cell centre (≤ ~170 ms); exact cost recorded |
+| GM group drag | Each member walks its own route; circles kept apart by slot choice, start delays, lateral re-plan | Same, but delays and slots only (no lateral offsets, cost rule holds) |
+| Ghost, `ignoreWalls`, unconstrained, `direct` | Core straight lines, one batch, no avoidance. Only if two members' rest circles overlap is the lower-priority one nudged | Pure core |
+| Doorway or corridor | Members file through in order of distance to goal, nose to tail | Same on cells |
+| Destination crowding | Anchor lands where dropped; others take packed slots around it | Others take the nearest free cells |
+| Mixed sizes | Radius = width × grid size / 2; largest placed first | Same, footprint cells |
+| No path for a member | That member behaves exactly as core; the rest plan around its constrained end point | Same |
+
+Skip `direct` contexts explicitly: core's own check never fires.
+
+#### 3. Click-to-stop
+
+Wrap `Token#_onClickLeft`. Conditions: select tool, no modifier keys, user can control the token, and the movement is pending, paused or animating. Stop first, then call the original. A double-click's second press finds a stopped token and opens the sheet.
+
+- **Out of combat:** displace the token to its drawn position (`animate: false`, action `displace`, unsnapped). Any owner may do this, so a player can stop a move the GM started. `[V]` the exact call shape, where the drawn position is read, and that a displace back from the document's end point does not fire unwanted region enter or exit behaviours.
+- **In combat:** paths commit with `checkpoint: true` at each cell centre they pass through (arc points stay non-checkpoints). The initiator calls `stopMovement()`. A non-initiator sends a kit query to the initiating client, 400 ms timeout; on failure nothing happens. Never displace in combat.
+  - `[V]` Waypoints accept `checkpoint`.
+  - `[V]` Per-cell continuation is smooth over the tunnel. If it stutters, use checkpoints every 2 cells.
+- **Group:** when the initiator stops any member, the whole group stops and unsent waves are cancelled. A player stopping their own token stops only theirs; others may then pass through it (accepted).
+
+#### 4. Group planning algorithm
+
+Trigger: the `_prepareDragLeftDropUpdates` wrap, with 2 or more contexts and no skip reason. During the drag only the grabbed token runs our planner; the others get core's preview, which avoids N × 8 ms per pointer step.
+
+If the solve cannot finish synchronously, the wrap returns no updates and we commit through the same `updateEmbeddedDocuments` shape (`method: "dragging"`). `[V]` that an empty return ends the drag cleanly, and that undo still works.
+
+Budget: 250 ms per member, 1 s total, 12 members. Over budget means core.
+
+**Step A, slots (rest positions).** The anchor is the grabbed token; its destination is final.
+- If every member's same-delta destination is walkable, reachable and free of other tokens' circles, keep the formation.
+- Otherwise generate candidates around the anchor: a hex lattice with pitch 2 × the largest radius plus gap out of combat; grid cells in combat. Keep a candidate only if:
+  - its footprint is walkable (`fieldFor`);
+  - its walk distance from the anchor is ≤ 2 × its straight distance (no slots through a wall);
+  - it is clear of non-group tokens.
+- Assign greedily, largest radius first, with pairwise distance ≥ r1 + r2 + 0.1 square.
+  - Open ground: minimise distance from the member's formation offset.
+  - Constricted (the anchor's route passes a gap narrower than 2 group diameters): assign by depth, so the member nearest the goal gets the slot deepest along the route and nobody has to pass anybody.
+
+**Step B, routes.** Call `pathfindRoute` for each member to its slot.
+
+**Step C, timing.** Position over time is a pure function: one common speed, terrain ÷ difficulty, dnd5e half speed `[V]`. Process members in order of remaining route length, shortest first. For member k against all fixed earlier trajectories, a conflict is distance < r_i + r_j + 0.25 square (sampled at 50 ms, plus segment-pair closest approach). Pairs that start overlapping are ignored until they first separate. Resolve in this order:
+1. **Start delay:** the smallest delay in 150 ms steps, up to 3 s. This alone produces the corridor file.
+2. **Lateral re-plan** (out of combat only): re-run the route with earlier members' rest circles as inflated static obstacles and a soft cost near their tracks, then retry the delay.
+3. **Go last:** delay until every conflicting member is at rest, then route around the rest circles.
+4. **Relax:** commit k's route with motion overlap allowed. Its rest slot is still unique.
+
+**Step D, commit.** Members with delay 0 go in one batch. Later waves are timers on the initiating client, one batched update per 150 ms bucket. Before each wave, check that the group was not stopped and that each member's document is still at its planned start; otherwise drop that member. Region checkpoints may hold a member; that is tolerated as a soft overlap, with no runtime repair.
+
+#### 5. Path representation
+
+`Route = { points: [{x, y, elevation}], length, cost, delay, slot }`, using top-left coordinates as core waypoints do.
+
+- **Out of combat:** fillets tessellated to chords with error ≤ 0.05 square, at most 8 points per corner and 64 per route. All interior points are `snapped: false, explicit: false, checkpoint: false`.
+- **In combat:** cell-centre points are `snapped: true, checkpoint: true`.
+- Every route is re-run through dnd5e constrain and measure before commit, as in 0.3.0. A mismatch falls back to core for that member.
+
+#### 6. Settings and API
+
+Defaults are seamless; there is no new UI.
+
+| Setting | Scope | Default |
+|---|---|---|
+| `pathfinding` (existing) | client | on |
+| `groupMovement` | world | on |
+| `clickToStop` | client | on |
+
+API additions, all in the describe golden:
+- `planGroup(refs, point)`: dry run; returns slots, routes, delays and the relaxation level per member.
+- `stop(ref)`.
+- `status()` also reports the regime, the last plan's timings and fallback reasons.
+
+#### 7. Acceptance tests
+
+**Unit (pure, no canvas)**
+1. Two circles, same route, same start time: the second gets a delay such that minimum separation ≥ r1 + r2 + 0.25 square.
+2. Corridor 1 wide, 4 members in a column: depth-ordered slots, strictly increasing delays, no lateral re-plans, no relaxations.
+3. Door 1 wide, 6 members in a 3×2 block: all pass, minimum separation holds, total added delay ≤ 3 s.
+4. Formation destination inside a wall: that member is re-slotted; the anchor is unchanged; pairwise rest distance ≥ r1 + r2.
+5. Mixed Large and Medium: the Large is placed first; no rest overlap.
+6. Members that start overlapped: no conflict reported before first separation.
+7. A member with no route: excluded, the others are planned, its constrained end point is treated as an obstacle.
+8. Budget exceeded: the result is "core", with no partial plan.
+9. Tessellation: chord error ≤ 0.05 square, ≤ 64 points.
+10. Combat route: every checkpoint is a cell centre; measured cost equals the grid optimum.
+11. `direct`, ghost, `ignoreWalls` and non-square grid each return their skip reason.
+12. 13 members: core.
+
+**Live (real browser; the bot has no canvas)**
+1. Player drags around a pillar: smooth curve, no prompt, destination snapped.
+2. Long detour, click mid-way: the token halts within one frame where drawn, is selected, and a second client shows it within 0.5 square of the same spot.
+3. Same in combat: stops at the next cell centre; the dnd5e spent movement equals the cells walked.
+4. A player clicks their own token during a GM-started move: stops out of combat; in combat it stops through the query.
+5. Double-click a moving token: it stops and the sheet opens.
+6. GM drags 5 tokens through a door: single file, no visible overlap on two clients, non-overlapping at rest.
+7. Same with ghost on: straight lines through the wall, formation kept.
+8. Drop a group into a 2×2 room: the anchor lands exactly, the others pack around it, none in walls.
+9. Drow Prison benchmark: 6-token drag with pointer-step cost ≤ 16 ms and drop solve ≤ 1 s.
+10. Click-stop during a staggered group: no later wave is sent.
+11. A planner throw (forced by a debug flag): the move completes as core, with one warning.
+12. Undo after a group move: record the behaviour and document it.
