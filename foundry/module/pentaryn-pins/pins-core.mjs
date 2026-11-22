@@ -11,7 +11,7 @@
 export const MODULE = "pentaryn-pins";
 export const SHORT = "pins";
 export const NS = "pins";
-export const VERSION = "0.5.1";                       // === module.json version (core.test pins it)
+export const VERSION = "0.5.2";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-pins/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_PINS";
 export const CSS = "ppi-";
@@ -60,6 +60,20 @@ const isId = v => typeof v === "string" && ID.test(v);
 export function pinOf(flags) {
   const v = flags?.[FLAG_SCOPE]?.[PIN_FLAG];
   return isId(v) ? v : null;
+}
+
+/**
+ * A root's token records with the unlinked copies of the character itself left out (live R6-15): when the
+ * root has a linked token, an unlinked token of that same actor (a statue, a test copy, a dragged-in
+ * duplicate; `form` null, `linked` false) is not the character, and counting it made every pinned read
+ * AMBIGUOUS or MANY_TOKENS. Unlinked form tokens (wild shape, polymorph: `form` set) always stay, and a
+ * root with no linked token keeps all of its tokens.
+ * @param {{ linked: boolean, form: string|null }[]} cands
+ */
+export function characterTokens(cands) {
+  const list = Array.isArray(cands) ? cands : [];
+  if (!list.some(c => c?.linked === true)) return list;
+  return list.filter(c => c?.linked !== false || c?.form != null);
 }
 
 /**

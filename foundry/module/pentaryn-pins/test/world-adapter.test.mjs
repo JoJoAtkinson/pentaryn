@@ -199,3 +199,13 @@ test("startedCombatTokens (gather plan §1.3): started combats only, keyed on co
     F.endCombats();
   }
 });
+
+test("an unlinked copy of the pinned character is not the character (live R6-15: teleport AMBIGUOUS)", () => {
+  const copy = counted({ id: "taloCopyTok00001", name: "Talo", actorId: IDS.talo, actorLink: false }, C);
+  try {
+    const ids = tokensOfRoot(IDS.talo).map(t => t.id);
+    assert.ok(!ids.includes("taloCopyTok00001"), "the unlinked copy is left out while the linked token exists");
+    assert.ok(ids.includes(IDS.taloTok) && ids.includes("wolfUnlinked0001"), "the linked token and an unlinked form stay");
+  } finally { C.tokens.delete(copy.id); }
+  assert.equal(tokensByRoots([IDS.spirit])[IDS.spirit].length, 5, "a root with no linked token keeps every token");
+});

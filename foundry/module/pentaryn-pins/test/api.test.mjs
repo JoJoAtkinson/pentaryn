@@ -137,6 +137,9 @@ test("audit: a form-only token is ok; every violation code from the live world; 
   assert.deepEqual(api.audit(), { enabled: false, ok: true, pins: 1, violations: [] });
   B.tokens.get(IDS.taloTok).actorId = IDS.talo;
   B.tokens.get(IDS.taloTok).flags = {};
+  // Two unlinked tokens of the character and no linked one: both count (with a linked token, an unlinked
+  // copy is left out: characterTokens, live R6-15).
+  B.tokens.get(IDS.taloTok).actorLink = false;
   const extra = makeToken({ id: "taloExtra0000001", name: "Talo", actorId: IDS.talo, actorLink: false }, C);
   extra.collection = C.tokens;
   C.tokens.set(extra.id, extra);
@@ -157,6 +160,7 @@ test("audit: a form-only token is ok; every violation code from the live world; 
   assert.deepEqual(JSON.parse(JSON.stringify(r)), r, "plain JSON");
   assert.deepEqual(writes(from), [], "the audit never deletes a token");
   C.tokens.delete(extra.id);
+  B.tokens.get(IDS.taloTok).actorLink = true;
   delete game.users.get(IDS.miraUser).flags[MODULE];
   delete game.users.get(IDS.bot).flags[MODULE];
   delete game.users.get(IDS.gm).flags[MODULE];
@@ -204,9 +208,11 @@ test("teleport: refusals; UNSUPPORTED without portals; a portals fail passes thr
   B.tokens.delete(IDS.taloTok);
   assert.equal((await api.teleport(IDS.taloUser, { x: 1, y: 1 })).code, "NOT_FOUND", "no token");
   B.tokens.set(IDS.taloTok, tok);
-  const extra = makeToken({ id: "taloExtra0000002", name: "Talo", actorId: IDS.talo }, C);
+  const extra = makeToken({ id: "taloExtra0000002", name: "Talo", actorId: IDS.talo, actorLink: true }, C);
   C.tokens.set(extra.id, extra);
-  assert.equal((await api.teleport(IDS.taloUser, { x: 1, y: 1 })).code, "AMBIGUOUS", "two tokens");
+  assert.equal((await api.teleport(IDS.taloUser, { x: 1, y: 1 })).code, "AMBIGUOUS", "two linked tokens");
+  extra.actorLink = false;   // live R6-15: an unlinked copy beside the linked token is not the character
+  assert.notEqual((await api.teleport(IDS.taloUser, { x: 1, y: 1, dryRun: true })).code, "AMBIGUOUS", "an unlinked copy is ignored");
   C.tokens.delete(extra.id);
   portalsAnswer = { ok: false, code: "BAD_ARGS", reason: "level x is not on Cave" };
   assert.deepEqual(await api.teleport(IDS.taloUser, { x: 1, y: 1, scene: IDS.sceneC, level: "x" }), portalsAnswer);

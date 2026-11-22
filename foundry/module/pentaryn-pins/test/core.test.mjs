@@ -18,7 +18,7 @@ test("core loads with no Foundry globals present", () => {
   for (const name of ["game", "canvas", "ui", "Hooks", "CONFIG", "foundry"]) {
     assert.equal(name in globalThis, false, `${name} is defined in a bare node process`);
   }
-  for (const fn of ["pinOf", "pickToken", "activateDecision", "netDecision", "coreSwitchesLevel", "levelFollow", "replayDecision",
+  for (const fn of ["pinOf", "pickToken", "characterTokens", "activateDecision", "netDecision", "coreSwitchesLevel", "levelFollow", "replayDecision",
     "tokenNotice", "pinnedNavTab", "auditPins", "menuTrigger", "menuAllowed", "menuPlacement", "teleportChoices", "singleChoices", "pinnedName", "gatherPlan", "gatherRow", "gatherResult"]) assert.equal(typeof core[fn], "function", fn);
   for (const gone of ["viewDecision", "queueDecision", "followNeeded", "TOAST_EVERY_MS", "SETTLE_MS", "SETTLE_GIVE_UP_MS"]) {
     assert.equal(gone in core, false, `${gone} was deleted in 0.2.0 (core's own pull moves the player)`);

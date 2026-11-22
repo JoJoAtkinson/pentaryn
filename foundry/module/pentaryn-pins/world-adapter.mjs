@@ -6,7 +6,7 @@
  * tokens. Nothing here needs `canvas`: the bot GM tab calls the API without one.
  */
 
-import { FLAG_SCOPE, PIN_FLAG, auditPins, pickToken, pinOf } from "./pins-core.mjs";
+import { FLAG_SCOPE, PIN_FLAG, auditPins, characterTokens, pickToken, pinOf } from "./pins-core.mjs";
 import { errorCode, fail } from "./lib/errors.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
@@ -93,6 +93,7 @@ export function tokensByRoots(roots) {
       if (want.has(root)) out[root].push(tokenRecord(t, root));
     }
   }
+  for (const r of Object.keys(out)) out[r] = characterTokens(out[r]);
   return out;
 }
 

@@ -1,5 +1,14 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
+## 0.5.2 — 2026-11-22
+
+- **Fixed [declared]** `teleport` refused with AMBIGUOUS, and the audit reported MANY_TOKENS, when unlinked
+  tokens of the pinned character's own actor lay on other scenes (live play-test round 6, R6-15). When the
+  character has a linked token, an unlinked copy of that same actor is not the character and is left out of
+  every pinned read (follow, teleport, gather, the menu, the audit); unlinked form tokens (wild shape,
+  polymorph) always count, and a root with no linked token keeps all its tokens. New pure rule
+  `characterTokens(cands)` in `pins-core.mjs`.
+
 ## 0.5.1 — 2026-11-22
 
 - **Fixed [declared]** a right-click on a pentaryn-aoe wall break disc repaired the wall and also
