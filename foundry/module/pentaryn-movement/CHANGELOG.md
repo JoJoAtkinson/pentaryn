@@ -35,6 +35,22 @@ use-doc `context/foundry/movement.md`).
   (dry run), `stop(ref)` (relay row), `status().group` (appended key: the regime, the last drop, the
   recent fallback reasons); selftest checks both wraps. Listens to two more `setup` (once) hooks.
   Adjustments rows `movement-group-drop`, `movement-click-stop`, `core-movement-group-drag-internals`.
+- Table review (UX and robustness), before release:
+  - The grabbed token walks the route its drag preview showed (its pathfound drag path is reused
+    as its group route), instead of a fresh search at the drop that could differ or stall.
+  - One route call during group planning is capped below the per-member budget (`routeTo` takes
+    `maxMs`), so a very long or impossible route excludes that member instead of freezing the drop
+    for up to 1.5 s and then dropping the whole group to core.
+  - A group stays one group until its last member should be at rest (not only until its last wave
+    is sent), and a one-wave group (ghost, unconstrained, all at once) is a group too: a click on
+    any member stops them all, as the plan says.
+  - A newer drop of a token by this client wins over its older pending wave or slow plan; waves and
+    slow-plan commits go to the drop's own scene, also after the GM switches the view mid-move.
+  - Followers keep their own pathfinding during a group drag core will commit anyway (Ctrl-click
+    waypoints, a direct or planned move), as in 0.3.0; before, they stopped at the first wall.
+  - In combat a planned (API) move keeps its own waypoints (no cell checkpoints inserted).
+  - A refused or failed stop-in-place puts the token back where the server has it, instead of
+    leaving it frozen at the click point on this client.
 - Files: `motion-core.mjs`, `group-core.mjs` (pure), `group-adapter.mjs`, `group.mjs`, `stop.mjs`.
   Tests: `group-core.test` (the plan's twelve unit acceptance tests and the decision tables),
   `group.test` (the two wraps). Not yet play-tested live (the plan's live list).

@@ -40,10 +40,17 @@ const groups = new Map();
 const groupOf = new Map();                 // token id → group id
 let last = null;                           // the last drop, for status()
 const fallbacks = [];                      // the last few reasons a drop went to core
+/** token id → the sequence number of this client's latest drop of it: an older plan or wave never overrides a newer drop. */
+const latestDrop = new Map();
+let dropSeq = 0;
 
 const now = () => globalThis.performance?.now?.() ?? Date.now();
 /** One async planning slice (ms), as the pathfinder's. */
 const SLICE_MS = 8;
+/** One route call's wall-clock cap: under the per-member budget, so a long or impossible route excludes that member instead of freezing the drop. */
+const ROUTE_MS = Math.max(GROUP_LIMITS.memberMs - 30, 20);
+/** How long after its last member should be at rest a group is still held as one (ms). */
+const GROUP_HOLD_MS = 1000;
 
 function fellBack(reason) {
   fallbacks.unshift({ at: new Date().toISOString(), reason });
@@ -64,6 +71,10 @@ function groupFollower(token) {
   const contexts = dragged.mouseInteractionManager?.interactionData?.contexts ?? {};
   const n = Object.keys(contexts).length;
   if (n < 2 || n > GROUP_LIMITS.maxMembers || !(token.document?.id in contexts)) return false;
+  // A drop core will commit anyway (Ctrl-click waypoints, a direct or planned move) keeps every
+  // member's own pathfinding, as before 0.4.0: otherwise its followers would stop at the first wall.
+  const planning = token.layer?._movementPlanningContext;
+  if (planning || Object.values(contexts).some(c => c?.waypoints?.length)) return false;
   return (token.document?.parent?.grid?.type ?? globalThis.canvas?.grid?.type) === 1;
 }
 
@@ -125,7 +136,8 @@ function checkpointAll(contexts, options) {
   for (const c of contexts) {
     const id = c.token?.document?.id;
     const m = options.movement?.[id];
-    if (!m?.waypoints?.length || !inCombat(c.token.document)) continue;
+    // A planned move (the planning API) keeps its waypoints: its caller holds them as the plan's result.
+    if (!m?.waypoints?.length || m.planned || !inCombat(c.token.document)) continue;
     const origin = feature.exposed.pathfindOrigin?.(c.token.document) ?? c.foundPath?.[0];
     m.waypoints = withCheckpoints(c.token, [origin, ...m.waypoints]);
   }
@@ -158,13 +170,27 @@ function oraclesFor(members, anchor, { combat, constrain }) {
     if (!restMemo.has(k)) restMemo.set(k, restWalkable(rec, c, s));
     return restMemo.get(k);
   };
+  const measured = path => {
+    const pts = path.map(p => toSquares(p, anchor.w, anchor.h, s));
+    let length = 0;
+    for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+    let cost = null;
+    try { cost = anchor.token.measureMovementPath(path, { preview: true })?.cost ?? null; } catch { cost = null; }
+    return { points: pts, length, data: { path, cost } };
+  };
   const route = (m, from, to, { avoid = [] } = {}) => {
     const rec = byId.get(m.id);
     const doc = rec.token.document;
-    const origin = feature.exposed.pathfindOrigin(doc);
     const tl = toTopLeft(to, rec.w, rec.h, s);
     const atFormation = tl.x === rec.dest.x && tl.y === rec.dest.y;
     const last = rec.corePathRaw?.at(-1) ?? {};
+    // The grabbed token to its drop point: the route its drag preview showed (already pathfound and
+    // constrained while dragging), so it walks what the player saw and the drop never searches it again.
+    const shown = rec.corePathRaw ?? [];
+    const src = doc._source;
+    if (m.id === anchor.id && !avoid.length && atFormation && shown.length >= 2 && last.x === tl.x && last.y === tl.y
+      && shown[0].x === src.x && shown[0].y === src.y) return measured(shown);
+    const origin = feature.exposed.pathfindOrigin(doc);
     const dest = {
       ...origin, x: tl.x, y: tl.y, elevation: rec.dest.elevation ?? origin.elevation,
       action: last.action ?? doc.movementAction, snapped: combat || (atFormation && !!rec.dest.snapped),
@@ -172,6 +198,7 @@ function oraclesFor(members, anchor, { combat, constrain }) {
     };
     const r = feature.exposed.pathfindRouteTo(rec.token, origin, dest, {
       preview: true, avoid: avoid.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
+      maxMs: ROUTE_MS,
     });
     if (!r?.reached || !r.path?.length) return null;
     const pts = r.path.map(p => toSquares(p, rec.w, rec.h, s));
@@ -236,33 +263,57 @@ function batches(plan, members, [updates, options], combat) {
   });
   const first = byWave[0]?.at === 0 ? cut(byWave[0].ids) : { updates: [], movement: {} };
   const later = byWave.filter(w => w.at > 0).map(w => ({ at: w.at, ids: w.ids, ...cut(w.ids) }));
-  return { first: [first.updates, { ...base, movement: first.movement }], later, base };
+  // When the last member should be at rest (ms after the drop): the group is stoppable as one until then.
+  let endMs = 0;
+  for (const m of members) {
+    const e = plan.members[m.id];
+    const pts = e?.points ?? [];
+    let len = 0;
+    for (let k = 1; k < pts.length; k++) len += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+    endMs = Math.max(endMs, (e?.delay ?? 0) + (len / (m.speed > 0 ? m.speed : MOTION.speed)) * 1000);
+  }
+  return { first: [first.updates, { ...base, movement: first.movement }], later, base, endMs };
 }
 
-/** Send the later waves from this client; each checks the group was not stopped and its members have not moved. */
-function schedule(later, base, members) {
-  if (!later.length) return;
+/**
+ * Which of `ids` may still be sent for drop `seq`: on `scene`, not moved since the drop
+ * (`starts`), and not dropped again by this client since (a newer drop always wins).
+ */
+function stillOurs(ids, scene, starts, seq) {
+  return ids.filter(id => {
+    const doc = scene?.tokens?.get(id);
+    const at = starts.get(id);
+    return doc && at && latestDrop.get(id) === seq && doc._source.x === at.x && doc._source.y === at.y;
+  });
+}
+
+/** Send one batch for drop `seq`, only for the members still ours. */
+function send(scene, seq, starts, updates, options, what) {
+  const ids = stillOurs(updates.map(u => u._id), scene, starts, seq);
+  if (!ids.length) return;
+  const movement = Object.fromEntries(ids.map(id => [id, options.movement?.[id]]).filter(([, m]) => m));
+  scene.updateEmbeddedDocuments("Token", updates.filter(u => ids.includes(u._id)), { ...options, movement })
+    .catch(err => log.warnOnce(`group-${what}`, `a group ${what} failed (further errors suppressed)`, err));
+}
+
+/**
+ * Hold this client's group until its last member should be at rest (so a click on any member stops
+ * them all, plan §12), and send the later waves; each checks the group was not stopped and its
+ * members have not moved or been dropped again. Waves go to the drop's own scene, also when this
+ * client has switched to another view meanwhile.
+ */
+function schedule(later, base, members, { scene, seq, starts, endMs = 0 }) {
+  if (!base || members.length < 2) return;
   const gid = foundry.utils.randomID();
   const group = { ids: new Set(members.map(m => m.id)), timers: [], stopped: false };
   groups.set(gid, group);
   for (const id of group.ids) groupOf.set(id, gid);
-  const starts = new Map(members.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
-  let left = later.length;
+  const lastWave = later.at(-1)?.at ?? 0;
+  group.timers.push(setTimeout(() => forget(gid), Math.max(endMs, lastWave) + GROUP_HOLD_MS));
   for (const wave of later) {
     group.timers.push(setTimeout(() => {
-      left -= 1;
-      if (left <= 0) forget(gid);
       if (group.stopped) return;
-      const ids = wave.ids.filter(id => {
-        const doc = canvas.scene?.tokens?.get(id);
-        const at = starts.get(id);
-        return doc && at && doc._source.x === at.x && doc._source.y === at.y;
-      });
-      if (!ids.length) return;
-      const updates = wave.updates.filter(u => ids.includes(u._id));
-      const movement = Object.fromEntries(ids.map(id => [id, wave.movement[id]]));
-      canvas.scene.updateEmbeddedDocuments("Token", updates, { ...base, movement })
-        .catch(err => log.warnOnce("group-wave", "a group wave failed (further errors suppressed)", err));
+      send(scene, seq, starts, wave.updates, { ...base, movement: wave.movement }, "wave");
     }, wave.at));
   }
 }
@@ -270,6 +321,7 @@ function schedule(later, base, members) {
 function forget(gid) {
   const g = groups.get(gid);
   if (!g) return;
+  for (const t of g.timers) clearTimeout(t);
   for (const id of g.ids) if (groupOf.get(id) === gid) groupOf.delete(id);
   groups.delete(gid);
 }
@@ -285,7 +337,6 @@ function groupCancel(tokenId, { only = false } = {}) {
   if (!g) return [];
   if (only) { g.ids.delete(tokenId); groupOf.delete(tokenId); return [tokenId]; }
   g.stopped = true;
-  for (const t of g.timers) clearTimeout(t);
   const ids = [...g.ids];
   forget(gid);
   return ids;
@@ -304,6 +355,9 @@ function onDrop(grabbed, event, result) {
   if (!Array.isArray(result) || !Array.isArray(result[0]) || !result[1]?.movement) return result;
   const contexts = contextsOf(event).filter(c => c?.token?.document);
   if (!contexts.length) return result;
+  // Every drop, whatever its mode, supersedes this client's pending plan or waves for those tokens.
+  const seq = ++dropSeq;
+  for (const c of contexts) latestDrop.set(c.token.document.id, seq);
   const info = modeFor(grabbed, contexts);
   const t0 = now();
   last = { at: new Date().toISOString(), mode: info.mode, reason: info.reason, combat: info.combat, members: contexts.length,
@@ -335,19 +389,21 @@ function onDrop(grabbed, event, result) {
     return b;
   };
 
+  const scene = grabbed.document.parent ?? canvas.scene;
+  const starts = new Map(prep.members.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
+  const hold = b => ({ scene, seq, starts, endMs: b.endMs ?? 0 });
   const step = runPlan(prep.gen, GROUP_LIMITS.syncMs, now);
   if (step.done) {
     const b = finish(step.value);
-    schedule(b.later, b.base, prep.members);
+    schedule(b.later, b.base, prep.members, hold(b));
     return b.first[0].length ? b.first : null;
   }
 
-  // Async: finish in timer slices, then commit the same shape core would have.
+  // Async: finish in timer slices, then commit the same shape core would have, for the members
+  // nobody moved and this client did not drop again in the meantime.
   last.async = true;
   const commit = ([updates, options]) => {
-    if (!updates.length) return;
-    canvas.scene.updateEmbeddedDocuments("Token", updates, options)
-      .catch(err => log.warnOnce("group-commit", "a group move failed (further errors suppressed)", err));
+    if (updates.length) send(scene, seq, starts, updates, options, "move");
   };
   const tick = () => {
     let b;
@@ -364,7 +420,7 @@ function onDrop(grabbed, event, result) {
       b = { first: result, later: [], base: null };
     }
     commit(b.first);
-    schedule(b.later, b.base, prep.members);
+    schedule(b.later, b.base, prep.members, hold(b));
   };
   setTimeout(tick, 0);
   return null;
@@ -475,5 +531,6 @@ export function uninstall() {
   }
   last = null;
   fallbacks.length = 0;
+  latestDrop.clear();
   feature = null;
 }
