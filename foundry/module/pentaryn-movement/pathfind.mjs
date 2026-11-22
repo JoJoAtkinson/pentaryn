@@ -126,10 +126,9 @@ function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   const lead = f.onLattice(a) ? null : f.pos(start);
   if (lead && !f.clear(a, lead)) { leg.state = "none"; return leg; }
   leg.lead = lead;
-  leg.job = pf.search({
-    start, goal: f.goal, edge: f.edge, wall: f.wall, unit: f.unit,
-    bounds: pf.boundsFor(start, f.goal, f.lattice), maxNodes: LIMITS.maxNodes, now,
-  });
+  leg.job = pf.searchWide({
+    start, goal: f.goal, edge: f.edge, wall: f.wall, unit: f.unit, maxNodes: LIMITS.maxNodes, now,
+  }, f.lattice);
   leg.finish = () => {
     leg.nodes = leg.job.expanded;
     const pulled = pf.stringPull(leg.job.path, leg.job.costs, { edge: f.edge, wall: f.wall, lineOk: f.lineOk });

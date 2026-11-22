@@ -259,3 +259,34 @@ test("fillet never repeats a point where two arcs meet (corners closer than two 
     assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 0.5, `points ${k - 1} and ${k} coincide: ${JSON.stringify([a, b])}`);
   }
 });
+
+test("searchWide (R2-7): a maze whose only gap lies outside the start/goal box is still routed; the box alone finds none", async () => {
+  const { search, searchWide, boundsFor } = await import("../pathfind-core.mjs");
+  // The R2 maze: 27 x 20 cells of 100 px, walls at x = 500, 900, 1300, 1700; gaps: 1700 top, 1300 bottom, 900 top, 500 bottom.
+  const walls = { 4: "bottom", 8: "top", 12: "bottom", 16: "top" };        // between column j and j+1
+  const open = (j, i) => { const g = walls[j]; return !g || (g === "top" ? i <= 2 : i >= 17); };
+  const edge = (a, b) => {
+    if (Math.max(a.i, b.i) > 19 || Math.min(a.i, b.i) < 0 || Math.max(a.j, b.j) > 26 || Math.min(a.j, b.j) < 0) return null;
+    if (a.j !== b.j) { const k = Math.min(a.j, b.j); if (walls[k] && !(open(k, a.i) && open(k, b.i))) return null; }
+    return Math.hypot(a.i - b.i, a.j - b.j);
+  };
+  const limit = { minI: 0, maxI: 19, minJ: 0, maxJ: 26 };
+  const start = { i: 14, j: 24 }, goal = { i: 16, j: 10 };          // Hero 0 at (2450,1450) → (1050,1650)
+  const boxed = search({ start, goal, edge, bounds: boundsFor(start, goal, limit) });
+  assert.equal(boxed.run(), "none", "the box (8-cell margin) does not reach the top gap at x=1700");
+  const wide = searchWide({ start, goal, edge }, limit);
+  let r;
+  do r = wide.run(); while (r === "more");
+  assert.equal(r, "found");
+  assert.equal(wide.widened, true);
+  assert.ok(wide.path.some(n => n.i <= 2 && n.j === 16), "through the top gap of x=1700");
+  assert.deepEqual(wide.path.at(-1), goal);
+  // A route inside the box is found without widening.
+  const near = searchWide({ start, goal: { i: 10, j: 20 }, edge }, limit);
+  do r = near.run(); while (r === "more");
+  assert.deepEqual([r, near.widened], ["found", false]);
+  // No route anywhere: none, after one widening.
+  const sealed = searchWide({ start, goal, edge: (a, b) => (b.j < 17 && a.j >= 17 ? null : edge(a, b)) }, limit);
+  do r = sealed.run(); while (r === "more");
+  assert.deepEqual([r, sealed.widened], ["none", true]);
+});

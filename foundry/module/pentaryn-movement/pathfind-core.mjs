@@ -202,6 +202,45 @@ export function search(spec) {
   return job;
 }
 
+/**
+ * A search that widens (0.4.2, live R2-7): first in the start/goal box plus a margin (boundsFor), then,
+ * when that box holds no route and the search was not cut off by maxNodes, in the whole of `limit`
+ * (the scene's lattice). A maze whose only gap lay outside the box (a drag 14 cells along the bottom,
+ * the opening 12 cells up) used to find nothing, and the drag stopped at the first wall. The nodes
+ * expanded in the box count against maxNodes for the wide search too. Same job shape as search().
+ * @param {object} spec    search()'s spec, without bounds
+ * @param {{minI,maxI,minJ,maxJ}|null} limit
+ */
+export function searchWide(spec, limit) {
+  const maxNodes = spec.maxNodes ?? LIMITS.maxNodes;
+  const box = boundsFor(spec.start, spec.goal, limit, spec.margin ?? LIMITS.margin);
+  const wider = limit && (box.minI > limit.minI || box.maxI < limit.maxI || box.minJ > limit.minJ || box.maxJ < limit.maxJ);
+  let job = search({ ...spec, bounds: box, maxNodes });
+  let spent = 0, widened = false;
+  const clock = spec.now ?? (() => 0);
+  const out = { path: null, costs: null, expanded: 0, state: "more", widened: false };
+  out.run = (budgetMs = Infinity) => {
+    if (out.state !== "more") return out.state;
+    const t0 = clock();
+    let r = job.run(budgetMs);
+    out.expanded = spent + job.expanded;
+    if (r === "none" && wider && !widened && job.expanded < maxNodes) {
+      widened = true;
+      out.widened = true;
+      spent = job.expanded;
+      job = search({ ...spec, bounds: limit, maxNodes: Math.max(maxNodes - spent, 1) });
+      // The rest of this slice goes to the wide search (a search always makes some progress per call).
+      r = job.run(budgetMs === Infinity ? Infinity : Math.max(budgetMs - (clock() - t0), 0));
+      out.expanded = spent + job.expanded;
+    }
+    if (r === "more") return "more";
+    out.path = job.path;
+    out.costs = job.costs;
+    return (out.state = r);
+  };
+  return out;
+}
+
 /* -------------------------------------------- */
 /*  2. String pulling                           */
 /* -------------------------------------------- */
