@@ -13,6 +13,10 @@ Four things live here, and only these:
 * ``_isolate_ops_log`` (autouse) — every module install appends to
   ``foundry/logs/ops-YYYY-MM.jsonl`` (python-tooling-10). No test may write there, so the log
   folder is a tmp folder for every test, and ``$PENTARYN_OPS_LOG`` is unset.
+* ``_isolate_tunnel`` (autouse) — the tunnel's run folder (pidfile, log, lock) is a tmp
+  folder and the machine has no cloudflared processes, so no test can delete the live
+  pidfile or signal the live tunnel (a test did delete it, 2026-11-20: two orphaned
+  connectors kept serving players).
 * ``_no_host_side`` (autouse) — the updater's host plan is empty and validation is skipped.
 * ``_isolate_notices`` (autouse) — notify's off-Mac queue for the headless GM is a tmp folder.
 * ``fake_cloud`` / ``fake_data`` (autouse) — the cloud is a temp folder and Foundry's data
@@ -80,6 +84,22 @@ def _isolate_ops_log(monkeypatch, tmp_path_factory):
 
     monkeypatch.setattr(cfg, "OPS_LOG_DIR", tmp_path_factory.mktemp("ops-log"))
     monkeypatch.delenv("PENTARYN_OPS_LOG", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_tunnel(monkeypatch, tmp_path_factory):
+    """`.run/cloudflared.pid` is the live tunnel's pidfile whenever the suite runs on the
+    host that serves players. tunnel_up/tunnel_down delete a pidfile they take for stale
+    and SIGTERM the connectors they find, so by default a test gets its own run folder
+    and a machine with no cloudflared at all. A test that wants processes patches
+    ``service._tunnel_processes`` itself."""
+    from scripts.foundry.ops import config as cfg, service
+
+    run = tmp_path_factory.mktemp("run")   # not tmp_path: tests assert theirs stays empty
+    monkeypatch.setattr(cfg, "RUN_DIR", run)
+    monkeypatch.setattr(cfg, "CF_PID", run / "cloudflared.pid")
+    monkeypatch.setattr(cfg, "CF_LOG", run / "cloudflared.log")
+    monkeypatch.setattr(service, "_tunnel_processes", lambda: [])
 
 
 @pytest.fixture(autouse=True)

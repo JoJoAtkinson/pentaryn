@@ -226,6 +226,52 @@ def _is_cloudflared(pid: int) -> bool:
     return Path((res.stdout or "").strip()).name in ("cloudflared", "cloudflared.exe")
 
 
+def _tunnel_processes() -> list[int]:
+    """Every live `cloudflared … run <TUNNEL_NAME>` on this machine, oldest pid first.
+
+    The pidfile names one process; this is what is actually running. They differ when the
+    pidfile was lost while its cloudflared lived (a test deleted the real one, 2026-11-20):
+    tunnel-down then said "already down", tunnel-up started a second connector, and the
+    first kept serving players with the config it was started with. Each connector is a
+    replica the edge load-balances over, so a config change (the http2 pin) reached only
+    a third of the traffic. A failed `ps` reads as "none": never worse than before."""
+    try:
+        res = subprocess.run(["ps", "-eo", "pid=,comm=,args="],
+                             capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    pids = []
+    for line in (res.stdout or "").splitlines():
+        parts = line.split()
+        if len(parts) < 3 or not parts[0].isdigit():
+            continue
+        pid, comm, args = int(parts[0]), parts[1], parts[2:]
+        if Path(comm).name not in ("cloudflared", "cloudflared.exe"):
+            continue
+        # `cloudflared tunnel [--config …] run <name>`: the name follows `run`. Another
+        # tunnel on this machine (a different name) or a quick tunnel (`--url`) is not ours.
+        if any(a == "run" and args[i + 1:i + 2] == [cfg.TUNNEL_NAME] for i, a in enumerate(args)):
+            pids.append(pid)
+    return sorted(pids)
+
+
+def _stop_connectors(pids: list[int], wait: float = 10.0) -> list[int]:
+    """SIGTERM each pid (cloudflared drains and exits), wait for them to go, and return
+    the ones still alive after `wait` seconds. Never signals a pid <= 1."""
+    pids = [p for p in pids if p > 1]
+    for pid in pids:
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
+    deadline = time.monotonic() + wait
+    left = pids
+    while left and time.monotonic() < deadline:
+        time.sleep(0.25)
+        left = [p for p in left if _is_cloudflared(p)]
+    return left
+
+
 def _drop_stale_pidfile() -> None:
     """Called once _tunnel_pid() has said no: any pidfile left is stale."""
     if cfg.CF_PID.exists():
@@ -311,7 +357,20 @@ def tunnel_up() -> int:
         return OK
     cfg.RUN_DIR.mkdir(parents=True, exist_ok=True)
     with _tunnel_lock():   # check → start → pidfile is one step to a concurrent run
-        if (pid := _tunnel_pid()) is not None:
+        pid = _tunnel_pid()
+        # One connector, and it is the pidfile's. Anything else running this tunnel was
+        # started before a pidfile was lost; it still serves players, on whatever config
+        # it was started with. Stop it — also when there is no pidfile at all, so the
+        # fresh start below is the only connector and runs the current config.
+        strays = [p for p in _tunnel_processes() if p != pid]
+        if strays:
+            _say(f"! {len(strays)} other cloudflared connector(s) for '{cfg.TUNNEL_NAME}' "
+                 f"not in the pidfile (pid {', '.join(map(str, strays))}) — stopping")
+            if left := _stop_connectors(strays):
+                _say(f"✗ still running after SIGTERM: pid {', '.join(map(str, left))} "
+                     "— tunnel not started; stop them by hand, then make tunnel-up")
+                return FAIL
+        if pid is not None:
             _say(f"▸ tunnel already up (pid {pid})")
             return OK
         _drop_stale_pidfile()
@@ -346,15 +405,26 @@ def tunnel_up() -> int:
 
 
 def tunnel_down() -> int:
+    """Stop every connector for this tunnel on this machine: the pidfile's and any the
+    pidfile does not know about (see _tunnel_processes)."""
     pid = _tunnel_pid()
-    if pid is None:
+    strays = [p for p in _tunnel_processes() if p != pid]
+    if pid is None and not strays:
         _drop_stale_pidfile()
         _say("▸ tunnel already down")
         return OK
-    try:
-        os.kill(pid, 15)
-    except OSError:
-        pass
+    if pid is not None:
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
+    if strays:
+        _say(f"! also stopping {len(strays)} cloudflared connector(s) not in the pidfile "
+             f"(pid {', '.join(map(str, strays))})")
+        if left := _stop_connectors(strays):
+            _say(f"✗ still running after SIGTERM: pid {', '.join(map(str, left))}")
+            cfg.CF_PID.unlink(missing_ok=True)
+            return FAIL
     cfg.CF_PID.unlink(missing_ok=True)
     _say("✓ tunnel stopped")
     return OK
@@ -404,6 +474,7 @@ def status_report() -> dict:
     """The three answers as data: `{foundry, tunnel, public}` (python-tooling-41)."""
     up = foundry_is_up(3.0)
     pid = _tunnel_pid()
+    strays = [p for p in _tunnel_processes() if p != pid]
     # The one that matters — and the one that used to lie. "HTTP 403" was printed
     # both when the tunnel was down and when it was perfectly healthy but no world
     # was launched: Foundry redirects the root to /setup, and /setup is 403'd at the
@@ -434,7 +505,7 @@ def status_report() -> dict:
     return {
         "foundry": {"up": up, "url": cfg.FOUNDRY_URL},
         "tunnel": {"up": bool(pid), "pid": pid, "host": cfg.TUNNEL_HOST,
-                   "disabled": tunnel_disabled()},
+                   "disabled": tunnel_disabled(), "strays": strays},
         "public": {"state": state, "code": code, "location": location, "verdict": verdict},
     }
 
@@ -458,5 +529,9 @@ def status(as_json: bool = False) -> int:
     else:
         line = "down (make tunnel-up; the 03:00 nightly also starts it)"
     print(f"  {'tunnel:':<10} {line}")
+    if strays := r["tunnel"].get("strays"):
+        print(f"  {'':<10} ! {len(strays)} EXTRA connector(s) not in the pidfile "
+              f"(pid {', '.join(map(str, strays))}): players are spread over all of them,\n"
+              f"  {'':<10}   each on the config it was started with — make tunnel-down && make tunnel-up")
     print(f"  {'public:':<10} {r['public']['verdict']}")
     return OK
