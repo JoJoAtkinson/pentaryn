@@ -150,7 +150,8 @@ Listens to (pinned in `test/golden/hooks.json`, in this order): `init` (once), `
 `updateCombatant`, `deleteCombatant`, `createToken`, `deleteToken`, `renderTokenHUD`, then pathfind's
 `setup` (once), `createWall`, `updateWall`, `deleteWall`, `createRegion`, `updateRegion`, `deleteRegion`,
 `createRegionBehavior`, `updateRegionBehavior`, `deleteRegionBehavior`, `createToken`, `updateToken`,
-`deleteToken`, `canvasReady` (each drops the step cache), and `ready` (once).
+`deleteToken`, `controlToken`, `canvasReady` (each drops the step cache; `canvasReady` also listens to
+the scene's fog "explored", which drops it too), and `ready` (once).
 
 ## Patches and adjustments
 

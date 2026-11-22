@@ -39,21 +39,39 @@ let bypass = false;
  * Step results (walls, creatures, cost) memoised across the searches of one drag: core asks again
  * on every square the pointer crosses, and nearly every step is the same. Keys are absolute
  * positions plus the moving token's id, size, action, level, elevation and preview: creature
- * blocking and creature difficult terrain depend on who moves. Dropped when a wall, door, region or token changes, on a new canvas, and after MEMO_TTL
- * (fog the player explores mid-drag changes which walls count in preview).
+ * blocking and creature difficult terrain depend on who moves. Dropped when a wall, door, region or
+ * token changes, when the controlled tokens change (dnd5e never blocks on a token moved with the
+ * mover), when this client's fog is explored (which walls and creatures count in preview), on a new
+ * canvas, and once the cache is MEMO_TTL old — its age, not its idle time, so a drag that keeps the
+ * cache busy still sees what changed visibility (a creature coming into view) within MEMO_TTL.
  */
 const MEMO_TTL = 2000;
 const MEMO_MAX = 200000;
 let memo = new Map();
-let memoAt = 0;
+let memoBorn = 0;
 function memoNow() {
   const t = Date.now();
-  if (t - memoAt > MEMO_TTL || memo.size > MEMO_MAX) { memo = new Map(); }
-  memoAt = t;
+  if (t - memoBorn > MEMO_TTL || memo.size > MEMO_MAX) { memo = new Map(); memoBorn = t; }
   return memo;
 }
 function dropMemo() {
   memo = new Map();
+  memoBorn = Date.now();
+}
+
+/** The FogManager this client listens to for "explored" (core's TokenLayer re-plans on it too). */
+let fogTarget = null;
+function watchFog() {
+  const fog = globalThis.canvas?.fog;
+  if (fog === fogTarget) return;
+  unwatchFog();
+  if (typeof fog?.addEventListener !== "function") return;
+  fog.addEventListener("explored", dropMemo);
+  fogTarget = fog;
+}
+function unwatchFog() {
+  fogTarget?.removeEventListener?.("explored", dropMemo);
+  fogTarget = null;
 }
 
 /** What the last search did, for status(). */
@@ -331,7 +349,7 @@ const DROP_HOOKS = [
   "createRegion", "updateRegion", "deleteRegion",
   "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior",
   "createToken", "updateToken", "deleteToken",
-  "canvasReady",
+  "controlToken",
 ];
 
 /** A setting changed: drop the cache and let core re-plan any drag in progress. */
@@ -347,6 +365,8 @@ export function install(reg, ctx) {
   if (ctx.late) findPatched = patchFind();
   else reg.once("setup", () => { findPatched = patchFind(); }, { guard: false, label: "setup: wrap findMovementPath" });
   for (const h of DROP_HOOKS) reg.on(h, dropMemo, { label: `${h}: drop path cache` });
+  reg.on("canvasReady", () => { dropMemo(); watchFog(); }, { label: "canvasReady: drop path cache, watch fog explored" });
+  if (ctx.late) watchFog();
   ctx.expose({
     pathfindStatus: status,
     pathfindRoute: route,
@@ -358,6 +378,7 @@ export function uninstall() {
   findHandle?.unwrap();
   findHandle = null;
   findPatched = false;
+  unwatchFog();
   dropMemo();
   last = null;
   if (feature) for (const key of ["pathfinding", "pathfindMine", "smoothCorners"]) feature.onSettingChange(key, null);

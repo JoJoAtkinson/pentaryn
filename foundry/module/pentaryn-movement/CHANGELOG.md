@@ -24,9 +24,11 @@ Drag pathfinding (plan `context/plans/pathfinding-2026-11.md`).
 - Three settings: `pathfinding` (world: everyone / gm / off, default everyone), `pathfindMine` and
   `smoothCorners` (client, default on). `status().settings` lists them (appended keys).
 - API: `pathfind.status()` and `pathfind.route(ref, { to, preview?, smooth? })` (read-only); selftest
-  checks the wrap. Listens to 14 more hooks (wall, region, behaviour and token changes, `canvasReady`,
-  a second `setup`): each drops the step cache. The cache is keyed per moving token, since creature
-  blocking and creature difficult terrain depend on who moves.
+  checks the wrap. Listens to 15 more hooks (wall, region, behaviour and token changes,
+  `controlToken`, `canvasReady`, a second `setup`): each drops the step cache, and `canvasReady`
+  also watches the scene's fog "explored" event, which drops it too. The cache is keyed per moving
+  token, since creature blocking and creature difficult terrain depend on who moves, and expires
+  2 s after it was built (its age, not idle time, so a long drag still sees visibility change).
 
 ## 0.2.0 — 2026-11-07
 

@@ -125,6 +125,10 @@
   },
   {
     "kind": "on",
+    "name": "controlToken"
+  },
+  {
+    "kind": "on",
     "name": "canvasReady"
   },
   {

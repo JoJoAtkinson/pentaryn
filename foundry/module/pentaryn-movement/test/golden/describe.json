@@ -368,8 +368,12 @@
       "label": "deleteToken: drop path cache"
     },
     {
+      "name": "controlToken",
+      "label": "controlToken: drop path cache"
+    },
+    {
       "name": "canvasReady",
-      "label": "canvasReady: drop path cache"
+      "label": "canvasReady: drop path cache, watch fog explored"
     }
   ],
   "patches": [

@@ -224,3 +224,61 @@ test("the step cache is per mover: one token's own square is not another's free 
   const fa = fieldFor(a, wp(0, 0), goal, opts);
   assert.equal(fa.blocked(fa.nodeOf(occupied)), true, "the same square blocks A, cache or not");
 });
+
+/** Count the wall rays one drag casts (0 = every step came from the cache). */
+function raysOf(fn) {
+  const orig = Token5e.prototype.checkCollision;
+  let n = 0;
+  Token5e.prototype.checkCollision = function (...a) { n += 1; return orig.apply(this, a); };
+  try { fn(); } finally { Token5e.prototype.checkCollision = orig; }
+  return n;
+}
+
+test("the step cache expires by age, not idle time: a drag that keeps using it still re-reads after 2 s", async () => {
+  await set("smoothCorners", false);
+  world.walls = [[{ x: 300, y: 0 }, { x: 300, y: 400 }]];
+  const realNow = Date.now;
+  let t = 1_000_000_000;
+  Date.now = () => t;
+  try {
+    F.fire("updateWall");                                    // a fresh cache, born now
+    const tok = makeToken();
+    const again = () => raysOf(() => drag(tok, [wp(0, 0), wp(500, 0)]));
+    assert.ok(again() > 0, "the first drag casts its rays");
+    for (const step of [500, 500, 500]) {                    // busy every 500 ms: reused
+      t += step;
+      assert.equal(again(), 0, `reused at +${t - 1_000_000_000} ms`);
+    }
+    t += 600;                                                // 2.1 s old, though used 600 ms ago
+    assert.ok(again() > 0, "rebuilt once the cache is older than 2 s");
+  } finally {
+    Date.now = realNow;
+    await set("smoothCorners", true);
+  }
+});
+
+test("the step cache drops when this client's fog is explored and when the controlled tokens change", async () => {
+  world.walls = [[{ x: 300, y: 0 }, { x: 300, y: 400 }]];
+  const fog = new EventTarget();
+  F.canvas.fog = fog;
+  F.fire("canvasReady", F.canvas);
+  const go = () => drag(makeToken(), [wp(0, 0), wp(500, 0)]);
+  go();
+  assert.ok(api.pathfind.status().memo > 0);
+  fog.dispatchEvent(new Event("explored"));
+  assert.equal(api.pathfind.status().memo, 0, "fog explored → dropped");
+  go();
+  assert.ok(api.pathfind.status().memo > 0);
+  F.fire("controlToken", {}, true);
+  assert.equal(api.pathfind.status().memo, 0, "controlToken → dropped");
+  // A new FogManager: the old one no longer drops the cache, the new one does.
+  const fog2 = new EventTarget();
+  F.canvas.fog = fog2;
+  F.fire("canvasReady", F.canvas);
+  go();
+  fog.dispatchEvent(new Event("explored"));
+  assert.ok(api.pathfind.status().memo > 0, "the old fog is unwatched");
+  fog2.dispatchEvent(new Event("explored"));
+  assert.equal(api.pathfind.status().memo, 0);
+  delete F.canvas.fog;
+});

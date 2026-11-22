@@ -11,14 +11,14 @@ const F = await movementWorld({ patchable: false });
 await import("../movement.mjs");
 const atLoad = F.hooks.slice();
 
-test("registration manifest equals golden/hooks.json (33 entries, today's order; 0.3.0 appends pathfind's 14)", () => {
+test("registration manifest equals golden/hooks.json (34 entries, today's order; 0.3.0 appends pathfind's 15)", () => {
   pinJSON("hooks", atLoad, import.meta.url);
   assert.deepEqual(atLoad.map(h => (h.kind === "once" ? `once ${h.name}` : h.name)), [
     "once init", "once setup", "getSceneControlButtons", "renderSceneControls", "drawTokenLayer", "canvasReady",
     "refreshToken", "updateActor", "updateToken", "createCombat", "updateCombat", "deleteCombat",
     "createCombatant", "updateCombatant", "deleteCombatant", "createToken", "deleteToken", "renderTokenHUD",
     "once setup", "createWall", "updateWall", "deleteWall", "createRegion", "updateRegion", "deleteRegion",
-    "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior", "createToken", "updateToken", "deleteToken",
+    "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior", "createToken", "updateToken", "deleteToken", "controlToken",
     "canvasReady", "once ready",
   ]);
 });
