@@ -20,10 +20,10 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { MOTION, cellChain, groupMode, radiusOf, waves } from "./motion-core.mjs";
+import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
 import { GROUP_LIMITS, flood, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
 import { skipReason } from "./pathfind-core.mjs";
-import { cutAtWalls, gridSize, inCombat, memberOf, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { clearOfWalls, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -42,6 +42,7 @@ let last = null;                           // the last drop, for status()
 let resumedLast = null;                    // the last reload that picked up unsent waves, for status()
 let stoppedAt = null;                      // the last time a turn change stopped a group, for status()
 let destacked = null;                      // the last rest check that moved a member off another, for status()
+let cutLast = null;                        // the last wall raised mid-walk that cut moves this client started, for status()
 const fallbacks = [];                      // the last few reasons a drop went to core
 /** token id → the sequence number of this client's latest drop of it: an older plan or wave never overrides a newer drop. */
 const latestDrop = new Map();
@@ -767,6 +768,166 @@ function onHistoryCleared(doc, options) {
 }
 
 /* -------------------------------------------- */
+/*  A wall raised mid-walk (live R6-3, R6-1)    */
+/* -------------------------------------------- */
+
+const DOOR_OPEN = 1;
+/** How long a combat cut waits for its stopped token to finish its square before it walks on (ms). */
+const CUT_WAIT_MS = 3000;
+const CUT_POLL_MS = 50;
+
+/** Does this wall block movement as it stands now? */
+function blocksMove(wall) {
+  const w = wall?._source ?? wall;
+  if (!w || !(Number(w.move) > 0)) return false;
+  return !(Number(w.door) > 0 && Number(w.ds) === DOOR_OPEN);
+}
+
+/**
+ * The route a moving token still has to walk, as core holds it: out of combat the whole path is one
+ * update (the document is already at its end, the tween walks `passed`), so the route starts where the
+ * token is drawn; in a fight (a checkpoint at every square) it starts at the square it is entering (its
+ * source), the rest is `pending`. null when nothing is left. Top-left pixels with width / height.
+ */
+function routeLeft(token, combat) {
+  const doc = token.document;
+  const m = doc.movement;
+  const src = doc._source;
+  const clean = w => ({ x: w.x, y: w.y, elevation: w.elevation ?? src.elevation ?? 0, width: w.width ?? src.width, height: w.height ?? src.height,
+    level: w.level ?? src.level, action: w.action ?? doc.movementAction ?? "walk", snapped: !!w.snapped, explicit: true, checkpoint: !!w.checkpoint });
+  if (combat) {
+    const pending = (m?.pending?.waypoints ?? []).filter(w => !w.intermediate);
+    if (!pending.length) return null;
+    return { from: { x: src.x, y: src.y, elevation: src.elevation ?? 0 }, waypoints: pending.map(clean) };
+  }
+  const all = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])].filter(w => Number.isFinite(w?.x) && Number.isFinite(w?.y));
+  const at = drawnPosition(token);
+  const k = routeAhead(all, at);
+  if (k === null) return null;
+  const waypoints = all.slice(k).map(clean);
+  if (waypoints.length) waypoints[waypoints.length - 1].checkpoint = true;
+  return { from: at, waypoints };
+}
+
+/**
+ * Where tokens rest or are going, for a cut (top-left `p` → taken?): every other token's source and, for one
+ * still walking with waypoints to go, where core will stop it (as takenFor), but never the movers being cut
+ * (their source is where they were going, core's stop for them is the stack this avoids): `claims`, the
+ * squares the movers before this one took, stand in for them.
+ */
+function takenForCut(scene, id, movers, claims) {
+  const doc = scene?.tokens?.get(id);
+  const s = doc?.object ? gridSize(doc.object) : (scene?.grid?.size ?? 100);
+  const src = doc?._source ?? {};
+  const w = src.width ?? 1, h = src.height ?? 1, r = radiusOf(w, h) * s;
+  const circles = [];
+  for (const o of scene?.tokens?.values?.() ?? []) {
+    if (!o?._source || o.id === id || movers.has(o.id)) continue;
+    if (o.hidden && !game.user?.isGM) continue;
+    if (src.level !== undefined && o._source.level !== undefined && o._source.level !== src.level) continue;
+    const ow = o._source.width ?? 1, oh = o._source.height ?? 1;
+    const or = radiusOf(ow, oh) * s;
+    circles.push({ x: o._source.x + (ow * s) / 2, y: o._source.y + (oh * s) / 2, r: or });
+    const stop = predictedStop(o);
+    if (stop) circles.push({ x: stop.x + (ow * s) / 2, y: stop.y + (oh * s) / 2, r: or });
+  }
+  for (const c of claims) if (c.id !== id) circles.push(c);
+  return p => {
+    const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
+    return circles.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1e-6);
+  };
+}
+
+/** In a fight: once the stopped token has finished its square, walk on to the cut square (a move, costed). */
+function walkOnAfterStop(doc, waypoints, left = Math.ceil(CUT_WAIT_MS / CUT_POLL_MS)) {
+  const token = doc.object;
+  if (!feature || !token || token.destroyed) return;
+  const st = doc.movement?.state;
+  if ((movementFacts(token).animating || st === "pending") && left > 0) {
+    setTimeout(() => walkOnAfterStop(doc, waypoints, left - 1), CUT_POLL_MS);
+    return;
+  }
+  try {
+    Promise.resolve(doc.move(waypoints, { method: "api" })).catch(err => log?.debug?.("cut: walk on", err));
+  } catch (err) { log?.debug?.("cut: walk on", err); }
+}
+
+/**
+ * createWall / updateWall, every client: a wall that now blocks movement across the route of a move this
+ * client started cuts that move on a whole square before it, one free square per token (live R6-3: out of
+ * combat the whole path is one update, so a door shut or a wall raised after the drop was walked straight
+ * through; R6-1: in a fight core cut every member walking to the door on the same last square, and the rest
+ * check split them with one-square jumps 4 s later). Out of combat the token walks on from where it is drawn
+ * to its square (one update: a displace to where it is drawn, then the route); in a fight it stops at its
+ * next square (stopMovement) and walks on from there, costed. The nearest to the wall chooses first. A token
+ * with no free square on its way stops where it stands. Ghost, unconstrained and wall-less actions pass.
+ * Returns the cuts made.
+ */
+function cutAcross(wall) {
+  const scene = wall?.parent;
+  const c = wall?._source?.c ?? wall?.c;
+  if (!feature || !scene?.tokens || !Array.isArray(c) || c.length < 4 || !blocksMove(wall)) return [];
+  const a = { x: c[0], y: c[1] }, b = { x: c[2], y: c[3] };
+  const movers = [];
+  for (const doc of scene.tokens.values?.() ?? []) {
+    const token = doc?.object;
+    const m = doc?.movement;
+    if (!token || token.destroyed || !m?.user?.isSelf || !doc.isOwner) continue;
+    if (m.constrainOptions?.ignoreWalls) continue;
+    const facts = movementFacts(token);
+    if (!facts.animating && m.state !== "pending" && m.state !== "paused") continue;
+    const combat = inCombat(doc);
+    const route = routeLeft(token, combat);
+    if (!route) continue;
+    const s = gridSize(token);
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
+    const legs = route.waypoints.filter(p => (CONFIG.Token?.movement?.actions?.[p.action]?.walls ?? "move") !== null);
+    const k = firstLegAcross(centre(route.from), legs.map(centre), a, b);
+    if (k < 0) continue;
+    // How far along it is to the wall: the nearer chooses its square first.
+    let along = 0, prev = centre(route.from);
+    for (let i = 0; i <= k; i++) { const q = centre(legs[i]); along += Math.hypot(q.x - prev.x, q.y - prev.y); prev = q; }
+    movers.push({ doc, token, combat, route, along, w, h, s });
+  }
+  if (!movers.length) return [];
+  movers.sort((x, y) => x.along - y.along);
+  const ids = new Set(movers.map(m => m.doc.id));
+  const claims = [];
+  const out = [];
+  for (const mv of movers) {
+    const { doc, token, combat, route, w, h, s } = mv;
+    let kept = [];
+    try { ({ waypoints: kept } = cutAtWalls(token, route.from, route.waypoints, { taken: takenForCut(scene, doc.id, ids, claims) })); }
+    catch (err) { log?.debug?.("cut: the square before the wall", err); kept = []; }
+    const end = kept.at(-1) ?? route.from;
+    claims.push({ id: doc.id, x: end.x + (w * s) / 2, y: end.y + (h * s) / 2, r: radiusOf(w, h) * s });
+    try {
+      if (combat) {
+        doc.stopMovement();
+        if (kept.length) walkOnAfterStop(doc, kept);
+      } else {
+        const z = doc._source.elevation ?? 0;
+        const here = kept.length ? route.from : clearOfWalls(token, route.from);
+        const wps = [{ x: here.x, y: here.y, elevation: z, action: "displace", snapped: false, explicit: true, checkpoint: !kept.length }, ...kept];
+        Promise.resolve(doc.move(wps, { method: "api", animate: kept.length > 0 })).catch(err => log?.debug?.("cut: move", err));
+      }
+      out.push({ id: doc.id, x: end.x, y: end.y, combat });
+    } catch (err) { log?.debug?.("cut", err); }
+  }
+  // This client's unsent waves plan round the squares just taken too.
+  for (const g of groups.values()) g.claims.push(...claims);
+  if (out.length) cutLast = { at: new Date().toISOString(), why: "wall", wall: wall.id ?? null, members: out.length };
+  return out;
+}
+
+function onWallChange(wall, changes) {
+  if (changes && !["ds", "door", "move", "c", "dir"].some(k => k in changes)) return;
+  try { cutAcross(wall); }
+  catch (err) { log?.warnOnce?.("group-cut", "a wall raised mid-walk could not cut the moves crossing it (further errors suppressed)", err); }
+}
+
+/* -------------------------------------------- */
 /*  The drop                                    */
 /* -------------------------------------------- */
 
@@ -921,6 +1082,7 @@ function groupStatus() {
     resumed: resumedLast ? { ...resumedLast } : null,
     stopped: stoppedAt ? { ...stoppedAt } : null,
     destacked: destacked ? { ...destacked } : null,
+    cut: cutLast ? { ...cutLast } : null,
   };
 }
 
@@ -992,7 +1154,10 @@ export function install(reg, ctx) {
   // A turn change clears every combatant's movement history, and core stops a token whose history is
   // cleared: the rest of its group stops with it (live R4-3).
   reg.on("updateToken", (doc, _changes, options) => onHistoryCleared(doc, options), { label: "updateToken: a turn change stops the whole group" });
-  ctx.expose({ groupFollower, groupCancel, groupStatus, groupDryRun: dryRun, groupPatched: () => dropPatched });
+  // A door shut or a wall raised across a move this client started cuts it before the wall (live R6-3, R6-1).
+  reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: cut moves across a new wall" });
+  reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: cut moves across a shut door" });
+  ctx.expose({ groupFollower, groupCancel, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
 }
 
 export function uninstall() {
@@ -1008,6 +1173,7 @@ export function uninstall() {
   resumedLast = null;
   stoppedAt = null;
   destacked = null;
+  cutLast = null;
   fallbacks.length = 0;
   latestDrop.clear();
   feature = null;

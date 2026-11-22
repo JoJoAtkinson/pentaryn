@@ -1428,3 +1428,105 @@ test("R3-5: planGroup's grabbed token walks the route its drag preview would sho
   assert.ok(r.anchorRoute.waypoints > 2, "round the wall, through the door");
   assert.deepEqual(r.members[0].slot, { x: 100, y: 600 });
 });
+
+/** A token this client is moving: drawn at `drawn` (top-left), its document already at `src`, the route `path` (origin first). */
+function walking(id, drawn, src, path, { combat = false, pending = [] } = {}) {
+  const t = makeToken(id, src.x, src.y);
+  t.document.x = drawn.x; t.document.y = drawn.y;
+  t.position = { x: drawn.x, y: drawn.y };
+  t.animationContexts.set(t.movementAnimationName, {});
+  t.document.movement = {
+    state: pending.length ? "pending" : "completed", user: { isSelf: true }, constrainOptions: {},
+    origin: wp(path[0].x, path[0].y), passed: { waypoints: path.slice(1).map(p => wp(p.x, p.y, { checkpoint: combat })) },
+    pending: { waypoints: pending.map(p => wp(p.x, p.y)) },
+  };
+  return t;
+}
+const doorWall = { id: "doorWall00000001", parent: sceneDoc, _source: { c: [400, 400, 500, 400], move: 20, sight: 20, door: 1, ds: 0 } };
+
+test("R6-3: a door shut across a move this client started out of combat cuts it on a free whole square before the door, one per token", () => {
+  combatFlag = false;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  // Two walking south through the door at x 400–500 (y = 400); the documents are already past it.
+  const a = walking("cutA000000000001", { x: 400, y: 150 }, { x: 400, y: 700 }, [{ x: 400, y: 100 }, { x: 400, y: 700 }]);
+  const b = walking("cutB000000000001", { x: 400, y: 20 }, { x: 400, y: 600 }, [{ x: 400, y: 0 }, { x: 400, y: 600 }]);
+  // One already through: it walks on. One at rest, not moving: untouched.
+  walking("cutC000000000001", { x: 400, y: 520 }, { x: 400, y: 800 }, [{ x: 400, y: 300 }, { x: 400, y: 800 }]);
+  makeToken("cutRest000000001", 600, 100);
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  const from = F.calls.length;
+  try {
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    assert.deepEqual(moves.map(m => m.id).sort(), [a.document.id, b.document.id].sort(), "only the two whose route crosses the shut door");
+    const end = id => moves.find(m => m.id === id).waypoints.at(-1);
+    assert.deepEqual([end(a.document.id).x, end(a.document.id).y], [400, 300], "the nearest takes the last square before the door");
+    assert.deepEqual([end(b.document.id).x, end(b.document.id).y], [400, 200], "the next one the square behind it");
+    for (const m of moves) {
+      assert.equal(m.waypoints[0].action, "displace", "from where it is drawn");
+      assert.ok(m.waypoints.slice(1).every(w => w.y < 400), "never across the door");
+    }
+    assert.deepEqual(moves.find(m => m.id === a.document.id).waypoints[0].y, 150);
+    assert.equal(game.pentaryn.movement.status().group.cut?.members, 2);
+  } finally {
+    world.walls.pop();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("R6-3: a new wall raised across a route cuts it too; a wall that crosses no route, or an opened door, cuts nothing", () => {
+  combatFlag = false;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const a = walking("cutD000000000001", { x: 20, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  const from = F.calls.length;
+  try {
+    F.fire("updateWall", { ...doorWall, _source: { ...doorWall._source, ds: 1 } }, { ds: 1 }, {}, "gm");
+    F.fire("createWall", { id: "farWall000000001", parent: sceneDoc, _source: { c: [700, 500, 700, 800], move: 20 } }, {}, "gm");
+    assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0);
+    world.walls.push([{ x: 600, y: 0 }, { x: 600, y: 300 }]);
+    try {
+      F.fire("createWall", { id: "newWall000000001", parent: sceneDoc, _source: { c: [600, 0, 600, 300], move: 20 } }, {}, "gm");
+    } finally { world.walls.pop(); }
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    assert.equal(moves.length, 1);
+    assert.equal(moves[0].id, a.document.id);
+    assert.deepEqual([moves[0].waypoints.at(-1).x, moves[0].waypoints.at(-1).y], [500, 100], "the square before the new wall");
+  } finally {
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("R6-1: in a fight, members walking to a door that shuts stop at their next square and walk on to separate squares before it", () => {
+  combatFlag = true;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  // A checkpoint at every square: the source is the square being entered, the rest pending.
+  const a = walking("cutE000000000001", { x: 400, y: 120 }, { x: 400, y: 200 }, [{ x: 400, y: 100 }, { x: 400, y: 200 }],
+    { combat: true, pending: [{ x: 400, y: 300 }, { x: 400, y: 400 }, { x: 400, y: 500 }] });
+  const b = walking("cutF000000000001", { x: 400, y: 20 }, { x: 400, y: 100 }, [{ x: 400, y: 0 }, { x: 400, y: 100 }],
+    { combat: true, pending: [{ x: 400, y: 200 }, { x: 400, y: 300 }, { x: 400, y: 400 }] });
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  const from = F.calls.length;
+  try {
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    const stops = F.calls.slice(from).filter(c => c.op === "stopMovement").map(c => c.id).sort();
+    assert.deepEqual(stops, [a.document.id, b.document.id].sort(), "both stop at their next square (never a displace in a fight)");
+    // Once each has finished its square, it walks on (costed) to its own square before the door.
+    for (const t of [a, b]) { t.animationContexts.clear(); t.document.movement.state = "stopped"; }
+    mock.timers.tick(200);
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    const endOf = t => moves.find(m => m.id === t.document.id)?.waypoints.at(-1);
+    assert.deepEqual([endOf(a).x, endOf(a).y], [400, 300], "the nearest takes the last square before the door");
+    assert.deepEqual([endOf(b).x, endOf(b).y], [400, 200], "the next one, stopped on (400, 100), walks on to the square behind it");
+    assert.ok(moves.every(m => m.waypoints.every(w => w.action !== "displace")), "a walk, never a displace");
+  } finally {
+    world.walls.pop();
+    combatFlag = false;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});

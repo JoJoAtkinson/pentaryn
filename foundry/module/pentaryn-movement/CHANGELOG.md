@@ -1,5 +1,23 @@
 # Changelog — pentaryn-movement
 
+## 0.4.6 — 2026-11-22
+
+Live play-test round 6 (a Mac browser through the tunnel, the BOSS harness).
+
+- **[declared] A door shut, or a wall raised, across a move already under way cuts it before the wall (R6-3,
+  R6-1).** Out of combat the whole path is one update, so core never looked at the walls again: a door
+  shut after the drop, or a new wall, was walked straight through. In a fight core did cut each member at the
+  door, but every one walking toward it on the same last square, and the rest check split them with
+  one-square jumps about 4 s later. A `createWall` / `updateWall` (door state, door, move, line or direction)
+  on the client that started each move now finds every token of its own whose route ahead crosses that wall
+  (it now blocks movement) and gives each, nearest first, its own whole square before the wall, free of every
+  other token, of where core will stop one still walking, and of the squares taken before it. Out of combat
+  it walks on there from where it is drawn (one update: a displace to the drawn point, then its route); in a
+  fight it stops at its next square (`stopMovement`) and walks on from there, costed. No free square on its
+  way: it stops where it stands (out of combat on a clear spot). This client's unsent waves plan round those
+  squares too. Ghost and unconstrained moves pass. `status().group.cut` `{ at, why: "wall", wall, members }`.
+- New pure rules in `motion-core.mjs`: `segmentsCross`, `routeAhead`, `firstLegAcross`.
+
 ## 0.4.5 — 2026-11-22
 
 Live play-test round 5 (a Mac browser through the tunnel, the BOSS harness).

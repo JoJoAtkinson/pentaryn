@@ -144,6 +144,14 @@
     "name": "updateToken"
   },
   {
+    "kind": "on",
+    "name": "createWall"
+  },
+  {
+    "kind": "on",
+    "name": "updateWall"
+  },
+  {
     "kind": "once",
     "name": "setup"
   },

@@ -283,3 +283,53 @@ export function clickStop({ enabled = true, tool = "select", modifiers = false, 
   if (!combat) return "displace";
   return initiatorSelf ? "stop" : "query";
 }
+
+/* -------------------------------------------- */
+/*  A wall raised mid-walk (0.4.6, live R6-3)   */
+/* -------------------------------------------- */
+
+/** Do segments p–q and a–b meet (a touch counts)? Any units. */
+export function segmentsCross(p, q, a, b) {
+  const d = (u, v, w) => (v.x - u.x) * (w.y - u.y) - (v.y - u.y) * (w.x - u.x);
+  const d1 = d(a, b, p), d2 = d(a, b, q), d3 = d(p, q, a), d4 = d(p, q, b);
+  if (((d1 > EPS && d2 < -EPS) || (d1 < -EPS && d2 > EPS)) && ((d3 > EPS && d4 < -EPS) || (d3 < -EPS && d4 > EPS))) return true;
+  const on = (u, v, w) => Math.min(u.x, v.x) - EPS <= w.x && w.x <= Math.max(u.x, v.x) + EPS
+    && Math.min(u.y, v.y) - EPS <= w.y && w.y <= Math.max(u.y, v.y) + EPS;
+  return (Math.abs(d1) <= EPS && on(a, b, p)) || (Math.abs(d2) <= EPS && on(a, b, q))
+    || (Math.abs(d3) <= EPS && on(p, q, a)) || (Math.abs(d4) <= EPS && on(p, q, b));
+}
+
+/**
+ * Where a token drawn at `at` is along its route `points` (origin first): the index of the next point it
+ * walks to. The nearest segment wins; of two as near (a route that doubles back), the earlier. null when
+ * the route has no segment, or `at` is its end.
+ * @param {{x: number, y: number}[]} points
+ * @param {{x: number, y: number}} at
+ * @returns {number|null}
+ */
+export function routeAhead(points, at) {
+  if (!Array.isArray(points) || points.length < 2 || !at) return null;
+  let best = null, bestD = Infinity;
+  for (let k = 0; k + 1 < points.length; k++) {
+    const a = points[k], b = points[k + 1];
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((at.x - a.x) * (b.x - a.x) + (at.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 1;
+    const d = Math.hypot(at.x - (a.x + (b.x - a.x) * t), at.y - (a.y + (b.y - a.y) * t));
+    if (d < bestD - 0.5) { best = k + 1; bestD = d; }
+  }
+  if (best === points.length - 1 && dist(points.at(-1), at) < 0.5) return null;
+  return best;
+}
+
+/**
+ * Of a route ahead (`from` then `points`), the index in `points` of the first one whose leg crosses the
+ * wall a–b, or -1. Centres, any units.
+ */
+export function firstLegAcross(from, points, a, b) {
+  let prev = from;
+  for (let k = 0; k < (points?.length ?? 0); k++) {
+    if (segmentsCross(prev, points[k], a, b)) return k;
+    prev = points[k];
+  }
+  return -1;
+}

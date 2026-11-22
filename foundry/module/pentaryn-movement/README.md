@@ -68,6 +68,9 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
 - **Click a moving token to stop it** where it is, once it has moved 400 ms (a click right after the drop,
   or a double click for the sheet, is a plain click). In a fight it stops at the next square, so dnd5e's
   spent movement stays exact; a GM may stop anyone's move.
+- **A door shut or a wall raised across a move** (0.4.6) stops each token walking toward it on its own free
+  whole square before it, the nearest one first; out of combat it walks on to that square from where it is
+  drawn, in a fight it finishes its square and walks on, costed. `status().group.cut`.
 - **Out of combat** movement is free-form and smooth; **in combat** it stays on the grid (no arcs, a
   checkpoint at every square) so the cost is exact. Ghost and the GM's *Unconstrained Movement* tool
   go in straight lines, the group keeping its shape. Not for arrow keys, gridless or hex scenes.
