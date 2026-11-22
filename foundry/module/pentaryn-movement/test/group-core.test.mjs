@@ -84,7 +84,7 @@ test("2. 1-wide corridor, 4 members in a column: depth-ordered slots, strictly i
   const { res } = plan(CORRIDOR, ms, "a");
   assert.equal(res.constricted, true);
   assert.equal(res.replans, 0);
-  assert.equal(res.relaxed, 0);
+  assert.deepEqual([res.cut, res.stayed, res.blocked], [[], [], 0], "nobody cut short");
   const file = Object.values(res.members).sort((x, y) => x.delay - y.delay);
   // Slot depth (x along the corridor) falls as the delay rises: nobody passes anybody.
   for (let k = 1; k < file.length; k++) {
@@ -103,7 +103,7 @@ test("3. a 1-wide door, 6 members in a 3×2 block: all pass, separation holds, t
   for (const y of [1.5, 2.5]) for (const x of [6.5, 7.5, 8.5]) ms.push(member(`m${n++}`, { x, y }, d));
   const { g, res } = plan(DOOR, ms, "m4");
   assert.equal(res.result, "plan");
-  assert.equal(res.relaxed, 0);
+  assert.deepEqual([res.cut, res.stayed], [[], []], "nobody cut short");
   assert.deepEqual(res.excluded, []);
   assert.deepEqual(res.members.m4.slot, { x: 7.5, y: 6.5 });
   for (const e of Object.values(res.members)) {
@@ -155,7 +155,9 @@ test("5. mixed sizes: the Large is placed first and nothing overlaps at rest", (
 test("6. members that start overlapped: no conflict before they first separate", () => {
   const A = trajectory([{ x: 0, y: 0 }, { x: 10, y: 0 }]);
   const B = trajectory([{ x: 0.3, y: 0 }, { x: 0.3, y: 10 }]);                   // overlapped, then apart
-  assert.equal(firstConflict(A, B, R, R), null);
+  assert.equal(firstConflict(A, B, R, R, { sameWave: true }), null);
+  // In another wave a client may draw B still on its start while A walks through it (0.5.0 latency buffer).
+  assert.notEqual(firstConflict(A, B, R, R), null);
   const C = trajectory([{ x: 0.2, y: 0 }, { x: 10.2, y: 0 }]);                   // overlapped, side by side throughout
   assert.equal(firstConflict(A, C, R, R), null);
   // Once separated the full distance applies: D leaves, then cuts back through A's line.
@@ -163,7 +165,7 @@ test("6. members that start overlapped: no conflict before they first separate",
   assert.notEqual(firstConflict(A, D, R, R), null);
 });
 
-test("7. a member with no route is excluded; the rest are planned around where core leaves it", () => {
+test("7. a member with no route at all stays where it stands (0.5.0, never core's walk); the rest are planned around it", () => {
   const SEALED = `
 ############
 #..........#
@@ -174,14 +176,17 @@ test("7. a member with no route is excluded; the rest are planned around where c
 ####.#######
 #..#.......#
 ############`;
-  // "z" stands in a sealed pocket (row 7, columns 1-2); core leaves it where it is.
+  // "z" stands in a sealed pocket (row 7, columns 1-2): no route, and no way at all (toward finds none).
   const d = { x: 0, y: 4 };
   const ms = [member("a", { x: 7.5, y: 1.5 }, d), member("b", { x: 8.5, y: 1.5 }, d), member("z", { x: 1.5, y: 7.5 }, { x: 0, y: -2 })];
-  ms[2].corePath = [{ x: 1.5, y: 7.5 }];
-  const { res } = plan(SEALED, ms, "a");
+  const g0 = gridWorld(SEALED);
+  const { res } = plan(SEALED, ms, "a", {}, { toward: (m, f, t) => g0.route(m, f, t) });
   assert.equal(res.result, "plan");
   assert.deepEqual(res.excluded, ["z"]);
-  assert.equal(res.members.z.core, true);
+  assert.equal(res.members.z.core, false);
+  assert.equal(res.members.z.level, "stay");
+  assert.deepEqual(res.members.z.points, [{ x: 1.5, y: 7.5 }]);
+  assert.deepEqual(res.stayed, ["z"]);
   assert.equal(res.members.b.core, false);
   for (const id of ["a", "b"]) assert.ok(dist(res.members[id].slot, { x: 1.5, y: 7.5 }) >= 1 - 1e-6);
 });
@@ -366,12 +371,21 @@ test("trajectories: linear per segment, delayed starts, terrain slows a segment,
   assert.deepEqual(positionAt(tr, 750), { x: 4.5, y: 0 });
 });
 
-test("conflicts: one batch out of combat may walk touching; different waves or combat need the buffer", () => {
+test("conflicts: one batch out of combat may walk touching; different waves or combat need the buffer along the way", () => {
   const A = trajectory([{ x: 0, y: 0 }, { x: 10, y: 0 }]);
+  // Side by side: a lag along the way never brings them together (0.5.0: no stagger for neighbours abreast).
   const B = trajectory([{ x: 0, y: 1.1 }, { x: 10, y: 1.1 }]);
   assert.equal(firstConflict(A, B, R, R, { sameWave: true }), null);
-  assert.notEqual(firstConflict(A, B, R, R, { sameWave: false }), null);
-  assert.notEqual(firstConflict(A, B, R, R, { sameWave: true, combat: true }), null);
+  assert.equal(firstConflict(A, B, R, R, { sameWave: false }), null);
+  assert.equal(firstConflict(A, B, R, R, { sameWave: true, combat: true }), null);
+  // In its wake, 1.1 behind: one batch may; another wave or a fight may be drawn 0.75 square closer, so it may not.
+  const W = trajectory([{ x: -1.1, y: 0 }, { x: 8.9, y: 0 }]);
+  assert.equal(firstConflict(A, W, R, R, { sameWave: true }), null);
+  assert.notEqual(firstConflict(A, W, R, R, { sameWave: false }), null);
+  assert.notEqual(firstConflict(A, W, R, R, { sameWave: true, combat: true }), null);
+  // Far enough behind (1 + 0.75): clear in any wave.
+  const F = trajectory([{ x: -1.8, y: 0 }, { x: 8.2, y: 0 }]);
+  assert.equal(firstConflict(A, F, R, R, { sameWave: false }), null);
   // Head on: found, and at the right moment (centres 1 apart at t where 10 - 12t/1000·… closes).
   const C = trajectory([{ x: 10, y: 0 }, { x: 0, y: 0 }]);
   const hit = firstConflict(A, C, R, R, { sameWave: true });
@@ -467,6 +481,12 @@ test("open ground: everyone steps off together (no stagger when paths do not con
     const { res } = plan(OPEN, members, "m0", { combat });
     assert.equal(res.result, "plan", `run ${run}`);
     assert.equal(res.formation, true, `run ${run}: formation kept`);
+    if (combat) {
+      // In a fight each square is its own update, so one walking in another's wake keeps the 0.75-square buffer
+      // (0.5.0) and steps off a beat later; abreast they go together. Nobody is held long, nobody cut.
+      for (const e of Object.values(res.members)) assert.ok(e.delay <= 150 * n && !e.short, `run ${run}: ${e.id} delay ${e.delay}`);
+      continue;
+    }
     for (const e of Object.values(res.members)) assert.equal(e.delay, 0, `run ${run}: ${e.id} set off with the rest (delay ${e.delay})`);
     assert.deepEqual(waves(Object.fromEntries(Object.values(res.members).map(e => [e.id, e.delay]))).length, 1, "one batch");
   }

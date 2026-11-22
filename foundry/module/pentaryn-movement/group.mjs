@@ -21,7 +21,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
-import { DETOUR_SQUARES, GROUP_LIMITS, detourTooLong, flood, hexCandidates, planGroup, restOnPaths, runPlan, walkersMeet } from "./group-core.mjs";
+import { GROUP_LIMITS, detourTooLong, flood, freePrefix, hexCandidates, onCell, planGroup, prefixOf, restOnPaths, runPlan, walkersMeet } from "./group-core.mjs";
 import { LIMITS, skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, continuationInFlight, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, movingOthers, narrowPoints, othersOf, pinDrawn, restWalkable, speedOf, stopWhereDrawn, toSquares, toTopLeft, unpin } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
@@ -193,7 +193,7 @@ function resumePending() {
 
 /** status().group.last after a throw: the drop went as core's (live R4-11: it read mode "plan", result null). */
 function noteThrow(t0 = null) {
-  last = { ...(last ?? { at: new Date().toISOString(), members: null, async: false, relaxed: 0, replans: 0 }),
+  last = { ...(last ?? { at: new Date().toISOString(), members: null, async: false, cut: 0, replans: 0 }),
     mode: "core", reason: "throw", result: "core", waves: 0, ms: t0 === null ? (last?.ms ?? null) : Math.round((now() - t0) * 10) / 10 };
 }
 
@@ -302,10 +302,18 @@ const unstackable = reason => UNSTACK.has(reason) || String(reason ?? "").starts
  * stops on a cell centre (or a waypoint), so the cells it walks stay whole. Mutates core's
  * [updates, options] and returns it: a member that would not move at all leaves both.
  */
-function unstack(contexts, result, anchorId, combat, around = []) {
+function unstack(contexts, result, anchorId, combat) {
   const [updates, options] = result ?? [];
   const movement = options?.movement;
-  if (!Array.isArray(updates) || !movement || contexts.length + around.length < 2) return result;
+  if (!Array.isArray(updates) || !movement || contexts.length < 2) return result;
+  // Tokens standing outside the drop are hard (0.5.0): each member's path stops before the first it would walk into,
+  // and nobody rests on one. Not for ghost or the unconstrained tool, which walk through on purpose.
+  let around = [];
+  try {
+    const free = !!options.constrainOptions?.ignoreWalls || contexts.some(c => feature.exposed.ghostFor?.(c.token));
+    const s0 = gridSize(contexts[0].token);
+    if (!free) around = othersOf(contexts.map(c => ({ id: c.token.document.id, token: c.token })), s0);
+  } catch (err) { log?.debug?.("unstack: the tokens standing round the drop", err); around = []; }
   // Circles that stay where they are (squares): tokens outside the drop, members that are not moving.
   const recs = around.map((c, i) => ({ id: `__still${i}`, r: c.r, path: [{ x: c.x, y: c.y }] }));
   for (const c of contexts) {
@@ -318,10 +326,9 @@ function unstack(contexts, result, anchorId, combat, around = []) {
     const raw = m?.waypoints?.length ? [origin, ...m.waypoints] : [origin];
     recs.push({ id: doc.id, r: radiusOf(w, h), w, h, s, m, path: raw.map(p => toSquares(p, w, h, s)) });
   }
-  // The grabbed token first (it keeps its end) unless it would rest on one that stays (H1-08).
-  if (!around.length) recs.sort((a, b) => (a.id === anchorId ? -1 : b.id === anchorId ? 1 : 0));
-  const onCell = (c, m) => [c.x - m.w / 2, c.y - m.h / 2].every(v => Math.abs(v - Math.round(v)) < 1e-6);
-  const rest = restOnPaths(recs, { allowed: combat ? onCell : null });
+  // The grabbed token first among the movers (it keeps its end); the ones that stay are placed before every mover.
+  recs.sort((a, b) => (a.id === anchorId ? -1 : b.id === anchorId ? 1 : 0));
+  const rest = restOnPaths(recs, { allowed: combat ? (c, m) => onCell(c, m.w, m.h) : null, hard: around });
   const still = new Set();
   for (const rec of recs) {
     const pick = rest[rec.id];
@@ -349,10 +356,6 @@ function unstack(contexts, result, anchorId, combat, around = []) {
 function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
   const s = gridSize(anchor.token);
   const byId = new Map(members.map(m => [m.id, m]));
-  // Tokens outside the drop, at rest where the server has them (squares): routes keep round them out of
-  // combat (live H1-09: arrivals were drawn through a crowd member standing in the far room, -30 / -81 px).
-  let still = null;
-  const stillOthers = () => (still ??= (() => { try { return othersOf(members, s); } catch { return []; } })());
   // Walk distances from the anchor's drop point, on its own lattice (walls and blocking creatures;
   // no cost, which the flood does not need). Built on first use: a straight (ghost) drop never asks.
   let f = null, walk = null;
@@ -412,65 +415,71 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
       explicit: true, checkpoint: true,
     } };
   };
-  const route = (m, from, to, { avoid = [] } = {}) => {
-    unfinished = false;
+  /** A found path (top-left pixels) as a route: centres in squares, its length, the path itself. */
+  const asRoute = (rec, path, cost) => {
+    const pts = path.map(p => toSquares(p, rec.w, rec.h, s));
+    let length = 0;
+    for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+    return { points: pts, length, data: { path, cost } };
+  };
+  /** The grabbed token's drag route, when it is the one to reuse for a route to `to` (its drop point). */
+  const shownFor = (m, to) => {
     const rec = byId.get(m.id);
+    if (m.id !== anchor.id || rec.searching) return null;
     const doc = rec.token.document;
     const tl = toTopLeft(to, rec.w, rec.h, s);
     const atFormation = tl.x === Math.round(rec.dest.x) && tl.y === Math.round(rec.dest.y);
     const last = rec.corePathRaw?.at(-1) ?? {};
-    // The grabbed token to its drop point: the route its drag preview showed (already pathfound and
-    // constrained while dragging), so it walks what the player saw and the drop never searches it again.
     const shown = rec.corePathRaw ?? [];
     const src = doc._source;
-    // Round the tokens that stay, when it can be (not those on its start or its spot); else as before.
-    const crowd = combat || constrain?.ignoreWalls ? [] : stillOthers()
-      .map(c => ({ x: c.x, y: c.y, r: c.r + rec.r }))
-      .filter(c => Math.hypot(c.x - from.x, c.y - from.y) >= c.r - 1e-6 && Math.hypot(c.x - to.x, c.y - to.y) >= c.r - 1e-6);
-    // A search the drag had not finished (`searching`) is never reused, nor one through a token that stays (HX1-01: the
-    // drag's preview routes round walls only, and the grabbed one walked through Hero 7 standing in room B, -84 px).
-    if (m.id === anchor.id && !avoid.length && atFormation && !rec.searching && shown.length >= 2
-      && Math.round(last.x) === tl.x && Math.round(last.y) === tl.y
-      && shown[0].x === src.x && shown[0].y === src.y && !throughAny(shown.map(p => toSquares(p, rec.w, rec.h, s)), crowd)) {
-      return measured(shown.map(p => ({ ...p })));
-    }
-    const origin = feature.exposed.pathfindOrigin(doc);
-    const dest = {
-      ...origin, x: tl.x, y: tl.y, elevation: rec.dest.elevation ?? origin.elevation,
-      action: last.action ?? doc.movementAction, snapped: combat || (atFormation && !!rec.dest.snapped),
-      explicit: true, checkpoint: true,
-    };
-    const search = list => feature.exposed.pathfindRouteTo(rec.token, origin, dest, {
+    if (!atFormation || shown.length < 2 || Math.round(last.x) !== tl.x || Math.round(last.y) !== tl.y) return null;
+    if (shown[0].x !== src.x || shown[0].y !== src.y) return null;
+    return shown;
+  };
+  const search = (rec, to, list, maxMs = ROUTE_MS) => {
+    const { origin, dest } = destOf(rec, to);
+    return feature.exposed.pathfindRouteTo(rec.token, origin, dest, {
       preview: true, avoid: list.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
-      maxMs: ROUTE_MS,
+      maxMs,
     });
-    const lengthOf = path => {
-      const pts = path.map(p => toSquares(p, rec.w, rec.h, s));
-      let length = 0;
-      for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
-      return { pts, length };
-    };
-    let r = crowd.length ? search([...avoid, ...crowd]) : null;
-    // Its search round them ran out (a slow tab): never the way through them instead; the plan finishes it (routeLong).
-    if (crowd.length && !r?.reached && r?.unfinished) { unfinished = true; return null; }
-    if (r?.reached && r.path?.length) {
-      // Round the crowd, but never the long way round (live H3-03): past the H2-02 rule against the way
-      // that ignores the crowd, that way wins (the rest check keeps the ends apart).
-      const round = lengthOf(r.path).length;
-      if (round > Math.hypot(to.x - from.x, to.y - from.y) + DETOUR_SQUARES) {
-        const plain = search(avoid);
-        if (plain?.reached && plain.path?.length && detourTooLong(lengthOf(plain.path).length, round)) r = plain;
-      }
-    }
-    if (!r?.reached || !r.path?.length) r = search(avoid);
+  };
+  /**
+   * The route round `avoid` (circles, squares: the tokens standing in the way and, in a re-plan, rest spots), which
+   * group-core decides (0.5.0: hard, in a fight too). There is no way back to a route through them: no route is null,
+   * and the plan walks the member as far as the way is free (toward).
+   */
+  const route = (m, from, to, { avoid = [] } = {}) => {
+    unfinished = false;
+    const rec = byId.get(m.id);
+    // The grabbed token to its drop point: the route its drag preview showed (already pathfound and constrained while
+    // dragging), so it walks what the player saw, unless it passes through a token that stays (HX1-01: the drag's
+    // preview routes round walls only) or a search the drag had not finished (`searching`).
+    const shown = shownFor(m, to);
+    if (shown && !throughAny(shown.map(p => toSquares(p, rec.w, rec.h, s)), avoid)) return measured(shown.map(p => ({ ...p })));
+    const r = search(rec, to, avoid);
     if (!r?.reached || !r.path?.length) { unfinished = !!r?.unfinished; return null; }
-    const { pts, length } = lengthOf(r.path);
-    return { points: pts, length, data: { path: r.path, cost: r.cost } };
+    return asRoute(rec, r.path, r.cost);
+  };
+  /**
+   * The way that ignores the tokens (0.5.0, a member with no route round them): the drag route for the grabbed one,
+   * else a search round walls only; for a big token as far as its body fits. group-core walks it only as far as it
+   * is free of the tokens. null when there is none.
+   */
+  const toward = (m, from, to) => {
+    const rec = byId.get(m.id);
+    if (!rec) return null;
+    const shown = shownFor(m, to);
+    if (shown) return measured(shown.map(p => ({ ...p })));
+    const r = search(rec, to, []);
+    if (r?.reached && r.path?.length >= 2) return asRoute(rec, r.path, r.cost);
+    if (r?.partial?.length >= 2) return asRoute(rec, r.partial, null);
+    return null;
   };
   /**
    * The route a short search could not finish, searched to the end in slices (a yield between them, so a slow
    * tab draws its frames): `yield*` it from the plan. Its own cap is a drag search's (LIMITS.totalMs of its
-   * own slices). The route, or null (no way, or still not found: `unfinished` says which).
+   * own slices). Round `avoid` as route() (HX1-01 (d): never redone through the tokens). The route, or null
+   * (no way, or still not found: `unfinished` says which).
    */
   const routeLong = function* (m, from, to, { avoid = [] } = {}) {
     unfinished = false;
@@ -478,48 +487,27 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     const steps = feature.exposed.pathfindRouteSteps;
     if (!rec || typeof steps !== "function") return null;
     const { origin, dest } = destOf(rec, to);
-    const searchLong = function* (list) {
-      const gen = steps(rec.token, origin, dest, {
-        preview: true, avoid: list.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
-      });
-      let busy = 0, r;
-      for (;;) {
-        const t = now();
-        r = gen.next(busy >= LIMITS.totalMs);
-        busy += now() - t;
-        if (r.done) break;
-        yield "route";
-      }
-      return r.value;
-    };
-    // Round the tokens that stay here too (HX1-01 (d): a member whose short search ran out on a slow tab was
-    // searched again without them and walked through the crowd at the corridor's mouth, -77 to -90 px), unless
-    // that is the long way round.
-    const crowd = combat || constrain?.ignoreWalls ? [] : stillOthers()
-      .map(c => ({ x: c.x, y: c.y, r: c.r + rec.r }))
-      .filter(c => Math.hypot(c.x - from.x, c.y - from.y) >= c.r - 1e-6 && Math.hypot(c.x - to.x, c.y - to.y) >= c.r - 1e-6);
-    const len = path => {
-      let L = 0;
-      for (let k = 1; k < path.length; k++) L += Math.hypot(path[k].x - path[k - 1].x, path[k].y - path[k - 1].y) / s;
-      return L;
-    };
-    let v = crowd.length ? yield* searchLong([...avoid, ...crowd]) : null;
-    if (v?.reached && v.path?.length && len(v.path) > Math.hypot(to.x - from.x, to.y - from.y) + DETOUR_SQUARES) {
-      const plain = yield* searchLong(avoid);
-      if (plain?.reached && plain.path?.length && detourTooLong(len(plain.path), len(v.path))) v = plain;
+    const gen = steps(rec.token, origin, dest, {
+      preview: true, avoid: avoid.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
+    });
+    let busy = 0, v;
+    for (;;) {
+      const t = now();
+      v = gen.next(busy >= LIMITS.totalMs);
+      busy += now() - t;
+      if (v.done) break;
+      yield "route";
     }
-    if (!v?.reached || !v.path?.length) v = yield* searchLong(avoid);
+    v = v.value;
     if (!v?.reached || !v.path?.length) { unfinished = !!v?.unfinished; return null; }
-    const pts = v.path.map(p => toSquares(p, rec.w, rec.h, s));
-    let length = 0;
-    for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
-    return { points: pts, length, data: { path: v.path, cost: v.cost } };
+    return asRoute(rec, v.path, v.cost);
   };
   return {
     walkable,
     walkDistance,
     route,
     routeLong,
+    toward,
     unfinished: () => unfinished,
     narrow: (points, r) => narrowPoints(anchor.token, points, r, s),
     now: clock?.now ?? now,
@@ -585,8 +573,10 @@ function batches(plan, members, [updates, options], combat) {
       movement[m.id] = { ...movement[m.id], waypoints: wps };
       continue;
     }
+    // A member that stays where it stands (no free way, 0.5.0) does not move at all.
+    if (e && !e.core && (e.points?.length ?? 0) < 2) { delete movement[m.id]; continue; }
     if (!e || e.core || !e.data?.path?.length) continue;
-    const path = e.data.path;
+    const path = cutPath(e.data.path, e.cut, combat);
     if (path.length < 2) { delete movement[m.id]; continue; }      // already there
     let wps = combat ? withCheckpoints(m.token, path) : path.slice(1);
     if (!plan.straight && !combat) wps = wps.map((w, k) => (k === wps.length - 1 ? w : { ...w, checkpoint: false }));
@@ -613,6 +603,25 @@ function batches(plan, members, [updates, options], combat) {
     endMs = Math.max(endMs, (e?.delay ?? 0) + (len / (m.speed > 0 ? m.speed : MOTION.speed)) * 1000);
   }
   return { first: [first.updates, { ...base, movement: first.movement }], later, base, endMs };
+}
+
+/**
+ * A found path (top-left pixels) cut short where the plan stops the member (group-core's { k, t }, 0.5.0): up to
+ * waypoint k, then the point at fraction t of the next leg (in a fight a whole square, snapped).
+ */
+function cutPath(path, cut, combat) {
+  if (!cut) return path;
+  const pts = path.map(p => ({ x: p.x, y: p.y }));
+  const pre = prefixOf(pts, cut);
+  const out = path.slice(0, Math.min(pre.length, cut.k + 1));
+  if (pre.length > out.length) {
+    const end = pre.at(-1);
+    const next = path[Math.min(cut.k + 1, path.length - 1)];
+    const x = Math.round(end.x), y = Math.round(end.y);
+    // In a fight the cut point is a whole square already (group-core onCell): its top-left is on the grid.
+    out.push({ ...next, x, y, snapped: !!combat });
+  }
+  return out;
 }
 
 /**
@@ -1724,17 +1733,21 @@ function tellNarrow(token) {
 }
 
 /**
- * Group drop: each big member the plan left to core (no route its body fits) that core stops short of its
- * spot gets the "does not fit" notice, as a single drag does (decision 8; live H3-09: no notice in the group case).
+ * Group drop: each big member with no route its body fits (excluded) that stops short of its spot gets the "does
+ * not fit" notice, as a single drag does (decision 8; live H3-09: no notice in the group case). The grabbed one
+ * stopped short of where it was dropped (a token standing in the only way, 0.5.0) tells the dragger "No route there".
  */
-function tellExcludedNarrow(members, excluded, result) {
-  for (const id of excluded ?? []) {
+function tellShort(members, plan) {
+  for (const id of plan?.excluded ?? []) {
     const m = members.find(x => x.id === id);
-    if (!m?.token || (m.w ?? 1) <= 1 && (m.h ?? 1) <= 1) continue;
-    const end = result?.[1]?.movement?.[id]?.waypoints?.at(-1) ?? m.token.document._source;
-    if (Math.round(end.x) === Math.round(m.dest?.x) && Math.round(end.y) === Math.round(m.dest?.y)) continue;
+    if (!m?.token || ((m.w ?? 1) <= 1 && (m.h ?? 1) <= 1)) continue;
+    if (!plan.members?.[id]?.short) continue;
     tellNarrow(m.token);
   }
+  if (!plan?.anchorShort) return;
+  const a = members.find(m => m.id === plan.anchorId);
+  if (a?.token && ((a.w ?? 1) > 1 || (a.h ?? 1) > 1)) tellNarrow(a.token);
+  else tellNoRoute(NO_ROUTE);
 }
 
 /** One route call that checks a drop the drag's own path fell short of (ms). */
@@ -1798,7 +1811,7 @@ function confirmLater(grabbed, c, result) {
   try { feature.exposed.noteDrop?.([doc.id]); } catch (err) { log.debug?.("noteDrop", err); }
   const starts = new Map([[doc.id, { x: doc._source.x, y: doc._source.y }]]);
   const t0 = now();
-  const rec = { at: new Date().toISOString(), mode: "core", reason: "single", combat: false, members: 1, result: null, ms: null, async: true, relaxed: 0, replans: 0, waves: 1 };
+  const rec = { at: new Date().toISOString(), mode: "core", reason: "single", combat: false, members: 1, result: null, ms: null, async: true, cut: 0, replans: 0, waves: 1 };
   last = rec;
   const big = (doc._source.width ?? 1) > 1 || (doc._source.height ?? 1) > 1;
   const coreGoes = !droppedInPlace([c], result);
@@ -1886,19 +1899,35 @@ function aroundOthers(grabbed, c, result) {
   // Its search round them ran out (a slow tab): finished after the drop, the token going when it is done (live
   // H4-04: on the slow page a single walked straight through a token standing in room B, -75 to -85 px).
   if (!moved && r1?.unfinished && typeof feature.exposed.pathfindRouteToAsync === "function") return { later: { origin, dest, avoid: live, wps } };
-  let path = r1?.reached && r1.path?.length >= 2 && !tooLong(origin, wps, r1.path.slice(1), s) ? r1.path : null;
-  if (!path && moved) {
-    try { const r2 = feature.exposed.pathfindRouteTo?.(grabbed, origin, dest, { preview: true, maxMs: SINGLE_MS }); if (r2?.reached && r2.path?.length >= 2) path = r2.path; }
-    catch (err) { log.debug?.("single: a route", err); }
-  }
-  if (!path) {
-    if (!moved) return false;
-    // The spot beside it, at the end of core's own way (the last leg bent to it).
-    m.waypoints = wps.map((p, k) => (k === wps.length - 1 ? { ...p, explicit: true, checkpoint: true } : p));
+  // Round them however long (0.5.0: the long way round is never swapped for the way through).
+  if (r1?.reached && r1.path?.length >= 2) {
+    m.waypoints = r1.path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
     return true;
   }
-  m.waypoints = path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
-  return true;
+  // No way round them: core's way (to the spot beside it, the last leg bent to it), walked only as far as it is free
+  // of them, and the dragger is told (0.5.0; before, it walked straight through).
+  const kept = freeOfOthers(grabbed, origin, wps, others);
+  if (!kept.length) return { stay: true };
+  m.waypoints = kept;
+  return kept.length === wps.length && !kept.short ? true : { short: true };
+}
+
+/**
+ * Core's waypoints for a single token (after `origin`), walked only as far as they are free of the tokens standing
+ * outside the move (`others`: circles, squares; 0.5.0). The waypoints, the last one explicit; [] when it cannot move
+ * at all; `.short` when they were cut.
+ */
+function freeOfOthers(token, origin, wps, others) {
+  const doc = token.document;
+  const s = gridSize(token);
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+  const path = [origin, ...wps];
+  const pts = path.map(p => toSquares(p, w, h, s));
+  const p = freePrefix(pts, radiusOf(w, h), others, { allowed: inCombat(doc) ? c => onCell(c, w, h) : null });
+  const out = (p.full ? path : cutPath(path, p.cut, inCombat(doc))).slice(1);
+  if (out.length) out[out.length - 1] = { ...out.at(-1), explicit: true, checkpoint: true };
+  if (!p.full) out.short = true;
+  return out;
 }
 
 /**
@@ -1914,7 +1943,7 @@ function aroundLater(grabbed, result, { origin, dest, avoid, wps }) {
   try { feature.exposed.noteDrop?.([doc.id]); } catch (err) { log.debug?.("noteDrop", err); }
   const starts = new Map([[doc.id, { x: doc._source.x, y: doc._source.y }]]);
   const t0 = now();
-  const rec = { at: new Date().toISOString(), mode: "core", reason: "single", combat: false, members: 1, result: null, ms: null, async: true, relaxed: 0, replans: 0, waves: 1 };
+  const rec = { at: new Date().toISOString(), mode: "core", reason: "single", combat: false, members: 1, result: null, ms: null, async: true, cut: 0, replans: 0, waves: 1 };
   last = rec;
   const s = gridSize(grabbed);
   const go = waypoints => {
@@ -1926,13 +1955,18 @@ function aroundLater(grabbed, result, { origin, dest, avoid, wps }) {
     .then(r => {
       rec.ms = Math.round((now() - t0) * 10) / 10;
       if (!feature || !stillOurs([doc.id], scene, starts, seq).length) { rec.result = "superseded"; return; }
-      if (r?.reached && r.path?.length >= 2 && !tooLong(origin, wps, r.path.slice(1), s)) {
+      if (r?.reached && r.path?.length >= 2) {
         rec.result = "round";
         go(r.path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false })));
         return;
       }
-      rec.result = "core";
-      go(wps);
+      // No way round them: as far as core's way is free of them (0.5.0), and the dragger is told.
+      let others = [];
+      try { others = othersOf([{ id: doc.id, token: grabbed }], s); } catch (err) { log.debug?.("single: the tokens that stay", err); }
+      const kept = freeOfOthers(grabbed, origin, wps, others);
+      rec.result = kept.short ? (kept.length ? "short" : "none") : "core";
+      if (kept.short) tellNoRoute(NO_ROUTE);
+      if (kept.length) go(kept);
     })
     .catch(err => log.warnOnce?.("single-around", "a single drop's way round the others failed (further errors suppressed)", err));
   return null;
@@ -1951,7 +1985,7 @@ function onDrop(grabbed, event, result) {
   if (contexts.length === 1 && noRoute === "none") {
     // Decision 7: a single token with no way there does not move at all.
     tellNoRoute(NO_ROUTE);
-    last = { at: new Date().toISOString(), mode: "core", reason: "noRoute", combat: false, members: 1, result: "none", ms: 0, async: false, relaxed: 0, replans: 0, waves: 0 };
+    last = { at: new Date().toISOString(), mode: "core", reason: "noRoute", combat: false, members: 1, result: "none", ms: 0, async: false, cut: 0, replans: 0, waves: 0 };
     return null;
   }
   if (contexts.length === 1 && noRoute === "pending") return confirmLater(grabbed, contexts[0], result);
@@ -1969,7 +2003,7 @@ function onDrop(grabbed, event, result) {
   const info = modeFor(grabbed, contexts);
   const t0 = now();
   last = { at: new Date().toISOString(), mode: info.mode, reason: info.reason, combat: info.combat, members: contexts.length,
-    result: null, ms: null, async: false, relaxed: 0, replans: 0, waves: 0 };
+    result: null, ms: null, async: false, cut: 0, replans: 0, waves: 0 };
 
   // Dropped where it stands: nobody moves, nothing to plan (live R4-11: it spent 316 ms and fell back on budget).
   if (droppedInPlace(contexts, result, caughtUp)) {
@@ -1981,6 +2015,13 @@ function onDrop(grabbed, event, result) {
       let around = false;
       try { around = aroundOthers(grabbed, contexts[0], result); } catch (err) { log.debug?.("single: round the tokens that stay", err); }
       if (around?.later) return aroundLater(grabbed, result, around.later);
+      // No way round a token standing in its only way (0.5.0): it stops before it, or does not move at all.
+      if (around?.stay || around?.short) {
+        tellNoRoute(NO_ROUTE);
+        Object.assign(last, { reason: "noRoute", result: around.stay ? "none" : "short", ms: 0 });
+        if (around.stay) return null;
+        return result;
+      }
     }
     if (unstackable(info.reason)) unstack(contexts, result, grabbed.document.id, info.combat);
     if (info.combat) checkpointAll(contexts, result[1]);
@@ -2012,10 +2053,11 @@ function onDrop(grabbed, event, result) {
       return { first: result, later: [], base: null };
     }
     last.result = "plan";
-    Object.assign(last, { relaxed: plan.relaxed, replans: plan.replans, constricted: plan.constricted,
-      formation: plan.formation, excluded: plan.excluded, planMs: plan.ms });
-    // A big member with no route its body fits stops short where core leaves it: told as a single drag is (H3-09).
-    try { tellExcludedNarrow(prep.members, plan.excluded, result); } catch (err) { log.debug?.("narrow: a group member", err); }
+    Object.assign(last, { cut: plan.cut?.length ?? 0, stayed: plan.stayed?.length ?? 0, replans: plan.replans, constricted: plan.constricted,
+      formation: plan.formation, excluded: plan.excluded, short: Object.values(plan.members).filter(e => e.short).map(e => e.id), planMs: plan.ms });
+    // A big member with no route its body fits stops short before the gap: told as a single drag is (H3-09); the
+    // grabbed one stopped short of its drop by a token in the way: the dragger hears "No route there" (0.5.0).
+    try { tellShort(prep.members, plan); } catch (err) { log.debug?.("narrow: a group member", err); }
     const b = batches(plan, prep.members, result, info.combat);
     last.waves = b.later.length + 1;
     return b;
@@ -2167,12 +2209,12 @@ function dryRun(refs, point) {
   const s = gridSize(tokens[0]);
   return {
     ok: true, result: "plan", reason: info.reason, combat: info.combat, constricted: plan.constricted, anchorRoute,
-    formation: plan.formation, replans: plan.replans, relaxed: plan.relaxed, ms: plan.ms,
+    formation: plan.formation, replans: plan.replans, cut: plan.cut, stayed: plan.stayed, ms: plan.ms,
     members: prep.members.map(m => {
       const e = plan.members[m.id];
       return {
         id: m.id, name: m.token.document.name, core: !!e?.core, level: e?.level ?? null, delay: e?.delay ?? 0,
-        slot: e ? toTopLeft(e.slot, m.w, m.h, s) : null, waypoints: e?.data?.path?.length ?? e?.points?.length ?? 0,
+        short: !!e?.short, slot: e ? toTopLeft(e.slot, m.w, m.h, s) : null, waypoints: e?.points?.length ?? 0,
       };
     }),
   };

@@ -2614,3 +2614,134 @@ test("HX1-01 (c): a player's stop of its own member: this client never walks tha
     tickBy(60000);
   }
 });
+
+/* ---- 0.5.0: standing tokens are hard obstacles ---- */
+
+/** Centre path (pixels) of a member's waypoints from its start never comes within `reach` px of `c`. */
+function clearOf(start, wps, c, reach) {
+  let prev = center(start);
+  for (const p of wps) {
+    const q = center(p);
+    const L2 = (q.x - prev.x) ** 2 + (q.y - prev.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((c.x - prev.x) * (q.x - prev.x) + (c.y - prev.y) * (q.y - prev.y)) / L2, 0), 1) : 0;
+    if (Math.hypot(c.x - (prev.x + (q.x - prev.x) * t), c.y - (prev.y + (q.y - prev.y) * t)) < reach) return false;
+    prev = q;
+  }
+  return true;
+}
+
+test("0.5.0: a single drag whose only way runs through a token standing in the door stops before it, and the dragger is told", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const a = makeToken("hrdS000000000001", 400, 100);
+  const door = makeToken("hrdD000000000001", 400, 400);              // standing just past the one-square door
+  door.visible = true;
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [a, door];
+  try {
+    const ctx = contextsFor([a], 0, 500);
+    drop.result = coreDrop(ctx);
+    const from = F.calls.length;
+    const out = a._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+    const wps = out[1].movement[a.document.id].waypoints;
+    assert.ok(clearOf(a.document._source, wps, center(door.document._source), S - 1), `never through it: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+    assert.ok(center(wps.at(-1)).y < 400, `it stops before the door: ${JSON.stringify(wps.at(-1))}`);
+    assert.equal(wps.at(-1).explicit, true);
+    assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.noRoute"), "told");
+    assert.equal(api.status().group.last.result, "short");
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(door.document.id); sceneTokens.delete(a.document.id);
+    tickBy(60000);
+  }
+});
+
+test("0.5.0: a group whose only way is through a token standing in the door: nobody walks through it, they stop short in the room, and the dragger is told", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("hrdA000000000001", 400, 200), makeToken("hrdB000000000001", 300, 200), makeToken("hrdC000000000001", 500, 200)];
+  const door = makeToken("hrdE000000000001", 400, 400);
+  door.visible = true;
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts, door];
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    tickBy(10000);
+    const batches = [...(out ? [{ options: out[1] }] : []), ...sent(from)];
+    const moves = Object.assign({}, ...batches.map(b => b.options.movement ?? {}));
+    for (const t of ts) {
+      const m = moves[t.document.id];
+      if (!m) continue;                                              // one that cannot move at all stays
+      assert.ok(clearOf(t.document._source, m.waypoints, center(door.document._source), S - 1), `${t.document.id} never through it`);
+      assert.ok(center(m.waypoints.at(-1)).y < 400, `${t.document.id} rests in the room: ${JSON.stringify(m.waypoints.at(-1))}`);
+    }
+    const last = api.status().group.last;
+    assert.equal(last.result, "plan");
+    assert.ok(last.short.includes(ts[0].document.id), JSON.stringify(last));
+    assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.noRoute"), "told");
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(door.document.id);
+    tickBy(60000);
+  }
+});
+
+test("0.5.0: a group drop left to core (out of planning time) stops each member's walk before a token standing in its way", () => {
+  combatFlag = false;
+  const ts = [makeToken("hrcA000000000001", 100, 600), makeToken("hrcB000000000001", 100, 700)];
+  const still = makeToken("hrcS000000000001", 500, 700);
+  still.visible = true;
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts, still];
+  const path = (t, ...pts) => [wp(t.document._source.x, t.document._source.y, { snapped: false, explicit: false, checkpoint: false }), ...pts.map(([x, y]) => wp(x, y))];
+  const ctx = {
+    [ts[0].document.id]: { token: ts[0], destination: wp(800, 600), foundPath: path(ts[0], [800, 600]), waypoints: [] },
+    [ts[1].document.id]: { token: ts[1], destination: wp(800, 700), foundPath: path(ts[1], [800, 700]), waypoints: [] },
+  };
+  try {
+    clock.step = 200;
+    const from = F.calls.length;
+    assert.equal(dropWith(ts[0], ctx), null);
+    for (let k = 0; k < 50; k++) mock.timers.tick(10);
+    clock.step = 0;
+    assert.equal(api.status().group.last.reason, "budget");
+    const commit = sent(from)[0];
+    const mb = commit.options.movement[ts[1].document.id];
+    assert.ok(mb, "b still moves");
+    assert.ok(clearOf(ts[1].document._source, mb.waypoints, center(still.document._source), S - 1), `b stops before the standing token: ${JSON.stringify(mb.waypoints.map(w => [w.x, w.y]))}`);
+    assert.ok(center(mb.waypoints.at(-1)).x <= 450, JSON.stringify(mb.waypoints.at(-1)));
+  } finally {
+    clock.step = 0;
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(still.document.id);
+    tickBy(60000);
+  }
+});
+
+test("0.5.0: in a fight a member's route goes round a token that stays too, every square a checkpoint", () => {
+  combatFlag = true;
+  clock.step = 0;
+  const a = makeToken("hfgA000000000001", 100, 100), b = makeToken("hfgB000000000001", 100, 200);
+  const rest = makeToken("hfgR000000000001", 300, 200);
+  rest.visible = true;
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [a, b, rest];
+  try {
+    const from = F.calls.length;
+    const out = dropWith(a, contextsFor([a, b], 400, 0));
+    tickBy(5000);
+    const batches = [...(out ? [{ options: out[1] }] : []), ...sent(from)];
+    const mb = batches.map(x => x.options.movement?.[b.document.id]).find(Boolean);
+    assert.equal(api.status().group.last.mode, "plan", JSON.stringify(api.status().group.last));
+    assert.equal(api.status().group.last.combat, true);
+    assert.ok(mb, "b moves");
+    assert.ok(clearOf(b.document._source, mb.waypoints, center(rest.document._source), S - 1), `b never through the standing token: ${JSON.stringify(mb.waypoints.map(w => [w.x, w.y]))}`);
+    for (const w of mb.waypoints) assert.ok(w.x % S === 0 && w.y % S === 0, `on whole squares: ${JSON.stringify(w)}`);
+  } finally {
+    combatFlag = false;
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(rest.document.id);
+    tickBy(60000);
+  }
+});

@@ -74,22 +74,23 @@ const DOOR = `
 #.............#
 ###############`;
 
-test("HX1-05: a member with no route (a Large that fits no door) sets off only once those whose way it crosses have passed; nobody is walked through while it waits", () => {
+test("HX1-05 / 0.5.0: a Large with no route it fits walks the way that ignores the tokens only as far as nothing meets it, never core's path; nobody is walked through", () => {
   const g = gridWorld(DOOR);
-  // a (anchor), b, c and e file through the door (column 7, row 4) to the lower room; the Large L has no route: core
-  // walks it east along row 2 toward the door, through where c and e stand waiting their turn (live H7b, -113 px).
+  // a (anchor), b, c and e file through the door (column 7, row 4) to the lower room; the Large L fits no door: the way
+  // toward its spot is a line east along row 2 toward the door, through where c and e stand waiting their turn (live
+  // H7b, -113 px when core walked it).
   const d = { x: 0, y: 4 };
   const ms = [member("a", { x: 7.5, y: 2.5 }, d), member("b", { x: 6.5, y: 2.5 }, d), member("c", { x: 5.5, y: 2.5 }, d), member("e", { x: 6.5, y: 1.5 }, d)];
   const L = member("L", { x: 2, y: 2.5 }, { x: 4.5, y: -0.5 }, { w: 2 });
-  L.corePath = [{ x: 2, y: 2.5 }, { x: 6.5, y: 2 }];
   const route = (m, from, to, opts) => (m.id === "L" ? null : g.route(m, from, to, opts));
+  const toward = m => (m.id === "L" ? { points: [{ x: 2, y: 2.5 }, { x: 6.5, y: 2 }], length: 4.53 } : null);
   const res = finish(planGroup({ members: [...ms, L], anchorId: "a" },
-    { walkable: g.walkable, walkDistance: g.walkDistanceFrom(ms[0].formation), route, narrow: g.narrow, now: () => 0 }));
+    { walkable: g.walkable, walkDistance: g.walkDistanceFrom(ms[0].formation), route, toward, narrow: g.narrow, now: () => 0 }));
   assert.equal(res.result, "plan");
   assert.deepEqual(res.excluded, ["L"]);
   const e = res.members;
-  assert.equal(e.L.core, true);
-  assert.ok(e.L.delay > 0, `the Large waits (${e.L.delay} ms)`);
+  assert.equal(e.L.core, false, "never core's walk");
+  assert.equal(e.L.short, true);
   // Over all time (standing at its start, walking, at rest), nobody is walked through the Large or it through them.
   const tr = id => delayed(trajectory(e[id].points, { speed: 6 }), e[id].delay);
   const end = Math.max(...Object.keys(e).map(id => tr(id).end)) + 100;

@@ -12,8 +12,11 @@
 import { directPath } from "./pathfind-core.mjs";
 
 export const MOTION = Object.freeze({
-  restGap: 0.1,          // squares between two circles at rest (slots)
-  motionGap: 0.25,       // squares between two circles both moving in different waves (latency buffer)
+  restGap: 0.2,          // squares between two circles at rest (slots; 0.1 until 0.5.0: hex rows 0.95 apart walled a
+                         // packed room off, with nothing allowed to brush past a resting member)
+  motionGap: 0.75,       // latency buffer (squares): a token walking in a different wave may be drawn this far ahead of or
+                         // behind itself along its way (~125 ms at 6 squares/s, above the tunnel's 11-105 ms spread;
+                         // a flat 0.25 square until 0.5.0)
   contact: 0.15,         // squares two circles that start in contact may brush while one leaves
   delayStep: 150,        // ms: start delays are multiples of this
   maxDelay: 3000,        // ms: the largest start delay tried before a lateral re-plan
@@ -133,12 +136,15 @@ const moving = (tr, t0, t1) => t0 >= tr.start - EPS && t1 <= tr.end + EPS && tr.
  * linearly between breakpoints, so the distance is a quadratic there), which covers the plan's
  * "sampled at 50 ms, plus segment-pair closest approach".
  *
- * Required distance, per stretch of time:
- *   - both moving, and in different waves or in combat:  rA + rB + motionGap  (latency buffer)
- *   - otherwise (one waiting or at rest, or one batch out of combat, which every client starts from
- *     the same update):  rA + rB
- * A pair that starts overlapped or in contact (closer than rA + rB + 0.05) is held only to "no closer
- * than it started, less `contact`" until it first reaches the required distance (plan §4 step C:
+ * Required distance, per stretch of time: rA + rB. When both are moving and in different waves (or in combat,
+ * where each token's next stretch is its own update), a client may draw either up to `gap` squares ahead of or
+ * behind where it is along its own way (the latency buffer, 0.75 square since 0.5.0: about 125 ms at 6 squares
+ * per second, above the tunnel's spread): rA + rB must hold with A or B shifted by -gap, -gap/2, gap/2 and gap
+ * along its direction (capped by the way it has walked and has left). Symmetric in A and B. Neighbours walking side by side are not pulled apart by it; one walking in another's
+ * wake is (0.4.x added a flat 0.25 square instead, in every direction). One batch out of combat starts on every
+ * client from the same update and gets no shift.
+ * A pair that starts overlapped or in contact (closer than rA + rB + 0.05) is held only to "no closer than it
+ * started, less `contact`" (shifted too while both walk) until it first reaches rA + rB + 0.05 (plan §4 step C:
  * ignored until it first separates; grid neighbours brush as one leaves).
  *
  * @returns {{ t: number, d: number } | null}
@@ -146,7 +152,21 @@ const moving = (tr, t0, t1) => t0 >= tr.start - EPS && t1 <= tr.end + EPS && tr.
 export function firstConflict(A, B, rA, rB, { sameWave = false, combat = false, gap = MOTION.motionGap,
   contact = MOTION.contact } = {}) {
   const rr = rA + rB;
-  const bt = breakpoints(A, B);
+  let bt = breakpoints(A, B);
+  // Where B has walked, or has left, half the buffer and the whole of it: the shift's cap changes there.
+  if (gap > 0 && (combat || !sameWave)) {
+    const extra = [];
+    for (const X of [A, B]) {
+      if (!(X.end > X.start)) continue;
+      let len = 0;
+      for (let k = 1; k < X.pts.length; k++) len += dist(X.pts[k - 1], X.pts[k]);
+      const v = len / (X.end - X.start);
+      if (v > 1e-12) for (const k of [0.5, 1]) extra.push(X.start + (gap * k) / v, X.end - (gap * k) / v);
+      bt = [...bt, ...extra.filter(t => t > X.start && t < X.end)];
+      extra.length = 0;
+    }
+    bt = bt.sort((x, y) => x - y).filter((t, i, all) => i === 0 || t - all[i - 1] > EPS);
+  }
   const d0 = dist(positionAt(A, 0), positionAt(B, 0));
   let held = d0 < rr + 0.05;
   const floor = Math.min(d0, rr) - contact;
@@ -161,19 +181,38 @@ export function firstConflict(A, B, rA, rB, { sameWave = false, combat = false, 
     const V = T > 0 ? { x: ((a1.x - a0.x) - (b1.x - b0.x)) / T, y: ((a1.y - a0.y) - (b1.y - b0.y)) / T } : { x: 0, y: 0 };
     const q = quad(P, V);
     const both = T > 0 && moving(A, t0, t1) && moving(B, t0, t1);
-    const need = both && (combat || !sameWave) ? rr + gap : rr;
+    // The latency buffer: either drawn up to `gap` ahead of or behind itself along its way (the same for A and B,
+    // so the answer does not depend on which is which).
+    const qs = [q];
+    if (both && (combat || !sameWave) && gap > 0) {
+      for (const [X, p0, p1, sign] of [[B, b0, b1, -1], [A, a0, a1, 1]]) {
+        const bx = p1.x - p0.x, by = p1.y - p0.y, L = Math.hypot(bx, by);
+        if (L <= 1e-9) continue;
+        // Never drawn behind its start or past its end: the shift is capped by the way walked and the way left.
+        const v = L / T;
+        const back = Math.max((t0 - X.start) * v, 0), ahead = Math.max((X.end - t1) * v, 0);
+        for (const k of [-1, -0.5, 0.5, 1]) {
+          const d = k < 0 ? -Math.min(gap * -k, back) : Math.min(gap * k, ahead);
+          if (Math.abs(d) > 1e-9) qs.push(quad({ x: P.x + sign * (bx / L) * d, y: P.y + sign * (by / L) * d }, V));
+        }
+      }
+    }
+    const earliest = (list, lim, span) => {
+      let best = null;
+      for (const qq of list) { const tau = earliestBelow(qq, lim, span); if (tau !== null && (best === null || tau < best.tau)) best = { tau, qq }; }
+      return best;
+    };
     let from = 0;
     if (held) {
-      const sep = earliestAtLeast(q, rr + gap, T);          // separated: clear of the moving distance
-      const closer = earliestBelow(q, floor, T);
-      if (closer !== null && (sep === null || closer < sep)) return hit(t0 + closer, q, closer);
+      const sep = earliestAtLeast(q, rr + 0.05, T);          // separated: no longer in contact
+      const closer = earliest(qs, floor, T);
+      if (closer !== null && (sep === null || closer.tau < sep)) return hit(t0 + closer.tau, closer.qq, closer.tau);
       if (sep === null) continue;
       held = false;
       from = sep;
     }
-    const shifted = shift(q, from);
-    const tau = earliestBelow(shifted, need - EPS, T - from);
-    if (tau !== null) return hit(t0 + from + tau, shifted, tau);
+    const found = earliest(qs.map(qq => shift(qq, from)), rr - EPS, T - from);
+    if (found !== null) return hit(t0 + from + found.tau, found.qq, found.tau);
   }
   return null;
 }

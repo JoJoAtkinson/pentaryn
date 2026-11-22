@@ -71,8 +71,13 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   group walking through their way has passed (0.4.11). Dropped where the grabbed token has no way to go,
   nobody moves and the dragger gets a short "No route there" warning (0.4.9; a single token too). A single
   drop lands where the pointer comes up, and one released before its route search has finished goes once
-  the search is done (0.4.10). A way round others is never more than 4 squares, or half the direct way,
-  longer: past that a member waits its turn instead (0.4.10). A big
+  the search is done (0.4.10). **Tokens standing in the way are walls (0.5.0)**, for a single drag and a
+  group, in a fight too: every route goes round them however long that is, nobody rests on one, and a token
+  whose only way runs through one walks only as far as it is free and stops there ("No route there"); nothing
+  ever walks through another token to get somewhere. Members of a group, and one walking in another's wake in a
+  different wave, keep 0.75 square of slack for the network (0.25 before). A re-plan round members already
+  at rest is never more than 4 squares, or half the direct way, longer: past that a member waits its turn
+  (0.4.10). A big
   token never walks where its body does not fit (core tests walls at the centre only): it takes a wider way
   round when there is one, else it stops before the gap, clear of the frame, and the GM is told (0.4.9).
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
@@ -139,7 +144,7 @@ frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offli
 | `pinsUnderTokens(scene?)` | — | — | map pins whose centre sits under a visible token on the same scene level (a pin shown on every level, or a token with no level, always counts), player-owned first; `scene` is a Scene or a scene id (an unknown id answers `[]`) (pins belong **beside** tokens: owned-on-top makes a pin under your token unclickable) |
 | `pathfind.status()` | — | — | the mode, this client's two settings, `patched` (the `findMovementPath` wrap), the step-cache size, the limits, and `last`: what the last search did (`nodes`, `ms`, `reached` of `of` explicit waypoints, `arcs`, `improved`, `async`) |
 | `pathfind.route(ref, { to, preview?, smooth? })` | — | — | dry run: the path a drag of that token to `to` (top-left pixels) would get, with its cost in feet; needs a browser tab showing the scene (the headless GM has no canvas) |
-| `planGroup(refs, point)` | — | — | dry run of a group drop (the first ref is the grabbed one, `point` its top-left drop point): each member's slot, start delay, level (0 delay · 1 re-plan · 2 go last · 3 relaxed · `core`), and `anchorRoute` (`reached`, `ms`, `waypoints`: the grabbed token's route, searched first with the pathfinder's full budget, as its drag preview is); needs a browser tab |
+| `planGroup(refs, point)` | — | — | dry run of a group drop (the first ref is the grabbed one, `point` its top-left drop point): each member's slot, start delay, level (0 delay · 1 re-plan or another spot · 2 go last · `short` no route round the tokens in its way, as far as it is free · `cut` stopped short so nothing meets it · `stay` does not move; 0.5.0: there is no `relaxed` or `core` member any more), `short`, and `anchorRoute` (`reached`, `ms`, `waypoints`: the grabbed token's route, searched first with the pathfinder's full budget, as its drag preview is); needs a browser tab |
 | `stop(ref)` | — | token position / its pending move | stop a moving token as a click would (no 400 ms arming); in combat a player's stop of a move the GM started goes to the active GM through the relay query `pentaryn-movement.stop`, a GM's goes to whoever started it (`pentaryn-movement.stopOwn`) |
 | `selftest()` | — | — | `{ ok, checks }` |
 

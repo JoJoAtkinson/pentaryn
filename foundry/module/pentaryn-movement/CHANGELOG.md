@@ -1,5 +1,36 @@
 # Changelog — pentaryn-movement
 
+## 0.5.0 — 2026-11-22
+
+Overlap redesign, stage 1 of 3: hard obstacles (plan `context/plans/pathfinding-2026-11.md` §15).
+
+- **[declared] Tokens standing in the way are hard obstacles everywhere**: every group route keeps round them, in a
+  fight too (before, a fight ignored them); rest slots keep clear of them; and the timing pass counts them, so a
+  member is never timed through one. A single drag out of combat goes round them however long the way round is.
+- **[declared] No way back to walking through.** The "too long" fallback (a way round longer than 4 squares or half
+  the direct way was swapped for the way through the crowd) and "relax" (a member that could not be timed clear was
+  allowed to brush past others) are gone. A member with no route round them walks the way that ignores them only as
+  far as it is free, and stops there; the grabbed one stopped short tells the dragger "No route there". Last,
+  every walk is checked against every other walk, every standing token and every token walking now, and anything
+  that would still meet one is cut back to where nothing meets it, or does not move (`level` `cut` / `stay`).
+  Stopping short beats overlapping.
+- **[declared] A Large that fits no door gets its own way** (as far as its body fits, then as far as that is free)
+  and never walks core's path; the GM is told it does not fit, as before. No group member is left to core any more.
+- **[declared] A group drop left to core** (out of planning time, a throw, Ctrl waypoints) **stops each member
+  before the first token standing in its way**, not only before the others' rest spots (not for ghost or the
+  unconstrained tool, which pass through on purpose).
+- **[declared] The latency buffer is 0.75 square (was 0.25)**, about 125 ms at 6 squares/s, above the tunnel's
+  11–105 ms spread. It is now a lag along each walker's own way (either drawn up to 0.75 square ahead of or behind
+  itself), not a flat ring: one walking in another's wake keeps it, neighbours abreast do not need it. A pair that
+  starts in contact is let go of the "brush as one leaves" allowance once it is in contact no longer (it was held
+  until 0.25 square apart, which at 0.75 would have let a follower ride in contact the whole corridor).
+- **[declared] Packed rooms:** rest spots keep 0.2 square apart (was 0.1), so a member can walk between two rows
+  of others at rest; the grabbed one dropped in a door's mouth onto open floor goes last and everyone else rests past
+  it; a member walled in by those already resting round its spot takes the nearest other free spot it can reach;
+  a queue through a door may wait up to twice the delay cap past the go-last point.
+- `status().group.last`: `cut`, `stayed`, `short` (ids) replace `relaxed`; `planGroup()` members carry `short`, and
+  `level` is 0 / 1 / 2 / `short` / `cut` / `stay`.
+
 ## 0.4.12 — 2026-11-22
 
 Hard-case round HX-1 (fixes only).
