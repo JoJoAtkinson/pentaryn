@@ -66,6 +66,21 @@
       "ghost": {
         "name": "My ghost button",
         "hint": "Hidden. Whether this player's ghost button is on; it only works while the GM allows ghost movement."
+      },
+      "pathfinding": {
+        "name": "Drag pathfinding",
+        "hint": "When a dragged token would stop at a wall, find the shortest way around it (through open doors, never closed ones) and show that path in the ruler. Players only route around walls they have seen. Ghost movement and the GM's unconstrained tool still move in a straight line.",
+        "everyone": "Everyone",
+        "gm": "GM only",
+        "off": "Off"
+      },
+      "pathfindMine": {
+        "name": "Find a path when I drag",
+        "hint": "Your drags go around walls when the GM allows drag pathfinding. Only on your screen."
+      },
+      "smoothCorners": {
+        "name": "Round path corners",
+        "hint": "A found path bends in an arc instead of a sharp corner, where the arc stays clear of walls and costs no extra movement. Only on your screen."
       }
     }
   }

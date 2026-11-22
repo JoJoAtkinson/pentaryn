@@ -13,7 +13,10 @@
  *   api.mjs              implementations, selftest()
  *   ghost.mjs            the feature: install(reg, ctx) / uninstall()
  *   ghost-combat.mjs     the GM's ghost-in-combat flag (Token HUD toggle, setGhost(ref, { combat }), inspect)
- *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
+ *   pathfind-core.mjs    PURE A*, string pulling and corner arcs (drag pathfinding, 0.3.0)
+ *   pathfind-adapter.mjs a Token and its drag options → the step tests the search uses (reads only)
+ *   pathfind.mjs         the feature: wraps Token#findMovementPath
+ *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the feature installs synchronously in this body (where its module-scope Hooks.on
  * calls always ran, so listener order is unchanged) · init → settings · setup → the feature wraps
@@ -33,9 +36,10 @@ import { onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import * as ghost from "./ghost.mjs";
 import * as ghostCombat from "./ghost-combat.mjs";
+import * as pathfind from "./pathfind.mjs";
 
-/** Features in load order (ghost first: its hooks have always registered first). */
-const FEATURES = [ghost, ghostCombat];
+/** Features in load order (ghost first: its hooks have always registered first; pathfind last, 0.3.0). */
+const FEATURES = [ghost, ghostCombat, pathfind];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

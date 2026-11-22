@@ -1135,6 +1135,28 @@ adjustments:
     retire_class: guarded
     check: make foundry-movement-check
 
+  - id: movement-pathfind-find-path
+    packages: [core, dnd5e]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/pathfind.mjs]
+    markers: ["findMovementPath", "__pentarynMovementPath"]
+    what: wraps Token#findMovementPath on Token5e (pentaryn → dnd5e → core); when the plain path stops short of an explicit waypoint, splices A*-found corners (and corner arcs) in as non-explicit waypoints and runs the original again, keeping the result only when it reaches more waypoints; returns core's TokenFindMovementPathJob shape (result / promise / cancel), async past an 8 ms slice
+    why: core v14's findMovementPath does no search (its doc says the path "may not necessarily be one with the least cost"); no maintained module pathfinds on v14
+    native_when: core or dnd5e ships a pathfinding findMovementPath (a search around walls during drag)
+    retire_class: guarded
+    check: make foundry-movement-check
+
+  - id: dnd5e-movement-pathfind-blocking
+    packages: [dnd5e]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/pathfind-adapter.mjs]
+    markers: ["isOccupiedGridSpaceBlocking", "neverBlockStatuses", "movementAutomation"]
+    what: the pathfinder treats squares as impassable through TokenLayer5e#isOccupiedGridSpaceBlocking, gated as Token5e#constrainMovementPath gates it (movementAutomation "full", a creature, no neverBlockStatuses, no ignoreTokens)
+    why: dnd5e stops a move one square before a blocking hostile; a route through one would end at the creature
+    native_when: dnd5e's own pathfinding routes around blocking creatures
+    retire_class: guarded
+    check: make foundry-movement-check
+
   - id: movement-layer-sort-owned
     packages: [core]
     modules: [pentaryn-movement]

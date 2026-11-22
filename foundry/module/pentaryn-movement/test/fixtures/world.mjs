@@ -29,6 +29,11 @@ export async function movementWorld({ patchable = true } = {}) {
       _getDragConstrainOptions() {
         return { ignoreWalls: false, k: 1 };
       }
+      /** Core's job shape; the stub passes the waypoints straight through (pathfind.test drives a real one). */
+      findMovementPath(waypoints) {
+        const path = waypoints.map(w => ({ ...w }));
+        return { result: path, promise: Promise.resolve(path), cancel: () => {} };
+      }
     };
     F.CONFIG.Canvas = { layers: { tokens: { layerClass: class TokenLayer5e {
       _prepareKeyboardMovementUpdates() {

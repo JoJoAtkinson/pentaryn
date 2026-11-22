@@ -33,9 +33,10 @@ test("published synchronously at ready: module.api is game.pentaryn.movement, fr
 });
 
 test("every described method is a function on the API; core is published unlisted (a frozen copy)", () => {
-  for (const m of api.describe().methods) assert.equal(typeof api[m.path], "function", m.path);
+  const at = path => path.split(".").reduce((o, k) => o?.[k], api);
+  for (const m of api.describe().methods) assert.equal(typeof at(m.path), "function", m.path);
   assert.deepEqual(api.describe().methods.map(m => m.path),
-    ["status", "ghostFor", "combatActive", "setGhost", "setPolicy", "pinsUnderTokens", "inspect", "selftest"]);
+    ["status", "ghostFor", "combatActive", "setGhost", "setPolicy", "pinsUnderTokens", "inspect", "pathfind.status", "pathfind.route", "selftest"]);
   assert.ok(Object.isFrozen(api.core));
   assert.equal(api.core.MODULE, MODULE);
 });
@@ -54,15 +55,18 @@ test("surface equals golden/surface.json (core.* is the pure module: checked aga
   assert.deepEqual(Object.keys(api.core).sort(), Object.keys(coreModule).sort());
 });
 
-test("every patch record names an adjustments row; three patches", () => {
+test("every patch record names an adjustments row; four patches (0.3.0: findMovementPath)", () => {
   const listed = api.describe().patches;
-  assert.equal(listed.length, 3);
+  assert.equal(listed.length, 4);
   for (const p of listed) assert.ok(p.adjustments?.startsWith("movement-"), p.label);
 });
 
 test("described settings are exactly the SETTINGS table; settings() snapshots them", () => {
   assert.deepEqual(api.describe().settings.map(s => s.key), SETTINGS.map(r => r.key));
-  assert.deepEqual(api.settings(), { ghostPolicy: "exploration", ghostPolicyLast: "exploration", ghost: false, ownedOnTop: true });
+  assert.deepEqual(api.settings(), {
+    ghostPolicy: "exploration", ghostPolicyLast: "exploration", ghost: false, ownedOnTop: true,
+    pathfinding: "everyone", pathfindMine: true, smoothCorners: true,
+  });
 });
 
 test("selftest passes on a healthy load", () => {
@@ -116,7 +120,7 @@ test("uninstall() leaves no hook and no patch behind; a hot re-import re-wires a
   const again = game.modules.get(MODULE).api;
   assert.notEqual(again, api);
   assert.equal(game.pentaryn.movement, again);
-  assert.deepEqual(again.describe().hooks.map(h => h.name), names.filter(n => n !== "setup"), "late: patched at once, no setup hook");
+  assert.deepEqual([...new Set(again.describe().hooks.map(h => h.name))], names.filter(n => n !== "setup"), "late: patched at once, no setup hook");
   assert.equal(CONFIG.Token.objectClass.prototype._getDragConstrainOptions.__pentarynMovement, true);
   assert.equal(again.selftest().ok, true, JSON.stringify(again.selftest().checks));
   mock.timers.tick(60);

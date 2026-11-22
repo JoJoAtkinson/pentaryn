@@ -92,6 +92,30 @@ export const MANIFEST = Object.freeze({
         + "feat (the incorporeal feat's name, or null) and ghostInCombat (either grants it). Options are ignored.",
     },
     {
+      path: "pathfind.status",
+      params: [],
+      returns: "{ mode, mine, smoothCorners, patched, gridType, memo, limits, last: { at, tokenId, legs, found, nodes, ms, reached, of, arcs, improved, async, memo } | null }",
+      gm: false, writes: false,
+      since: "0.3.0",
+      doc: "Drag pathfinding on this client: the world mode (everyone / gm / off), this client's two settings, whether "
+        + "Token#findMovementPath is wrapped, the step-cache size, the search limits, and what the last search did "
+        + "(nodes expanded, ms, explicit waypoints reached of how many, arcs placed, whether it beat the straight drag).",
+    },
+    {
+      path: "pathfind.route",
+      params: [
+        { name: "ref", kind: "token", type: "Token | TokenDocument | uuid | id | exact name", doc: "a token on the scene this client's canvas shows" },
+        { name: "opts", type: "{ to: { x, y }, preview?: boolean, smooth?: boolean }",
+          doc: "to: the destination top-left in pixels; preview: count only walls this user has seen (default false); smooth: corner arcs (default this client's setting)" },
+      ],
+      returns: "{ ok, reached, straight, waypoints: [{ x, y, explicit }], cost, arcs, legs: [{ state, nodes, corners, arcs }], ms } | { ok: false, reason }",
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
+      since: "0.3.0",
+      doc: "Dry run of a drag: the path the pathfinder would give that token to opts.to, without moving it. Needs a drawn "
+        + "canvas (a browser tab, not the headless GM). straight: the plain drag already got there; cost in feet as the ruler measures it.",
+    },
+    {
       path: "selftest",
       params: [],
       returns: "{ ok, checks: [{ label, ok, detail }] }",

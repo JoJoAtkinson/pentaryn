@@ -1,5 +1,32 @@
 # Changelog — pentaryn-movement
 
+## 0.3.0 — 2026-11-21
+
+Drag pathfinding (plan `context/plans/pathfinding-2026-11.md`).
+
+- **[declared] A drag past a wall goes around it.** `Token#findMovementPath` is wrapped (Token5e,
+  so the chain is pentaryn → dnd5e → core; adjustments row `movement-pathfind-find-path`, marker
+  `__pentarynMovementPath`). A drag whose plain path already reaches every waypoint is returned as
+  core made it. Otherwise each blocked leg is searched with 8-connected A* (5 ft a step, Chebyshev
+  heuristic, Euclidean tie-break), string-pulled without raising the cost, and the corners are
+  spliced in as non-explicit waypoints; the expanded list runs through dnd5e and core again, and is
+  kept only when it reaches more waypoints than the plain drag.
+- Walls through `Token#checkCollision` on every square a token covers (a 2×2 token must fit); doors
+  and one-way walls as core sees them; in a player's preview only walls they have seen count. No
+  diagonal squeezes between two walls meeting at a corner. Creatures through dnd5e's
+  `isOccupiedGridSpaceBlocking` (row `dnd5e-movement-pathfind-blocking`); cost through
+  `Token#measureMovementPath` (plus `createTerrainMovementPath` when a region has terrain effects).
+- **Rounded corners:** each corner becomes a circular arc tangent to both legs (≤ 2 squares, halved
+  until it is clear and costs no more than the sharp corner), as unsnapped non-explicit waypoints.
+- Skipped for ghost and the GM's unconstrained tool (`ignoreWalls`), on gridless and hex scenes, and
+  for keyboard movement. A search past one 8 ms slice continues in timer slices (core's searching
+  animation shows); capped at 6000 nodes / 1.5 s.
+- Three settings: `pathfinding` (world: everyone / gm / off, default everyone), `pathfindMine` and
+  `smoothCorners` (client, default on). `status().settings` lists them (appended keys).
+- API: `pathfind.status()` and `pathfind.route(ref, { to, preview?, smooth? })` (read-only); selftest
+  checks the wrap. Listens to 14 more hooks (wall, region, behaviour and token changes, `canvasReady`,
+  a second `setup`): each drops the step cache.
+
 ## 0.2.0 — 2026-11-07
 
 Ghost movement for incorporeal creatures during a fight (player feedback `nwhjz2`, triage
