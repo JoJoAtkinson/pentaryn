@@ -247,3 +247,15 @@ test("boundsFor pads the box and clips it; reachedCount counts explicit waypoint
   assert.equal(pf.reachedCount([{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 5, y: 0 }], ex, same), 2);
   assert.equal(pf.reachedCount([], ex, same), 0);
 });
+
+// Live round 1 D-10: two corners one square apart (in and out of a door) shared their tangent point,
+// and the route carried that waypoint twice.
+test("fillet never repeats a point where two arcs meet (corners closer than two tangent lengths)", () => {
+  const pts = [{ x: 450, y: 350 }, { x: 750, y: 850 }, { x: 850, y: 850 }, { x: 1250, y: 350 }];
+  const r = pf.fillet(pts, { maxT: 150, clear: () => true, cost: () => 10, maxError: 5 });
+  assert.equal(r.arcs, 2);
+  for (let k = 1; k < r.points.length; k++) {
+    const a = r.points[k - 1], b = r.points[k];
+    assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 0.5, `points ${k - 1} and ${k} coincide: ${JSON.stringify([a, b])}`);
+  }
+});

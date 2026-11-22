@@ -343,7 +343,13 @@ export function fillet(pts, { maxT, clear, cost, tries = LIMITS.arcTries, stepDe
       break;
     }
     if (placed) {
-      for (const p of placed) out.push({ ...p, arc: true });
+      // Where the previous arc used up the whole incoming leg, this arc starts on the point it ended
+      // on: never the same point twice (live R1 D-10; waypoints are rounded to whole pixels).
+      for (const p of placed) {
+        const prev = out.at(-1);
+        if (Math.hypot(p.x - prev.x, p.y - prev.y) < 0.5) continue;
+        out.push({ ...p, arc: true });
+      }
       arcs += 1;
     } else out.push({ ...B });
   }
