@@ -214,8 +214,11 @@ export function chooseSwing(weaponId) {
   render();
   const oldUuid = attackActivityOf(current.actor.items.get(before))?.uuid ?? null;
   const me = current;
+  const at = me.state.index;
+  // Only this swing's window: once it has rolled (Quick mode, or Normal clicked first), a later swing
+  // that uses the old weapon is not the chooser's to close.
   const tryClose = (n) => {
-    if (current !== me || !oldUuid || tag?.activityUuid !== oldUuid) return;
+    if (current !== me || me.state.index !== at || me.state.status !== "running" || !oldUuid || tag?.activityUuid !== oldUuid) return;
     me.rechosen = true;
     if (closeSwingWindow()) return;
     me.rechosen = false;

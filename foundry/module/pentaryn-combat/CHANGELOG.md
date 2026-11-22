@@ -11,6 +11,8 @@ A patch again: 0.4.0 stays reserved for the declared legacy `pentarynCombat.*` e
   GM clicks at most once per change (all Pistol = one click; Pistol then Scimitar = two). A roll
   window already open for the old weapon closes unrolled and the swing is rolled again with the new
   one, with no pause. A usage card left with nothing rolled under it is tidied as before.
+  The chooser only ever closes the window of the swing it was clicked on: once that swing has
+  rolled (Quick mode, or Normal clicked first), a later swing's window for the old weapon stays open.
   Fixed-composition Multiattacks ("one Bite and two Claws") show no chooser and plan as before.
 - **Parser** (`core/multiattack.mjs`): a "N attacks, using A or B (in any combination)" group carries
   `mix: true`, and its plan row carries `group` and `choices`. The parser checked against every

@@ -838,6 +838,33 @@ test("any combination: a choice with the roll window open closes it and rolls th
   F.calls.length = 0;
 });
 
+test("any combination: a choice while a windowless roll is in flight never closes a later swing's window for the old weapon", async () => {
+  // Quick mode: swing 1 (Scimitar) is rolling with no window when Pistol is chosen. It rolls as the
+  // Scimitar; swing 2 here is a Scimitar outside the group, and its window must stay open.
+  const sc = act(captain, SCIM);
+  const s1 = pending(sc);
+  const s2 = pending(sc);
+  const run = seq.runSwings(captain, [
+    { weaponId: SCIM, mode: null, kind: "main", group: 0, choices: [SCIM, PISTOL] },
+    { weaponId: SCIM, mode: null, kind: "main" }
+  ]);
+  await drain();
+  assert.equal(seq.chooseSwing(PISTOL), true);
+  s1.release({ total: 12 });     // the in-flight roll lands with the old weapon
+  await drain();
+  assert.equal(seq.running().state.index, 1);
+  const w = rollWindow("capWinLate", sc);
+  await tick(400);               // the chooser's close polls run past the late window
+  assert.equal(w.closed, 0, "swing 2's Scimitar window was not the chooser's to close");
+  F.foundry.applications.instances.delete("capWinLate");
+  s2.release({ total: 9 });
+  const out = await run;
+  await tick(400);
+  assert.deepEqual(out, { rolled: 2, status: "done" });
+  reset(captain);
+  F.calls.length = 0;
+});
+
 test("any combination: a choice outside a running sequence, or of a weapon the group does not offer, does nothing", async () => {
   assert.equal(seq.chooseSwing(PISTOL), false, "nothing running");
   const s1 = pending(act(captain, SCIM));
