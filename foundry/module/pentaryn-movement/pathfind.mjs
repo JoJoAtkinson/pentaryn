@@ -4,7 +4,8 @@
  *
  * GLUE, one feature. Wraps Token#findMovementPath on the configured token class (dnd5e's Token5e),
  * so the chain is pentaryn → dnd5e → core. The original runs first; when its path already reaches
- * every explicit waypoint (a straight drag) it is returned untouched. Otherwise each leg from the
+ * every explicit waypoint (a straight drag) it is returned untouched, unless it walks into a teleport /
+ * change-level region the drag neither starts nor ends in (0.4.5, live R5-4). Otherwise each leg from the
  * first unreached waypoint on is searched (pathfind-core: A*, cost-preserving string pulling, and
  * corner arcs when this client's "Smooth corners" is on), the found corners are spliced in as
  * non-explicit waypoints, and the expanded list goes back through the original, so dnd5e and core
@@ -224,6 +225,18 @@ function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid
 }
 
 /**
+ * Does core's path `path` for this drag cross a teleport / change-level region (pathfind-adapter
+ * placesToAvoid's traps: not one the drag starts or ends in; a hidden one only for a GM)? Fog and
+ * secret doors are not asked: a straight drag over them stays core's.
+ */
+function entersTrap(token, waypoints, path, options) {
+  const hz = placesToAvoid(token, waypoints[0], waypoints.at(-1), { preview: !!options?.preview });
+  if (!hz.traps.length) return false;
+  for (let k = 1; k < path.length; k++) if (!hz.line(path[k - 1], path[k], { fog: false })) return true;
+  return false;
+}
+
+/**
  * The job core's drag code waits on (TokenFindMovementPathJob): `result` is the path when found
  * at once, `undefined` while searching, `null` once cancelled. A search that does not finish in
  * one slice continues in timer slices; the drag shows core's searching animation meanwhile.
@@ -235,10 +248,16 @@ function pathfindJob(token, waypoints, options, wrapped, base) {
   const reason = skipFor(token, waypoints, options);
   if (reason) return null;
   const reached = pf.reachedCount(base.result, waypoints, same);
-  if (reached >= waypoints.length || reached === 0) return null;
+  if (reached === 0) return null;
+  // A drag core lets through whole is core's own, unless its line walks into a teleport / change-level
+  // region the drag neither starts nor ends in (live R5-4: a straight drag walked into a scene link and
+  // the player's view jumped to its destination; only group slots and route() kept out). Then every leg
+  // is searched round it; with no way round, core's line stays.
+  const force = reached >= waypoints.length;
+  if (force && !entersTrap(token, waypoints, base.result, options)) return null;
 
   const smooth = !!setting("smoothCorners") && !inCombat(token);
-  const plan = planner(token, waypoints, options, reached - 1, wrapped, base, smooth);
+  const plan = planner(token, waypoints, options, force ? 0 : reached - 1, wrapped, base, smooth, { force });
   if (plan.step(LIMITS.sliceMs) === "done") {
     const path = plan.result();
     return { result: path, promise: Promise.resolve(path), cancel: () => {} };

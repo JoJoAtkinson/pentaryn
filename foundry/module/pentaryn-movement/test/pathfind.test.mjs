@@ -411,6 +411,37 @@ test("teleport / change-level regions: an auto-route keeps out unless the leg en
   }
 });
 
+test("R5-4: a straight drag core allows whole is routed round a teleport region it would walk into, unless it ends there", async () => {
+  await set("smoothCorners", false);
+  const zone = { x: 200, y: 0, w: 150, h: 300 };
+  const inZone = path => {
+    for (let k = 1; k < path.length; k++) {
+      const a = center(path[k - 1]), b = center(path[k]);
+      for (let t = 0; t <= 1; t += 0.05) if (inRect(zone, { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })) return true;
+    }
+    return false;
+  };
+  try {
+    world.walls = [];
+    world.regions = [region("reg00000000000r5", zone)];
+    F.fire("updateRegion");
+    const path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+    assert.ok(reaches(path, 500, 0), "still reached");
+    assert.ok(!inZone(path), `no wall in the way, yet the route keeps out of the region: ${JSON.stringify(path.map(w => [w.x, w.y]))}`);
+    // Dropped inside it: core's straight line, the token goes there on purpose.
+    const into = drag(makeToken(), [wp(0, 0), wp(200, 0)]).result;
+    assert.deepEqual(into.map(w => [w.x, w.y]), [[0, 0], [200, 0]]);
+    // Sealed round it: no way round, core's line stays.
+    world.regions = [region("reg00000000000r6", { x: 200, y: -2000, w: 150, h: 6000 })];
+    F.fire("updateRegion");
+    assert.ok(reaches(drag(makeToken(), [wp(0, 0), wp(500, 0)]).result, 500, 0));
+  } finally {
+    world.regions = [];
+    F.fire("updateRegion");
+    await set("smoothCorners", true);
+  }
+});
+
 test("fog: a player's route never plans through ground that player has not explored and cannot see", async () => {
   await set("smoothCorners", false);
   const vis = F.canvas.visibility;

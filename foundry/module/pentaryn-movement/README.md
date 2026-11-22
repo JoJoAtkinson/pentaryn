@@ -59,7 +59,8 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   creatures and costlier terrain, a big token only where it fits; corners rounded where an arc costs
   nothing extra. Players route only round walls they have seen, and only over ground they have explored
   or can see. A route never uses a secret door (open or shut) or crosses a teleport / change-level region
-  (a scene link) unless it ends there. A straight drag is core's own.
+  (a scene link) unless it ends there. A straight drag is core's own, but it too bends round such a region
+  rather than walk into it (0.4.5).
 - **Drag several tokens together** and each walks its own way to its own spot by the drop point,
   all setting off together on open ground and in turn only at a door, so they file through it one behind
   the other, never resting on top of each other (circles: touching is fine). The grabbed token lands
