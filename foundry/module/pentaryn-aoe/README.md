@@ -77,7 +77,9 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   hit (`core.attackHitTargets`, dnd5e's own `evaluatedTargets` rule; an unknown AC counts as hit), passed
   as `message.data.system.targets` to `rollDamage`, instead of the roller's current targets dnd5e would
   record, so a missed creature is not in the Apply tray; an attack card whose recorded targets were all
-  missed rolls nothing (a two-target roll has no single AC, so `shouldAutoDamage` alone rolled).
+  missed rolls nothing (a two-target roll has no single AC, so `shouldAutoDamage` alone rolled). Since
+  0.8.0 an attack card that recorded no target rolls nothing either (`core.autoDamageHasTarget`): a
+  natural 20 at nobody had auto-rolled, and dnd5e's Apply tray then offered each viewer's selection.
   J1 (`autoDamageOnSave`): using a save activity that has damage and at least one recorded
   target (Psionic Lash at Caven) rolls its damage at once, threaded under the usage card with the
   card's targets, so the flow is Use → the target saves → Apply. A save spell that places an area

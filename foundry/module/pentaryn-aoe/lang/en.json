@@ -84,7 +84,7 @@
       },
       "autoDamageOnHit": {
         "Name": "Roll damage on a hit",
-        "Hint": "After an attack roll that hits (or whose target is unknown), roll its damage straight away on the attacker's client. A known miss or a natural 1 rolls nothing."
+        "Hint": "After an attack roll that hits a target (or a target whose AC is unknown), roll its damage straight away on the attacker's client. A known miss, a natural 1, or an attack with no target (even a natural 20) rolls nothing: click the card's Damage button."
       },
       "autoApplySelf": {
         "Name": "Apply self-cast effects automatically",

@@ -252,6 +252,17 @@ export function attackHitTargets(targets, { total = 0, isCritical = false, isFum
 }
 
 /**
+ * Part C (0.8.0, Joe 2026-11-21): may the auto damage roll go ahead, given attackHitTargets' answer?
+ * Only with at least one target the roll hit. `null` (the card recorded no target: a natural 20 at
+ * nobody) rolls nothing, as does `[]` (every target missed): dnd5e's Apply tray on such a card offers
+ * whatever each viewer has selected, often the attacker. The card's Damage button stays.
+ * @param {object[]|null} hits
+ */
+export function autoDamageHasTarget(hits) {
+  return Array.isArray(hits) && hits.length > 0;
+}
+
+/**
  * D2 (feedback ORGqVN, hKDbzi): what an attack card says about hit or miss. `targets` are dnd5e's
  * evaluated targets (`message.system.evaluatedTargets`: `{ isMiss, ac }`; `ac === null` is total cover,
  * a miss); `visible` is whether this viewer may know the result (dnd5e's `attackRollVisibility` is not

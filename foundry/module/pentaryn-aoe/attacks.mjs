@@ -8,7 +8,9 @@
  * A known miss or a natural 1 rolls nothing. The manual Damage button stays. Since 0.7.1 the damage
  * card's targets are only the attack card's targets this roll hit (core.attackHitTargets; an unknown AC
  * counts as hit), not the roller's current targets dnd5e would record, so a missed creature is not in
- * its Apply tray; when the card recorded targets and every one was missed, nothing rolls.
+ * its Apply tray; when the card recorded targets and every one was missed, nothing rolls. Since 0.8.0
+ * nothing rolls either when the attack card recorded NO target (core.autoDamageHasTarget): a natural 20
+ * at nobody had rolled damage whose Apply tray offered each viewer's selection (often the attacker).
  *
  * J1 (feedback fs7q6K, Psionic Lash): a save activity has the same gap — Use posts the card, and the
  * damage waits for a Damage click. With autoDamageOnSave on, using a save activity that has damage
@@ -26,7 +28,7 @@
  * visibility is "none" (core.attackOutcome).
  */
 
-import { RECENT_MESSAGES, attackHitTargets, attackOutcome, shouldAutoDamage, shouldAutoDamageOnUse } from "./core.mjs";
+import { RECENT_MESSAGES, attackHitTargets, attackOutcome, autoDamageHasTarget, shouldAutoDamage, shouldAutoDamageOnUse } from "./core.mjs";
 import { setting, dnd5eAttackVisibility } from "./settings.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 
@@ -53,11 +55,13 @@ export async function onPostRollAttack(rolls, { subject } = {}) {
   // roll against two targets that hit one listed both in the Apply tray. The card gets only the
   // targets this roll hit (an unknown AC counts as hit); every one missed → no damage at all (with
   // two or more targets dnd5e gives the roll no single AC, so shouldAutoDamage alone rolled).
+  // 0.8.0 (Joe 2026-11-21): with NO target recorded nothing rolls either. A natural 20 at nobody had
+  // rolled damage and dnd5e's Apply tray then offered whatever each viewer had selected (the attacker,
+  // often); with no target the card's own Damage button stays for the player to click.
   const hits = attackHitTargets(attackMsg?.system?.targets, { total: roll.total, isCritical: roll.isCritical, isFumble: roll.isFumble });
-  if (hits && !hits.length) return;
-  const system = { ...(origin ? { origin } : {}), ...(hits ? { targets: hits } : {}) };
-  const message = Object.keys(system).length ? { data: { system } } : {};
-  return subject.rollDamage({ attackMode, ammunition, isCritical: roll.isCritical }, { configure: false }, message);
+  if (!autoDamageHasTarget(hits)) return;
+  const system = { ...(origin ? { origin } : {}), targets: hits };
+  return subject.rollDamage({ attackMode, ammunition, isCritical: roll.isCritical }, { configure: false }, { data: { system } });
 }
 
 /** The targets the usage card recorded (dnd5e 6 `system.targets`; the data form when the card was not created). */

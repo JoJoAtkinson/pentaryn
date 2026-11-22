@@ -32,6 +32,16 @@
   - Not built: Wall of Stone made permanent after a full duration of concentration (its walls go with
     concentration, as its region does). B1 (visible thickness) and B3 (panel counter) unchanged; their
     tests pass.
+  - **[declared] No target, no auto damage** (Joe 2026-11-21). With nothing targeted a natural 20 still
+    auto-rolled damage (`shouldAutoDamage`: a crit, or an unknown AC, rolls), and dnd5e's Apply tray on
+    that card then offered the selected token — the attacker, or whatever each viewer had selected.
+    `attacks.mjs onPostRollAttack` now rolls only when the attack card's hit targets
+    (`core.attackHitTargets`) are not empty (`core.autoDamageHasTarget`); a card that recorded no target,
+    or no attack card at all, leaves the card's Damage button for the player. Every auto-rolled card now
+    carries its hit targets. Note: a pentaryn-combat Full Attack with no target and aoe's auto damage on
+    shows no per-swing Damage button (combat hides it whenever `autoDamageOnHit` is on); the usage card's
+    Damage button remains. Tests: `attacks.test.mjs` (no target, no card, crit with a target), the
+    `attacks.json` golden (each row now records a target; a "no target, natural 20" row).
   - Adjustment rows `core-region-spell-walls`, `core-controls-layer-wall-breaks`. Tests:
     `spell-walls.test.mjs` (per-spell walls, sections, ids, diff, break geometry, repair, own-wall
     clipping exclusion, the GM sync, the Walls-layer break, the controls); hooks / settings / describe /

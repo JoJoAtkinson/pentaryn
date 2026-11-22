@@ -143,7 +143,9 @@ Talo (+11)". The GM always sees it; by default a player sees it on a card they r
 own who took it, and never a monster's row (setting *Who sees "Applied by" under a card*).
 
 **Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
-client. It also rolls when the target's AC is unknown, for example with no target selected.
+client. It also rolls when the target's AC is unknown. With **no target** nothing rolls, not even on a
+natural 20 (0.8.0): dnd5e's Apply tray on such a card would offer whatever each viewer has selected,
+often the attacker, so the player clicks the card's Damage button instead.
 A known miss or a natural 1 rolls nothing. The card's Damage button still works.
 With several targets, the damage card lists only the ones the roll hit, so Apply never hurts a creature
 the attack missed; if it missed them all, no damage is rolled.
