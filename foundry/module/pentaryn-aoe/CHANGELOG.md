@@ -29,7 +29,10 @@
     `region.update` is still on its server round trip is dropped (`exclusive`): it read the old shapes
     and section numbers, so it put the first break back or knocked out the wrong stretch of a split
     panel. With `spellWalls` off, the GM deleting a leftover spell wall on the Walls layer is just
-    cleanup and no longer cuts the area.
+    cleanup and no longer cuts the area. Clear All on the Walls layer (core's `deleteAll`) breaks no
+    wall spell either; the active GM raises their walls again. A region moved to another level takes
+    its walls along (`diffWalls` compares `levels`). A drag preview of a wall region (a clone with the
+    same id) neither draws break controls nor drops the real region's.
   - **[declared] Part H.** A spell's own walls never clip its own area, and a Wall of Force's walls clip
     other areas although they block no sight (`core.areaEdgeClips`; `walls.mjs` passes the region id in
     the polygon config). Under `areaWalls: move`, core's polygon is used as before unless the scene has

@@ -163,8 +163,8 @@ const SENSES = ["move", "sight", "light", "sound"];
 
 /**
  * B2: what to write so a region's walls match its plan. `existing` are the walls flagged for the
- * region (`{ _id, c, move, sight, light, sound, flags }`). A planned wall with an existing id is
- * updated when its line, senses or panel/section flags differ (a dragged wall moves its walls in
+ * region (`{ _id, c, move, sight, light, sound, levels, flags }`). A planned wall with an existing id is
+ * updated when its line, senses, levels or panel/section flags differ (a dragged wall moves its walls in
  * place); a missing one is created; an existing one the plan no longer has is deleted.
  * @returns {{ create: object[], update: object[], remove: string[] }}
  */
@@ -178,6 +178,8 @@ export function diffWalls(existing = [], planned = [], { module = "pentaryn-aoe"
     const change = {};
     if ((old.c ?? []).join() !== w.c.join()) change.c = w.c;
     for (const k of SENSES) if (old[k] !== w[k]) change[k] = w[k];
+    // A region moved to another level takes its walls along (a level-less plan leaves them as they are).
+    if (w.levels && [...(old.levels ?? [])].sort().join() !== [...w.levels].sort().join()) change.levels = [...w.levels];
     const of = old.flags?.[module] ?? {}, nf = w.flags[module];
     if (of.panel !== nf.panel || of.section !== nf.section) change[`flags.${module}`] = nf;
     if (Object.keys(change).length) update.push({ _id: w._id, ...change });

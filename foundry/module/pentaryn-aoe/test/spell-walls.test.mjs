@@ -436,3 +436,38 @@ test("B2: a round wall (Wall of Force's sphere) is drawn as its ring of sections
   const g = obj.children[0];
   assert.equal(g.ops.filter(o => o[0] === "moveTo").length, 14, "7 of 8 sections, each stroked twice (edge, fill)");
 });
+
+test("B2 review: a region moved to another level takes its walls along (diffWalls compares levels)", () => {
+  const planned = wallPlan({ regionId: "r", shapes: [{ ...stone, x: 0, y: 0, length: 200 }], kind: kind("wall-of-stone"), levels: ["lvlUpper00000001"] });
+  const existing = planned.map(w => ({ _id: w._id, c: [...w.c], move: w.move, sight: w.sight, light: w.light, sound: w.sound, levels: ["lvlGround0000001"], flags: w.flags }));
+  assert.deepEqual(diffWalls(existing, planned).update, [{ _id: planned[0]._id, levels: ["lvlUpper00000001"] }]);
+  const same = existing.map(w => ({ ...w, levels: ["lvlUpper00000001"] }));
+  assert.deepEqual(diffWalls(same, planned).update, [], "the same levels: no write");
+  const levelless = wallPlan({ regionId: "r", shapes: [{ ...stone, x: 0, y: 0, length: 200 }], kind: kind("wall-of-stone") });
+  assert.deepEqual(diffWalls(existing, levelless).update, [], "a level-less plan leaves the walls' levels alone");
+});
+
+test("B2 review: a drag preview of a wall region (a clone, same id) neither draws nor drops the real region's controls", async () => {
+  const s = wallScene("WallSyncScene012");
+  F.canvas.scene = s;
+  F.canvas.controls = new FakeContainer();
+  F.canvas.dimensions = { uiScale: 1 };
+  const r = wallRegion(s, "regWallSync00012", stoneItem, square.map(x => ({ ...x })));
+  const real = SW.drawControls({ document: r, visible: true });
+  assert.equal(real.children.length, 3);
+  const preview = { document: r, visible: true, isPreview: true, animationState: { shapes: [square[0]] } };
+  assert.equal(SW.drawControls(preview), null);
+  F.fire("destroyRegion", preview);
+  await flush();
+  assert.equal(F.canvas.controls[SW.ROOT].byRegion.get(r.id), real, "the real controls stay");
+});
+
+test("B2 review: Clear All on the Walls layer (deleteAll) breaks no wall spell; the active GM raises their walls again", async () => {
+  const s = wallScene("WallSyncScene013");
+  const r = wallRegion(s, "regWallSync00013", stoneItem, square.map(x => ({ ...x })));
+  await SW.syncRegion(r);
+  await s.deleteEmbeddedDocuments("Wall", [...s.walls.keys()], { deleteAll: true });
+  await flush(); await flush(); await flush();
+  assert.equal(r.shapes.length, 3, "the area is untouched, not destroyed");
+  assert.equal(s.walls.size, 3, "its walls are back");
+});

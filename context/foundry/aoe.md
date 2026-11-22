@@ -67,7 +67,7 @@ on the GM's map only, on any layer. **Click** it: that section is gone. Its wall
 the hole, so players see (and walk) through it, and a toast says "Wall of Stone: a section is broken".
 **Right-click** any disc of that wall: the whole wall is put back (also `game.pentaryn.aoe.repairWall(regionId)`).
 Breaking the last section removes the wall and its area. Deleting the spell's walls on the Walls layer
-breaks those sections too, so they do not come back on the next drag. Wall of Stone becoming permanent
+breaks those sections too, so they do not come back on the next drag (Clear All on the Walls layer breaks nothing: the walls come back). Wall of Stone becoming permanent
 after a full 10 minutes of concentration is not built: its walls go with concentration, like its area.
 
 **Which walls stop an area.** The PHB's rule is that an area spreads from its point of origin, and

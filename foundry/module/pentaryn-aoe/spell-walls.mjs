@@ -98,7 +98,7 @@ async function deleteKept(scene, ids) {
 }
 
 /** The plain fields diffWalls compares. */
-const wallRow = w => ({ _id: w.id, c: [...(w._source?.c ?? w.c ?? [])], move: w.move, sight: w.sight, light: w.light, sound: w.sound, flags: w.flags });
+const wallRow = w => ({ _id: w.id, c: [...(w._source?.c ?? w.c ?? [])], move: w.move, sight: w.sight, light: w.light, sound: w.sound, levels: [...(w._source?.levels ?? w.levels ?? [])], flags: w.flags });
 
 /** Region id → the sync in flight (one at a time per region). */
 const queues = new Map();
@@ -260,9 +260,25 @@ export function wallsFor(ref) {
 /** deleteWall batches: region id → the sections the GM deleted on the Walls layer, broken together. */
 const deleted = new Map();
 
+/** Scenes whose Clear All re-sync is already queued on this client (one per batch). */
+const cleared = new Set();
+
 function onDeleteWall(wall, options, userId) {
-  // spellWalls off: a leftover wall the GM deletes is just cleanup, never a break of the area.
-  if (options?.[SYNC] || userId !== game.user?.id || !game.user?.isGM || !setting("spellWalls")) return;
+  if (options?.[SYNC] || !setting("spellWalls")) return;
+  // Clear All on the Walls layer (core's deleteAll) is not a break of every wall spell on the scene: their
+  // areas stay, and the active GM's client raises their walls again.
+  if (options?.deleteAll) {
+    const scene = wall?.parent;
+    if (!isActiveGM() || !scene?.id || !wall?.flags?.[MODULE]?.regionId || cleared.has(scene.id)) return;
+    cleared.add(scene.id);
+    queueMicrotask(() => {
+      cleared.delete(scene.id);
+      syncScene(scene).catch(err => log.error("re-raise spell walls after Clear All", err));
+    });
+    return;
+  }
+  // spellWalls off (above): a leftover wall the GM deletes is just cleanup, never a break of the area.
+  if (userId !== game.user?.id || !game.user?.isGM) return;
   const f = wall?.flags?.[MODULE];
   const region = f?.regionId ? wall.parent?.regions?.get(f.regionId) : null;
   if (!region) return;
@@ -359,7 +375,8 @@ function control(doc, panel, section, at) {
 /** refreshRegion: the GM's break controls for a wall spell's region, where its sections are now. */
 export function drawControls(region) {
   const doc = region?.document;
-  if (!doc?.id) return null;
+  // A drag preview (a clone with the same id) never owns the real region's controls, nor breaks through them.
+  if (!doc?.id || region.isPreview) return null;
   if (!game.user?.isGM || !setting("spellWalls") || region.destroyed || region.visible === false) return dropControls(doc.id);
   const plan = planFor(doc, region.animationState?.shapes ?? null);
   if (!plan.length) return dropControls(doc.id);
@@ -398,7 +415,7 @@ export function install(reg, ctx) {
   reg.on("deleteRegion", reg.guardSwallowAsync("deleteRegion(wall controls)", region => dropControls(region?.id)), { guard: false, label: "deleteRegion(wall controls)" });
   reg.on("deleteWall", reg.guardSwallowAsync("deleteWall(break)", onDeleteWall), { guard: false, label: "deleteWall(break)" });
   reg.on("refreshRegion", reg.guardSwallowAsync("refreshRegion(wall controls)", drawControls), { guard: false, label: "refreshRegion(wall controls)" });
-  reg.on("destroyRegion", reg.guardSwallowAsync("destroyRegion(wall controls)", region => dropControls(region?.document?.id)), { guard: false, label: "destroyRegion(wall controls)" });
+  reg.on("destroyRegion", reg.guardSwallowAsync("destroyRegion(wall controls)", region => (region?.isPreview ? null : dropControls(region?.document?.id))), { guard: false, label: "destroyRegion(wall controls)" });
   reg.on("canvasTearDown", reg.guardSwallowAsync("canvasTearDown(wall controls)", dropAllControls), { guard: false, label: "canvasTearDown(wall controls)" });
   reg.on("canvasReady", reg.guardSwallowAsync("canvasReady(walls)", c => isActiveGM() && syncScene(c?.scene)), { guard: false, label: "canvasReady(walls)" });
   onSettingChange("spellWalls", () => {
@@ -415,6 +432,7 @@ export function uninstall() {
   onSettingChange("spellWalls", null);
   try { dropAllControls(); } catch (err) { log.warn("wall controls uninstall", err); }
   deleted.clear();
+  cleared.clear();
   busy.clear();
 }
 

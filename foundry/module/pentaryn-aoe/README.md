@@ -202,7 +202,7 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   handle's position; right-click any control of the wall puts it back (`repairWall`, moved with the
   handle since). The last section broken deletes the region. Deleting spell walls on the Walls layer
   breaks those sections the same way (`breakSections`, last first), so a later drag does not bring
-  them back. Not built: Wall of Stone made permanent after a full duration of concentration — its
+  them back (Clear All, core's `deleteAll`, breaks nothing: the active GM raises the walls again). Not built: Wall of Stone made permanent after a full duration of concentration — its
   walls go with concentration, as its region does.
 - **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
