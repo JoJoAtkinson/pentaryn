@@ -879,3 +879,32 @@ test("any combination: a choice outside a running sequence, or of a weapon the g
   reset(captain);
   F.calls.length = 0;
 });
+
+test("0.3.3: paused, the bar offers this swing's Multiattack choices even unequipped (MM Pistol), and picking one switches only its group", async () => {
+  const cap2 = makeActor({ id: "banditCaptain002", name: "Bandit Captain 2", type: "npc", items: [
+    weapon("scimitarCapt0002", "Scimitar", { props: "fin lgt" }),
+    weapon("pistolCaptain002", "Pistol", { attackType: "ranged", damageTypes: ["piercing"], equipped: false }),
+    weapon("clubCaptain00002", "Club", {}),
+  ] });
+  const S2 = "scimitarCapt0002", P2 = "pistolCaptain002", C2 = "clubCaptain00002";
+  const sc = act(cap2, S2);
+  sc.script.attack.push(null);                       // swing 1's window closed: the run pauses
+  act(cap2, P2).script.attack.push({ total: 15 });
+  act(cap2, C2).script.attack.push({ total: 11 });
+  const run = seq.runSwings(cap2, [
+    { weaponId: S2, mode: null, kind: "main", group: 0, choices: [S2, P2] },
+    { weaponId: C2, mode: null, kind: "main", group: 1, choices: [C2] },
+  ]);
+  await drain();
+  assert.equal(seq.running().state.status, "paused");
+  const tiles = [...stripEl().querySelectorAll('[data-pc="swap"]')].map(b => b.dataset.id);
+  assert.deepEqual(tiles, [S2, C2, P2], "the unequipped Pistol is offered after the weapons that can swing");
+  F.calls.length = 0;
+  await click("swap", `[data-id="${P2}"]`);
+  const out = await run;
+  await tick(400);
+  assert.deepEqual(out, { rolled: 2, status: "done" });
+  assert.deepEqual(rolledIds(), [P2, C2], "swing 1 switched to the Pistol; the Club swing (another group) kept its weapon");
+  reset(cap2);
+  F.calls.length = 0;
+});

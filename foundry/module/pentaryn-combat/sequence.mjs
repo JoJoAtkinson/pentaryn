@@ -186,10 +186,26 @@ function stripContext() {
     title: current.title,
     // What a closed roll leaves unspent (Flurry's Focus is already paid).
     note: core.pausedNote({ kinds: s.swings.map(x => x.kind), paid: current.paid }),
-    weapons: current.swappable ? weaponsOf(current.actor).filter(core.canSwing).map(w => swapTile(current.actor, w)) : [],
+    weapons: current.swappable ? pauseWeapons(current.actor, s).map(w => swapTile(current.actor, w)) : [],
     // Multiattack "in any combination": this swing's choices, the one it uses marked (the strip's chooser).
     choices: choiceTiles(current.actor, core.swingChoices(s))
   };
+}
+
+/**
+ * The pause bar's weapons: every weapon that can swing, plus this swing's Multiattack choices that
+ * cannot (0.3.3, live play-test: the 2024 MM Bandit Captain's Pistol is unequipped, so the chooser
+ * offered it while running and the pause bar did not — a run switched to the Pistol could not be
+ * swapped back from the pause bar, and one on the Scimitar could not reach the Pistol).
+ */
+function pauseWeapons(actor, state) {
+  const swingable = weaponsOf(actor).filter(core.canSwing);
+  const sc = core.swingChoices(state);
+  if (!sc) return swingable;
+  const have = new Set(swingable.map(w => w.id));
+  const extra = sc.choices.filter(id => !have.has(id)).map(id => actor.items.get(id)).filter(Boolean)
+    .map(i => ({ id: i.id, name: i.name, img: i.img }));
+  return [...swingable, ...extra];
 }
 
 /** The chooser's tiles for core.swingChoices(state): [{id, name, img, stats, active}], or []. */
@@ -287,7 +303,12 @@ function tidyOrigins(ids) {
 async function onPaused(actor, dispatch) {
   const choice = await waitChoice(stripContext());
   if (current.abort || !choice || choice.type === "stop") { dispatch({ type: "stop" }); return true; }
-  if (choice.type === "swap") dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
+  if (choice.type === "swap") {
+    // One of this swing's Multiattack choices switches its group, as the running chooser does (a
+    // swap would move every main swing left: the Tarrasque's Bite too). Any other weapon swaps.
+    if (core.swingChoices(current.state)?.choices.includes(choice.weaponId)) dispatch({ type: "choose", weaponId: choice.weaponId });
+    else dispatch({ type: "swap", weaponId: choice.weaponId, extras: swapExtras(actor, choice.weaponId) });
+  }
   if (choice.type === "retarget") {
     const swing = current.state.swings[current.state.index];
     const act = attackActivityOf(actor.items.get(swing.weaponId));

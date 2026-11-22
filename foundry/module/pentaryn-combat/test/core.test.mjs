@@ -59,8 +59,9 @@ test("object exports are frozen tables, rows and arrays included", () => {
 // legacy pentarynCombat.* event names sunset at 0.4.0 (HOOKS `until`) and that is its own declared change.
 // 0.3.2 (2026-11-21): Multiattack "in any combination" — each swing's weapon is chosen on the strip.
 // A patch again: 0.4.0 stays the declared legacy event sunset.
-test("module.json version is 0.3.2 (Multiattack in any combination)", () => {
-  assert.equal(manifest.version, "0.3.2");
+// 0.3.3 (2026-11-21): live play-test — the pause bar offers the swing's Multiattack choices (an unequipped MM Pistol).
+test("module.json version is 0.3.3 (pause bar offers the Multiattack choices)", () => {
+  assert.equal(manifest.version, "0.3.3");
   assert.equal(core.VERSION, manifest.version);
   assert.equal(manifest.id, core.MOD);
 });

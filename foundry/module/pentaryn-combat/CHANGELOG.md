@@ -1,5 +1,15 @@
 # Changelog — Pentaryn Combat (`pentaryn-combat`)
 
+## 0.3.3 — 2026-11-21 (live play-test of 0.3.2)
+
+- **The pause bar offers the swing's Multiattack choices.** The 2024 MM Bandit Captain's Pistol is
+  not equipped, and the pause bar lists only weapons that can swing (equipped): the running chooser
+  offered the Pistol, but after Esc a run switched to the Pistol could not be swapped back, and one on
+  the Scimitar could not reach the Pistol (there were no tiles at all, one weapon being too few). The
+  paused bar now adds this swing's choices that cannot swing, after the others (`pauseWeapons`), and
+  picking one of them switches this swing's group as the running chooser does ("choose"), instead of a
+  swap that moves every main swing left (a Tarrasque's Bite with its Claws).
+
 ## 0.3.2 — 2026-11-21 (Multiattack "in any combination")
 
 A patch again: 0.4.0 stays reserved for the declared legacy `pentarynCombat.*` event sunset.
