@@ -350,6 +350,35 @@ test("a forced planner throw: the move is core's own, with one warning", () => {
   assert.equal(api.status().group.fallbacks[0].reason, "throw");
 });
 
+test("R2-1: a planner throw is core's drop, still with no two members resting on one spot", () => {
+  combatFlag = false;
+  const a = makeToken("thsA000000000001", 100, 300), b = makeToken("thsB000000000001", 200, 300);
+  const ctx = contextsFor([a, b], 200, 0);
+  // Core's paths, as a wall at x = 400 cuts them: both end on (300, 300).
+  ctx[a.document.id].foundPath = [ctx[a.document.id].foundPath[0], wp(300, 300)];
+  ctx[b.document.id].foundPath = [ctx[b.document.id].foundPath[0], wp(300, 300)];
+  drop.result = coreDrop(ctx);
+  F.CONFIG.debug = { ...(F.CONFIG.debug ?? {}), [`${MOD}.throw`]: true };
+  const saved = console.warn;
+  console.warn = () => {};
+  let out;
+  try {
+    out = a._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+  } finally {
+    console.warn = saved;
+    delete F.CONFIG.debug[`${MOD}.throw`];
+  }
+  const [, options] = out;
+  const restOf = t => {
+    const m = options.movement[t.document.id];
+    const p = m?.waypoints?.length ? m.waypoints.at(-1) : t.document._source;
+    return center(p);
+  };
+  const pa = restOf(a), pb = restOf(b);
+  assert.deepEqual([options.movement[a.document.id].waypoints.at(-1).x, options.movement[a.document.id].waypoints.at(-1).y], [300, 300], "the grabbed token keeps its end");
+  assert.ok(Math.hypot(pa.x - pb.x, pa.y - pb.y) >= S - 1e-6, `no rest overlap: ${JSON.stringify([pa, pb])}`);
+});
+
 test("a slow plan returns no updates and commits the same shape when it finishes", () => {
   const ts = [makeToken("asyA000000000001", 400, 200), makeToken("asyB000000000001", 300, 200)];
   const ctx = contextsFor(ts, 0, 400);

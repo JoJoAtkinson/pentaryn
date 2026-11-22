@@ -546,6 +546,11 @@ function patchDrop() {
     catch (err) {
       log.warnOnce("group", "group movement skipped; the move goes as core's (further errors suppressed)", err);
       fellBack("throw");
+      // Still no two at rest on one spot (as every other core fallback; live R2-1 checked the throw path too).
+      try {
+        const contexts = contextsOf(event).filter(c => c?.token?.document);
+        if (Array.isArray(result?.[0]) && result[1]?.movement) unstack(contexts, result, this.document?.id, contexts.some(c => inCombat(c.token.document)));
+      } catch (e) { log.debug?.("unstack after a throw", e); }
       return result;
     }
   });

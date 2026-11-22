@@ -12,7 +12,8 @@ Live play-test round 2 (BOSS harness and a Mac browser through the tunnel).
 - **[declared] A group drop left to core never rests a boxed-in member on its neighbour (R2-1).** A member
   with no clear point stayed at its start, which a member placed before it could already hold (a 3×2
   block dragged into a wall ended with two pairs at distance 0). `restOnPaths` now holds such a member at
-  its start and places the drop again around it.
+  its start and places the drop again around it. A planning throw caught by the drop wrap now cuts the
+  members' paths the same way (it returned core's paths untouched).
 - **[declared] A door closed after a group drop stops a waiting member on a cell before it (R2-5).** A later
   wave is checked against the walls when it is sent; a blocked route ends on the furthest whole cell
   before the wall (`group-adapter` `cutAtWalls`), never on the door line where core's own cut left it.
