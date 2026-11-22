@@ -17,7 +17,7 @@
  * (Part A) can still be dragged afterwards.
  *
  * B3 (feedback 8t6Nn1): a placement of several shapes (Wall of Stone's ten panels, one region each)
- * shows one permanent notice, "Panel n of N: mouse wheel rotates, Esc to finish, right-click skips a panel"
+ * shows one permanent notice, "Panel n of N: Shift+wheel rotates, Esc to finish, right-click skips a panel"
  * (core.panelCounter), advanced by each confirmed or skipped shape (the caller's own preConfirm /
  * preSkip run first; a `false` from them confirms nothing and the count stays) and removed when the
  * placement ends. 0.7.1: one notice on screen at a time (a new placement replaces a stale one), and

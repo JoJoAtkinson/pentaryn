@@ -195,12 +195,12 @@ test("B3: panelNotice counts each placed or skipped panel on one permanent notic
     const { options, done } = S.aim.panelNotice(10, { preConfirm: a => { confirmed.push(a); }, onMove: "keep" });
     assert.equal(options.onMove, "keep", "the other options pass through");
     assert.equal(notes.length, 1);
-    assert.equal(notes[0].message, "Panel 1 of 10: mouse wheel rotates, Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 1 of 10: Shift+wheel rotates, Esc to finish, right-click skips a panel");
     assert.equal(notes[0].opts.permanent, true);
     options.preConfirm({ index: 0 });
-    assert.equal(notes[0].message, "Panel 2 of 10: mouse wheel rotates, Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 2 of 10: Shift+wheel rotates, Esc to finish, right-click skips a panel");
     options.preSkip({ index: 0 });
-    assert.equal(notes[0].message, "Panel 3 of 10: mouse wheel rotates, Esc to finish, right-click skips a panel", "a skipped panel counts too");
+    assert.equal(notes[0].message, "Panel 3 of 10: Shift+wheel rotates, Esc to finish, right-click skips a panel", "a skipped panel counts too");
     assert.equal(confirmed.length, 1, "dnd5e's own preConfirm still runs");
     done();
     assert.equal(notes[0].removed, true);
@@ -241,7 +241,7 @@ test("B3: a caller's preConfirm that refuses (false) does not advance the counte
     assert.equal(one.options.preConfirm, undefined, "and the options are untouched");
     const { options } = S.aim.panelNotice(2, { preConfirm: () => false });
     assert.equal(options.preConfirm({}), false);
-    assert.equal(notes[0].message, "Panel 1 of 2: mouse wheel rotates, Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 1 of 2: Shift+wheel rotates, Esc to finish, right-click skips a panel");
   } finally { restore(); }
 });
 
@@ -253,12 +253,12 @@ test("B3: an async preConfirm: a Promise of false counts nothing, a Promise of a
     const refused = options.preConfirm({});
     assert.equal(typeof refused?.then, "function", "the caller's promise is handed back");
     assert.equal(await refused, false);
-    assert.equal(notes[0].message, "Panel 1 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "the refusal counts nothing");
+    assert.equal(notes[0].message, "Panel 1 of 3: Shift+wheel rotates, Esc to finish, right-click skips a panel", "the refusal counts nothing");
     answer = undefined;
     const kept = options.preConfirm({});
-    assert.equal(notes[0].message, "Panel 1 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "not before it settles");
+    assert.equal(notes[0].message, "Panel 1 of 3: Shift+wheel rotates, Esc to finish, right-click skips a panel", "not before it settles");
     assert.equal(await kept, undefined);
-    assert.equal(notes[0].message, "Panel 2 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 2 of 3: Shift+wheel rotates, Esc to finish, right-click skips a panel");
   } finally { restore(); }
 });
 
@@ -269,9 +269,9 @@ test("0.7.1: the same shape's hook called twice (core's regionIndex / shapeIndex
     options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
     options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
     assert.equal(notes.length, 1, "never a second notice");
-    assert.equal(notes[0].message, "Panel 2 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "panel 1 counted once");
+    assert.equal(notes[0].message, "Panel 2 of 3: Shift+wheel rotates, Esc to finish, right-click skips a panel", "panel 1 counted once");
     options.preSkip({ regionIndex: 1, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
-    assert.equal(notes[0].message, "Panel 3 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "the next region's shape counts");
+    assert.equal(notes[0].message, "Panel 3 of 3: Shift+wheel rotates, Esc to finish, right-click skips a panel", "the next region's shape counts");
     done();
   } finally { restore(); }
 });

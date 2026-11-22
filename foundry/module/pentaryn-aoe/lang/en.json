@@ -191,7 +191,7 @@
       "MissLine": "Miss — no damage"
     },
     "Panels": {
-      "Counter": "Panel {n} of {total}: mouse wheel rotates, Esc to finish, right-click skips a panel"
+      "Counter": "Panel {n} of {total}: Shift+wheel rotates, Esc to finish, right-click skips a panel"
     },
     "Walls": {
       "Break": "Click: break this section · Right-click: repair the whole wall",
