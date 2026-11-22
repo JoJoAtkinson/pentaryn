@@ -23,11 +23,21 @@
  * is armed. The API's stop() is never held back.
  * When the client that sent a group stops one member, the whole group stops and its unsent waves
  * are cancelled (group.mjs groupCancel).
+ *
+ * The click also reaches a moving token core's MouseInteractionManager drops (0.4.1, live R1 D-2): a
+ * DOM pointerdown on the board that the wrap did not see (the token's manager was not in its hover
+ * state, or PIXI hit-tested a transform a frame old) is matched against the circles where the moving
+ * tokens are drawn, and stops the nearest one this client could have clicked.
+ * A stop never leaves this client showing a token off its server position (0.4.1, live R1 D-4): the
+ * tween's queued links are emptied before it is terminated (a terminated tween still ticked once
+ * resumed a link with no context: core's TypeError "reading 'chain'", which also wrote the old tween
+ * values back onto the document), and once the token is at rest a drawn position that differs from
+ * its source is reset to it.
  */
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop } from "./motion-core.mjs";
-import { drawnPosition, inCombat, movementFacts } from "./group-adapter.mjs";
+import { drawnPosition, gridSize, inCombat, movementFacts } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
@@ -37,6 +47,12 @@ let feature = null;
 let clickHandle = null;
 let clickPatched = false;
 let lastStop = null;
+/** The DOM pointerdown the click wrap saw last (the board listener leaves that one alone). */
+let lastNative = null;
+/** The board element the fallback listens on, and its listener. */
+let board = null;
+/** How long after a stop's write a drawn position is checked again against the source (ms). */
+const RESYNC_MS = 250;
 
 /** The query a GM sends to the user who started a move in combat (registered by hand: see the header). */
 export const STOP_OWN = `${MODULE}.stopOwn`;
@@ -80,9 +96,47 @@ function elapsedOf(doc) {
 }
 
 /**
+ * Empty the queued links of a token's tweens before they are terminated, resolving each. A tween
+ * terminated while its frame is still due this tick runs that frame once more; with links queued, its
+ * completion resumes the next link although the context is gone, and core throws ("reading 'chain'")
+ * after writing the old tween values onto the document (live R1 D-4). With no links it just ends.
+ */
+function defuse(token) {
+  let contexts = [];
+  try { contexts = [...(token.animationContexts?.values?.() ?? [])]; } catch { contexts = []; }
+  for (const ctx of contexts) {
+    const links = Array.isArray(ctx?.chain) ? ctx.chain.splice(0) : [];
+    for (const link of links) {
+      try { link?.resolve?.(); } catch (err) { log?.debug?.("defuse", err); }
+    }
+  }
+}
+
+/**
+ * At rest, a token drawn anywhere but its source position is out of step with the server: reset it
+ * (a full stopAnimation resets the document's derived position to its source). Never while a
+ * movement tween runs, and never for a destroyed token.
+ */
+function resync(token) {
+  try {
+    if (!token || token.destroyed) return false;
+    const doc = token.document;
+    if (!doc?._source || movementFacts(token).animating) return false;
+    if (Math.round(doc.x) === doc._source.x && Math.round(doc.y) === doc._source.y) return false;
+    token.stopAnimation?.();
+    return true;
+  } catch (err) {
+    log?.debug?.("resync", err);
+    return false;
+  }
+}
+
+/**
  * Put a token where it is drawn, out of combat (one frame here: the tween stops before the write).
  * When the write is refused or fails, the token is put back where the server has it (a full
  * stopAnimation resets it to its source), so this client never shows it frozen somewhere it is not.
+ * When it succeeds, the drawn position is checked against the source once the write is in and again
+ * RESYNC_MS later (resync).
  */
 function displace(token) {
   const doc = token.document;
@@ -94,9 +148,10 @@ function displace(token) {
   if (m?.user?.isSelf && (m.state === "pending" || m.state === "paused")) {
     try { doc.stopMovement(); } catch (err) { log.debug?.("stopMovement before displace", err); }
   }
+  defuse(token);
   try { token.stopAnimation?.({ reset: false }); } catch (err) { log.debug?.("stopAnimation", err); }
   const wp = { x: p.x, y: p.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
-  const resync = () => {
+  const reset = () => {
     try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log.debug?.("stopAnimation reset", err); }
   };
   let pending;
@@ -104,11 +159,15 @@ function displace(token) {
   catch (err) { pending = Promise.reject(err); }
   return pending
     .then(moved => {
-      if (moved === false) resync();
+      if (moved === false) reset();
+      else {
+        resync(token);
+        setTimeout(() => resync(token), RESYNC_MS);
+      }
       return moved;
     })
     .catch(err => {
-      resync();
+      reset();
       log.warnOnce("stop-displace", "could not stop a token where it was drawn (further errors suppressed)", err);
     });
 }
@@ -162,10 +221,69 @@ function stopToken(token, how) {
 }
 
 function onClick(token, event) {
+  lastNative = event?.nativeEvent ?? null;
   const how = decide(token, {
     modifiers: !!(event?.shiftKey || event?.ctrlKey || event?.metaKey || event?.altKey),
   });
   if (how) stopToken(token, how);
+}
+
+/* -------------------------------------------- */
+/*  The board fallback                          */
+/* -------------------------------------------- */
+
+/**
+ * The moving token this client would stop at canvas point `p`: the nearest whose drawn circle
+ * (its derived x / y: where the tween has it now) holds `p` and that the click table stops.
+ * @returns {{ token, how } | null}
+ */
+export function movingTokenAt(p, { modifiers = false } = {}) {
+  let best = null, bestD = Infinity;
+  for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
+    const doc = t?.document;
+    if (!doc || t.isPreview || t.destroyed) continue;
+    const s = gridSize(t);
+    const w = doc._source?.width ?? doc.width ?? 1, h = doc._source?.height ?? doc.height ?? 1;
+    const d = Math.hypot(p.x - (doc.x + (w * s) / 2), p.y - (doc.y + (h * s) / 2));
+    if (d > (Math.max(w, h) * s) / 2 || d >= bestD) continue;
+    const how = decide(t, { modifiers });
+    if (!how) continue;
+    best = { token: t, how };
+    bestD = d;
+  }
+  return best;
+}
+
+/** A pointerdown on the board the click wrap did not see: stop the moving token drawn under it. */
+function onBoardDown(ev) {
+  try {
+    if (ev?.button !== 0 || !feature) return;
+    if (lastNative && (lastNative === ev || (lastNative.timeStamp === ev.timeStamp && lastNative.type === ev.type))) return;
+    const cv = globalThis.canvas;
+    if (!cv?.ready || !cv.tokens?.active || typeof cv.canvasCoordinatesFromClient !== "function") return;
+    const p = cv.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
+    const hit = movingTokenAt(p, { modifiers: !!(ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey) });
+    if (!hit) return;
+    stopToken(hit.token, hit.how);
+    // As the click would have: the stopped token is selected (the canvas click just released the rest).
+    if (!hit.token.controlled) hit.token.control?.({ releaseOthers: true });
+  } catch (err) {
+    log?.warnOnce("stop-board", "click to stop (board) skipped (further errors suppressed)", err);
+  }
+}
+
+/** Listen on the board element (once per element; the app's view outlives every scene). */
+function listenBoard() {
+  const el = globalThis.canvas?.app?.view ?? null;
+  if (!el || el === board || typeof el.addEventListener !== "function") return;
+  unlistenBoard();
+  el.addEventListener("pointerdown", onBoardDown);
+  board = el;
+}
+
+function unlistenBoard() {
+  try { board?.removeEventListener?.("pointerdown", onBoardDown); } catch (err) { log?.debug?.("board listener", err); }
+  board = null;
 }
 
 /* -------------------------------------------- */
@@ -246,6 +364,9 @@ export function install(reg, ctx) {
   if (ctx.late) clickPatched = patchClick();
   else reg.once("setup", () => { clickPatched = patchClick(); }, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
   reg.on("moveToken", (doc, movement) => onMoveToken(doc, movement), { label: "moveToken: when a move started (click-to-stop arming)" });
+  // After PIXI's own pointerdown listener (added when the app was made), so the wrap sees a click first.
+  reg.on("canvasReady", () => listenBoard(), { label: "canvasReady: board pointerdown (click to stop, fallback)" });
+  if (ctx.late) listenBoard();
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).
   if (globalThis.CONFIG?.queries) globalThis.CONFIG.queries[STOP_OWN] = stopOwn;
@@ -257,6 +378,8 @@ export function uninstall() {
   clickHandle = null;
   clickPatched = false;
   lastStop = null;
+  lastNative = null;
+  unlistenBoard();
   starts.clear();
   if (globalThis.CONFIG?.queries?.[STOP_OWN] === stopOwn) delete globalThis.CONFIG.queries[STOP_OWN];
   feature = null;

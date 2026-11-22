@@ -452,6 +452,10 @@
     {
       "name": "moveToken",
       "label": "moveToken: when a move started (click-to-stop arming)"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: board pointerdown (click to stop, fallback)"
     }
   ],
   "patches": [

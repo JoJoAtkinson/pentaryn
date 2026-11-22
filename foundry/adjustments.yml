@@ -1172,8 +1172,8 @@ adjustments:
     packages: [core]
     modules: [pentaryn-movement]
     files: [foundry/module/pentaryn-movement/stop.mjs]
-    markers: ["_onClickLeft", "__pentarynMovementStop", "stopMovement", "displace"]
-    what: wraps Token#_onClickLeft; when the select tool is active, no modifier is held, the user can control the token and its movement is pending, paused or animating, stops it first (out of combat a displace move to where it is drawn with animate false; in a started combat stopMovement() by the initiating client, or the stop relay query to the active GM), then calls the original so selecting still works
+    markers: ["_onClickLeft", "__pentarynMovementStop", "stopMovement", "displace", "canvasCoordinatesFromClient", "chain.splice"]
+    what: wraps Token#_onClickLeft; when the select tool is active, no modifier is held, the user can control the token and its movement is pending, paused or animating, stops it first (out of combat a displace move to where it is drawn with animate false; in a started combat stopMovement() by the initiating client, or the stop relay query to the active GM), then calls the original so selecting still works. A pointerdown listener on canvas.app.view (after PIXI's) catches a click the wrap did not see (the token's MouseInteractionManager not in its hover state) and stops the moving token whose drawn circle holds the point. Before terminating the tween it empties each animation context's chain (a terminated tween ticked once more resumed a link with no context, core's TypeError reading chain), and resets a drawn position left off the source once the token is at rest
     why: core has no way to stop a moving token from the canvas; stopMovement() is initiator-only and does not stop the tween
     native_when: core stops a token's movement when it is clicked mid-move
     retire_class: guarded

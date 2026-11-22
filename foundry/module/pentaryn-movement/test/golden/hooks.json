@@ -144,6 +144,10 @@
     "name": "moveToken"
   },
   {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
     "kind": "once",
     "name": "ready"
   }

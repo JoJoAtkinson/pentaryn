@@ -725,3 +725,103 @@ test("a group slot is never inside a teleport region (a scene link), unless the 
     sceneDoc.regions = [];
   }
 });
+
+// Live round 1 (2026-11-22): D-4 (a stop's terminated tween resumed a link with no context, and the
+// player client kept the old tween position) and D-2 (a click on a moving token that core's mouse
+// manager dropped never reached the click wrap).
+
+test("D-4: a stop empties the tween's queued links (resolving each) before it terminates the tween", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const t = makeToken("dfsA000000000001", 100, 100);
+  t.document.x = 250;
+  const resolved = [];
+  const ctx = { chain: [{ resolve: () => resolved.push(1) }, { resolve: () => resolved.push(2) }] };
+  t.animationContexts.set(t.movementAnimationName, ctx);
+  let chainAtStop = null;
+  t.stopAnimation = function (opts) { chainAtStop = ctx.chain.length; F.calls.push({ op: "stopAnimation", id: this.document.id, opts }); };
+  t._onClickLeft({});
+  assert.equal(chainAtStop, 0, "no link left for a stale frame to resume");
+  assert.deepEqual(resolved, [1, 2], "every queued link's promise is settled");
+  t.animationContexts.clear();
+});
+
+test("D-4: once the displace is in, a drawn position off the source is reset to it (now and again later)", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const t = makeToken("rsyA000000000001", 100, 100);
+  t.document.x = 320;
+  t.animationContexts.set(t.movementAnimationName, {});
+  const stops = [];
+  t.stopAnimation = function (opts) { stops.push(opts); if (!opts) { this.document.x = this.document._source.x; this.document.y = this.document._source.y; } };
+  // The server applies the displace; a stale tween frame then writes an older position onto the document.
+  t.document.move = async wps => {
+    t.document._source = { ...t.document._source, x: wps[0].x, y: wps[0].y };
+    t.animationContexts.clear();
+    t.document.x = 375; t.document.y = 129;
+    return true;
+  };
+  t._onClickLeft({});
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+  assert.deepEqual(stops, [{ reset: false }, undefined], "the off-source drawn position is reset to the source");
+  assert.equal(t.document.x, 320);
+  // A late stale frame: caught by the second check.
+  t.document.x = 390;
+  mock.timers.tick(300);
+  assert.equal(stops.length, 3);
+  assert.equal(t.document.x, 320);
+  // In step: nothing more.
+  mock.timers.tick(300);
+  assert.equal(stops.length, 3);
+});
+
+test("D-2: a board pointerdown the click wrap did not see stops the moving token drawn under it, and selects it", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const listeners = [];
+  const view = { addEventListener: (type, fn) => listeners.push({ type, fn }), removeEventListener: (type, fn) => { const i = listeners.findIndex(l => l.fn === fn); if (i >= 0) listeners.splice(i, 1); } };
+  const t = makeToken("brdA000000000001", 100, 100);
+  const other = makeToken("brdB000000000001", 600, 600);
+  t.document.x = 320; t.document.y = 100;                 // drawn mid-way: centre (370, 150)
+  t.animationContexts.set(t.movementAnimationName, {});
+  const controlled = [];
+  t.control = opts => { controlled.push(opts); return true; };
+  const saved = { app: F.canvas.app, coords: F.canvas.canvasCoordinatesFromClient, tokens: F.canvas.tokens };
+  F.canvas.app = { view };
+  F.canvas.canvasCoordinatesFromClient = p => ({ x: p.x, y: p.y });
+  F.canvas.tokens = { ...saved.tokens, active: true, placeables: [other, t] };
+  try {
+    F.fire("canvasReady");
+    const board = listeners.filter(l => l.type === "pointerdown");
+    assert.equal(board.length, 1, "one board listener");
+    // A click where the token was a frame ago (outside its drawn circle) stops nothing.
+    let from = F.calls.length;
+    board[0].fn({ type: "pointerdown", button: 0, clientX: 180, clientY: 150, timeStamp: 1 });
+    assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0);
+    // On its drawn circle: displaced where drawn, and selected.
+    from = F.calls.length;
+    board[0].fn({ type: "pointerdown", button: 0, clientX: 395, clientY: 160, timeStamp: 2 });
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    assert.deepEqual(moves.map(m => [m.id, m.waypoints[0].x, m.waypoints[0].y, m.waypoints[0].action]), [["brdA000000000001", 320, 100, "displace"]]);
+    assert.deepEqual(controlled, [{ releaseOthers: true }]);
+    // The same pointerdown already handled by the click wrap is not stopped twice; a right press never.
+    t.animationContexts.set(t.movementAnimationName, {});
+    const ev = { type: "pointerdown", button: 0, clientX: 370, clientY: 150, timeStamp: 3 };
+    from = F.calls.length;
+    t._onClickLeft({ nativeEvent: ev });
+    board[0].fn(ev);
+    board[0].fn({ ...ev, button: 2, timeStamp: 4 });
+    assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 1, "once, by the wrap");
+    // A modifier press (shift: add to the selection) is core's.
+    from = F.calls.length;
+    board[0].fn({ ...ev, shiftKey: true, timeStamp: 5 });
+    assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0);
+    // The listener goes with the module.
+    F.fire("canvasReady");
+    assert.equal(listeners.filter(l => l.type === "pointerdown").length, 1, "never a second listener on the same board");
+  } finally {
+    Object.assign(F.canvas, { app: saved.app, canvasCoordinatesFromClient: saved.coords, tokens: saved.tokens });
+    t.animationContexts.clear();
+    mock.timers.tick(1000);
+  }
+});
