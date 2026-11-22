@@ -17,7 +17,7 @@
  * (Part A) can still be dragged afterwards.
  *
  * B3 (feedback 8t6Nn1): a placement of several shapes (Wall of Stone's ten panels, one region each)
- * shows one permanent notice, "Panel n of N: Esc to finish, right-click skips a panel"
+ * shows one permanent notice, "Panel n of N: mouse wheel rotates, Esc to finish, right-click skips a panel"
  * (core.panelCounter), advanced by each confirmed or skipped shape (the caller's own preConfirm /
  * preSkip run first; a `false` from them confirms nothing and the count stays) and removed when the
  * placement ends. 0.7.1: one notice on screen at a time (a new placement replaces a stale one), and
@@ -117,6 +117,32 @@ function panelNotice(total, options) {
     advance(args);
     return r;
   };
+  // R4-10: each new panel starts at the rotation the last placed one had (core starts every shape at
+  // its own data's rotation, so ten panels turned one by one came out as a comb of horizontal ones).
+  let lastRotation = null;
+  const seeded = new Set();
+  const remember = args => {
+    const r = args?.shape?.rotation;
+    if (Number.isFinite(r)) lastRotation = r;
+  };
+  const confirm = fn => args => {
+    const r = fn?.(args);
+    if (typeof r?.then === "function") return r.then(v => { if (v !== false) remember(args); return v; });
+    if (r !== false) remember(args);
+    return r;
+  };
+  const theirsMove = options.onMove;
+  const onMove = typeof theirsMove === "function" || theirsMove === undefined ? args => {
+    const key = Number.isInteger(args?.shapeIndex) ? `${args.regionIndex ?? 0}:${args.shapeIndex}` : null;
+    if (key !== null && !seeded.has(key)) {
+      seeded.add(key);
+      const sh = args.shape;
+      if (lastRotation !== null && typeof sh?.rotate === "function" && Number.isFinite(sh.rotation) && sh.rotation !== lastRotation) {
+        try { sh.rotate(lastRotation - sh.rotation); } catch (err) { log.debug("panel rotation", err); }
+      }
+    }
+    return theirsMove?.(args);
+  } : theirsMove;
   const handle = {
     done: () => {
       try { note?.remove?.(); } catch (err) { log.debug("panel notice", err); }
@@ -125,7 +151,7 @@ function panelNotice(total, options) {
     },
   };
   shown = handle;
-  return { options: { ...options, preConfirm: step(options.preConfirm), preSkip: step(options.preSkip) }, done: handle.done };
+  return { options: { ...options, onMove, preConfirm: confirm(step(options.preConfirm)), preSkip: step(options.preSkip) }, done: handle.done };
 }
 
 function wrapPlacement() {

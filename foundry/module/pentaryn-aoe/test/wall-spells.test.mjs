@@ -195,15 +195,41 @@ test("B3: panelNotice counts each placed or skipped panel on one permanent notic
     const { options, done } = S.aim.panelNotice(10, { preConfirm: a => { confirmed.push(a); }, onMove: "keep" });
     assert.equal(options.onMove, "keep", "the other options pass through");
     assert.equal(notes.length, 1);
-    assert.equal(notes[0].message, "Panel 1 of 10: Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 1 of 10: mouse wheel rotates, Esc to finish, right-click skips a panel");
     assert.equal(notes[0].opts.permanent, true);
     options.preConfirm({ index: 0 });
-    assert.equal(notes[0].message, "Panel 2 of 10: Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 2 of 10: mouse wheel rotates, Esc to finish, right-click skips a panel");
     options.preSkip({ index: 0 });
-    assert.equal(notes[0].message, "Panel 3 of 10: Esc to finish, right-click skips a panel", "a skipped panel counts too");
+    assert.equal(notes[0].message, "Panel 3 of 10: mouse wheel rotates, Esc to finish, right-click skips a panel", "a skipped panel counts too");
     assert.equal(confirmed.length, 1, "dnd5e's own preConfirm still runs");
     done();
     assert.equal(notes[0].removed, true);
+  } finally { restore(); }
+});
+
+test("R4-10: each new panel starts at the rotation the last placed panel had; the caller's onMove still runs", () => {
+  const { restore } = noticesStub();
+  try {
+    const moved = [];
+    const { options, done } = S.aim.panelNotice(3, { onMove: a => { moved.push(a.shapeIndex ?? a.regionIndex); } });
+    const shape = rotation => ({ rotation, rotate(d) { this.rotation += d; } });
+    const p1 = shape(0);
+    options.onMove({ regionIndex: 0, shapeIndex: 0, shape: p1 });
+    assert.equal(p1.rotation, 0, "the first panel keeps its own rotation");
+    p1.rotate(90);                                      // the GM turns it with the wheel
+    options.preConfirm({ regionIndex: 0, shapeIndex: 0, shape: p1 });
+    const p2 = shape(0);
+    options.onMove({ regionIndex: 1, shapeIndex: 0, shape: p2 });
+    assert.equal(p2.rotation, 90, "the next panel starts turned as the last one was placed");
+    p2.rotate(-45);
+    options.onMove({ regionIndex: 1, shapeIndex: 0, shape: p2 });
+    assert.equal(p2.rotation, 45, "seeded once: a turn while placing it is kept");
+    options.preSkip({ regionIndex: 1, shapeIndex: 0, shape: p2 });
+    const p3 = shape(0);
+    options.onMove({ regionIndex: 2, shapeIndex: 0, shape: p3 });
+    assert.equal(p3.rotation, 90, "a skipped panel's rotation is not carried");
+    assert.equal(moved.length, 4, "the caller's onMove runs every time");
+    done();
   } finally { restore(); }
 });
 
@@ -215,7 +241,7 @@ test("B3: a caller's preConfirm that refuses (false) does not advance the counte
     assert.equal(one.options.preConfirm, undefined, "and the options are untouched");
     const { options } = S.aim.panelNotice(2, { preConfirm: () => false });
     assert.equal(options.preConfirm({}), false);
-    assert.equal(notes[0].message, "Panel 1 of 2: Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 1 of 2: mouse wheel rotates, Esc to finish, right-click skips a panel");
   } finally { restore(); }
 });
 
@@ -227,12 +253,12 @@ test("B3: an async preConfirm: a Promise of false counts nothing, a Promise of a
     const refused = options.preConfirm({});
     assert.equal(typeof refused?.then, "function", "the caller's promise is handed back");
     assert.equal(await refused, false);
-    assert.equal(notes[0].message, "Panel 1 of 3: Esc to finish, right-click skips a panel", "the refusal counts nothing");
+    assert.equal(notes[0].message, "Panel 1 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "the refusal counts nothing");
     answer = undefined;
     const kept = options.preConfirm({});
-    assert.equal(notes[0].message, "Panel 1 of 3: Esc to finish, right-click skips a panel", "not before it settles");
+    assert.equal(notes[0].message, "Panel 1 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "not before it settles");
     assert.equal(await kept, undefined);
-    assert.equal(notes[0].message, "Panel 2 of 3: Esc to finish, right-click skips a panel");
+    assert.equal(notes[0].message, "Panel 2 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel");
   } finally { restore(); }
 });
 
@@ -243,9 +269,9 @@ test("0.7.1: the same shape's hook called twice (core's regionIndex / shapeIndex
     options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
     options.preConfirm({ regionIndex: 0, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
     assert.equal(notes.length, 1, "never a second notice");
-    assert.equal(notes[0].message, "Panel 2 of 3: Esc to finish, right-click skips a panel", "panel 1 counted once");
+    assert.equal(notes[0].message, "Panel 2 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "panel 1 counted once");
     options.preSkip({ regionIndex: 1, regionCount: 3, shapeIndex: 0, shapeCount: 1 });
-    assert.equal(notes[0].message, "Panel 3 of 3: Esc to finish, right-click skips a panel", "the next region's shape counts");
+    assert.equal(notes[0].message, "Panel 3 of 3: mouse wheel rotates, Esc to finish, right-click skips a panel", "the next region's shape counts");
     done();
   } finally { restore(); }
 });

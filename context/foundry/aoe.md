@@ -87,7 +87,7 @@ its handle) or resized is clipped from its new centre.
 **Cancelling a placement.** While a template follows the mouse, **Escape** cancels it, on the first
 press even when the sheet you cast from is open. **Right-click** skips the shape under the mouse; for a
 one-shape area that is the same as cancelling. A spell with several panels (Wall of Stone's ten) shows
-"Panel 2 of 10: Esc to finish, right-click skips a panel" while you place them: Escape *finishes* the
+"Panel 2 of 10: mouse wheel rotates, Esc to finish, right-click skips a panel" while you place them (each panel starts turned as the last placed one, 0.8.4): Escape *finishes* the
 wall with the panels placed so far, and right-click leaves one out. Core's own Escape would close every open
 window first (dnd5e minimises the sheet during placement), so the module keeps a small Escape binding
 that cancels core's region placement before anything else (`escape.mjs`).
