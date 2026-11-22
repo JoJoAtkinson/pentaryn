@@ -19,7 +19,7 @@ const {
   SPECIAL_ACTIONS, specialActionOf, actionsLeft, recordSpecialAction, dashChanges, expiringAt, damageAtZero,
   portraitExtras, orphanUsage, planSummary, dockRect, swingTag,
   recordBonusAction, turnBoundary, pausedNote, steadyAimChanges, steadyAimAfterAttack, hideOffhandSlot, drawerLeft,
-  pipFor, recordQuickened, recordQuickenedCast, spentPips, reactionSpent
+  pipFor, recordQuickened, recordQuickenedCast, spentPips, reactionSpent, swingChoices, fullAttackPlanFrom
 } = core;
 
 let pass = 0;
@@ -332,7 +332,7 @@ check("201 two Claw attacks", parseMultiattack(`${LOOK} makes two [[/item .claw]
   { total: 2, groups: [{ count: 2, choices: ["claw"] }] });
 check("202 Watch-Captain: three attacks in any combination",
   parseMultiattack(`${LOOK} makes three attacks, using [[/item .gsword]] or [[/item .lbow]] in any combination.`, items),
-  { total: 3, groups: [{ count: 3, choices: ["gsword", "lbow"] }] });
+  { total: 3, groups: [{ count: 3, choices: ["gsword", "lbow"], mix: true }] });
 check("203 'and' in any combination", parseMultiattack(`${LOOK} makes two attacks, using [[/item .gsword]] and [[/item .lbow]] in any combination.`, items).total, 2);
 check("204 two A or B attacks", parseMultiattack(`${LOOK} makes two [[/item .gsword]] or [[/item .lbow]] attacks.`, items),
   { total: 2, groups: [{ count: 2, choices: ["gsword", "lbow"] }] });
@@ -362,7 +362,7 @@ check("218 'makes two attacks' ambiguous → null", parseMultiattack(`${LOOK} ma
 check("219 missing trailing period", parseMultiattack(`${LOOK} makes three [[/item .claw]] attacks`, items).total, 3);
 check("220 label after link", parseMultiattack(`${LOOK} makes two [[/item .claw]]{Claws} attacks.`, items).total, 2);
 check("221 default plan", multiattackPlan(parseMultiattack(`${LOOK} makes three attacks, using [[/item .gsword]] or [[/item .lbow]] in any combination.`, items)),
-  [{ itemId: "gsword", count: 3 }]);
+  [{ itemId: "gsword", count: 3, group: 0, choices: ["gsword", "lbow"] }]);
 check("222 plan with a pick", multiattackPlan({ groups: [{ count: 2, choices: ["gsword", "lbow"] }] }, { pick: { 0: "lbow" } }), [{ itemId: "lbow", count: 2 }]);
 check("222a remembered pick applies to the group that offers it (not only group 0)",
   multiattackPlan({ groups: [{ count: 1, choices: ["bite"] }, { count: 2, choices: ["claw", "tail"] }] }, { pick: { "*": "tail" } }),
@@ -374,6 +374,85 @@ check("225 'two [A] attacks or two [B] attacks' = 2 swings, a choice", parseMult
   { total: 2, groups: [{ count: 2, choices: ["gsword", "lbow"] }] });
 check("226 2024 MM Warrior Veteran: two [A] or [B] attacks", parseMultiattack(`${LOOK} makes two [[/item .gsword]] or [[/item .lbow]] attacks.`, items).total, 2);
 check("227 Matron: 'It can replace one attack with a [B] attack' ignored", parseMultiattack(`${LOOK} makes two [[/item .claw]] attacks. It can replace one attack with a [[/item .bite]] attack.`, items).total, 2);
+
+/* ── Multiattack "in any combination" (0.3.2): the 2024 MM phrasings, read from dnd-monster-manual.actors ── */
+
+const cap = [{ id: "scim", name: "Scimitar", isAttack: true }, { id: "pistol", name: "Pistol", isAttack: true },
+  { id: "armor", name: "Studded Leather Armor", isAttack: false }, { id: "parry", name: "Parry", isAttack: false }];
+check("228 Bandit Captain (2024 MM, verbatim): two attacks, using A and B in any combination",
+  parseMultiattack(`<p>${LOOK} makes two attacks, using [[/item .scim]] and [[/item .pistol]] in any combination.</p>`, cap),
+  { total: 2, groups: [{ count: 2, choices: ["scim", "pistol"], mix: true }] });
+check("228a Bandit Captain plan: every swing may be either", multiattackPlan(parseMultiattack(`${LOOK} makes two attacks, using [[/item .scim]] and [[/item .pistol]] in any combination.`, cap)),
+  [{ itemId: "scim", count: 2, group: 0, choices: ["scim", "pistol"] }]);
+check("228b remembered Pistol starts every swing on it", multiattackPlan(parseMultiattack(`${LOOK} makes two attacks, using [[/item .scim]] and [[/item .pistol]] in any combination.`, cap), { pick: { "*": "pistol" } }),
+  [{ itemId: "pistol", count: 2, group: 0, choices: ["scim", "pistol"] }]);
+check("229 Merrow: three choices, commas", parseMultiattack(`${LOOK} makes two attacks, using [[/item .bite]], [[/item .claw]], or [[/item .slam]] in any combination.`, items),
+  { total: 2, groups: [{ count: 2, choices: ["bite", "claw", "slam"], mix: true }] });
+check("229a Animal Lord: ', and uses [X]' after the combination", parseMultiattack(`${LOOK} makes two attacks, using [[/item .claw]] or [[/item .slam]] in any combination, and uses [[/item .constrict]].`, items),
+  { total: 2, groups: [{ count: 2, choices: ["claw", "slam"], mix: true }] });
+check("229b Yeti: the verb after another use", parseMultiattack(`${LOOK} can use its [[/item .constrict]] and makes two attacks, using [[/item .claw]] or [[/item .slam]] in any combination.`, items),
+  { total: 2, groups: [{ count: 2, choices: ["claw", "slam"], mix: true }] });
+check("229c Iron Golem: 'two attack' (singular)", parseMultiattack(`${LOOK} makes two attack, using [[/item .claw]] or [[/item .slam]] in any combination.`, items).groups[0].mix, true);
+check("229d Fire Giant: no space before 'in any combination'", parseMultiattack(`${LOOK} makes two attacks, using [[/item .claw]] or [[/item .slam]]in any combination.`, items),
+  { total: 2, groups: [{ count: 2, choices: ["claw", "slam"], mix: true }] });
+check("229e Werebear: labelled links, 'It can replace one attack' ignored",
+  parseMultiattack(`${LOOK} makes two attacks, using [[/item .claw]]{Claw} or [[/item .slam]]{Slam} in any combination. It can replace one attack with a [[/item .bite]]{Bite} attack.`, items),
+  { total: 2, groups: [{ count: 2, choices: ["claw", "slam"], mix: true }] });
+check("229f Weretiger: the MM's text drops 'makes'", parseMultiattack(`${LOOK} two attacks, using [[/item .claw]]{Scratch} or [[/item .slam]]{Longbow} in any combination.`, items),
+  { total: 2, groups: [{ count: 2, choices: ["claw", "slam"], mix: true }] });
+check("229g 'using A or B' without 'in any combination' is a mix too", parseMultiattack(`${LOOK} makes three attacks, using [[/item .gsword]] or [[/item .lbow]].`, items),
+  { total: 3, groups: [{ count: 3, choices: ["gsword", "lbow"], mix: true }] });
+check("229h Tarrasque: one fixed Bite, then three other attacks in any combination",
+  parseMultiattack(`${LOOK} makes one [[/item .bite]] attack and three other attacks, using [[/item .claw]] or [[/item .tail]] in any combination.`, items),
+  { total: 4, groups: [{ count: 1, choices: ["bite"] }, { count: 3, choices: ["claw", "tail"], mix: true }] });
+check("229i Tarrasque plan: the Bite row stays fixed",
+  multiattackPlan(parseMultiattack(`${LOOK} makes one [[/item .bite]] attack and three other attacks, using [[/item .claw]] or [[/item .tail]] in any combination.`, items)),
+  [{ itemId: "bite", count: 1 }, { itemId: "claw", count: 3, group: 1, choices: ["claw", "tail"] }]);
+check("229j a mix of one choice is no mix in the plan", multiattackPlan({ groups: [{ count: 2, choices: ["claw"], mix: true }] }), [{ itemId: "claw", count: 2 }]);
+check("229k fixed composition unchanged: no mix, no choices on the plan",
+  multiattackPlan(parseMultiattack(`${LOOK} makes one [[/item .bite]] attack and two [[/item .claw]] attacks.`, items)),
+  [{ itemId: "bite", count: 1 }, { itemId: "claw", count: 2 }]);
+check("229l 'two [A] or [B] attacks' (Warrior Veteran) is one choice for both, not a mix",
+  parseMultiattack(`${LOOK} makes two [[/item .gsword]] or [[/item .lbow]] attacks.`, items).groups[0].mix, undefined);
+check("229m Barbed Devil: ', or it makes two [C] attacks' is the other routine, not more swings",
+  parseMultiattack(`${LOOK} makes one [[/item .claw]] attack and one [[/item .tail]] attack, or it makes two [[/item .slam]] attacks.`, items),
+  { total: 2, groups: [{ count: 1, choices: ["claw"] }, { count: 1, choices: ["tail"] }] });
+check("229n Clay Golem: 'or it makes three Slam attacks if it used Hasten' adds nothing",
+  parseMultiattack(`${LOOK} makes two [[/item Slam]] attacks, or it makes three Slam attacks if it used Hasten this turn.`, items),
+  { total: 2, groups: [{ count: 2, choices: ["slam"] }] });
+
+/* ── the swing accounting of a mix (0.3.2) ────────────────────────────────── */
+
+const mixPlan = [{ itemId: "bite", count: 1 }, { itemId: "claw", count: 2, group: 1, choices: ["claw", "tail"] }];
+const mixSwings = planSequence({ multiattack: mixPlan });
+check("240 planSequence: a mix row's swings carry its group and choices; a fixed row's none", mixSwings, [
+  { weaponId: "bite", mode: null, kind: "main" },
+  { weaponId: "claw", mode: null, kind: "main", group: 1, choices: ["claw", "tail"] },
+  { weaponId: "claw", mode: null, kind: "main", group: 1, choices: ["claw", "tail"] }]);
+check("241 planSequence: swings already taken are dropped from the front", planSequence({ multiattack: mixPlan, done: 2 }).map(s => s.weaponId), ["claw"]);
+const st0 = sequenceReducer(null, { type: "start", swings: mixSwings });
+check("242 swingChoices: none on the fixed Bite swing", swingChoices(st0), null);
+check("242a choose on a fixed swing: nothing changes", sequenceReducer(st0, { type: "choose", weaponId: "tail" }), st0);
+const st1 = sequenceReducer(st0, { type: "rolled" });
+check("243 swingChoices on the first mix swing", swingChoices(st1), { choices: ["claw", "tail"], current: "claw" });
+const st2 = sequenceReducer(st1, { type: "choose", weaponId: "tail" });
+check("244 choose: this swing and the rest of its group switch", st2.swings.map(s => s.weaponId), ["bite", "tail", "tail"]);
+check("244a choose keeps the count, the index and the status", [st2.swings.length, st2.index, st2.status, st2.rolled], [3, 1, "running", 1]);
+const st3 = sequenceReducer(sequenceReducer(st2, { type: "rolled" }), { type: "choose", weaponId: "claw" });
+check("245 a mixed run: Tail then Claw", st3.swings.map(s => s.weaponId), ["bite", "tail", "claw"]);
+check("245a the rolled swings are never rewritten", st3.swings.slice(0, 2).map(s => s.result), ["rolled", "rolled"]);
+check("246 choose a weapon not in the group: nothing changes", sequenceReducer(st1, { type: "choose", weaponId: "bite" }), st1);
+check("246a choose the weapon already in use: the same state", sequenceReducer(st1, { type: "choose", weaponId: "claw" }), st1);
+check("246b choose when stopped or done: nothing changes", sequenceReducer({ ...st1, status: "stopped" }, { type: "choose", weaponId: "tail" }).swings[1].weaponId, "claw");
+check("247 a mix run counts its swings like any other: 3 rolled → done",
+  (() => { let s = st3; s = sequenceReducer(s, { type: "rolled" }); return [s.status, s.rolled, stripNumbers(s).left]; })(), ["done", 3, 0]);
+check("248 fullAttackPlanFrom: a mix run spends the same pips (one swing taken by hand → the rest)",
+  fullAttackPlanFrom({ multiattack: { plan: [{ itemId: "scim", count: 2, group: 0, choices: ["scim", "pistol"] }], groups: [{ count: 2, choices: ["scim", "pistol"], mix: true }], total: 2 },
+    inCombat: true, turn: { attackAction: { swings: 1 }, surges: 0, otherActions: 0 } }),
+  { swings: [{ weaponId: "scim", mode: null, kind: "main", group: 0, choices: ["scim", "pistol"] }], count: 2, left: 1, weaponId: "scim" });
+check("249 fullAttackPlanFrom with the remembered Pistol: the mix starts on it",
+  fullAttackPlanFrom({ multiattack: { plan: [{ itemId: "scim", count: 2 }], groups: [{ count: 2, choices: ["scim", "pistol"], mix: true }], total: 2 }, pick: { "*": "pistol" } }).swings.map(s => s.weaponId),
+  ["pistol", "pistol"]);
 
 /* ── weapon sets ──────────────────────────────────────────────────────────── */
 

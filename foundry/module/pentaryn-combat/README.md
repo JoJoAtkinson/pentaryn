@@ -16,7 +16,7 @@ are never edited: the bars are recomposed in `render*ArgonComponent` hooks.
 |---|---|---|
 | Action bar, first button | **Full Attack** (badge = swings left) — only for characters with 2+ swings (Extra Attack…), a Nick pair, or an NPC/form with a parseable Multiattack | Left: every swing, one roll dialog each. Right: pick another weapon (remembered). |
 | Action pips | **2 → 1 → 0** for a character with Extra Attack — also when a weapon is clicked by hand | — |
-| Above the HUD while it runs | the **swing strip**: "Swing 2 of 3 · Longsword → Goblin", Adv / Dis for the next swing, Quick, Stop, "Enter = Normal · Esc = pause"; the roll windows sit just above it | Esc on a roll **pauses**: Resume / New target / another weapon (tiles show to-hit · damage) / Stop. Esc again stops. **Stop** with a roll window open closes it unrolled; a usage card the stopped run posted with nothing rolled under it goes too (`tidyCancelledAttacks`, 0.2.3). |
+| Above the HUD while it runs | the **swing strip**: "Swing 2 of 3 · Longsword → Goblin", Adv / Dis for the next swing, Quick, Stop, "Enter = Normal · Esc = pause"; the roll windows sit just above it. For a Multiattack "in any combination" (Bandit Captain: Scimitar or Pistol), a **This swing: [Scimitar] [Pistol]** row (0.3.2) | Chooser: one click switches this swing and the rest of its group. An open roll window closes and opens again for the new weapon, with no pause. Esc on a roll **pauses**: Resume / New target / another weapon (tiles show to-hit · damage) / Stop. Esc again stops. **Stop** with a roll window open closes it unrolled; a usage card the stopped run posted with nothing rolled under it goes too (`tidyCancelledAttacks`, 0.2.3). |
 | Bonus bar, after the Attack action | **Off-hand: Dagger**, **Hew: Greatsword** (after a crit or a kill), **Pole Strike** (after a glaive / quarterstaff / spear swing), **Flurry of Blows**, **Martial Arts strike** — only what the character qualifies for right now; a new one pulses until the pointer reaches the bar. Argon's own off-hand weapon slot hides while **Off-hand** offers the same weapon, and once Nick or the off-hand attack used the Light extra attack. With Dual Wielder the Off-hand attack stays next to Nick (PHB: two separate extra attacks); its tooltip then names Dual Wielder, not the Light property (0.2.3) | one click → the roll dialog |
 | Special bar | **Nick: Scimitar** (free, once per turn), **Sneak Attack: Ask / Auto** toggle, **New turn** (out of combat only) | one click |
 | Attack card in chat | **+ Sneak Attack 3d6** (also Frenzy — d6s equal to the Rage Damage bonus, not offered or spent without one — Colossus Slayer, Divine Strike) — roller and GM only, once per turn; tooltip shows advantage ✓ / ally beside the target ? / no disadvantage ✓ | one click → damage card, crit carried, weapon's damage type, no type picker |
@@ -105,7 +105,7 @@ is canonical; `game.pentaryn.combat` the alias; `pentaryn-combat.ready` fires). 
 | `count(actor, weaponId?)` | swings the Attack action gives |
 | `plan(actor, weaponId?)` | `{swings, count, left, weaponId}` Full Attack would make now |
 | `turn(actor)` · `newTurn(actor)` | this turn's flag (fresh if stale) · out-of-combat reset (writes) |
-| `multiattack(actor)` · `weapons(actor)` | parsed Multiattack `{total, groups, plan, source}` · weapon shapes |
+| `multiattack(actor)` · `weapons(actor)` | parsed Multiattack `{total, groups, plan, source}` (a group "in any combination" has `mix: true`, its plan row `group` and `choices`) · weapon shapes |
 | `offers(message)` · `rollRider(message, key)` | rider eligibility on an attack card · roll one rider |
 | `fullAttack(actor, weaponId?, opts?)` · `followUp(actor, followUp, opts?)` | what the buttons do |
 | `reckless(actor)` · `setReckless(actor, on)` | Reckless Attack state · toggle |
@@ -229,8 +229,7 @@ Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy
   With it on, don't also click GWM's own "Heavy Weapon Damage" button.
 - **Auto Sneak Attack** goes on the first eligible swing's damage; the module can't see hit/miss
   (players don't), so a miss needs the **Undo** on the card.
-- **Multiattack "in any combination"** runs the first listed weapon for every swing; right-click
-  Full Attack to pick another, or pause and swap per swing.
+- **Multiattack mix** (0.3.2): only "N attacks, using A or B (in any combination)" gets the chooser; "two [A] or [B] attacks" is one choice for both; ", or it makes …" plans the first routine (pause and swap for the other). After a swing clicked by hand, Full Attack plans the rest from the plan's front.
 - **C23 open:** this module still reads pentaryn-aoe's `autoDamageOnHit` setting directly (one
   reader, `aoeAutoDamage()` in `settings.mjs`): aoe's `settings()` member is published at `ready`,
   but chat cards first render before it.

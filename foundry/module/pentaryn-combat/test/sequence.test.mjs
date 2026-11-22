@@ -752,3 +752,130 @@ test("combat-core-EXT-4: runFollowUp's one-swing follow-ups come from a frozen S
   assert.doesNotMatch(body, /f\.kind === "(offhand|nick|martial-arts|hew|pole-strike)"/, "no per-kind branch left for the table's kinds");
   assert.match(body, /f\.kind === "flurry"/, "Flurry keeps its own branch");
 });
+
+/* ── 0.3.2: Multiattack "in any combination" — the strip's chooser ─────────────────────────────── */
+
+// The 2024 MM Bandit Captain as dnd-monster-manual.actors stores it (read-only check in the live
+// world, 2026-11-21): Scimitar and Pistol linked by id, "makes two attacks, using … in any combination".
+const { makeActor, weapon } = await import("./fixtures/world.mjs");
+const captain = makeActor({ id: "banditCaptain001", name: "Bandit Captain", type: "npc", items: [
+  { id: "mmMultiattack000", name: "Multiattack", type: "feat", system: { description: { value: "<p>The [[lookup @name lowercase]] makes two attacks, using [[/item .scimitarCapt0001]] and [[/item .pistolCaptain001]] in any combination.</p>" } } },
+  weapon("scimitarCapt0001", "Scimitar", { props: "fin lgt" }),
+  weapon("pistolCaptain001", "Pistol", { attackType: "ranged", damageTypes: ["piercing"] }),
+] });
+const SCIM = "scimitarCapt0001";
+const PISTOL = "pistolCaptain001";
+const rolledIds = () => F.calls.filter(c => c.op === "activity.rollAttack").map(c => c.activity.split(".")[3]);
+const chooser = () => [...stripEl().querySelectorAll('[data-pc="choose"]')].map(b => [b.dataset.id, b.classList.contains("active")]);
+const rollWindow = (key, subject) => {
+  const win = { element: doc.createElement("div"), config: { subject }, closed: 0, close() { this.closed += 1; return Promise.resolve(); } };
+  win.element.className = "application roll-configuration";
+  F.foundry.applications.instances.set(key, win);
+  return win;
+};
+const pending = (activity) => {
+  const p = {};
+  activity.script.attack.push(() => new Promise(r => { p.release = r; }));
+  return p;
+};
+
+test("any combination: the running strip offers the swing's weapons; a fixed Multiattack offers none", async () => {
+  assert.deepEqual(api.multiattack(captain).groups, [{ count: 2, choices: [SCIM, PISTOL], mix: true }]);
+  const s1 = pending(act(captain, SCIM));
+  const s2 = pending(act(captain, SCIM));
+  const run = api.fullAttack(captain);
+  await drain();
+  assert.deepEqual(chooser(), [[SCIM, true], [PISTOL, false]], "This swing: Scimitar (active) · Pistol");
+  assert.match(stripEl().innerHTML, /pc-choose-label/);
+  s1.release({ total: 11 });
+  await drain();
+  assert.deepEqual(chooser(), [[SCIM, true], [PISTOL, false]], "swing 2 offers both again");
+  s2.release({ total: 12 });
+  assert.deepEqual(await run, { rolled: 2, status: "done" });
+  await tick(400);
+  // The wolf's "two [Bite] attacks": no chooser.
+  const b1 = pending(act(gob, "bite"));
+  const run2 = api.fullAttack(gob);
+  await drain();
+  assert.deepEqual(chooser(), []);
+  b1.release({ total: 9 });
+  await run2;
+  await tick(400);
+  reset(captain, gob);
+  F.calls.length = 0;
+});
+
+test("any combination: a choice with the roll window open closes it and rolls that swing with the new weapon, no pause; swing 2 switches back", async () => {
+  const sc = act(captain, SCIM);
+  const pi = act(captain, PISTOL);
+  const w1 = rollWindow("capWin1", sc);
+  const s1 = pending(sc);
+  pi.script.attack.push({ total: 17 });
+  const s2 = pending(pi);
+  sc.script.attack.push({ total: 8 });
+  const run = api.fullAttack(captain);
+  await drain();
+  await click("choose", `[data-id="${PISTOL}"]`);
+  assert.equal(w1.closed, 1, "the Scimitar's open roll window closed unrolled");
+  F.foundry.applications.instances.delete("capWin1");
+  const w2 = rollWindow("capWin2", pi);
+  s1.release(null);              // dnd5e answers a closed window with no roll
+  await drain();
+  assert.equal(seq.running().state.status, "running", "no pause: the swing was rolled again");
+  assert.equal(seq.running().state.index, 1, "swing 1 rolled with the Pistol");
+  assert.deepEqual(chooser(), [[SCIM, false], [PISTOL, true]], "swing 2 follows the choice");
+  await click("choose", `[data-id="${SCIM}"]`);
+  assert.equal(w2.closed, 1);
+  F.foundry.applications.instances.delete("capWin2");
+  s2.release(null);
+  const out = await run;
+  await tick(400);
+  assert.deepEqual(out, { rolled: 2, status: "done" });
+  assert.deepEqual(rolledIds(), [SCIM, PISTOL, PISTOL, SCIM], "Scimitar closed · Pistol rolled · Pistol closed · Scimitar rolled");
+  assert.equal(F.calls.filter(c => c.op === "activity.use").length, 2, "one usage card per item");
+  assert.equal(captain.flags[MODULE].last.weapon, PISTOL, "the first swing's weapon is remembered");
+  reset(captain);
+  F.calls.length = 0;
+});
+
+test("any combination: a choice while a windowless roll is in flight never closes a later swing's window for the old weapon", async () => {
+  // Quick mode: swing 1 (Scimitar) is rolling with no window when Pistol is chosen. It rolls as the
+  // Scimitar; swing 2 here is a Scimitar outside the group, and its window must stay open.
+  const sc = act(captain, SCIM);
+  const s1 = pending(sc);
+  const s2 = pending(sc);
+  const run = seq.runSwings(captain, [
+    { weaponId: SCIM, mode: null, kind: "main", group: 0, choices: [SCIM, PISTOL] },
+    { weaponId: SCIM, mode: null, kind: "main" }
+  ]);
+  await drain();
+  assert.equal(seq.chooseSwing(PISTOL), true);
+  s1.release({ total: 12 });     // the in-flight roll lands with the old weapon
+  await drain();
+  assert.equal(seq.running().state.index, 1);
+  const w = rollWindow("capWinLate", sc);
+  await tick(400);               // the chooser's close polls run past the late window
+  assert.equal(w.closed, 0, "swing 2's Scimitar window was not the chooser's to close");
+  F.foundry.applications.instances.delete("capWinLate");
+  s2.release({ total: 9 });
+  const out = await run;
+  await tick(400);
+  assert.deepEqual(out, { rolled: 2, status: "done" });
+  reset(captain);
+  F.calls.length = 0;
+});
+
+test("any combination: a choice outside a running sequence, or of a weapon the group does not offer, does nothing", async () => {
+  assert.equal(seq.chooseSwing(PISTOL), false, "nothing running");
+  const s1 = pending(act(captain, SCIM));
+  const run = api.fullAttack(captain);
+  await drain();
+  assert.equal(seq.chooseSwing("bite"), false, "not one of its choices");
+  assert.equal(seq.chooseSwing(SCIM), false, "already the swing's weapon");
+  assert.deepEqual(seq.running().state.swings.map(s => s.weaponId), [SCIM, SCIM]);
+  s1.release({ total: 10 });
+  await run;
+  await tick(400);
+  reset(captain);
+  F.calls.length = 0;
+});

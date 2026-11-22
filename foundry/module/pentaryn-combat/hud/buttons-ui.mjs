@@ -163,7 +163,9 @@ export function argonClasses() {
       return {
         title: _loc("PENTARYN_COMBAT.FullAttack"),
         subtitle: nick ? _loc("PENTARYN_COMBAT.Hud.PlusNick", { left, weapon: nickName }) : left,
-        description: `<p>${_loc("PENTARYN_COMBAT.Hud.FullAttackText", { what })}</p>`,
+        // Multiattack "in any combination": say where each swing's weapon is chosen.
+        description: `<p>${_loc("PENTARYN_COMBAT.Hud.FullAttackText", { what })}</p>`
+          + (st.ma && st.plan.swings.some(s => s.choices?.length > 1) ? `<p>${_loc("PENTARYN_COMBAT.Hud.AnyCombination")}</p>` : ""),
         details: [
           { label: _loc("PENTARYN_COMBAT.Hud.ToHit"), value: act?.labels?.toHit ?? "—" },
           { label: _loc("PENTARYN_COMBAT.Hud.Swings"), value: String(st.plan.swings.length) }

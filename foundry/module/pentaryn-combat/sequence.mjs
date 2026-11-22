@@ -186,9 +186,50 @@ function stripContext() {
     title: current.title,
     // What a closed roll leaves unspent (Flurry's Focus is already paid).
     note: core.pausedNote({ kinds: s.swings.map(x => x.kind), paid: current.paid }),
-    weapons: current.swappable ? weaponsOf(current.actor).filter(core.canSwing).map(w => swapTile(current.actor, w)) : []
+    weapons: current.swappable ? weaponsOf(current.actor).filter(core.canSwing).map(w => swapTile(current.actor, w)) : [],
+    // Multiattack "in any combination": this swing's choices, the one it uses marked (the strip's chooser).
+    choices: choiceTiles(current.actor, core.swingChoices(s))
   };
 }
+
+/** The chooser's tiles for core.swingChoices(state): [{id, name, img, stats, active}], or []. */
+function choiceTiles(actor, sc) {
+  if (!sc) return [];
+  return sc.choices.map(id => actor.items.get(id)).filter(Boolean)
+    .map(i => ({ ...swapTile(actor, { id: i.id, name: i.name, img: i.img }), active: i.id === sc.current }));
+}
+
+/**
+ * The strip's chooser was clicked: this swing (and the rest of its "any combination" group) uses
+ * another choice. A roll window already open for the old weapon closes unrolled and the swing is
+ * rolled again with the new one, with no pause (`rechosen` tells the loop the close was ours). A
+ * roll started but its window not drawn yet is closed once it shows. Before the roll starts, the
+ * loop sees the changed weapon itself (its check just before rollAttack).
+ */
+export function chooseSwing(weaponId) {
+  if (!current || current.state.status !== "running") return false;
+  const before = current.state.swings[current.state.index]?.weaponId;
+  current.state = core.sequenceReducer(current.state, { type: "choose", weaponId });
+  if (current.state.swings[current.state.index]?.weaponId === before) return false;
+  render();
+  const oldUuid = attackActivityOf(current.actor.items.get(before))?.uuid ?? null;
+  const me = current;
+  const at = me.state.index;
+  // Only this swing's window: once it has rolled (Quick mode, or Normal clicked first), a later swing
+  // that uses the old weapon is not the chooser's to close.
+  const tryClose = (n) => {
+    if (current !== me || me.state.index !== at || me.state.status !== "running" || !oldUuid || tag?.activityUuid !== oldUuid) return;
+    me.rechosen = true;
+    if (closeSwingWindow()) return;
+    me.rechosen = false;
+    if (n < CHOOSE_CLOSE_TRIES) setTimeout(() => tryClose(n + 1), core.DELAYS.damagePoll);
+  };
+  tryClose(0);
+  return true;
+}
+
+/** How many polls (DELAYS.damagePoll apart) the chooser waits for the old weapon's roll window. */
+const CHOOSE_CLOSE_TRIES = 20;
 
 /** A pause-bar weapon tile: name, icon and what it does ("+6 · 1d8 + 3 Slashing"). */
 function swapTile(actor, w) {
@@ -296,6 +337,21 @@ function swingRollArgs(s, swing, item, activity, origin, { event, keyed }) {
 }
 
 /**
+ * One usage card per item: ammo / uses / the action economy go through dnd5e once, no auto roll.
+ * The caller reuses a card already posted for the item (no await then: the swing's timing is
+ * unchanged). The new card's message id (null when none was posted), or false when cancelled.
+ */
+async function usageCard(activity, item, kind) {
+  const results = await activity.use({ subsequentActions: false }, { configure: false }, { create: true });
+  if (!results) return false;
+  const origin = results.message?.id ?? null;
+  current.origins.set(item.id, origin);
+  if (origin) current.created.add(origin);
+  emit("usage", activity, kind);
+  return origin;
+}
+
+/**
  * Run a list of swings for an actor.
  * @param {Actor} actor
  * @param {{weaponId, mode, kind}[]} swings
@@ -327,13 +383,15 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     paid,
     abort: false,
     lastAdv: null,
+    rechosen: false,        // the chooser closed this swing's roll window: roll it again, no pause
     created: new Set()      // usage cards this sequence posted (Flurry's own card is passed in, not ours)
   };
   const dispatch = (action) => { current.state = core.sequenceReducer(current.state, action); render(); };
   show(stripContext(), {
     onAdv: (value) => dispatch({ type: "adv", value }),
     onStop: () => { dispatch({ type: "stop" }); closeSwingWindow(); choose({ type: "stop" }); },
-    onQuick: async (on) => { await setQuickMode(on); render(); }
+    onQuick: async (on) => { await setQuickMode(on); render(); },
+    onChoose: (weaponId) => { chooseSwing(weaponId); }
   });
 
   try {
@@ -355,16 +413,10 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
         break;
       }
 
-      // One usage card per item: ammo/uses/the action economy go through dnd5e once, no auto roll.
-      let origin = current.origins.get(item.id);
-      if (!origin) {
-        const results = await activity.use({ subsequentActions: false }, { configure: false }, { create: true });
-        if (!results) { dispatch({ type: "cancel" }); continue; }
-        origin = results.message?.id ?? null;
-        current.origins.set(item.id, origin);
-        if (origin) current.created.add(origin);
-        emit("usage", activity, swing.kind);
-      }
+      const origin = current.origins.get(item.id) || await usageCard(activity, item, swing.kind);
+      if (origin === false) { dispatch({ type: "cancel" }); continue; }
+      // The chooser switched this swing's weapon while its usage card was posted: read it again.
+      if (current.state.swings[current.state.index]?.weaponId !== swing.weaponId) continue;
 
       const { config, dialog, message } = swingRollArgs(s, swing, item, activity, origin, { event, keyed });
 
@@ -378,7 +430,10 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
         tag = null;
       }
       await settleDamage(dmg);
-      if (!rolls?.length) { dispatch({ type: "cancel" }); continue; }
+      // A roll window the chooser closed (another weapon for this swing) is rolled again, not paused.
+      const rechosen = current.rechosen;
+      current.rechosen = false;
+      if (!rolls?.length) { if (!rechosen) dispatch({ type: "cancel" }); continue; }
       const r = rolls[0];
       current.lastAdv = r.hasAdvantage ? "advantage" : r.hasDisadvantage ? "disadvantage" : null;
       // W4-C1 [declared]: Adv / Dis pressed while this swing's window was open is for the NEXT swing

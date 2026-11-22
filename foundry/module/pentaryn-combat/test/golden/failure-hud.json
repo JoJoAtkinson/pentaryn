@@ -7,13 +7,19 @@
         "choices": [
           "bite",
           "claw"
-        ]
+        ],
+        "mix": true
       }
     ],
     "plan": [
       {
         "itemId": "bite",
-        "count": 2
+        "count": 2,
+        "group": 0,
+        "choices": [
+          "bite",
+          "claw"
+        ]
       }
     ],
     "source": "multiattack00007"

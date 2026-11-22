@@ -198,6 +198,11 @@ body.pentaryn-combat-picker-cue .ech-target-picker::after {
   color: #ccc;
   margin-left: 4px;
 }
+/* 0.3.2: Multiattack "in any combination" — the swing's weapon chooser on the running strip. */
+.pentaryn-combat-strip .pc-choose-label {
+  font-size: 11px;
+  color: #bbb;
+}
 .extended-combat-hud .pentaryn-combat-dup {
   display: none !important;
 }
