@@ -195,7 +195,7 @@
     },
     "Walls": {
       "Break": "Click: break this section · Right-click: repair the whole wall",
-      "Broken": "{spell}: a section is broken.",
+      "Broken": "{spell}: a section is broken. Right-click any section still standing to repair the whole wall.",
       "Destroyed": "{spell}: the last section is broken, the wall is gone.",
       "Repaired": "{spell}: the wall is whole again.",
       "NothingToRepair": "{spell} has no broken section."

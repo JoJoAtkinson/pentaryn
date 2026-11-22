@@ -67,6 +67,7 @@ section, a 10-foot stretch of a Wall of Fire, one arc of a ring) has a small dar
 on the GM's map only, on any layer. **Click** it: that section is gone. Its walls go and the drawn wall shows
 the hole, so players see (and walk) through it, and a toast says "Wall of Stone: a section is broken".
 **Right-click** any disc of that wall: the whole wall is put back (also `game.pentaryn.aoe.repairWall(regionId)`).
+The broken section has no disc left, so a right-click at the gap is the map's own (the GM's pins menu): use a section still standing.
 Breaking the last section removes the wall and its area. Deleting the spell's walls on the Walls layer
 breaks those sections too, so they do not come back on the next drag (Clear All on the Walls layer breaks nothing: the walls come back. Core 14 hides Clear All's flag from
 modules, so deleting the last walls of a one-level scene by hand reads as Clear All too). Wall of Stone becoming permanent

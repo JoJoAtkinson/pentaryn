@@ -314,7 +314,7 @@ test("B2: breaking a section (GM) cuts the region's shape, its walls follow, a t
   assert.deepEqual(r.shapes.map(x => x.x), [1000, 1400], "the middle panel is gone from the drawn area");
   assert.deepEqual([...s.walls.values()].map(w => w.c[0]).sort(), [1000, 1400], "and from the walls");
   assert.deepEqual(r.flags[MODULE].wallOriginal.shapes.map(x => x.x), [1000, 1200, 1400], "the whole wall is kept for a repair");
-  assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["info", "Wall of Stone: a section is broken."]], "one toast");
+  assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["info", "Wall of Stone: a section is broken. Right-click any section still standing to repair the whole wall."]], "one toast");
   assert.deepEqual(SW.wallsFor(r.id)?.walls.length, 2);
   assert.equal(SW.wallsFor(r.id)?.repairable, true);
   assert.deepEqual(SW.wallsFor(r.id)?.broken, ["1:0"], "the knocked-out section is listed (live R1 D-6), against the panels as cast");

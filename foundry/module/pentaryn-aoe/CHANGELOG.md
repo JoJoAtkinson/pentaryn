@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **0.8.8 (2026-11-22). Live play-test round 7.**
+  - **[declared] The break toast says where to repair (R7-14).** A broken section leaves no disc, so a
+    right-click at the gap is the canvas's own (the GM's pins menu). The toast now says to right-click any
+    section still standing, which repairs the whole wall (as the disc's tooltip already said).
 - **0.8.7 (2026-11-22). Live play-test round 6.**
   - **[declared] The `canvasReady(argon)` once-handler no longer stops the chain.** It returned
     `guardArgonBind()`'s `false` while Argon was not there yet, the same `Hooks.call("canvasReady")` stop as
