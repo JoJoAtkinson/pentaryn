@@ -457,28 +457,62 @@ function stillOurs(ids, scene, starts, seq) {
 }
 
 /**
+ * Is a cell (top-left pixels) where token `id` would overlap another token at rest, or a spot an earlier
+ * cut of the same drop claimed (`claims`: centres and radii in pixels)? Another token counts where the
+ * server has it (its source: a moving one's is where it will stop). Tokens are circles: touching is fine.
+ * A hidden token counts only for the GM.
+ */
+function takenFor(scene, id, claims) {
+  const doc = scene?.tokens?.get(id);
+  const s = doc?.object ? gridSize(doc.object) : (scene?.grid?.size ?? 100);
+  const src = doc?._source ?? {};
+  const w = src.width ?? 1, h = src.height ?? 1;
+  const r = radiusOf(w, h) * s;
+  const circles = [];
+  const all = typeof scene?.tokens?.values === "function" ? [...scene.tokens.values()] : [];
+  for (const o of all) {
+    if (!o?._source || o.id === id) continue;
+    if (o.hidden && !game.user?.isGM) continue;
+    if (src.level !== undefined && o._source.level !== undefined && o._source.level !== src.level) continue;
+    const ow = o._source.width ?? 1, oh = o._source.height ?? 1;
+    circles.push({ x: o._source.x + (ow * s) / 2, y: o._source.y + (oh * s) / 2, r: radiusOf(ow, oh) * s });
+  }
+  for (const c of claims ?? []) if (c.id !== id) circles.push(c);
+  return p => {
+    const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
+    return circles.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1e-6);
+  };
+}
+
+/**
  * A member's waypoints as they may still be walked now: a wall that closed since the plan (a door the
  * GM shut mid-walk, live R2-5) cuts them on a clean spot before it, never on the wall line, where core's
- * own cut would leave the member. null when it cannot move at all. Ghost and unconstrained moves pass.
+ * own cut would leave the member, and never on a spot another token rests on or another member of the
+ * drop was cut to (live R4-1). The cut spot is added to `claims`. null when it cannot move at all.
+ * Ghost and unconstrained moves pass.
  */
-function walkableNow(scene, id, m, options) {
+function walkableNow(scene, id, m, options, claims) {
   if (!m?.waypoints?.length || options?.constrainOptions?.ignoreWalls || m.planned) return m;
   const doc = scene?.tokens?.get(id);
   const token = doc?.object;
   if (!token?.checkCollision) return m;
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
-  const { waypoints, cut } = cutAtWalls(token, origin, m.waypoints);
+  const { waypoints, cut } = cutAtWalls(token, origin, m.waypoints, { taken: takenFor(scene, id, claims) });
   if (!cut) return m;
-  return waypoints.length ? { ...m, waypoints } : null;
+  if (!waypoints.length) return null;
+  const end = waypoints.at(-1), s = gridSize(token);
+  const w = end.width ?? doc._source.width ?? 1, h = end.height ?? doc._source.height ?? 1;
+  claims?.push({ id, x: end.x + (w * s) / 2, y: end.y + (h * s) / 2, r: radiusOf(w, h) * s });
+  return { ...m, waypoints };
 }
 
-/** Send one batch for drop `seq`, only for the members still ours. */
-function send(scene, seq, starts, updates, options, what) {
+/** Send one batch for drop `seq`, only for the members still ours. `claims`: the drop's cut spots so far. */
+function send(scene, seq, starts, updates, options, what, claims = []) {
   let ids = stillOurs(updates.map(u => u._id), scene, starts, seq);
   if (!ids.length) return;
   const movement = {};
   for (const id of ids) {
-    const m = options.movement?.[id] ? walkableNow(scene, id, options.movement[id], options) : options.movement?.[id];
+    const m = options.movement?.[id] ? walkableNow(scene, id, options.movement[id], options, claims) : options.movement?.[id];
     if (m) movement[id] = m;
   }
   ids = ids.filter(id => movement[id] || !options.movement?.[id]);
@@ -496,7 +530,7 @@ function send(scene, seq, starts, updates, options, what) {
 function schedule(later, base, members, { scene, seq, starts, endMs = 0 }) {
   if (!base || members.length < 2) return;
   const gid = foundry.utils.randomID();
-  const group = { ids: new Set(members.map(m => m.id)), timers: [], stopped: false };
+  const group = { ids: new Set(members.map(m => m.id)), timers: [], stopped: false, claims: [] };
   groups.set(gid, group);
   for (const id of group.ids) groupOf.set(id, gid);
   const lastWave = later.at(-1)?.at ?? 0;
@@ -512,7 +546,7 @@ function schedule(later, base, members, { scene, seq, starts, endMs = 0 }) {
       if (group.stopped) return;
       // A member a relay stop took out of the group (groupCancel only) is not sent.
       const updates = wave.updates.filter(u => group.ids.has(u._id));
-      if (updates.length) send(scene, seq, starts, updates, { ...base, movement: wave.movement }, "wave");
+      if (updates.length) send(scene, seq, starts, updates, { ...base, movement: wave.movement }, "wave", group.claims);
     }, wave.at));
   }
 }

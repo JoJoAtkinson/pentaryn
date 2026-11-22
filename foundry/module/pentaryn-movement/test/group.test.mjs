@@ -244,6 +244,57 @@ test("R2-5: a door closed after the drop cuts a waiting member's wave on a whole
   }
 });
 
+test("R4-1: a door closed after the drop never sends two waiting members to one cell before it, nor onto a token at rest", () => {
+  combatFlag = false;
+  clock.step = 0;
+  // Only this test's tokens (and one ally resting by the door) stand on the scene meanwhile.
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const ts = [400, 300, 500, 200, 600, 100].map((x, k) => makeToken(`stk${k}00000000000`.slice(0, 16), x, 100));
+  const ally = makeToken("stkAlly000000001", 300, 300);
+  try {
+    const out = dropWith(ts[0], contextsFor(ts, 0, 500));
+    const first = new Set(out[0].map(u => u._id));
+    const waiting = ts.filter(t => !first.has(t.document.id));
+    assert.ok(waiting.length >= 3, `several members wait for later waves (${waiting.length})`);
+    world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+    const from = F.calls.length;
+    let moves;
+    try {
+      // Each wave's update lands on the server before the next goes out (the source moves to the cut spot).
+      const onUpdate = viewedScene.updateEmbeddedDocuments;
+      viewedScene.updateEmbeddedDocuments = async (type, updates, options) => {
+        for (const u of updates) {
+          const end = options.movement?.[u._id]?.waypoints?.at(-1);
+          const d = sceneTokens.get(u._id);
+          if (end && d) d._source = { ...d._source, x: end.x, y: end.y };
+        }
+        return onUpdate.call(viewedScene, type, updates, options);
+      };
+      try { mock.timers.tick(5000); } finally { viewedScene.updateEmbeddedDocuments = onUpdate; }
+      moves = Object.assign({}, ...sent(from).map(c => c.options.movement));
+    } finally {
+      world.walls.pop();
+    }
+    const rest = t => moves[t.document.id]?.waypoints?.at(-1) ?? t.document._source;
+    const cut = waiting.filter(t => moves[t.document.id]);
+    assert.ok(cut.length >= 2, `at least two waiting members still walk to the door (${cut.length})`);
+    const spots = [...waiting.map(t => ({ id: t.document.id, p: rest(t) })), { id: "ally", p: ally.document._source }];
+    for (let i = 0; i < spots.length; i++) for (let j = i + 1; j < spots.length; j++) {
+      const d = Math.hypot(spots[i].p.x - spots[j].p.x, spots[i].p.y - spots[j].p.y);
+      assert.ok(d >= S - 1e-6, `${spots[i].id} and ${spots[j].id} rest ${d} px apart: ${JSON.stringify(spots)}`);
+    }
+    for (const t of cut) {
+      const end = rest(t);
+      assert.ok(end.x % S === 0 && end.y % S === 0, `${t.document.id} ends on a whole cell`);
+      assert.ok(center(end).y < 400, `${t.document.id} stays north of the closed door`);
+    }
+  } finally {
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
 test("planGroup(refs, point) is the same plan as a dry run: slots, delays, levels; nothing moves", () => {
   F.canvas.ready = true;
   const ts = [makeToken("dryA000000000001", 400, 200), makeToken("dryB000000000001", 300, 200)];

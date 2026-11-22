@@ -172,11 +172,14 @@ export function movementFacts(token) {
  * A later wave's waypoints, cut where a wall now blocks them (live R2-5: the GM closed a door after the
  * drop, core then cut the member's path at the door and left it straddling the door line). Each segment
  * from `origin` is tested against move-blocking walls as they are now; at the first blocked one the path
- * ends on the furthest whole cell before the wall along that segment that the member's centre reaches
- * without crossing a wall, else on the last waypoint before it. Returns `{ waypoints, cut }`; an empty
- * list means the member cannot move at all. Reads only.
+ * ends on the furthest whole cell before the wall that the member's centre reaches without crossing a
+ * wall and that `taken` (top-left pixels → true when another token rests there) leaves free: along the
+ * blocked segment first, then back along the earlier ones (live R4-1: every waiting member was sent to
+ * the same last square before the door and four ended stacked on it). Back at the origin's cell, or
+ * with no free cell at all, the list is empty: the member cannot move and stays where it stands.
+ * Returns `{ waypoints, cut }`. Reads only.
  */
-export function cutAtWalls(token, origin, waypoints) {
+export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
   const s = gridSize(token);
   const src = token.document?._source ?? {};
   const centre = p => {
@@ -186,26 +189,35 @@ export function cutAtWalls(token, origin, waypoints) {
   const blocked = (a, b) => {
     try { return !!token.checkCollision(centre(b), { origin: centre(a), type: "move", mode: "any" }); } catch { return false; }
   };
+  const isTaken = p => { try { return !!taken?.(p); } catch { return false; } };
   let prev = origin;
   for (let k = 0; k < waypoints.length; k++) {
     const w = waypoints[k];
     if (!blocked(prev, w)) { prev = w; continue; }
-    const kept = waypoints.slice(0, k);
-    const ww = w.width ?? src.width ?? 1, hh = w.height ?? src.height ?? 1;
-    const a = centre(prev), b = centre(w);
-    const L = Math.hypot(b.x - a.x, b.y - a.y);
-    const n = Math.max(Math.ceil(L / (s / 4)), 1);
-    const at = { x: prev.x, y: prev.y };
-    for (let q = n; q >= 0; q--) {
-      const c = { x: a.x + (b.x - a.x) * (q / n), y: a.y + (b.y - a.y) * (q / n) };
-      const cand = { ...w, x: Math.round((c.x - (ww * s) / 2) / s) * s, y: Math.round((c.y - (hh * s) / 2) / s) * s };
-      if (cand.x === at.x && cand.y === at.y) break;                  // back where the segment starts
-      if (blocked(prev, cand)) continue;
-      kept.push({ ...cand, snapped: true, explicit: true, checkpoint: true });
-      return { waypoints: kept, cut: true };
+    const home = { x: Math.round(origin.x / s) * s, y: Math.round(origin.y / s) * s };
+    const seen = new Set();
+    // Segment `seg` runs from waypoint seg - 1 (the origin for 0) to waypoint seg; the blocked one is k.
+    for (let seg = k; seg >= 0; seg--) {
+      const from = seg === 0 ? origin : waypoints[seg - 1];
+      const to = waypoints[seg];
+      const kept = waypoints.slice(0, seg);
+      const ww = to.width ?? src.width ?? 1, hh = to.height ?? src.height ?? 1;
+      const a = centre(from), b = centre(to);
+      const L = Math.hypot(b.x - a.x, b.y - a.y);
+      const n = Math.max(Math.ceil(L / (s / 4)), 1);
+      for (let q = n; q >= 0; q--) {
+        const c = { x: a.x + (b.x - a.x) * (q / n), y: a.y + (b.y - a.y) * (q / n) };
+        const cand = { ...to, x: Math.round((c.x - (ww * s) / 2) / s) * s, y: Math.round((c.y - (hh * s) / 2) / s) * s };
+        if (cand.x === home.x && cand.y === home.y) return { waypoints: [], cut: true };   // back where it stands
+        const key = `${cand.x},${cand.y}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (blocked(from, cand) || isTaken(cand)) continue;
+        kept.push({ ...cand, snapped: true, explicit: true, checkpoint: true });
+        return { waypoints: kept, cut: true };
+      }
     }
-    if (kept.length) kept[kept.length - 1] = { ...kept.at(-1), explicit: true, checkpoint: true };
-    return { waypoints: kept, cut: true };
+    return { waypoints: [], cut: true };
   }
   return { waypoints, cut: false };
 }
