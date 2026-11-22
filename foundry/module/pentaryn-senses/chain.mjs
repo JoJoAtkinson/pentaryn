@@ -270,7 +270,15 @@ export function paint(pairs) {
 
 /** One chain HUD button (core/hud-dom.mjs); a failed click logs `chain hud click`. */
 const chainButton = (col, icon, tip, onClick) =>
-  hudButton(col, { cls: "ps-chain-btn", icon, tip, onClick, onError: e => warn("hud click", e) });
+  hudButton(col, { cls: "ps-chain-btn", icon, tip, onClick: () => { dismissTip(); return onClick(); }, onError: e => warn("hud click", e) });
+
+/**
+ * The click re-renders the HUD, which takes the clicked button away under the pointer: core's tooltip for it
+ * never sees a pointerleave and stayed on screen ("Chain to …", live H3-14). It goes with the click.
+ */
+function dismissTip() {
+  try { globalThis.game?.tooltip?.deactivate?.(); } catch (err) { log?.debug?.("tooltip", err); }
+}
 
 function injectHUD(app, element) {
   if (!isAnyGM()) return;

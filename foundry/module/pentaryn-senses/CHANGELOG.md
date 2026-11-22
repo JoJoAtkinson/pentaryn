@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **0.5.2 (2026-11-22). [declared] H3-14: a chain HUD click takes its button's tooltip with it.** The click
+  re-renders the Token HUD, which removed the button under the pointer, and core's tooltip ("Chain to …") stayed
+  on screen after the HUD closed.
+
 - **0.5.1 (2026-11-22). [declared] Chains follow the real token, not the drag preview (Joe's decision 6).**
   While a chained token is dragged the chain stays on the token itself; while it walks the chain follows it,
   and it is drawn again once the walk is done. Adjustment row `core-token-preview-private` retired (no read of

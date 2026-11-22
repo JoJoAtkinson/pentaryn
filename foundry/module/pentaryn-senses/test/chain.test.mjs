@@ -328,3 +328,21 @@ test("console text (i): a failing HUD click warns 'pentaryn-senses | chain hud c
   await C().break(ID.tHulk);
   assert.deepEqual(out, [["warn", `${MODULE} | chain hud click`, "Error: db down"]]);
 });
+
+test("H3-14: a chain HUD click takes its button's tooltip with it (the re-render removes the button under the pointer)", async () => {
+  await C().link(ID.tHulk, ID.tStake);
+  const tips = [];
+  const saved = game.tooltip;
+  game.tooltip = { deactivate: () => tips.push("off") };
+  try {
+    // After uninstall no HUD is drawn: drive the Break chain button the HUD test captured.
+    assert.ok(hudClick, "captured in the HUD test");
+    hudClick.click();
+    await flush();
+    assert.deepEqual(tips, ["off"]);
+  } finally {
+    game.tooltip = saved;
+    await C().break(ID.tHulk);
+    await flush();
+  }
+});
