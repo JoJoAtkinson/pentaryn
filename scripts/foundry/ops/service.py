@@ -199,8 +199,62 @@ def down() -> int:
 
 # ── the Cloudflare tunnel ─────────────────────────────────────────────────────
 
+# The tunnel as a systemd --user unit (BOSS). systemd owns the process: one instance by
+# construction, back after a boot or a crash. A host without the unit file (the Mac has no
+# systemd) keeps the pidfile start below, unchanged.
+TUNNEL_UNIT = "foundry-tunnel.service"
+UNIT_TEMPLATE = cfg.REPO_ROOT / "automation/systemd" / TUNNEL_UNIT
+SYSTEMCTL_TIMEOUT = 45   # `stop` waits for cloudflared to drain (TimeoutStopSec=30)
+
+
+def _unit_path() -> Path:
+    return Path.home() / ".config/systemd/user" / TUNNEL_UNIT
+
+
+def _tunnel_unit() -> str | None:
+    """The unit's name when this host runs the tunnel under systemd: the unit file is
+    installed (`make tunnel-unit-install`) and there is a systemctl to drive it."""
+    if _unit_path().is_file() and shutil.which("systemctl"):
+        return TUNNEL_UNIT
+    return None
+
+
+def _systemctl(*args: str, timeout: float = SYSTEMCTL_TIMEOUT) -> subprocess.CompletedProcess | None:
+    """`systemctl --user …`; None when it could not run or did not return."""
+    try:
+        return subprocess.run(["systemctl", "--user", *args],
+                              capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _unit_main_pid() -> int | None:
+    """The unit's main process, if it is running and is cloudflared."""
+    res = _systemctl("show", TUNNEL_UNIT, "-p", "MainPID", "--value", timeout=10)
+    try:
+        pid = int((res.stdout if res else "").strip() or 0)
+    except ValueError:
+        return None
+    return pid if pid > 1 and _is_cloudflared(pid) else None
+
+
 def _tunnel_pid() -> int | None:
-    """The pid from the pidfile, if that process is alive AND is cloudflared."""
+    """The tunnel's connector process. Under systemd: the unit's main pid (the pidfile is
+    kept in step with it, for the nightly and the updater, which read the file).
+    Otherwise: the pid from the pidfile, if that process is alive AND is cloudflared."""
+    if _tunnel_unit():
+        pid = _unit_main_pid()
+        if pid is not None:
+            try:
+                if cfg.CF_PID.read_text().strip() != str(pid):
+                    raise OSError
+            except OSError:   # lost or stale: the unit is the truth, the file follows it
+                try:
+                    cfg.RUN_DIR.mkdir(parents=True, exist_ok=True)
+                    cfg.CF_PID.write_text(str(pid))
+                except OSError:
+                    pass
+        return pid
     try:
         pid = int(cfg.CF_PID.read_text().strip())
     except (OSError, ValueError):
@@ -270,6 +324,25 @@ def _stop_connectors(pids: list[int], wait: float = 10.0) -> list[int]:
         time.sleep(0.25)
         left = [p for p in left if _is_cloudflared(p)]
     return left
+
+
+def _tunnel_connectors() -> int | None:
+    """How many connectors Cloudflare itself lists for the tunnel (`cloudflared tunnel
+    info`), on any machine — `ps` only sees this one. None when it cannot be asked: not
+    the primary, no credential, no cloudflared, no answer."""
+    try:
+        if host.role() != "primary" or not CF_CERT.exists() or not shutil.which("cloudflared"):
+            return None
+        res = subprocess.run(["cloudflared", "tunnel", "info", cfg.TUNNEL_NAME],
+                             capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError, host.HostError):
+        return None
+    if res.returncode != 0:
+        return None
+    # One row per connector, each starting with its UUID.
+    return sum(1 for line in (res.stdout or "").splitlines()
+               if len(line) > 36 and line[8] == "-" and line[13] == "-" and line[36] == " "
+               and all(c in "0123456789abcdef-" for c in line[:36]))
 
 
 def _drop_stale_pidfile() -> None:
@@ -386,20 +459,31 @@ def tunnel_up() -> int:
             _say(f"✗ tunnel '{cfg.TUNNEL_NAME}' doesn't exist — run: make tunnel-setup")
             return FAIL
 
-        _say("▸ starting tunnel...")
-        with open(cfg.CF_LOG, "ab") as log:
-            proc = subprocess.Popen(
-                ["cloudflared", "tunnel", "--config", str(cfg.CF_CONFIG),
-                 "run", cfg.TUNNEL_NAME],
-                stdout=log, stderr=log, stdin=subprocess.DEVNULL,
-                start_new_session=True,   # survives the make process going away
-            )
-        cfg.CF_PID.write_text(str(proc.pid))
+        if unit := _tunnel_unit():
+            _say(f"▸ starting tunnel ({unit})...")
+            res = _systemctl("start", unit)
+            if res is None or res.returncode != 0:
+                why = ((res.stderr or res.stdout).strip() if res else "systemctl did not answer")
+                _say(f"✗ systemctl --user start {unit} failed: {why}")
+                _say(f"  see: systemctl --user status {unit}")
+                return FAIL
+        else:
+            _say("▸ starting tunnel...")
+            with open(cfg.CF_LOG, "ab") as log:
+                proc = subprocess.Popen(
+                    ["cloudflared", "tunnel", "--config", str(cfg.CF_CONFIG),
+                     "run", cfg.TUNNEL_NAME],
+                    stdout=log, stderr=log, stdin=subprocess.DEVNULL,
+                    start_new_session=True,   # survives the make process going away
+                )
+            cfg.CF_PID.write_text(str(proc.pid))
     time.sleep(3)
     if _tunnel_pid() is not None:
         _say(f"✓ tunnel up → https://{cfg.TUNNEL_HOST}")
         return OK
     _say(f"✗ tunnel died on startup — see {cfg.CF_LOG}")
+    if _tunnel_unit():
+        _systemctl("stop", TUNNEL_UNIT)   # no restart loop behind a failed start
     cfg.CF_PID.unlink(missing_ok=True)
     return FAIL
 
@@ -407,13 +491,21 @@ def tunnel_up() -> int:
 def tunnel_down() -> int:
     """Stop every connector for this tunnel on this machine: the pidfile's and any the
     pidfile does not know about (see _tunnel_processes)."""
+    unit = _tunnel_unit()
     pid = _tunnel_pid()
     strays = [p for p in _tunnel_processes() if p != pid]
+    if unit:
+        # Always, also with no main pid: a unit waiting out RestartSec would come back.
+        res = _systemctl("stop", unit)
+        if res is None or res.returncode != 0:
+            why = ((res.stderr or res.stdout).strip() if res else "systemctl did not answer")
+            _say(f"✗ systemctl --user stop {unit} failed: {why}")
+            return FAIL
     if pid is None and not strays:
         _drop_stale_pidfile()
         _say("▸ tunnel already down")
         return OK
-    if pid is not None:
+    if pid is not None and not unit:
         try:
             os.kill(pid, 15)
         except OSError:
@@ -427,6 +519,61 @@ def tunnel_down() -> int:
             return FAIL
     cfg.CF_PID.unlink(missing_ok=True)
     _say("✓ tunnel stopped")
+    return OK
+
+
+def tunnel_unit_install() -> int:
+    """Install and enable the systemd --user unit (primary host, Linux). From then on
+    tunnel-up / tunnel-down drive the unit, and it comes back by itself after a boot.
+    Does not start or stop anything: a connector already running keeps serving until the
+    next `make tunnel-up`, which replaces it with the unit's."""
+    try:
+        host.require_primary("the tunnel unit", "tunnel-unit-install", log=_say)
+    except host.NotPrimary as exc:
+        _say(f"✗ not installed — {exc}")
+        return FAIL
+    cloudflared = shutil.which("cloudflared")
+    if not shutil.which("systemctl") or host.is_mac():
+        _say("✗ no systemd on this host — the tunnel keeps its pidfile start (nothing to do)")
+        return FAIL
+    if not cloudflared:
+        _say("✗ cloudflared is not installed")
+        return FAIL
+    text = UNIT_TEMPLATE.read_text()
+    for key, value in (("@REPO@", str(cfg.REPO_ROOT)), ("@CLOUDFLARED@", cloudflared),
+                       ("@CONFIG@", str(cfg.CF_CONFIG)), ("@TUNNEL@", cfg.TUNNEL_NAME)):
+        if any(c.isspace() for c in value):
+            _say(f"✗ {key[1:-1].lower()} path has whitespace ({value!r}) — the unit cannot quote it")
+            return FAIL
+        text = text.replace(key, value)
+    dst = _unit_path()
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text(text)
+    for args in (("daemon-reload",), ("enable", TUNNEL_UNIT)):
+        res = _systemctl(*args)
+        if res is None or res.returncode != 0:
+            why = ((res.stderr or res.stdout).strip() if res else "systemctl did not answer")
+            _say(f"✗ systemctl --user {' '.join(args)} failed: {why}")
+            return FAIL
+    _say(f"✓ {TUNNEL_UNIT} installed and enabled ({dst})")
+    if _unit_main_pid() is None and _tunnel_processes():
+        _say("  ! the tunnel now running was not started by the unit. Hand it over at a quiet")
+        _say("    moment (players drop for a few seconds): make tunnel-up")
+    else:
+        _say("  start it with: make tunnel-up")
+    return OK
+
+
+def tunnel_unit_remove() -> int:
+    """Stop, disable and delete the unit; the tunnel goes back to the pidfile start."""
+    if not _unit_path().exists():
+        _say(f"▸ {TUNNEL_UNIT} is not installed")
+        return OK
+    _systemctl("disable", "--now", TUNNEL_UNIT)
+    _unit_path().unlink(missing_ok=True)
+    _systemctl("daemon-reload")
+    cfg.CF_PID.unlink(missing_ok=True)
+    _say(f"✓ {TUNNEL_UNIT} stopped and removed — the tunnel is down; make tunnel-up starts it the old way")
     return OK
 
 
@@ -505,7 +652,10 @@ def status_report() -> dict:
     return {
         "foundry": {"up": up, "url": cfg.FOUNDRY_URL},
         "tunnel": {"up": bool(pid), "pid": pid, "host": cfg.TUNNEL_HOST,
-                   "disabled": tunnel_disabled(), "strays": strays},
+                   "disabled": tunnel_disabled(), "strays": strays,
+                   "unit": _tunnel_unit(),
+                   # Asked only while a tunnel runs here: Cloudflare's own count, any machine.
+                   "connectors": _tunnel_connectors() if pid or strays else None},
         "public": {"state": state, "code": code, "location": location, "verdict": verdict},
     }
 
@@ -521,7 +671,8 @@ def status(as_json: bool = False) -> int:
     pid = r["tunnel"]["pid"]
     disabled = r["tunnel"]["disabled"]
     if pid:
-        line = f"UP   (pid {pid}, https://{cfg.TUNNEL_HOST})"
+        unit = r["tunnel"].get("unit")
+        line = f"UP   (pid {pid}{f', {unit}' if unit else ''}, https://{cfg.TUNNEL_HOST})"
         if disabled:
             line += f"  — but DISABLED {disabled}: it will not come back after a stop (make tunnel-enable)"
     elif disabled:
@@ -533,5 +684,9 @@ def status(as_json: bool = False) -> int:
         print(f"  {'':<10} ! {len(strays)} EXTRA connector(s) not in the pidfile "
               f"(pid {', '.join(map(str, strays))}): players are spread over all of them,\n"
               f"  {'':<10}   each on the config it was started with — make tunnel-down && make tunnel-up")
+    if (n := r["tunnel"].get("connectors")) and n > 1:
+        print(f"  {'':<10} ! Cloudflare lists {n} connectors for '{cfg.TUNNEL_NAME}' (want 1): "
+              f"cloudflared tunnel info {cfg.TUNNEL_NAME}\n"
+              f"  {'':<10}   — one may be on another machine; stop it there (make tunnel-down)")
     print(f"  {'public:':<10} {r['public']['verdict']}")
     return OK

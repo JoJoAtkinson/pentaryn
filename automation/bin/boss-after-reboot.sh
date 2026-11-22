@@ -28,7 +28,9 @@ if a.status().world != world:
 print("  world serving:", a.wait_for_world(world, timeout=300))
 EOF
 
-# 3. Tunnel (no unit; started by make). Exactly one connector must exist afterwards.
+# 3. Tunnel. With foundry-tunnel.service installed (make tunnel-unit-install) systemd has
+#    already started it and tunnel-up says "already up"; without the unit, make starts it.
+#    Either way tunnel-up stops connectors it does not own: exactly one must exist afterwards.
 make -s tunnel-up
 sleep 10
 CONN=$(timeout 30 cloudflared tunnel info ardenhaven 2>/dev/null | grep -cE '^[0-9a-f]{8}-')
