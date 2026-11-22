@@ -25,7 +25,8 @@ Drag pathfinding (plan `context/plans/pathfinding-2026-11.md`).
   `smoothCorners` (client, default on). `status().settings` lists them (appended keys).
 - API: `pathfind.status()` and `pathfind.route(ref, { to, preview?, smooth? })` (read-only); selftest
   checks the wrap. Listens to 14 more hooks (wall, region, behaviour and token changes, `canvasReady`,
-  a second `setup`): each drops the step cache.
+  a second `setup`): each drops the step cache. The cache is keyed per moving token, since creature
+  blocking and creature difficult terrain depend on who moves.
 
 ## 0.2.0 — 2026-11-07
 

@@ -38,8 +38,8 @@ let bypass = false;
 /**
  * Step results (walls, creatures, cost) memoised across the searches of one drag: core asks again
  * on every square the pointer crosses, and nearly every step is the same. Keys are absolute
- * positions plus the token's size, action, level, elevation and preview, so one map serves every
- * token. Dropped when a wall, door, region or token changes, on a new canvas, and after MEMO_TTL
+ * positions plus the moving token's id, size, action, level, elevation and preview: creature
+ * blocking and creature difficult terrain depend on who moves. Dropped when a wall, door, region or token changes, on a new canvas, and after MEMO_TTL
  * (fog the player explores mid-drag changes which walls count in preview).
  */
 const MEMO_TTL = 2000;

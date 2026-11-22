@@ -65,7 +65,9 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   const terrain = sceneHasTerrain(doc.parent);
   const blocking = creatureBlocking(token, constrain, automation);
   const rect = canvas.dimensions?.rect;
-  const sub = `${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}`;
+  // The mover is in the key: creature blocking and dnd5e's creature difficult terrain depend on who
+  // moves (its disposition, and its own squares are never in its way).
+  const sub = `${doc.id}|${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}`;
 
   const pos = n => ({ x: to.x + n.j * s, y: to.y + n.i * s });
   const nodeOf = p => ({ i: Math.round((p.y - to.y) / s), j: Math.round((p.x - to.x) / s) });

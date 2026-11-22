@@ -198,3 +198,29 @@ test("pathfind.route needs a drawn token; it refuses politely without one", () =
   const r = api.pathfind.route({ documentName: "Token", id: "x", object: null, parent: { id: "sceneA" } }, { to: { x: 0, y: 0 } });
   assert.equal(r.ok, false);
 });
+
+test("the step cache is per mover: one token's own square is not another's free square", async () => {
+  const { fieldFor } = await import("../pathfind-adapter.mjs");
+  world.walls = [];
+  // Token B stands on the square at (300, 0); dnd5e blocks every creature but B itself there.
+  const occupied = { x: 300, y: 0 };
+  const layer = { isOccupiedGridSpaceBlocking: (space, mover) => space.i === 0 && space.j === 3 && mover.document.id !== "tokB000000000001" };
+  const creature = (id, x, y) => {
+    const t = makeToken({ x, y });
+    t.document.id = id;
+    t.document.actor = { system: { isCreature: true }, statuses: new Set() };
+    t.document.getOccupiedGridSpaceOffsets = w => [cell(w)];
+    t.layer = layer;
+    return t;
+  };
+  const a = creature("tokA000000000001", 0, 0);
+  const b = creature("tokB000000000001", occupied.x, occupied.y);
+  const memo = new Map();
+  const goal = wp(500, 0);
+  const opts = { memo, automation: "full" };
+  const fb = fieldFor(b, wp(occupied.x, occupied.y), goal, opts);
+  assert.equal(fb.blocking, true);
+  assert.equal(fb.blocked(fb.nodeOf(occupied)), false, "B's own square is free to B");
+  const fa = fieldFor(a, wp(0, 0), goal, opts);
+  assert.equal(fa.blocked(fa.nodeOf(occupied)), true, "the same square blocks A, cache or not");
+});
