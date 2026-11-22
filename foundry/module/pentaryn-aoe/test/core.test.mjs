@@ -408,10 +408,11 @@ check("player status line: waiting, applied, superseded, nothing to say",
 // roll's card is dnd5e type `healing`; Part I accepts it (isApplyCard). 0.6.4 (2026-11-20): an area resolve
 // writes the ticked rows into the card's system.targets (areaTargetRows), so dnd5e's own tray lists the area.
 // 0.8.0 (2026-11-21, feedback 8t6Nn1 B2): wall spells raise real, breakable Wall documents.
-test("module.json is pentaryn-aoe 0.8.0", () => {
+// 0.8.1 (2026-11-21): live play-test fixes (Clear All on core 14, a round wall's break redraws, wall handles off the wall).
+test("module.json is pentaryn-aoe 0.8.1", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.8.0");
+  assert.equal(manifest.version, "0.8.1");
 });
 
 test("VERSION === module.json version", () => {

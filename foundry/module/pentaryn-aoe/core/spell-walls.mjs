@@ -154,6 +154,35 @@ export function wallPlan({ regionId, shapes = [], kind = null, broken = [], grid
   return out;
 }
 
+/**
+ * B2 playtest (0.8.1): does any section of the wall still stand? `broken`: the round walls' knocked-out
+ * chords (flags.pentaryn-aoe.wallBroken). A ring whose every chord is broken has no wall left, so the
+ * GM's last break removes the area, as it does for a line wall whose last panel is gone.
+ * @param {object[]} shapes
+ * @param {string[]} broken
+ * @param {number} secPx
+ */
+export function wallStanding(shapes, broken, secPx) {
+  const skip = new Set(broken ?? []);
+  return [...(shapes ?? [])].some((shape, panel) => panelSections(shape, secPx).some((_, section) => !skip.has(brokenKey(panel, section))));
+}
+
+/**
+ * B2 playtest (0.8.1): is this deleteWall core's Clear All on the Walls layer? Core 14 sends Clear All
+ * as `deleteEmbeddedDocuments("Wall", [], { deleteAll: true })` only on a scene with at most one level,
+ * and the client backend strips `deleteAll` from the options its hooks get (client-backend.mjs
+ * `_deleteDocuments`), so the hook never sees the flag. Every Wall of the batch is out of the scene's
+ * collection before the first deleteWall hook runs, so a single-level scene left with no wall at all is
+ * the batch's mark. The flag still counts, should a core version pass it. A GM who deletes the scene's
+ * last walls by hand (only spell walls left, all selected) reads the same way: those walls come back,
+ * and the break controls are the way to break them.
+ * @param {{ deleteAll?: boolean, levels?: number, wallsLeft?: number }} o
+ */
+export function isClearAll({ deleteAll = false, levels = 1, wallsLeft = 0 } = {}) {
+  if (deleteAll) return true;
+  return (Number(levels) || 0) <= 1 && Number(wallsLeft) === 0;
+}
+
 /** The midpoint of a planned wall, for its break control. */
 export function wallMidpoint(c) {
   return { x: (c[0] + c[2]) / 2, y: (c[1] + c[3]) / 2 };

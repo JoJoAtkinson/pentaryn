@@ -51,6 +51,36 @@ export function centreOf(shape, { gridSize = 100 } = {}) {
 /* -------------------------------------------- */
 
 /**
+ * B2 playtest (0.8.1): where a WALL SPELL's handle sits — just outside the wall, never on it. Its
+ * real walls (spell-walls.mjs) run along the panel's centre line, and a half-square token gets ONE
+ * visibility test point, its centre: a handle centred on the wall line was hidden from every player
+ * (even the caster who owns it) by the wall it moves, so a player could not drag their own Wall of
+ * Stone. A line panel's handle sits half a square before its start, on the line but past the wall's
+ * end, so it is seen from both sides; a ring's (Wall of Ice's globe, Wall of Fire's ring) half a
+ * square outside the ring, to the east, where the caster usually stands. null for any other shape, or
+ * when that spot is off the scene (`bounds`: `{ width, height }`): the caller keeps centreOf.
+ * @param {object} shape
+ * @param {{ gridSize?: number, bounds?: {width:number, height:number}|null }} [opts]
+ * @returns {{x:number, y:number}|null}
+ */
+export function wallHandleCentre(shape, { gridSize = 100, bounds = null } = {}) {
+  if (!shape) return null;
+  const half = (Number(gridSize) || 100) / 2;
+  let at = null;
+  if (shape.type === "line") {
+    const a = ((Number(shape.rotation) || 0) * Math.PI) / 180;
+    at = { x: (Number(shape.x) || 0) - Math.cos(a) * half, y: (Number(shape.y) || 0) - Math.sin(a) * half };
+  } else if (shape.type === "circle" && Number(shape.radius) > 0) {
+    at = { x: (Number(shape.x) || 0) + Number(shape.radius) + half, y: Number(shape.y) || 0 };
+  }
+  if (!at) return null;
+  at = { x: Math.round(at.x * 1000) / 1000, y: Math.round(at.y * 1000) / 1000 };
+  if (bounds && (at.x < 0 || at.y < 0 || at.x > bounds.width || at.y > bounds.height)) return null;
+  return at;
+}
+
+
+/**
  * The handle token's top-left corner (px) for an area centred at `centre`, so that core's drag
  * snapping can bring the area back onto the grid ([declared] aoe-drag-snap, feedback 7v8jPs).
  *

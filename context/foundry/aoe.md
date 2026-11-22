@@ -17,8 +17,9 @@ module internals → [`../../foundry/module/pentaryn-aoe/README.md`](../../found
 
 **Moving and deleting an area.** Every spell area (a dnd5e template, which is a Region on v14)
 gets a small target-icon **handle token** at its centre. For cones and lines it sits at the caster's end.
-A wall spell (Wall of Stone's panels, all one area) gets one handle at the start of its first panel;
-dragging it moves every panel, deleting it deletes the whole wall.
+A wall spell (Wall of Stone's panels, all one area) gets one handle just before the start of its first panel
+(a ring's: just outside it, to the east), never on the wall itself, whose real walls would hide it from
+the players (0.8.1); dragging it moves every panel, deleting it deletes the whole wall.
 Everyone owns the handle and the area.
 - Drag the handle to move the area. It ignores walls (movement action *displace*). When the area's
   centre is a grid corner (a 20 ft cube, a Fireball), the handle sits in the square just below and to
@@ -67,7 +68,8 @@ on the GM's map only, on any layer. **Click** it: that section is gone. Its wall
 the hole, so players see (and walk) through it, and a toast says "Wall of Stone: a section is broken".
 **Right-click** any disc of that wall: the whole wall is put back (also `game.pentaryn.aoe.repairWall(regionId)`).
 Breaking the last section removes the wall and its area. Deleting the spell's walls on the Walls layer
-breaks those sections too, so they do not come back on the next drag (Clear All on the Walls layer breaks nothing: the walls come back). Wall of Stone becoming permanent
+breaks those sections too, so they do not come back on the next drag (Clear All on the Walls layer breaks nothing: the walls come back. Core 14 hides Clear All's flag from
+modules, so deleting the last walls of a one-level scene by hand reads as Clear All too). Wall of Stone becoming permanent
 after a full 10 minutes of concentration is not built: its walls go with concentration, like its area.
 
 **Which walls stop an area.** The PHB's rule is that an area spreads from its point of origin, and

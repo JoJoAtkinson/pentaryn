@@ -1797,7 +1797,7 @@ adjustments:
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/spell-walls.mjs]
     markers: ["canvas?.controls", "drawControls"]
-    what: one PIXI.Container added to canvas.controls (ControlsLayer keeps interactiveChildren true on every tool, as for DoorControl) with a GM-only static-eventMode break control per wall section; redrawn on refreshRegion, removed on deleteRegion / destroyRegion / canvasTearDown
+    what: one PIXI.Container added to canvas.controls (ControlsLayer keeps interactiveChildren true on every tool, as for DoorControl) with a GM-only static-eventMode break control per wall section; redrawn on refreshRegion (a flags-only break or repair of a round wall asks the Region placeable for renderFlags refreshState on updateRegion, 0.8.1), removed on deleteRegion / destroyRegion / canvasTearDown
     why: a Region placeable is not interactive unless the Regions layer is active, and the GM must break a wall section with one click from the token layer
     native_when: core gives region placeables an interactive control on every layer, or a context menu on regions outside the Regions layer
     retire_class: safe

@@ -8,7 +8,7 @@ import { boot, flush, MODULE } from "./fixtures/world.mjs";
 import { seams } from "./fixtures/seams.mjs";
 import {
   SPELL_WALLS, WALL_NORMAL, WALL_NONE, spellWallKind, sectionPixels, panelSections, wallId, wallPlan, diffWalls,
-  breakSection, breakSections, restoreShapes, areaEdgeClips, brokenKey,
+  breakSection, breakSections, restoreShapes, areaEdgeClips, brokenKey, isClearAll, wallStanding, wallHandleCentre,
 } from "../core.mjs";
 
 /* ── just enough PIXI for the break controls ─────────────────────────── */
@@ -470,4 +470,57 @@ test("B2 review: Clear All on the Walls layer (deleteAll) breaks no wall spell; 
   await flush(); await flush(); await flush();
   assert.equal(r.shapes.length, 3, "the area is untouched, not destroyed");
   assert.equal(s.walls.size, 3, "its walls are back");
+});
+
+/* ── 0.8.1: the live play-test on core 14.370 ─────────────────────────── */
+
+test("0.8.1: core 14 strips deleteAll from the hook options — an emptied single-level scene is Clear All: no break, the walls come back", async () => {
+  assert.equal(isClearAll({ deleteAll: true, levels: 3, wallsLeft: 9 }), true, "the flag, should core pass it");
+  assert.equal(isClearAll({ levels: 1, wallsLeft: 0 }), true);
+  assert.equal(isClearAll({ levels: 0, wallsLeft: 0 }), true, "a scene with no level list");
+  assert.equal(isClearAll({ levels: 1, wallsLeft: 1 }), false, "a wall left: a GM's own delete");
+  assert.equal(isClearAll({ levels: 2, wallsLeft: 0 }), false, "several levels: core deletes by id, no Clear All mark");
+  const s = wallScene("WallSyncScene081");
+  const r = wallRegion(s, "regWallSync00081", stoneItem, square.map(x => ({ ...x })));
+  await SW.syncRegion(r);
+  await s.deleteEmbeddedDocuments("Wall", [...s.walls.keys()], {});   // what core 14's hooks get: no deleteAll
+  await flush(); await flush(); await flush();
+  assert.equal(r.shapes.length, 3, "the area is untouched, not destroyed");
+  assert.equal(s.walls.size, 3, "its walls are back");
+});
+
+test("0.8.1: a round wall's break and repair (flags only) ask its placeable for a refresh, so the gap and the controls redraw", () => {
+  const set = [];
+  const region = { object: { renderFlags: { set: f => set.push(f) } } };
+  SW.onUpdateRegionFlags(region, { flags: { [MODULE]: { wallBroken: ["0:1"] } } });
+  SW.onUpdateRegionFlags(region, { flags: { [MODULE]: { wallOriginal: null, wallBroken: [] } } });
+  SW.onUpdateRegionFlags(region, { flags: { [MODULE]: { "-=wallOriginal": null } } });
+  SW.onUpdateRegionFlags(region, { flags: { [MODULE]: { handle: "x" } } });
+  SW.onUpdateRegionFlags(region, { shapes: [] });
+  SW.onUpdateRegionFlags({ object: null }, { flags: { [MODULE]: { wallBroken: [] } } });
+  assert.deepEqual(set, [{ refreshState: true }, { refreshState: true }, { refreshState: true }]);
+});
+
+test("0.8.1: breaking a ring's last standing chord removes the area (no empty ring left behind)", async () => {
+  assert.equal(wallStanding([{ type: "circle", x: 0, y: 0, radius: 200 }], ["0:0", "0:1"], 200), true);
+  assert.equal(wallStanding([{ type: "circle", x: 0, y: 0, radius: 200 }], [0, 1, 2, 3, 4, 5, 6, 7].map(i => `0:${i}`), 200), false);
+  assert.equal(wallStanding([], [], 200), false);
+  const s = wallScene("WallSyncScene082");
+  F.canvas.scene = s;
+  const r = wallRegion(s, "regWallRing00082", forceItem, [{ type: "circle", x: 500, y: 500, radius: 200 }]);
+  r.flags[MODULE] = { wallBroken: [0, 1, 2, 3, 4, 5, 6].map(i => `0:${i}`) };
+  await SW.syncRegion(r);
+  assert.equal(s.walls.size, 1);
+  const out = await SW.breakWallSection(r, 0, 7);
+  assert.equal(out?.destroyed, true);
+  assert.equal(s.regions.has(r.id), false, "the region is gone");
+});
+
+test("0.8.1: a wall spell's handle sits just outside its wall (half a square before a panel's start, outside a ring), never on the wall line", () => {
+  assert.deepEqual(wallHandleCentre({ type: "line", x: 500, y: 1250, rotation: 0, length: 200 }, { gridSize: 100 }), { x: 450, y: 1250 });
+  assert.deepEqual(wallHandleCentre({ type: "line", x: 500, y: 500, rotation: 90, length: 200 }, { gridSize: 100 }), { x: 500, y: 450 });
+  assert.deepEqual(wallHandleCentre({ type: "circle", x: 1500, y: 600, radius: 200 }, { gridSize: 100 }), { x: 1750, y: 600 });
+  assert.equal(wallHandleCentre({ type: "line", x: 20, y: 500, rotation: 0, length: 200 }, { gridSize: 100, bounds: { width: 3000, height: 2000 } }), null, "off the scene: the caller keeps the anchor");
+  assert.equal(wallHandleCentre({ type: "rectangle", x: 0, y: 0, width: 10, height: 10 }), null);
+  assert.equal(wallHandleCentre(null), null);
 });

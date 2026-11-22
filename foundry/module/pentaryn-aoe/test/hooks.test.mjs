@@ -50,7 +50,7 @@ test("setup registers the feature hooks in Part order: areas, token areas, resol
     "on dnd5e.postUseActivity",
     "on dnd5e.preCreateMeasuredTemplate",
     "on refreshRegion",
-    "on createRegion", "on updateRegion", "on deleteRegion", "on deleteRegion", "on deleteWall", "on refreshRegion",
+    "on createRegion", "on updateRegion", "on deleteRegion", "on deleteRegion", "on deleteWall", "on updateRegion", "on refreshRegion",
     "on destroyRegion", "on canvasTearDown", "on canvasReady",
     "on preCreateChatMessage", "on dnd5e.renderChatMessage", "on targetToken", "on deleteChatMessage",
   ]);

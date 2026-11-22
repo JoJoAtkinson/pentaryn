@@ -961,6 +961,10 @@
       "label": "deleteWall(break)"
     },
     {
+      "name": "updateRegion",
+      "label": "updateRegion(wall redraw)"
+    },
+    {
       "name": "refreshRegion",
       "label": "refreshRegion(wall controls)"
     },

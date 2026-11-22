@@ -33,7 +33,7 @@
  * with concentration, as its region does).
  */
 
-import { MODULE, aoeFlags, alreadyExists, breakSections, diffWalls, doesNotExist, isTemplateRegion, restoreShapes, sectionPixels, wallMidpoint, wallPlan } from "./core.mjs";
+import { MODULE, aoeFlags, alreadyExists, breakSections, diffWalls, doesNotExist, isClearAll, isTemplateRegion, restoreShapes, sectionPixels, wallMidpoint, wallPlan, wallStanding } from "./core.mjs";
 import { handleFor, shapesOf, spellWallsOf, wallKindOf } from "./scene-adapter.mjs";
 import { onSettingChange, setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -199,19 +199,22 @@ export async function breakWall(ref, sections) {
 async function breakRegion(region, sections) {
   const scene = region.parent;
   const shapes = shapesOf(region);
-  const out = breakSections(shapes, sections, sectionPixels(scene.grid?.size, scene.grid?.distance));
+  const secPx = sectionPixels(scene.grid?.size, scene.grid?.distance);
+  const out = breakSections(shapes, sections, secPx);
   if (!out) return null;
   const name = spellName(region);
-  if (!out.shapes.length) {
+  const flags = aoeFlags(region);
+  const broken = [...new Set([...(flags.wallBroken ?? []), ...out.broken])];
+  // The last line panel gone, or a ring with every chord broken (0.8.1): no wall stands, the area goes.
+  if (!out.shapes.length || !wallStanding(out.shapes, broken, secPx)) {
     await scene.deleteEmbeddedDocuments("Region", [region.id]);
     ui.notifications.info(_loc("PENTARYN_AOE.Walls.Destroyed", { spell: name }));
     log.info(`wall broken down: ${name} (${region.id})`);
     return { regionId: region.id, broken: out.applied, panels: 0, destroyed: true };
   }
-  const flags = aoeFlags(region);
   const update = { shapes: out.shapes };
   if (!flags.wallOriginal) update[`flags.${MODULE}.wallOriginal`] = { shapes, at: handleAt(region) };
-  if (out.broken.length) update[`flags.${MODULE}.wallBroken`] = [...new Set([...(flags.wallBroken ?? []), ...out.broken])];
+  if (out.broken.length) update[`flags.${MODULE}.wallBroken`] = broken;
   await region.update(update);
   ui.notifications.info(_loc("PENTARYN_AOE.Walls.Broken", { spell: name }));
   log.info(`wall section broken: ${name} (${region.id}) ${sections.map(s => `${s.panel}:${s.section}`).join(", ")} — right-click a break control, or game.pentaryn.aoe.repairWall("${region.id}"), puts it back`);
@@ -266,9 +269,10 @@ const cleared = new Set();
 function onDeleteWall(wall, options, userId) {
   if (options?.[SYNC] || !setting("spellWalls")) return;
   // Clear All on the Walls layer (core's deleteAll) is not a break of every wall spell on the scene: their
-  // areas stay, and the active GM's client raises their walls again.
-  if (options?.deleteAll) {
-    const scene = wall?.parent;
+  // areas stay, and the active GM's client raises their walls again. Core 14's hooks never see the
+  // deleteAll flag (core.isClearAll): an emptied single-level scene is the mark (0.8.1, live play-test).
+  const scene = wall?.parent;
+  if (isClearAll({ deleteAll: options?.deleteAll, levels: scene?.levels?.size ?? 1, wallsLeft: scene?.walls?.size ?? 1 })) {
     if (!isActiveGM() || !scene?.id || !wall?.flags?.[MODULE]?.regionId || cleared.has(scene.id)) return;
     cleared.add(scene.id);
     queueMicrotask(() => {
@@ -290,6 +294,18 @@ function onDeleteWall(wall, options, userId) {
     deleted.delete(region.id);
     breakWall(region, list).catch(err => log.error("break from the Walls layer", err));
   });
+}
+
+/**
+ * updateRegion, every client: a round wall's break or a repair writes only flags (wallBroken,
+ * wallOriginal) when its shapes do not change, and core refreshes a Region placeable for shape and
+ * visibility changes only. Without this the ring kept its broken chord drawn and its break control
+ * until the next redraw (0.8.1, live play-test). Asks for one refresh, which reruns refreshRegion.
+ */
+function onUpdateRegionFlags(region, changes) {
+  const f = changes?.flags?.[MODULE];
+  if (!f || !Object.keys(f).some(k => /wall(Broken|Original)$/.test(k))) return;
+  region?.object?.renderFlags?.set?.({ refreshState: true });
 }
 
 /* -------------------------------------------- */
@@ -414,6 +430,7 @@ export function install(reg, ctx) {
   reg.on("deleteRegion", sync("deleteRegion(walls)"), { guard: false, label: "deleteRegion(walls)" });
   reg.on("deleteRegion", reg.guardSwallowAsync("deleteRegion(wall controls)", region => dropControls(region?.id)), { guard: false, label: "deleteRegion(wall controls)" });
   reg.on("deleteWall", reg.guardSwallowAsync("deleteWall(break)", onDeleteWall), { guard: false, label: "deleteWall(break)" });
+  reg.on("updateRegion", reg.guardSwallowAsync("updateRegion(wall redraw)", onUpdateRegionFlags), { guard: false, label: "updateRegion(wall redraw)" });
   reg.on("refreshRegion", reg.guardSwallowAsync("refreshRegion(wall controls)", drawControls), { guard: false, label: "refreshRegion(wall controls)" });
   reg.on("destroyRegion", reg.guardSwallowAsync("destroyRegion(wall controls)", region => (region?.isPreview ? null : dropControls(region?.document?.id))), { guard: false, label: "destroyRegion(wall controls)" });
   reg.on("canvasTearDown", reg.guardSwallowAsync("canvasTearDown(wall controls)", dropAllControls), { guard: false, label: "canvasTearDown(wall controls)" });
@@ -437,4 +454,4 @@ export function uninstall() {
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only. Not part of the API.
-export const _internals = { planFor, syncRegion, syncScene, breakWall, breakWallSection, repairWall, wallsFor, drawControls, dropControls, onDeleteWall, regionOf, SYNC, ROOT, queues, busy };
+export const _internals = { planFor, syncRegion, syncScene, breakWall, breakWallSection, repairWall, wallsFor, drawControls, dropControls, onDeleteWall, onUpdateRegionFlags, regionOf, SYNC, ROOT, queues, busy };

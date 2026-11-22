@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- **0.8.1 (2026-11-21). Live play-test fixes for the 0.8.0 wall spells** (core 14.370, dnd5e 6.1.1, a GM
+  and a player tab on a test scene).
+  - **Clear All on the Walls layer broke every wall spell on the scene.** Core 14's client backend strips
+    `deleteAll` from the options its deleteWall hooks get, so 0.8.0's check never fired: every spell wall
+    counted as a GM break, every line wall's area was deleted and every ring was left with no walls.
+    `core.isClearAll` now also reads an emptied single-level scene (every Wall of the batch is out of the
+    collection before the first hook) as Clear All; the active GM raises the walls again. A GM who deletes
+    the scene's last walls by hand gets the same answer (break them with the discs instead).
+  - **A round wall's break did not show.** Breaking a chord of Wall of Ice's globe (or a Wall of Force or
+    Fire ring) writes only flags, and core does not refresh a Region placeable for a flags change: the ring
+    kept the broken chord drawn and its break disc until the next redraw (the walls themselves were right).
+    `updateRegion` now asks the placeable for one refresh when `wallBroken` or `wallOriginal` changes, on
+    every client. Breaking a ring's last standing chord now removes the area (`core.wallStanding`), as the
+    last panel of a line wall always did.
+  - **A player could not drag their own Wall of Stone.** The handle sat on the first panel's start, on the
+    wall line, and a half-square token has one visibility test point, its centre: the spell's own walls
+    hid it from every player, the caster included, so it could be neither seen nor dragged. A wall spell's
+    handle now sits half a square before the first panel's start (on the line, past the wall's end, so it
+    is seen from both sides), or half a square outside a ring to the east (`core.wallHandleCentre`; the
+    anchor as before when that spot is off the scene). Handles placed before 0.8.1 stay where they are.
+
 - **0.8.0 (2026-11-21). B2 — wall spells raise real, breakable walls** (feedback 8t6Nn1; plan
   feedback-triage-2026-11-19 §B and §H4, with Joe's final ruling of 2026-11-21 replacing the §H4 table
   where they differ).

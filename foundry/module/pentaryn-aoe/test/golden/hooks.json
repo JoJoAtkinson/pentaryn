@@ -137,6 +137,10 @@
   },
   {
     "kind": "on",
+    "name": "updateRegion"
+  },
+  {
+    "kind": "on",
     "name": "refreshRegion"
   },
   {

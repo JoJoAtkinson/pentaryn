@@ -21,8 +21,8 @@
  * its caster) gets no handle: re-attaching it to a handle would leave it behind when the caster moves.
  */
 
-import { MODULE, aoeFlags, centreOf, handleTopLeft, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle, alreadyExists, doesNotExist } from "./core.mjs";
-import { handleActor, handleFor, removeArea, spellAreas } from "./scene-adapter.mjs";
+import { MODULE, aoeFlags, centreOf, handleTopLeft, wallHandleCentre, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle, alreadyExists, doesNotExist } from "./core.mjs";
+import { handleActor, handleFor, removeArea, spellAreas, wallKindOf } from "./scene-adapter.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -173,11 +173,18 @@ const wantsHandle = region => isTemplateRegion(region) && !attachedElsewhere(reg
  * Wall of Stone's panels) gets its handle at its FIRST shape's anchor — for a wall panel (a line) that is
  * the panel's start, the end the caster placed first — never the region's centre, which on a bent wall
  * can lie on no panel at all. Core moves every shape of an attached region with the token.
+ * 0.8.1: a wall spell's handle sits half a square before that start (a ring's, half a square outside it),
+ * because its real walls hid a handle on the wall line from every player, the caster included.
  */
 function handleData(region, actor) {
   const scene = region.parent;
   const shape = region.shapes?.[0];
-  const centre = centreOf(shape, { gridSize: scene.grid.size });
+  // 0.8.1: a wall spell's handle sits just outside its wall, where its own walls do not hide it
+  // (core.wallHandleCentre); any other area's at its anchor.
+  const wallSpot = wallKindOf(region)
+    ? wallHandleCentre(shape, { gridSize: scene.grid.size, bounds: scene.dimensions ?? (scene.width ? { width: scene.width, height: scene.height } : null) })
+    : null;
+  const centre = wallSpot ?? centreOf(shape, { gridSize: scene.grid.size });
   // [declared] aoe-drag-snap: a spot core's drag snapping can return to (core.handleTopLeft).
   const { x, y } = handleTopLeft(centre, { gridSize: scene.grid.size, square: squareGrid(scene) });
   const authorId = Object.entries(region.ownership ?? {}).find(([k, v]) => k !== "default" && v === OWNER)?.[0];
