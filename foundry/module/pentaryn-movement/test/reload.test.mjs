@@ -7,7 +7,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { movementWorld, SCENE, PLAYER } from "./fixtures/world.mjs";
 
-mock.timers.enable({ apis: ["setTimeout"] });
+mock.timers.enable({ apis: ["setTimeout", "Date"], now: Date.now() });
 const F = await movementWorld();
 const KEY = "pentaryn-movement.pendingWaves";
 

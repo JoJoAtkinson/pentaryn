@@ -150,7 +150,32 @@ function stopSpot(token, taken = null, { roomy = false } = {}) {
   const drawn = drawnPosition(token);
   let p = drawn;
   try { p = clearOfWalls(token, p, { taken, snap: true, prefer: roomy ? roomyFor(token) : null }); } catch (err) { log?.debug?.("clearOfWalls", err); }
-  return { drawn, p };
+  return { drawn, p, near: nearFirst(token, drawn, p, taken) };
+}
+
+/** Past this (squares) a stop's square is walked to, not jumped to (HX1-07). */
+const JUMP_SQUARES = 0.75;
+
+/**
+ * A stop square further than JUMP_SQUARES from where the token is drawn (a corridor member sent out to open floor,
+ * H4-09) was a drawn jump of 191-200 px (HX1-07; decision 2: no visible jump). Then the nearest free whole square
+ * to where it is drawn comes first (the displace), and it walks on from there: that square, or null when the stop
+ * square is near enough, or the walk on would cross a wall.
+ */
+function nearFirst(token, drawn, p, taken) {
+  const s = gridSize(token);
+  if (Math.hypot(p.x - drawn.x, p.y - drawn.y) <= JUMP_SQUARES * s) return null;
+  let q = null;
+  try { q = clearOfWalls(token, drawn, { taken, snap: true }); } catch (err) { log?.debug?.("near square", err); return null; }
+  if (!q || (q.x === p.x && q.y === p.y)) return null;
+  if (Math.hypot(q.x - drawn.x, q.y - drawn.y) >= Math.hypot(p.x - drawn.x, p.y - drawn.y)) return null;
+  const src = token.document?._source ?? {};
+  const w = src.width ?? 1, h = src.height ?? 1, z = src.elevation ?? 0;
+  try {
+    if (token.checkCollision({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: z },
+      { origin: { x: q.x + (w * s) / 2, y: q.y + (h * s) / 2, elevation: z }, type: "move", mode: "any" })) return null;
+  } catch { return null; }
+  return { x: q.x, y: q.y };
 }
 
 /**
@@ -185,19 +210,32 @@ function displace(token, at = stopSpot(token)) {
   }
   defuse(token);
   try { stopWhereDrawn(token, drawn); } catch (err) { log.debug?.("stopAnimation", err); }
-  pinDrawn(token, drawn, p);
-  const wp = { x: p.x, y: p.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
+  // Far from where it is drawn: the near square first, then a walk (HX1-07). Two writes, as a door cut does (R7-1).
+  const near = at.near ?? null;
+  const first = near ?? p;
+  pinDrawn(token, drawn, first);
+  const wp = { x: first.x, y: first.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
+  const walkOn = () => {
+    if (!near || !feature || token.destroyed) return;
+    const z = p.elevation ?? doc._source.elevation ?? 0;
+    try {
+      Promise.resolve(doc.move([{ x: p.x, y: p.y, elevation: z, action: doc.movementAction ?? "walk", snapped: true, explicit: true, checkpoint: true }], { method: "api" }))
+        .catch(err => log.debug?.("stop: walk to the square", err));
+    } catch (err) { log.debug?.("stop: walk to the square", err); }
+  };
   const reset = () => {
     unpin(token);
     try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log.debug?.("stopAnimation reset", err); }
   };
   let pending;
-  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api" })); }
+  // The square it walks on to, for the client that sent its group (it walks the others round that square).
+  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
   catch (err) { pending = Promise.reject(err); }
   return pending
     .then(moved => {
       unpin(token);
       if (moved === false) reset();
+      else if (near) walkOn();
       else {
         resync(token);
         setTimeout(() => resync(token), RESYNC_MS);
@@ -421,15 +459,16 @@ function stopToken(token, how, via = "api") {
   if (list.length > 1 || held) {
     try { feature.exposed.groupNoteStop?.({ why: "click", members: out.length, whole: held && whole }); } catch (err) { log?.debug?.("note the stop", err); }
   }
-  // In a fight each finishes the square it is in; two can finish on one (live H3-01): once at rest, apart.
-  if (combatStopped.length > 1) settleAfter(out, combatStopped, scene);
+  // In a fight each finishes the square it is in; two can finish on one (live H3-01): once at rest, apart, and
+  // none left in a one-wide corridor or doorway when there is room near (HX1-03: two rested in the A-B corridor).
+  if (combatStopped.length > 1 || (held && combatStopped.length)) settleAfter(out, combatStopped, scene);
   return out;
 }
 
-/** Once the stops are made, the stopped members (ids, in order) are set apart at rest (group.mjs groupSettle). */
+/** Once the stops are made, the stopped members (ids, in order) are set apart at rest, out of the gaps (group.mjs groupSettle). */
 function settleAfter(promises, ids, scene) {
   Promise.allSettled(promises)
-    .then(() => { if (feature) feature.exposed.groupSettle?.(ids, scene); })
+    .then(() => { if (feature) feature.exposed.groupSettle?.(ids, scene, { roomy: true }); })
     .catch(err => log?.debug?.("settle after a stop", err));
 }
 
@@ -688,7 +727,7 @@ async function stopOwn(data = {}, qctx = {}) {
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how: "stopOwn", by: sender.id ?? null };
   if (ids.length) { try { feature?.exposed?.groupNoteStop?.({ why: "gm", members: stopped.length, whole: true }); } catch (err) { log?.debug?.("note the stop", err); } }
   // Two that finish their squares on one square are set apart at rest (H3-01).
-  if (stopped.length > 1) { try { feature?.exposed?.groupSettle?.(stopped, doc.parent); } catch (err) { log?.debug?.("settle after a stop", err); } }
+  if (stopped.length > 1) { try { feature?.exposed?.groupSettle?.(stopped, doc.parent, { roomy: true }); } catch (err) { log?.debug?.("settle after a stop", err); } }
   return { ok, how: "stop", tokenId: doc.id };
 }
 

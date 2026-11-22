@@ -56,14 +56,32 @@ export function memberOf(context, s) {
   };
 }
 
-/** Circles (squares) of the visible tokens on the scene that are not in the group, on the same level. */
+/**
+ * Does a token outside the move count for its routes and spots (HX1-01)? Not `Token#visible`: that is this
+ * client's vision now, and a GM controlling a member sees only what that member sees, so a token standing past a
+ * wall, or round the corner of a door, was left out and the members were walked through it (-29 to -99 px, every
+ * two-way, single-then-group and crowd run on the Mac). A GM counts every token; a player every token the GM has
+ * not hidden that it sees, owns or that is friendly (its party: never a hostile it cannot see, which would give
+ * that token away).
+ */
+export function countsForRoutes(t) {
+  const doc = t?.document;
+  if (!doc) return false;
+  if (globalThis.game?.user?.isGM) return true;
+  if (doc.hidden) return false;
+  if (t.visible) return true;
+  const friendly = globalThis.CONST?.TOKEN_DISPOSITIONS?.FRIENDLY ?? 1;
+  try { return !!(doc.isOwner || doc.disposition === friendly); } catch { return false; }
+}
+
+/** Circles (squares) of the tokens on the scene that are not in the group (countsForRoutes), on the same level. */
 export function othersOf(members, s) {
   const ids = new Set(members.map(m => m.id));
   const level = members[0]?.token?.document?._source?.level;
   const out = [];
   for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
     const doc = t.document;
-    if (!doc || ids.has(doc.id) || t.isPreview || !t.visible) continue;
+    if (!doc || ids.has(doc.id) || t.isPreview || !countsForRoutes(t)) continue;
     if (level !== undefined && doc._source?.level !== undefined && doc._source.level !== level) continue;
     const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
     out.push({ ...toSquares(doc._source, w, h, s), r: radiusOf(w, h) });
@@ -75,7 +93,7 @@ export function othersOf(members, s) {
  * Tokens outside the group that are walking right now (live H4-03 / H4-04: a group dropped while another token or
  * group walked the other way through the corridor went straight through it): each one's circle and the rest of
  * its walk from where it is drawn (centres, squares) and its speed, for the plan's timing. Same level only;
- * a hidden one only for the GM. Reads only.
+ * the tokens countsForRoutes keeps. Reads only.
  */
 export function movingOthers(members, s) {
   const ids = new Set(members.map(m => m.id));
@@ -83,7 +101,7 @@ export function movingOthers(members, s) {
   const out = [];
   for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
     const doc = t?.document;
-    if (!doc?._source || ids.has(doc.id) || t.isPreview || t.destroyed || !t.visible) continue;
+    if (!doc?._source || ids.has(doc.id) || t.isPreview || t.destroyed || !countsForRoutes(t)) continue;
     if (level !== undefined && doc._source.level !== undefined && doc._source.level !== level) continue;
     if (!movementFacts(t).animating) continue;
     const m = doc.movement;
@@ -276,7 +294,23 @@ const pinClock = () => globalThis.performance?.now?.() ?? Date.now();
 export function pinDrawn(token, at, target) {
   const id = token?.document?.id;
   if (!id || !Number.isFinite(at?.x) || !Number.isFinite(at?.y) || !Number.isFinite(target?.x) || !Number.isFinite(target?.y)) return;
-  pins.set(id, { x: Math.round(at.x), y: Math.round(at.y), tx: Math.round(target.x), ty: Math.round(target.y), until: pinClock() + PIN_MS });
+  const src = token.document._source ?? {};
+  pins.set(id, { x: Math.round(at.x), y: Math.round(at.y), tx: Math.round(target.x), ty: Math.round(target.y), until: pinClock() + PIN_MS,
+    sx: Math.round(src.x), sy: Math.round(src.y) });
+}
+
+/**
+ * A pin let go of while the token is drawn on it, nothing walking it on: drawn where the server has it (HX1-01 (c): a
+ * pin that ran out, or another user's stop that moved the token elsewhere, left it drawn 25 px off its square for
+ * good, its derived position and the board both on the pin).
+ */
+function letGo(token, pin) {
+  const doc = token.document;
+  pins.delete(doc.id);
+  if (movementFacts(token).animating) return;
+  const src = doc._source ?? {};
+  if (doc.x === pin.x && doc.y === pin.y && (src.x !== pin.x || src.y !== pin.y)) { doc.x = src.x; doc.y = src.y; }
+  if (token.position && (token.position.x !== doc.x || token.position.y !== doc.y)) token.position.set?.(doc.x, doc.y);
 }
 
 /** Let go of a pinned token (its displace landed, was refused, or failed). */
@@ -294,7 +328,10 @@ export function holdPinned(token) {
   const pin = doc?.id ? pins.get(doc.id) : null;
   if (!pin) return false;
   const src = doc._source ?? {};
-  if (token.destroyed || pinClock() > pin.until || (Math.round(src.x) === pin.tx && Math.round(src.y) === pin.ty)) { pins.delete(doc.id); return false; }
+  if (token.destroyed || (Math.round(src.x) === pin.tx && Math.round(src.y) === pin.ty)) { pins.delete(doc.id); return false; }
+  // Ran out, or the server has it somewhere else than before and than its target (another user moved it): let go.
+  const moved = Number.isFinite(pin.sx) && (Math.round(src.x) !== pin.sx || Math.round(src.y) !== pin.sy);
+  if (pinClock() > pin.until || moved) { letGo(token, pin); return false; }
   if (doc.x === pin.x && doc.y === pin.y && token.position?.x === pin.x && token.position?.y === pin.y) return false;
   if (movementFacts(token).animating) {
     queueMicrotask(() => {
@@ -342,7 +379,7 @@ export function continuationInFlight(doc) {
  * with no free cell at all, the list is empty: the member cannot move and stays where it stands.
  * Returns `{ waypoints, cut }`. Reads only.
  */
-export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
+export function cutAtWalls(token, origin, waypoints, { taken = null, clear = null } = {}) {
   const s = gridSize(token);
   const src = token.document?._source ?? {};
   const centre = p => {
@@ -380,7 +417,8 @@ export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
         const key = `${cand.x},${cand.y}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        if (blocked(from, cand) || isTaken(cand)) continue;
+        // `clear` (a door cut, HX1-08): the last leg to it keeps off the squares the members cut before it took.
+        if (blocked(from, cand) || isTaken(cand) || (clear && !clear(from, cand))) continue;
         kept.push({ ...cand, snapped: true, explicit: true, checkpoint: true });
         return { waypoints: kept, cut: true };
       }

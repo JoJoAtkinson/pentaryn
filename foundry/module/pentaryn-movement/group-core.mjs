@@ -325,6 +325,24 @@ function meetsWalking(mine, r, f) {
   return false;
 }
 
+/**
+ * Would any of `mine` (members about to set off now: { points (centres, squares), r, speed }) meet one of `walkers`
+ * (tokens outside the group walking now: { points: the rest of their walk from where they are drawn, r, speed })?
+ * Both from now (HX1-02: two players dragged opposite groups through a one-wide corridor at the same moment; each
+ * plan was made before the other group moved, and their later waves walked into each other, -49 to -96 px).
+ */
+export function walkersMeet(mine, walkers, { combat = false } = {}) {
+  const ws = (walkers ?? []).filter(f => f.points?.length >= 2)
+    .map(f => ({ r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed }) }));
+  if (!ws.length) return false;
+  for (const m of mine ?? []) {
+    if (!(m.points?.length >= 2)) continue;
+    const tr = trajectory(m.points, { speed: m.speed ?? MOTION.speed });
+    if (ws.some(f => firstConflict(tr, f.tr, m.r, f.r, { combat }) !== null)) return true;
+  }
+  return false;
+}
+
 /** The smallest delay with no conflict, or null. */
 function firstFreeDelay(tr, r, fixed, combat) {
   for (const d of delaySteps()) if (!conflictsAt(tr, r, d, fixed, combat).length) return d;
@@ -453,15 +471,14 @@ export function* planGroup(spec, o) {
     if (!changed) break;
   }
 
-  // Step C: timing. Tokens outside the group walking now (the rest of their walk from the drop), and excluded
-  // members (as core moves them), first and fixed: nobody sets off into them (live H4-03 / H4-04).
+  // Step C: timing. Tokens outside the group walking now (the rest of their walk from the drop) first and fixed:
+  // nobody sets off into them (live H4-03 / H4-04).
   const base = moving.filter(f => f.points?.length >= 2)
     .map(f => ({ id: `moving:${f.id}`, r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed }), wave: 0, foreign: true }));
-  for (const m of excluded) {
-    const path = m.corePath?.length ? m.corePath : [m.start];
-    base.push({ id: m.id, r: m.r, tr: trajectory(path, { speed: m.speed }), wave: 0 });
-    out[m.id] = { id: m.id, core: true, slot: path.at(-1), points: path, delay: 0, level: "core" };
-  }
+  // Excluded members (no route: core moves them, a big one as far as its body fits) go last, once those whose way
+  // they cross have passed (HX1-05: a Large that fits no door set off at once, walked through Hero 1 still standing
+  // at its start and stood in the door's mouth, -113 px for 3-4 s). Each one's way is core's.
+  const coreTrack = m => trajectoryOf(m.corePath?.length ? m.corePath : [m.start], m.speed);
   // Timing order: constricted, the file (front first); open ground, shortest remaining route first.
   let order = members.filter(m => routes.has(m.id) && !excluded.includes(m)).sort(constricted ? front : (a, b) =>
     routes.get(a.id).length - routes.get(b.id).length
@@ -471,7 +488,8 @@ export function* planGroup(spec, o) {
 
   /** One timing pass over `order`: { entries, relaxed: [{ id, blocker }] }. */
   function* pass(seq) {
-    const fixed = [...base];
+    // An excluded member stands at its start while the others pass (it sets off after them, below).
+    const fixed = [...base, ...excluded.map(m => ({ id: m.id, r: m.r, tr: trajectoryOf([m.start], m.speed), wave: 0, standIn: true }))];
     const entries = {};
     const relaxed = [];
     for (const m of seq) {
@@ -529,6 +547,22 @@ export function* planGroup(spec, o) {
       fixed.push({ id: m.id, r: m.r, tr: delayed(tr, delay), wave });
       entries[m.id] = { id: m.id, core: false, slot: route.points.at(-1), points: route.points, data: route.data ?? null,
         delay, level, length: route.length };
+    }
+    for (const m of excluded) {
+      const tr = coreTrack(m);
+      const others = fixed.filter(f => !(f.standIn && f.id === m.id));
+      fixed.length = 0; fixed.push(...others);
+      let delay = firstFreeDelay(tr, m.r, fixed, combat);
+      if (delay === null) {
+        // Once everything it meets is at rest; it brushes only those standing still (as a relaxed member).
+        const blockers = conflictsAt(tr, m.r, 0, fixed, combat);
+        const lastEnd = blockers.length ? Math.max(...blockers.map(f => f.tr.end)) : 0;
+        delay = Math.ceil(lastEnd / MOTION.delayStep - EPS) * MOTION.delayStep;
+      }
+      const wave = Math.ceil(delay / MOTION.waveMs - EPS);
+      fixed.push({ id: m.id, r: m.r, tr: delayed(tr, delay), wave });
+      const path = m.corePath?.length ? m.corePath : [m.start];
+      entries[m.id] = { id: m.id, core: true, slot: path.at(-1), points: path, delay, level: "core" };
     }
     return { entries, relaxed };
   }

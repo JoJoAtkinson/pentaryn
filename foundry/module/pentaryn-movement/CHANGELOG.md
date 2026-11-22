@@ -1,5 +1,43 @@
 # Changelog — pentaryn-movement
 
+## 0.4.12 — 2026-11-22
+
+Hard-case round HX-1 (fixes only).
+
+- **[declared] HX1-01: routes, spots and timing count every token standing or walking in the way, not only the
+  ones this client can see now.** `Token#visible` is the viewer's vision, and a GM controlling a member sees
+  only what that member sees: a token past a wall or round a door's corner was left out, and members were walked
+  through it (-29 to -99 px: single then group, two-way traffic, the crowd from the SW corner). A GM counts every
+  token; a player every token the GM has not hidden that it sees, owns or that is friendly (never an unseen
+  hostile). The grabbed one's drag route (it routes round walls only) is not reused when it passes through a token
+  that stays: its route is searched round it, and a member's search round them that only ran out is finished in
+  slices still round them, never redone through them. When a player stops its own members of the GM's group, the
+  sending client no longer walks that player's other members round the stop (the player stops them: the two writes
+  raced and one was left drawn off its square); its own members keep round every stopped one, not only the last,
+  also one whose walk round an earlier stop was not sent yet; a stop walked on to its square (HX1-07) names that
+  square in its update (`pentarynMovementStopAt`). A held drawn position (H4-06) is let go when its time runs out or
+  another user moves the token, and it is then drawn where the server has it (it stayed 25 px off for good).
+- **[declared] HX1-02: a later wave waits while a token outside its group walks through its way** (looked at
+  every 250 ms, 8 s at most; `status().group.held`): two players dragging opposite groups through a one-wide
+  corridor at the same moment each planned before the other moved, and their waves walked into each other.
+- **[declared] HX1-06 (seen in the harness): a later wave never goes sooner after the waves before it than
+  planned.** A page frozen past several waves' times (core's fog extraction stalls a player tab 150-650 ms; the
+  harness froze for seconds) sent them all in one tick, and members meant to file through a door 150-450 ms apart
+  set off together, drawn on top of each other; a late wave now shifts those after it (and the group's end).
+- **[declared] HX1-05: a member with no route (a Large that fits no door) sets off after those whose way it
+  crosses have passed**, standing at its start until then: it walked through Hero 1 still waiting at its start
+  and stood in the door's mouth (-113 px for 3-4 s).
+- **[declared] HX1-03: a group clicked to a stop in a fight leaves nobody at rest in a one-wide corridor or
+  doorway** when a free square in the open is within 3 squares (a displace, free), as out of combat.
+- **[declared] HX1-04: in a fight, the member crossing a door's line when the door shuts finishes that square
+  and goes no further** (it walked on 8 squares into the far room). Its square's cost is spent, so it rests on
+  the far side of the door, not back before it.
+- **[declared] HX1-07: a click-stop square more than 0.75 square from where the token is drawn is walked to**
+  from the nearest free square, not jumped to (a corridor member sent out to open floor jumped 191-200 px).
+- **[declared] HX1-08: a door cut out of combat that puts a member back on the square it is drawn in rests it on
+  that whole square**, not off the grid where it was drawn, and a cut member's last leg keeps off the squares the
+  members cut before it took (one walked past another already resting by the door, -22 px).
+
 ## 0.4.11 — 2026-11-22
 
 Hard-case round H-4 (fixes only).
