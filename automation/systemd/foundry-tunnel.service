@@ -1,0 +1,33 @@
+# The Cloudflare tunnel that publishes this host's Foundry as vtt.atjoseph.com.
+# Installed by `make tunnel-unit-install` (scripts/foundry/ops/service.py), which replaces
+# @REPO@, @CLOUDFLARED@, @CONFIG@ and @TUNNEL@. Primary host only; the Mac has no systemd
+# and keeps the pidfile start. Use-doc: context/foundry/ops.md (§2, tunnel-up / tunnel-down).
+#
+# Drive it with `make tunnel-up` / `make tunnel-down`, not systemctl: those also honour the
+# role gate, stop connectors this unit does not own, and say what they did.
+[Unit]
+Description=Cloudflare tunnel "@TUNNEL@" -> Foundry (vtt.atjoseph.com)
+# Ordering only, as for the headless GM: starting the tunnel never starts Foundry.
+After=network-online.target foundryvtt.service
+# The off switch (`make tunnel-disable`): systemd itself declines, at boot too.
+ConditionPathExists=!@REPO@/.state/tunnel.disabled
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO@
+# .run first: ExecStartPost below runs as soon as ExecStart is forked.
+ExecStartPre=/bin/mkdir -p @REPO@/.run
+# Same log as before (`make tunnel-logs`, every grep in the docs). The shell redirects, then
+# exec's: the main pid is cloudflared itself. Not StandardOutput=append:, which systemd
+# opens for ExecStartPre too, before the folder can exist (status=209/STDOUT).
+ExecStart=/bin/sh -c 'exec @CLOUDFLARED@ tunnel --config @CONFIG@ run @TUNNEL@ >> @REPO@/.run/cloudflared.log 2>&1'
+# The pidfile stays, written from the unit: the nightly, the updater and `make vtt` read it.
+ExecStartPost=/bin/sh -c 'echo $MAINPID > @REPO@/.run/cloudflared.pid'
+ExecStopPost=/bin/rm -f @REPO@/.run/cloudflared.pid
+# A crash or a kill -9 comes back; `systemctl stop` (cloudflared exits 0 on SIGTERM) does not.
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target

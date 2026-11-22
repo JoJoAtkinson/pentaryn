@@ -64,6 +64,9 @@ def build_parser() -> argparse.ArgumentParser:
     td.add_argument("--reason", default="", help="why, kept in the switch file and shown by status")
     add("tunnel-enable", "Remove the off switch (does not start the tunnel).")
     add("tunnel-setup", "One-time: authenticate, create the tunnel, route DNS.")
+    add("tunnel-unit-install", "Run the tunnel as a systemd --user unit (primary, Linux): one "
+                               "connector, back after a boot. Starts nothing.")
+    add("tunnel-unit-remove", "Stop and remove the systemd unit; back to the pidfile start.")
     bs = add("bridge-status", "MCP bridge processes: which are live sessions, which are orphans, "
                               "and who holds the websocket ports.")
     bs.add_argument("--json", action="store_true", help="print the scan as JSON (same exit code)")
@@ -189,6 +192,8 @@ def main(argv: list[str] | None = None) -> int:
     if c == "tunnel-disable": return service.tunnel_disable(args.reason)
     if c == "tunnel-enable": return service.tunnel_enable()
     if c == "tunnel-setup":  return service.tunnel_setup()
+    if c == "tunnel-unit-install": return service.tunnel_unit_install()
+    if c == "tunnel-unit-remove":  return service.tunnel_unit_remove()
     if c == "tunnel-logs":   return service.tunnel_logs(args.lines)
     if c == "bridge-status": return bridge.status(as_json=args.json)
     if c == "bridge-clean":  return bridge.clean(dry_run=args.dry_run)

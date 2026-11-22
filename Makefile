@@ -142,6 +142,7 @@ vtt-nightly-host-check:
 
 # ─── The pieces: application, tunnel ────────────────────────────────────
 .PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-disable tunnel-enable tunnel-logs tunnel-setup foundry-boot
+.PHONY: tunnel-unit-install tunnel-unit-remove
 .PHONY: foundry-bridge-status foundry-bridge-clean foundry-eval-report
 .PHONY: foundry-headless-install foundry-headless-start foundry-headless-stop foundry-headless-restart
 .PHONY: foundry-headless-status foundry-headless-logs foundry-headless-ensure foundry-headless-test
@@ -171,6 +172,10 @@ tunnel-disable:  ; @$(OPS) tunnel-disable $(if $(REASON),--reason "$(REASON)")
 tunnel-enable:   ; @$(OPS) tunnel-enable
 tunnel-logs:     ; @$(OPS) tunnel-logs
 tunnel-setup:    ; @$(OPS) tunnel-setup
+# The tunnel as a systemd --user unit (BOSS): one connector by construction, back after a
+# boot. tunnel-up/-down drive it once installed; the Mac (no systemd) keeps the pidfile start.
+tunnel-unit-install: ; @$(OPS) tunnel-unit-install
+tunnel-unit-remove:  ; @$(OPS) tunnel-unit-remove
 
 # Every Claude Code session spawns its own MCP server, and the first one also spawns the
 # singleton broker that owns the bridge's websocket ports. Nothing cleans them up. A

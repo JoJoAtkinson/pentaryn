@@ -100,6 +100,13 @@ def _isolate_tunnel(monkeypatch, tmp_path_factory):
     monkeypatch.setattr(cfg, "CF_PID", run / "cloudflared.pid")
     monkeypatch.setattr(cfg, "CF_LOG", run / "cloudflared.log")
     monkeypatch.setattr(service, "_tunnel_processes", lambda: [])
+    # …no systemd unit (the host's real one must never be started or stopped by a test),
+    # and nobody asks Cloudflare how many connectors it sees.
+    monkeypatch.setattr(service, "_tunnel_unit", lambda: None)
+    monkeypatch.setattr(service, "_unit_path", lambda: run / "systemd" / service.TUNNEL_UNIT)
+    monkeypatch.setattr(service, "_systemctl",
+                        lambda *a, **k: pytest.fail(f"a test reached systemctl --user {a}"))
+    monkeypatch.setattr(service, "_tunnel_connectors", lambda: None)
 
 
 @pytest.fixture(autouse=True)

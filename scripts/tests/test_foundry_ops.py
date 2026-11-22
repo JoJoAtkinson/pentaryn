@@ -299,7 +299,7 @@ def test_every_subcommand_routes(monkeypatch):
     assert len(names) >= 18
 
     for fn in ("up", "down", "status", "lock_check", "tunnel_up", "tunnel_down",
-               "tunnel_setup", "tunnel_logs"):
+               "tunnel_setup", "tunnel_logs", "tunnel_unit_install", "tunnel_unit_remove"):
         monkeypatch.setattr(cli.service, fn, lambda *a, **k: 0)
     for fn in ("build_actors", "stage", "install_importer", "run_import", "clean", "clean_only", "verify"):
         monkeypatch.setattr(cli.pipeline, fn, lambda *a, **k: 0)
