@@ -476,3 +476,49 @@ test("a chokepoint still files them through in waves", () => {
   assert.equal(res.result, "plan");
   assert.ok(Object.values(res.members).some(e => e.delay > 0), "someone waits at the door");
 });
+
+// Live round 1 D-1: a group drop that went to core (the 300 ms budget) left members stacked.
+test("restOnPaths: members whose paths end on one spot rest apart, each on its own path; the first keeps its end", async () => {
+  const { restOnPaths } = await import("../group-core.mjs");
+  const list = [
+    { id: "a", r: 0.5, path: [{ x: 1.5, y: 5.5 }, { x: 14.5, y: 9.5 }] },
+    { id: "b", r: 0.5, path: [{ x: 1.5, y: 6.5 }, { x: 14.5, y: 9.5 }] },
+    { id: "c", r: 0.5, path: [{ x: 1.5, y: 7.5 }, { x: 10.5, y: 9.5 }, { x: 14.5, y: 9.5 }] },
+  ];
+  const rest = restOnPaths(list);
+  assert.deepEqual([rest.a.x, rest.a.y, rest.a.end], [14.5, 9.5, true]);
+  const pts = ["a", "b", "c"].map(id => rest[id]);
+  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+    assert.ok(Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y) >= 1 - 1e-6, `${i}/${j} overlap`);
+  }
+  for (const id of ["b", "c"]) assert.equal(rest[id].end, false);
+  // c stops on its own second segment, as far along as it can go.
+  assert.equal(rest.c.k, 1);
+  assert.ok(Math.abs(rest.c.y - 9.5) < 1e-9 && rest.c.x > 10.5 && rest.c.x < 14.5, JSON.stringify(rest.c));
+});
+
+test("restOnPaths: a member that does not move is placed first; a member with no free point stays at its start", async () => {
+  const { restOnPaths } = await import("../group-core.mjs");
+  const rest = restOnPaths([
+    { id: "mover", r: 0.5, path: [{ x: 3.5, y: 0.5 }, { x: 0.5, y: 0.5 }] },
+    { id: "still", r: 0.5, path: [{ x: 0.5, y: 0.5 }] },
+  ]);
+  assert.deepEqual([rest.still.x, rest.still.y], [0.5, 0.5]);
+  assert.ok(Math.abs(rest.mover.x - 1.5) < 1e-9, `the mover stops touching it: ${rest.mover.x}`);
+  const stuck = restOnPaths([
+    { id: "p", r: 0.5, path: [{ x: 0.5, y: 0.5 }] },
+    { id: "q", r: 0.5, path: [{ x: 0.6, y: 0.5 }, { x: 0.5, y: 0.5 }] },
+  ]);
+  assert.deepEqual([stuck.q.k, stuck.q.t, stuck.q.end], [0, 0, false]);
+});
+
+test("restOnPaths: in combat (allowed) a member stops only on a cell centre or a vertex", async () => {
+  const { restOnPaths } = await import("../group-core.mjs");
+  const onCell = c => [c.x - 0.5, c.y - 0.5].every(v => Math.abs(v - Math.round(v)) < 1e-6);
+  const rest = restOnPaths([
+    { id: "a", r: 0.5, path: [{ x: 0.5, y: 0.5 }, { x: 5.5, y: 0.5 }] },
+    { id: "b", r: 0.5, path: [{ x: 0.5, y: 1.5 }, { x: 5.5, y: 0.5 }] },
+  ], { allowed: onCell });
+  assert.ok(onCell(rest.b), JSON.stringify(rest.b));
+  assert.ok(Math.hypot(rest.b.x - 5.5, rest.b.y - 0.5) >= 1 - 1e-6);
+});

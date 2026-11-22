@@ -481,6 +481,63 @@ export function runPlan(gen, budgetMs, now = () => 0) {
 }
 
 /* -------------------------------------------- */
+/*  Rest spots for a drop left to core          */
+/* -------------------------------------------- */
+
+/**
+ * Where each member of a group drop that went to core (budget, no anchor route, a throw, ...) stops,
+ * so that no two rest on top of each other (live R1 D-1: core's paths, cut at walls, left members
+ * stacked at distance 0). Each member keeps its own path and stops at its furthest point whose
+ * circle is clear of every member placed before it (touching is fine); one that finds none stays
+ * where it is. Members that do not move are placed first, then the list order (the grabbed token
+ * first: it is never pulled back by another).
+ *
+ * @param {{ id, r, path: {x,y}[] }[]} list   centres in squares, start first; a path of one point does not move
+ * @param {object} [o]
+ * @param {number} [o.step]                    sample spacing along a segment (squares)
+ * @param {(c, member) => boolean} [o.allowed] a stop point other than a path vertex must pass this
+ *                                             (in combat: a cell centre)
+ * @returns {Object<string, { x, y, k, t, end: boolean }>}  the point lies on segment k (path[k] → path[k+1])
+ *                                             at fraction t; end: the path's own end
+ */
+export function restOnPaths(list, { step = 0.25, allowed = null } = {}) {
+  const out = {};
+  const placed = [];
+  const clear = (m, c) => placed.every(p => dist(c, p.c) >= m.r + p.r - EPS);
+  const ordered = [...list.filter(m => (m.path?.length ?? 0) < 2), ...list.filter(m => (m.path?.length ?? 0) >= 2)];
+  for (const m of ordered) {
+    const path = m.path ?? [];
+    if (path.length < 2) {
+      const c = path[0] ?? { x: 0, y: 0 };
+      out[m.id] = { x: c.x, y: c.y, k: 0, t: 0, end: true };
+      placed.push({ c, r: m.r });
+      continue;
+    }
+    let pick = null;
+    for (let k = path.length - 2; k >= 0 && !pick; k--) {
+      const a = path[k], b = path[k + 1];
+      const L = dist(a, b);
+      const n = Math.max(Math.ceil(L / step), 1);
+      for (let q = n; q >= 0; q--) {
+        const t = q / n;
+        if (q === 0 && k > 0) continue;               // the vertex is the previous segment's t = 1
+        const c = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+        const vertex = q === n || q === 0;
+        if (!vertex && allowed && !allowed(c, m)) continue;
+        if (!clear(m, c)) continue;
+        pick = { ...c, k, t };
+        break;
+      }
+    }
+    pick ??= { ...path[0], k: 0, t: 0 };
+    const end = pick.k === path.length - 2 && pick.t >= 1 - EPS;
+    out[m.id] = { x: pick.x, y: pick.y, k: pick.k, t: pick.t, end };
+    placed.push({ c: { x: pick.x, y: pick.y }, r: m.r });
+  }
+  return out;
+}
+
+/* -------------------------------------------- */
 /*  A flood for walk distances                  */
 /* -------------------------------------------- */
 

@@ -20,8 +20,8 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { MOTION, cellChain, groupMode, waves } from "./motion-core.mjs";
-import { GROUP_LIMITS, flood, planGroup, runPlan } from "./group-core.mjs";
+import { MOTION, cellChain, groupMode, radiusOf, waves } from "./motion-core.mjs";
+import { GROUP_LIMITS, flood, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
 import { skipReason } from "./pathfind-core.mjs";
 import { gridSize, inCombat, memberOf, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
@@ -141,6 +141,57 @@ function checkpointAll(contexts, options) {
     const origin = feature.exposed.pathfindOrigin?.(c.token.document) ?? c.foundPath?.[0];
     m.waypoints = withCheckpoints(c.token, [origin, ...m.waypoints]);
   }
+}
+
+/* -------------------------------------------- */
+/*  A drop left to core: no two at rest on one spot */
+/* -------------------------------------------- */
+
+/** Core reasons whose group drop is still de-stacked (the others are not a group, or the caller holds the path). */
+const UNSTACK = new Set(["tooMany", "waypoints", "ghost", "unconstrained", "budget", "anchorNoRoute", "noPlan", "throw"]);
+const unstackable = reason => UNSTACK.has(reason) || String(reason ?? "").startsWith("pathfind:");
+
+/**
+ * A group drop committed as core's: cut each member's path so that no two rest on top of each other
+ * (group-core restOnPaths; live R1 D-1). The grabbed token is placed first. In combat a member only
+ * stops on a cell centre (or a waypoint), so the cells it walks stay whole. Mutates core's
+ * [updates, options] and returns it: a member that would not move at all leaves both.
+ */
+function unstack(contexts, result, anchorId, combat) {
+  const [updates, options] = result ?? [];
+  const movement = options?.movement;
+  if (!Array.isArray(updates) || !movement || contexts.length < 2) return result;
+  const recs = [];
+  for (const c of contexts) {
+    const doc = c.token?.document;
+    if (!doc?._source) continue;
+    const s = gridSize(c.token);
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    const m = movement[doc.id];
+    const origin = feature.exposed.pathfindOrigin?.(doc) ?? c.foundPath?.[0] ?? doc._source;
+    const raw = m?.waypoints?.length ? [origin, ...m.waypoints] : [origin];
+    recs.push({ id: doc.id, r: radiusOf(w, h), w, h, s, m, path: raw.map(p => toSquares(p, w, h, s)) });
+  }
+  recs.sort((a, b) => (a.id === anchorId ? -1 : b.id === anchorId ? 1 : 0));
+  const onCell = (c, m) => [c.x - m.w / 2, c.y - m.h / 2].every(v => Math.abs(v - Math.round(v)) < 1e-6);
+  const rest = restOnPaths(recs, { allowed: combat ? onCell : null });
+  const still = new Set();
+  for (const rec of recs) {
+    const pick = rest[rec.id];
+    if (!rec.m?.waypoints?.length || !pick || pick.end) continue;
+    if (pick.k === 0 && pick.t <= 1e-6) { still.add(rec.id); delete movement[rec.id]; continue; }
+    const wps = rec.m.waypoints;
+    let cut;
+    if (pick.t >= 1 - 1e-6) cut = wps.slice(0, pick.k + 1);
+    else {
+      const tl = toTopLeft(pick, rec.w, rec.h, rec.s);
+      cut = [...wps.slice(0, pick.k), { ...wps[pick.k], x: tl.x, y: tl.y, snapped: !!combat }];
+    }
+    cut[cut.length - 1] = { ...cut.at(-1), explicit: true, checkpoint: true };
+    movement[rec.id] = { ...rec.m, waypoints: cut };
+  }
+  if (still.size) result[0] = updates.filter(u => !still.has(u._id));
+  return result;
 }
 
 /* -------------------------------------------- */
@@ -387,6 +438,7 @@ function onDrop(grabbed, event, result) {
     result: null, ms: null, async: false, relaxed: 0, replans: 0, waves: 0 };
 
   if (info.mode === "core") {
+    if (unstackable(info.reason)) unstack(contexts, result, grabbed.document.id, info.combat);
     if (info.combat) checkpointAll(contexts, result[1]);
     last.result = "core";
     return result;
@@ -401,6 +453,7 @@ function onDrop(grabbed, event, result) {
       fellBack(plan?.reason ?? "noPlan");
       last.result = "core";
       last.reason = plan?.reason ?? "noPlan";
+      unstack(contexts, result, grabbed.document.id, info.combat);
       if (info.combat) checkpointAll(contexts, result[1]);
       return { first: result, later: [], base: null };
     }
@@ -441,6 +494,8 @@ function onDrop(grabbed, event, result) {
     } catch (err) {
       log.warnOnce("group-plan", "group planning failed; the move goes as core's (further errors suppressed)", err);
       fellBack("throw");
+      try { unstack(contexts, result, grabbed.document.id, info.combat); }
+      catch (e) { log.debug?.("unstack after a planning throw", e); }
       b = { first: result, later: [], base: null };
     }
     commit(b.first);

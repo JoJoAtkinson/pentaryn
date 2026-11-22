@@ -825,3 +825,31 @@ test("D-2: a board pointerdown the click wrap did not see stops the moving token
     mock.timers.tick(1000);
   }
 });
+
+test("D-1: a group drop that runs out of planning time is core's, but no two members rest on one spot", () => {
+  combatFlag = false;
+  // Core's paths (cut by walls on the table) bring b and c to a's end square.
+  const ts = [makeToken("stkA000000000001", 100, 600), makeToken("stkB000000000001", 100, 700), makeToken("stkC000000000001", 100, 800)];
+  const path = (t, ...pts) => [wp(t.document._source.x, t.document._source.y, { snapped: false, explicit: false, checkpoint: false }), ...pts.map(([x, y]) => wp(x, y))];
+  const ctx = {
+    [ts[0].document.id]: { token: ts[0], destination: wp(800, 600), foundPath: path(ts[0], [800, 600]), waypoints: [] },
+    [ts[1].document.id]: { token: ts[1], destination: wp(800, 700), foundPath: path(ts[1], [800, 600]), waypoints: [] },
+    [ts[2].document.id]: { token: ts[2], destination: wp(800, 800), foundPath: path(ts[2], [500, 600], [800, 600]), waypoints: [] },
+  };
+  clock.step = 50;                                      // every clock read costs 50 ms: the 300 ms budget runs out
+  const from = F.calls.length;
+  assert.equal(dropWith(ts[0], ctx), null);
+  for (let k = 0; k < 50; k++) mock.timers.tick(10);
+  clock.step = 0;
+  assert.equal(api.status().group.last.reason, "budget");
+  const commit = sent(from)[0];
+  assert.ok(commit, "core's move went out");
+  const ends = Object.fromEntries(Object.entries(commit.options.movement).map(([id, m]) => [id, m.waypoints.at(-1)]));
+  assert.deepEqual([ends.stkA000000000001.x, ends.stkA000000000001.y], [800, 600], "the grabbed token keeps its drop point");
+  const cs = Object.values(ends).map(e => center(e));
+  for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) {
+    assert.ok(Math.hypot(cs[i].x - cs[j].x, cs[i].y - cs[j].y) >= S - 1e-6, `members ${i} and ${j} rest on top of each other`);
+  }
+  for (const e of Object.values(ends)) assert.equal(e.checkpoint, true);
+  mock.timers.tick(60000);
+});
