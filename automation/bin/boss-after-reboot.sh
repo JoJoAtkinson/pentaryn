@@ -32,7 +32,7 @@ EOF
 make -s tunnel-up
 sleep 10
 CONN=$(timeout 30 cloudflared tunnel info ardenhaven 2>/dev/null | grep -cE '^[0-9a-f]{8}-')
-say "tunnel connectors: $CONN (want 1); processes: $(pgrep -fc 'cloudflared .*run ardenhaven')"
+say "tunnel connectors: $CONN (want 1); processes: $(pgrep -a cloudflared | grep -c 'run ardenhaven')"
 say "public: $(curl -s -o /dev/null -w '%{http_code}' https://vtt.atjoseph.com/) (want 302)"
 grep -E 'UDP Connectivity|SUMMARY|Initial protocol' .run/cloudflared.log | tail -4
 
