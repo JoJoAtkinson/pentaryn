@@ -36,7 +36,8 @@ test("every described method is a function on the API; core is published unliste
   const at = path => path.split(".").reduce((o, k) => o?.[k], api);
   for (const m of api.describe().methods) assert.equal(typeof at(m.path), "function", m.path);
   assert.deepEqual(api.describe().methods.map(m => m.path),
-    ["status", "ghostFor", "combatActive", "setGhost", "setPolicy", "pinsUnderTokens", "inspect", "pathfind.status", "pathfind.route", "selftest"]);
+    ["status", "ghostFor", "combatActive", "setGhost", "setPolicy", "pinsUnderTokens", "inspect", "pathfind.status", "pathfind.route",
+      "planGroup", "stop", "selftest"]);
   assert.ok(Object.isFrozen(api.core));
   assert.equal(api.core.MODULE, MODULE);
 });
@@ -55,9 +56,9 @@ test("surface equals golden/surface.json (core.* is the pure module: checked aga
   assert.deepEqual(Object.keys(api.core).sort(), Object.keys(coreModule).sort());
 });
 
-test("every patch record names an adjustments row; four patches (0.3.0: findMovementPath)", () => {
+test("every patch record names an adjustments row; six patches (0.3.0: findMovementPath; 0.4.0: the drop and the click)", () => {
   const listed = api.describe().patches;
-  assert.equal(listed.length, 4);
+  assert.equal(listed.length, 6);
   for (const p of listed) assert.ok(p.adjustments?.startsWith("movement-"), p.label);
 });
 
@@ -65,7 +66,7 @@ test("described settings are exactly the SETTINGS table; settings() snapshots th
   assert.deepEqual(api.describe().settings.map(s => s.key), SETTINGS.map(r => r.key));
   assert.deepEqual(api.settings(), {
     ghostPolicy: "exploration", ghostPolicyLast: "exploration", ghost: false, ownedOnTop: true,
-    pathfinding: "everyone", pathfindMine: true, smoothCorners: true,
+    pathfinding: "everyone", pathfindMine: true, smoothCorners: true, groupMovement: true, clickToStop: true,
   });
 });
 

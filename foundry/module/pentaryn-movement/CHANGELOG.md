@@ -1,5 +1,72 @@
 # Changelog — pentaryn-movement
 
+## 0.4.0 — 2026-11-21
+
+Group movement and click to stop (plan `context/plans/pathfinding-2026-11.md` §12, deviations §13;
+use-doc `context/foundry/movement.md`).
+
+- **[declared] Several tokens dragged together each walk their own route to their own spot.**
+  `Token#_prepareDragLeftDropUpdates` is wrapped (row `movement-group-drop`, marker
+  `__pentarynMovementGroup`). Core's `[updates, options]` come back first; for two to twelve
+  contexts the pure planner (`group-core.mjs`) keeps the formation where it fits, otherwise packs
+  rest slots round the grabbed token (hex lattice out of combat, whole cells in combat; through a
+  narrow gap in file order, so nobody passes anybody), routes each member with the pathfinder's new
+  `routeTo` (through dnd5e's constrain), and staggers starts (150 ms steps up to 3 s, then a lateral
+  re-route round resting members, then "go last", then relaxed) so no two circles come within
+  r1 + r2 (+ 0.25 square across waves) while moving or r1 + r2 at rest. Wave 0 is the drop's own
+  update; later waves are timers on this client, one batched update per 150 ms, each dropped for a
+  member that moved meanwhile. A plan past 30 ms finishes in timer slices (the drop returns no
+  updates, the same shape is committed later); past 1 s, a throw, or no route for the grabbed token
+  means core's own drop. Ghost and the GM's unconstrained tool keep core's straight lines (a rest
+  overlap is nudged).
+- **[declared] Click a moving token to stop it.** `Token#_onClickLeft` is wrapped (row
+  `movement-click-stop`, marker `__pentarynMovementStop`): select tool, no modifier, a token you
+  control that is pending, paused or animating. Out of combat it is displaced to where it is drawn
+  (`animate: false`); in a started combat the initiating client calls `stopMovement()` and another
+  client asks the active GM through the new relay query `pentaryn-movement.stop` (400 ms). Stopping
+  a member of a group this client sent stops the group and cancels its unsent waves.
+- **[declared] In combat drops get a checkpoint at every cell** (kept only at the same measured cost)
+  and found paths no arcs, so a stop lands on a cell and dnd5e records exactly what was walked.
+- **[declared] Followers are not pathfound while a group is dragged** (only the grabbed token); the
+  drop plan replaces their previews.
+- Pathfinding: fillets are tessellated to chords within 0.05 square (at most 8 points a corner, 64 a
+  route); `fieldFor` takes `avoid` circles; `pathfind.route` runs on the new `routeTo`.
+- Settings: `groupMovement` (world, on) and `clickToStop` (client, on). API: `planGroup(refs, point)`
+  (dry run), `stop(ref)` (relay row), `status().group` (appended key: the regime, the last drop, the
+  recent fallback reasons); selftest checks both wraps. Listens to two more `setup` (once) hooks.
+  Adjustments rows `movement-group-drop`, `movement-click-stop`, `core-movement-group-drag-internals`.
+- Table review (UX and robustness), before release:
+  - The grabbed token walks the route its drag preview showed (its pathfound drag path is reused
+    as its group route), instead of a fresh search at the drop that could differ or stall.
+  - One route call during group planning is capped below the per-member budget (`routeTo` takes
+    `maxMs`), so a very long or impossible route excludes that member instead of freezing the drop
+    for up to 1.5 s and then dropping the whole group to core.
+  - A group stays one group until its last member should be at rest (not only until its last wave
+    is sent), and a one-wave group (ghost, unconstrained, all at once) is a group too: a click on
+    any member stops them all, as the plan says.
+  - A newer drop of a token by this client wins over its older pending wave or slow plan; waves and
+    slow-plan commits go to the drop's own scene, also after the GM switches the view mid-move.
+  - Followers keep their own pathfinding during a group drag core will commit anyway (Ctrl-click
+    waypoints, a direct or planned move), as in 0.3.0; before, they stopped at the first wall.
+  - In combat a planned (API) move keeps its own waypoints (no cell checkpoints inserted).
+  - A refused or failed stop-in-place puts the token back where the server has it, instead of
+    leaving it frozen at the click point on this client.
+- Files: `motion-core.mjs`, `group-core.mjs` (pure), `group-adapter.mjs`, `group.mjs`, `stop.mjs`.
+  Tests: `group-core.test` (the plan's twelve unit acceptance tests and the decision tables),
+  `group.test` (the two wraps). Not yet play-tested live (the plan's live list).
+- Correctness review (against core 14.370), merged with the table review above (the overlapping
+  fixes are one implementation: the reused drag route, the capped route call at `memberMs - 30`
+  ms via `routeTo`'s `maxMs`, the drop's scene for late commits and waves, followers pathfound on
+  a drop core commits, planned moves untouched). In addition:
+  - The reused drag route is never one the drag was still searching (`searching`).
+  - `MOTION.checkpointEvery` is honoured (every in-combat cell was a checkpoint).
+  - A wave leaves out a member a relay stop took out of the group.
+  - Click to stop on this client's own pending move calls `stopMovement()` before the displace, so
+    core's continuation cannot race the displace and carry the token on.
+  - An async plan finishing after `uninstall()` sends nothing.
+- Property tests: `group-props.test` (300 seeded random maps: termination, walls, rest slots,
+  no overlap in motion; `firstConflict` against brute force; 17 edge cases).
+
 ## 0.3.0 — 2026-11-21
 
 Drag pathfinding (plan `context/plans/pathfinding-2026-11.md`).

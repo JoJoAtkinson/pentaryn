@@ -1,8 +1,8 @@
 /**
  * Pentaryn Movement — settings. The only file outside lib/ that calls game.settings.register/get.
  *
- * Seven rows: the four ghost / owned-on-top rows in their historic order, then the three pathfinding
- * rows (0.3.0). Every row carries full literal label keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
+ * Nine rows: the four ghost / owned-on-top rows in their historic order, the three pathfinding
+ * rows (0.3.0), then group movement and click to stop (0.4.0). Every row carries full literal label keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
  * i18n gate proves each one. A row's onChange calls whatever the feature registered for that key with
  * onSettingChange(); the feature does that during its synchronous install, before `init`.
  */
@@ -81,6 +81,20 @@ export const SETTINGS = Object.freeze([
     hint: "PENTARYN_MOVEMENT.settings.smoothCorners.hint",
     onChange: forward("smoothCorners"),
     doc: "Round a found path's corners into arcs where that stays clear of walls and costs no extra movement. Client scope.",
+  },
+  {
+    key: "groupMovement", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_MOVEMENT.settings.groupMovement.name",
+    hint: "PENTARYN_MOVEMENT.settings.groupMovement.hint",
+    onChange: forward("groupMovement"),
+    doc: "Several tokens dragged together each walk their own route to their own spot, started in turn so they do not overlap (0.4.0).",
+  },
+  {
+    key: "clickToStop", scope: "client", config: true, type: Boolean, default: true,
+    name: "PENTARYN_MOVEMENT.settings.clickToStop.name",
+    hint: "PENTARYN_MOVEMENT.settings.clickToStop.hint",
+    onChange: forward("clickToStop"),
+    doc: "Clicking a moving token stops it where it is (in combat, at the next square). Client scope (0.4.0).",
   },
 ]);
 

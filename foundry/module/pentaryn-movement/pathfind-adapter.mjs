@@ -17,6 +17,9 @@
  *
  * Lattice: nodes are whole-square offsets from an anchor (the leg's goal), so node {i, j} is the
  * top-left position anchor + (j, i) squares — the positions a snapped drag lands on.
+ *
+ * `avoid` (0.4.0, group movement's lateral re-plan): circles { x, y, r } in pixels, centres. A step
+ * whose footprint centre comes inside one is blocked, so the route walks round resting group members.
  */
 
 
@@ -51,7 +54,7 @@ function creatureBlocking(token, constrain, automation) {
  * settings.mjs). Results are memoised in `memo` (a Map the feature keeps and clears when walls,
  * regions, doors or tokens change).
  */
-export function fieldFor(token, from, to, { preview = false, constrain = {}, measureOptions = {}, terrainOptions = {}, memo = new Map(), automation = "none" } = {}) {
+export function fieldFor(token, from, to, { preview = false, constrain = {}, measureOptions = {}, terrainOptions = {}, memo = new Map(), automation = "none", avoid = null } = {}) {
   const doc = token.document;
   const grid = doc.parent?.grid ?? canvas.grid;
   const s = grid.size;
@@ -67,7 +70,9 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   const rect = canvas.dimensions?.rect;
   // The mover is in the key: creature blocking and dnd5e's creature difficult terrain depend on who
   // moves (its disposition, and its own squares are never in its way).
-  const sub = `${doc.id}|${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}`;
+  const circles = avoid?.length ? avoid : null;
+  const sub = `${doc.id}|${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}`
+    + (circles ? `|a${circles.map(c => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.r)}`).join(";")}` : "");
 
   const pos = n => ({ x: to.x + n.j * s, y: to.y + n.i * s });
   const nodeOf = p => ({ i: Math.round((p.y - to.y) / s), j: Math.round((p.x - to.x) / s) });
@@ -109,7 +114,20 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     return rect.contains(c.x, c.y);
   };
 
+  /** The footprint centre at top-left p (pixels). */
+  const centreOf = p => ({ x: p.x + (width * s) / 2, y: p.y + (height * s) / 2 });
+  /** Does the centre's straight move p→q come inside an avoid circle? */
+  const grazes = (p, q) => {
+    if (!circles) return false;
+    const a = centreOf(p), b = centreOf(q);
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    return circles.some(c => {
+      const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+      return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < c.r - 1e-6;
+    });
+  };
   const blockedPx = p => {
+    if (grazes(p, p)) return true;
     if (!blocking) return false;
     const k = Math.floor((elevation / grid.distance) + 1e-8);
     const spaces = doc.getOccupiedGridSpaceOffsets({ x: p.x, y: p.y, elevation, width, height, depth, shape });
@@ -137,15 +155,15 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   const blocked = n => memoGet("b", at(n), () => blockedPx(pos(n)));
   const wall = (a, b) => memoGet("w", pair(a, b), () => inside(pos(b)) && wallPx(pos(a), pos(b)));
   const edge = (a, b) => memoGet("e", pair(a, b), () => {
-    if (blocked(b) || !wall(a, b)) return null;
+    if (blocked(b) || !wall(a, b) || grazes(pos(a), pos(b))) return null;
     return measure([pos(a), pos(b)]);
   });
   /** The whole straight line a→b (string pulling): the real footprint rays of that one move. */
-  const lineOk = (a, b) => memoGet("l", pair(a, b), () => wallPx(pos(a), pos(b)));
+  const lineOk = (a, b) => memoGet("l", pair(a, b), () => wallPx(pos(a), pos(b)) && !grazes(pos(a), pos(b)));
 
   /** Fillet tests, in pixels: the straight move p→q is open (walls on the footprint, creatures on the squares crossed). */
   const clear = (p, q) => {
-    if (!inside(q) || !wallPx(p, q)) return false;
+    if (!inside(q) || !wallPx(p, q) || grazes(p, q)) return false;
     if (!blocking) return true;
     const steps = doc.getCompleteMovementPath([waypoint(p), waypoint(q)]);
     return !steps.slice(1).some(w => blockedPx(w));

@@ -15,6 +15,10 @@ export const GM = "gmUser0000000001";
 /** What the stub TokenLayer#_prepareKeyboardMovementUpdates returns next (tests set it). */
 export const keyboard = { result: undefined, calls: 0 };
 
+/** What the stub Token#_prepareDragLeftDropUpdates returns next, and the stub Token#_onClickLeft's calls (0.4.0). */
+export const drop = { result: undefined, calls: 0 };
+export const clicks = [];
+
 export async function movementWorld({ patchable = true } = {}) {
   const lang = JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
   const F = await installFoundry({
@@ -33,6 +37,15 @@ export async function movementWorld({ patchable = true } = {}) {
       findMovementPath(waypoints) {
         const path = waypoints.map(w => ({ ...w }));
         return { result: path, promise: Promise.resolve(path), cancel: () => {} };
+      }
+      /** Core's drop: [updates, options] as the test sets it (group.test drives a real shape). */
+      _prepareDragLeftDropUpdates() {
+        drop.calls += 1;
+        return drop.result;
+      }
+      /** Core's click: records that it ran (select / release), after any stop. */
+      _onClickLeft(event) {
+        clicks.push({ token: this, event });
       }
     };
     F.CONFIG.Canvas = { layers: { tokens: { layerClass: class TokenLayer5e {

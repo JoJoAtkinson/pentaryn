@@ -7,11 +7,13 @@
   "pathfind.route": "pathfind.route",
   "pathfind.status": "pathfind.status",
   "pinsUnderTokens": "pinsUnderTokens",
+  "planGroup": "planGroup",
   "selftest": "selftest",
   "setGhost": "setGhost",
   "setPolicy": "setPolicy",
   "settings": "settings",
   "status": "status",
+  "stop": "stop",
   "trace": "trace",
   "uninstall": "uninstall",
   "version": "string"

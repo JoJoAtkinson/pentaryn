@@ -11,7 +11,7 @@ const F = await movementWorld({ patchable: false });
 await import("../movement.mjs");
 const atLoad = F.hooks.slice();
 
-test("registration manifest equals golden/hooks.json (34 entries, today's order; 0.3.0 appends pathfind's 15)", () => {
+test("registration manifest equals golden/hooks.json (36 entries, today's order; 0.3.0 appends pathfind's 15, 0.4.0 group's and stop's setup)", () => {
   pinJSON("hooks", atLoad, import.meta.url);
   assert.deepEqual(atLoad.map(h => (h.kind === "once" ? `once ${h.name}` : h.name)), [
     "once init", "once setup", "getSceneControlButtons", "renderSceneControls", "drawTokenLayer", "canvasReady",
@@ -19,11 +19,11 @@ test("registration manifest equals golden/hooks.json (34 entries, today's order;
     "createCombatant", "updateCombatant", "deleteCombatant", "createToken", "deleteToken", "renderTokenHUD",
     "once setup", "createWall", "updateWall", "deleteWall", "createRegion", "updateRegion", "deleteRegion",
     "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior", "createToken", "updateToken", "deleteToken", "controlToken",
-    "canvasReady", "once ready",
+    "canvasReady", "once setup", "once setup", "once ready",
   ]);
 });
 
-test("setup with none of the three methods: three warns, byte for byte; status().patched both false", () => {
+test("setup with none of the five methods: five warns, byte for byte; status().patched both false", () => {
   const warns = [];
   const saved = console.warn;
   console.warn = (...a) => warns.push(a.map(String).join(" "));
@@ -37,6 +37,8 @@ test("setup with none of the three methods: three warns, byte for byte; status()
     "pentaryn-movement | no Token#_getDragConstrainOptions; ghost drag disabled",
     "pentaryn-movement | no TokenLayer#_prepareKeyboardMovementUpdates; ghost arrow keys disabled",
     "pentaryn-movement | no Token#findMovementPath; drag pathfinding disabled",
+    "pentaryn-movement | no Token#_prepareDragLeftDropUpdates; group movement disabled",
+    "pentaryn-movement | no Token#_onClickLeft; click to stop disabled",
   ]);
   F.fire("ready");
   mock.timers.tick(0);

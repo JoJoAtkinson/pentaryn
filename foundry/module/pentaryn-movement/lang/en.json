@@ -81,6 +81,14 @@
       "smoothCorners": {
         "name": "Round path corners",
         "hint": "A found path bends in an arc instead of a sharp corner, where the arc stays clear of walls and costs no extra movement. Only on your screen."
+      },
+      "groupMovement": {
+        "name": "Group movement",
+        "hint": "When several tokens are dragged together, each walks its own way to its own spot around the drop point, setting off in turn so they file through doors and never overlap. Ghost movement and the GM's unconstrained tool move them in straight lines."
+      },
+      "clickToStop": {
+        "name": "Click a moving token to stop it",
+        "hint": "Clicking one of your tokens while it is moving stops it where it is, then selects it. In a fight it stops at the next square, so the movement spent stays exact. Only on your screen."
       }
     }
   }

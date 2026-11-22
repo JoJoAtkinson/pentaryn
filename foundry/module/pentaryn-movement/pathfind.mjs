@@ -19,6 +19,7 @@
 
 import * as pf from "./pathfind-core.mjs";
 import { LIMITS } from "./pathfind-core.mjs";
+import { MOTION } from "./motion-core.mjs";
 import { MODULE } from "./movement-core.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { fieldFor } from "./pathfind-adapter.mjs";
@@ -105,14 +106,19 @@ function searchable(a, b) {
 /*  One leg                                     */
 /* -------------------------------------------- */
 
+/** In a started combat (dnd5e records the movement): no arcs, the route stays on the grid (0.4.0). */
+function inCombat(token) {
+  try { return token.document?._shouldRecordMovementHistory?.() === true; } catch { return false; }
+}
+
 /** A resumable search for leg a→b. `points` (pixel top-lefts, a and b excluded) once found. */
-function legPlan(token, a, b, options, smooth) {
+function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   const leg = { a, b, state: "more", points: null, arcs: 0, nodes: 0, field: null, job: null };
   if (!searchable(a, b)) { leg.state = "none"; return leg; }
   const f = fieldFor(token, a, b, {
     preview: !!options.preview, constrain: options.constrainOptions ?? {},
-    measureOptions: options.measureOptions ?? {}, terrainOptions: options.terrainOptions ?? {}, memo: memoNow(),
-    automation: dnd5eMovementAutomation(),
+    measureOptions: options.measureOptions ?? {}, terrainOptions: options.terrainOptions ?? {},
+    memo: avoid ? new Map() : memoNow(), automation: dnd5eMovementAutomation(), avoid,
   });
   leg.field = f;
   // An unsnapped start joins the lattice at its nearest node, if that first move is open.
@@ -130,7 +136,9 @@ function legPlan(token, a, b, options, smooth) {
     let pts = pulled.map(n => ({ ...f.pos(n), lattice: true }));
     if (lead) pts = [{ x: a.x, y: a.y }, ...pts];
     if (smooth && pts.length > 2) {
-      const r = pf.fillet(pts, { maxT: LIMITS.arcMaxCells * f.s, clear: f.clear, cost: f.cost });
+      // 0.4.0: chords within MOTION.chordError of the arc, a point cap per corner and per route.
+      const r = pf.fillet(pts, { maxT: LIMITS.arcMaxCells * f.s, clear: f.clear, cost: f.cost,
+        maxError: MOTION.chordError * f.s, cornerPoints: MOTION.cornerPoints, maxPoints: MOTION.routePoints });
       leg.arcs = r.arcs;
       leg.smoothed = r.points.slice(1, -1);
     }
@@ -153,9 +161,9 @@ function cornerWaypoints(leg, useArcs) {
  * Plan every leg from `from` (index of the last explicit waypoint the plain path reached), then
  * rebuild through the original. Returns { step(budgetMs) → "done"|"more", result() }.
  */
-function planner(token, waypoints, options, from, wrapped, base, smooth) {
+function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid = null, force = false } = {}) {
   const legs = [];
-  for (let k = from; k < waypoints.length - 1; k++) legs.push(legPlan(token, waypoints[k], waypoints[k + 1], options, smooth));
+  for (let k = from; k < waypoints.length - 1; k++) legs.push(legPlan(token, waypoints[k], waypoints[k + 1], options, smooth, { avoid }));
   const t0 = now();
   let ms = 0;
 
@@ -196,7 +204,8 @@ function planner(token, waypoints, options, from, wrapped, base, smooth) {
         const path = r?.result;
         if (!Array.isArray(path)) continue;
         const n = pf.reachedCount(path, waypoints, same);
-        if (n > reach) {
+        // force (a group re-plan round resting members): a found route that gets there replaces the plain one.
+        if (n > reach || (force && n === waypoints.length && best === base.result)) {
           best = path; reach = n;
           arcs = useArcs ? legs.reduce((s, l) => s + l.arcs, 0) : 0;
           if (n === waypoints.length) break;
@@ -222,12 +231,14 @@ function planner(token, waypoints, options, from, wrapped, base, smooth) {
  */
 function pathfindJob(token, waypoints, options, wrapped, base) {
   if (!Array.isArray(base?.result)) return null;          // a wrapper below us is still searching
+  // A group drag (0.4.0): only the grabbed token is searched while dragging; the group plan runs at the drop.
+  if (feature?.exposed?.groupFollower?.(token)) return null;
   const reason = skipFor(token, waypoints, options);
   if (reason) return null;
   const reached = pf.reachedCount(base.result, waypoints, same);
   if (reached >= waypoints.length || reached === 0) return null;
 
-  const smooth = !!setting("smoothCorners");
+  const smooth = !!setting("smoothCorners") && !inCombat(token);
   const plan = planner(token, waypoints, options, reached - 1, wrapped, base, smooth);
   if (plan.step(LIMITS.sliceMs) === "done") {
     const path = plan.result();
@@ -299,6 +310,62 @@ function status() {
   };
 }
 
+/** A waypoint for `token` at its current source position. */
+function originOf(tokenDoc) {
+  const src = tokenDoc._source;
+  return { x: src.x, y: src.y, elevation: src.elevation, width: src.width, height: src.height, depth: src.depth,
+    shape: src.shape, level: src.level, action: tokenDoc.movementAction, snapped: false, explicit: false, checkpoint: false };
+}
+
+/**
+ * Route `token` from waypoint `origin` to waypoint `dest` without moving it: core's (dnd5e's) own
+ * path when it gets there, else the pathfinder's, both through the original findMovementPath so
+ * dnd5e constrains them. Runs every slice synchronously (up to LIMITS.totalMs).
+ *   avoid: circles { x, y, r } (pixel centres) the route keeps out of (group re-plan); a plain path
+ *          that crosses one is searched round it.
+ *   smooth: corner arcs (default this client's setting; never in combat).
+ *   maxMs:  wall-clock cap for this one call (default LIMITS.totalMs). Group planning passes less
+ *           than its per-member budget, so one long or impossible route never freezes the drop.
+ * Returns { reached, straight, path, cost, legs, arcs, ms }.
+ */
+function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = null, constrainOptions = {}, maxMs = LIMITS.totalMs } = {}) {
+  const options = { preview, constrainOptions, measureOptions: {}, terrainOptions: {} };
+  const call = (w, o) => {
+    bypass = true;
+    try { return token.findMovementPath(w, o); } finally { bypass = false; }
+  };
+  const t0 = now();
+  const ends = [origin, dest];
+  const base = call(ends, options);
+  if (!Array.isArray(base?.result)) return { reached: false, straight: false, path: null, cost: null, legs: [], arcs: 0, ms: 0 };
+  const reached = pf.reachedCount(base.result, ends, same);
+  const s = token.document?.parent?.grid?.size ?? canvas.grid?.size ?? 100;
+  const w = origin.width ?? 1, h = origin.height ?? 1;
+  const crosses = avoid?.length && base.result.some((p, k) => k > 0 && avoid.some(c => {
+    const a = { x: base.result[k - 1].x + (w * s) / 2, y: base.result[k - 1].y + (h * s) / 2 };
+    const b = { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 };
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+    return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < c.r;
+  }));
+  let path = base.result, legs = [], arcs = 0;
+  if (reached === 1 || crosses) {
+    const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
+    const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!crosses });
+    const cap = Math.min(maxMs, LIMITS.totalMs);
+    while (plan.step(Math.min(LIMITS.sliceMs, cap)) === "more" && now() - t0 < cap);
+    path = plan.result();
+    if (crosses && path === base.result) path = null;   // no way round: the caller keeps what it had
+    legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));
+    arcs = last?.arcs ?? 0;
+  }
+  const cost = path?.length ? token.measureMovementPath(path, { preview }).cost : null;
+  return {
+    reached: !!path && pf.reachedCount(path, ends, same) === 2,
+    straight: reached === 2 && !crosses, path, cost, legs, arcs, ms: Math.round((now() - t0) * 10) / 10,
+  };
+}
+
 /**
  * Route a token to a top-left position without moving it: what the drag would get. Runs every
  * slice synchronously (up to LIMITS.totalMs). Needs a canvas with the token's scene drawn.
@@ -308,34 +375,16 @@ function route(tokenDoc, opts = {}) {
   if (!token || !canvas?.ready) return { ok: false, reason: "no drawn token (the canvas must show its scene)" };
   const to = opts.to;
   if (!Number.isFinite(to?.x) || !Number.isFinite(to?.y)) return { ok: false, reason: "opts.to { x, y } (top-left pixels) is required" };
-  const src = tokenDoc._source;
-  const origin = { x: src.x, y: src.y, elevation: src.elevation, width: src.width, height: src.height, depth: src.depth,
-    shape: src.shape, level: src.level, action: tokenDoc.movementAction, snapped: false, explicit: false, checkpoint: false };
+  const origin = originOf(tokenDoc);
   const dest = { ...origin, x: to.x, y: to.y, snapped: true, explicit: true };
-  const options = { preview: !!opts.preview, constrainOptions: {}, measureOptions: {}, terrainOptions: {} };
-  const call = (w, o) => {
-    bypass = true;
-    try { return token.findMovementPath(w, o); } finally { bypass = false; }
-  };
-  const t0 = now();
   dropMemo();
-  const base = call([origin, dest], options);
-  const reached = pf.reachedCount(base.result, [origin, dest], same);
-  let path = base.result, legs = [], arcs = 0;
-  if (reached === 1) {
-    const plan = planner(token, [origin, dest], options, 0, call, base, opts.smooth ?? !!setting("smoothCorners"));
-    while (plan.step(LIMITS.sliceMs) === "more" && now() - t0 < LIMITS.totalMs);
-    path = plan.result();
-    legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));
-    arcs = last?.arcs ?? 0;
-  }
-  const cost = path?.length ? token.measureMovementPath(path, { preview: !!opts.preview }).cost : null;
+  const r = routeTo(token, origin, dest, { preview: !!opts.preview, smooth: opts.smooth ?? null });
   return {
     ok: true,
-    reached: pf.reachedCount(path, [origin, dest], same) === 2,
-    straight: reached === 2,
-    waypoints: (path ?? []).map(w => ({ x: w.x, y: w.y, explicit: !!w.explicit })),
-    cost, arcs, legs, ms: Math.round((now() - t0) * 10) / 10,
+    reached: r.reached,
+    straight: r.straight,
+    waypoints: (r.path ?? []).map(w => ({ x: w.x, y: w.y, explicit: !!w.explicit })),
+    cost: r.cost, arcs: r.arcs, legs: r.legs, ms: r.ms,
   };
 }
 
@@ -370,6 +419,8 @@ export function install(reg, ctx) {
   ctx.expose({
     pathfindStatus: status,
     pathfindRoute: route,
+    pathfindRouteTo: routeTo,
+    pathfindOrigin: originOf,
     pathfindPatched: () => findPatched,
   });
 }

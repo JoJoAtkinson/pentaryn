@@ -48,6 +48,8 @@ function selftest(ctx) {
     { label: "Token#_getDragConstrainOptions wrapped", ok: patched.drag === true },
     { label: "TokenLayer#_prepareKeyboardMovementUpdates wrapped", ok: patched.keyboard === true },
     { label: "Token#findMovementPath wrapped (drag pathfinding)", ok: ctx.exposed.pathfindPatched?.() === true },
+    { label: "Token#_prepareDragLeftDropUpdates wrapped (group movement)", ok: ctx.exposed.groupPatched?.() === true },
+    { label: "Token#_onClickLeft wrapped (click to stop)", ok: ctx.exposed.stopPatched?.() === true },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
@@ -64,7 +66,7 @@ const isCreatureRef = on => typeof on === "string" || (on !== null && typeof on 
 export function buildApiFor(ctx) {
   const x = ctx.exposed;
   return buildApi(MANIFEST, {
-    status: opts => x.status(opts),
+    status: opts => ({ ...x.status(opts), group: x.groupStatus() }),
     ghostFor: token => x.ghostFor(token),
     combatActive: sceneId => x.combatActive(sceneId),
     setGhost: (on, opts) => (isCreatureRef(on) ? x.setGhostInCombat(on, opts) : x.setGhost(on)),
@@ -74,6 +76,9 @@ export function buildApiFor(ctx) {
     inspect: actor => toPlain(x.inspectActor(actor)),
     "pathfind.status": () => x.pathfindStatus(),
     "pathfind.route": (token, opts) => x.pathfindRoute(token, opts),
+    planGroup: (refs, point) => toPlain(x.groupDryRun(refs, point)),
+    // `ref` is resolved by the kit (a TokenDocument); through the relay the kit passes core's query context last.
+    stop: (doc, opts, qctx) => x.stop(doc, opts, qctx),
     selftest: () => selftest(ctx),
     core,
   }, {
