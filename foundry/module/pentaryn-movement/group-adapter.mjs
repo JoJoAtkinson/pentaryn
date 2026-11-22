@@ -221,3 +221,30 @@ export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
   }
   return { waypoints, cut: false };
 }
+
+/**
+ * Where a token stopped at `p` (top-left pixels) may rest: `p` itself when its body crosses no
+ * move-blocking wall (restWalkable), else the nearest whole cell around it that is clear and that its
+ * centre reaches from `p` without crossing a wall. Live R4-5: a click-stop in a doorway left the token
+ * off the grid with its circle 37–41 px into the solid wall beside the door. `p` when nothing nearby fits.
+ * Reads only.
+ */
+export function clearOfWalls(token, p) {
+  const s = gridSize(token);
+  const src = token.document?._source ?? {};
+  const w = src.width ?? 1, h = src.height ?? 1;
+  const member = { token, r: radiusOf(w, h) };
+  const at = q => toSquares(q, w, h, s);
+  if (restWalkable(member, at(p), s)) return p;
+  const z = p.elevation ?? src.elevation ?? 0;
+  const from = { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: z };
+  const bx = Math.floor(p.x / s), by = Math.floor(p.y / s);
+  const cands = [];
+  for (let dy = -1; dy <= 2; dy++) for (let dx = -1; dx <= 2; dx++) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
+  cands.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
+  for (const c of cands) {
+    const to = { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z };
+    if (restWalkable(member, at(c), s) && open(token, from, to)) return { ...p, x: c.x, y: c.y };
+  }
+  return p;
+}

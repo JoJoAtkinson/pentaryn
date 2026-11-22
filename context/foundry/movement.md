@@ -25,7 +25,7 @@ There is nothing to learn: drag, and it works out the rest.
 | Path | free-form and smooth, arcs at corners | on the grid: no arcs, a checkpoint at every square |
 | Group spots | packed round the drop point (a hex pattern) | whole squares round the drop point |
 | Group timing | start delays, then a re-route round resting members if needed | start delays only |
-| Click to stop | put where it is drawn (a displace: free, recorded nowhere) | stops at the next square (`stopMovement`); never a displace |
+| Click to stop | put where it is drawn (a displace: free, recorded nowhere); stopped in a doorway with its body across the wall beside it, on the nearest clear whole square instead (0.4.4) | stops at the next square (`stopMovement`); never a displace |
 | A player stopping a move the GM started | works (any owner may) | asked of the active GM, which stops it only when it started the move; on no answer in 400 ms nothing happens |
 | The GM stopping a move a player started | works | asked of that player's client (`pentaryn-movement.stopOwn`, GM sender only), which stops it at the next square; on no answer in 400 ms, or the player offline, nothing happens |
 

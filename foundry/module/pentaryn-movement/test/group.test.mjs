@@ -526,6 +526,21 @@ test("click to stop out of combat: displaced where drawn (animate false), then c
   assert.equal(clicks.at(-1).token, t);
 });
 
+test("R4-5: a click-stop in a doorway, the body across the wall beside the door, rests on the nearest clear whole cell", () => {
+  combatFlag = false;
+  const t = makeToken("clkDoor000000001", 400, 100);
+  t.document._source = { ...t.document._source, x: 400, y: 600 };   // the server holds the end, through the door
+  t.document.x = 460; t.document.y = 340;                           // drawn in the doorway, its circle over the wall at x 500+
+  t.animationContexts.set(t.movementAnimationName, {});
+  const from = F.calls.length;
+  t._onClickLeft({});
+  const move = F.calls.slice(from).find(c => c.op === "move");
+  assert.equal(move.waypoints.length, 1);
+  assert.deepEqual([move.waypoints[0].x, move.waypoints[0].y], [500, 300], "the nearest whole cell clear of the wall");
+  assert.equal(move.waypoints[0].action, "displace");
+  t.animationContexts.clear();
+});
+
 test("R2-9: another client that receives a stop's displace and still draws the token elsewhere puts it where the server has it", () => {
   combatFlag = false;
   const t = makeToken("rsyA000000000001", 100, 100);

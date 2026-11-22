@@ -37,7 +37,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop } from "./motion-core.mjs";
-import { drawnPosition, gridSize, inCombat, movementFacts } from "./group-adapter.mjs";
+import { clearOfWalls, drawnPosition, gridSize, inCombat, movementFacts } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
@@ -140,7 +140,9 @@ function resync(token) {
  */
 function displace(token) {
   const doc = token.document;
-  const p = drawnPosition(token);
+  // Never at rest inside a solid wall: stopped in a doorway, it steps onto the nearest clear cell (live R4-5).
+  let p = drawnPosition(token);
+  try { p = clearOfWalls(token, p); } catch (err) { log.debug?.("clearOfWalls", err); }
   // This client's own move with checkpoints still to go: stop it first. stopAnimation resolves the
   // animation promise the continuation waits on, and that continuation would otherwise race the
   // displace to the server and carry the token on past where it was clicked (review-correctness).
