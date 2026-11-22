@@ -21,18 +21,16 @@ const ROWS = {
   "Token#_prepareDragLeftDropUpdates": "movement-group-drop",
   "Token#_onClickLeft": "movement-click-stop",
   "Token#stopAnimation": "movement-stop-animation-defuse",
-  "DoorControl#_onMouseDown": "movement-click-stop-door",
 };
 const MARKERS = {
   "Token#findMovementPath": "__pentarynMovementPath",
   "Token#_prepareDragLeftDropUpdates": "__pentarynMovementGroup",
   "Token#_onClickLeft": "__pentarynMovementStop",
   "Token#stopAnimation": "__pentarynMovementDefuse",
-  "DoorControl#_onMouseDown": "__pentarynMovementDoor",
 };
 const markerOf = label => MARKERS[label] ?? "__pentarynMovement";
 
-test("setup records the seven prototype wraps, each with its adjustments row and the marker", () => {
+test("setup records the six prototype wraps, each with its adjustments row and the marker", () => {
   const mine = patches().filter(p => p.moduleId === "pentaryn-movement");
   assert.deepEqual(mine.map(p => [p.label, p.adjustments, p.marker, p.via]), [
     ["Token#_getDragConstrainOptions", ROWS["Token#_getDragConstrainOptions"], "__pentarynMovement", "direct"],
@@ -41,7 +39,6 @@ test("setup records the seven prototype wraps, each with its adjustments row and
     ["Token#_prepareDragLeftDropUpdates", ROWS["Token#_prepareDragLeftDropUpdates"], "__pentarynMovementGroup", "direct"],
     ["Token#_onClickLeft", ROWS["Token#_onClickLeft"], "__pentarynMovementStop", "direct"],
     ["Token#stopAnimation", ROWS["Token#stopAnimation"], "__pentarynMovementDefuse", "direct"],
-    ["DoorControl#_onMouseDown", ROWS["DoorControl#_onMouseDown"], "__pentarynMovementDoor", "direct"],
   ]);
 });
 
@@ -49,18 +46,18 @@ test("a second setup does not wrap again (marker)", () => {
   const drag = CONFIG.Token.objectClass.prototype._getDragConstrainOptions;
   F.fire("setup");                                  // once-listener already consumed: nothing runs
   assert.equal(CONFIG.Token.objectClass.prototype._getDragConstrainOptions, drag);
-  assert.equal(patches().length, 7);
+  assert.equal(patches().length, 6);
 });
 
 test("the layer sort is recorded once per live container; a new draw drops the old record", () => {
   const a = { objects: { sortDirty: false, children: [] } };
   const b = { objects: { sortDirty: false, children: [] } };
   F.fire("drawTokenLayer", a);
-  assert.equal(patches().length, 8);
+  assert.equal(patches().length, 7);
   F.fire("drawTokenLayer", a);
-  assert.equal(patches().length, 8, "same container: no second record");
+  assert.equal(patches().length, 7, "same container: no second record");
   F.fire("drawTokenLayer", b);
-  assert.equal(patches().length, 8, "new container: the old record is dropped");
+  assert.equal(patches().length, 7, "new container: the old record is dropped");
   assert.equal(b.objects.sortChildren.__pentarynMovement, true);
   assert.equal(Object.hasOwn(a.objects, "sortChildren"), false, "the dead container is restored");
   for (const p of patches()) {
@@ -77,5 +74,5 @@ test("a sort someone else put over ours is replaced on the next draw (as before)
   c.objects.sortChildren = other;
   F.fire("drawTokenLayer", c);
   assert.equal(c.objects.sortChildren.__pentarynMovement, true);
-  assert.equal(patches().length, 8);
+  assert.equal(patches().length, 7);
 });

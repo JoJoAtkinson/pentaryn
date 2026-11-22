@@ -1179,13 +1179,13 @@ adjustments:
     retire_class: guarded
     check: make foundry-movement-check
 
-  - id: movement-click-stop-door
+  - id: core-door-control-click-precedence
     packages: [core]
     modules: [pentaryn-movement]
     files: [foundry/module/pentaryn-movement/stop.mjs]
-    markers: ["DoorControl", "_onMouseDown", "__pentarynMovementDoor", "movingTokenAt"]
-    what: wraps DoorControl#_onMouseDown (wrapped at setup, before core binds it when it draws a door icon); a left press on a door's icon while a token this client could click-stop is drawn under the pointer stops that token as a click on it would, selects it, stops the event and returns without toggling the door; any other press is core's toggle
-    why: the door icon sits above the tokens, so a click on a token crossing a door hit the icon and shut the door on it (live R5-3, 8 of 8 runs), leaving it against the closed door and part-way into the wall
+    markers: ["controls?.doors", "capture: true", "onDoorDown", "movingTokenAt"]
+    what: a capture-phase pointerdown listener on canvas.controls.doors (the door icons' container, re-attached on canvasReady); a left press on a door's icon while a token this client could click-stop is drawn under the pointer stops propagation (the icon's own DoorControl#_onMouseDown never runs) and stops and selects that token as a click on it would; any other press reaches core's toggle
+    why: the door icon sits above the tokens, so a click on a token crossing a door hit the icon and shut the door on it (live R5-3, 8 of 8 runs), leaving it against the closed door and part-way into the wall. Not a wrap of DoorControl#_onMouseDown — libWrapper keeps a direct wrap innermost, under Monk's Active Tile Triggers' async wrapper, so it ran a frame late
     native_when: core gives a moving token's click precedence over the door control under it
     retire_class: guarded
     check: make foundry-movement-check

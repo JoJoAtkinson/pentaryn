@@ -16,9 +16,11 @@ Live play-test round 5 (a Mac browser through the tunnel, the BOSS harness).
   member left on top of another token steps to the nearest free whole cell it reaches in a straight line
   (a walk; a displace in a fight). `status().group.destacked`.
 - **[declared] A click on a moving token over a door's icon stops the token, not the door (R5-3).**
-  `DoorControl#_onMouseDown` is wrapped (row `movement-click-stop-door`, marker `__pentarynMovementDoor`;
-  eight patches): a press there with a token this client could stop drawn under it stops and selects the
-  token and never toggles the door. A click-stop whose body would rest across a door's line, open or shut,
+  A capture-phase pointerdown listener on the door icons' container (row `core-door-control-click-precedence`)
+  runs before the icon's own handler: a press there with a token this client could stop drawn under it stops
+  and selects the token and never reaches the door. (A wrap of `DoorControl#_onMouseDown` was tried first:
+  libWrapper keeps it under Monk's Active Tile Triggers' async wrapper, so it decided a frame late and the
+  door still shut.) A click-stop whose body would rest across a door's line, open or shut,
   rests on the nearest whole cell beside it.
 - **[declared] A straight drag bends round a teleport / change-level region (R5-4).** Core's whole path was
   returned untouched when no wall cut it, so a single drag walked into a scene link (the player's view jumped

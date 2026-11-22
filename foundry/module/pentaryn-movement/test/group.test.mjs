@@ -682,10 +682,16 @@ test("R4-5: a click-stop in a doorway, the body across the wall beside the door,
   t.animationContexts.clear();
 });
 
-test("R5-3: a press on a door's icon over a moving token stops the token and never toggles the door; with none moving there, the door toggles", () => {
+test("R5-3: a press on a door's icon over a moving token stops the token and never reaches the icon's handler; with none moving there, it does", () => {
   combatFlag = false;
   const DoorControl = F.foundry.canvas.containers.DoorControl;
-  assert.equal(DoorControl.prototype._onMouseDown.__pentarynMovementDoor, true, "DoorControl#_onMouseDown is wrapped");
+  const listeners = [];
+  const doorsLayer = { addEventListener: (type, fn, opts) => listeners.push({ type, fn, opts }), removeEventListener() {} };
+  const controlsBefore = F.canvas.controls;
+  F.canvas.controls = { doors: doorsLayer };
+  F.fire("canvasReady");
+  const capture = listeners.find(l => l.type === "pointerdown" && l.opts?.capture);
+  assert.ok(capture, "a capture-phase pointerdown listener on the door icons' container");
   const t = makeToken("doorTok00000001", 400, 100);
   t.document._source = { ...t.document._source, x: 400, y: 600 };
   t.document.x = 430; t.document.y = 300;                        // drawn crossing the door, centre (480, 350)
@@ -696,26 +702,26 @@ test("R5-3: a press on a door's icon over a moving token stops the token and nev
   F.canvas.tokens = { ...layerBefore, active: true, placeables: [t] };
   const press = (x, y) => {
     let stopped = false;
-    const ev = { button: 0, getLocalPosition: () => ({ x, y }), stopPropagation: () => { stopped = true; }, nativeEvent: { type: "pointerdown", timeStamp: x } };
-    return { out: control._onMouseDown(ev), stopped };
+    const ev = { button: 0, target: control, getLocalPosition: () => ({ x, y }), stopPropagation: () => { stopped = true; }, nativeEvent: { type: "pointerdown", timeStamp: x } };
+    capture.fn(ev);
+    if (!stopped) control._onMouseDown(ev);                        // the event reaches the icon's own handler
+    return stopped;
   };
   try {
     const n = doors.length;
     const from = F.calls.length;
-    const a = press(485, 352);                                    // on the icon, the token drawn under it
-    assert.equal(a.out, false);
-    assert.equal(a.stopped, true, "the press goes no further");
+    assert.equal(press(485, 352), true, "stopped in the capture phase");
     assert.equal(doors.length, n, "the door is not toggled");
     assert.ok(F.calls.slice(from).some(c => c.op === "move" && c.id === t.document.id), "the token is stopped (a displace)");
     assert.equal(t.controlled, true, "and selected");
     t.animationContexts.clear();
     t.document.movement = { state: "completed", user: { isSelf: true } };
-    const b = press(485, 352);                                    // nothing moving: core's toggle
-    assert.equal(b.out, "toggled");
-    assert.equal(doors.length, n + 1);
+    assert.equal(press(485, 352), false, "nothing moving: the press goes on");
+    assert.equal(doors.length, n + 1, "core's toggle");
   } finally {
     t.animationContexts.clear();
     F.canvas.tokens = layerBefore;
+    F.canvas.controls = controlsBefore;
   }
 });
 

@@ -46,7 +46,6 @@ let log = null;
 let feature = null;
 let clickHandle = null;
 let defuseHandle = null;
-let doorHandle = null;
 let clickPatched = false;
 let lastStop = null;
 /** The DOM pointerdown the click wrap saw last (the board listener leaves that one alone). */
@@ -377,40 +376,45 @@ function patchStopAnimation() {
 }
 
 /**
- * DoorControl#_onMouseDown: a left press on a door's icon while a token this client could stop is drawn
- * under the pointer stops the token and leaves the door alone (live R5-3: clicking a token as it crossed
- * a door hit the door's icon, which sits above the tokens, and shut the door on it; 8 of 8 runs). A press
- * on the icon with no moving token under it is core's toggle, as before; so is a token at rest on the icon.
- * Core binds the handler when it draws the control, so the wrap is in place before the first canvas draw.
+ * A left press on a door's icon while a token this client could stop is drawn under the pointer stops
+ * the token and leaves the door alone (live R5-3: clicking a token as it crossed a door hit the door's
+ * icon, which sits above the tokens, and shut the door on it; 8 of 8 runs). A press on the icon with no
+ * moving token under it is core's toggle, as before; so is a token at rest on the icon. A capture-phase
+ * listener on the door icons' container (canvas.controls.doors) runs before the icon's own handler and
+ * stops the event there. Not a wrap of DoorControl#_onMouseDown: libWrapper keeps such a wrap innermost,
+ * under another module's async wrapper (Monk's Active Tile Triggers), so it ran a frame late, after the
+ * token had moved on, and the door still toggled (BOSS, 0.4.5 first build).
  */
-function patchDoor() {
-  const proto = globalThis.foundry?.canvas?.containers?.DoorControl?.prototype;
-  if (typeof proto?._onMouseDown !== "function") {
-    log.debug?.("no DoorControl#_onMouseDown; a click on a token over a door's icon toggles the door");
-    return null;
-  }
-  return wrapMethod(MODULE, {
-    target: proto, name: "_onMouseDown", label: "DoorControl#_onMouseDown",
-    marker: "__pentarynMovementDoor", adjustments: "movement-click-stop-door",
-  }, function (wrapped, event, ...rest) {
-    try {
-      if (event?.button === 0 && feature && setting("clickToStop")) {
-        const tokens = globalThis.canvas?.tokens;
-        let p = null;
-        try { p = event.getLocalPosition?.(tokens) ?? null; } catch { p = null; }
-        if (!p && Number.isFinite(event?.clientX)) p = globalThis.canvas?.canvasCoordinatesFromClient?.({ x: event.clientX, y: event.clientY }) ?? null;
-        const hit = p ? movingTokenAt(p, { modifiers: !!(event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) }) : null;
-        if (hit) {
-          event.stopPropagation?.();
-          lastNative = event.nativeEvent ?? null;      // the board fallback leaves this press alone
-          stopToken(hit.token, hit.how);
-          if (!hit.token.controlled) hit.token.control?.({ releaseOthers: true });
-          return false;
-        }
-      }
-    } catch (err) { log.warnOnce("stop-door", "click to stop over a door skipped (further errors suppressed)", err); }
-    return wrapped(event, ...rest);
-  });
+function onDoorDown(event) {
+  try {
+    if (event?.button !== 0 || !feature || !setting("clickToStop")) return;
+    const DoorControl = globalThis.foundry?.canvas?.containers?.DoorControl;
+    if (DoorControl && !(event.target instanceof DoorControl)) return;
+    const tokens = globalThis.canvas?.tokens;
+    let p = null;
+    try { p = event.getLocalPosition?.(tokens) ?? null; } catch { p = null; }
+    if (!p && Number.isFinite(event?.clientX)) p = globalThis.canvas?.canvasCoordinatesFromClient?.({ x: event.clientX, y: event.clientY }) ?? null;
+    const hit = p ? movingTokenAt(p, { modifiers: !!(event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) }) : null;
+    if (!hit) return;
+    event.stopPropagation?.();                    // the icon's own handler never sees it: no toggle
+    lastNative = event.nativeEvent ?? null;       // the board fallback leaves this press alone
+    stopToken(hit.token, hit.how);
+    if (!hit.token.controlled) hit.token.control?.({ releaseOthers: true });
+  } catch (err) { log.warnOnce("stop-door", "click to stop over a door skipped (further errors suppressed)", err); }
+}
+
+/** The door icons' container this client listens on (one per canvas draw). */
+let doorLayer = null;
+function listenDoors() {
+  const c = globalThis.canvas?.controls?.doors ?? null;
+  if (!c || c === doorLayer || typeof c.addEventListener !== "function") return;
+  unlistenDoors();
+  c.addEventListener("pointerdown", onDoorDown, { capture: true });
+  doorLayer = c;
+}
+function unlistenDoors() {
+  try { doorLayer?.removeEventListener?.("pointerdown", onDoorDown, { capture: true }); } catch (err) { log?.debug?.("door listener", err); }
+  doorLayer = null;
 }
 
 function patchClick() {
@@ -484,7 +488,7 @@ async function stopOwn(data = {}, qctx = {}) {
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  const wrapAll = () => { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); doorHandle = patchDoor(); };
+  const wrapAll = () => { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); };
   if (ctx.late) wrapAll();
   else reg.once("setup", wrapAll, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
   reg.on("moveToken", (doc, movement) => onMoveToken(doc, movement), { label: "moveToken: when a move started (click-to-stop arming)" });
@@ -493,8 +497,8 @@ export function install(reg, ctx) {
   // from its document after a stop; seen on a 3 FPS harness only). resync is a no-op when they agree.
   reg.on("updateToken", (doc, changes, options) => onUnanimatedMove(doc, changes, options), { label: "updateToken: resync after an unanimated move (stop)" });
   // After PIXI's own pointerdown listener (added when the app was made), so the wrap sees a click first.
-  reg.on("canvasReady", () => listenBoard(), { label: "canvasReady: board pointerdown (click to stop, fallback)" });
-  if (ctx.late) listenBoard();
+  reg.on("canvasReady", () => { listenBoard(); listenDoors(); }, { label: "canvasReady: board pointerdown (click to stop, fallback)" });
+  if (ctx.late) { listenBoard(); listenDoors(); }
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).
   if (globalThis.CONFIG?.queries) globalThis.CONFIG.queries[STOP_OWN] = stopOwn;
@@ -506,8 +510,7 @@ export function uninstall() {
   clickHandle = null;
   defuseHandle?.unwrap();
   defuseHandle = null;
-  doorHandle?.unwrap();
-  doorHandle = null;
+  unlistenDoors();
   clickPatched = false;
   lastStop = null;
   lastNative = null;
