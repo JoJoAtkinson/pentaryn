@@ -9,6 +9,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { movementWorld, drop, clicks, SCENE } from "./fixtures/world.mjs";
+import { MOTION } from "../motion-core.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -231,6 +232,7 @@ test("a stopped group sends no later wave (the initiator stops one member: all s
   const first = out[0].map(u => u._id);
   const moving = sceneTokens.get(first[0]).object;
   moving.animationContexts.set(moving.movementAnimationName, {});
+  clock.t += MOTION.armMs;                             // armed: the move has run 400 ms
   const from = F.calls.length;
   moving._onClickLeft({});
   mock.timers.tick(5000);
@@ -437,6 +439,7 @@ test("a click on any member stops the whole group after its last wave went out, 
   const ts = [makeToken("hldA000000000001", 400, 200), makeToken("hldB000000000001", 300, 200), makeToken("hldC000000000001", 500, 200)];
   dropWith(ts[0], contextsFor(ts, 0, 400));
   mock.timers.tick(1200);                              // every wave is out; they are still walking
+  clock.t += 1200;
   for (const t of ts) t.animationContexts.set(t.movementAnimationName, {});
   let from = F.calls.length;
   ts[1]._onClickLeft({});
@@ -455,6 +458,7 @@ test("a click on any member stops the whole group after its last wave went out, 
   const out = dropWith(gs[0], ctx);
   assert.equal(out[0].length, 2, "one batch");
   for (const t of gs) t.animationContexts.set(t.movementAnimationName, {});
+  clock.t += MOTION.armMs;
   from = F.calls.length;
   gs[0]._onClickLeft({});
   moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
@@ -592,4 +596,132 @@ test("click to stop out of combat on this client's pending move: stopMovement fi
   t._onClickLeft({});
   const ops = F.calls.slice(from).map(c => c.op).filter(o => ["stopMovement", "stopAnimation", "move"].includes(o));
   assert.deepEqual(ops, ["stopMovement", "stopAnimation", "move"]);
+});
+
+test("a click within 400 ms of a drop is core's click (habit click, double click); after that it stops the group", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("hbtA000000000001", 400, 200), makeToken("hbtB000000000001", 300, 200)];
+  dropWith(ts[0], contextsFor(ts, 0, 400));
+  for (const t of ts) t.animationContexts.set(t.movementAnimationName, {});
+  let from = F.calls.length;
+  ts[0]._onClickLeft({});
+  clock.t += 150;
+  ts[0]._onClickLeft({});                               // the second press of a double click
+  assert.equal(F.calls.slice(from).filter(c => c.op === "move" || c.op === "stopMovement").length, 0, "not armed: nothing stopped");
+  assert.equal(clicks.at(-1).token, ts[0], "core's click still runs (select, then the sheet)");
+  clock.t += MOTION.armMs;
+  from = F.calls.length;
+  ts[0]._onClickLeft({});
+  const moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
+  assert.deepEqual(moved, ts.map(t => t.document.id).sort(), "armed: the whole group stops where drawn");
+  for (const t of ts) t.animationContexts.clear();
+  mock.timers.tick(60000);
+});
+
+test("a move another client started arms 400 ms after this client first saw it (moveToken); the API stop is never held back", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const t = makeToken("hbtC000000000001", 100, 100);
+  t.animationContexts.set(t.movementAnimationName, {});
+  t.document.movement = { id: "mov0000000000001", chain: [], state: "pending", user: { isSelf: false } };
+  F.fire("moveToken", t.document, t.document.movement, {}, { id: "other" });
+  let from = F.calls.length;
+  t._onClickLeft({});
+  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0, "just started: not armed");
+  // A continuation of the same move keeps the first start.
+  clock.t += 300;
+  t.document.movement = { id: "mov0000000000002", chain: ["mov0000000000001"], state: "pending", user: { isSelf: false } };
+  F.fire("moveToken", t.document, t.document.movement, {}, { id: "other" });
+  clock.t += 150;
+  from = F.calls.length;
+  t._onClickLeft({});
+  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 1, "450 ms into the move: stopped");
+  // A new move: unarmed again, but api.stop() stops it at once.
+  t.document.movement = { id: "mov0000000000003", chain: [], state: "pending", user: { isSelf: false } };
+  F.fire("moveToken", t.document, t.document.movement, {}, { id: "other" });
+  from = F.calls.length;
+  t._onClickLeft({});
+  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0);
+  const r = await api.stop(t.document);
+  assert.equal(r.ok, true);
+  t.animationContexts.clear();
+});
+
+test("in combat a GM's click asks the user who started the move (stopOwn); only that client stops it, only for a GM", async () => {
+  combatFlag = true;
+  const t = makeToken("gmsA000000000001", 100, 100);
+  t.animationContexts.set(t.movementAnimationName, {});
+  const asked = [];
+  const starter = { id: "player0000000002", isSelf: false, active: true,
+    query: async (name, data, opts) => { asked.push({ name, data, opts }); return { ok: true, how: "stop", tokenId: t.document.id }; } };
+  t.document.movement = { state: "pending", user: starter };
+  const user = game.user;
+  const wasGM = user.isGM;
+  Object.defineProperty(user, "isGM", { value: true, configurable: true, writable: true });
+  try {
+    const from = F.calls.length;
+    t._onClickLeft({});
+    for (let k = 0; k < 5; k++) await Promise.resolve();
+    assert.equal(asked.length, 1, "the starter is asked");
+    assert.equal(asked[0].name, `${MOD}.stopOwn`);
+    assert.deepEqual(asked[0].data, { ref: t.document.uuid });
+    assert.equal(asked[0].opts.timeout, 400);
+    assert.equal(F.calls.slice(from).filter(c => c.op === "query" && c.name === `${MOD}.stop`).length, 0, "not the active-GM relay");
+    assert.equal(F.calls.slice(from).filter(c => c.op === "stopMovement" || c.op === "move").length, 0, "never a stop or displace here");
+    // A starter that went offline: nothing is sent to it.
+    starter.active = false;
+    t._onClickLeft({});
+    for (let k = 0; k < 5; k++) await Promise.resolve();
+    assert.equal(asked.length, 1);
+  } finally {
+    Object.defineProperty(user, "isGM", { value: wasGM, configurable: true, writable: true });
+  }
+
+  // The starter's side: the handler.
+  const handler = CONFIG.queries[`${MOD}.stopOwn`];
+  assert.equal(typeof handler, "function");
+  t.document.movement = { state: "pending", user: { isSelf: true } };
+  const saved = globalThis.fromUuidSync;
+  globalThis.fromUuidSync = u => (u === t.document.uuid ? t.document : null);
+  try {
+    let from = F.calls.length;
+    assert.equal((await handler({ ref: t.document.uuid }, { user: { isGM: false } })).code, "NOT_GM");
+    assert.equal((await handler({ ref: "Scene.x.Token.nope" }, { user: { isGM: true } })).code, "NOT_FOUND");
+    assert.equal(F.calls.slice(from).filter(c => c.op === "stopMovement").length, 0);
+    from = F.calls.length;
+    const r = await handler({ ref: t.document.uuid }, { user: { isGM: true, id: "gm" } });
+    assert.deepEqual(r, { ok: true, how: "stop", tokenId: t.document.id });
+    assert.equal(F.calls.slice(from).filter(c => c.op === "stopMovement" && c.id === t.document.id).length, 1);
+    t.document.movement = { state: "pending", user: { isSelf: false } };
+    assert.equal((await handler({ ref: t.document.uuid }, { user: { isGM: true } })).code, "NOT_INITIATOR");
+  } finally {
+    globalThis.fromUuidSync = saved;
+    combatFlag = false;
+    t.animationContexts.clear();
+  }
+});
+
+test("a group slot is never inside a teleport region (a scene link), unless the group is dropped into it", () => {
+  combatFlag = false;
+  clock.step = 0;
+  // Open floor south of the wall; a scene-link region on b's formation spot (300, 600).
+  const zone = { x: 300, y: 600, w: 100, h: 100 };
+  const inZone = c => c.x > zone.x && c.x < zone.x + zone.w && c.y > zone.y && c.y < zone.y + zone.h;
+  sceneDoc.regions = [{ id: "regTele000000001", hidden: false, behaviors: [{ type: "teleportToken", disabled: false }] }];
+  const ts = [makeToken("regA000000000001", 400, 500), makeToken("regB000000000001", 300, 500)];
+  for (const t of ts) t.document.testInsideRegion = (r, d) => inZone(center({ x: d.x, y: d.y, width: 1, height: 1 }));
+  try {
+    const r = api.planGroup(ts.map(t => t.document), { x: 400, y: 600 });
+    assert.equal(r.ok, true);
+    assert.equal(r.result, "plan");
+    const b = r.members.find(m => m.id === "regB000000000001");
+    assert.ok(!inZone(center({ ...b.slot, width: 1, height: 1 })), `b is re-slotted out of the region: ${JSON.stringify(b.slot)}`);
+    // Dropped into it: the grabbed token lands there and the region is not avoided.
+    const r2 = api.planGroup([ts[1].document, ts[0].document], { x: 300, y: 600 });
+    assert.equal(r2.result, "plan");
+    assert.deepEqual(r2.members[0].slot, { x: 300, y: 600 });
+  } finally {
+    sceneDoc.regions = [];
+  }
 });

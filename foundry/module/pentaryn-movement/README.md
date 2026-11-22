@@ -57,12 +57,16 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
 
 - **Past a wall the ruler goes around it** — the shortest way, through open doors only, round hostile
   creatures and costlier terrain, a big token only where it fits; corners rounded where an arc costs
-  nothing extra. Players route only round walls they have seen. A straight drag is core's own.
+  nothing extra. Players route only round walls they have seen, and only over ground they have explored
+  or can see. A route never uses a secret door (open or shut) or crosses a teleport / change-level region
+  (a scene link) unless it ends there. A straight drag is core's own.
 - **Drag several tokens together** and each walks its own way to its own spot by the drop point,
-  setting off in turn, so they file through a door one behind the other and never rest on top of each
-  other (circles: touching is fine, overlapping is not). The grabbed token lands exactly where dropped.
-- **Click a moving token to stop it** where it is (then it is selected as usual; a double click opens
-  the sheet). In a fight it stops at the next square, so dnd5e's spent movement stays exact.
+  all setting off together on open ground and in turn only at a door, so they file through it one behind
+  the other, never resting on top of each other (circles: touching is fine). The grabbed token lands
+  exactly where dropped. A plan that takes over 300 ms is core's own drop.
+- **Click a moving token to stop it** where it is, once it has moved 400 ms (a click right after the drop,
+  or a double click for the sheet, is a plain click). In a fight it stops at the next square, so dnd5e's
+  spent movement stays exact; a GM may stop anyone's move.
 - **Out of combat** movement is free-form and smooth; **in combat** it stays on the grid (no arcs, a
   checkpoint at every square) so the cost is exact. Ghost and the GM's *Unconstrained Movement* tool
   go in straight lines, the group keeping its shape. Not for arrow keys, gridless or hex scenes.
@@ -110,12 +114,13 @@ frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offli
 | `pathfind.status()` | — | — | the mode, this client's two settings, `patched` (the `findMovementPath` wrap), the step-cache size, the limits, and `last`: what the last search did (`nodes`, `ms`, `reached` of `of` explicit waypoints, `arcs`, `improved`, `async`) |
 | `pathfind.route(ref, { to, preview?, smooth? })` | — | — | dry run: the path a drag of that token to `to` (top-left pixels) would get, with its cost in feet; needs a browser tab showing the scene (the headless GM has no canvas) |
 | `planGroup(refs, point)` | — | — | dry run of a group drop (the first ref is the grabbed one, `point` its top-left drop point): each member's slot, start delay, level (0 delay · 1 re-plan · 2 go last · 3 relaxed · `core`); needs a browser tab |
-| `stop(ref)` | — | token position / its pending move | stop a moving token as a click would; a player's in-combat stop of a move the GM started goes to the active GM through the relay query `pentaryn-movement.stop` |
+| `stop(ref)` | — | token position / its pending move | stop a moving token as a click would (no 400 ms arming); in combat a player's stop of a move the GM started goes to the active GM through the relay query `pentaryn-movement.stop`, a GM's goes to whoever started it (`pentaryn-movement.stopOwn`) |
 | `selftest()` | — | — | `{ ok, checks }` |
 
 Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`, `uninstall()`.
-`core` is the pure module (`movement-core.mjs`), published as a frozen copy. One query: the
-`stop` relay row (any sender, run on the active GM, which stops only a move it started).
+`core` is the pure module (`movement-core.mjs`), published as a frozen copy. Two queries: the `stop` relay
+row (any sender, run on the active GM, which stops only a move it started) and the hand-registered `stopOwn`
+(a GM sender only, run on the user who started the move; exceptions.json C30/C56: the kit cannot target a user).
 
 ## Data written
 
@@ -142,7 +147,8 @@ Listens to (pinned in `test/golden/hooks.json`, in this order): `init` (once), `
 `setup` (once), `createWall`, `updateWall`, `deleteWall`, `createRegion`, `updateRegion`, `deleteRegion`,
 `createRegionBehavior`, `updateRegionBehavior`, `deleteRegionBehavior`, `createToken`, `updateToken`,
 `deleteToken`, `controlToken`, `canvasReady` (each drops the step cache; `canvasReady` also listens to
-the scene's fog "explored", which drops it too), group's and stop's `setup` (once each), and `ready` (once).
+the scene's fog "explored", which drops it too), group's and stop's `setup` (once each), stop's `moveToken`
+(when a move started, for the 400 ms arming), and `ready` (once).
 
 ## Patches and adjustments
 
@@ -167,10 +173,10 @@ The first three carry the `__pentarynMovement` marker and go through the kit (`w
 
 Client-only: nothing is elected and nothing runs on one client for everyone. Each client decides
 ghost and the sort for its own user; a group's later waves are timers on the client that dropped it
-(never the headless GM, which has no canvas). The `stop` relay is answered by the active GM only for
-a move that client started. A player's client clears its own `ghost` setting when ghost
-stops being allowed; only a GM writes the world settings and the `ghostInCombat` actor flag (from the
-GM client that clicked or called — no relay; the headless GM bot is a GM client like any other).
+(never the headless GM, which has no canvas). The `stop` relay is answered by the active GM only for a
+move that client started; `stopOwn` by the client that started it, for a GM. A player's client clears its
+own `ghost` setting when ghost stops being allowed; only a GM writes the world settings and the
+`ghostInCombat` flag (from the GM client that clicked or called; the headless GM bot is a GM client too).
 
 ## Extending
 
@@ -188,15 +194,11 @@ GM client that clicked or called — no relay; the headless GM bot is a GM clien
 - It wraps **private** core members (`_getDragConstrainOptions`, `_prepareKeyboardMovementUpdates`,
   `_lastSortedIndex`). After a core or dnd5e update, check `status().patched` is
   `{ drag: true, keyboard: true }` and run the three adjustments rows' check.
-- Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag
-  disabled`) and ghost then simply does nothing for that input.
+- Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag disabled`).
 - The GM never ghosts through this module (core's own tool is the GM's).
-- Group waves run on the dropping client: closing that tab mid-move leaves the unsent members where
-  they stood. Undo (Ctrl+Z) undoes one wave at a time (each is its own update).
-- The incorporeal test is by **feat name** (`INCORPOREAL_FEATS` in core). A homebrew creature whose
-  trait is named differently needs the GM toggle; a spell by that name never counts.
-- Errors in the two per-frame hooks (`refreshToken`, `renderSceneControls`) are warned once per
-  session, then suppressed.
+- Group waves run on the dropping client (closing it mid-move strands unsent members); Ctrl+Z undoes one wave.
+- The incorporeal test is by **feat name** (`INCORPOREAL_FEATS`); a differently named trait needs the GM toggle.
+- Errors in the per-frame hooks (`refreshToken`, `renderSceneControls`) warn once per session.
 
 ## Files
 
@@ -225,8 +227,8 @@ GM client that clicked or called — no relay; the headless GM bot is a GM clien
 goldens, i18n keys and logging; `pathfind-core.test` (A* on synthetic wall maps: corners, doors,
 one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equality) and
 `pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-core.test`
-(the plan's unit acceptance tests on ASCII floors) and `group.test` (the drop and click wraps).
-Fixtures are synthetic, because `test/` is published with the module. One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, then review the diff.
+(the plan's unit acceptance tests on ASCII floors) and `group.test` (the drop and click wraps). Fixtures are
+synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.
 
 **Verify live (as a player):**
 
@@ -238,8 +240,7 @@ Fixtures are synthetic, because `test/` is published with the module. One golden
 2b. Summon an Undead Spirit (Incorporeal Passage) into that fight: one toast, the spirit drags
    through a wall, your character still stops at it. The GM's Token HUD toggle does the same.
 3. GM clicks the GM button: the players' buttons disappear; click again and they come back.
-4. Two tokens overlapping: the player's own is drawn on top and takes the click; for the GM nothing
-   changed.
+4. Two tokens overlapping: the player's own is drawn on top and takes the click; the GM's view is unchanged.
 5. `game.pentaryn.movement.selftest().ok` is true.
 6. Drag movement: the play-test list in `context/plans/pathfinding-2026-11.md` §9 (pathfinding)
    and §12 "Acceptance tests" → Live (groups, click to stop); `status().group.last` shows the last drop.

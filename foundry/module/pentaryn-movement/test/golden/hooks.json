@@ -140,6 +140,10 @@
     "name": "setup"
   },
   {
+    "kind": "on",
+    "name": "moveToken"
+  },
+  {
     "kind": "once",
     "name": "ready"
   }

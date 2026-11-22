@@ -16,7 +16,7 @@ use-doc `context/foundry/movement.md`).
   r1 + r2 (+ 0.25 square across waves) while moving or r1 + r2 at rest. Wave 0 is the drop's own
   update; later waves are timers on this client, one batched update per 150 ms, each dropped for a
   member that moved meanwhile. A plan past 30 ms finishes in timer slices (the drop returns no
-  updates, the same shape is committed later); past 1 s, a throw, or no route for the grabbed token
+  updates, the same shape is committed later); past 300 ms, a throw, or no route for the grabbed token
   means core's own drop. Ghost and the GM's unconstrained tool keep core's straight lines (a rest
   overlap is nudged).
 - **[declared] Click a moving token to stop it.** `Token#_onClickLeft` is wrapped (row
@@ -66,6 +66,28 @@ use-doc `context/foundry/movement.md`).
   - An async plan finishing after `uninstall()` sends nothing.
 - Property tests: `group-props.test` (300 seeded random maps: termination, walls, rest slots,
   no overlap in motion; `firstConflict` against brute force; 17 edge cases).
+- Before shipping (Fable's verdict, 2026-11-21; still 0.4.0, unreleased):
+  - **[declared] Click to stop arms after 400 ms of movement** (`MOTION.armMs`). Earlier, the click is
+    core's own: the habit click after a drop and a double click for the sheet no longer stop the token
+    short. The start is this client's drop (`noteDrop`) or the move's first `moveToken` (new hook,
+    appended to `hooks.json`); a move never seen starting is armed. `stop(ref)` is never held back.
+  - **[declared] The silent planning wait is capped at 300 ms** (`GROUP_LIMITS.totalMs`, was 1 s;
+    `memberMs` 250 → 150, so a route call is capped at 120 ms), then core's own drop.
+  - **No stagger when paths do not conflict**: on open ground every member's delay is 0 and the drop
+    is one batch; waves only where routes meet (a door). Pinned by a seeded test (60 formations, in and
+    out of combat); the planner already behaved so.
+  - **[declared] A GM may stop any move in combat.** A GM's click on a move another user started sends
+    the new query `pentaryn-movement.stopOwn` to that user (400 ms); its client stops the token (and
+    the group it sent). GM sender only, only a move that client started. The kit's queries reach only
+    the active GM, so the handler is registered by hand: `exceptions.json` C30 and C56 for movement.
+  - **[declared] Auto-routes keep out of places a drag should not discover**: never through a secret
+    door (open or shut); never into a region with a `teleportToken` (a pentaryn-portals scene link) or
+    `changeLevel` behaviour unless the leg starts or ends inside it (hidden regions count only for a
+    GM); for a player's preview, never over ground that player has neither explored nor can see.
+    Closed and locked doors block as before (core's collision). Applies to drag routes, group routes
+    (`routeTo` now searches when core's own straight line would cross one) and group rest slots.
+    `pathfind-core.mjs` `segmentsCross`, `avoidRegion`, `MOVE_ON_ENTER`; `pathfind-adapter.mjs`
+    `placesToAvoid`.
 
 ## 0.3.0 — 2026-11-21
 

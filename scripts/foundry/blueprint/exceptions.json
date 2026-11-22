@@ -82,6 +82,24 @@
           "^styles/ties\\.css: #pentaryn-ties-cards$"
         ]
       }
+    },
+    "pentaryn-movement": {
+      "C30": {
+        "reason": "stop.mjs registers the stopOwn query handler without guarded/relayed: both refuse a player receiver (guarded wants a GM receiver, relayed the active GM), and stopOwn runs on the player client that started a move in combat; it checks its GM sender (ctx.user.isGM) and that this client started the move itself",
+        "decision": "Fable's movement 0.4.0 verdict 2026-11-21 (\"Let the GM stop any move in combat. Take the design-rule exception\"), applied by the orchestrated overnight run Joe approved (full auto)",
+        "until": "the kit gains a user-targeted query (any receiver, GM sender) — move stopOwn to a manifest row and delete this row",
+        "match": [
+          "^stop\\.mjs:\\d+ unguarded query handler$"
+        ]
+      },
+      "C56": {
+        "reason": "stop.mjs assigns CONFIG.queries[\"pentaryn-movement.stopOwn\"] by hand: the kit's queryGM reaches only the active GM, and a GM stopping a player's move in combat must ask the client that started it (only that client may stopMovement)",
+        "decision": "Fable's movement 0.4.0 verdict 2026-11-21 (\"Let the GM stop any move in combat. Take the design-rule exception\"), applied by the orchestrated overnight run Joe approved (full auto)",
+        "until": "as C30",
+        "match": [
+          "^stop\\.mjs:\\d+ hand-written CONFIG\\.queries assignment$"
+        ]
+      }
     }
   }
 }

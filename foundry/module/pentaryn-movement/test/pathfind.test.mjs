@@ -7,6 +7,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { movementWorld } from "./fixtures/world.mjs";
+import { segmentsCross } from "../pathfind-core.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -26,7 +27,18 @@ function hit(p, q, a, b) {
 }
 
 const world = { walls: [] };
-const crossing = (o, dpt) => world.walls.map(([a, b]) => hit(o, dpt, a, b)).filter(Boolean);
+// A wall may carry door / ds (core's WALL_DOOR_TYPES / WALL_DOOR_STATES): an open door (ds 1) never collides, as in core.
+const crossing = (o, dpt) => world.walls.filter(w => w.ds !== 1).map(([a, b]) => hit(o, dpt, a, b)).filter(Boolean);
+const door = (a, b, door = 1, ds = 0) => Object.assign([a, b], { door, ds });
+/** The token's Scene as the adapter reads it: walls (door type, segment) and regions. */
+const sceneDoc = {
+  grid: null,
+  get walls() { return world.walls.map(([a, b, ...rest]) => ({ c: [a.x, a.y, b.x, b.y], door: world.walls.find(w => w[0] === a && w[1] === b)?.door ?? 0, ds: 0, rest })); },
+  get regions() { return world.regions ?? []; },
+};
+/** A region as core and the adapter read it: a rectangle, its behaviours, hidden. */
+const region = (id, rect, { type = "teleportToken", hidden = false, disabled = false } = {}) => ({ id, hidden, rect, behaviors: [{ type, disabled }] });
+const inRect = (r, p) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 const center = w => ({ x: w.x + (w.width ?? 1) * S / 2, y: w.y + (w.height ?? 1) * S / 2, elevation: 0 });
 const cell = p => ({ i: Math.floor(p.y / S), j: Math.floor(p.x / S) });
 let coreCalls = 0;
@@ -57,6 +69,7 @@ Token5e.prototype.measureMovementPath = function (wps) {
 Token5e.prototype.createTerrainMovementPath = wps => wps;
 
 const grid = { size: S, distance: 5, type: 1, getOffset: p => cell(p) };
+sceneDoc.grid = grid;
 Object.assign(F.canvas, {
   grid,
   dimensions: { rect: { x: 0, y: 0, width: 1000, height: 1000, contains: (x, y) => x >= 0 && y >= 0 && x <= 1000 && y <= 1000 } },
@@ -68,7 +81,8 @@ F.foundry.documents.TokenDocument ??= { arePositionsEqual: (a, b) => a.x === b.x
 function makeToken({ x = 0, y = 0, size = 1 } = {}) {
   const t = Object.create(Token5e.prototype);
   t.document = {
-    id: "tok0000000000001", movementAction: "walk", parent: { grid, regions: [] },
+    id: "tok0000000000001", movementAction: "walk", parent: sceneDoc,
+    testInsideRegion: (r, data) => inRect(r.rect, center({ ...{ x, y, width: size, height: size }, ...data })),
     _source: { x, y, elevation: 0, width: size, height: size },
     getMovementOrigin: w => center(w),
     getOccupiedGridSpaceOffsets: () => [],
@@ -281,4 +295,143 @@ test("the step cache drops when this client's fog is explored and when the contr
   fog2.dispatchEvent(new Event("explored"));
   assert.equal(api.pathfind.status().memo, 0);
   delete F.canvas.fog;
+});
+
+/* -------------------------------------------- */
+/*  Places an auto-route never goes (0.4.0)     */
+/* -------------------------------------------- */
+
+// A wall down x = 300 the whole height, with openings at y 400–500 (A) and y 800–900 (B).
+const splitWith = (a, b = null) => [
+  [{ x: 300, y: 0 }, { x: 300, y: 400 }], a, [{ x: 300, y: 500 }, { x: 300, y: 800 }],
+  b ?? [{ x: 300, y: 800 }, { x: 300, y: 900 }], [{ x: 300, y: 900 }, { x: 300, y: 1000 }],
+];
+const A = (kind, ds) => door({ x: 300, y: 400 }, { x: 300, y: 500 }, kind, ds);
+const B = (kind, ds) => door({ x: 300, y: 800 }, { x: 300, y: 900 }, kind, ds);
+// Touching counts (a line through a door's end passes that door).
+const crossesSeg = (path, [a, b]) => path.some((w, k) => k > 0 && segmentsCross(center(path[k - 1]), center(w), a, b));
+const reaches = (path, x, y) => path.at(-1).x === x && path.at(-1).y === y;
+
+test("doors: an auto-route uses an open door, never a closed or locked one", async () => {
+  await set("smoothCorners", false);
+  try {
+    world.walls = splitWith(A(1, 1), B(1, 0));
+    F.fire("updateWall");
+    let path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+    assert.ok(reaches(path, 500, 0), "through the open door");
+    assert.ok(crossesSeg(path, world.walls[1]), `the route passes door A: ${JSON.stringify(path.map(w => [w.x, w.y]))}`);
+    for (const ds of [0, 2]) {                                  // closed, locked
+      world.walls = splitWith(A(1, ds), B(1, ds));
+      F.fire("updateWall");
+      path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+      assert.ok(!reaches(path, 500, 0), `ds ${ds}: no route, core's partial path`);
+    }
+  } finally {
+    world.walls = [];
+    F.fire("updateWall");
+    await set("smoothCorners", true);
+  }
+});
+
+test("secret doors: an auto-route never passes one, open or shut; an ordinary open door elsewhere is used", async () => {
+  await set("smoothCorners", false);
+  try {
+    world.walls = splitWith(A(2, 1), B(1, 0));                  // the secret door stands open, B is shut
+    F.fire("updateWall");
+    let path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+    assert.ok(!reaches(path, 500, 0), "no route through an open secret door");
+    world.walls = splitWith(A(2, 1), B(1, 1));                  // B open too: the route takes B
+    F.fire("updateWall");
+    path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+    assert.ok(reaches(path, 500, 0));
+    assert.ok(!crossesSeg(path, world.walls[1]), "never through the secret door");
+    assert.ok(crossesSeg(path, world.walls[3]), "through door B");
+    // routeTo (a group member's route, pathfind.route): even where core's own straight line goes
+    // through the open secret door, the route this module invents goes round by door B.
+    world.walls = splitWith(A(2, 1), B(1, 1));
+    F.fire("updateWall");
+    const t = makeToken({ x: 200, y: 400 });
+    Object.assign(t.document, { object: t, documentName: "Token", uuid: "Scene.sceneA.Token.tok0000000000001" });
+    const r = api.pathfind.route(t.document, { to: { x: 400, y: 400 } });
+    assert.equal(r.ok, true);
+    assert.equal(r.reached, true);
+    assert.equal(r.straight, false, "core's straight line was not taken");
+    assert.ok(!crossesSeg(r.waypoints, world.walls[1]), "not through the secret door");
+  } finally {
+    world.walls = [];
+    F.fire("updateWall");
+    await set("smoothCorners", true);
+  }
+});
+
+test("teleport / change-level regions: an auto-route keeps out unless the leg ends or starts inside; hidden ones count only for a GM", async () => {
+  await set("smoothCorners", false);
+  const zone = { x: 200, y: 400, w: 250, h: 300 };
+  const inZone = path => {
+    for (let k = 1; k < path.length; k++) {
+      const a = center(path[k - 1]), b = center(path[k]);
+      for (let t = 0; t <= 1; t += 0.05) if (inRect(zone, { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })) return true;
+    }
+    return false;
+  };
+  try {
+    world.walls = [[{ x: 300, y: 0 }, { x: 300, y: 400 }]];
+    world.regions = [];
+    F.fire("updateWall");
+    const plain = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+    assert.ok(reaches(plain, 500, 0) && inZone(plain), "without the region the shortest way passes where it will be");
+    for (const type of ["teleportToken", "changeLevel"]) {
+      world.regions = [region("reg0000000000001", zone, { type })];
+      F.fire("updateRegion");
+      const path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+      assert.ok(reaches(path, 500, 0), `${type}: still reached`);
+      assert.ok(!inZone(path), `${type}: the route keeps out of the region`);
+    }
+    // The destination inside it: allowed (the token is going there).
+    const into = drag(makeToken(), [wp(0, 0), wp(300, 500)]).result;
+    assert.ok(reaches(into, 300, 500), "a leg that ends in the region gets there");
+    // Starting inside it: leaving is free.
+    const out = drag(makeToken({ x: 300, y: 500 }), [wp(300, 500), wp(0, 600)]).result;
+    assert.ok(reaches(out, 0, 600));
+    // A disabled behaviour, or a behaviour that moves nobody: no effect.
+    for (const r of [region("reg0000000000002", zone, { disabled: true }), region("reg0000000000003", zone, { type: "executeScript" })]) {
+      world.regions = [r];
+      F.fire("updateRegion");
+      assert.ok(inZone(drag(makeToken(), [wp(0, 0), wp(500, 0)]).result));
+    }
+    // Hidden: a player's route does not bend round it (that would give it away).
+    world.regions = [region("reg0000000000004", zone, { hidden: true })];
+    F.fire("updateRegion");
+    assert.ok(inZone(drag(makeToken(), [wp(0, 0), wp(500, 0)]).result), "a player ignores a hidden region");
+  } finally {
+    world.walls = [];
+    world.regions = [];
+    F.fire("updateRegion");
+    await set("smoothCorners", true);
+  }
+});
+
+test("fog: a player's route never plans through ground that player has not explored and cannot see", async () => {
+  await set("smoothCorners", false);
+  const vis = F.canvas.visibility;
+  let explored = c => c.y < 400;
+  F.canvas.visibility = { tokenVision: true, testVisibility: () => false };
+  F.canvas.fog = { isPointExplored: c => explored(c), addEventListener() {}, removeEventListener() {} };
+  try {
+    world.walls = [[{ x: 300, y: 0 }, { x: 300, y: 400 }]];
+    F.fire("updateWall");
+    let path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+    assert.ok(!reaches(path, 500, 0), "the only way round is unexplored: no route");
+    explored = c => c.y < 600;
+    F.fire("updateWall");
+    path = drag(makeToken(), [wp(0, 0), wp(500, 0)]).result;
+    assert.ok(reaches(path, 500, 0), "explored now: routed");
+    for (const w of path) assert.ok(explored(center(w)), "every corner on explored ground");
+  } finally {
+    F.canvas.visibility = vis;
+    delete F.canvas.fog;
+    world.walls = [];
+    F.fire("updateWall");
+    await set("smoothCorners", true);
+  }
 });

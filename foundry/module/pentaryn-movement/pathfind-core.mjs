@@ -395,3 +395,41 @@ export function reachedCount(path, explicit, same) {
   }
   return n;
 }
+
+/* -------------------------------------------- */
+/*  Places an auto-route never goes (0.4.0)     */
+/* -------------------------------------------- */
+
+/** Core's WALL_DOOR_TYPES.SECRET. */
+export const SECRET_DOOR = 2;
+/**
+ * Region behaviour types that move a token somewhere else when it walks in (a pentaryn-portals scene
+ * link is a teleportToken; core's stairs are changeLevel). An auto-route never enters such a region
+ * unless its leg starts or ends inside it.
+ */
+export const MOVE_ON_ENTER = Object.freeze(["teleportToken", "changeLevel"]);
+
+/**
+ * Does the segment p→q cross (or touch) the segment a→b? Collinear overlaps count as touching.
+ * The secret-door test: an auto-route never passes a secret door, open or shut.
+ */
+export function segmentsCross(p, q, a, b) {
+  const EPS = 1e-9;
+  const d = (u, v, w) => (v.x - u.x) * (w.y - u.y) - (v.y - u.y) * (w.x - u.x);
+  const on = (u, v, w) => Math.min(u.x, v.x) - EPS <= w.x && w.x <= Math.max(u.x, v.x) + EPS
+    && Math.min(u.y, v.y) - EPS <= w.y && w.y <= Math.max(u.y, v.y) + EPS;
+  const d1 = d(a, b, p), d2 = d(a, b, q), d3 = d(p, q, a), d4 = d(p, q, b);
+  if (((d1 > EPS && d2 < -EPS) || (d1 < -EPS && d2 > EPS)) && ((d3 > EPS && d4 < -EPS) || (d3 < -EPS && d4 > EPS))) return true;
+  return (Math.abs(d1) <= EPS && on(a, b, p)) || (Math.abs(d2) <= EPS && on(a, b, q))
+    || (Math.abs(d3) <= EPS && on(p, q, a)) || (Math.abs(d4) <= EPS && on(p, q, b));
+}
+
+/**
+ * Is this region one an auto-route keeps out of? `region`: { hidden, behaviors: [{ type, disabled }] }.
+ * A hidden region counts only for a GM (a player's route bending round an invisible trap would give it
+ * away; walking into one is the same as a straight drag into it).
+ */
+export function avoidRegion(region, { isGM = false } = {}) {
+  if (!region || (region.hidden && !isGM)) return false;
+  return [...(region.behaviors ?? [])].some(b => b && !b.disabled && MOVE_ON_ENTER.includes(b.type));
+}

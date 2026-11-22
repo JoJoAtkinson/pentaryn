@@ -147,10 +147,12 @@ export const MANIFEST = Object.freeze({
       since: "0.4.0",
       sideEffects: ["Token position (displace, out of combat)", "the token's pending movement (stopMovement, in combat)"],
       doc: "Stop a moving token as a click on it would: out of combat it is put where it is drawn; in a started combat "
-        + "the client that started the move stops it at the next square (stopMovement), and another client asks the "
+        + "the client that started the move stops it at the next square (stopMovement). A GM asks that client directly "
+        + "(the pentaryn-movement.stopOwn query: GM sender only), so a GM may stop any move; a player asks the "
         + "active GM through this row's relay, which stops it only when it started the move and the sender owns the "
         + "token (NOT_INITIATOR / NOT_OWNER otherwise). Stopping a member of a group this client sent stops the group "
-        + "and cancels its unsent waves. NOT_MOVING when it is not moving or you cannot control it.",
+        + "and cancels its unsent waves. Never held back by the 400 ms arming a click waits for. NOT_MOVING when it "
+        + "is not moving or you cannot control it.",
     },
     {
       path: "selftest",

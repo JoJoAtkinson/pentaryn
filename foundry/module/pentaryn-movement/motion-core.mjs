@@ -23,6 +23,7 @@ export const MOTION = Object.freeze({
   routePoints: 64,       // points per route at most
   speed: 6,              // squares per second when nothing says otherwise (core's default)
   checkpointEvery: 1,    // in combat, a checkpoint every this many cells
+  armMs: 400,            // ms: a click stops a move only once it has run this long (a habit click right after a drop, or a double click to open the sheet, leaves it alone)
 });
 
 const EPS = 1e-6;
@@ -270,12 +271,15 @@ export function groupMode({ enabled = true, members = 0, gridType = 1, direct = 
  *   displace   out of combat: put it where it is drawn
  *   stop       in combat, this client started the move: stopMovement()
  *   query      in combat, another user started it: ask that client to stop it
+ * `elapsed`: ms since this move started (Infinity when unknown). Under MOTION.armMs the click is
+ * core's own: the stop is for a wild detour, not for the click that follows every drop.
  */
 export function clickStop({ enabled = true, tool = "select", modifiers = false, canControl = false,
-  state = "completed", animating = false, combat = false, initiatorSelf = false } = {}) {
+  state = "completed", animating = false, combat = false, initiatorSelf = false, elapsed = Infinity } = {}) {
   if (!enabled || tool !== "select" || modifiers || !canControl) return null;
   const inMotion = state === "pending" || state === "paused" || animating;
   if (!inMotion) return null;
+  if (!(elapsed >= MOTION.armMs)) return null;
   if (!combat) return "displace";
   return initiatorSelf ? "stop" : "query";
 }

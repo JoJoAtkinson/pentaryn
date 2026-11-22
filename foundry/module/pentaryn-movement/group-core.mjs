@@ -20,8 +20,8 @@ import { MOTION, dist, firstConflict, trajectory, delayed, GROUP_MAX } from "./m
 
 export const GROUP_LIMITS = Object.freeze({
   maxMembers: GROUP_MAX,
-  memberMs: 250,       // one member's routes, all tries
-  totalMs: 1000,       // the whole plan
+  memberMs: 150,       // one member's routes, all tries
+  totalMs: 300,        // the whole plan: past this the drop is core's (a silent wait longer than this reads as lag)
   syncMs: 30,          // what the drop spends synchronously before going async
   rings: 5,            // candidate rings around the anchor
   walkRatio: 2,        // a slot's walk distance ≤ this × its straight distance (no slots through a wall)

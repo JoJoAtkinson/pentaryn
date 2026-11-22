@@ -24,7 +24,7 @@ import { MOTION, cellChain, groupMode, waves } from "./motion-core.mjs";
 import { GROUP_LIMITS, flood, planGroup, runPlan } from "./group-core.mjs";
 import { skipReason } from "./pathfind-core.mjs";
 import { gridSize, inCombat, memberOf, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
-import { fieldFor } from "./pathfind-adapter.mjs";
+import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
@@ -164,10 +164,27 @@ function oraclesFor(members, anchor, { combat, constrain }) {
     return walk.get(`${n.i},${n.j}`) ?? null;
   };
   const restMemo = new Map();
+  // Per member: the places no slot may be (a teleport / change-level region other than the one the
+  // group is dropped into or the member starts in; a player's unexplored ground).
+  const avoidMemo = new Map();
+  const avoidFor = rec => {
+    if (!avoidMemo.has(rec.id)) {
+      let hz = null;
+      try {
+        const origin = feature.exposed.pathfindOrigin?.(rec.token.document) ?? { ...rec.token.document._source };
+        hz = placesToAvoid(rec.token, origin, { ...anchor.dest, width: rec.w, height: rec.h }, { preview: true });
+      } catch { hz = null; }
+      avoidMemo.set(rec.id, hz);
+    }
+    return avoidMemo.get(rec.id);
+  };
   const walkable = (m, c) => {
     const rec = byId.get(m.id) ?? m;
-    const k = `${rec.w}x${rec.h}|${c.x.toFixed(3)},${c.y.toFixed(3)}`;
-    if (!restMemo.has(k)) restMemo.set(k, restWalkable(rec, c, s));
+    const k = `${rec.id}|${rec.w}x${rec.h}|${c.x.toFixed(3)},${c.y.toFixed(3)}`;
+    if (!restMemo.has(k)) {
+      const hz = rec.token ? avoidFor(rec) : null;
+      restMemo.set(k, restWalkable(rec, c, s) && !hz?.at(toTopLeft(c, rec.w, rec.h, s)));
+    }
     return restMemo.get(k);
   };
   const measured = path => {
@@ -362,6 +379,8 @@ function onDrop(grabbed, event, result) {
   // Every drop, whatever its mode, supersedes this client's pending plan or waves for those tokens.
   const seq = ++dropSeq;
   for (const c of contexts) latestDrop.set(c.token.document.id, seq);
+  // Click-to-stop arms MOTION.armMs after the drop (stop.mjs).
+  try { feature.exposed.noteDrop?.(contexts.map(c => c.token.document.id)); } catch (err) { log.debug?.("noteDrop", err); }
   const info = modeFor(grabbed, contexts);
   const t0 = now();
   last = { at: new Date().toISOString(), mode: info.mode, reason: info.reason, combat: info.combat, members: contexts.length,

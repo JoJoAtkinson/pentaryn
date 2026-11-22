@@ -22,7 +22,7 @@ import { LIMITS } from "./pathfind-core.mjs";
 import { MOTION } from "./motion-core.mjs";
 import { MODULE } from "./movement-core.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
-import { fieldFor } from "./pathfind-adapter.mjs";
+import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
 let log = null;
@@ -348,21 +348,28 @@ function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = 
     const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
     return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < c.r;
   }));
+  // A route this module invents (a group member's) never goes through a secret door, a teleport /
+  // change-level region or a player's unexplored ground, even where core's straight line would.
+  const hz = placesToAvoid(token, origin, dest, { preview });
+  const risky = base.result.some((p, k) => k > 0 && (!hz.line(base.result[k - 1], p)
+    || (hz.secret.length && hz.crossesSecret(
+      { x: base.result[k - 1].x + (w * s) / 2, y: base.result[k - 1].y + (h * s) / 2 },
+      { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 }))));
   let path = base.result, legs = [], arcs = 0;
-  if (reached === 1 || crosses) {
+  if (reached === 1 || crosses || risky) {
     const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
-    const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!crosses });
+    const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!(crosses || risky) });
     const cap = Math.min(maxMs, LIMITS.totalMs);
     while (plan.step(Math.min(LIMITS.sliceMs, cap)) === "more" && now() - t0 < cap);
     path = plan.result();
-    if (crosses && path === base.result) path = null;   // no way round: the caller keeps what it had
+    if ((crosses || risky) && path === base.result) path = null;   // no way round: the caller keeps what it had
     legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));
     arcs = last?.arcs ?? 0;
   }
   const cost = path?.length ? token.measureMovementPath(path, { preview }).cost : null;
   return {
     reached: !!path && pf.reachedCount(path, ends, same) === 2,
-    straight: reached === 2 && !crosses, path, cost, legs, arcs, ms: Math.round((now() - t0) * 10) / 10,
+    straight: reached === 2 && !crosses && !risky, path, cost, legs, arcs, ms: Math.round((now() - t0) * 10) / 10,
   };
 }
 

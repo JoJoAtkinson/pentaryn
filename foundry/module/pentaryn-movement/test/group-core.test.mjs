@@ -411,3 +411,68 @@ test("click to stop: the decision table", () => {
   assert.equal(clickStop({ ...moving, canControl: false }), null);
   assert.equal(clickStop({ ...moving, enabled: false }), null);
 });
+
+test("click to stop is armed only after MOTION.armMs of movement (a habit click is core's)", () => {
+  const moving = { canControl: true, state: "completed", animating: true };
+  assert.equal(MOTION.armMs, 400);
+  assert.equal(clickStop({ ...moving, elapsed: 0 }), null);
+  assert.equal(clickStop({ ...moving, elapsed: 399 }), null);
+  assert.equal(clickStop({ ...moving, elapsed: 400 }), "displace");
+  assert.equal(clickStop({ ...moving, elapsed: Infinity }), "displace", "a move this client never saw start is armed");
+  assert.equal(clickStop({ ...moving, elapsed: 100, combat: true, initiatorSelf: true }), null);
+  assert.equal(clickStop({ ...moving, elapsed: Number.NaN }), null);
+});
+
+test("the silent planning wait is capped at 300 ms (then core's drop)", () => {
+  assert.equal(GROUP_LIMITS.totalMs, 300);
+  assert.ok(GROUP_LIMITS.memberMs < GROUP_LIMITS.totalMs);
+  assert.ok(GROUP_LIMITS.syncMs < GROUP_LIMITS.totalMs);
+});
+
+const OPEN = `
+##############################
+#............................#
+#............................#
+#............................#
+#............................#
+#............................#
+#............................#
+#............................#
+#............................#
+#............................#
+#............................#
+#............................#
+##############################`;
+
+test("open ground: everyone steps off together (no stagger when paths do not conflict), formation kept", () => {
+  // Seeded formations of 2–8 Medium tokens on open floor, dragged in any direction, in and out of combat.
+  let seed = 7;
+  const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  for (let run = 0; run < 60; run++) {
+    const n = 2 + Math.floor(rand() * 7);
+    const cells = new Set();
+    const ms = [];
+    while (ms.length < n) {
+      const i = 2 + Math.floor(rand() * 3), j = 2 + Math.floor(rand() * 4);
+      if (cells.has(`${i},${j}`)) continue;
+      cells.add(`${i},${j}`);
+      ms.push({ i, j });
+    }
+    const d = { x: Math.floor(rand() * 12) + 6, y: Math.floor(rand() * 5) - 1 };
+    const members = ms.map((c, k) => member(`m${k}`, { x: c.j + 0.5, y: c.i + 0.5 }, d));
+    const combat = run % 3 === 0;
+    const { res } = plan(OPEN, members, "m0", { combat });
+    assert.equal(res.result, "plan", `run ${run}`);
+    assert.equal(res.formation, true, `run ${run}: formation kept`);
+    for (const e of Object.values(res.members)) assert.equal(e.delay, 0, `run ${run}: ${e.id} set off with the rest (delay ${e.delay})`);
+    assert.deepEqual(waves(Object.fromEntries(Object.values(res.members).map(e => [e.id, e.delay]))).length, 1, "one batch");
+  }
+});
+
+test("a chokepoint still files them through in waves", () => {
+  const d = { x: 0, y: 4 };
+  const ms = [member("a", { x: 7.5, y: 2.5 }, d), member("b", { x: 6.5, y: 2.5 }, d), member("c", { x: 8.5, y: 2.5 }, d)];
+  const { res } = plan(DOOR, ms, "a");
+  assert.equal(res.result, "plan");
+  assert.ok(Object.values(res.members).some(e => e.delay > 0), "someone waits at the door");
+});
