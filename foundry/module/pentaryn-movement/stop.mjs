@@ -408,7 +408,8 @@ function onDoorDown(event) {
 let doorLayer = null;
 function listenDoors() {
   const c = globalThis.canvas?.stage ?? null;
-  if (!c || c === doorLayer || typeof c.addEventListener !== "function") return;
+  if (!c || typeof c.addEventListener !== "function") return;
+  // The stage outlives a scene, but a canvas draw clears its listeners: add again on every canvasReady.
   unlistenDoors();
   c.addEventListener("pointerdown", onDoorDown, { capture: true });
   doorLayer = c;
