@@ -1,5 +1,29 @@
 # Changelog — pentaryn-movement
 
+## 0.4.4 — 2026-11-22
+
+Live play-test round 4 (a Mac browser through the tunnel, the BOSS harness).
+
+- **[declared] A door shut while a group walks never stacks the waiting members (R4-1, blocker).** 0.4.2's
+  wave-time door check sent every member still waiting before the door to the same last whole square, and
+  four of six heroes ended on one cell. The cut now takes the nearest whole cell before the wall, walking
+  back along the route, that no other token rests on (its source) and no earlier cut of the drop claimed;
+  with none, the member stays where it stands.
+- **[declared] Next Turn mid group drag stops the whole group (R4-3).** A turn start clears every
+  combatant's movement history and core stops a token whose history is cleared; only the members that had
+  walked a square stopped, the others and the unsent waves went on. A history clear on a member of a group
+  this client sent now stops the group as a click does. New hook `updateToken: a turn change stops the
+  whole group`; `status().group.stopped`. The squares walked before the turn change are cleared with the
+  turn, as core does for every token.
+- **[declared] No client throws core's "reading 'chain'" when it sees a click-stop (R4-4).** Core's own
+  `stopAnimation({ reset: false })` for the displace left each tween's queued links; the observing client's
+  terminated tween resumed one with no context. `Token#stopAnimation` is wrapped on every client to empty
+  the chain first (row `movement-stop-animation-defuse`, marker `__pentarynMovementDefuse`; seven patches).
+- **[declared] A click-stop in a doorway never rests the token inside the wall beside it (R4-5).** When the
+  drawn spot's body crosses a wall, the displace uses the nearest clear whole cell reachable from it.
+- **[declared] `status().group.last` after a throw reads mode / result `core`, reason `throw`; a group
+  dropped where it stands plans nothing (reason `still`) (R4-11).**
+
 ## 0.4.3 — 2026-11-22
 
 Live play-test round 3 (a Mac browser through the tunnel, the BOSS harness).

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **0.8.4 (2026-11-22). Live play-test round 4.**
+  - **[declared] Wall panels keep their turn (R4-10).** Core starts each shape of a multi-panel placement at
+    its own data's rotation, so panels turned one by one came out as a comb. Each new panel now starts, on
+    its first move, at the rotation the last placed panel had (a skipped panel is not carried), and the
+    counter reads "Panel n of N: mouse wheel rotates, Esc to finish, right-click skips a panel".
 - **0.8.3 (2026-11-22). Live play-test round 2.**
   - **[declared] Red "already exists" / "does not exist" toasts at every Wall of Stone cast, break and
     repair (R2-2).** The GM account was open in two sessions; `activeGM.isSelf` is true on both, so both
