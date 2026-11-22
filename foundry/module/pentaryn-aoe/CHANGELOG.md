@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **0.8.7 (2026-11-22). Live play-test round 6.**
+  - **[declared] The `canvasReady(argon)` once-handler no longer stops the chain.** It returned
+    `guardArgonBind()`'s `false` while Argon was not there yet, the same `Hooks.call("canvasReady")` stop as
+    0.8.6 (R6-2 audit). It has a block body now; the repo test requires one on every handler of a core hook
+    fired with `Hooks.call`.
+  - **[declared] `wallsFor().walls[]` is numbered as cast, like `broken` (R6-14).** After a break the region's
+    shapes are renumbered, and the panels after the broken one were listed with the wrong panel (`broken
+    ['1:0']` beside "panel 1" that was really panel 2). `panel` / `section` are as cast now, and the new
+    `shape` is the shape index now (what `breakWallSection` takes). New pure `castSectionOf`.
 - **0.8.6 (2026-11-22). canvasReady chain.**
   - **[declared] Two canvasReady handlers no longer stop every later one.** Foundry fires canvasReady with
     `Hooks.call`, which stops at the first handler returning `false`. The area sweep (`isLeadGM() && sweep()`)

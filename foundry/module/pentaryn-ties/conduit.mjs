@@ -60,7 +60,7 @@ function registerSockets() {
  */
 export function install(reg) {
   reg.once("ready", registerSockets, { guard: false, label: "conduit: sockets" });
-  reg.on("canvasReady", () => endLookingRun("scene change"), { label: "tempo: scene change" });
+  reg.on("canvasReady", () => { endLookingRun("scene change"); }, { label: "tempo: scene change" });
   reg.on("combatStart", () => endLookingRun("combat started"), { label: "tempo: combat started" });
   reg.on("deleteCombat", combat => {
     endLookingRun("combat ended");

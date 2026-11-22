@@ -118,7 +118,7 @@ export function install(reg, ctx) {
     schedule();
   }, { label: "canvasPan: remember" });
 
-  reg.on("canvasReady", () => schedule(0), { label: "canvasReady: remember" });
+  reg.on("canvasReady", () => { schedule(0); }, { label: "canvasReady: remember" });
 
   reg.on("updateScene", (scene, changes) => {
     if ("active" in (changes ?? {})) schedule();

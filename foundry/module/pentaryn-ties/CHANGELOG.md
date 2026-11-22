@@ -3,6 +3,13 @@
 Newest first. The version is `module.json`'s; entries before the 2026-10 migration were collected from
 the old README's version-tagged sections.
 
+## 0.19.6 — 2026-11-22 (playtest round 6: canvasReady handlers)
+
+- [declared] The three canvasReady handlers (overlay wires, tempo scene change, look menu) have block
+  bodies, so none can ever return a value to core's `Hooks.call("canvasReady")`, which stops at the
+  first `false` (R6-2: two aoe handlers did). No behaviour change; enforced by
+  `scripts/tests/test_hook_bodies_never_return_false.py`.
+
 ## 0.19.5 — 2026-11-21 (playtest round 3: a dormant statue's Look window)
 
 - [declared] **Fixed** the Look window naming a dormant creature. A token disguised by

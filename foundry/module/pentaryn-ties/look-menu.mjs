@@ -133,7 +133,7 @@ export function wireCanvas() {
  * logs `pentaryn-ties | look menu: <hook>`.
  */
 export function install(reg) {
-  reg.on("canvasReady", () => wireCanvas(), { label: "look menu: canvas double-click" });
+  reg.on("canvasReady", () => { wireCanvas(); }, { label: "look menu: canvas double-click" });
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("keydown", onKeyDown);
   reg.on("canvasPan", () => closeLookMenu(), { label: "look menu: canvasPan" });

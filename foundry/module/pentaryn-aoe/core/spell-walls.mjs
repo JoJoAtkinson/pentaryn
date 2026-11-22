@@ -347,6 +347,34 @@ export function brokenLineSections(original, current, secPx) {
 }
 
 /**
+ * B2: a wall's section as numbered against the panels the wall was cast with (live R6-14: after a break
+ * the region's shapes are renumbered, a split or removed panel shifts every later one, and wallsFor listed
+ * the walls by their current shape index while `broken` uses the cast numbering). `shape`/`section` are
+ * the wall's flags (its current shape index and section on it), `c` its line. The cast panel comes from
+ * the piece-to-panel assignment, the cast section from where the wall's midpoint lies along that panel.
+ * The wall's own numbering when there is no original (never broken) or the shapes cannot be read so.
+ * @returns {{ panel: number, section: number }}
+ */
+export function castSectionOf(original, current, secPx, shape, section, c) {
+  const own = { panel: shape, section };
+  const orig = [...(original ?? [])], cur = [...(current ?? [])];
+  if (!orig.length || !Array.isArray(c) || c.length < 4) return own;
+  const owner = piecesOf(orig, cur);
+  const panel = owner ? owner[shape] : -1;
+  if (!(panel >= 0)) return own;
+  const o = orig[panel];
+  if (o?.type !== "line") return { panel, section };
+  const segs = panelSections(o, secPx);
+  if (!segs.length) return own;
+  const m = wallMidpoint(c);
+  const a = (Number(o.rotation) || 0) * Math.PI / 180;
+  const along = (m.x - (Number(o.x) || 0)) * Math.cos(a) + (m.y - (Number(o.y) || 0)) * Math.sin(a);
+  const step = (Number(o.length) || 0) / segs.length;
+  const k = step > 0 ? Math.min(Math.max(Math.floor(along / step), 0), segs.length - 1) : section;
+  return { panel, section: k };
+}
+
+/**
  * B2: the shapes a broken wall had before its first break, moved by however far the wall has been
  * dragged since (`at` = the handle's position then, `now` = its position now; no handle → as stored).
  * @param {{ shapes: object[], at?: {x: number, y: number}|null }} original  flags.pentaryn-aoe.wallOriginal

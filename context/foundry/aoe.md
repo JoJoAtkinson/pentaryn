@@ -232,7 +232,7 @@ game.pentaryn.aoe.areasFor(activityUuid, scene)
 game.pentaryn.aoe.removeArea(regionIds, scene)
 game.pentaryn.aoe.resolve(messageId)    // (re)build the tray on a damage message
 game.pentaryn.aoe.applyRows(messageId[, rowIds])
-game.pentaryn.aoe.wallsFor(regionId)     // a wall spell's walls by panel and section, what is broken
+game.pentaryn.aoe.wallsFor(regionId)     // a wall spell's walls by panel and section as cast (shape: its index now), what is broken
 game.pentaryn.aoe.repairWall(regionId)   // GM: put a broken wall back
 ```
 

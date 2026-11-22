@@ -142,9 +142,9 @@ export const FEATURE_ROWS = Object.freeze({
   ],
   spellWalls: [
     {
-      path: "wallsFor", params: [REGION], returns: "{ regionId, spell, blocks: { move, sight, areas }, walls: { id, panel, section, c }[], broken: string[], repairable }|null",
+      path: "wallsFor", params: [REGION], returns: "{ regionId, spell, blocks: { move, sight, areas }, walls: { id, panel, section, shape, c }[], broken: string[], repairable }|null",
       gm: false, writes: false, since: "0.8.0", nullWhen: "no such region, or it is not a wall spell that raises walls (Blade Barrier, Wind Wall, any other area)",
-      doc: "B2: a wall spell's region — which spell, what its walls block, its Wall documents by panel and 10-ft section, the round-wall sections knocked out, and whether repairWall has anything to put back.",
+      doc: "B2: a wall spell's region — which spell, what its walls block, its Wall documents by panel and 10-ft section numbered as cast (as `broken` is; `shape`: the region's shape index now, what breakWallSection takes), the round-wall sections knocked out, and whether repairWall has anything to put back.",
     },
     {
       path: "breakWallSection", params: [REGION, p("panel", "number", { doc: "the region's shape index (a placed panel)" }), p("section", "number", { doc: "the 10-ft section along that panel (a round wall: the chord), from 0" })],

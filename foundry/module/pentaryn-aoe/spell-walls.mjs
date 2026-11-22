@@ -34,7 +34,7 @@
  * with concentration, as its region does).
  */
 
-import { MODULE, aoeFlags, alreadyExists, breakSections, brokenLineSections, diffWalls, doesNotExist, isClearAll, isTemplateRegion, restoreShapes, sectionPixels, wallMidpoint, wallPlan, wallStanding } from "./core.mjs";
+import { MODULE, aoeFlags, alreadyExists, breakSections, brokenLineSections, castSectionOf, diffWalls, doesNotExist, isClearAll, isTemplateRegion, restoreShapes, sectionPixels, wallMidpoint, wallPlan, wallStanding } from "./core.mjs";
 import { handleFor, shapesOf, spellWallsOf, wallKindOf } from "./scene-adapter.mjs";
 import { onSettingChange, setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -275,10 +275,19 @@ export function wallsFor(ref) {
   const kind = region ? wallKindOf(region) : null;
   if (!kind) return null;
   const flags = aoeFlags(region);
+  // Numbered as cast, like `broken` (live R6-14: a break renumbers the region's shapes); `shape` is the index now.
+  const grid = region.parent?.grid;
+  const secPx = sectionPixels(grid?.size, grid?.distance);
+  const original = flags.wallOriginal ? restoreShapes(flags.wallOriginal, handleAt(region)) : null;
+  const current = original ? shapesOf(region) : null;
   return {
     regionId: region.id, spell: kind.id,
     blocks: { move: kind.move > 0, sight: kind.sight > 0, areas: kind.move > 0 && (kind.sight > 0 || kind.clipsAreas) },
-    walls: spellWallsOf(region.parent, region.id).map(w => ({ id: w.id, panel: w.flags[MODULE].panel, section: w.flags[MODULE].section, c: [...(w._source?.c ?? w.c)] })),
+    walls: spellWallsOf(region.parent, region.id).map(w => {
+      const f = w.flags[MODULE], c = [...(w._source?.c ?? w.c)];
+      const cast = original ? castSectionOf(original, current, secPx, f.panel, f.section, c) : { panel: f.panel, section: f.section };
+      return { id: w.id, panel: cast.panel, section: cast.section, shape: f.panel, c };
+    }),
     broken: brokenOf(region, flags), repairable: !!flags.wallOriginal || !!(flags.wallBroken ?? []).length,
   };
 }

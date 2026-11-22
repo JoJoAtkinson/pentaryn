@@ -1,5 +1,12 @@
 # Changelog — Pentaryn Resume (`pentaryn-resume`)
 
+## 0.2.1 — 2026-11-22
+
+- [declared] The canvasReady handler has a block body, so it can never return a value to core's
+  `Hooks.call("canvasReady")`, which stops at the first `false` (live play-test round 6, R6-2: two aoe
+  handlers did, and every later canvasReady handler was skipped). No behaviour change; the repo test
+  `scripts/tests/test_hook_bodies_never_return_false.py` now requires a block body on every such hook.
+
 ## 0.2.0 — 2026-10-17
 
 - Resume owns "which scene at login" for a pentaryn-pins pinned player (pins 0.2.0 removed its

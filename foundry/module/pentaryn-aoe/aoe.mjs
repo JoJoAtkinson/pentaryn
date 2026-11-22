@@ -135,7 +135,7 @@ function onReady({ hot = false } = {}) {
   api = ctx.api;
   if (hot) return;
   // D-A4: the late-Argon fallback goes through the registry too, so uninstall() removes it.
-  setTimeout(() => { if (!guardArgonBind()) reg.once("canvasReady", () => guardArgonBind(), { label: "canvasReady(argon)" }); }, 0);
+  setTimeout(() => { if (!guardArgonBind()) reg.once("canvasReady", () => { guardArgonBind(); }, { label: "canvasReady(argon)" }); }, 0);
   migrateSettings().catch(err => log.error("settings migration", err));
   areas.readyAreas().catch(err => log.error("ready", err));
 }

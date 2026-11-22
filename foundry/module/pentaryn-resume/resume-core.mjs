@@ -9,7 +9,7 @@
 export const MODULE = "pentaryn-resume";
 export const SHORT = "resume";
 export const NS = "resume";
-export const VERSION = "0.2.0";                       // === module.json version (core.test pins it)
+export const VERSION = "0.2.1";                       // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-resume/api@1";   // bump the major on a published-shape change
 export const I18N = "PENTARYN_RESUME";
 export const CSS = "pre-";

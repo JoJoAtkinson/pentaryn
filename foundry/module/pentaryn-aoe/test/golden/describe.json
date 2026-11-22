@@ -547,14 +547,14 @@
           "doc": "a wall spell's template region; an id is looked up on the viewed scene, then every scene"
         }
       ],
-      "returns": "{ regionId, spell, blocks: { move, sight, areas }, walls: { id, panel, section, c }[], broken: string[], repairable }|null",
+      "returns": "{ regionId, spell, blocks: { move, sight, areas }, walls: { id, panel, section, shape, c }[], broken: string[], repairable }|null",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "nullWhen": "no such region, or it is not a wall spell that raises walls (Blade Barrier, Wind Wall, any other area)",
       "since": "0.8.0",
-      "doc": "B2: a wall spell's region — which spell, what its walls block, its Wall documents by panel and 10-ft section, the round-wall sections knocked out, and whether repairWall has anything to put back."
+      "doc": "B2: a wall spell's region — which spell, what its walls block, its Wall documents by panel and 10-ft section numbered as cast (as `broken` is; `shape`: the region's shape index now, what breakWallSection takes), the round-wall sections knocked out, and whether repairWall has anything to put back."
     },
     {
       "path": "breakWallSection",

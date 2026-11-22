@@ -318,6 +318,8 @@ test("B2: breaking a section (GM) cuts the region's shape, its walls follow, a t
   assert.deepEqual(SW.wallsFor(r.id)?.walls.length, 2);
   assert.equal(SW.wallsFor(r.id)?.repairable, true);
   assert.deepEqual(SW.wallsFor(r.id)?.broken, ["1:0"], "the knocked-out section is listed (live R1 D-6), against the panels as cast");
+  assert.deepEqual(SW.wallsFor(r.id)?.walls.map(w => [w.c[0], w.panel, w.section]).sort((a, b) => a[0] - b[0]),
+    [[1000, 0, 0], [1400, 2, 0]], "walls numbered as cast, as broken is (live R6-14: the 1400 panel read as panel 1)");
 
   await SW.breakWallSection(r, 0, 0);
   await flush();
@@ -597,4 +599,23 @@ test("R2-2: two sessions of the active GM's account — only the lead writes spe
     SS.stop();
     game.socket = saved;
   }
+});
+
+test("B2 (live R6-14): castSectionOf numbers a wall as cast after a break renumbered the shapes", async () => {
+  const { castSectionOf, breakSection, wallPlan, brokenLineSections } = await import("../core.mjs");
+  const kind = { id: "wall-of-stone", move: 20, sight: 20, light: 20, sound: 20 };
+  const four = [0, 1, 2, 3].map(i => ({ type: "line", x: 1900 + i * 200, y: 1100, length: 200, rotation: 0, width: 10 }));
+  const cut = breakSection(four, 1, 0, 200).shapes;
+  assert.equal(cut.length, 3, "panel 1 is gone: the later panels shift down");
+  const walls = wallPlan({ regionId: "r", shapes: cut, kind, gridSize: 100, gridDistance: 5 });
+  const cast = walls.map(w => castSectionOf(four, cut, 200, w.flags["pentaryn-aoe"].panel, w.flags["pentaryn-aoe"].section, w.c));
+  assert.deepEqual(cast.map(k => `${k.panel}:${k.section}`), ["0:0", "2:0", "3:0"]);
+  assert.deepEqual(brokenLineSections(four, cut, 200), ["1:0"], "the broken key uses the same numbering");
+  // A long panel split in the middle: the second piece's section 0 is the cast section 2.
+  const long = [{ type: "line", x: 0, y: 0, length: 600, rotation: 0, width: 10 }];
+  const split = breakSection(long, 0, 1, 200).shapes;
+  const w2 = wallPlan({ regionId: "r", shapes: split, kind, gridSize: 100, gridDistance: 5 });
+  assert.deepEqual(w2.map(w => castSectionOf(long, split, 200, w.flags["pentaryn-aoe"].panel, w.flags["pentaryn-aoe"].section, w.c))
+    .map(k => `${k.panel}:${k.section}`), ["0:0", "0:2"]);
+  assert.deepEqual(castSectionOf(null, null, 200, 1, 0, [0, 0, 1, 1]), { panel: 1, section: 0 }, "never broken: its own numbering");
 });

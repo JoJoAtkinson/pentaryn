@@ -461,7 +461,7 @@ export function install(reg) {
   }, { label: "overlay: canvasTearDown" });
 
   // a pinned card that travelled here from another scene needs its leash drawn again
-  reg.on("canvasReady", () => drawWires(), { label: "overlay: canvasReady" });
+  reg.on("canvasReady", () => { drawWires(); }, { label: "overlay: canvasReady" });
 
   // transient cards ride the canvas, and every wire is anchored to it
   reg.on("canvasPan", () => {
