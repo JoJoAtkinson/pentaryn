@@ -34,7 +34,7 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   when no caster token is found, never an actor name — and gives a faint dim light of half a
   square, so it and the area's outline show in darkness to anyone who can see that spot. Handles
   are never combatants and never stay targeted. The spell card gets an eraser icon after *Place Template*: **Remove all templates** of
-  that spell on the viewed scene. When concentration ends, that spell's areas go on every scene.
+  that spell on the viewed scene. When concentration ends, that spell's areas go on every scene. The other way round for Wall of Stone (0.8.9): deleting its area by hand (its handle, Remove, the Regions layer) ends its caster's concentration, with a chat line saying so.
 - **Part B — saves off the area** (`resolve.mjs`, `tray.mjs`). A damage roll from a save activity
   makes the active GM's client list the creatures inside the area (or the roller's targets), roll
   the monsters' saves (`npcSaveRollMode`), post one request card for the players, and show a

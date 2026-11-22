@@ -198,7 +198,8 @@
       "Broken": "{spell}: a section is broken. Right-click any section still standing to repair the whole wall.",
       "Destroyed": "{spell}: the last section is broken, the wall is gone.",
       "Repaired": "{spell}: the wall is whole again.",
-      "NothingToRepair": "{spell} has no broken section."
+      "NothingToRepair": "{spell} has no broken section.",
+      "ConcentrationEnds": "{actor}'s concentration on {spell} ends: its wall was taken away."
     }
   }
 }

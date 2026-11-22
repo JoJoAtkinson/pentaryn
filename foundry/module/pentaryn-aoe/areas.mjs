@@ -22,7 +22,7 @@
  */
 
 import { MODULE, aoeFlags, centreOf, handleTopLeft, wallHandleCentre, isTemplateRegion, attachedToOther, handleVertical, stillListing, isHandle, alreadyExists, doesNotExist } from "./core.mjs";
-import { handleActor, handleFor, removeArea, spellAreas, wallKindOf } from "./scene-adapter.mjs";
+import { handleActor, handleFor, regionItem, removeArea, spellAreas, wallKindOf } from "./scene-adapter.mjs";
 import { activityOf } from "./messages-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -467,6 +467,8 @@ export function install(reg, ctx) {
   // repeats it shortly after in case that client couldn't.
   reg.on("deleteRegion", reg.guardSwallowAsync("deleteRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
+    // A Wall of Stone taken away by hand ends its caster's concentration (Joe's decision 5, 2026-11-22).
+    if (isLeadGM()) await endWallConcentration(region);
     if (userId === game.user.id && isLeadSession()) await deleteHandlesOf(region);
     else if (isLeadGM()) {
       // -9: the handle is often gone already (the deleting client got there); deleteHandlesOf
@@ -529,6 +531,32 @@ function concentrationItemUuid(effect) {
     if (doc?.uuid) return doc.uuid;
   }
   return null;
+}
+
+/** Wall spells whose area, deleted by hand (its handle, the card's Remove, the Regions layer), ends concentration on them. */
+const ENDS_CONCENTRATION = new Set(["wall-of-stone"]);
+
+/**
+ * The active GM, a wall spell's region deleted (decision 5): its caster's concentration on that spell ends,
+ * with a chat line saying so. When concentration ended first (dnd5e's own end, our concentration cleanup)
+ * there is no effect left and nothing happens. Returns true when it ended one.
+ */
+async function endWallConcentration(region) {
+  const kind = wallKindOf(region);
+  if (!kind || !ENDS_CONCENTRATION.has(kind.id)) return false;
+  const item = regionItem(region);
+  const actor = item?.actor ?? item?.parent ?? null;
+  if (!actor?.effects) return false;
+  const status = CONFIG.specialStatusEffects?.CONCENTRATING ?? "concentrating";
+  const effect = actor.effects.find(e => e.statuses?.has?.(status) && concentrationItemUuid(e) === item.uuid);
+  if (!effect) return false;
+  try { await effect.delete(); }
+  catch (err) { if (doesNotExist(err)) return false; throw err; }
+  await ChatMessage.implementation.create({
+    content: `<p>${foundry.utils.escapeHTML(_loc("PENTARYN_AOE.Walls.ConcentrationEnds", { actor: actor.name ?? "", spell: item.name ?? "" }))}</p>`,
+    speaker: ChatMessage.getSpeaker({ actor }),
+  });
+  return true;
 }
 
 /** Startup work for the active GM: the actor, then a sweep of the viewed scene (install() wires later scenes). */

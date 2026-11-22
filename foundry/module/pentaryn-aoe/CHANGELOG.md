@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **0.8.9 (2026-11-22). Joe's decision 5.**
+  - **[declared] Deleting a Wall of Stone's area by hand ends its caster's concentration**, with a chat line
+    saying so (the handle, the card's Remove, the Regions layer). When concentration ended first (dnd5e's own
+    end, the concentration clean-up) nothing more happens. Only Wall of Stone; the active GM acts.
 - **0.8.8 (2026-11-22). Live play-test round 7.**
   - **[declared] The break toast says where to repair (R7-14).** A broken section leaves no disc, so a
     right-click at the gap is the canvas's own (the GM's pins menu). The toast now says to right-click any

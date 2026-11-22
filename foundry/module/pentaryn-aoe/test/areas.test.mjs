@@ -426,6 +426,38 @@ test("deleteActiveEffect: not concentration, or concentrationCleanup off → not
   assert.deepEqual(ops("deleteEmbedded"), []);
 });
 
+/* ── decision 5: a Wall of Stone deleted by hand ends its caster's concentration ─────────────── */
+
+test("decision 5: deleting a Wall of Stone area by hand ends its caster's concentration with a chat line; other spells, or no concentration left, do nothing", async () => {
+  const mage = W.actor({ id: "mage", name: "Mage" });
+  const stone = W.item({ name: "Wall of Stone", system: { identifier: "wall-of-stone", duration: { units: "minute" } } }, mage);
+  const STONE = stone.uuid;
+  const s = W.scene({ id: "StoneScene000001" });
+  const conc = W.effect(mage, { statuses: ["concentrating"], origin: STONE });
+  const other = W.effect(mage, { statuses: ["concentrating"], origin: ITEM });
+  const r = W.region(s, { flags: { dnd5e: { item: STONE, activity: `${STONE}.Activity.act0000000stone1` } }, ownership: { default: 3 } });
+  reset();
+  F.fire("deleteRegion", r, {}, PLAYER_ID);
+  await flush();
+  assert.deepEqual(ops("delete").map(c => c.uuid), [conc.uuid], "only the Wall of Stone's concentration ends");
+  const chat = ops("create").filter(c => c.documentName === "ChatMessage");
+  assert.equal(chat.length, 1, "one chat line");
+  assert.match(chat[0].data.content, /ConcentrationEnds|Mage/);
+  // Concentration already gone (it ended first, and its cleanup deleted the region): nothing more.
+  mage.effects.delete(conc.id);
+  reset();
+  F.fire("deleteRegion", r, {}, GM_ID);
+  await flush();
+  assert.deepEqual(ops("delete"), []);
+  // Another spell's area (Fireball): concentration stays.
+  const fb = W.region(s, template({ id: "regionFireNoConc" }));
+  reset();
+  F.fire("deleteRegion", fb, {}, GM_ID);
+  await flush();
+  assert.ok(!ops("delete").some(c => c.uuid === other.uuid));
+  assert.ok(stone);
+});
+
 /* ── sweep, the handle actor, ready ─────────────────────────────────────────────────────────── */
 
 test("sweep: orphans deleted, old handles size-locked, ownership fixed, missing handles made (counts)", async () => {
