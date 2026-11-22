@@ -1,5 +1,32 @@
 # Changelog — pentaryn-movement
 
+## 0.4.1 — 2026-11-22
+
+Live play-test round 1 (BOSS harness and a Mac browser through the tunnel).
+
+- **[declared] A click-stop never leaves a token off its server position (D-4).** A terminated
+  movement tween that still ticked once resumed a queued link with no context: core threw
+  `TypeError: Cannot read properties of undefined (reading 'chain')` after writing the old tween values
+  onto the document, and the player's client drew the token 60–75 px from where the server had it.
+  The displace now empties each animation context's queued links (resolving them) before it stops the
+  tween, and once its write is in (and again 250 ms later) resets a drawn position left off the
+  source when the token is at rest.
+- **[declared] A click core's mouse manager dropped still stops the token (D-2).** A pointerdown on the
+  board that the `_onClickLeft` wrap did not see (the token's MouseInteractionManager was not in its
+  hover state, or PIXI hit-tested a transform a frame old) is matched against the circles where moving
+  tokens are drawn; the nearest one the click table stops is stopped and selected. New hook
+  `canvasReady: board pointerdown (click to stop, fallback)`.
+- **[declared] A group drop left to core never leaves two members on one spot (D-1).** Past the 300 ms
+  budget (or no route for the grabbed token, a planning throw, and the core reasons tooMany, waypoints,
+  pathfind:*, ghost or unconstrained in combat), each member's own path is cut at its furthest point
+  clear of the members placed before it (`group-core` `restOnPaths`): the grabbed token first, keeping
+  its drop point; touching is fine; in combat only on a cell centre or a waypoint.
+- **[declared] A started encounter counts as a fight even when it is not the active one (D-9).** Core
+  records movement for a combatant of any started combat; the ghost policy, the toolbar and
+  `status().combatOnScene` now agree with it.
+- **A rounded route never carries the same waypoint twice (D-10).** Two corners one square apart (into
+  and out of a door) shared their tangent point.
+
 ## 0.4.0 — 2026-11-21
 
 Group movement and click to stop (plan `context/plans/pathfinding-2026-11.md` §12, deviations §13;

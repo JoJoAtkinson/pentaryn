@@ -1,7 +1,7 @@
 ---
 title: Drag movement — pathfinding, group drags, click to stop
 status: active
-last_modified: 2026-11-21
+last_modified: 2026-11-22
 tags: [foundry, module, pentaryn-movement, movement, pathfinding]
 ---
 
@@ -33,9 +33,9 @@ There is nothing to learn: drag, and it works out the rest.
 
 - **Read what the last drop did:** `game.pentaryn.movement.status().group.last` — `mode` (`plan` / `straight` / `core`), `reason` (why it went to core: `single`, `off`, `tooMany` (more than 12), `grid`, `direct`, `planned`, `waypoints` (Ctrl-click waypoints in a group drag), `pathfind:<why>`, `budget`, `anchorNoRoute`, `throw`), `waves`, `relaxed` (members allowed to brush while moving), `async`. `status().group.fallbacks` keeps the last few core fallbacks.
 - **Dry run a group** from a browser console (the headless GM has no canvas): `game.pentaryn.movement.planGroup(["Talo", "Caven"], { x: 1200, y: 800 })` — the first is the grabbed one, `{ x, y }` its top-left drop point. Each member's `slot`, `delay` (ms) and `level` (0 a delay, 1 a re-route, 2 waited until the others stopped, 3 relaxed, `core` no route: it moves as core would).
-- **"It paused, then they all moved":** a big group's plan did not finish in 30 ms, so the drop returned nothing and the moves went out when the plan was ready (≤ 300 ms; past that, core's own drop: followers then stop at the first wall, as core does).
+- **"It paused, then they all moved":** a big group's plan did not finish in 30 ms, so the drop returned nothing and the moves went out when the plan was ready (≤ 300 ms; past that, core's own drop: followers then stop at the first wall, as core does, but each stops short of any member already resting there, so none ends on top of another).
 - **"The route went the long way round":** the short way crossed a secret door, a scene-link region, or (for a player) unexplored ground. That is on purpose. Drag in a straight line through it if you mean to go there.
-- **"I clicked it and it kept going":** the move had run under 400 ms (the arming delay); click again.
+- **"I clicked it and it kept going":** the move had run under 400 ms (the arming delay); click again. A click lands on where the token is drawn now, even when core's own click handling misses a token that moved under the pointer.
 - **A member walked straight into a wall and stopped:** it had no route to any spot; it is left to core, and the others plan around where core leaves it.
 - **Overlap while moving on another screen:** each client starts a tween when the update arrives, so a late wave can drift by the network delay. Members are kept 0.25 square further apart across waves for that; a region that holds a member at a checkpoint can still bring two together (accepted).
 - **Undo (Ctrl+Z) after a group move** undoes one wave at a time (each wave is its own update).

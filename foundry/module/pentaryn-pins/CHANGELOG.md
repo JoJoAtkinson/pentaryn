@@ -1,5 +1,13 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
+## 0.5.1 — 2026-11-22
+
+- **Fixed [declared]** a right-click on a pentaryn-aoe wall break disc repaired the wall and also
+  opened the GM canvas menu (live play-test round 1, D-5). The right press now records whether an
+  interactive control on the controls layer (a pointer event mode and a hit area under it) was hit,
+  read at the press because the disc's handler redraws it before the release; such a press never
+  opens the menu.
+
 ## 0.5.0 — 2026-11-21
 
 - **Added [declared]** a way back from a peek (triage A, `fpnsNR`: Marrith's player viewed the lobby

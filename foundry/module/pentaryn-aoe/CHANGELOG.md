@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **0.8.2 (2026-11-22). Live play-test round 1.**
+  - **`wallsFor(regionId).broken` stayed `[]` after a section was broken (D-6).** A line panel's break
+    cuts its shape; only a round wall's chords were listed. `broken` now also lists every section of
+    the wall as cast (`"panel:section"`, from `wallOriginal` moved to where the handle is now) that no
+    current panel covers (`core.brokenLineSections`).
 - **0.8.1 (2026-11-21). Live play-test fixes for the 0.8.0 wall spells** (core 14.370, dnd5e 6.1.1, a GM
   and a player tab on a test scene).
   - **Clear All on the Walls layer broke every wall spell on the scene.** Core 14's client backend strips
