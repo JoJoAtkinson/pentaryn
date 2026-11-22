@@ -522,3 +522,30 @@ test("restOnPaths: in combat (allowed) a member stops only on a cell centre or a
   assert.ok(onCell(rest.b), JSON.stringify(rest.b));
   assert.ok(Math.hypot(rest.b.x - 5.5, rest.b.y - 0.5) >= 1 - 1e-6);
 });
+
+test("restOnPaths (R2-1): a 3x2 block walking into a wall never leaves two on one spot, even a boxed-in member", async () => {
+  const { restOnPaths } = await import("../group-core.mjs");
+  // Live R2-1: heroes at x 100/200/300, y 400/500 (centres 1.5..3.5, 4.5/5.5), core's paths cut at a wall at x=500
+  // (the last centre before it is 4.5). Hero 0 grabbed (listed first). Before the fix Hero 1 and Hero 2 both ended at 3.5.
+  const row = y => [1.5, 2.5, 3.5].map(x => [{ x, y }, { x: 4.5, y }]);
+  const [a, b, c] = row(4.5), [d, e, f] = row(5.5);
+  const list = [a, b, c, d, e, f].map((path, i) => ({ id: `h${i}`, r: 0.5, path }));
+  const rest = restOnPaths(list);
+  const ids = list.map(m => m.id);
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
+    const p = rest[ids[i]], q = rest[ids[j]];
+    assert.ok(Math.hypot(p.x - q.x, p.y - q.y) >= 1 - 1e-6, `${ids[i]} / ${ids[j]} overlap at rest: ${JSON.stringify([p, q])}`);
+  }
+  // Every rest point lies on its own path, between start and wall.
+  for (const m of list) assert.ok(rest[m.id].x >= m.path[0].x - 1e-9 && rest[m.id].x <= 4.5 + 1e-9 && rest[m.id].y === m.path[0].y);
+});
+
+test("restOnPaths (R2-1): two members that start on one spot are pulled apart when either can move", async () => {
+  const { restOnPaths } = await import("../group-core.mjs");
+  const rest = restOnPaths([
+    { id: "wall", r: 0.5, path: [{ x: 3.5, y: 0.5 }] },
+    { id: "p", r: 0.5, path: [{ x: 2.5, y: 0.5 }, { x: 3.5, y: 0.5 }] },
+    { id: "q", r: 0.5, path: [{ x: 2.5, y: 0.5 }, { x: 0.5, y: 0.5 }] },
+  ]);
+  assert.ok(Math.hypot(rest.p.x - rest.q.x, rest.p.y - rest.q.y) >= 1 - 1e-6, JSON.stringify(rest));
+});

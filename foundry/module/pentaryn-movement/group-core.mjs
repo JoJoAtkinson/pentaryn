@@ -489,8 +489,9 @@ export function runPlan(gen, budgetMs, now = () => 0) {
  * so that no two rest on top of each other (live R1 D-1: core's paths, cut at walls, left members
  * stacked at distance 0). Each member keeps its own path and stops at its furthest point whose
  * circle is clear of every member placed before it (touching is fine); one that finds none stays
- * where it is. Members that do not move are placed first, then the list order (the grabbed token
- * first: it is never pulled back by another).
+ * where it is, and is then held there while the others are placed again (R2-1). Members that do not
+ * move are placed first, then the held ones, then the list order (the grabbed token first: only a
+ * member that cannot move at all pulls it back).
  *
  * @param {{ id, r, path: {x,y}[] }[]} list   centres in squares, start first; a path of one point does not move
  * @param {object} [o]
@@ -501,16 +502,40 @@ export function runPlan(gen, budgetMs, now = () => 0) {
  *                                             at fraction t; end: the path's own end
  */
 export function restOnPaths(list, { step = 0.25, allowed = null } = {}) {
+  // A member with no clear point stays at its start, which a member placed before it may already
+  // hold (live R2-1: a row walking into a wall, the middle one boxed in, ended on its neighbour).
+  // Such a member is held at its start from then on, placed before the movers, and the drop is
+  // placed again; each round holds at least one more, so it ends within list.length rounds.
+  const held = new Set();
+  let out = null;
+  for (let round = 0; round <= list.length; round++) {
+    const r = restOnce(list, held, step, allowed);
+    out = r.out;
+    if (!r.stuck.length) break;
+    for (const id of r.stuck) held.add(id);
+  }
+  return out;
+}
+
+function restOnce(list, held, step, allowed) {
   const out = {};
   const placed = [];
+  const stuck = [];
   const clear = (m, c) => placed.every(p => dist(c, p.c) >= m.r + p.r - EPS);
-  const ordered = [...list.filter(m => (m.path?.length ?? 0) < 2), ...list.filter(m => (m.path?.length ?? 0) >= 2)];
+  const still = m => (m.path?.length ?? 0) < 2;
+  const ordered = [...list.filter(still), ...list.filter(m => !still(m) && held.has(m.id)), ...list.filter(m => !still(m) && !held.has(m.id))];
   for (const m of ordered) {
     const path = m.path ?? [];
-    if (path.length < 2) {
+    if (still(m)) {
       const c = path[0] ?? { x: 0, y: 0 };
       out[m.id] = { x: c.x, y: c.y, k: 0, t: 0, end: true };
       placed.push({ c, r: m.r });
+      continue;
+    }
+    // Held at its start, unless that start is already taken (two that began on one spot): it then looks along its path.
+    if (held.has(m.id) && clear(m, path[0])) {
+      out[m.id] = { x: path[0].x, y: path[0].y, k: 0, t: 0, end: false };
+      placed.push({ c: { x: path[0].x, y: path[0].y }, r: m.r });
       continue;
     }
     let pick = null;
@@ -529,12 +554,13 @@ export function restOnPaths(list, { step = 0.25, allowed = null } = {}) {
         break;
       }
     }
+    if (!pick && !held.has(m.id)) stuck.push(m.id);
     pick ??= { ...path[0], k: 0, t: 0 };
     const end = pick.k === path.length - 2 && pick.t >= 1 - EPS;
     out[m.id] = { x: pick.x, y: pick.y, k: pick.k, t: pick.t, end };
     placed.push({ c: { x: pick.x, y: pick.y }, r: m.r });
   }
-  return out;
+  return { out, stuck };
 }
 
 /* -------------------------------------------- */
