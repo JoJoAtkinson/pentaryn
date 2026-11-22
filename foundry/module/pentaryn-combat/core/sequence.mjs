@@ -36,6 +36,28 @@ export function planSequence({ weaponId = null, count = 1, done = 0, extras = []
 }
 
 /**
+ * Multiattack "in any combination": the weapons picked per swing earlier in this combat (Joe's decision 4,
+ * 2026-11-22). `picks` maps a swing's place in the whole Multiattack (0-based) to an item id; `offset` is the
+ * place of swings[0]. A swing that offers the remembered pick takes it; any other swing is unchanged.
+ */
+export function applySwingPicks(swings = [], picks = null, offset = 0) {
+  if (!picks || typeof picks !== "object") return swings;
+  return swings.map((s, k) => {
+    const want = picks[offset + k];
+    return want && s.kind === "main" && Array.isArray(s.choices) && s.choices.includes(want) && s.weaponId !== want ? { ...s, weaponId: want } : s;
+  });
+}
+
+/** The picks a finished run adds (its rolled "any combination" swings), merged over `picks`. */
+export function swingPicksAfter(swings = [], offset = 0, picks = null) {
+  const out = { ...(picks && typeof picks === "object" ? picks : {}) };
+  swings.forEach((s, k) => {
+    if (s?.result === "rolled" && s.kind === "main" && Array.isArray(s.choices) && s.choices.length > 1 && s.weaponId) out[offset + k] = s.weaponId;
+  });
+  return out;
+}
+
+/**
  * The sequence state. Pure transitions; sequence.mjs drives the rolls.
  *   status: "running" | "paused" | "done" | "stopped"
  *   index:  the swing about to be rolled (0-based); swings before it are rolled

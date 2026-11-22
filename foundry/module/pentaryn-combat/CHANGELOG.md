@@ -1,5 +1,14 @@
 # Changelog — Pentaryn Combat (`pentaryn-combat`)
 
+## 0.3.4 — 2026-11-22 (Joe's decision 4)
+
+- **[declared] A Multiattack "in any combination" remembers the weapon picked for each swing for the rest of
+  the combat.** Switch the second Scimitar swing to the Pistol once, and every later Full Attack in that fight
+  starts its second swing on the Pistol (`flags.pentaryn-combat.last.swingPicks = { combatId, picks }`, keyed
+  by the swing's place in the Multiattack). Another combat, or none, reads as nothing: it resets when the
+  combat ends. Swings that do not offer the remembered pick are unchanged. New pure core exports
+  `applySwingPicks`, `swingPicksAfter`.
+
 ## 0.3.3 — 2026-11-21 (live play-test of 0.3.2)
 
 - **The pause bar offers the swing's Multiattack choices.** The 2024 MM Bandit Captain's Pistol is

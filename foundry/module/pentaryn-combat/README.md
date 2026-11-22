@@ -229,7 +229,7 @@ Strike) are here; damage/heal rule riders, rituals, concentration and Argon tidy
   With it on, don't also click GWM's own "Heavy Weapon Damage" button.
 - **Auto Sneak Attack** goes on the first eligible swing's damage; the module can't see hit/miss
   (players don't), so a miss needs the **Undo** on the card.
-- **Multiattack mix** (0.3.2): only "N attacks, using A or B (in any combination)" gets the chooser; "two [A] or [B] attacks" is one choice for both; ", or it makes …" plans the first routine (pause and swap for the other). After a swing clicked by hand, Full Attack plans the rest from the plan's front.
+- **Multiattack mix** (0.3.2): only "N attacks, using A or B (in any combination)" gets the chooser; "two [A] or [B] attacks" is one choice for both; ", or it makes …" plans the first routine (pause and swap for the other). After a swing clicked by hand, Full Attack plans the rest from the plan's front. In a fight each swing's pick is remembered for the rest of that combat (0.3.4): the next Full Attack starts each swing on the weapon picked for it last time (`flags.pentaryn-combat.last.swingPicks`, keyed by the combat); a new combat starts afresh.
 - **C23 open:** this module still reads pentaryn-aoe's `autoDamageOnHit` setting directly (one
   reader, `aoeAutoDamage()` in `settings.mjs`): aoe's `settings()` member is published at `ready`,
   but chat cards first render before it.

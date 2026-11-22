@@ -35,7 +35,9 @@ const ADDED_EXT8 = ["turnEffectData"];
 const ADDED_TRIAGE = ["arithmeticAssignment", "arithmeticExpression", "manualDiceConfig"];
 // 0.3.2: Multiattack "in any combination" — the swing strip's chooser for the swing about to be rolled.
 const ADDED_MIX = ["swingChoices"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13, ...ADDED_EXT8, ...ADDED_TRIAGE, ...ADDED_MIX];
+// 0.3.4: the per-swing Multiattack picks remembered for the rest of a combat (decision 4, 2026-11-22).
+const ADDED_PICKS = ["applySwingPicks", "swingPicksAfter"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13, ...ADDED_EXT8, ...ADDED_TRIAGE, ...ADDED_MIX, ...ADDED_PICKS];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();
@@ -59,9 +61,9 @@ test("object exports are frozen tables, rows and arrays included", () => {
 // legacy pentarynCombat.* event names sunset at 0.4.0 (HOOKS `until`) and that is its own declared change.
 // 0.3.2 (2026-11-21): Multiattack "in any combination" — each swing's weapon is chosen on the strip.
 // A patch again: 0.4.0 stays the declared legacy event sunset.
-// 0.3.3 (2026-11-21): live play-test — the pause bar offers the swing's Multiattack choices (an unequipped MM Pistol).
-test("module.json version is 0.3.3 (pause bar offers the Multiattack choices)", () => {
-  assert.equal(manifest.version, "0.3.3");
+// 0.3.4 (2026-11-22): decision 4 — a Multiattack's per-swing picks are remembered for the rest of the combat.
+test("module.json version is 0.3.4 (per-swing Multiattack picks remembered for the combat)", () => {
+  assert.equal(manifest.version, "0.3.4");
   assert.equal(core.VERSION, manifest.version);
   assert.equal(manifest.id, core.MOD);
 });
@@ -159,4 +161,14 @@ test("combat-core-EXT-12: core.followUps greys Flurry itself when no Focus is le
   assert.deepEqual(core.followUps({ ...monk, turn: core.recordFollowUp(turn, "martial-arts") }), []);
   assert.deepEqual(core.followUps({ ...monk, turn: core.recordFollowUp(turn, "flurry") }), []);
   assert.deepEqual(core.followUps({ ...monk, features: ["martial-arts"] }).map(f => f.kind), ["martial-arts"], "no Monk's Focus: no Flurry at all");
+});
+
+test("decision 4: a Multiattack's per-swing picks are remembered by place and reapplied where that swing offers them", () => {
+  const mix = { kind: "main", mode: null, group: 0, choices: ["scim", "pistol"] };
+  const swings = [{ ...mix, weaponId: "scim", result: "rolled" }, { ...mix, weaponId: "pistol", result: "rolled" }, { ...mix, weaponId: "pistol" }];
+  const picks = core.swingPicksAfter(swings, 1, { 0: "scim" });
+  assert.deepEqual(picks, { 0: "scim", 1: "scim", 2: "pistol" }, "rolled swings only, by their place in the whole Multiattack");
+  const next = core.applySwingPicks([{ ...mix, weaponId: "scim" }, { ...mix, weaponId: "scim" }, { kind: "main", mode: null, weaponId: "bite" }], { 2: "pistol", 3: "pistol" }, 1);
+  assert.deepEqual(next.map(s => s.weaponId), ["scim", "pistol", "bite"], "a swing that does not offer the pick keeps its weapon");
+  assert.equal(core.applySwingPicks(swings, null, 0), swings, "no memory: unchanged");
 });

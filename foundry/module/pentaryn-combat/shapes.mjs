@@ -351,6 +351,33 @@ export function rememberWeapon(actor, weaponId) {
   return actor.setFlag(MODULE, "last.weapon", weaponId);
 }
 
+/**
+ * Multiattack "in any combination": the weapon picked per swing, remembered for the rest of the combat it was
+ * picked in (Joe's decision 4; flags.pentaryn-combat.last.swingPicks = { combatId, picks }). Another combat, or
+ * none, reads as nothing: the memory resets when the combat ends.
+ */
+export function swingPicksOf(actor) {
+  const { combat, inCombat } = combatContext(actor);
+  const rec = actor?.getFlag?.(MODULE, "last")?.swingPicks;
+  return inCombat && rec?.combatId && rec.combatId === combat?.id ? rec.picks ?? null : null;
+}
+
+/** Where the next Full Attack's first swing sits in the actor's Multiattack (0-based), or null out of combat. */
+export function swingOffset(actor, ma) {
+  const { inCombat } = combatContext(actor);
+  if (!inCombat || !ma?.total) return null;
+  return (turnOf(actor)?.attackAction?.swings ?? 0) % ma.total;
+}
+
+/** Remember a finished run's per-swing picks for this combat (only while in one). */
+export function rememberSwingPicks(actor, offset, swings) {
+  const { combat, inCombat } = combatContext(actor);
+  if (!inCombat || !combat?.id || !Number.isInteger(offset)) return Promise.resolve(null);
+  const picks = core.swingPicksAfter(swings, offset, swingPicksOf(actor));
+  if (!Object.keys(picks).length) return Promise.resolve(null);
+  return actor.setFlag(MODULE, "last.swingPicks", { combatId: combat.id, picks });
+}
+
 /** The actor's Multiattack when it swings by one (NPC, Wild Shape form) and `enabled` (setting multiattack). */
 export function multiattackFor(actor, { enabled = true } = {}) {
   return usesMultiattack(actor) && enabled ? multiattackOf(actor) : null;
@@ -379,7 +406,12 @@ export function planFor(actor, weaponId = null, { multiattackOn = true } = {}) {
   // A Multiattack plan never reads weaponId: check it first, so its actor's weapons are not scanned (wave 3, combat-2).
   if (!ma) weaponId ??= chosenWeapon(actor);
   const pick = ma ? { "*": rememberedWeapon(actor) } : null;
-  return fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId, { multiattackOn }), pick });
+  const plan = fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId, { multiattackOn }), pick });
+  // Each swing's pick earlier in this combat (decision 4).
+  const offset = ma ? swingOffset(actor, ma) : null;
+  if (offset === null) return plan;
+  const swings = core.applySwingPicks(plan.swings, swingPicksOf(actor), offset);
+  return swings === plan.swings ? plan : { ...plan, swings };
 }
 
 /** An area handle pentaryn-aoe placed (its token flag); combat reselects your token when one goes. */

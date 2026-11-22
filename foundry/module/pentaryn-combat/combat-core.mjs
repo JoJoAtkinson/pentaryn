@@ -10,7 +10,7 @@
  *   core/count.mjs        attackCount (Extra Attack and friends)
  *   core/weapons.mjs      canSwing, off-hand / Light / Nick partners, extraSwings, defaultWeapon, mainMode,
  *                         weaponSetSeed / shouldSeed, offhandVia
- *   core/sequence.mjs     planSequence, sequenceReducer, stripNumbers, planSummary, pausedNote,
+ *   core/sequence.mjs     planSequence, sequenceReducer, stripNumbers, planSummary, pausedNote, applySwingPicks, swingPicksAfter,
  *                         replanExtras, fullAttackPlanFrom, swingChoices
  *   core/turn.mjs         the turn flag: turnKey, readTurn, record*, swingsLeft, pipState, pipFor,
  *                         spentPips, reactionSpent, stale / orphan combat flags
@@ -33,7 +33,7 @@ export const MODULE = "pentaryn-combat";
 export { MODULE as MOD };                  // game.pentaryn.combat.core.MOD stays readable for macros
 export const SHORT = "combat";
 export const NS = "combat";                // game.pentaryn.combat
-export const VERSION = "0.3.3";            // === module.json version (core.test pins it)
+export const VERSION = "0.3.4";            // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-combat/api@1";
 export const I18N = "PENTARYN_COMBAT";
 export const CSS = "pc-";
@@ -159,8 +159,8 @@ import {
   offhandVia, partnerWeapon, shouldSeed, weaponSetSeed
 } from "./core/weapons.mjs";
 import {
-  fullAttackPlanFrom, pausedNote, planSequence, planSummary, replanExtras, sequenceReducer,
-  stripNumbers, swingChoices
+  applySwingPicks, fullAttackPlanFrom, pausedNote, planSequence, planSummary, replanExtras, sequenceReducer,
+  stripNumbers, swingChoices, swingPicksAfter
 } from "./core/sequence.mjs";
 import {
   ATTACK_ACTION_KINDS, actionsLeft, attackActions, classifySwing, freshTurn, orphanCombatFlags,
@@ -199,7 +199,7 @@ export {
   featureSet, normalizeName, slugify, attackCount, canSwing, defaultWeapon, extraSwings,
   lightTrigger, mainMode, nickCapable, offhandCapable, offhandVia, partnerWeapon, shouldSeed,
   weaponSetSeed, fullAttackPlanFrom, pausedNote, planSequence, planSummary, replanExtras,
-  sequenceReducer, stripNumbers, swingChoices, attackActions, classifySwing, freshTurn, orphanCombatFlags,
+  sequenceReducer, stripNumbers, swingChoices, applySwingPicks, swingPicksAfter, attackActions, classifySwing, freshTurn, orphanCombatFlags,
   otherActionsOf, pickCombat, pipFor, pipState, reactionSpent, readTurn, recordBonusAction,
   recordFollowUp, recordKill, recordOtherAction, recordQuickened, recordQuickenedCast, recordSurge,
   recordSwing, setRider, spentPips, staleCombatFlags, swingsLeft, turnKey, followUps,

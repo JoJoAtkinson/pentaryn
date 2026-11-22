@@ -16,7 +16,7 @@ import * as core from "./combat-core.mjs";
 import { HOOKS, MODULE, VERSION } from "./combat-core.mjs";
 import { emitter } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
-import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor, enhancedDualWieldingOf, combatContext } from "./shapes.mjs";
+import { attackActivityOf, weaponsOf, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf, damageLabel, rememberWeapon, planFor, enhancedDualWieldingOf, combatContext, multiattackFor, swingOffset, rememberSwingPicks } from "./shapes.mjs";
 import { openRollResolvers, isOrphanCard } from "./dialog-adapter.mjs";
 import { cancelWaits, choose, hide, onceCancel, picking, show, update, waitChoice } from "./strip.mjs";
 import { quickMode, setQuickMode, setting } from "./settings.mjs";
@@ -373,6 +373,20 @@ async function usageCard(activity, item, kind) {
 }
 
 /**
+ * After a run: the weapon it started with, and in a fight a Multiattack's per-swing picks (decision 4), are
+ * remembered for the next Full Attack.
+ */
+function rememberRun(actor, swings, slotOffset) {
+  const first = swings?.[0];
+  if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
+    rememberWeapon(actor, first.weaponId).catch(err => { log.warn("remember weapon", err); return null; });
+  }
+  if (Number.isInteger(slotOffset) && actor.isOwner && swings) {
+    rememberSwingPicks(actor, slotOffset, swings).catch(err => { log.warn("remember swing picks", err); return null; });
+  }
+}
+
+/**
  * Run a list of swings for an actor.
  * @param {Actor} actor
  * @param {{weaponId, mode, kind}[]} swings
@@ -382,9 +396,10 @@ async function usageCard(activity, item, kind) {
  * @param {Map} [opts.origins]       itemId → usage message id already posted (Flurry's card)
  * @param {boolean} [opts.swappable=true]
  * @param {boolean} [opts.paid=false]  a cost was already paid before swing 1 (Flurry's Focus Point)
+ * @param {number|null} [opts.slotOffset=null]  a Multiattack run in a fight: where swing 1 sits in it (its per-swing picks are remembered, decision 4)
  * @returns {Promise<{rolled: number, status: string}>}
  */
-export async function runSwings(actor, swings, { event = null, title = null, origins = null, swappable = true, paid = false } = {}) {
+export async function runSwings(actor, swings, { event = null, title = null, origins = null, swappable = true, paid = false, slotOffset = null } = {}) {
   if (current) {
     ui.notifications.warn(_loc("PENTARYN_COMBAT.Strip.AlreadyRunning"));
     return { rolled: 0, status: "busy" };
@@ -465,10 +480,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     }
     return { rolled: current.state.rolled, status: current.state.status };
   } finally {
-    const first = current?.state?.swings?.[0];
-    if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
-      rememberWeapon(actor, first.weaponId).catch(err => { log.warn("remember weapon", err); return null; });
-    }
+    rememberRun(actor, current?.state?.swings, slotOffset);
     const created = [...(current?.created ?? [])];
     current = null;
     // After dnd5e has posted any last attack (and the tidy hook's own 250 ms look).
@@ -578,7 +590,9 @@ const onTokenUpdated = (doc, changes) => {
 /** api.fullAttack: run the plan api.plan would answer. */
 async function fullAttack(actor, weaponId, opts = {}) {
   const p = planFor(actor, weaponId, { multiattackOn: setting("multiattack") });
-  return runSwings(actor, p.swings, opts);
+  const ma = multiattackFor(actor, { enabled: setting("multiattack") });
+  const slotOffset = ma ? swingOffset(actor, ma) : null;
+  return runSwings(actor, p.swings, { ...opts, slotOffset });
 }
 
 /** A running sequence is stopped (its strip goes, its roll window closes); session maps cleared. */
