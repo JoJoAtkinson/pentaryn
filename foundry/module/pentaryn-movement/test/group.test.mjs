@@ -407,3 +407,60 @@ test("groupMovement off: a group drop is core's, followers are pathfound again",
   assert.equal(api.status().group.last.reason, "off");
   await game.settings.set(MOD, "groupMovement", true);
 });
+
+// Review (correctness lens): pins for the fixes on feat/movement-0.4-review-correctness.
+
+test("a group drag with explicit waypoints is core's drop, so its followers are still pathfound", () => {
+  const ts = [makeToken("wptA000000000001", 400, 200), makeToken("wptB000000000001", 300, 200)];
+  const contexts = contextsFor(ts, 0, 400);
+  contexts[ts[0].document.id].waypoints = [wp(400, 300)];
+  layer._draggedToken = ts[0];
+  ts[0].mouseInteractionManager = { interactionData: { contexts } };
+  try {
+    const follower = ts[1].findMovementPath([wp(300, 200), wp(300, 600)], { preview: true, constrainOptions: {}, measureOptions: {}, terrainOptions: {} });
+    assert.deepEqual([follower.result.at(-1).x, follower.result.at(-1).y], [300, 600], "pathfound round the wall, as in 0.3");
+  } finally {
+    layer._draggedToken = null;
+  }
+});
+
+test("the grabbed token keeps the route its drag found (no second search inside the drop)", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("ancA000000000001", 400, 200), makeToken("ancB000000000001", 300, 200)];
+  const ctx = contextsFor(ts, 0, 400);
+  // What the drag's pathfinder found for the anchor: a dog-leg through the door the stub would not draw.
+  const shown = [wp(400, 200, { explicit: false, checkpoint: false }), wp(450, 300, { snapped: false, explicit: false, checkpoint: false }), wp(400, 600)];
+  ctx[ts[0].document.id].foundPath = shown;
+  const out = dropWith(ts[0], ctx);
+  const from = F.calls.length;
+  mock.timers.tick(5000);
+  const moves = { ...out[1].movement, ...Object.assign({}, ...sent(from).map(c => c.options.movement)) };
+  assert.deepEqual(moves.ancA000000000001.waypoints.map(w => [w.x, w.y]), [[450, 300], [400, 600]]);
+});
+
+test("a late (async) commit leaves out a member moved while the plan ran", () => {
+  const ts = [makeToken("latA000000000001", 400, 200), makeToken("latB000000000001", 300, 200)];
+  const ctx = contextsFor(ts, 0, 400);
+  clock.step = 2;
+  const from = F.calls.length;
+  assert.equal(dropWith(ts[0], ctx), null);
+  ts[1].document._source = { ...ts[1].document._source, x: 0 };        // someone moved it meanwhile
+  for (let k = 0; k < 50; k++) mock.timers.tick(10);
+  clock.step = 0;
+  const ids = sent(from).flatMap(c => c.ids);
+  assert.ok(ids.includes("latA000000000001"));
+  assert.ok(!ids.includes("latB000000000001"), "the moved member keeps its newer move");
+  for (const c of sent(from)) assert.deepEqual(Object.keys(c.options.movement).sort(), [...c.ids].sort());
+});
+
+test("click to stop out of combat on this client's pending move: stopMovement first, then the displace", () => {
+  combatFlag = false;
+  const t = makeToken("clkD000000000001", 100, 100);
+  t.document.movement = { state: "pending", user: { isSelf: true } };
+  t.document.x = 250;
+  const from = F.calls.length;
+  t._onClickLeft({});
+  const ops = F.calls.slice(from).map(c => c.op).filter(o => ["stopMovement", "stopAnimation", "move"].includes(o));
+  assert.deepEqual(ops, ["stopMovement", "stopAnimation", "move"]);
+});

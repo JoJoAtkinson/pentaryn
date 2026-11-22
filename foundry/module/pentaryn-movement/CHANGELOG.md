@@ -38,6 +38,14 @@ use-doc `context/foundry/movement.md`).
 - Files: `motion-core.mjs`, `group-core.mjs` (pure), `group-adapter.mjs`, `group.mjs`, `stop.mjs`.
   Tests: `group-core.test` (the plan's twelve unit acceptance tests and the decision tables),
   `group.test` (the two wraps). Not yet play-tested live (the plan's live list).
+- Review fixes (correctness against core 14.370): the grabbed token reuses the route its drag already
+  found instead of searching it again inside the drop; every other route search in a group plan is
+  capped at 200 ms (it was the pathfinder's 1.5 s, in one uninterruptible slice); a late (async)
+  commit and every wave go to the drop's scene and leave out members moved meanwhile; a group drag
+  with explicit waypoints, or a planned or direct one, pathfinds its followers again as in 0.3;
+  `MOTION.checkpointEvery` is honoured; a planned movement keeps its waypoints in combat; click to
+  stop on this client's own pending move calls `stopMovement()` before the displace, so core's
+  continuation cannot race the displace and carry the token on.
 
 ## 0.3.0 — 2026-11-21
 

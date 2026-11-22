@@ -35,6 +35,13 @@ let lastStop = null;
 function displace(token) {
   const doc = token.document;
   const p = drawnPosition(token);
+  // This client's own move with checkpoints still to go: stop it first. stopAnimation resolves the
+  // animation promise the continuation waits on, and that continuation would otherwise race the
+  // displace to the server and carry the token on past where it was clicked (review-correctness).
+  const m = doc.movement;
+  if (m?.user?.isSelf && (m.state === "pending" || m.state === "paused")) {
+    try { doc.stopMovement(); } catch (err) { log.debug?.("stopMovement before displace", err); }
+  }
   try { token.stopAnimation?.({ reset: false }); } catch (err) { log.debug?.("stopAnimation", err); }
   const wp = { x: p.x, y: p.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
   return doc.move([wp], { animate: false, method: "api" })

@@ -44,6 +44,18 @@ const fallbacks = [];                      // the last few reasons a drop went t
 const now = () => globalThis.performance?.now?.() ?? Date.now();
 /** One async planning slice (ms), as the pathfinder's. */
 const SLICE_MS = 8;
+/** The most one route search may take (ms): under GROUP_LIMITS.memberMs, so a capped search is a member left to core, not a budget fallback. */
+const ROUTE_MS = Math.round(GROUP_LIMITS.memberMs * 0.8);
+
+/** The scene a drop was made on (waves and late commits go there, not to whatever the canvas shows then). */
+const sceneById = id => globalThis.game?.scenes?.get?.(id) ?? (globalThis.canvas?.scene?.id === id ? globalThis.canvas.scene : null);
+/** Members still where the drop found them (nobody moved them while the plan or a wave waited). */
+const unmoved = (scene, starts, ids) => ids.filter(id => {
+  const doc = scene?.tokens?.get(id);
+  const at = starts.get(id);
+  return doc && at && doc._source.x === at.x && doc._source.y === at.y;
+});
+const startsOf = members => new Map(members.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
 
 function fellBack(reason) {
   fallbacks.unshift({ at: new Date().toISOString(), reason });
@@ -64,6 +76,10 @@ function groupFollower(token) {
   const contexts = dragged.mouseInteractionManager?.interactionData?.contexts ?? {};
   const n = Object.keys(contexts).length;
   if (n < 2 || n > GROUP_LIMITS.maxMembers || !(token.document?.id in contexts)) return false;
+  // The drops groupMode leaves to core keep the 0.3 per-token pathfinding: explicit waypoints, a planned
+  // or direct movement (review-correctness: these drags lost their followers' pathfinding).
+  if (token.layer?._movementPlanningContext) return false;
+  if (Object.values(contexts).some(c => c?.waypoints?.length)) return false;
   return (token.document?.parent?.grid?.type ?? globalThis.canvas?.grid?.type) === 1;
 }
 
@@ -104,7 +120,7 @@ function withCheckpoints(token, path) {
     if (flat && Number.isInteger(di) && Number.isInteger(dj)) {
       const cells = cellChain([{ i: 0, j: 0 }, { i: di, j: dj }]);
       for (const c of cells.slice(1, -1)) {
-        out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: true });
+        out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: c.checkpoint });
       }
     }
     out.push({ ...b, checkpoint: true });
@@ -125,7 +141,8 @@ function checkpointAll(contexts, options) {
   for (const c of contexts) {
     const id = c.token?.document?.id;
     const m = options.movement?.[id];
-    if (!m?.waypoints?.length || !inCombat(c.token.document)) continue;
+    // A planned movement (core's planMovement) keeps its waypoints: core already stored them as the plan's result.
+    if (!m?.waypoints?.length || m.planned || !inCombat(c.token.document)) continue;
     const origin = feature.exposed.pathfindOrigin?.(c.token.document) ?? c.foundPath?.[0];
     m.waypoints = withCheckpoints(c.token, [origin, ...m.waypoints]);
   }
@@ -163,8 +180,20 @@ function oraclesFor(members, anchor, { combat, constrain }) {
     const doc = rec.token.document;
     const origin = feature.exposed.pathfindOrigin(doc);
     const tl = toTopLeft(to, rec.w, rec.h, s);
-    const atFormation = tl.x === rec.dest.x && tl.y === rec.dest.y;
+    const atFormation = tl.x === Math.round(rec.dest.x) && tl.y === Math.round(rec.dest.y);
     const last = rec.corePathRaw?.at(-1) ?? {};
+    // The grabbed token's drag already found its route (the ruler the user saw): reuse it when it reached
+    // the drop point, instead of searching it again synchronously inside the drop (review-correctness).
+    if (rec.id === anchor.id && !avoid.length && atFormation && !rec.searching && rec.corePathRaw?.length >= 2
+      && Math.round(last.x) === tl.x && Math.round(last.y) === tl.y) {
+      const path = rec.corePathRaw.map(p => ({ ...p }));
+      const pts = path.map(p => toSquares(p, rec.w, rec.h, s));
+      let length = 0;
+      for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+      let cost = null;
+      try { cost = rec.token.measureMovementPath(path, { preview: true })?.cost ?? null; } catch { cost = null; }
+      return { points: pts, length, data: { path, cost } };
+    }
     const dest = {
       ...origin, x: tl.x, y: tl.y, elevation: rec.dest.elevation ?? origin.elevation,
       action: last.action ?? doc.movementAction, snapped: combat || (atFormation && !!rec.dest.snapped),
@@ -172,6 +201,9 @@ function oraclesFor(members, anchor, { combat, constrain }) {
     };
     const r = feature.exposed.pathfindRouteTo(rec.token, origin, dest, {
       preview: true, avoid: avoid.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
+      // One route call cannot be interrupted: cap it under the member budget, so no slice blocks for the
+      // pathfinder's whole 1.5 s (review-correctness: "never freeze the UI").
+      budgetMs: ROUTE_MS,
     });
     if (!r?.reached || !r.path?.length) return null;
     const pts = r.path.map(p => toSquares(p, rec.w, rec.h, s));
@@ -191,7 +223,7 @@ function oraclesFor(members, anchor, { combat, constrain }) {
 /** Members, the anchor and the plan generator for a drop (or a dry run). */
 function prepare(grabbed, contexts, info) {
   const s = gridSize(grabbed);
-  const members = contexts.map(c => ({ ...memberOf(c, s), corePathRaw: c.foundPath ?? [] }));
+  const members = contexts.map(c => ({ ...memberOf(c, s), corePathRaw: c.foundPath ?? [], searching: !!c.searching }));
   const anchor = members.find(m => m.id === grabbed.document.id);
   if (!anchor) return null;
   const spec = { members, anchorId: anchor.id, combat: info.combat, mode: info.mode, others: othersOf(members, s) };
@@ -240,28 +272,24 @@ function batches(plan, members, [updates, options], combat) {
 }
 
 /** Send the later waves from this client; each checks the group was not stopped and its members have not moved. */
-function schedule(later, base, members) {
+function schedule(later, base, members, sceneId, starts = startsOf(members)) {
   if (!later.length) return;
   const gid = foundry.utils.randomID();
   const group = { ids: new Set(members.map(m => m.id)), timers: [], stopped: false };
   groups.set(gid, group);
   for (const id of group.ids) groupOf.set(id, gid);
-  const starts = new Map(members.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
   let left = later.length;
   for (const wave of later) {
     group.timers.push(setTimeout(() => {
       left -= 1;
       if (left <= 0) forget(gid);
       if (group.stopped) return;
-      const ids = wave.ids.filter(id => {
-        const doc = canvas.scene?.tokens?.get(id);
-        const at = starts.get(id);
-        return doc && at && doc._source.x === at.x && doc._source.y === at.y;
-      });
+      const scene = sceneById(sceneId);
+      const ids = unmoved(scene, starts, wave.ids.filter(id => group.ids.has(id)));
       if (!ids.length) return;
       const updates = wave.updates.filter(u => ids.includes(u._id));
       const movement = Object.fromEntries(ids.map(id => [id, wave.movement[id]]));
-      canvas.scene.updateEmbeddedDocuments("Token", updates, { ...base, movement })
+      scene.updateEmbeddedDocuments("Token", updates, { ...base, movement })
         .catch(err => log.warnOnce("group-wave", "a group wave failed (further errors suppressed)", err));
     }, wave.at));
   }
@@ -306,6 +334,7 @@ function onDrop(grabbed, event, result) {
   if (!contexts.length) return result;
   const info = modeFor(grabbed, contexts);
   const t0 = now();
+  const sceneId = grabbed.document.parent?.id ?? globalThis.canvas?.scene?.id;
   last = { at: new Date().toISOString(), mode: info.mode, reason: info.reason, combat: info.combat, members: contexts.length,
     result: null, ms: null, async: false, relaxed: 0, replans: 0, waves: 0 };
 
@@ -317,6 +346,7 @@ function onDrop(grabbed, event, result) {
   debugThrow();
   const prep = prepare(grabbed, contexts, info);
   if (!prep) { fellBack("noAnchor"); return result; }
+  const starts = startsOf(prep.members);
 
   const finish = plan => {
     last.ms = Math.round((now() - t0) * 10) / 10;
@@ -338,18 +368,24 @@ function onDrop(grabbed, event, result) {
   const step = runPlan(prep.gen, GROUP_LIMITS.syncMs, now);
   if (step.done) {
     const b = finish(step.value);
-    schedule(b.later, b.base, prep.members);
+    schedule(b.later, b.base, prep.members, sceneId, starts);
     return b.first[0].length ? b.first : null;
   }
 
   // Async: finish in timer slices, then commit the same shape core would have.
   last.async = true;
+  // A late commit only moves members still where the drop found them, on the drop's scene: a token
+  // dragged again (or moved by someone else) during the plan keeps its newer move (review-correctness).
   const commit = ([updates, options]) => {
-    if (!updates.length) return;
-    canvas.scene.updateEmbeddedDocuments("Token", updates, options)
+    const scene = sceneById(sceneId);
+    const ids = unmoved(scene, starts, updates.map(u => u._id));
+    if (!ids.length) return;
+    const movement = Object.fromEntries(Object.entries(options.movement ?? {}).filter(([id]) => ids.includes(id)));
+    scene.updateEmbeddedDocuments("Token", updates.filter(u => ids.includes(u._id)), { ...options, movement })
       .catch(err => log.warnOnce("group-commit", "a group move failed (further errors suppressed)", err));
   };
   const tick = () => {
+    if (!feature) return;                  // uninstalled while planning: nothing is sent
     let b;
     try {
       if (now() - t0 > GROUP_LIMITS.totalMs) b = finish({ result: "core", reason: "budget" });
@@ -364,7 +400,7 @@ function onDrop(grabbed, event, result) {
       b = { first: result, later: [], base: null };
     }
     commit(b.first);
-    schedule(b.later, b.base, prep.members);
+    schedule(b.later, b.base, prep.members, sceneId, starts);
   };
   setTimeout(tick, 0);
   return null;
