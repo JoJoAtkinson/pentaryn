@@ -1,5 +1,32 @@
 # Changelog — pentaryn-movement
 
+## 0.4.3 — 2026-11-22
+
+Live play-test round 3 (a Mac browser through the tunnel, the BOSS harness).
+
+- **[declared] A reload mid-move no longer loses a group's later waves (R3-1).** The waves lived only in the
+  dropping client's timers; a reload 1 s after a five-wave drop left a waiting member at its start for good.
+  Each group's unsent waves are kept in that tab's sessionStorage and taken off as they go out; the next
+  `ready` sends what is left, spaced as planned (the first unsent one at once when overdue), only for this
+  user and world, within 60 s of the drop, and only for members nobody moved since. A stop clears them.
+  New hook `ready: resume a group's waves after a reload`; `status().group.resumed`.
+- **[declared] A stopped token is never left drawn away from its server position (R3-2, R3-7).** After an
+  unanimated move (a stop's displace) every client watches the token for 3 s: a movement tween that runs on
+  with no newer movement is stopped at the source, and a drawn position left off the source is reset. 0.4.2
+  checked at 0 and 250 ms only, found the token still animating and never looked again; the drawn token then
+  walked on through a door and stayed there while the server had it east of it.
+- **[declared] A click-stop puts the token where it is drawn, not at its destination (R3-4).** Any
+  re-preparation of a moving token's document puts its derived x / y on the source (the destination) until
+  the next frame; a stop that read them in that window put the token at its destination (a member jumped
+  1456 px into the group). While a movement tween runs and the derived position equals the source, the
+  placeable's last drawn position is used (stop and the board fallback's hit test).
+- **[declared] The group width probe casts no ray from off the canvas (R3-6).** Slot candidates beyond the
+  scene edge were probed with rays core cannot compute (330 "origin is out of the scene bounds" warnings in
+  one planGroup); such a point is narrow, with no ray.
+- **planGroup searches the grabbed token's route first, as its drag preview does (R3-5),** and reports it
+  as `anchorRoute` (`reached`, `ms`, `waypoints`). The dry run had searched it inside one member's budget,
+  so a maze read "anchorNoRoute" / "budget" where a real drop reuses the preview's route.
+
 ## 0.4.2 — 2026-11-22
 
 Live play-test round 2 (BOSS harness and a Mac browser through the tunnel).
