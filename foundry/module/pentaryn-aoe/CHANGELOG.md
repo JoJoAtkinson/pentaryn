@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **0.8.3 (2026-11-22). Live play-test round 2.**
+  - **[declared] Red "already exists" / "does not exist" toasts at every Wall of Stone cast, break and
+    repair (R2-2).** The GM account was open in two sessions; `activeGM.isSelf` is true on both, so both
+    wrote the same spell walls (fixed ids) and the server refused the second, which Foundry shows as a red
+    toast and a console error even when caught. One GM plus the headless Claude GM was clean (reproduced on
+    BOSS). New feature `sessions.mjs`: the sessions of each account elect one lead over the
+    `module.pentaryn-aoe` socket (`core.leadSession`: the oldest session heard within 150 s; hello, here
+    every 20 s, bye on pagehide; a new tab listens 1.5 s first). Spell walls, handles, concentration cleanup
+    and the sweeps run on the active GM's lead session; a session that takes the lead late re-runs the
+    startup work and syncs the viewed scene's walls. **`module.json` `socket: true`** (a world relaunch).
+    New hooks `ready(sessions)`, `userConnected(sessions)`.
+  - **[declared] `wallsFor(regionId).broken` stayed `[]` with overlapping panels (R2-3).** Three 10-foot
+    panels placed 100 px apart overlap; a broken panel's stretch was still covered by its neighbour and
+    counted as standing. Each current piece is now matched to the cast panel it came from, and only that
+    panel's pieces count (`core.brokenLineSections`).
 - **0.8.2 (2026-11-22). Live play-test round 1.**
   - **`wallsFor(regionId).broken` stayed `[]` after a section was broken (D-6).** A line panel's break
     cuts its shape; only a round wall's chords were listed. `broken` now also lists every section of

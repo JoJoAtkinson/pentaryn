@@ -148,7 +148,9 @@ Listens to (pinned in `test/golden/hooks.json`, in this order): `init` (once), `
 `createRegionBehavior`, `updateRegionBehavior`, `deleteRegionBehavior`, `createToken`, `updateToken`,
 `deleteToken`, `controlToken`, `canvasReady` (each drops the step cache; `canvasReady` also listens to
 the scene's fog "explored", which drops it too), group's and stop's `setup` (once each), stop's `moveToken`
-(when a move started, for the 400 ms arming), and `ready` (once).
+(when a move started, for the 400 ms arming), stop's `updateToken` (0.4.2: after an unanimated move, every
+client puts the token where the server has it), stop's `canvasReady` (the board pointerdown fallback), and
+`ready` (once).
 
 ## Patches and adjustments
 

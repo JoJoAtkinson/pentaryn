@@ -410,10 +410,11 @@ check("player status line: waiting, applied, superseded, nothing to say",
 // 0.8.0 (2026-11-21, feedback 8t6Nn1 B2): wall spells raise real, breakable Wall documents.
 // 0.8.1 (2026-11-21): live play-test fixes (Clear All on core 14, a round wall's break redraws, wall handles off the wall).
 // 0.8.2 (2026-11-22): live play-test round 1 (wallsFor lists a line panel's broken sections).
-test("module.json is pentaryn-aoe 0.8.2", () => {
+// 0.8.3 (2026-11-22): live play-test round 2 (one GM account in two sessions writes once; overlapping panels' breaks listed).
+test("module.json is pentaryn-aoe 0.8.3", () => {
   const manifest = manifestOf(ROOT);
   assert.equal(manifest.id, core.MODULE);
-  assert.equal(manifest.version, "0.8.2");
+  assert.equal(manifest.version, "0.8.3");
 });
 
 test("VERSION === module.json version", () => {

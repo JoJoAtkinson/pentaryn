@@ -1,5 +1,25 @@
 # Changelog — pentaryn-movement
 
+## 0.4.2 — 2026-11-22
+
+Live play-test round 2 (BOSS harness and a Mac browser through the tunnel).
+
+- **[declared] A route whose only gap lies outside the start/goal box is found (R2-7).** The search was
+  bounded by the start/goal box plus max(8, half the distance) cells; in a maze whose opening lay 12 cells
+  above that box the drag showed a straight red ruler and stopped at the first wall. `searchWide` retries
+  in the whole scene lattice when the box holds no route, within the same node cap. The same bound made
+  the grabbed token's route fail in a group drag (`anchorNoRoute`, R2-11).
+- **[declared] A group drop left to core never rests a boxed-in member on its neighbour (R2-1).** A member
+  with no clear point stayed at its start, which a member placed before it could already hold (a 3×2
+  block dragged into a wall ended with two pairs at distance 0). `restOnPaths` now holds such a member at
+  its start and places the drop again around it.
+- **[declared] A door closed after a group drop stops a waiting member on a cell before it (R2-5).** A later
+  wave is checked against the walls when it is sent; a blocked route ends on the furthest whole cell
+  before the wall (`group-adapter` `cutAtWalls`), never on the door line where core's own cut left it.
+- **[declared] Every client puts a stopped token where the server has it (R2-9).** The resync after a
+  stop's displace ran only on the client that clicked; every client now runs it after an unanimated move.
+  New hook `updateToken: resync after an unanimated move (stop)`.
+
 ## 0.4.1 — 2026-11-22
 
 Live play-test round 1 (BOSS harness and a Mac browser through the tunnel).
