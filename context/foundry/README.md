@@ -79,7 +79,7 @@ The table is generated from each `module.json`, the module's code and its
 | `importer` | `pentaryn-importer` | 1.3.1 | full tier | `import`, `ddbCorrections.plan`, `ddbCorrections.apply`, `ddbCorrections.rules` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | `personal`, `add`, `status`, `open`, `shouldShowBar`, `ensure`, `ensureAll`, `report` … (+3) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | `search`, `page`, `monster`, `monsters`, `names`, `packs`, `onList`, `spellList` … (+1) | [README](../../foundry/module/pentaryn-lookup/README.md) |
-| `movement` | `pentaryn-movement` | 0.4.11 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens`, `pathfind.status`, `pathfind.route` … (+2) | [`movement.md`](movement.md) · [README](../../foundry/module/pentaryn-movement/README.md) |
+| `movement` | `pentaryn-movement` | 0.4.12 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens`, `pathfind.status`, `pathfind.route` … (+2) | [`movement.md`](movement.md) · [README](../../foundry/module/pentaryn-movement/README.md) |
 | `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
 | `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
 | `pins` | `pentaryn-pins` | 0.5.3 | full tier | `pin`, `unpin`, `pins`, `pinnedToken`, `pinnedTokens`, `audit`, `teleport`, `gather` | [`pins.md`](pins.md) · [README](../../foundry/module/pentaryn-pins/README.md) |
