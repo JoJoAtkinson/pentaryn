@@ -17,6 +17,7 @@ const p = (name, type, extra = {}) => ({ name, type, resolve: false, ...extra })
 const MESSAGE = p("messageOrId", "ChatMessage|id");
 const MESSAGE_ID = p("messageId", "string", { doc: "the damage message's id" });
 const SCENE = p("scene", "Scene", { optional: true });
+const REGION = p("region", "RegionDocument|Region|id|uuid", { doc: "a wall spell's template region; an id is looked up on the viewed scene, then every scene" });
 const legacy = (path, params, returns, doc, extra = {}) => ({ path, params, returns, gm: false, writes: false, legacy: true, doc, ...extra });
 
 const WRITES_RESOLUTION = ["flags.pentaryn-aoe.resolution"];
@@ -78,6 +79,10 @@ export const MANIFEST = Object.freeze({
       "flags.pentaryn-aoe.damageMessage", "flags.pentaryn-aoe.careful", "flags.pentaryn-aoe.npcSave",
       "flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets",
       "flags.pentaryn-aoe.applied", "flags.pentaryn-aoe.appliedLog",
+      // B2: on the Wall documents a wall spell raises, and on its region once a section is broken
+      "flags.pentaryn-aoe.regionId", "flags.pentaryn-aoe.panel", "flags.pentaryn-aoe.section",
+      "flags.pentaryn-aoe.spell", "flags.pentaryn-aoe.clipsAreas",
+      "flags.pentaryn-aoe.wallOriginal", "flags.pentaryn-aoe.wallBroken",
       "flags.dnd5e.lockSize", "flags.dnd5e.requestResult",
     ],
     // F0: an Empowered Spell card names the card it replaces (`from`); aoe reads nothing else of it.
@@ -134,6 +139,32 @@ export const FEATURE_ROWS = Object.freeze({
       { writes: true, sideEffects: ["ActiveEffect (on the caster)", "flags.pentaryn-aoe.effectsApplied", "flags.pentaryn-aoe.claims"] }),
     legacy("pendingFor", [MESSAGE, p("opts", "{ effects? }", { optional: true, doc: "effects: the card's effects, when the caller already fetched them (-14)" })], "Promise<string[]>",
       "Effect ids on a usage card nobody has applied yet ([] once one is applied, or for a card over an hour old)."),
+  ],
+  spellWalls: [
+    {
+      path: "wallsFor", params: [REGION], returns: "{ regionId, spell, blocks: { move, sight, areas }, walls: { id, panel, section, c }[], broken: string[], repairable }|null",
+      gm: false, writes: false, since: "0.8.0", nullWhen: "no such region, or it is not a wall spell that raises walls (Blade Barrier, Wind Wall, any other area)",
+      doc: "B2: a wall spell's region — which spell, what its walls block, its Wall documents by panel and 10-ft section, the round-wall sections knocked out, and whether repairWall has anything to put back.",
+    },
+    {
+      path: "breakWallSection", params: [REGION, p("panel", "number", { doc: "the region's shape index (a placed panel)" }), p("section", "number", { doc: "the 10-ft section along that panel (a round wall: the chord), from 0" })],
+      returns: "Promise<{ regionId, broken, panels, destroyed }|null>", gm: true, writes: true, since: "0.8.0",
+      nullWhen: "not a GM, not a wall spell, or no such panel or section",
+      sideEffects: ["Region shapes (the panel cut) or flags.pentaryn-aoe.wallBroken", "flags.pentaryn-aoe.wallOriginal", "Wall (deleted by the sync)", "Region (deleted with its last section)"],
+      doc: "B2: knock one section out of a wall, as the map's break control does: a line panel's shape is cut so the area shows the gap, a round wall's section is listed as broken; the active GM's sync then removes its Wall document. An info toast names the spell.",
+    },
+    {
+      path: "repairWall", params: [REGION], returns: "Promise<{ regionId, panels }|null>", gm: true, writes: true, since: "0.8.0",
+      nullWhen: "not a GM, not a wall spell, or nothing is broken (an info toast)",
+      sideEffects: ["Region shapes", "flags.pentaryn-aoe.wallOriginal", "flags.pentaryn-aoe.wallBroken", "Wall (re-created by the sync)"],
+      doc: "B2: put a broken wall back as it was before its first break, moved with its handle since (right-click a break control does the same).",
+    },
+    {
+      path: "syncWalls", params: [{ ...SCENE, doc: "default: canvas.scene" }], returns: "Promise<{ regions, created, updated, deleted, orphans }>",
+      gm: true, writes: true, since: "0.8.0",
+      sideEffects: ["Wall (created/updated/deleted, flags.pentaryn-aoe.regionId)"],
+      doc: "B2, active GM: repair one scene's spell walls — every wall spell's region gets the walls its panels call for (none with spellWalls off), walls whose region is gone are deleted. All zeros on any other client. Runs on canvasReady.",
+    },
   ],
   escape: [
     legacy("activePlacement", [], "object|null",

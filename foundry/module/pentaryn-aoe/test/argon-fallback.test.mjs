@@ -9,8 +9,8 @@ const { F } = await boot({ entry: true });
 
 test("D-A4: the pending Argon fallback is a registry once, labelled canvasReady(argon)", () => {
   const rec = game.pentaryn.aoe.hookIds().filter(h => h.name === "canvasReady");
-  assert.equal(rec.length, 2, "the GM sweep and the Argon fallback");
-  assert.equal(F.listeners("canvasReady"), 2);
+  assert.equal(rec.length, 3, "the GM sweep, the spell-wall sync (0.8.0) and the Argon fallback");
+  assert.equal(F.listeners("canvasReady"), 3);
 });
 
 test("D-A4: uninstall() removes it before it fires; a late Argon is then left alone", () => {

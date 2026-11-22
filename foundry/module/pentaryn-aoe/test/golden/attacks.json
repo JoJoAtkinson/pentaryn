@@ -8,7 +8,20 @@
         "dialog": {
           "configure": false
         },
-        "message": {}
+        "message": {
+          "data": {
+            "system": {
+              "targets": [
+                {
+                  "actor": "Actor.gobT",
+                  "token": "Scene.s.Token.gobT",
+                  "name": "Goblin",
+                  "ac": 15
+                }
+              ]
+            }
+          }
+        }
       }
     ]
   },
@@ -27,7 +40,20 @@
         "dialog": {
           "configure": false
         },
-        "message": {}
+        "message": {
+          "data": {
+            "system": {
+              "targets": [
+                {
+                  "actor": "Actor.gobT",
+                  "token": "Scene.s.Token.gobT",
+                  "name": "Goblin",
+                  "ac": 30
+                }
+              ]
+            }
+          }
+        }
       }
     ]
   },
@@ -44,8 +70,24 @@
         "dialog": {
           "configure": false
         },
-        "message": {}
+        "message": {
+          "data": {
+            "system": {
+              "targets": [
+                {
+                  "actor": "Actor.gobT",
+                  "token": "Scene.s.Token.gobT",
+                  "name": "Goblin"
+                }
+              ]
+            }
+          }
+        }
       }
     ]
+  },
+  {
+    "label": "no target, natural 20",
+    "calls": []
   }
 ]

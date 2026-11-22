@@ -3,8 +3,8 @@
  * game.settings.register/get/set.
  *
  * Every row carries LITERAL `name` and `hint` keys (C51). Rows register in table order, which is
- * the order of the settings menu: the 20 booleans first (the old BOOLS order, then
- * stationaryInstantAreas, autoDamageOnSave, applyFromCard, hitMissLabels), then showAppliedBy (G2), then
+ * the order of the settings menu: the booleans first (the old BOOLS order, then
+ * stationaryInstantAreas, autoDamageOnSave, applyFromCard, hitMissLabels, spellWalls), then showAppliedBy (G2), then
  * npcSaveRollMode, then areaWalls —
  * golden/settings-register.json pins it.
  *
@@ -98,6 +98,11 @@ export const SETTINGS = Object.freeze([
   { key: "hitMissLabels", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_AOE.Setting.hitMissLabels.Name", hint: "PENTARYN_AOE.Setting.hitMissLabels.Hint",
     doc: "Part C (D2): an attack card says Hit (blue) or Miss (orange) in its title, or on each target with several, a miss adds a \"Miss — no damage\" line, and the damage card after a hit has a blue title; nothing while dnd5e.attackRollVisibility is none." },
+  { key: "spellWalls", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_AOE.Setting.spellWalls.Name", hint: "PENTARYN_AOE.Setting.spellWalls.Hint",
+    // spell-walls.mjs: the active GM's client adds or removes the walls of the viewed scene's wall spells.
+    onChange: routed("spellWalls"),
+    doc: "B2: Wall of Stone and Wall of Ice raise walls that block movement and sight, Wall of Force movement only, Wall of Fire sight only; the GM breaks a section with its map control. Off: the active GM's client removes them (the viewed scene now, any other when it is next viewed)." },
   { key: "showAppliedBy", scope: "world", config: true, type: String, default: "owners",
     name: "PENTARYN_AOE.Setting.showAppliedBy.Name", hint: "PENTARYN_AOE.Setting.showAppliedBy.Hint",
     choices: {

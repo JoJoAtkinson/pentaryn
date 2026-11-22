@@ -30,10 +30,15 @@
  * a rotated or resized cube was clipped from a centre computed with its old rotation or size).
  *
  * Changing areaWalls re-clips the template areas on the levels this client views (refreshAreaClips).
+ *
+ * B2 (0.8.0): the walls a wall spell raises (spell-walls.mjs, flagged `{ regionId }`) never clip that
+ * spell's own area, and a Wall of Force's walls (`clipsAreas`, movement only) clip every other area
+ * although they block no sight (core.areaEdgeClips). Under "move" core's polygon is used as before
+ * unless the scene holds spell walls.
  * Adjustment row aoe-area-walls.
  */
 
-import { MODULE, areaClipOrigin, edgeClipsArea, isTemplateRegion } from "./core.mjs";
+import { MODULE, areaClipOrigin, areaEdgeClips, isTemplateRegion } from "./core.mjs";
 import { onSettingChange, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -60,12 +65,28 @@ function areaBackend(Base) {
     Narrowed = class AreaPolygon extends Base {
       _testEdgeInclusion(edge, edgeTypes) {
         if (!super._testEdgeInclusion(edge, edgeTypes)) return false;
-        return edgeClipsArea(edge, this.config?.pentarynAreaWalls ?? "cover");
+        return areaEdgeClips(edge, this.config?.pentarynAreaWalls ?? "cover", this.config?.pentarynRegionId ?? null, spellWallFlags(edge));
       }
     };
     backends.set(Base, Narrowed);
   }
   return Narrowed;
+}
+
+/**
+ * B2: a spell wall's flags (`{ regionId, clipsAreas, … }`) for a wall edge, else null. Core 14 builds
+ * a wall's edge with the Wall placeable, or the WallDocument for a level nobody draws, as `object`.
+ */
+function spellWallFlags(edge) {
+  if (edge?.type !== "wall") return null;
+  const doc = edge.object?.document ?? edge.object ?? null;
+  return doc?.flags?.[MODULE]?.regionId ? doc.flags[MODULE] : null;
+}
+
+/** B2: does this region's scene hold any spell walls (spell-walls.mjs)? */
+function sceneHasSpellWalls(region) {
+  const walls = region?.parent?.walls;
+  return !!walls?.some?.(w => !!w?.flags?.[MODULE]?.regionId);
 }
 
 /**
@@ -78,11 +99,13 @@ function computeConstraint(wrapped, origin, config) {
   if (!isTemplateRegion(this) || config?.type !== "move") return wrapped(origin, config);
   const rule = setting("areaWalls");
   const Base = globalThis.CONFIG?.Canvas?.polygonBackends?.move;
-  if (rule === "move" || typeof Base?.create !== "function") return wrapped(origin, config);
+  if (typeof Base?.create !== "function") return wrapped(origin, config);
+  // "move" is core's own polygon, except that a spell's own walls never clip it and a Wall of Force clips (B2).
+  if (rule === "move" && !sceneHasSpellWalls(this)) return wrapped(origin, config);
   const gridSize = this.parent?.grid?.size ?? globalThis.canvas?.grid?.size ?? 100;
   const pending = pendingShapes?.doc === this ? pendingShapes.shapes : null;
   const at = areaClipOrigin(pending ?? this.shapes, origin, { gridSize });
-  return areaBackend(Base).create(at, { ...config, pentarynAreaWalls: rule });
+  return areaBackend(Base).create(at, { ...config, pentarynAreaWalls: rule, pentarynRegionId: this.id ?? null });
 }
 
 /**
@@ -165,4 +188,4 @@ export function uninstall() {
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only.
 // Not part of the API.
-export const _internals = { WRAPPED, SHAPES_WRAPPED, areaBackend, computeConstraint, computeConstraints, wrapConstraint, refreshAreaClips };
+export const _internals = { WRAPPED, SHAPES_WRAPPED, areaBackend, computeConstraint, computeConstraints, wrapConstraint, refreshAreaClips, spellWallFlags, sceneHasSpellWalls };

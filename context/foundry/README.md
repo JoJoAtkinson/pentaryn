@@ -68,7 +68,7 @@ The table is generated from each `module.json`, the module's code and its
 
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
-| `aoe` | `pentaryn-aoe` | 0.7.1 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+16) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
+| `aoe` | `pentaryn-aoe` | 0.8.0 | full tier | `areasFor`, `spellAreas`, `handleFor`, `removeArea`, `cardEffects`, `setting`, `hookIds`, `resolution` … (+20) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
 | `attunement` | `pentaryn-attunement` | 0.3.0 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
 | `combat` | `pentaryn-combat` | 0.3.1 | full tier | `count`, `plan`, `turn`, `newTurn`, `multiattack`, `weapons`, `offers`, `fullAttack` … (+15) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.5.1 | full tier | `list`, `render`, `syncScene`, `syncAll`, `isCreature`, `ownerSees`, `patchedWith`, `status` … (+5) | [README](../../foundry/module/pentaryn-creatures/README.md) |
@@ -116,7 +116,7 @@ The table is generated from each `module.json`, the module's code and its
 | Full Attack, swing pips, off-hand / Nick / Flurry, Sneak Attack offers on the HUD — `pentaryn-combat` | [`melee.md`](melee.md) |
 | The Argon Combat HUD misbehaves — a button missing or doubled, wrong pips, a tooltip that sticks or eats a click, the HUD on the wrong token; every Argon hook and patch by module and order | [`argon.md`](argon.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
-| Spell circles you can't move/delete, an area cut short by walls or stuck on a token, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
+| Spell circles you can't move/delete, an area cut short by walls or stuck on a token, "damage isn't rolled", monster saves off an area, Wall of Stone / Ice / Force / Fire blocking sight or movement and knocking a section down — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
 | "Why didn't I get the Shield card" — the whispered reaction reminder when a monster hits or damages a PC, a card that is grey or missing, nothing waits on it — `pentaryn-reactions` | [`reactions.md`](reactions.md) · [README](../../foundry/module/pentaryn-reactions/README.md) |
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |

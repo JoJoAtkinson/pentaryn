@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { pinJSON } from "./kit/harness.mjs";
 import { boot, flush, MODULE } from "./fixtures/world.mjs";
 import { seams } from "./fixtures/seams.mjs";
-import { attackHitTargets } from "../core.mjs";
+import { attackHitTargets, autoDamageHasTarget } from "../core.mjs";
 
 const { F, W } = await boot({ entry: true });
 const { attacks: A } = await seams();
@@ -29,31 +29,50 @@ async function roll(rolls, subj = subject()) {
   return F.calls.filter(c => c.op === "rollDamage");
 }
 
-test("hit, miss, crit, fumble, unknown AC (golden/attacks.json)", async () => {
+/** The attack card the roll belongs to, recording one target (dnd5e's descriptor; ac undefined = unknown). */
+const card = ac => ({ type: "attack", system: { targets: [{ actor: "Actor.gobT", token: "Scene.s.Token.gobT", name: "Goblin", ac }] }, _source: { system: {} } });
+
+test("hit, miss, crit, fumble, unknown AC, no target (golden/attacks.json)", async () => {
   const rows = [];
   for (const [label, r] of [
-    ["hit", { total: 15, options: { target: 15 } }],
-    ["miss", { total: 14, options: { target: 15 } }],
-    ["crit beats AC", { total: 12, options: { target: 30 }, isCritical: true }],
-    ["fumble", { total: 25, options: { target: 10 }, isFumble: true }],
-    ["unknown AC", { total: 3, options: {} }],
+    ["hit", { total: 15, options: { target: 15 }, parent: card(15) }],
+    ["miss", { total: 14, options: { target: 15 }, parent: card(15) }],
+    ["crit beats AC", { total: 12, options: { target: 30 }, isCritical: true, parent: card(30) }],
+    ["fumble", { total: 25, options: { target: 10 }, isFumble: true, parent: card(10) }],
+    ["unknown AC", { total: 3, options: {}, parent: card(undefined) }],
+    ["no target, natural 20", { total: 25, options: {}, isCritical: true, parent: { type: "attack", system: { targets: [] }, _source: { system: {} } } }],
   ]) rows.push({ label, calls: await roll([r]) });
   pinJSON("attacks", rows, import.meta.url);
-  assert.deepEqual(rows.map(r => r.calls.length), [1, 0, 1, 0, 1]);
+  assert.deepEqual(rows.map(r => r.calls.length), [1, 0, 1, 0, 1, 0]);
+});
+
+test("0.8.0: a natural 20 with NO target rolls no damage (dnd5e's tray would offer each viewer's selection, often the attacker); the Damage button stays", async () => {
+  assert.deepEqual(await roll([{ total: 25, options: {}, isCritical: true, parent: { type: "attack", system: { targets: [] }, _source: { system: { origin: "u0" } } } }]), [], "a card that recorded nobody");
+  assert.deepEqual(await roll([{ total: 25, options: {}, isCritical: true }]), [], "no attack card at all");
+  const [hit] = await roll([{ total: 25, options: {}, isCritical: true, parent: card(30) }]);
+  assert.equal(hit.message.data.system.targets.length, 1, "with a target, a crit still rolls at once");
+});
+
+test("autoDamageHasTarget: only a non-empty list of hit targets", () => {
+  assert.equal(autoDamageHasTarget([{ name: "Goblin" }]), true);
+  assert.equal(autoDamageHasTarget([]), false);
+  assert.equal(autoDamageHasTarget(null), false);
+  assert.equal(autoDamageHasTarget(undefined), false);
 });
 
 test("the attack message (roll.parent) gives mode, ammunition and the usage card origin", async () => {
-  const parent = { type: "attack", system: { mode: "twoHanded", ammunition: arrow.id }, _source: { system: { origin: "usageCard000001" } } };
+  const parent = { type: "attack", system: { mode: "twoHanded", ammunition: arrow.id, targets: card(10).system.targets }, _source: { system: { origin: "usageCard000001" } } };
   const [call] = await roll([{ total: 20, options: { target: 10 }, parent }]);
-  assert.deepEqual(call, { op: "rollDamage", config: { attackMode: "twoHanded", ammunition: arrow.id, isCritical: undefined }, dialog: { configure: false }, message: { data: { system: { origin: "usageCard000001" } } } });
+  assert.deepEqual(call, { op: "rollDamage", config: { attackMode: "twoHanded", ammunition: arrow.id, isCritical: undefined }, dialog: { configure: false }, message: { data: { system: { origin: "usageCard000001", targets: card(10).system.targets } } } });
 });
 
-test("roll options win over the attack message; no origin → an empty message config", async () => {
-  const parent = { type: "attack", system: { mode: "oneHanded", ammunition: "x" }, _source: { system: { origin: "u1" } } };
+test("roll options win over the attack message; no origin → the message carries only the hit targets", async () => {
+  const targets = card(10).system.targets;
+  const parent = { type: "attack", system: { mode: "oneHanded", ammunition: "x", targets }, _source: { system: { origin: "u1" } } };
   const [a] = await roll([{ total: 20, options: { attackMode: "offhand", ammunition: arrow.id, originatingMessage: "u2" }, parent }]);
-  assert.deepEqual([a.config.attackMode, a.config.ammunition, a.message], ["offhand", arrow.id, { data: { system: { origin: "u2" } } }]);
-  const [b] = await roll([{ total: 20, options: {} }]);
-  assert.deepEqual([b.config.attackMode, b.config.ammunition, b.message], [undefined, undefined, {}]);
+  assert.deepEqual([a.config.attackMode, a.config.ammunition, a.message], ["offhand", arrow.id, { data: { system: { origin: "u2", targets } } }]);
+  const [b] = await roll([{ total: 20, options: {}, parent: card(10) }]);
+  assert.deepEqual([b.config.attackMode, b.config.ammunition, b.message], [undefined, undefined, { data: { system: { targets } } }]);
 });
 
 /* ── 0.7.1 (playtest 2026-11-21): one roll, two targets, one hit — the miss is not in the damage tray ── */
@@ -90,19 +109,19 @@ test("one attack roll against two targets, both missed: nothing rolls; both hit:
 });
 
 test("a roll that lost its parent: the last 10 messages are scanned for this activity's attack card", async () => {
-  W.message({ type: "attack", system: { activity: { uuid: "Actor.r.Item.bow.Activity.atk" }, mode: "thrown" }, _src: 1 });
+  W.message({ type: "attack", system: { activity: { uuid: "Actor.r.Item.bow.Activity.atk" }, mode: "thrown", targets: card(5).system.targets }, _src: 1 });
   const [call] = await roll([{ total: 20, options: {} }]);
   assert.equal(call.config.attackMode, "thrown");
 });
 
 test("nothing rolls: setting off, not an attack activity, no roll, no damage parts", async () => {
   await game.settings.set(MODULE, "autoDamageOnHit", false);
-  assert.deepEqual(await roll([{ total: 20, options: {} }]), []);
+  assert.deepEqual(await roll([{ total: 20, options: {}, parent: card(5) }]), []);
   await game.settings.set(MODULE, "autoDamageOnHit", true);
-  assert.deepEqual(await roll([{ total: 20, options: {} }], subject({ type: "save" })), []);
+  assert.deepEqual(await roll([{ total: 20, options: {}, parent: card(5) }], subject({ type: "save" })), []);
   assert.deepEqual(await roll([]), []);
   assert.deepEqual(await roll(null), []);
-  assert.deepEqual(await roll([{ total: 20, options: {} }], subject({ damage: { parts: [] } })), []);
+  assert.deepEqual(await roll([{ total: 20, options: {}, parent: card(5) }], subject({ damage: { parts: [] } })), []);
   assert.deepEqual(await A.onPostRollAttack([{ total: 20 }]), undefined, "no subject");
 });
 

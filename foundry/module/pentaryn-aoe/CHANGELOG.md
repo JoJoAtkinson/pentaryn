@@ -2,6 +2,59 @@
 
 ## Unreleased
 
+- **0.8.0 (2026-11-21). B2 — wall spells raise real, breakable walls** (feedback 8t6Nn1; plan
+  feedback-triage-2026-11-19 §B and §H4, with Joe's final ruling of 2026-11-21 replacing the §H4 table
+  where they differ).
+  - **[declared] Wall documents per spell** (`spell-walls.mjs`, pure `core/spell-walls.mjs`; setting
+    `spellWalls`, default on). Joe: walls are for storytelling and behave like the real thing — a party
+    behind its own wall does not know what happens on the other side. `core.SPELL_WALLS` by dnd5e item
+    identifier: Wall of Stone and Wall of Ice block movement and sight (Ice was "see-through" on
+    2026-11-20; Joe reversed it), Wall of Force movement only (invisible) and still stops other areas,
+    Wall of Fire sight only; Blade Barrier and Wind Wall none. One Wall per 10-ft section on each panel's
+    centre line (`wallPlan`; a sphere / cylinder: a ring of at least 8 chords), flagged `{ regionId,
+    panel, section, spell, clipsAreas }`, with fixed ids (`wallId`, `keepId`) so two GM tabs make one.
+    The active GM's client writes them (players cannot create Walls) on createRegion, updateRegion (a
+    handle drag moves them in place, `diffWalls`) and deleteRegion (so they go with the area and with
+    concentration through Part A's cleanup); canvasReady re-syncs the viewed scene and deletes orphans.
+  - **[declared] Breaking a section (GM).** Each section has a small break control (a dark disc with a
+    crack) in a container on `canvas.controls`, interactive on every layer like core's door controls.
+    Click: the section is knocked out (`breakSection`) — a line panel's shape is cut so the drawn area shows
+    the gap, a round wall's chord goes in `flags.pentaryn-aoe.wallBroken` (`wall-spells.mjs` draws round
+    walls as their ring of sections, gaps open) — and an info toast names the spell. The first break keeps
+    the whole wall in `wallOriginal` with its handle's position; right-click any control repairs it
+    (`repairWall`, moved with the handle). The last section deletes the region. Deleting spell walls on
+    the Walls layer breaks those sections too (`breakSections`, last first), so a drag does not bring
+    them back. API: `wallsFor`, `breakWallSection`, `repairWall`, `syncWalls` (describe golden updated).
+  - **Review fixes.** A second break click (or a repair) on the same wall while the first
+    `region.update` is still on its server round trip is dropped (`exclusive`): it read the old shapes
+    and section numbers, so it put the first break back or knocked out the wrong stretch of a split
+    panel. With `spellWalls` off, the GM deleting a leftover spell wall on the Walls layer is just
+    cleanup and no longer cuts the area. Clear All on the Walls layer (core's `deleteAll`) breaks no
+    wall spell either; the active GM raises their walls again. A region moved to another level takes
+    its walls along (`diffWalls` compares `levels`). A drag preview of a wall region (a clone with the
+    same id) neither draws break controls nor drops the real region's.
+  - **[declared] Part H.** A spell's own walls never clip its own area, and a Wall of Force's walls clip
+    other areas although they block no sight (`core.areaEdgeClips`; `walls.mjs` passes the region id in
+    the polygon config). Under `areaWalls: move`, core's polygon is used as before unless the scene has
+    spell walls.
+  - Not built: Wall of Stone made permanent after a full duration of concentration (its walls go with
+    concentration, as its region does). B1 (visible thickness) and B3 (panel counter) unchanged; their
+    tests pass.
+  - **[declared] No target, no auto damage** (Joe 2026-11-21). With nothing targeted a natural 20 still
+    auto-rolled damage (`shouldAutoDamage`: a crit, or an unknown AC, rolls), and dnd5e's Apply tray on
+    that card then offered the selected token — the attacker, or whatever each viewer had selected.
+    `attacks.mjs onPostRollAttack` now rolls only when the attack card's hit targets
+    (`core.attackHitTargets`) are not empty (`core.autoDamageHasTarget`); a card that recorded no target,
+    or no attack card at all, leaves the card's Damage button for the player. Every auto-rolled card now
+    carries its hit targets. Note: a pentaryn-combat Full Attack with no target and aoe's auto damage on
+    shows no per-swing Damage button (combat hides it whenever `autoDamageOnHit` is on); the usage card's
+    Damage button remains. Tests: `attacks.test.mjs` (no target, no card, crit with a target), the
+    `attacks.json` golden (each row now records a target; a "no target, natural 20" row).
+  - Adjustment rows `core-region-spell-walls`, `core-controls-layer-wall-breaks`. Tests:
+    `spell-walls.test.mjs` (per-spell walls, sections, ids, diff, break geometry, repair, own-wall
+    clipping exclusion, the GM sync, the Walls-layer break, the controls); hooks / settings / describe /
+    surface goldens regenerated for the new hooks, setting and rows.
+
 - **0.7.1 (2026-11-21). Browser playtest of 0.7.0** (four findings, live on BOSS).
   - **[declared] A relay that timed out is no longer reported as "no GM".** The GM's client was slow
     (over `RELAY_TIMEOUT_MS`, 8 s), the heal landed late, and the player had been told "No GM is

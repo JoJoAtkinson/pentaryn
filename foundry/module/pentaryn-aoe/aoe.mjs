@@ -14,6 +14,7 @@
  *   escape.mjs   Part E  Escape cancels a spell-area placement on the first press, even with a sheet open
  *   walls.mjs    Part H  only walls that are total cover (block movement and sight) clip a spell area
  *   wall-spells.mjs  B1  a wall spell's panels are drawn thick enough to see, in neutral stone
+ *   spell-walls.mjs  B2  a wall spell raises real Wall documents; the GM breaks a section from the map
  *   apply.mjs    Part I  Apply from any damage / healing card: unowned rows relayed to the GM, late targets, typed totals
  *
  * Lifecycle: init → settings and the Escape keybinding (a keybinding can only be registered then) ·
@@ -48,10 +49,11 @@ import * as aim from "./aim.mjs";
 import * as escape from "./escape.mjs";
 import * as walls from "./walls.mjs";
 import * as wallSpells from "./wall-spells.mjs";
+import * as spellWalls from "./spell-walls.mjs";
 import * as apply from "./apply.mjs";
 
 /** Features in load order: their hooks register in this order, and order within a hook name is behaviour. */
-const FEATURES = [areas, tokenAreas, careful, resolvePart, tray, attacks, effects, refund, aim, escape, walls, wallSpells, apply];
+const FEATURES = [areas, tokenAreas, careful, resolvePart, tray, attacks, effects, refund, aim, escape, walls, wallSpells, spellWalls, apply];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

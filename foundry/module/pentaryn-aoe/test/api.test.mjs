@@ -43,15 +43,16 @@ test("version and contract; VERSION === module.json", () => {
 
 test("every pre-migration row is legacy with resolve: false params; the -10 reads are not", () => {
   const rows = Object.fromEntries(api.describe().methods.map(m => [m.path, m]));
-  const fresh = ["resolution", "latestResolution", "summary", "isHandle", "inspect", "applyRelay"];
-  assert.equal(Object.keys(rows).length, 25);
+  // 0.8.0 (B2): the spell-wall rows are new rows, not legacy ones
+  const fresh = ["resolution", "latestResolution", "summary", "isHandle", "inspect", "applyRelay", "wallsFor", "breakWallSection", "repairWall", "syncWalls"];
+  assert.equal(Object.keys(rows).length, 29);
   for (const [path, m] of Object.entries(rows)) {
     assert.equal(!!m.legacy, !fresh.includes(path), path);
     for (const p of m.params) assert.equal(p.resolve, false, `${path}.${p.name}`);
   }
   assert.deepEqual(Object.values(FEATURE_ROWS).flat().map(r => r.path).sort(),
-    ["activePlacement", "applyRelay", "applyRows", "createHandle", "ensureHandleActor", "pendingFor", "pingPlayers", "resolve", "rollForPlayer", "rollNpcSaves", "selfApply", "setRow", "sweep"]);
-  for (const p of ["resolve", "applyRows", "rollNpcSaves", "rollForPlayer", "pingPlayers", "setRow", "sweep", "applyRelay"]) assert.equal(rows[p].gm, true, p);
+    ["activePlacement", "applyRelay", "applyRows", "breakWallSection", "createHandle", "ensureHandleActor", "pendingFor", "pingPlayers", "repairWall", "resolve", "rollForPlayer", "rollNpcSaves", "selfApply", "setRow", "sweep", "syncWalls", "wallsFor"]);
+  for (const p of ["resolve", "applyRows", "rollNpcSaves", "rollForPlayer", "pingPlayers", "setRow", "sweep", "applyRelay", "breakWallSection", "repairWall", "syncWalls"]) assert.equal(rows[p].gm, true, p);
   // Part I: the one query row is the relay (any sender, the active GM answers), registered on every client
   assert.deepEqual([rows.applyRelay.query, rows.applyRelay.relay, rows.applyRelay.writes], [true, true, true]);
   assert.deepEqual(api.describe().queries, ["pentaryn-aoe.applyRelay"]);
@@ -61,7 +62,8 @@ test("every pre-migration row is legacy with resolve: false params; the -10 read
 test("the flags contract: what aoe writes, what it reads", () => {
   const { flags } = api.describe();
   assert.ok(flags.writes.includes("flags.pentaryn-aoe.handle") && flags.writes.includes("flags.pentaryn-aoe.resolution"));
-  assert.equal(flags.writes.length, 16);
+  assert.equal(flags.writes.length, 23);   // 0.8.0: + the seven B2 spell-wall flags
+  for (const f of ["regionId", "panel", "section", "spell", "clipsAreas", "wallOriginal", "wallBroken"]) assert.ok(flags.writes.includes(`flags.pentaryn-aoe.${f}`), f);
   for (const f of ["flags.pentaryn-aoe.lateTargets", "flags.pentaryn-aoe.areaTargets", "flags.pentaryn-aoe.recordedTargets", "flags.pentaryn-aoe.applied", "flags.pentaryn-aoe.appliedLog"]) assert.ok(flags.writes.includes(f), f);
   assert.deepEqual(flags.reads, ["flags.dnd5e.*", "flags.core.MeasuredTemplate", "flags.item-piles.data.enabled", "flags.pentaryn-riders.empowered"]);
 });
@@ -170,8 +172,9 @@ test("inspect(…, { as: a player }): no tray summary; Careful Spell only on an 
 
 test("settings() is every SETTINGS row's live value", () => {
   const s = api.settings();
-  assert.equal(Object.keys(s).length, 23);
+  assert.equal(Object.keys(s).length, 24);
   assert.equal(s.hitMissLabels, true);
+  assert.equal(s.spellWalls, true, "0.8.0 B2: on by default");
   assert.equal(s.showAppliedBy, "owners");
   assert.deepEqual([s.autoDamageOnSave, s.applyFromCard], [true, true]);
   assert.equal(s.npcSaveRollMode, "gm");

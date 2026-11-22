@@ -8,7 +8,7 @@
 export const MODULE = "pentaryn-aoe";
 export const SHORT = "aoe";
 export const NS = "aoe";
-export const VERSION = "0.7.1";                          // === module.json version (core.test pins it)
+export const VERSION = "0.8.0";                          // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-aoe/api@1";            // bump the major on a published-shape change
 export const I18N = "PENTARYN_AOE";
 export const CSS = "pa-";
@@ -19,6 +19,9 @@ export const HOOKS = Object.freeze({});
 // Area geometry: centreOf, handleTopLeft, AREA_WALL_RULES, edgeClipsArea, areaClipOrigin, instantaneous,
 // instantSpellArea.
 export * from "./core/areas.mjs";
+// B2 spell walls: SPELL_WALLS, spellWallKind, sectionPixels, panelSections, wallId, wallPlan, diffWalls,
+// breakSection, restoreShapes, areaEdgeClips.
+export * from "./core/spell-walls.mjs";
 
 /** Read this module's flags without getFlag(): getFlag throws while the module is inactive (hot-patch). */
 export function aoeFlags(doc) {
@@ -246,6 +249,17 @@ export function attackHitTargets(targets, { total = 0, isCritical = false, isFum
   if (!list.length) return null;
   const missed = t => t.ac === null || (!isCritical && (!!isFumble || (Number.isFinite(t.ac) && Number(total) < t.ac)));
   return list.filter(t => !missed(t)).map(t => ({ ...t }));
+}
+
+/**
+ * Part C (0.8.0, Joe 2026-11-21): may the auto damage roll go ahead, given attackHitTargets' answer?
+ * Only with at least one target the roll hit. `null` (the card recorded no target: a natural 20 at
+ * nobody) rolls nothing, as does `[]` (every target missed): dnd5e's Apply tray on such a card offers
+ * whatever each viewer has selected, often the attacker. The card's Damage button stays.
+ * @param {object[]|null} hits
+ */
+export function autoDamageHasTarget(hits) {
+  return Array.isArray(hits) && hits.length > 0;
 }
 
 /**

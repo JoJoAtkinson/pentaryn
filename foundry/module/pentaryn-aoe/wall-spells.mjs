@@ -11,13 +11,14 @@
  * gives a wall spell's region (core.wallSpellRegion) one extra PIXI.Graphics child on the Region
  * PLACEABLE: each line shape drawn core.wallThickness thick (its width, or a fifth of a square when
  * that is thinner), filled in a neutral stone grey with a solid dark stroke, not the user colour. The
- * shape data is never changed, so which creatures the area holds is exactly what it was; and no
- * Wall documents are made (B2, a separate decision). The drawing follows the placeable: hidden with
+ * shape data is never changed, so which creatures the area holds is exactly what it was. This file makes no
+ * Wall documents (B2, spell-walls.mjs, does). The drawing follows the placeable: hidden with
  * it, gone with a redraw (core destroys the children; the next refresh adds it again) and with the
  * region. Adjustment row core-region-wall-panels.
  */
 
-import { MODULE, isTemplateRegion, wallPanelOutline, wallSpellRegion } from "./core.mjs";
+import { MODULE, WALL_MIN_FRACTION, aoeFlags, brokenKey, isTemplateRegion, panelSections, sectionPixels, wallPanelOutline, wallSpellRegion } from "./core.mjs";
+import { wallKindOf } from "./scene-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 /** Where the drawing hangs on the placeable (one per region). */
@@ -47,6 +48,31 @@ function describe(doc) {
   };
 }
 
+/** The region's one overlay, cleared (made on first use, or again after a redraw destroyed it). */
+function overlayOf(region) {
+  let g = region[OVERLAY];
+  if (!g || g.destroyed) {
+    g = new PIXI.Graphics();
+    g.eventMode = "none";
+    region.addChildAt ? region.addChildAt(g, 0) : region.addChild(g);
+    region[OVERLAY] = g;
+  }
+  g.clear();
+  return g;
+}
+
+/** B2: a round wall's sections, each a thick stone stroke. */
+function drawRing(region, segments) {
+  const g = overlayOf(region);
+  const grid = canvas?.grid?.size ?? canvas?.dimensions?.size ?? 0;
+  const t = Math.max(4, grid * WALL_MIN_FRACTION);
+  for (const [x1, y1, x2, y2] of segments) {
+    g.lineStyle(t + STROKE_PX * 2, WALL_STROKE, 1).moveTo(x1, y1).lineTo(x2, y2);
+    g.lineStyle(t, WALL_FILL, 1).moveTo(x1, y1).lineTo(x2, y2);
+  }
+  return g;
+}
+
 function dropOverlay(region) {
   const g = region?.[OVERLAY];
   if (!g) return;
@@ -57,18 +83,27 @@ function dropOverlay(region) {
   }
 }
 
+/**
+ * B2 (0.8.0): a round wall that raises walls (Wall of Force's sphere, Wall of Ice's globe, Wall of
+ * Fire's ring) is drawn as its ring of sections in stone, a knocked-out one left open, so the gap the
+ * GM broke shows on everyone's map (the region's own fill is a disc and cannot show it). Null for any
+ * other region.
+ */
+function ringSections(doc, shapes) {
+  if (!shapes.length || !shapes.every(s => s?.type === "circle") || !wallKindOf(doc)) return null;
+  const scene = doc.parent;
+  const secPx = sectionPixels(scene?.grid?.size, scene?.grid?.distance);
+  const broken = new Set(aoeFlags(doc).wallBroken ?? []);
+  return shapes.flatMap((shape, panel) => panelSections(shape, secPx).filter((_, section) => !broken.has(brokenKey(panel, section))));
+}
+
 /** refreshRegion: (re)draw the panels of a wall spell's region. Never touches any other region. */
 export function onRefreshRegion(region) {
   const doc = region?.document;
+  const ring = doc ? ringSections(doc, [...(region.animationState?.shapes ?? doc.shapes ?? [])]) : null;
+  if (ring) return drawRing(region, ring);
   if (!doc || !wallSpellRegion(describe(doc))) return dropOverlay(region);
-  let g = region[OVERLAY];
-  if (!g || g.destroyed) {
-    g = new PIXI.Graphics();
-    g.eventMode = "none";
-    region.addChildAt ? region.addChildAt(g, 0) : region.addChild(g);
-    region[OVERLAY] = g;
-  }
-  g.clear();
+  const g = overlayOf(region);
   const grid = canvas?.grid?.size ?? canvas?.dimensions?.size ?? 0;
   const shapes = region.animationState?.shapes ?? doc.shapes ?? [];
   for (const shape of shapes) {
