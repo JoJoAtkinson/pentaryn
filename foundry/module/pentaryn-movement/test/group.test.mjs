@@ -687,11 +687,11 @@ test("R5-3: a press on a door's icon over a moving token stops the token and nev
   const DoorControl = F.foundry.canvas.containers.DoorControl;
   const listeners = [];
   const doorsLayer = { addEventListener: (type, fn, opts) => listeners.push({ type, fn, opts }), removeEventListener() {} };
-  const controlsBefore = F.canvas.controls;
-  F.canvas.controls = { doors: doorsLayer };
+  const stageBefore = F.canvas.stage;
+  F.canvas.stage = doorsLayer;
   F.fire("canvasReady");
   const capture = listeners.find(l => l.type === "pointerdown" && l.opts?.capture);
-  assert.ok(capture, "a capture-phase pointerdown listener on the door icons' container");
+  assert.ok(capture, "a capture-phase pointerdown listener on the stage");
   const t = makeToken("doorTok00000001", 400, 100);
   t.document._source = { ...t.document._source, x: 400, y: 600 };
   t.document.x = 430; t.document.y = 300;                        // drawn crossing the door, centre (480, 350)
@@ -721,7 +721,7 @@ test("R5-3: a press on a door's icon over a moving token stops the token and nev
   } finally {
     t.animationContexts.clear();
     F.canvas.tokens = layerBefore;
-    F.canvas.controls = controlsBefore;
+    F.canvas.stage = stageBefore;
   }
 });
 

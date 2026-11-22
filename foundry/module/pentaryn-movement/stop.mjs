@@ -380,8 +380,9 @@ function patchStopAnimation() {
  * the token and leaves the door alone (live R5-3: clicking a token as it crossed a door hit the door's
  * icon, which sits above the tokens, and shut the door on it; 8 of 8 runs). A press on the icon with no
  * moving token under it is core's toggle, as before; so is a token at rest on the icon. A capture-phase
- * listener on the door icons' container (canvas.controls.doors) runs before the icon's own handler and
- * stops the event there. Not a wrap of DoorControl#_onMouseDown: libWrapper keeps such a wrap innermost,
+ * listener on the canvas stage runs before the icon's own handler and, for a press whose target is a door
+ * icon, stops the event there (a capture listener on canvas.controls.doors itself is never called on
+ * core 14 / PIXI 7.4: checked live). Not a wrap of DoorControl#_onMouseDown: libWrapper keeps such a wrap innermost,
  * under another module's async wrapper (Monk's Active Tile Triggers), so it ran a frame late, after the
  * token had moved on, and the door still toggled (BOSS, 0.4.5 first build).
  */
@@ -403,10 +404,10 @@ function onDoorDown(event) {
   } catch (err) { log.warnOnce("stop-door", "click to stop over a door skipped (further errors suppressed)", err); }
 }
 
-/** The door icons' container this client listens on (one per canvas draw). */
+/** The stage this client listens on for door icon presses. */
 let doorLayer = null;
 function listenDoors() {
-  const c = globalThis.canvas?.controls?.doors ?? null;
+  const c = globalThis.canvas?.stage ?? null;
   if (!c || c === doorLayer || typeof c.addEventListener !== "function") return;
   unlistenDoors();
   c.addEventListener("pointerdown", onDoorDown, { capture: true });
