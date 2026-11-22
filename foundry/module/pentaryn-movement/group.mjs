@@ -152,6 +152,12 @@ function resumePending() {
   return resumed;
 }
 
+/** status().group.last after a throw: the drop went as core's (live R4-11: it read mode "plan", result null). */
+function noteThrow(t0 = null) {
+  last = { ...(last ?? { at: new Date().toISOString(), members: null, async: false, relaxed: 0, replans: 0 }),
+    mode: "core", reason: "throw", result: "core", waves: 0, ms: t0 === null ? (last?.ms ?? null) : Math.round((now() - t0) * 10) / 10 };
+}
+
 function fellBack(reason) {
   fallbacks.unshift({ at: new Date().toISOString(), reason });
   fallbacks.length = Math.min(fallbacks.length, 8);
@@ -609,6 +615,15 @@ function debugThrow() {
   if (globalThis.CONFIG?.debug?.[`${MODULE}.throw`]) throw new Error("debug: forced planner throw");
 }
 
+/** Does no member of this drop go anywhere (every waypoint is where it stands)? */
+function droppedInPlace(contexts, [updates, options]) {
+  return contexts.every(c => {
+    const doc = c.token.document;
+    const wps = options.movement?.[doc.id]?.waypoints ?? [];
+    return wps.every(w => w.x === doc._source.x && w.y === doc._source.y && (w.elevation ?? doc._source.elevation) === doc._source.elevation);
+  }) || !updates.length;
+}
+
 /** The wrap's body: core's result in, the drop's result out (null while an async plan runs). */
 function onDrop(grabbed, event, result) {
   if (!Array.isArray(result) || !Array.isArray(result[0]) || !result[1]?.movement) return result;
@@ -624,6 +639,11 @@ function onDrop(grabbed, event, result) {
   last = { at: new Date().toISOString(), mode: info.mode, reason: info.reason, combat: info.combat, members: contexts.length,
     result: null, ms: null, async: false, relaxed: 0, replans: 0, waves: 0 };
 
+  // Dropped where it stands: nobody moves, nothing to plan (live R4-11: it spent 316 ms and fell back on budget).
+  if (droppedInPlace(contexts, result)) {
+    Object.assign(last, { mode: "core", reason: "still", result: "core", ms: 0 });
+    return result;
+  }
   if (info.mode === "core") {
     if (unstackable(info.reason)) unstack(contexts, result, grabbed.document.id, info.combat);
     if (info.combat) checkpointAll(contexts, result[1]);
@@ -681,6 +701,7 @@ function onDrop(grabbed, event, result) {
     } catch (err) {
       log.warnOnce("group-plan", "group planning failed; the move goes as core's (further errors suppressed)", err);
       fellBack("throw");
+      noteThrow(t0);
       try { unstack(contexts, result, grabbed.document.id, info.combat); }
       catch (e) { log.debug?.("unstack after a planning throw", e); }
       b = { first: result, later: [], base: null };
@@ -711,6 +732,7 @@ function patchDrop() {
     catch (err) {
       log.warnOnce("group", "group movement skipped; the move goes as core's (further errors suppressed)", err);
       fellBack("throw");
+      noteThrow();
       // Still no two at rest on one spot (as every other core fallback; live R2-1 checked the throw path too).
       try {
         const contexts = contextsOf(event).filter(c => c?.token?.document);

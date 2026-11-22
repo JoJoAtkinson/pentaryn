@@ -425,6 +425,28 @@ test("a forced planner throw: the move is core's own, with one warning", () => {
   assert.equal(warns.length, 1, warns.join("\n"));
   assert.match(warns[0], /pentaryn-movement \| group movement skipped/);
   assert.equal(api.status().group.fallbacks[0].reason, "throw");
+  // R4-11: last says what happened, not the plan it was about to make.
+  const last = api.status().group.last;
+  assert.deepEqual([last.mode, last.result, last.reason, last.waves], ["core", "core", "throw", 0]);
+});
+
+test("R4-11: a group dropped where it stands plans nothing and is instant", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("zeroA00000000001", 700, 100), makeToken("zeroB00000000001", 800, 100)];
+  const ctx = contextsFor(ts, 0, 0);
+  const core = coreDrop(ctx);
+  drop.result = core;
+  const from = F.calls.length;
+  clock.step = 50;                                    // a plan would read the clock and run over budget
+  try {
+    const out = ts[0]._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+    assert.equal(out, core, "core's own (zero-length) drop, untouched");
+  } finally { clock.step = 0; }
+  mock.timers.tick(5000);
+  assert.equal(sent(from).length, 0);
+  const last = api.status().group.last;
+  assert.deepEqual([last.mode, last.reason, last.result, last.async], ["core", "still", "core", false]);
 });
 
 test("R2-1: a planner throw is core's drop, still with no two members resting on one spot", () => {
