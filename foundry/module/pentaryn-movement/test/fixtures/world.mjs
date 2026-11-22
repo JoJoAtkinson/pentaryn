@@ -18,6 +18,8 @@ export const keyboard = { result: undefined, calls: 0 };
 /** What the stub Token#_prepareDragLeftDropUpdates returns next, and the stub Token#_onClickLeft's calls (0.4.0). */
 export const drop = { result: undefined, calls: 0 };
 export const clicks = [];
+/** Door icon presses core's DoorControl#_onMouseDown handled (a toggle). */
+export const doors = [];
 
 export async function movementWorld({ patchable = true } = {}) {
   const lang = JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
@@ -53,6 +55,13 @@ export async function movementWorld({ patchable = true } = {}) {
         this.animationContexts?.clear?.();
       }
     };
+    // Core's door icon: a left press toggles the door (the stub records it).
+    F.foundry.canvas.containers = { DoorControl: class DoorControl {
+      _onMouseDown(event) {
+        doors.push({ control: this, event });
+        return "toggled";
+      }
+    } };
     F.CONFIG.Canvas = { layers: { tokens: { layerClass: class TokenLayer5e {
       _prepareKeyboardMovementUpdates() {
         keyboard.calls += 1;

@@ -64,7 +64,7 @@ F.fire("ready");
 
 const sent = () => F.calls.filter(c => c.op === "scene.update");
 
-test("R3-1: after a reload the unsent waves go out, spaced as planned, and only ours", () => {
+test("R3-1: after a reload the unsent waves go out, spaced as planned, and only ours", async () => {
   mock.timers.tick(0);
   assert.deepEqual(sent().map(c => c.ids), [["memB000000000001"]], "the overdue wave at once");
   assert.deepEqual(sent()[0].options.movement.memB000000000001.waypoints.map(w => [w.x, w.y]), [[2200, 1200]]);
@@ -75,6 +75,7 @@ test("R3-1: after a reload the unsent waves go out, spaced as planned, and only 
   assert.deepEqual(sent().map(c => c.ids), [["memB000000000001"], ["memC000000000001"]], "a member moved since the drop (D) is left out");
   mock.timers.tick(10000);
   assert.equal(sent().length, 2, "another user's or a stale record is never sent");
+  await new Promise(r => setImmediate(r));          // a wave leaves the record once the server answered (R5-2)
   assert.equal(store.has(KEY), false, "nothing left to resume");
   assert.equal(game.pentaryn.movement.status().group.resumed.groups, 1);
 });

@@ -502,6 +502,11 @@
       "adjustments": "movement-stop-animation-defuse"
     },
     {
+      "label": "DoorControl#_onMouseDown",
+      "marker": "__pentarynMovementDoor",
+      "adjustments": "movement-click-stop-door"
+    },
+    {
       "label": "TokenLayer.objects#sortChildren",
       "marker": "__pentarynMovement",
       "adjustments": "movement-layer-sort-owned"

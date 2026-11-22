@@ -41,6 +41,7 @@ const groupOf = new Map();                 // token id → group id
 let last = null;                           // the last drop, for status()
 let resumedLast = null;                    // the last reload that picked up unsent waves, for status()
 let stoppedAt = null;                      // the last time a turn change stopped a group, for status()
+let destacked = null;                      // the last rest check that moved a member off another, for status()
 const fallbacks = [];                      // the last few reasons a drop went to core
 /** token id → the sequence number of this client's latest drop of it: an older plan or wave never overrides a newer drop. */
 const latestDrop = new Map();
@@ -70,6 +71,34 @@ const GROUP_HOLD_MS = 1000;
 const PENDING_KEY = `${MODULE}.pendingWaves`;
 /** How long after its drop a group's unsent waves are still sent after a reload (ms). */
 const PENDING_TTL_MS = 60000;
+
+/**
+ * The page is going (a reload, a closed tab): a wave due now is not sent and stays in the record for the
+ * next `ready` (live R5-2). Between a reload's start and the old page's end its timers still fire; 0.4.3
+ * took the wave off the record and then sent it over a socket that was closing, so the update was lost
+ * and the reloaded page had nothing to resume: the grabbed member, in the last wave, never moved. A wave
+ * now leaves the record only once the server has the update. If the page stays after all (a cancelled
+ * navigation), the held wave goes out UNLOAD_RETRY_MS later.
+ */
+let unloading = false;
+const UNLOAD_RETRY_MS = 2000;
+let unloadTarget = null;
+const onUnload = () => { unloading = true; };
+function listenUnload() {
+  const w = globalThis.window ?? globalThis;
+  if (unloadTarget === w || typeof w?.addEventListener !== "function") return;
+  w.addEventListener("beforeunload", onUnload);
+  w.addEventListener("pagehide", onUnload);
+  unloadTarget = w;
+}
+function unlistenUnload() {
+  try {
+    unloadTarget?.removeEventListener?.("beforeunload", onUnload);
+    unloadTarget?.removeEventListener?.("pagehide", onUnload);
+  } catch (err) { log?.debug?.("unload listener", err); }
+  unloadTarget = null;
+  unloading = false;
+}
 
 function sessionStore() {
   try { return globalThis.sessionStorage ?? null; } catch { return null; }
@@ -482,13 +511,38 @@ function takenFor(scene, id, claims) {
     if (o.hidden && !game.user?.isGM) continue;
     if (src.level !== undefined && o._source.level !== undefined && o._source.level !== src.level) continue;
     const ow = o._source.width ?? 1, oh = o._source.height ?? 1;
-    circles.push({ x: o._source.x + (ow * s) / 2, y: o._source.y + (oh * s) / 2, r: radiusOf(ow, oh) * s });
+    const r = radiusOf(ow, oh) * s;
+    circles.push({ x: o._source.x + (ow * s) / 2, y: o._source.y + (oh * s) / 2, r });
+    // Still walking with waypoints to go (a move with checkpoints): core constrains each next leg when it
+    // continues, so a door shut since stops it short of its source. Where it will stop counts too (live
+    // R5-1: a member already walking to the door was cut by core on the square a waiting member was sent to).
+    const stop = predictedStop(o);
+    if (stop) circles.push({ x: stop.x + (ow * s) / 2, y: stop.y + (oh * s) / 2, r });
   }
   for (const c of claims ?? []) if (c.id !== id) circles.push(c);
   return p => {
     const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
     return circles.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1e-6);
   };
+}
+
+/**
+ * Where core will stop a token whose move still has waypoints pending (top-left pixels), with the walls
+ * as they are now: its own constrainMovementPath over the rest of the path, as core's continuation runs
+ * it. null when nothing is pending, the path is not cut, or the token is not drawn here.
+ */
+function predictedStop(doc) {
+  const m = doc?.movement;
+  const pending = m?.pending?.waypoints;
+  if (!pending?.length || m.state === "completed" || m.state === "stopped") return null;
+  const token = doc.object;
+  if (typeof token?.constrainMovementPath !== "function") return null;
+  try {
+    const origin = { ...doc._source };
+    const [path, cut] = token.constrainMovementPath([origin, ...pending.filter(w => !w.intermediate)], { preview: false });
+    const end = cut ? path?.at(-1) : null;
+    return end && Number.isFinite(end.x) && Number.isFinite(end.y) ? { x: end.x, y: end.y } : null;
+  } catch { return null; }
 }
 
 /**
@@ -513,19 +567,29 @@ function walkableNow(scene, id, m, options, claims) {
   return { ...m, waypoints };
 }
 
-/** Send one batch for drop `seq`, only for the members still ours. `claims`: the drop's cut spots so far. */
+/**
+ * Send one batch for drop `seq`, only for the members still ours. `claims`: the drop's cut spots so far.
+ * Resolves true once the batch is done with (sent and answered, nothing to send, or refused), false when
+ * the update failed because the page is going: the caller keeps it for the reloaded page.
+ */
 function send(scene, seq, starts, updates, options, what, claims = []) {
   let ids = stillOurs(updates.map(u => u._id), scene, starts, seq);
-  if (!ids.length) return;
+  if (!ids.length) return Promise.resolve(true);
   const movement = {};
   for (const id of ids) {
     const m = options.movement?.[id] ? walkableNow(scene, id, options.movement[id], options, claims) : options.movement?.[id];
     if (m) movement[id] = m;
   }
   ids = ids.filter(id => movement[id] || !options.movement?.[id]);
-  if (!ids.length) return;
-  scene.updateEmbeddedDocuments("Token", updates.filter(u => ids.includes(u._id)), { ...options, movement })
-    .catch(err => log.warnOnce(`group-${what}`, `a group ${what} failed (further errors suppressed)`, err));
+  if (!ids.length) return Promise.resolve(true);
+  let pending;
+  try { pending = Promise.resolve(scene.updateEmbeddedDocuments("Token", updates.filter(u => ids.includes(u._id)), { ...options, movement })); }
+  catch (err) { pending = Promise.reject(err); }
+  return pending.then(() => true, err => {
+    if (unloading) return false;
+    log.warnOnce(`group-${what}`, `a group ${what} failed (further errors suppressed)`, err);
+    return true;
+  });
 }
 
 /**
@@ -538,23 +602,118 @@ function schedule(later, base, members, { scene, seq, starts, endMs = 0 }) {
   if (!base || members.length < 2) return;
   const gid = foundry.utils.randomID();
   const group = { ids: new Set(members.map(m => m.id)), timers: [], stopped: false, claims: [] };
+  const order = members.map(m => m.id);
   groups.set(gid, group);
   for (const id of group.ids) groupOf.set(id, gid);
   const lastWave = later.at(-1)?.at ?? 0;
-  group.timers.push(setTimeout(() => forget(gid), Math.max(endMs, lastWave) + GROUP_HOLD_MS));
+  group.timers.push(setTimeout(() => {
+    const stopped = group.stopped;
+    forget(gid);
+    // A stopped group rests where it was stopped (a click, a turn change); otherwise nobody on top of anybody.
+    if (!stopped && scene) settleGroup(order, scene);
+  }, Math.max(endMs, lastWave) + GROUP_HOLD_MS));
   if (later.length && scene?.id) {
     savePending({ gid, world: game.world?.id ?? null, user: game.user?.id ?? null, sceneId: scene.id, t0: Date.now(),
       endMs, base, ids: [...group.ids], starts: Object.fromEntries(starts ?? []),
       waves: later.map(w => ({ at: w.at, ids: w.ids, updates: w.updates, movement: w.movement })) });
   }
-  for (const wave of later) {
-    group.timers.push(setTimeout(() => {
-      prunePending(gid, { at: wave.at });
-      if (group.stopped) return;
-      // A member a relay stop took out of the group (groupCancel only) is not sent.
-      const updates = wave.updates.filter(u => group.ids.has(u._id));
-      if (updates.length) send(scene, seq, starts, updates, { ...base, movement: wave.movement }, "wave", group.claims);
-    }, wave.at));
+  if (later.length) listenUnload();
+  const fire = wave => {
+    if (group.stopped) return;
+    // The page is going: the wave stays in the record for the reloaded page (live R5-2).
+    if (unloading) {
+      group.timers.push(setTimeout(() => { unloading = false; fire(wave); }, UNLOAD_RETRY_MS));
+      return;
+    }
+    // A member a relay stop took out of the group (groupCancel only) is not sent.
+    const updates = wave.updates.filter(u => group.ids.has(u._id));
+    if (!updates.length) { prunePending(gid, { at: wave.at }); return; }
+    send(scene, seq, starts, updates, { ...base, movement: wave.movement }, "wave", group.claims)
+      .then(done => { if (done) prunePending(gid, { at: wave.at }); });
+  };
+  for (const wave of later) group.timers.push(setTimeout(() => fire(wave), wave.at));
+}
+
+/** How often, and how many times, the rest check waits for a member still walking (ms). */
+const DESTACK_EVERY_MS = 500;
+const DESTACK_TRIES = 6;
+
+/**
+ * When a group this client sent is at rest: no member rests on top of another token (tokens are circles;
+ * touching is fine). Whatever brought two together (a door shut mid-walk and core's own cut of a member
+ * already on its way, live R5-1; a member moved by hand meanwhile), the later member steps to the nearest
+ * whole cell around it that is clear of walls and of every other token and that it reaches in a straight
+ * line: a walk out of combat, a displace in one (free: dnd5e records no movement for it). Only members this
+ * client may move; nothing when none overlaps. Returns the moves made.
+ */
+function destack(ids, sceneOf) {
+  const moved = [];
+  const claims = [];
+  for (const id of ids) {
+    const doc = sceneOf(id)?.tokens?.get(id);
+    const token = doc?.object;
+    if (!doc?._source || !token || !doc.isOwner) continue;
+    const s = gridSize(token);
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    const taken = takenFor(doc.parent, id, claims);
+    const here = { x: doc._source.x, y: doc._source.y };
+    if (!taken(here)) continue;
+    // Only a token that overlaps one sent before it in this group, or one not in the group, moves: walk the
+    // ids in order and let the first of a stacked pair stay.
+    const earlier = ids.slice(0, ids.indexOf(id));
+    const self = { x: here.x + (w * s) / 2, y: here.y + (h * s) / 2 };
+    const r = radiusOf(w, h) * s;
+    const blockers = [...(doc.parent?.tokens?.values?.() ?? [])].filter(o => o?._source && o.id !== id
+      && (earlier.includes(o.id) || !ids.includes(o.id))
+      && Math.hypot(o._source.x + ((o._source.width ?? 1) * s) / 2 - self.x, o._source.y + ((o._source.height ?? 1) * s) / 2 - self.y)
+        < r + radiusOf(o._source.width ?? 1, o._source.height ?? 1) * s - 1e-6);
+    if (!blockers.length && !claims.some(c => Math.hypot(c.x - self.x, c.y - self.y) < r + c.r - 1e-6)) continue;
+    const bx = Math.round(here.x / s), by = Math.round(here.y / s);
+    const cands = [];
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx || dy) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
+    cands.sort((a, b) => Math.hypot(a.x - here.x, a.y - here.y) - Math.hypot(b.x - here.x, b.y - here.y));
+    const member = { token, r: radiusOf(w, h) };
+    const z = doc._source.elevation ?? 0;
+    const pick = cands.find(c => {
+      if (taken(c)) return false;
+      if (!restWalkable(member, toSquares(c, w, h, s), s)) return false;
+      try {
+        return !token.checkCollision({ x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z },
+          { origin: { ...self, elevation: z }, type: "move", mode: "any" });
+      } catch { return false; }
+    });
+    if (!pick) continue;
+    claims.push({ id, x: pick.x + (w * s) / 2, y: pick.y + (h * s) / 2, r });
+    const action = inCombat(doc) ? "displace" : (doc.movementAction ?? "walk");
+    try {
+      Promise.resolve(doc.move([{ x: pick.x, y: pick.y, elevation: z, action, snapped: true, explicit: true, checkpoint: true }], { method: "api" }))
+        .catch(err => log?.debug?.("destack move", err));
+      moved.push({ id, x: pick.x, y: pick.y });
+    } catch (err) { log?.debug?.("destack move", err); }
+  }
+  if (moved.length) destacked = { at: new Date().toISOString(), members: moved.length };
+  return moved;
+}
+
+/** Is any of these tokens still walking (or animating) on this client? */
+function anyWalking(ids, sceneOf) {
+  return ids.some(id => {
+    const doc = sceneOf(id)?.tokens?.get(id);
+    if (!doc) return false;
+    const st = doc.movement?.state;
+    if (st && st !== "completed" && st !== "stopped") return true;
+    try { return !!doc.object?.animationContexts?.has?.(doc.object.movementAnimationName); } catch { return false; }
+  });
+}
+
+function settleGroup(ids, scene, tries = DESTACK_TRIES) {
+  const sceneOf = () => scene;
+  try {
+    if (!feature) return;
+    if (anyWalking(ids, sceneOf) && tries > 0) { setTimeout(() => settleGroup(ids, scene, tries - 1), DESTACK_EVERY_MS); return; }
+    destack(ids, sceneOf);
+  } catch (err) {
+    log?.warnOnce?.("group-destack", "a group's rest check failed (further errors suppressed)", err);
   }
 }
 
@@ -761,6 +920,7 @@ function groupStatus() {
     fallbacks: fallbacks.map(f => ({ ...f })),
     resumed: resumedLast ? { ...resumedLast } : null,
     stopped: stoppedAt ? { ...stoppedAt } : null,
+    destacked: destacked ? { ...destacked } : null,
   };
 }
 
@@ -836,6 +996,7 @@ export function install(reg, ctx) {
 }
 
 export function uninstall() {
+  unlistenUnload();
   dropHandle?.unwrap();
   dropHandle = null;
   dropPatched = false;
@@ -846,6 +1007,7 @@ export function uninstall() {
   last = null;
   resumedLast = null;
   stoppedAt = null;
+  destacked = null;
   fallbacks.length = 0;
   latestDrop.clear();
   feature = null;

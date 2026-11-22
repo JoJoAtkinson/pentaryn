@@ -8,7 +8,7 @@
 // a click on a moving token displaces it out of combat, stops it in combat, asks the GM otherwise.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { movementWorld, drop, clicks, SCENE } from "./fixtures/world.mjs";
+import { movementWorld, drop, clicks, doors, SCENE } from "./fixtures/world.mjs";
 import { MOTION } from "../motion-core.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
@@ -295,6 +295,147 @@ test("R4-1: a door closed after the drop never sends two waiting members to one 
   }
 });
 
+test("R5-1: a door closed mid-walk never sends a waiting member to the square where core will stop a member already walking", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const ts = [400, 300, 500, 200, 600, 100].map((x, k) => makeToken(`wlk${k}00000000000`.slice(0, 16), x, 100));
+  // Already on its way through the door with checkpoints to go: its source is the next checkpoint, (400, 200);
+  // core's continuation will constrain the rest at the shut door and stop it on (400, 300).
+  const walker = makeToken("wlkWalker0000001", 400, 200);
+  walker.document.movement = { state: "pending", user: { isSelf: false }, pending: { waypoints: [wp(400, 300), wp(400, 600)] } };
+  let asked = 0;
+  walker.constrainMovementPath = path => {
+    asked += 1;
+    const out = [];
+    for (const w of path) { if (out.length && crossing(center(out.at(-1)), center(w)).length) return [out, true]; out.push(w); }
+    return [out, false];
+  };
+  try {
+    const out = dropWith(ts[0], contextsFor(ts, 0, 500));
+    const first = new Set(out[0].map(u => u._id));
+    const waiting = ts.filter(t => !first.has(t.document.id));
+    world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+    const from = F.calls.length;
+    let moves;
+    try {
+      const onUpdate = viewedScene.updateEmbeddedDocuments;
+      viewedScene.updateEmbeddedDocuments = async (type, updates, options) => {
+        for (const u of updates) {
+          const end = options.movement?.[u._id]?.waypoints?.at(-1);
+          const d = sceneTokens.get(u._id);
+          if (end && d) d._source = { ...d._source, x: end.x, y: end.y };
+        }
+        return onUpdate.call(viewedScene, type, updates, options);
+      };
+      try { mock.timers.tick(5000); } finally { viewedScene.updateEmbeddedDocuments = onUpdate; }
+      moves = Object.assign({}, ...sent(from).map(c => c.options.movement));
+    } finally {
+      world.walls.pop();
+    }
+    assert.ok(asked > 0, "the walking token's stop was predicted with its own constrainMovementPath");
+    for (const t of waiting) {
+      const end = moves[t.document.id]?.waypoints?.at(-1);
+      if (!end) continue;
+      assert.ok(!(end.x === 400 && end.y === 300), `${t.document.id} is not sent to (400, 300), where the walker will stop`);
+    }
+  } finally {
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("R5-1: when a group this client sent is at rest, a member left on top of another steps to the nearest free whole cell", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const ts = [makeToken("dstA000000000001", 400, 100), makeToken("dstB000000000001", 300, 100), makeToken("dstC000000000001", 500, 100)];
+  try {
+    dropWith(ts[0], contextsFor(ts, 0, 100));
+    mock.timers.tick(100);
+    // Whatever cut them (a door, core's own constrain), B and C end on one cell; A elsewhere.
+    ts[0].document._source = { ...ts[0].document._source, x: 400, y: 200 };
+    ts[1].document._source = { ...ts[1].document._source, x: 600, y: 200 };
+    ts[2].document._source = { ...ts[2].document._source, x: 600, y: 200 };
+    const from = F.calls.length;
+    mock.timers.tick(20000);
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    assert.equal(moves.length, 1, `one member moves off the other: ${JSON.stringify(moves.map(m => [m.id, m.waypoints]))}`);
+    assert.equal(moves[0].id, "dstC000000000001", "the later one in the group moves, the first stays");
+    const p = moves[0].waypoints[0];
+    assert.ok(p.x % S === 0 && p.y % S === 0, "onto a whole cell");
+    assert.ok(Math.hypot(p.x - 600, p.y - 200) <= S * 1.5, "next to where it was");
+    assert.ok(!(p.x === 400 && p.y === 200), "not onto A");
+    assert.equal(p.y < 400, true, "on its own side of the wall");
+    assert.ok(game.pentaryn.movement.status().group.destacked?.members === 1);
+  } finally {
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("R5-2: a wave due while the page unloads is not sent and stays in the record; a wave leaves it only once the server answered", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const store = new Map();
+  const listeners = {};
+  globalThis.sessionStorage = {
+    getItem: k => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => { store.set(k, String(v)); },
+    removeItem: k => { store.delete(k); },
+  };
+  globalThis.addEventListener = (type, fn) => { (listeners[type] ??= new Set()).add(fn); };
+  globalThis.removeEventListener = (type, fn) => { listeners[type]?.delete(fn); };
+  const KEY = "pentaryn-movement.pendingWaves";
+  const waves = () => JSON.parse(store.get(KEY) ?? "[]").flatMap(r => r.waves.map(w => w.at));
+  const ts = [400, 300, 500, 200, 600, 100].map((x, k) => makeToken(`unl${k}00000000000`.slice(0, 16), x, 100));
+  try {
+    const out = dropWith(ts[0], contextsFor(ts, 0, 500));
+    const first = new Set(out[0].map(u => u._id));
+    assert.ok(ts.some(t => !first.has(t.document.id)), "some members wait for later waves");
+    const due = waves().sort((a, b) => a - b);
+    assert.ok(due.length >= 2, `two or more later waves are recorded (${due})`);
+    // The first later wave goes out; the server has not answered yet: it stays in the record.
+    const onUpdate = viewedScene.updateEmbeddedDocuments;
+    let answer;
+    viewedScene.updateEmbeddedDocuments = (type, updates, options) => {
+      F.calls.push({ op: "scene.update", type, ids: updates.map(u => u._id), options });
+      return new Promise(r => { answer = r; });
+    };
+    const from = F.calls.length;
+    try {
+      mock.timers.tick(due[0]);
+      assert.equal(sent(from).length, 1, "the first later wave is sent");
+      await new Promise(r => setImmediate(r));
+      assert.ok(waves().includes(due[0]), "not taken off before the server answered");
+      answer([]);
+      await new Promise(r => setImmediate(r));
+      assert.ok(!waves().includes(due[0]), "taken off once answered");
+    } finally { viewedScene.updateEmbeddedDocuments = onUpdate; }
+    // A reload starts: the next wave is due while the old page still runs. Nothing goes out; it stays.
+    for (const fn of listeners.beforeunload ?? []) fn();
+    const mid = F.calls.length;
+    mock.timers.tick(due[1] - due[0]);
+    await new Promise(r => setImmediate(r));
+    assert.equal(sent(mid).length, 0, "no wave is sent while the page unloads");
+    assert.ok(waves().includes(due[1]), "the unsent wave is left for the reloaded page");
+    // The navigation did not happen after all: the held wave goes out later.
+    mock.timers.tick(2000);
+    assert.ok(sent(mid).length >= 1, "the held wave goes out when the page stays");
+  } finally {
+    mock.timers.tick(10000);
+    delete globalThis.sessionStorage;
+    delete globalThis.addEventListener;
+    delete globalThis.removeEventListener;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
 test("R4-3: a turn change that clears one member's history (core stops it) stops the whole group: unsent waves cancelled, the others stopped", () => {
   combatFlag = true;
   clock.step = 0;
@@ -539,6 +680,64 @@ test("R4-5: a click-stop in a doorway, the body across the wall beside the door,
   assert.deepEqual([move.waypoints[0].x, move.waypoints[0].y], [500, 300], "the nearest whole cell clear of the wall");
   assert.equal(move.waypoints[0].action, "displace");
   t.animationContexts.clear();
+});
+
+test("R5-3: a press on a door's icon over a moving token stops the token and never toggles the door; with none moving there, the door toggles", () => {
+  combatFlag = false;
+  const DoorControl = F.foundry.canvas.containers.DoorControl;
+  assert.equal(DoorControl.prototype._onMouseDown.__pentarynMovementDoor, true, "DoorControl#_onMouseDown is wrapped");
+  const t = makeToken("doorTok00000001", 400, 100);
+  t.document._source = { ...t.document._source, x: 400, y: 600 };
+  t.document.x = 430; t.document.y = 300;                        // drawn crossing the door, centre (480, 350)
+  t.animationContexts.set(t.movementAnimationName, {});
+  t.control = () => { t.controlled = true; };
+  const control = new DoorControl();
+  const layerBefore = F.canvas.tokens;
+  F.canvas.tokens = { ...layerBefore, active: true, placeables: [t] };
+  const press = (x, y) => {
+    let stopped = false;
+    const ev = { button: 0, getLocalPosition: () => ({ x, y }), stopPropagation: () => { stopped = true; }, nativeEvent: { type: "pointerdown", timeStamp: x } };
+    return { out: control._onMouseDown(ev), stopped };
+  };
+  try {
+    const n = doors.length;
+    const from = F.calls.length;
+    const a = press(485, 352);                                    // on the icon, the token drawn under it
+    assert.equal(a.out, false);
+    assert.equal(a.stopped, true, "the press goes no further");
+    assert.equal(doors.length, n, "the door is not toggled");
+    assert.ok(F.calls.slice(from).some(c => c.op === "move" && c.id === t.document.id), "the token is stopped (a displace)");
+    assert.equal(t.controlled, true, "and selected");
+    t.animationContexts.clear();
+    t.document.movement = { state: "completed", user: { isSelf: true } };
+    const b = press(485, 352);                                    // nothing moving: core's toggle
+    assert.equal(b.out, "toggled");
+    assert.equal(doors.length, n + 1);
+  } finally {
+    t.animationContexts.clear();
+    F.canvas.tokens = layerBefore;
+  }
+});
+
+test("R5-3: a click-stop in an open doorway, its body across the door's line, rests on a whole cell on one side of it", () => {
+  combatFlag = false;
+  const t = makeToken("clkOpen000000001", 400, 100);
+  t.document._source = { ...t.document._source, x: 400, y: 600 };
+  t.document.x = 400; t.document.y = 352;                           // centre (450, 402): across the open door at y 400
+  t.animationContexts.set(t.movementAnimationName, {});
+  sceneDoc.walls = [{ door: 1, ds: 1, c: [400, 400, 500, 400] }];
+  try {
+    const from = F.calls.length;
+    t._onClickLeft({});
+    const move = F.calls.slice(from).find(c => c.op === "move");
+    const p = move.waypoints[0];
+    assert.ok(p.x % S === 0 && p.y % S === 0, `a whole cell (${p.x}, ${p.y})`);
+    assert.ok(p.y === 300 || p.y === 400, `beside the door, not across it (${p.y})`);
+    assert.equal(p.x, 400);
+  } finally {
+    delete sceneDoc.walls;
+    t.animationContexts.clear();
+  }
 });
 
 test("R4-4: core's own stopAnimation (an unanimated update seen by another client) empties each tween's queued links first", () => {

@@ -226,7 +226,8 @@ export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
  * Where a token stopped at `p` (top-left pixels) may rest: `p` itself when its body crosses no
  * move-blocking wall (restWalkable), else the nearest whole cell around it that is clear and that its
  * centre reaches from `p` without crossing a wall. Live R4-5: a click-stop in a doorway left the token
- * off the grid with its circle 37–41 px into the solid wall beside the door. `p` when nothing nearby fits.
+ * off the grid with its circle 37–41 px into the solid wall beside the door. A body across a door's line
+ * (open or shut) does not fit either (live R5-3). `p` when nothing nearby fits.
  * Reads only.
  */
 export function clearOfWalls(token, p) {
@@ -235,7 +236,17 @@ export function clearOfWalls(token, p) {
   const w = src.width ?? 1, h = src.height ?? 1;
   const member = { token, r: radiusOf(w, h) };
   const at = q => toSquares(q, w, h, s);
-  if (restWalkable(member, at(p), s)) return p;
+  // Its body across a door's line, open or shut (live R5-3: stopped in an open doorway, it rested across
+  // the door line, and anyone shutting the door then left it inside the wall): not a place to rest either.
+  const doors = doorSegments(token);
+  const rr = member.r * s * 0.9;
+  const straddles = q => {
+    if (!doors.length) return false;
+    const c = { x: q.x + (w * s) / 2, y: q.y + (h * s) / 2 };
+    return doors.some(([a, b]) => pointSegment(c, a, b) < rr);
+  };
+  const fits = q => restWalkable(member, at(q), s) && !straddles(q);
+  if (fits(p)) return p;
   const z = p.elevation ?? src.elevation ?? 0;
   const from = { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: z };
   const bx = Math.floor(p.x / s), by = Math.floor(p.y / s);
@@ -244,7 +255,25 @@ export function clearOfWalls(token, p) {
   cands.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
   for (const c of cands) {
     const to = { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z };
-    if (restWalkable(member, at(c), s) && open(token, from, to)) return { ...p, x: c.x, y: c.y };
+    if (fits(c) && open(token, from, to)) return { ...p, x: c.x, y: c.y };
   }
   return p;
+}
+
+/** The scene's door segments (any door type, open or shut) as point pairs (pixels). */
+function doorSegments(token) {
+  const out = [];
+  for (const wall of token.document?.parent?.walls ?? []) {
+    const c = wall?.c;
+    if (!(wall?.door > 0) || !Array.isArray(c) || c.length < 4) continue;
+    out.push([{ x: c[0], y: c[1] }, { x: c[2], y: c[3] }]);
+  }
+  return out;
+}
+
+/** Distance from point p to segment a–b (pixels). */
+function pointSegment(p, a, b) {
+  const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+  const t = L2 ? Math.min(Math.max(((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+  return Math.hypot(p.x - (a.x + (b.x - a.x) * t), p.y - (a.y + (b.y - a.y) * t));
 }

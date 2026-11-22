@@ -46,6 +46,7 @@ let log = null;
 let feature = null;
 let clickHandle = null;
 let defuseHandle = null;
+let doorHandle = null;
 let clickPatched = false;
 let lastStop = null;
 /** The DOM pointerdown the click wrap saw last (the board listener leaves that one alone). */
@@ -375,6 +376,43 @@ function patchStopAnimation() {
   });
 }
 
+/**
+ * DoorControl#_onMouseDown: a left press on a door's icon while a token this client could stop is drawn
+ * under the pointer stops the token and leaves the door alone (live R5-3: clicking a token as it crossed
+ * a door hit the door's icon, which sits above the tokens, and shut the door on it; 8 of 8 runs). A press
+ * on the icon with no moving token under it is core's toggle, as before; so is a token at rest on the icon.
+ * Core binds the handler when it draws the control, so the wrap is in place before the first canvas draw.
+ */
+function patchDoor() {
+  const proto = globalThis.foundry?.canvas?.containers?.DoorControl?.prototype;
+  if (typeof proto?._onMouseDown !== "function") {
+    log.debug?.("no DoorControl#_onMouseDown; a click on a token over a door's icon toggles the door");
+    return null;
+  }
+  return wrapMethod(MODULE, {
+    target: proto, name: "_onMouseDown", label: "DoorControl#_onMouseDown",
+    marker: "__pentarynMovementDoor", adjustments: "movement-click-stop-door",
+  }, function (wrapped, event, ...rest) {
+    try {
+      if (event?.button === 0 && feature && setting("clickToStop")) {
+        const tokens = globalThis.canvas?.tokens;
+        let p = null;
+        try { p = event.getLocalPosition?.(tokens) ?? null; } catch { p = null; }
+        if (!p && Number.isFinite(event?.clientX)) p = globalThis.canvas?.canvasCoordinatesFromClient?.({ x: event.clientX, y: event.clientY }) ?? null;
+        const hit = p ? movingTokenAt(p, { modifiers: !!(event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) }) : null;
+        if (hit) {
+          event.stopPropagation?.();
+          lastNative = event.nativeEvent ?? null;      // the board fallback leaves this press alone
+          stopToken(hit.token, hit.how);
+          if (!hit.token.controlled) hit.token.control?.({ releaseOthers: true });
+          return false;
+        }
+      }
+    } catch (err) { log.warnOnce("stop-door", "click to stop over a door skipped (further errors suppressed)", err); }
+    return wrapped(event, ...rest);
+  });
+}
+
 function patchClick() {
   const proto = CONFIG.Token?.objectClass?.prototype;
   if (typeof proto?._onClickLeft !== "function") {
@@ -446,8 +484,9 @@ async function stopOwn(data = {}, qctx = {}) {
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  if (ctx.late) { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); }
-  else reg.once("setup", () => { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); }, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
+  const wrapAll = () => { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); doorHandle = patchDoor(); };
+  if (ctx.late) wrapAll();
+  else reg.once("setup", wrapAll, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
   reg.on("moveToken", (doc, movement) => onMoveToken(doc, movement), { label: "moveToken: when a move started (click-to-stop arming)" });
   // Every client: a stop's displace (an unanimated position write) must leave the token drawn where the
   // server has it here too, not only on the client that clicked (live R2-9: both clients showed it away
@@ -467,6 +506,8 @@ export function uninstall() {
   clickHandle = null;
   defuseHandle?.unwrap();
   defuseHandle = null;
+  doorHandle?.unwrap();
+  doorHandle = null;
   clickPatched = false;
   lastStop = null;
   lastNative = null;
