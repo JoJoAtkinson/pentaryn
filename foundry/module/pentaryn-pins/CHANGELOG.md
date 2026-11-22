@@ -5,8 +5,10 @@
 - **Fixed [declared]** A cross-scene pins teleport left the player's view where it was (live play-test round 7,
   R7-13): into the scene the player already viewed nothing is drawn, so core never panned, and back through the
   safety net's view the view sat at the scene's default centre. The pinned player's client now centres on the
-  pinned token (a 250 ms pan) when it is created on the scene that client shows, and after any view pins itself
-  asks for. New hook `createToken: arrival pan`.
+  pinned token (a 250 ms pan) when it is created on the scene that client shows, once a pull to the pinned
+  token's scene (portals teleportToken's) has been drawn (or at once when nothing is drawn), and after any view
+  pins itself asks for. New hooks `createToken: arrival pan`, `canvasReady: pan to the pin after a pull` (it acts
+  only after such a pull: still no canvasReady login path).
 
 ## 0.5.2 — 2026-11-22
 

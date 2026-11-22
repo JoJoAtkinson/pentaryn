@@ -98,7 +98,9 @@ test("one patch: Scene#_onActivate is wrapped, Scene#view is core's own; one pul
   assert.equal(B.view.__pentarynPinsView, undefined, "no Scene#view patch since 0.2.0");
   assert.equal(F.socketListeners("pullToScene"), 1);
   assert.equal(game.pentaryn[NS], game.modules.get(MODULE).api);
-  assert.deepEqual(F.listeners("canvasReady"), 1, "only the canvas menu's: pins has no canvasReady login path");
+  // The canvas menu's, and (0.5.3, R7-13) the pan after a pull, which acts only when a pull to the pin's
+  // scene asked for it: pins still has no canvasReady login path.
+  assert.deepEqual(F.listeners("canvasReady"), 2, "the canvas menu's and the pan after a pull");
 });
 
 test("2 switch off: activation, pulls, nav clicks, deletes and moves are all stock; no timer fires", async t => {
@@ -776,6 +778,43 @@ test("R7-13: a cross-scene teleport centres the view on the pinned token, into t
     await flush();
     assert.deepEqual(pans, [], "not my pin: no pan");
   } finally {
+    canvas.animatePan = before.animatePan;
+    canvas.tokens = before.tokens;
+    restoreTalo();
+    at(B, IDS.levelB2);
+  }
+});
+
+test("R7-13: a pull to the pinned token's scene (portals teleportToken) centres the view on the token once drawn, or at once when nothing is drawn", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const pans = [];
+  const before = { animatePan: canvas.animatePan, tokens: canvas.tokens };
+  canvas.animatePan = o => { pans.push(o); return Promise.resolve(true); };
+  canvas.tokens = { get: id => (id === IDS.taloTok ? { center: { x: 550, y: 550 } } : undefined) };
+  const autoDraw = F.autoDraw;
+  F.autoDraw = true;
+  try {
+    reset();
+    at(C);
+    F.socketFire("pullToScene", IDS.sceneB, ctl(IDS.levelB2));
+    for (let i = 0; i < 6; i++) await flush();
+    t.mock.timers.tick(NET_POLL_MS);
+    await flush();
+    assert.equal(canvas.scene?.id, IDS.sceneB, "core's view drew B");
+    assert.deepEqual(pans.map(p => [p.x, p.y]), [[550, 550]], "then centred on the pinned token");
+    pans.length = 0;
+    F.socketFire("pullToScene", IDS.sceneB, { level: IDS.levelB2 });
+    await flush();
+    assert.deepEqual(pans.map(p => [p.x, p.y]), [[550, 550]], "already shown: centred at once");
+    pans.length = 0;
+    at(B, IDS.levelB2);
+    F.socketFire("pullToScene", IDS.sceneC, {});
+    for (let i = 0; i < 6; i++) await flush();
+    t.mock.timers.tick(NET_POLL_MS);
+    await flush();
+    assert.deepEqual(pans, [], "a pull elsewhere than the pin's scene: no pan");
+  } finally {
+    F.autoDraw = autoDraw;
     canvas.animatePan = before.animatePan;
     canvas.tokens = before.tokens;
     restoreTalo();

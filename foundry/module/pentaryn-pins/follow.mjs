@@ -149,6 +149,29 @@ function panToPin(where) {
   }, where);
 }
 
+/** A pull to the pinned token's scene pans to it once drawn (canvasReady), or now when nothing is drawn. */
+let panOnReady = null;
+
+/**
+ * A pull (core's pullToScene: portals teleportToken, the GM's pulls) of this pinned client to the scene its
+ * pinned token is on: centre on the token once that scene is drawn (live R7-13: core's draw left the view
+ * at the scene's centre after a cross-scene pins teleport), or at once when the scene is already shown and
+ * core draws nothing.
+ */
+function panAfterPull(sceneId, viewOptions) {
+  const t = safeTarget("pull: pan to the pin");
+  if (!t || t.scene !== sceneId) return;
+  if (showing(sceneId, viewOptions) && !canvas?.loading) { panToPin("pull: pan to the pin"); return; }
+  panOnReady = sceneId;
+}
+
+function onCanvasReady() {
+  if (!panOnReady) return;
+  const sceneId = panOnReady;
+  panOnReady = null;
+  if (canvas?.scene?.id === sceneId) panToPin("canvasReady: pan to the pin");
+}
+
 /** createToken, the pinned player's client: the pinned token arrived; centre on it if it is on the viewed scene. */
 function onCreateToken(doc) {
   const root = myRoot();
@@ -333,6 +356,7 @@ function showing(sceneId, viewOptions) {
 }
 
 function onPull(sceneId, viewOptions) {
+  guarded(() => panAfterPull(sceneId, viewOptions), "the pull pan");
   const mine = ++seq;
   lastPull = mine;
   // every pull replaces the one held: a newer pull core honours (not loading) supersedes a dropped
@@ -381,6 +405,7 @@ export function install(reg, ctx) {
   reg.on("deleteToken", doc => onDeleteToken(doc), { label: "deleteToken: safety net" });
   reg.on("moveToken", (doc, movement, _operation, user) => onMoveToken(doc, movement, user), { label: "moveToken: level gap" });
   reg.on("createToken", doc => onCreateToken(doc), { label: "createToken: arrival pan" });
+  reg.on("canvasReady", () => { onCanvasReady(); }, { label: "canvasReady: pan to the pin after a pull" });
   reg.on("renderSceneNavigation", (app, element) => decorateNav(app, element), { label: "renderSceneNavigation: back tab" });
   navUnsubscribe = onPinningChange(() => globalThis.ui?.nav?.render?.());
   if (globalThis.game?.ready) attachPullReplay(ctx);              // a hot re-import after ready
@@ -394,6 +419,7 @@ export function uninstall() {
   for (const old of globalThis.document?.querySelectorAll?.(`.${NAV_TAB}`) ?? []) old.remove();
   if (pullListener) globalThis.game?.socket?.off?.("pullToScene", pullListener);
   pullListener = null;
+  panOnReady = null;
   clearTimeout(netTimer);
   netTimer = null;
   netSeenLevel = null;

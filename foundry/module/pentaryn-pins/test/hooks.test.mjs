@@ -44,6 +44,7 @@ test("registry labels (describe().hooks)", () => {
     { name: "deleteToken", label: "deleteToken: safety net" },
     { name: "moveToken", label: "moveToken: level gap" },
     { name: "createToken", label: "createToken: arrival pan" },
+    { name: "canvasReady", label: "canvasReady: pan to the pin after a pull" },
     { name: "renderSceneNavigation", label: "renderSceneNavigation: back tab" },
     { name: "ready", label: "ready: pull replay" },
     { name: "renderBaseActorSheet", label: "sheet: pinned badge" },
