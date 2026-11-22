@@ -537,3 +537,17 @@ test("B2 (live R1 D-6): brokenLineSections lists a section cut out of the middle
   const again = breakSection(cut, 1, 0, 100).shapes;          // the first section of the far piece: the cast panel's section 3
   assert.deepEqual(brokenLineSections([panel], again, 100), ["0:2", "0:3"]);
 });
+
+test("B2 (live R2-3): brokenLineSections lists a broken panel whose stretch an overlapping panel still covers", async () => {
+  const { brokenLineSections, breakSection } = await import("../core.mjs");
+  // Three 10-foot panels (200 px on a 5-foot, 100 px grid) placed 100 px apart along y=1200: they overlap.
+  const panels = [900, 1000, 1100].map(x => ({ type: "line", x, y: 1200, length: 200, rotation: 0, width: 10 }));
+  const one = breakSection(panels, 0, 0, 200).shapes;
+  assert.equal(one.length, 2);
+  assert.deepEqual(brokenLineSections(panels, one, 200), ["0:0"]);
+  const two = breakSection(one, 1, 0, 200).shapes;        // now the cast panel 2
+  assert.deepEqual(brokenLineSections(panels, two, 200), ["0:0", "2:0"]);
+  const mid = breakSection(panels, 1, 0, 200).shapes;
+  assert.deepEqual(brokenLineSections(panels, mid, 200), ["1:0"]);
+  assert.deepEqual(brokenLineSections(panels, panels, 200), []);
+});

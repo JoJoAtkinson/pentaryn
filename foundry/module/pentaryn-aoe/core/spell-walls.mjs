@@ -266,27 +266,79 @@ export function breakSections(shapes, list, secPx) {
   return applied ? { shapes: cur, broken, applied } : null;
 }
 
+/** Where a line piece lies along a cast line panel: `{ from, to }` in pixels from its start, or null when it is not a piece of it. */
+function alongPanel(piece, panel) {
+  if (piece?.type !== "line" || panel?.type !== "line") return null;
+  const rot = v => (((Number(v) || 0) % 360) + 360) % 360;
+  const dr = Math.abs(rot(piece.rotation) - rot(panel.rotation));
+  if (Math.min(dr, 360 - dr) > 0.01) return null;
+  const a = rot(panel.rotation) * Math.PI / 180;
+  const ux = Math.cos(a), uy = Math.sin(a);
+  const dx = (Number(piece.x) || 0) - (Number(panel.x) || 0), dy = (Number(piece.y) || 0) - (Number(panel.y) || 0);
+  if (Math.abs(dy * ux - dx * uy) >= 1) return null;
+  const from = dx * ux + dy * uy, to = from + (Number(piece.length) || 0);
+  const L = Number(panel.length) || 0;
+  return from > -0.5 && to < L + 0.5 ? { from, to } : null;
+}
+
+/**
+ * Which cast panel each current shape came from. breakSection replaces a panel by its pieces in place,
+ * so the shapes keep the cast order: a monotone assignment, each piece inside its own panel, in order
+ * along it. null when the shapes cannot be read that way.
+ */
+function piecesOf(original, current) {
+  const n = original.length, m = current.length;
+  const owner = new Array(m).fill(-1);
+  const fits = (j, i, lastTo) => {
+    const p = current[j], o = original[i];
+    if (p?.type === "circle" || o?.type === "circle") {
+      return p?.type === o?.type && Math.abs((Number(p.x) || 0) - (Number(o.x) || 0)) < 1 && Math.abs((Number(p.y) || 0) - (Number(o.y) || 0)) < 1 && lastTo === -Infinity ? Infinity : null;
+    }
+    const at = alongPanel(p, o);
+    return at && at.from > lastTo - 0.5 ? at.to : null;
+  };
+  let steps = 0;
+  const walk = (j, i, lastTo) => {
+    if (++steps > 20000) return false;
+    if (j === m) return true;
+    if (i >= n) return false;
+    const to = fits(j, i, lastTo);
+    if (to !== null) {
+      owner[j] = i;
+      if (walk(j + 1, i, to)) return true;
+    }
+    owner[j] = -1;
+    return walk(j, i + 1, -Infinity);
+  };
+  return walk(0, 0, -Infinity) ? owner : null;
+}
+
 /**
  * B2: the sections knocked out of a wall's line panels, as brokenKey strings against the panels it was
  * cast with (0.8.2, live R1 D-6: a cut line panel was listed nowhere). An original section is broken
- * when no current line panel covers its midpoint. A round wall's chords are listed in its flags instead.
+ * when no piece of that same panel covers its midpoint (0.8.3, live R2-3: overlapping panels, a broken
+ * panel's stretch still covered by its neighbour, was listed as standing). A round wall's chords are
+ * listed in its flags instead.
  * @param {object[]} original  the shapes before the first break, moved to where the wall is now (restoreShapes)
  * @param {object[]} current   the region's shapes now
  * @param {number} secPx       sectionPixels()
  * @returns {string[]}
  */
 export function brokenLineSections(original, current, secPx) {
-  const lines = (current ?? []).filter(sh => sh?.type === "line" && Number(sh.length) > 0);
-  const covered = p => lines.some(sh => {
-    const a = (Number(sh.rotation) || 0) * Math.PI / 180;
-    const ux = Math.cos(a), uy = Math.sin(a);
-    const dx = p.x - (Number(sh.x) || 0), dy = p.y - (Number(sh.y) || 0);
-    const along = dx * ux + dy * uy, across = Math.abs(dy * ux - dx * uy);
-    return across < 1 && along > -0.5 && along < Number(sh.length) + 0.5;
-  });
+  const orig = [...(original ?? [])], cur = [...(current ?? [])];
+  const owner = piecesOf(orig, cur);
+  const piecesFor = panel => cur.filter((sh, j) => (owner ? owner[j] === panel : true) && sh?.type === "line" && Number(sh.length) > 0);
   const out = [];
-  (original ?? []).forEach((shape, panel) => {
+  orig.forEach((shape, panel) => {
     if (shape?.type !== "line") return;
+    const lines = piecesFor(panel);
+    const covered = p => lines.some(sh => {
+      const a = (Number(sh.rotation) || 0) * Math.PI / 180;
+      const ux = Math.cos(a), uy = Math.sin(a);
+      const dx = p.x - (Number(sh.x) || 0), dy = p.y - (Number(sh.y) || 0);
+      const along = dx * ux + dy * uy, across = Math.abs(dy * ux - dx * uy);
+      return across < 1 && along > -0.5 && along < Number(sh.length) + 0.5;
+    });
     panelSections(shape, secPx).forEach(([x1, y1, x2, y2], section) => {
       if (!covered({ x: (x1 + x2) / 2, y: (y1 + y2) / 2 })) out.push(brokenKey(panel, section));
     });
