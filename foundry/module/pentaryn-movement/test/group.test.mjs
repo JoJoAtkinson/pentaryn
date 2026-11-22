@@ -295,6 +295,32 @@ test("R4-1: a door closed after the drop never sends two waiting members to one 
   }
 });
 
+test("R4-3: a turn change that clears one member's history (core stops it) stops the whole group: unsent waves cancelled, the others stopped", () => {
+  combatFlag = true;
+  clock.step = 0;
+  const ts = [makeToken("trnA000000000001", 400, 200), makeToken("trnB000000000001", 300, 200), makeToken("trnC000000000001", 500, 200)];
+  const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+  const first = new Set(out[0].map(u => u._id));
+  for (const t of ts) t.document.movement = { state: first.has(t.document.id) ? "pending" : "completed", user: { isSelf: true } };
+  const cleared = ts.find(t => first.has(t.document.id));
+  const from = F.calls.length;
+  try {
+    F.fire("updateToken", cleared.document, { _movementHistory: [] }, { diff: false, noHook: true, _clearMovementHistory: true }, "gm00000000000001");
+    mock.timers.tick(5000);
+    const calls = F.calls.slice(from);
+    assert.equal(calls.filter(c => c.op === "scene.update").length, 0, "no later wave went out");
+    const stopped = new Set(calls.filter(c => c.op === "stopMovement").map(c => c.id));
+    for (const t of ts) {
+      if (t === cleared || !first.has(t.document.id)) assert.ok(!stopped.has(t.document.id), `${t.document.id} not stopped again`);
+      else assert.ok(stopped.has(t.document.id), `${t.document.id} (still walking) is stopped with it`);
+    }
+    assert.equal(api.status().group.stopped?.why, "turnChange");
+  } finally {
+    for (const t of ts) t.document.movement = { state: "completed", user: { isSelf: true } };
+    combatFlag = false;
+  }
+});
+
 test("planGroup(refs, point) is the same plan as a dry run: slots, delays, levels; nothing moves", () => {
   F.canvas.ready = true;
   const ts = [makeToken("dryA000000000001", 400, 200), makeToken("dryB000000000001", 300, 200)];

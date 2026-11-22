@@ -450,6 +450,10 @@
       "label": "ready: resume a group's waves after a reload"
     },
     {
+      "name": "updateToken",
+      "label": "updateToken: a turn change stops the whole group"
+    },
+    {
       "name": "setup",
       "label": "setup: wrap _onClickLeft (click to stop)"
     },

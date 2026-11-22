@@ -140,6 +140,10 @@
     "name": "ready"
   },
   {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
     "kind": "once",
     "name": "setup"
   },

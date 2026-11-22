@@ -40,6 +40,7 @@ const groups = new Map();
 const groupOf = new Map();                 // token id → group id
 let last = null;                           // the last drop, for status()
 let resumedLast = null;                    // the last reload that picked up unsent waves, for status()
+let stoppedAt = null;                      // the last time a turn change stopped a group, for status()
 const fallbacks = [];                      // the last few reasons a drop went to core
 /** token id → the sequence number of this client's latest drop of it: an older plan or wave never overrides a newer drop. */
 const latestDrop = new Map();
@@ -576,6 +577,30 @@ function groupCancel(tokenId, { only = false } = {}) {
   return ids;
 }
 
+/**
+ * updateToken, every client: core stops a token's movement when its movement history is cleared, which
+ * a turn change does for every combatant with a history (Combat#_clearMovementHistoryOnStartTurn). In a
+ * group this client sent, that stopped only the members that had walked a square already, and the rest
+ * (and the unsent waves) went on (live R4-3: on BOSS the third member kept walking). The whole group
+ * now stops as one, as a click on a member stops it: unsent waves cancelled, every member this client
+ * is moving stopped at its next square (stopMovement). What they walked before the turn change was
+ * that turn's, and core clears it with the turn, as it does for a single token.
+ */
+function onHistoryCleared(doc, options) {
+  if (!options?._clearMovementHistory || !doc?.id || !groupOf.has(doc.id)) return;
+  const ids = groupCancel(doc.id);
+  for (const id of ids) {
+    if (id === doc.id) continue;
+    const d = doc.parent?.tokens?.get(id);
+    const m = d?.movement;
+    if (!m?.user?.isSelf || m.state === "completed" || m.state === "stopped") continue;
+    try { d.stopMovement(); } catch (err) { log?.debug?.("stop a member at a turn change", err); }
+  }
+  if (ids.length) {
+    stoppedAt = { at: new Date().toISOString(), why: "turnChange", members: ids.length };
+  }
+}
+
 /* -------------------------------------------- */
 /*  The drop                                    */
 /* -------------------------------------------- */
@@ -713,6 +738,7 @@ function groupStatus() {
     last: last ? { ...last } : null,
     fallbacks: fallbacks.map(f => ({ ...f })),
     resumed: resumedLast ? { ...resumedLast } : null,
+    stopped: stoppedAt ? { ...stoppedAt } : null,
   };
 }
 
@@ -781,6 +807,9 @@ export function install(reg, ctx) {
   // A reload mid-move: this tab's unsent waves go out now (live R3-1).
   if (ctx.late) resumePending();
   else reg.once("ready", () => { resumePending(); }, { label: "ready: resume a group's waves after a reload" });
+  // A turn change clears every combatant's movement history, and core stops a token whose history is
+  // cleared: the rest of its group stops with it (live R4-3).
+  reg.on("updateToken", (doc, _changes, options) => onHistoryCleared(doc, options), { label: "updateToken: a turn change stops the whole group" });
   ctx.expose({ groupFollower, groupCancel, groupStatus, groupDryRun: dryRun, groupPatched: () => dropPatched });
 }
 
@@ -794,6 +823,7 @@ export function uninstall() {
   groupOf.clear();
   last = null;
   resumedLast = null;
+  stoppedAt = null;
   fallbacks.length = 0;
   latestDrop.clear();
   feature = null;
