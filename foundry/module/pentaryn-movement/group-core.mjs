@@ -20,8 +20,9 @@ import { MOTION, dist, firstConflict, trajectory, delayed, GROUP_MAX } from "./m
 
 export const GROUP_LIMITS = Object.freeze({
   maxMembers: GROUP_MAX,
-  memberMs: 150,       // one member's routes, all tries
-  totalMs: 300,        // the whole plan: past this the drop is core's (a silent wait longer than this reads as lag)
+  memberMs: 400,       // one member's routes, all tries (planning time: the clock runs only while the plan does)
+  totalMs: 1200,       // the whole plan's planning time: past this the drop is core's
+  waitMs: 2500,        // the silent wait on the wall clock (slices and the frames between them): past this, core's
   syncMs: 30,          // what the drop spends synchronously before going async
   rings: 5,            // candidate rings around the anchor
   walkRatio: 2,        // a slot's walk distance ≤ this × its straight distance (no slots through a wall)
@@ -29,6 +30,8 @@ export const GROUP_LIMITS = Object.freeze({
 });
 
 const EPS = 1e-6;
+/** How many clear spots a grabbed token dropped on another token tries a route to (H1-08). */
+const ANCHOR_TRIES = 4;
 
 /* -------------------------------------------- */
 /*  Candidates                                  */
@@ -277,10 +280,25 @@ function firstFreeDelay(tr, r, fixed, combat) {
  * @returns {Generator<string, object>}   the result: { result: "plan", members: { id → entry }, ... } or { result: "core", reason }
  */
 export function* planGroup(spec, o) {
-  const { members, anchorId, combat = false, mode = "plan", others = [] } = spec;
+  const { anchorId, combat = false, mode = "plan", others = [] } = spec;
+  let { members } = spec;
   if (members.length > GROUP_LIMITS.maxMembers) return { result: "core", reason: "tooMany" };
-  const anchor = members.find(m => m.id === anchorId);
+  let anchor = members.find(m => m.id === anchorId);
   if (!anchor) return { result: "core", reason: "noAnchor" };
+  // Dropped on top of a token that is not in the group (live H1-08: on the Large in a full closet the
+  // grabbed one walked as far as it could and parked in the one-wide connector): it takes the nearest
+  // spot clear of every other token that it has a route to, on open floor rather than in a gap.
+  let goals = [anchor.formation];
+  if (mode !== "straight" && !combat) {
+    const clear = c => others.every(q => dist(c, q) >= anchor.r + q.r - EPS);
+    if (!clear(anchor.formation)) {
+      const roomy = c => !o.narrow?.([c, { x: c.x + 0.01, y: c.y }], anchor.r)?.length && !o.narrow?.([c, { x: c.x, y: c.y + 0.01 }], anchor.r)?.length;
+      const cands = hexCandidates(anchor.formation, anchor.r, GROUP_LIMITS.rings + 1)
+        .filter(c => clear(c) && o.walkable(anchor, c))
+        .sort((a, b) => (roomy(b) - roomy(a)) || dist(a, anchor.formation) - dist(b, anchor.formation));
+      if (cands.length) goals = cands.slice(0, ANCHOR_TRIES);
+    }
+  }
   const rmax = Math.max(...members.map(m => m.r));
   const out = {};
   const timer = budget(o.now);
@@ -288,10 +306,18 @@ export function* planGroup(spec, o) {
   if (mode === "straight") return straightPlan(spec, o);
 
   // The anchor's own route first: it decides "constricted".
-  timer.member();
-  const anchorRoute = o.route(anchor, anchor.start, anchor.formation, {});
-  yield "route";
-  if (timer.over()) return { result: "core", reason: "budget" };
+  let anchorRoute = null;
+  for (const goal of goals) {
+    timer.member();
+    const a = goal === anchor.formation ? anchor : { ...anchor, formation: { x: goal.x, y: goal.y } };
+    anchorRoute = o.route(a, a.start, a.formation, {});
+    yield "route";
+    if (timer.over()) return { result: "core", reason: "budget" };
+    if (anchorRoute) {
+      if (a !== anchor) { anchor = a; members = members.map(m => (m.id === anchorId ? anchor : m)); }
+      break;
+    }
+  }
   // No route for the anchor: nothing to plan around (its end is wherever core stops it).
   if (!anchorRoute) return { result: "core", reason: "anchorNoRoute" };
   const excluded = [];

@@ -45,7 +45,9 @@
         "combat": "The fight is over: ghost movement is available again. Click the ghost button under the Ruler to use it.",
         "off": "The GM allows ghost movement again. Click the ghost button under the Ruler to use it.",
         "exempt": "Your incorporeal creature may move through walls during the fight. Click the ghost button under the Ruler to use it."
-      }
+      },
+      "noRoute": "No way there: it stops where the way ends.",
+      "noRouteGroup": "No way there: the group stays where it is."
     },
     "settings": {
       "policy": {

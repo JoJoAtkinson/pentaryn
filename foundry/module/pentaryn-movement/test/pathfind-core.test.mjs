@@ -290,3 +290,11 @@ test("searchWide (R2-7): a maze whose only gap lies outside the start/goal box i
   do r = sealed.run(); while (r === "more");
   assert.deepEqual([r, sealed.widened], ["none", true]);
 });
+
+test("H1-10: a drag's search is over on its own slices' time, or on a much longer wall clock, not on the frames between slices", async () => {
+  const { searchOver, LIMITS } = await import("../pathfind-core.mjs");
+  assert.equal(searchOver({ busy: 200, wall: 1600 }), false, "a slow page: 200 ms of search over 1.6 s of frames goes on");
+  assert.equal(searchOver({ busy: LIMITS.totalMs + 1, wall: 1600 }), true);
+  assert.equal(searchOver({ busy: 10, wall: LIMITS.waitMs + 1 }), true);
+  assert.ok(LIMITS.waitMs > LIMITS.totalMs);
+});

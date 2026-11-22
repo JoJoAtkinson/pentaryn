@@ -63,11 +63,16 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   rather than walk into it (0.4.5).
 - **Drag several tokens together** and each walks its own way to its own spot by the drop point,
   all setting off together on open ground and in turn only at a door, so they file through it one behind
-  the other, never resting on top of each other (circles: touching is fine). The grabbed token lands
-  exactly where dropped. A plan that takes over 300 ms is core's own drop.
+  the other, never resting on top of each other (circles: touching is fine), and round tokens that stay
+  where they are (0.4.8). The grabbed token lands exactly where dropped, unless that is on another token:
+  then the nearest clear spot it can reach (0.4.8). A plan whose own work takes over 1.2 s, or that has
+  not finished 2.5 s after the drop, is core's own drop. Dropped where the grabbed token has no way to go,
+  the others stay put and a notice says so (0.4.8). A big token never walks where its body does not fit
+  (core tests walls at the centre only): its drag stops where it last fits (0.4.8).
 - **Click a moving token to stop it** where it is, once it has moved 400 ms (a click right after the drop,
   or a double click for the sheet, is a plain click). In a fight it stops at the next square, so dnd5e's
-  spent movement stays exact; a GM may stop anyone's move.
+  spent movement stays exact; a GM may stop anyone's move. Only the clicked token stops (0.4.8): the
+  rest of its group walks on, out of combat round it (or, with no way round, stops short of it).
 - **A door shut or a wall raised across a move** (0.4.6) stops each token walking toward it on its own free
   whole square before it, the nearest one first; out of combat it stops at once where it is drawn (0.4.7) and walks on to that square from where it is
   drawn, in a fight it finishes its square and walks on, costed. `status().group.cut`.
@@ -167,6 +172,7 @@ client puts the token where the server has it), stop's `canvasReady` (the board 
 | `Token#_prepareDragLeftDropUpdates` | `movement-group-drop` | group movement: core's updates, then the plan's routes and waves; combat cell checkpoints (marker `__pentarynMovementGroup`) |
 | `Token#_onClickLeft` | `movement-click-stop` | click to stop, before core's click (marker `__pentarynMovementStop`) |
 | `Token#stopAnimation` | `movement-stop-animation-defuse` | every client: empties the tweens' queued links before core terminates them, so no stop throws core's "reading 'chain'" (marker `__pentarynMovementDefuse`) |
+| `CanvasAnimation.animate` | `movement-canvas-animation-registration` | every client: a chained tween that completes inside its own first frame (a slow page) leaves its running next link registered under the name, so a stop terminates it (marker `__pentarynMovementAnimReg`, 0.4.8) |
 
 Not patches: `dnd5e-movement-pathfind-blocking` (the search asks dnd5e's
 `TokenLayer5e#isOccupiedGridSpaceBlocking` which squares a creature blocks) and

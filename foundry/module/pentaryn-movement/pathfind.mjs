@@ -24,6 +24,7 @@ import { MOTION } from "./motion-core.mjs";
 import { MODULE } from "./movement-core.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
+import { fitPath } from "./group-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
 let log = null;
@@ -241,27 +242,38 @@ function entersTrap(token, waypoints, path, options) {
  * at once, `undefined` while searching, `null` once cancelled. A search that does not finish in
  * one slice continues in timer slices; the drag shows core's searching animation meanwhile.
  */
+/** A big token's path where its body fits (live H1-04); any other path as it is. */
+function fitted(token, path, options) {
+  if (options?.constrainOptions?.ignoreWalls || !Array.isArray(path)) return path;
+  try { return fitPath(token, path).path; } catch (err) { log?.debug?.("fitPath", err); return path; }
+}
+
+/** A finished job for `path`. */
+const doneJob = path => ({ result: path, promise: Promise.resolve(path), cancel: () => {} });
+
 function pathfindJob(token, waypoints, options, wrapped, base) {
   if (!Array.isArray(base?.result)) return null;          // a wrapper below us is still searching
+  // A big token never walks where its body does not fit (core tests walls at its centre only, live H1-04).
+  const big = !options?.constrainOptions?.ignoreWalls && ((token.document?._source?.width ?? 1) > 1 || (token.document?._source?.height ?? 1) > 1);
+  const squeezed = big && fitPath(token, base.result).cut;
+  const plain = () => (squeezed ? doneJob(fitted(token, base.result, options)) : null);
   // A group drag (0.4.0): only the grabbed token is searched while dragging; the group plan runs at the drop.
-  if (feature?.exposed?.groupFollower?.(token)) return null;
+  if (feature?.exposed?.groupFollower?.(token)) return plain();
   const reason = skipFor(token, waypoints, options);
-  if (reason) return null;
+  if (reason) return plain();
   const reached = pf.reachedCount(base.result, waypoints, same);
-  if (reached === 0) return null;
+  if (reached === 0) return plain();
   // A drag core lets through whole is core's own, unless its line walks into a teleport / change-level
   // region the drag neither starts nor ends in (live R5-4: a straight drag walked into a scene link and
-  // the player's view jumped to its destination; only group slots and route() kept out). Then every leg
-  // is searched round it; with no way round, core's line stays.
+  // the player's view jumped to its destination; only group slots and route() kept out), or a big token's
+  // body does not fit along it (H1-04). Then every leg is searched round it; with no way round, core's
+  // line stays (a big token's cut where it stops fitting).
   const force = reached >= waypoints.length;
-  if (force && !entersTrap(token, waypoints, base.result, options)) return null;
+  if (force && !squeezed && !entersTrap(token, waypoints, base.result, options)) return null;
 
   const smooth = !!setting("smoothCorners") && !inCombat(token);
   const plan = planner(token, waypoints, options, force ? 0 : reached - 1, wrapped, base, smooth, { force });
-  if (plan.step(LIMITS.sliceMs) === "done") {
-    const path = plan.result();
-    return { result: path, promise: Promise.resolve(path), cancel: () => {} };
-  }
+  if (plan.step(LIMITS.sliceMs) === "done") return doneJob(big ? fitted(token, plan.result(), options) : plan.result());
 
   let cancelled = false;
   let resolve;
@@ -273,12 +285,20 @@ function pathfindJob(token, waypoints, options, wrapped, base) {
     job.result = null;
     resolve(null);
   };
+  // The cap counts the search's own slices (live H1-10: on a slow page the frames between slices used the
+  // 1.5 s up, the drop took core's partial line, and a maze drag stopped 3.6 squares short on a 165 ft
+  // ruler); the wall clock has its own, longer cap.
+  let busy = 0;
   const tick = () => {
     if (cancelled) return;
     try {
-      const over = now() - started > LIMITS.totalMs;
-      if (!over && plan.step(LIMITS.sliceMs) === "more") { setTimeout(tick, 0); return; }
+      const over = pf.searchOver({ busy, wall: now() - started });
+      const t = now();
+      const more = !over && plan.step(LIMITS.sliceMs) === "more";
+      busy += now() - t;
+      if (more) { setTimeout(tick, 0); return; }
       job.result = over ? base.result : plan.result();
+      if (big) job.result = fitted(token, job.result, options);
     } catch (err) {
       log?.warnOnce("pathfind-async", "pathfinding failed (further errors suppressed)", err);
       job.result = base.result;
@@ -373,14 +393,16 @@ function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = 
     || (hz.secret.length && hz.crossesSecret(
       { x: base.result[k - 1].x + (w * s) / 2, y: base.result[k - 1].y + (h * s) / 2 },
       { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 }))));
+  const squeezed = !constrainOptions?.ignoreWalls && fitPath(token, base.result).cut;
   let path = base.result, legs = [], arcs = 0;
-  if (reached === 1 || crosses || risky) {
+  if (reached === 1 || crosses || risky || squeezed) {
     const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
-    const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!(crosses || risky) });
+    const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!(crosses || risky || squeezed) });
     const cap = Math.min(maxMs, LIMITS.totalMs);
     while (plan.step(Math.min(LIMITS.sliceMs, cap)) === "more" && now() - t0 < cap);
     path = plan.result();
-    if ((crosses || risky) && path === base.result) path = null;   // no way round: the caller keeps what it had
+    if ((crosses || risky || squeezed) && path === base.result) path = null;   // no way round: the caller keeps what it had
+    else if (path && !constrainOptions?.ignoreWalls && fitPath(token, path).cut) path = null;
     legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));
     arcs = last?.arcs ?? 0;
   }
@@ -446,6 +468,7 @@ export function install(reg, ctx) {
     pathfindRoute: route,
     pathfindRouteTo: routeTo,
     pathfindOrigin: originOf,
+    pathfindSkip: token => !!skipFor(token, [null, null], { constrainOptions: {} }),
     pathfindPatched: () => findPatched,
   });
 }

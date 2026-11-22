@@ -55,6 +55,23 @@ export async function movementWorld({ patchable = true } = {}) {
         this.animationContexts?.clear?.();
       }
     };
+    // Core's CanvasAnimation.animate, as 14.370 orders it: the executor runs the first frame synchronously
+    // (`first`, which may complete the animation and start a nested one of the same name) before the
+    // animation is registered under its name (live H1-01).
+    F.foundry.canvas.animation = { CanvasAnimation: class CanvasAnimation {
+      static animations = {};
+      static STATES = Object.freeze({ FAILED: -2, TERMINATED: -1, WAITING: 0, RUNNING: 1, COMPLETED: 2 });
+      static animate(attributes, { name, first } = {}) {
+        if (name) this.terminateAnimation(name);
+        const animation = { name, state: 1, resolve(completed) { if (this.state === 0 || this.state === 1) this.state = completed ? 2 : -1; } };
+        first?.(animation);
+        const promise = Promise.resolve();
+        animation.promise = promise;
+        this.animations[name] = animation;
+        return promise;
+      }
+      static terminateAnimation(name) { this.animations[name]?.resolve(false); }
+    } };
     // Core's door icon: a left press toggles the door (the stub records it).
     F.foundry.canvas.containers = { DoorControl: class DoorControl {
       _onMouseDown(event) {

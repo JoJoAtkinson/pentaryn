@@ -1,5 +1,42 @@
 # Changelog — pentaryn-movement
 
+## 0.4.8 — 2026-11-22
+
+Hard-case round H-1 (walls, doors, crowds, mixed sizes; a Mac browser through the tunnel, the BOSS harness).
+
+- **[declared] A door cut never leaves a token frozen in the door frame or walking on through the shut door
+  (H1-01 blocker, H1-02).** Core registers a CanvasAnimation under its name only after running its first
+  frame; a chained movement tween that completes inside that frame (a slow page: one 300-900 ms frame
+  covers a segment) starts the next link, which registers itself, and the outer call then overwrites that
+  with its own completed animation. Every later stop (terminateAnimation by name) missed the running link:
+  it walked on through the shut door (the rest check snapped it back), and ending with links queued it threw
+  core's "reading 'chain'" and left the token drawn off its server position. A wrap of
+  `CanvasAnimation.animate` (row `movement-canvas-animation-registration`) points the name back at the
+  running animation. A cut or a click-stop also puts the drawn point back on the document's derived position
+  before stopping the tween (a re-prepared document made the token jump to its destination first).
+- **[declared] A member cut in the doorway with no square before the door** walks from where it is drawn to
+  the nearest clear spot no other token takes (it was put on the square a member behind it had just taken,
+  H1-07 / H1-09); in a fight, one core stops on another token's square steps off at once, costed (H1-07:
+  two on one square for 3.4-4.1 s, then a 0-cost jump).
+- **[declared] Group planning counts its own work, not the frames between its slices (H1-03).** 1.2 s of
+  planning, 2.5 s on the wall clock (was 300 ms of wall clock: a slow tab fell back to core on most funnels,
+  the followers stopping at the first wall). A drag's own search the same way (1.5 s of search, 4 s of wall
+  clock; H1-10: a maze drag stopped 3.6 squares short).
+- **[declared] A click-stop stops only the clicked token (H1-05).** The rest of its group walks on; out of
+  combat a member still walking through where it stopped is stopped where drawn and walks on round it, or,
+  with no way round, stops short of it; later waves route round it; the rest check never moves it.
+- **[declared] A big token never walks where its body does not fit (H1-04).** Core tests walls at the centre
+  only: a 2×2 Large walked through a one-square door with its body 55-87 px in the rock. Its path is cut where
+  16 rays over 75 % of its radius first meet a wall, a straight drag that squeezes is searched round, and a
+  group route that squeezes counts as no route.
+- **[declared] Dropped on another token, the grabbed one takes the nearest clear spot it can reach (H1-08:
+  it parked in a one-wide connector on top of a Large).** Its core path, when it has no route, never ends on
+  a token that stays.
+- **[declared] No way there: a notice, and the group does not half-move (H1-12).** Out of combat, when the
+  grabbed token's way ends short of the drop; with a group, only the grabbed token goes (as core takes it).
+- **[declared] Out of combat a member's route goes round tokens that stay (H1-09:** arrivals drawn through a
+  crowd member, -30 / -81 px), when there is such a route.
+
 ## 0.4.7 — 2026-11-22
 
 Live play-test round 7 (a Mac browser through the tunnel, the BOSS harness).

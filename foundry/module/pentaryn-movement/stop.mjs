@@ -21,8 +21,8 @@
  * out of habit, or the first press of a double click, is core's own (Fable's verdict). The start is
  * when this client saw the drop (noteDrop) or the move's first moveToken; a move it never saw start
  * is armed. The API's stop() is never held back.
- * When the client that sent a group stops one member, the whole group stops and its unsent waves
- * are cancelled (group.mjs groupCancel).
+ * When the client that sent a group stops one member, only that member stops (live H1-05); the others
+ * walk round it out of combat (group.mjs groupStopOne).
  *
  * The click also reaches a moving token core's MouseInteractionManager drops (0.4.1, live R1 D-2): a
  * DOM pointerdown on the board that the wrap did not see (the token's manager was not in its hover
@@ -37,7 +37,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop } from "./motion-core.mjs";
-import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, inCombat, movementFacts } from "./group-adapter.mjs";
+import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, inCombat, movementFacts, stopWhereDrawn } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
@@ -46,6 +46,7 @@ let log = null;
 let feature = null;
 let clickHandle = null;
 let defuseHandle = null;
+let animHandle = null;
 let clickPatched = false;
 let lastStop = null;
 /** The DOM pointerdown the click wrap saw last (the board listener leaves that one alone). */
@@ -139,11 +140,18 @@ function resync(token) {
  * When it succeeds, the drawn position is checked against the source once the write is in and again
  * RESYNC_MS later (resync).
  */
-function displace(token) {
+/** Where a click-stop out of combat puts a token: where it is drawn, or the nearest clear cell (live R4-5). */
+function stopSpot(token) {
+  const drawn = drawnPosition(token);
+  let p = drawn;
+  try { p = clearOfWalls(token, p); } catch (err) { log?.debug?.("clearOfWalls", err); }
+  return { drawn, p };
+}
+
+function displace(token, at = stopSpot(token)) {
   const doc = token.document;
   // Never at rest inside a solid wall: stopped in a doorway, it steps onto the nearest clear cell (live R4-5).
-  let p = drawnPosition(token);
-  try { p = clearOfWalls(token, p); } catch (err) { log.debug?.("clearOfWalls", err); }
+  const { drawn, p } = at;
   // This client's own move with checkpoints still to go: stop it first. stopAnimation resolves the
   // animation promise the continuation waits on, and that continuation would otherwise race the
   // displace to the server and carry the token on past where it was clicked (review-correctness).
@@ -154,7 +162,7 @@ function displace(token) {
     try { doc.stopMovement(); } catch (err) { log.debug?.("stopMovement before displace", err); }
   }
   defuse(token);
-  try { token.stopAnimation?.({ reset: false }); } catch (err) { log.debug?.("stopAnimation", err); }
+  try { stopWhereDrawn(token, drawn); } catch (err) { log.debug?.("stopAnimation", err); }
   const wp = { x: p.x, y: p.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
   const reset = () => {
     try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log.debug?.("stopAnimation reset", err); }
@@ -296,20 +304,22 @@ function decide(token, { tool = game.activeTool, modifiers = false, armed = fals
   });
 }
 
-/** Stop `token`; if this client sent its group, stop every member and cancel the unsent waves. */
+/**
+ * Stop `token`, and only it (live H1-05: a click on one member froze the whole group mid-room; Joe: only
+ * the clicked one stops). When this client sent its group, that member leaves it; out of combat the
+ * others still walking through where it now rests walk round it (group.mjs groupStopOne).
+ */
 function stopToken(token, how) {
   const doc = token.document;
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how };
-  const group = how === "query" ? [] : (feature.exposed.groupCancel?.(doc.id) ?? []);
-  const out = [act(token, how)];
-  for (const id of group) {
-    if (id === doc.id) continue;
-    const other = doc.parent?.tokens?.get(id)?.object;
-    if (!other) continue;
-    const next = decide(other, { tool: "select", armed: true });
-    if (next === "displace" || next === "stop") out.push(act(other, next));
+  if (how === "displace") {
+    const at = stopSpot(token);
+    const out = [displace(token, at)];
+    try { lastStop.rerouted = feature.exposed.groupStopOne?.(doc.id, at.p)?.length ?? 0; } catch (err) { log?.debug?.("stop one", err); }
+    return out;
   }
-  return out;
+  if (how === "stop") { try { feature.exposed.groupStopOne?.(doc.id, null); } catch (err) { log?.debug?.("stop one", err); } }
+  return [act(token, how)];
 }
 
 function onClick(token, event) {
@@ -454,6 +464,49 @@ function unlistenDoors() {
   doorLayer = null;
 }
 
+/**
+ * Every client: CanvasAnimation.animate keeps the animation registered under its name that is actually
+ * running (live H1-01, H1-02). Core registers an animation (`animations[name] = animation`) only after its
+ * promise executor has run the first frame synchronously. A token's chained movement tween whose first
+ * frame already completes it (a slow page: one 300-900 ms frame covers a whole segment) completes there and
+ * starts the next link, which registers itself under the same name; then the outer call overwrites that
+ * registration with its own, already completed, animation. The running link is registered nowhere, so
+ * every later terminateAnimation(name) (stopAnimation, the next movement) misses it: it walks on after a
+ * stop (a door cut drew the token on through the shut door, then the rest check snapped it back), writes
+ * its frames onto the document, and when it ends with links still queued it resumes one whose context
+ * is gone: core's TypeError "reading 'chain'", the token left frozen off its server position. After the
+ * outer call, the name points back at the newest nested animation of that name while it still runs.
+ */
+const ANIM_LIVE = new Set([0, 1]);                 // CanvasAnimation.STATES.WAITING, RUNNING
+const animFrames = [];
+function patchCanvasAnimate() {
+  const CA = globalThis.foundry?.canvas?.animation?.CanvasAnimation;
+  if (typeof CA?.animate !== "function") {
+    log.warn("no CanvasAnimation.animate; a stop on a slow page may miss a running tween");
+    return null;
+  }
+  return wrapMethod(MODULE, {
+    target: CA, name: "animate", label: "CanvasAnimation.animate",
+    marker: "__pentarynMovementAnimReg", adjustments: "movement-canvas-animation-registration",
+  }, function (wrapped, attributes, options = {}) {
+    const name = options?.name;
+    if (name === undefined || name === null) return wrapped(attributes, options);
+    const frame = { name, nested: null };
+    animFrames.push(frame);
+    let out;
+    try { out = wrapped(attributes, options); }
+    finally { animFrames.pop(); }
+    try {
+      const reg = this.animations;
+      const live = a => !!a && ANIM_LIVE.has(a.state);
+      if (reg && frame.nested && frame.nested !== reg[name] && live(frame.nested) && !live(reg[name])) reg[name] = frame.nested;
+      const outer = animFrames.findLast?.(f => f.name === name) ?? [...animFrames].reverse().find(f => f.name === name);
+      if (outer && reg) outer.nested = reg[name];
+    } catch (err) { log?.debug?.("animation registration", err); }
+    return out;
+  });
+}
+
 function patchClick() {
   const proto = CONFIG.Token?.objectClass?.prototype;
   if (typeof proto?._onClickLeft !== "function") {
@@ -497,8 +550,8 @@ async function stop(doc, opts = {}, qctx = null) {
 }
 
 /**
- * STOP_OWN, on the client that started a move: a GM asks it to stop that token (and, when this
- * client sent its group, the group). Only a GM sender; only a move this client started.
+ * STOP_OWN, on the client that started a move: a GM asks it to stop that token (only that one, H1-05).
+ * Only a GM sender; only a move this client started.
  */
 async function stopOwn(data = {}, qctx = {}) {
   const sender = qctx?.user ?? null;
@@ -507,13 +560,9 @@ async function stopOwn(data = {}, qctx = {}) {
   try { doc = typeof data?.ref === "string" ? globalThis.fromUuidSync?.(data.ref) ?? null : null; } catch { doc = null; }
   if (doc?.documentName !== "Token") return { ok: false, code: "NOT_FOUND", reason: "no such token" };
   if (!doc.movement?.user?.isSelf) return { ok: false, code: "NOT_INITIATOR", reason: "this client did not start that move" };
-  const ids = feature?.exposed?.groupCancel?.(doc.id) ?? [];
-  let ok = false;
-  for (const id of new Set([doc.id, ...ids])) {
-    const d = id === doc.id ? doc : doc.parent?.tokens?.get(id);
-    if (!d?.movement?.user?.isSelf) continue;
-    if ((await stopSafely(d)) && id === doc.id) ok = true;
-  }
+  // Only that token (live H1-05): it leaves this client's group, the others carry on.
+  try { feature?.exposed?.groupStopOne?.(doc.id, null); } catch (err) { log?.debug?.("stop one", err); }
+  const ok = await stopSafely(doc);
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how: "stopOwn", by: sender.id ?? null };
   return { ok, how: "stop", tokenId: doc.id };
 }
@@ -525,7 +574,7 @@ async function stopOwn(data = {}, qctx = {}) {
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  const wrapAll = () => { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); };
+  const wrapAll = () => { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); animHandle = patchCanvasAnimate(); };
   if (ctx.late) wrapAll();
   else reg.once("setup", wrapAll, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
   reg.on("moveToken", (doc, movement) => onMoveToken(doc, movement), { label: "moveToken: when a move started (click-to-stop arming)" });
@@ -547,6 +596,9 @@ export function uninstall() {
   clickHandle = null;
   defuseHandle?.unwrap();
   defuseHandle = null;
+  animHandle?.unwrap();
+  animHandle = null;
+  animFrames.length = 0;
   unlistenDoors();
   clickPatched = false;
   lastStop = null;

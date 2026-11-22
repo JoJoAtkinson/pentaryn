@@ -26,7 +26,8 @@ export const DEFAULT_PATHFIND = "everyone";
 export const LIMITS = Object.freeze({
   maxNodes: 6000,
   sliceMs: 8,          // one synchronous slice; a longer search continues in timer slices
-  totalMs: 1500,       // wall-clock cap for one search, all slices
+  totalMs: 1500,       // cap for one search: its own slices' time (a drag's search), or wall clock for a synchronous one
+  waitMs: 4000,        // a drag's search on the wall clock (its slices and the frames between them)
   margin: 8,           // cells around the start/goal box the search may use
   arcStepDeg: 40,      // fillet sampling
   arcMaxCells: 2,      // largest fillet tangent length, in cells
@@ -399,6 +400,15 @@ export function fillet(pts, { maxT, clear, cost, tries = LIMITS.arcTries, stepDe
 /* -------------------------------------------- */
 /*  Rules the glue asks                         */
 /* -------------------------------------------- */
+
+/**
+ * Has a drag's search run out (live H1-10)? `busy`: the time its own slices took; `wall`: since it
+ * started, frames between slices included. A slow page drew frames of 300-900 ms between 8 ms slices,
+ * so the wall clock alone ran out at a fraction of the search and the drop took core's partial line.
+ */
+export function searchOver({ busy = 0, wall = 0 } = {}) {
+  return busy > LIMITS.totalMs || wall > LIMITS.waitMs;
+}
 
 /**
  * Should this drag be pathfound at all? Pure inputs, so every early return is a table row.

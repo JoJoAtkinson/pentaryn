@@ -423,8 +423,10 @@ test("click to stop is armed only after MOTION.armMs of movement (a habit click 
   assert.equal(clickStop({ ...moving, elapsed: Number.NaN }), null);
 });
 
-test("the silent planning wait is capped at 300 ms (then core's drop)", () => {
-  assert.equal(GROUP_LIMITS.totalMs, 300);
+test("planning time is capped at 1.2 s and the silent wait at 2.5 s (then core's drop)", () => {
+  assert.equal(GROUP_LIMITS.totalMs, 1200);
+  assert.equal(GROUP_LIMITS.waitMs, 2500);
+  assert.ok(GROUP_LIMITS.totalMs < GROUP_LIMITS.waitMs);
   assert.ok(GROUP_LIMITS.memberMs < GROUP_LIMITS.totalMs);
   assert.ok(GROUP_LIMITS.syncMs < GROUP_LIMITS.totalMs);
 });
@@ -548,4 +550,17 @@ test("restOnPaths (R2-1): two members that start on one spot are pulled apart wh
     { id: "q", r: 0.5, path: [{ x: 2.5, y: 0.5 }, { x: 0.5, y: 0.5 }] },
   ]);
   assert.ok(Math.hypot(rest.p.x - rest.q.x, rest.p.y - rest.q.y) >= 1 - 1e-6, JSON.stringify(rest));
+});
+
+test("H1-08: a group dropped with the grabbed one on top of a token outside the group: it rests on the nearest clear spot, not on that token", () => {
+  const d = { x: 6.5, y: 4.5 };                              // the drop point (the grabbed one's centre)
+  const delta = { x: 4, y: 2 };
+  const ms = [member("a", { x: 2.5, y: 2.5 }, delta), member("b", { x: 2.5, y: 4.5 }, delta)];
+  const big = { x: 7, y: 5, r: 1 };                          // a Large resting where the grabbed one is dropped
+  const { res } = plan(OPEN, ms, "a", { others: [big] });
+  assert.equal(res.result, "plan");
+  const slot = res.members.a.slot;
+  assert.ok(dist(slot, big) >= 0.5 + 1 - 1e-6, `clear of the Large: ${JSON.stringify(slot)}`);
+  assert.ok(dist(slot, d) <= 2, `still near the drop: ${JSON.stringify(slot)}`);
+  assert.ok(dist(res.members.b.slot, slot) >= 1 - 1e-6);
 });

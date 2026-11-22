@@ -80,17 +80,59 @@ function open(token, from, to) {
  * Can `member` stand with its centre at `c` (squares)? Inside the scene, and no wall between its
  * centre and eight points on a circle of 0.9 × its radius (its body does not cross a wall).
  */
-export function restWalkable(member, c, s) {
+export function restWalkable(member, c, s, ratio = 0.9, rays = 8) {
   const rect = globalThis.canvas?.dimensions?.rect;
   const p = { x: c.x * s, y: c.y * s };
   if (rect && !rect.contains(p.x, p.y)) return false;
-  const rr = member.r * s * 0.9;
+  const rr = member.r * s * ratio;
   const z = member.token.document?._source?.elevation ?? 0;
-  for (let k = 0; k < 8; k++) {
-    const a = (k * Math.PI) / 4;
+  for (let k = 0; k < rays; k++) {
+    const a = (k * 2 * Math.PI) / rays;
     if (!open(member.token, { ...p, elevation: z }, { x: p.x + Math.cos(a) * rr, y: p.y + Math.sin(a) * rr, elevation: z })) return false;
   }
   return true;
+}
+
+/** How much of a big token's radius must stay clear of walls along its path (fitPath). */
+const FIT_RATIO = 0.75;
+
+/**
+ * A big token's path (top-left waypoints) cut where its body no longer fits between the walls (live H1-04:
+ * core tests walls at the centre only, so a 2×2 Large walked a straight line through a one-square door and
+ * corridor, its body 55-87 px inside the rock). Every quarter square along it, 16 rays over FIT_RATIO of its
+ * circle must be clear of move-blocking walls; at the first point where it is not, the path ends at the last point
+ * that fits (unsnapped, explicit). `{ path, cut }`; a 1×1 or smaller token, or a path whose start does not
+ * fit (already squeezed in), is returned whole. Reads only.
+ */
+export function fitPath(token, path) {
+  const doc = token?.document;
+  const src = doc?._source ?? {};
+  const w0 = src.width ?? 1, h0 = src.height ?? 1;
+  if (!Array.isArray(path) || path.length < 2 || (w0 <= 1 && h0 <= 1)) return { path, cut: false };
+  const s = gridSize(token);
+  const sz = p => ({ w: p.width ?? w0, h: p.height ?? h0 });
+  const member = { token, r: radiusOf(w0, h0) };
+  const fits = (x, y, w, h) => restWalkable(member, { x: (x + (w * s) / 2) / s, y: (y + (h * s) / 2) / s }, s, FIT_RATIO, 16);
+  const first = path[0], f0 = sz(first);
+  if (!fits(first.x, first.y, f0.w, f0.h)) return { path, cut: false };
+  let lastOk = { x: first.x, y: first.y };
+  for (let k = 1; k < path.length; k++) {
+    const a = path[k - 1], b = path[k], { w, h } = sz(b);
+    const L = Math.hypot(b.x - a.x, b.y - a.y) / s;
+    const n = Math.max(1, Math.ceil(L / 0.25));
+    for (let i = 1; i <= n; i++) {
+      const t = i / n, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+      if (!fits(x, y, w, h)) {
+        const out = path.slice(0, k).map(p => ({ ...p }));
+        const end = { ...b, x: Math.round(lastOk.x), y: Math.round(lastOk.y), snapped: false, explicit: true, checkpoint: true };
+        if (out.length && Math.round(out.at(-1).x) === end.x && Math.round(out.at(-1).y) === end.y) out[out.length - 1] = { ...out.at(-1), explicit: true, checkpoint: true };
+        else out.push(end);
+        return { path: out, cut: true };
+      }
+      lastOk = { x, y };
+    }
+  }
+  return { path, cut: false };
 }
 
 /** Ray angles (radians from the direction of travel) the width probe casts on each side. */
@@ -157,6 +199,20 @@ export function drawnPosition(token) {
   if (src && pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) && doc.x === src.x && doc.y === src.y
     && movementFacts(token).animating) { x = pos.x; y = pos.y; }
   return { x: Math.round(x), y: Math.round(y), elevation: doc.elevation };
+}
+
+/**
+ * Stop a token's tweens where it is drawn now (this client, before a stop's or a cut's unanimated write).
+ * Core's stopAnimation({ reset: false }) keeps the document's derived position as the new drawn one; when
+ * that was just re-prepared onto the source (drawnPosition's exception: the destination, behind a door
+ * that has just shut) the token jumped there first (live H1-02: drawn through the shut door to its slot,
+ * then back to its cut square). The drawn point is put back on the derived position first.
+ */
+export function stopWhereDrawn(token, at = drawnPosition(token)) {
+  const doc = token?.document;
+  if (!doc) return;
+  if (Number.isFinite(at?.x) && Number.isFinite(at?.y)) { doc.x = at.x; doc.y = at.y; }
+  token.stopAnimation?.({ reset: false });
 }
 
 /** The movement facts click-to-stop decides on. */
@@ -241,10 +297,13 @@ export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
  * move-blocking wall (restWalkable), else the nearest whole cell around it that is clear and that its
  * centre reaches from `p` without crossing a wall. Live R4-5: a click-stop in a doorway left the token
  * off the grid with its circle 37–41 px into the solid wall beside the door. A body across a door's line
- * (open or shut) does not fit either (live R5-3). `p` when nothing nearby fits.
+ * (open or shut) does not fit either (live R5-3). `taken` (top-left → true when another token rests or is
+ * going there) rules a spot out too (live H1-07 / H1-09: a door cut left a member on the square another
+ * had just stopped on); when every clear spot nearby is taken, the nearest clear one. `p` when nothing
+ * nearby fits.
  * Reads only.
  */
-export function clearOfWalls(token, p) {
+export function clearOfWalls(token, p, { taken = null } = {}) {
   const s = gridSize(token);
   const src = token.document?._source ?? {};
   const w = src.width ?? 1, h = src.height ?? 1;
@@ -262,18 +321,21 @@ export function clearOfWalls(token, p) {
     return doors.some(([a, b]) => pointSegment(c, a, b) < rr);
   };
   const fits = q => restWalkable(member, at(q), s) && !straddles(q);
-  if (fits(p)) return p;
+  const free = q => !taken?.(q);
+  if (fits(p) && free(p)) return p;
   const z = p.elevation ?? src.elevation ?? 0;
   const from = { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: z };
   const bx = Math.floor(p.x / s), by = Math.floor(p.y / s);
   const cands = [];
-  for (let dy = -1; dy <= 2; dy++) for (let dx = -1; dx <= 2; dx++) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
+  const reach = taken ? 2 : 1;
+  for (let dy = -reach; dy <= reach + 1; dy++) for (let dx = -reach; dx <= reach + 1; dx++) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
   cands.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
-  for (const c of cands) {
-    const to = { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z };
-    if (fits(c) && open(token, from, to)) return { ...p, x: c.x, y: c.y };
-  }
-  return p;
+  const ok = c => fits(c) && open(token, from, { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z });
+  const pick = cands.find(c => free(c) && ok(c));
+  if (pick) return { ...p, x: pick.x, y: pick.y };
+  if (fits(p)) return p;
+  const near = cands.find(c => Math.hypot(c.x - p.x, c.y - p.y) <= 1.5 * s && ok(c));
+  return near ? { ...p, x: near.x, y: near.y } : p;
 }
 
 /** The scene's door segments (any door type, open or shut) as point pairs (pixels). */
