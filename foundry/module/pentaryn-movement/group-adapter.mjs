@@ -7,7 +7,7 @@
  * Foundry waypoints are top-left pixels. `toSquares` / `toTopLeft` convert, given the grid size.
  */
 
-import { MOTION, radiusOf } from "./motion-core.mjs";
+import { MOTION, radiusOf, remainingFrom } from "./motion-core.mjs";
 
 /** A token's centre in squares, for a top-left pixel position and its size in squares. */
 export const toSquares = (p, w, h, s) => ({ x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s });
@@ -67,6 +67,34 @@ export function othersOf(members, s) {
     if (level !== undefined && doc._source?.level !== undefined && doc._source.level !== level) continue;
     const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
     out.push({ ...toSquares(doc._source, w, h, s), r: radiusOf(w, h) });
+  }
+  return out;
+}
+
+/**
+ * Tokens outside the group that are walking right now (live H4-03 / H4-04: a group dropped while another token or
+ * group walked the other way through the corridor went straight through it): each one's circle and the rest of
+ * its walk from where it is drawn (centres, squares) and its speed, for the plan's timing. Same level only;
+ * a hidden one only for the GM. Reads only.
+ */
+export function movingOthers(members, s) {
+  const ids = new Set(members.map(m => m.id));
+  const level = members[0]?.token?.document?._source?.level;
+  const out = [];
+  for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
+    const doc = t?.document;
+    if (!doc?._source || ids.has(doc.id) || t.isPreview || t.destroyed || !t.visible) continue;
+    if (level !== undefined && doc._source.level !== undefined && doc._source.level !== level) continue;
+    if (!movementFacts(t).animating) continue;
+    const m = doc.movement;
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    const wps = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])]
+      .filter(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
+    if (wps.length < 2) continue;
+    const pts = wps.map(p => toSquares(p, w, h, s));
+    const left = remainingFrom(pts, toSquares(drawnPosition(t), w, h, s));
+    if (!left || left.length < 2) continue;
+    out.push({ id: doc.id, r: radiusOf(w, h), points: left, speed: speedOf(t) });
   }
   return out;
 }
@@ -230,6 +258,54 @@ export function stopWhereDrawn(token, at = drawnPosition(token)) {
   if (!doc) return;
   if (Number.isFinite(at?.x) && Number.isFinite(at?.y)) { doc.x = at.x; doc.y = at.y; }
   token.stopAnimation?.({ reset: false });
+}
+
+/**
+ * Tokens this client has just stopped where they are drawn and sent an unanimated displace for (stop.mjs, the
+ * group cut and stop-one): until the server has the displace (the source reaches `target`), at most PIN_MS, the
+ * token is kept drawn where it was stopped. Anything that re-prepares its document meanwhile (another update of
+ * it, a late segment of the walk landing) would draw it at the old destination for that round trip and back
+ * (live H4-06: a click-stop drew five members 780-1402 px away for ~120 ms; a door cut drew one through the wall).
+ * id → { x, y, tx, ty, until }.
+ */
+const pins = new Map();
+const PIN_MS = 1500;
+const pinClock = () => globalThis.performance?.now?.() ?? Date.now();
+
+/** Keep `token` drawn at `at` until its source reaches `target` (top-left pixels) or PIN_MS pass. */
+export function pinDrawn(token, at, target) {
+  const id = token?.document?.id;
+  if (!id || !Number.isFinite(at?.x) || !Number.isFinite(at?.y) || !Number.isFinite(target?.x) || !Number.isFinite(target?.y)) return;
+  pins.set(id, { x: Math.round(at.x), y: Math.round(at.y), tx: Math.round(target.x), ty: Math.round(target.y), until: pinClock() + PIN_MS });
+}
+
+/** Let go of a pinned token (its displace landed, was refused, or failed). */
+export function unpin(token) {
+  const id = token?.document?.id ?? token;
+  if (id) pins.delete(id);
+}
+
+/**
+ * refreshToken, this client: a pinned token drawn anywhere but its pin is put back on it (a tween that started
+ * meanwhile is stopped there). Returns true when it put it back.
+ */
+export function holdPinned(token) {
+  const doc = token?.document;
+  const pin = doc?.id ? pins.get(doc.id) : null;
+  if (!pin) return false;
+  const src = doc._source ?? {};
+  if (token.destroyed || pinClock() > pin.until || (Math.round(src.x) === pin.tx && Math.round(src.y) === pin.ty)) { pins.delete(doc.id); return false; }
+  if (doc.x === pin.x && doc.y === pin.y && token.position?.x === pin.x && token.position?.y === pin.y) return false;
+  if (movementFacts(token).animating) {
+    queueMicrotask(() => {
+      try { if (pins.get(doc.id) === pin && !token.destroyed) stopWhereDrawn(token, pin); }
+      catch (err) { globalThis.console?.debug?.("pentaryn-movement | hold a stopped token (the next refresh tries again)", err); }
+    });
+    return true;
+  }
+  doc.x = pin.x; doc.y = pin.y;
+  token.position?.set?.(pin.x, pin.y);
+  return true;
 }
 
 /** The movement facts click-to-stop decides on. */

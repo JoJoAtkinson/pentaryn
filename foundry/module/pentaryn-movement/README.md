@@ -65,8 +65,10 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   all setting off together on open ground and in turn only at a door, so they file through it one behind
   the other, never resting on top of each other (circles: touching is fine), and round tokens that stay
   where they are (0.4.8). The grabbed token lands exactly where dropped, unless that is on another token:
-  then the nearest clear spot it can reach (0.4.8). A plan whose own work takes over 1.2 s, or that has
-  not finished 2.5 s after the drop, is core's own drop. Dropped where the grabbed token has no way to go,
+  then the nearest clear spot it can reach (0.4.8). A plan whose own work takes over 2.5 s, or that has
+  not finished 5 s after the drop, is core's own drop (1.2 / 2.5 s until 0.4.11). A route search that only ran
+  out of time is finished, never read as "no route" (0.4.11). Members set off only once a token outside the
+  group walking through their way has passed (0.4.11). Dropped where the grabbed token has no way to go,
   nobody moves and the dragger gets a short "No route there" warning (0.4.9; a single token too). A single
   drop lands where the pointer comes up, and one released before its route search has finished goes once
   the search is done (0.4.10). A way round others is never more than 4 squares, or half the direct way,
@@ -80,7 +82,9 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   whole group (0.4.9); when you do not own every member (a player's token in the GM's group), only your own
   members stop, out of any one-wide corridor or doorway when there is room within 3 squares (0.4.10), and the
   GM's client walks the rest round them. In a fight, two that finish their squares on one square are set apart
-  once at rest (0.4.10).
+  once at rest (0.4.10). A whole group stopped at once keeps out of a one-wide corridor too, and a stopped token is
+  never drawn anywhere but where it stopped while its stop reaches the server (0.4.11). `status().stop.last` says
+  what the last stop was and what asked for it (`via`: click, board, door, api).
 - **The GM's drag-help button** (Token controls, the route icon, next to the ghost button): one click turns
   pathfinding and group movement off for the whole table, so every drag is plain Foundry dragging; click again
   to turn them back on (world setting `assist`, 0.4.9). Players: if the GM has it off, a drag goes straight

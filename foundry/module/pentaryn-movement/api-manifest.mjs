@@ -21,7 +21,8 @@ export const MANIFEST = Object.freeze({
         doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope }, combatExempt: string[], "
-        + "group: { enabled, clickToStop, patched: { drop, click }, regime, limits, groups, last, fallbacks, resumed, stopped, destacked, cut } }",
+        + "group: { enabled, clickToStop, patched: { drop, click }, regime, limits, groups, last, fallbacks, resumed, stopped, destacked, cut }, "
+        + "stop: { last } }",
       gm: false, writes: false, legacy: true,
       doc: "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM "
         + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
@@ -32,7 +33,8 @@ export const MANIFEST = Object.freeze({
         + "limits, groups still sending waves, the last drop (mode, reason, result, ms, async, waves, relaxed, replans) "
         + "and the last few reasons a drop went to core; resumed / stopped / destacked / cut (0.4.6): when a reload last "
         + "picked up unsent waves, a turn change last stopped a group, the rest check last moved a member off another, "
-        + "a door shut or a wall raised last cut moves this client started.",
+        + "a door shut or a wall raised last cut moves this client started. stop.last (0.4.11): this client's last "
+        + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole), or null.",
     },
     {
       path: "ghostFor",

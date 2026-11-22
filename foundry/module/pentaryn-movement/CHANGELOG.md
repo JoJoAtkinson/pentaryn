@@ -1,5 +1,32 @@
 # Changelog — pentaryn-movement
 
+## 0.4.11 — 2026-11-22
+
+Hard-case round H-4 (fixes only).
+
+- **[declared] H4-01: a route search that only ran out of time is never read as "no route there".** The group
+  plan searched the grabbed token's route with a 250 ms cap and took "not found yet" for "no way": the first drag
+  after a reset was refused (`anchorNoRoute`) where the identical retry planned. It now finishes that search in
+  slices on the plan's budget (also for a member, which went to core before). A refusal records `last.dest`.
+- **[declared] H4-01: a Large whose drag search had not finished walks as far as its body fits along the found
+  way** (the finished drag's own path), not the drag's one-square line ("5 ft").
+- **[declared] H4-02: the group plan's budget is 2.5 s of its own work and 5 s on the wall clock** (1.2 / 2.5 s):
+  a slow tab fell back to core 3 of 5 times on H7b and core parked members in the one-wide corridor.
+- **[declared] H4-03 / H4-04: a group sets off only once a token outside it walking through its way has
+  passed** (the rest of that walk from where it is drawn is in the plan's timing): two-way traffic and a group
+  dragged after a single token went through each other. A member that has to relax sets off once those it meets
+  are at rest, never into one walking (two of a group of 8 went through the door on the same frame). A single
+  drop whose way round a standing token is still being searched at the drop goes once the search is done (it
+  walked straight through the token, -75 to -85 px).
+- **[declared] H4-06: a stopped or cut token stays drawn where it stopped until its displace reaches the
+  server** (at most 1.5 s): anything that re-prepared it meanwhile drew it at its old destination for a round
+  trip and back (780-1402 px; through the wall at a door cut).
+- **[declared] H4-09: a whole group stopped at once keeps out of a one-wide corridor or doorway** when there is
+  room within 3 squares, as a player's partial stop already did.
+- **[declared] H4-14: the drag-help (and ghost) button's tooltip closes when the controls redraw.**
+- **[declared] `status().stop.last`:** the last click-stop on this client and what asked for it (`via`: click,
+  board, door, api), for the next round (H4-03: a token stopped with no record of why).
+
 ## 0.4.10 — 2026-11-22
 
 Hard-case round H-3 (fixes only).

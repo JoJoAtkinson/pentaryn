@@ -39,7 +39,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop, radiusOf } from "./motion-core.mjs";
-import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, inCombat, movementFacts, narrowPoints, stopWhereDrawn } from "./group-adapter.mjs";
+import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, narrowPoints, pinDrawn, stopWhereDrawn, unpin } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
@@ -185,8 +185,10 @@ function displace(token, at = stopSpot(token)) {
   }
   defuse(token);
   try { stopWhereDrawn(token, drawn); } catch (err) { log.debug?.("stopAnimation", err); }
+  pinDrawn(token, drawn, p);
   const wp = { x: p.x, y: p.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
   const reset = () => {
+    unpin(token);
     try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log.debug?.("stopAnimation reset", err); }
   };
   let pending;
@@ -194,6 +196,7 @@ function displace(token, at = stopSpot(token)) {
   catch (err) { pending = Promise.reject(err); }
   return pending
     .then(moved => {
+      unpin(token);
       if (moved === false) reset();
       else {
         resync(token);
@@ -372,9 +375,10 @@ function owns(token) {
  * Stop `token` by the table's decision `how`, and with it the rest of its group (decision 3): all of it when
  * this user owns every member, else only this user's own members. Returns the stops' promises.
  */
-function stopToken(token, how) {
+function stopToken(token, how, via = "api") {
   const doc = token.document;
-  lastStop = { at: new Date().toISOString(), tokenId: doc.id, how };
+  // `via`: what asked (click, board, door, api), for status().stop (live H4-03: a token stopped with no record of why).
+  lastStop = { at: new Date().toISOString(), tokenId: doc.id, name: doc.name ?? null, how, via };
   if (how === "query") return [act(token, how)];
   let held = false, ids = [];
   try { ({ held, ids } = feature.exposed.groupMembers?.(doc.id) ?? { held: false, ids: [] }); } catch (err) { log?.debug?.("group members", err); }
@@ -382,8 +386,10 @@ function stopToken(token, how) {
   const others = ids.filter(id => id !== doc.id).map(id => scene?.tokens?.get(id)?.object).filter(t => t && !t.destroyed);
   const whole = others.every(owns);
   const list = [token, ...others.filter(owns)];
-  // Others of the group walk on (not this user's): this user's stop keeps out of the gaps they must pass.
+  // Others of the group walk on (not this user's): this user's stop keeps out of the gaps they must pass. A whole
+  // group stopped at once keeps out of them too (live H4-09: a member left in the one-wide corridor blocked it).
   const partial = !whole && others.length > 0;
+  const roomy = partial || list.length > 1;
   // The whole group: its unsent waves go too. Only some: each leaves the group, and the rest walk round it.
   if (held && whole) { try { feature.exposed.groupCancel?.(doc.id); } catch (err) { log?.debug?.("stop the group", err); } }
   const skip = new Set(list.map(t => t.document.id));
@@ -396,7 +402,7 @@ function stopToken(token, how) {
     const next = t === token ? how : decide(t, { tool: "select", armed: true });
     if (next !== "displace" && next !== "stop") continue;
     if (next === "displace") {
-      const at = stopSpot(t, takenAround(t, skip, claims), { roomy: partial });
+      const at = stopSpot(t, takenAround(t, skip, claims), { roomy });
       const s = gridSize(t), w = tdoc._source.width ?? 1, h = tdoc._source.height ?? 1;
       claims.push({ id: tdoc.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s });
       out.push(displace(t, at));
@@ -432,7 +438,7 @@ function onClick(token, event) {
   const how = decide(token, {
     modifiers: !!(event?.shiftKey || event?.ctrlKey || event?.metaKey || event?.altKey),
   });
-  if (how) stopToken(token, how);
+  if (how) stopToken(token, how, "click");
 }
 
 /* -------------------------------------------- */
@@ -472,7 +478,8 @@ function onBoardDown(ev) {
     const p = cv.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
     const hit = movingTokenAt(p, { modifiers: !!(ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey) });
     if (!hit) return;
-    stopToken(hit.token, hit.how);
+    stopToken(hit.token, hit.how, "board");
+    if (lastStop) lastStop.point = { x: Math.round(p.x), y: Math.round(p.y) };
     // As the click would have: the stopped token is selected (the canvas click just released the rest).
     if (!hit.token.controlled) hit.token.control?.({ releaseOthers: true });
   } catch (err) {
@@ -546,7 +553,7 @@ function onDoorDown(event) {
     if (!hit) return;
     event.stopPropagation?.();                    // the icon's own handler never sees it: no toggle
     lastNative = event.nativeEvent ?? null;       // the board fallback leaves this press alone
-    stopToken(hit.token, hit.how);
+    stopToken(hit.token, hit.how, "door");
     if (!hit.token.controlled) hit.token.control?.({ releaseOthers: true });
   } catch (err) { log.warnOnce("stop-door", "click to stop over a door skipped (further errors suppressed)", err); }
 }
@@ -702,6 +709,8 @@ export function install(reg, ctx) {
   reg.on("updateToken", (doc, changes, options) => onUnanimatedMove(doc, changes, options), { label: "updateToken: resync after an unanimated move (stop)" });
   // After PIXI's own pointerdown listener (added when the app was made), so the wrap sees a click first.
   reg.on("canvasReady", () => { listenBoard(); listenDoors(); }, { label: "canvasReady: board pointerdown (click to stop, fallback)" });
+  reg.on("refreshToken", token => { try { holdPinned(token); } catch (err) { log.debug?.("hold a stopped token", err); } },
+    { label: "refreshToken: a stopped token stays drawn where it stopped until its displace lands (H4-06)" });
   if (ctx.late) { listenBoard(); listenDoors(); }
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).

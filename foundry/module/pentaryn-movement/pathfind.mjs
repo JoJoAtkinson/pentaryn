@@ -442,7 +442,7 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
       { x: base.result[k - 1].x + (w * s) / 2, y: base.result[k - 1].y + (h * s) / 2 },
       { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 }))));
   const squeezed = !constrainOptions?.ignoreWalls && fitPath(token, base.result).cut;
-  let path = base.result, legs = [], arcs = 0;
+  let path = base.result, legs = [], arcs = 0, partial = null, unfinished = false;
   if (reached === 1 || crosses || risky || squeezed) {
     const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
     const big = !constrainOptions?.ignoreWalls && ((w > 1) || (h > 1));
@@ -451,15 +451,21 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
       if (yield "more") break;
     }
     path = plan.result();
+    // A big token's way as far as its body fits (H4-01: a drop whose drag search had not finished walked the
+    // drag's one-square line; the drag itself shows this cut path once its search is done).
+    if (big && path?.length) { try { partial = fitPath(token, path).path; } catch { partial = null; } }
     if ((crosses || risky || squeezed) && path === base.result) path = null;   // no way round: the caller keeps what it had
     else if (path && !constrainOptions?.ignoreWalls && fitPath(token, path).cut) path = null;
     legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));
+    // Stopped by its cap with a leg still searching: "not found yet", never "no way there" (H4-01).
+    unfinished = legs.some(l => l.state === "more");
     arcs = last?.arcs ?? 0;
   }
   const cost = path?.length ? token.measureMovementPath(path, { preview }).cost : null;
   return {
     reached: !!path && pf.reachedCount(path, ends, same) === 2,
     straight: reached === 2 && !crosses && !risky, path, cost, legs, arcs, ms: Math.round((now() - t0) * 10) / 10,
+    unfinished, partial,
   };
 }
 
@@ -518,6 +524,7 @@ export function install(reg, ctx) {
     pathfindRoute: route,
     pathfindRouteTo: routeTo,
     pathfindRouteToAsync: routeToAsync,
+    pathfindRouteSteps: routeSteps,
     pathfindOrigin: originOf,
     pathfindSkip: token => !!skipFor(token, [null, null], { constrainOptions: {} }),
     pathfindPatched: () => findPatched,

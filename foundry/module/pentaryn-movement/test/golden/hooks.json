@@ -176,6 +176,10 @@
     "name": "canvasReady"
   },
   {
+    "kind": "on",
+    "name": "refreshToken"
+  },
+  {
     "kind": "once",
     "name": "ready"
   }

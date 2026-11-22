@@ -2074,6 +2074,10 @@ test("decision 8: a 2x2 with no way its body fits stops before the gap and the d
   const out = dropWith(big, c1);
   assert.ok(out, "it still moves up to the gap");
   assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.level === "warn" && /nrwL000000000001|tooNarrow/.test(c.message)), JSON.stringify(F.calls.slice(from).filter(c => c.op === "notify")));
+  // H4-01 (live H7c, the first drag after a reset: "5 ft", one square): the drag's search had not finished, its
+  // path one square long; the drop walks as far as the body fits along the found way, as the finished drag shows.
+  const wps = out[1].movement[big.document.id].waypoints;
+  assert.deepEqual([wps.at(-1).x, wps.at(-1).y], [350, 200], `as far as it fits, not the drag's one square: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
   sceneTokens.delete(big.document.id);
 });
 

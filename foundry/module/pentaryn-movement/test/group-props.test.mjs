@@ -363,3 +363,35 @@ test("edge: flood respects radius and blocked cells; diagonals cost √2", () =>
 });
 
 test.after(() => console.log("# property stats", JSON.stringify(stats)));
+
+test("property (H4-04): a member that has to relax sets off once those it meets are at rest, never at once", () => {
+  let seen = 0;
+  for (const seed of SEEDS) {
+    const sc = randomScenario(seed);
+    if (sc.combat) continue;
+    const anchor = sc.ms.find(m => m.id === sc.anchorId);
+    const res = finish(planGroup({ members: sc.ms, anchorId: sc.anchorId }, oracles(sc.g, anchor)));
+    if (res.result !== "plan" || !res.relaxed) continue;
+    const byId = Object.fromEntries(sc.ms.map(m => [m.id, m]));
+    const list = Object.values(res.members).filter(e => !e.core);
+    for (const e of list) {
+      if (e.level !== 3) continue;
+      seen += 1;
+      // It may brush a member standing still (waiting, or at rest), never one walking at the same moment.
+      const A = traj(e);
+      for (const f of list) {
+        if (f === e) continue;
+        const B = traj(f);
+        const rr = byId[e.id].r + byId[f.id].r;
+        const d0 = dist(positionAt(A, 0), positionAt(B, 0));
+        const floor = (d0 < rr + 0.05 ? Math.min(d0, rr) - MOTION.contact : rr) - 1e-6;
+        for (let t = A.start; t <= A.end; t += 10) {
+          if (t <= B.start || t >= B.end) continue;
+          const d = dist(positionAt(A, t), positionAt(B, t));
+          assert.ok(d >= floor, `seed ${seed}: relaxed ${e.id} meets ${f.id} walking at ${t} ms (${d.toFixed(3)} apart)\n${sc.ascii}`);
+        }
+      }
+    }
+  }
+  assert.ok(seen > 0, "the seeds include relaxed members");
+});

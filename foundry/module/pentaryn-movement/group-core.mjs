@@ -16,7 +16,7 @@
  * can run it in time slices and give up past the budget (runPlan()).
  */
 
-import { MOTION, dist, firstConflict, trajectory, delayed, GROUP_MAX } from "./motion-core.mjs";
+import { MOTION, dist, firstConflict, trajectory, delayed, positionAt, GROUP_MAX } from "./motion-core.mjs";
 
 /** A way round may add this many squares, or half the direct way, whichever is more (H2-02, H3-03). */
 export const DETOUR_SQUARES = 4;
@@ -29,8 +29,8 @@ export function detourTooLong(direct, round) {
 export const GROUP_LIMITS = Object.freeze({
   maxMembers: GROUP_MAX,
   memberMs: 400,       // one member's routes, all tries (planning time: the clock runs only while the plan does)
-  totalMs: 1200,       // the whole plan's planning time: past this the drop is core's
-  waitMs: 2500,        // the silent wait on the wall clock (slices and the frames between them): past this, core's
+  totalMs: 2500,       // the whole plan's planning time: past this the drop is core's (1200 until 0.4.11: a slow tab fell back, live H4-02)
+  waitMs: 5000,        // the silent wait on the wall clock (slices and the frames between them): past this, core's
   syncMs: 30,          // what the drop spends synchronously before going async
   rings: 5,            // candidate rings around the anchor
   walkRatio: 2,        // a slot's walk distance ≤ this × its straight distance (no slots through a wall)
@@ -315,6 +315,16 @@ function trajectoryOf(points, speed) {
   return byS.get(speed);
 }
 
+/** Do `mine` (radius r) and fixed entry `f` overlap at a moment when both are walking? (sampled every 20 ms) */
+function meetsWalking(mine, r, f) {
+  const t0 = Math.max(mine.start, f.tr.start), t1 = Math.min(mine.end, f.tr.end);
+  if (t1 <= t0) return false;
+  const a = boxOf(mine.pts), b = boxOf(f.tr.pts), reach = r + f.r;
+  if (a.x0 - reach > b.x1 || b.x0 - reach > a.x1 || a.y0 - reach > b.y1 || b.y0 - reach > a.y1) return false;
+  for (let t = t0; t <= t1; t += 20) if (dist(positionAt(mine, t), positionAt(f.tr, t)) < reach - MOTION.contact - EPS) return true;
+  return false;
+}
+
 /** The smallest delay with no conflict, or null. */
 function firstFreeDelay(tr, r, fixed, combat) {
   for (const d of delaySteps()) if (!conflictsAt(tr, r, d, fixed, combat).length) return d;
@@ -339,7 +349,7 @@ function firstFreeDelay(tr, r, fixed, combat) {
  * @returns {Generator<string, object>}   the result: { result: "plan", members: { id → entry }, ... } or { result: "core", reason }
  */
 export function* planGroup(spec, o) {
-  const { anchorId, combat = false, mode = "plan", others = [] } = spec;
+  const { anchorId, combat = false, mode = "plan", others = [], moving = [] } = spec;
   let { members } = spec;
   if (members.length > GROUP_LIMITS.maxMembers) return { result: "core", reason: "tooMany" };
   let anchor = members.find(m => m.id === anchorId);
@@ -382,7 +392,13 @@ export function* planGroup(spec, o) {
     const a = goal === anchor.formation ? anchor : { ...anchor, formation: { x: goal.x, y: goal.y } };
     anchorRoute = o.route(a, a.start, a.formation, {});
     yield "route";
-    if (timer.over()) return { result: "core", reason: "budget" };
+    // Its search ran out before it found the way (a cold or slow tab): finish it, on the whole plan's budget,
+    // never "no route there" for a way that is there (live H4-01: the identical next drag planned and moved).
+    if (!anchorRoute && o.unfinished?.() && o.routeLong) {
+      anchorRoute = yield* o.routeLong(a, a.start, a.formation, {});
+      if (!anchorRoute && o.unfinished?.()) return { result: "core", reason: "budget" };
+      if (timer.overTotal()) return { result: "core", reason: "budget" };
+    } else if (timer.over()) return { result: "core", reason: "budget" };
     if (anchorRoute) {
       if (a !== anchor) { anchor = a; members = members.map(m => (m.id === anchorId ? anchor : m)); }
       break;
@@ -424,17 +440,23 @@ export function* planGroup(spec, o) {
       const prev = routes.get(m.id);
       if (prev && dist(prev.points.at(-1), slot) < EPS) continue;
       timer.member();
-      const r = o.route(m, m.start, slot, {});
+      let r = o.route(m, m.start, slot, {});
       yield "route";
-      if (timer.over()) return { result: "core", reason: "budget" };
+      // A member whose search only ran out is not left to core (live H4-02: core parked it in the corridor).
+      if (!r && o.unfinished?.() && o.routeLong) {
+        r = yield* o.routeLong(m, m.start, slot, {});
+        if (timer.overTotal()) return { result: "core", reason: "budget" };
+      } else if (timer.over()) return { result: "core", reason: "budget" };
       if (r) routes.set(m.id, r);
       else { routes.delete(m.id); excluded.push(m); changed = true; }
     }
     if (!changed) break;
   }
 
-  // Step C: timing. Excluded members move as core moves them, first and fixed.
-  const base = [];
+  // Step C: timing. Tokens outside the group walking now (the rest of their walk from the drop), and excluded
+  // members (as core moves them), first and fixed: nobody sets off into them (live H4-03 / H4-04).
+  const base = moving.filter(f => f.points?.length >= 2)
+    .map(f => ({ id: `moving:${f.id}`, r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed }), wave: 0, foreign: true }));
   for (const m of excluded) {
     const path = m.corePath?.length ? m.corePath : [m.start];
     base.push({ id: m.id, r: m.r, tr: trajectory(path, { speed: m.speed }), wave: 0 });
@@ -491,9 +513,16 @@ export function* planGroup(spec, o) {
         if (!conflictsAt(tr, m.r, d, fixed, combat).length) { delay = d; level = 2; }
         else {
           // Relax. Who is in the way even after they have all stopped (a resting circle)?
-          const late = conflictsAt(tr, m.r, d, fixed, combat).find(f => f.id !== m.id && !excluded.some(x => x.id === f.id));
+          const late = conflictsAt(tr, m.r, d, fixed, combat).find(f => f.id !== m.id && !f.foreign && !excluded.some(x => x.id === f.id));
           relaxed.push({ id: m.id, blocker: late?.id ?? null });
-          delay = 0; level = 3;
+          // It brushes only those standing still in its way, never one walking at the same moment (live H4-04: a
+          // relaxed member set off at once and two of a group of 8 went through the one-square door on the same frame).
+          delay = d;
+          for (let dd = d; dd <= d + MOTION.maxDelay + EPS; dd += MOTION.delayStep) {
+            const mine = delayed(tr, dd);
+            if (!fixed.some(f => meetsWalking(mine, m.r, f))) { delay = dd; break; }
+          }
+          level = 3;
         }
       }
       const wave = Math.ceil(delay / MOTION.waveMs - EPS);
@@ -565,6 +594,7 @@ function budget(now = () => 0) {
       const t = now();
       return t - m0 > GROUP_LIMITS.memberMs || t - t0 > GROUP_LIMITS.totalMs;
     },
+    overTotal: () => now() - t0 > GROUP_LIMITS.totalMs,
     elapsed: () => Math.round((now() - t0) * 10) / 10,
   };
 }

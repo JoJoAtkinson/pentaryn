@@ -193,11 +193,11 @@ test("8. over budget: the result is core, with no partial plan", () => {
   const ms = [member("a", { x: 7.5, y: 2.5 }, d), member("b", { x: 6.5, y: 2.5 }, d)];
   const res = finish(planGroup({ members: ms, anchorId: "a" }, oracles(g, ms[0], { now: () => clock.t })));
   assert.deepEqual(res, { result: "core", reason: "budget" });
-  // Total budget too: many cheap routes add up past 1 s.
-  const slow = { t: 0, perRoute: 200 };
+  // Total budget too: many routes, each under the member budget, add up past the total (2.5 s since 0.4.11).
+  const slow = { t: 0, perRoute: 390 };
   const g2 = gridWorld(DOOR, { clock: slow });
   const many = [];
-  for (let k = 0; k < 6; k++) many.push(member(`m${k}`, { x: 2.5 + k, y: 2.5 }, d));
+  for (let k = 0; k < 7; k++) many.push(member(`m${k}`, { x: 2.5 + k, y: 2.5 }, d));
   const res2 = finish(planGroup({ members: many, anchorId: "m0" }, oracles(g2, many[0], { now: () => slow.t })));
   assert.equal(res2.result, "core");
   assert.equal(res2.members, undefined);
@@ -424,9 +424,9 @@ test("click to stop is armed only after MOTION.armMs of movement (a habit click 
   assert.equal(clickStop({ ...moving, elapsed: Number.NaN }), null);
 });
 
-test("planning time is capped at 1.2 s and the silent wait at 2.5 s (then core's drop)", () => {
-  assert.equal(GROUP_LIMITS.totalMs, 1200);
-  assert.equal(GROUP_LIMITS.waitMs, 2500);
+test("planning time is capped at 2.5 s and the silent wait at 5 s (then core's drop; H4-02: 1.2 / 2.5 s fell back on a slow tab)", () => {
+  assert.equal(GROUP_LIMITS.totalMs, 2500);
+  assert.equal(GROUP_LIMITS.waitMs, 5000);
   assert.ok(GROUP_LIMITS.totalMs < GROUP_LIMITS.waitMs);
   assert.ok(GROUP_LIMITS.memberMs < GROUP_LIMITS.totalMs);
   assert.ok(GROUP_LIMITS.syncMs < GROUP_LIMITS.totalMs);
@@ -651,4 +651,83 @@ test("H3-03: detourTooLong is the H2-02 rule (4 squares, or half the direct way)
   assert.equal(detourTooLong(20, 30), false);
   assert.equal(detourTooLong(20, 31), true);
   assert.equal(detourTooLong(9, 83), true);
+});
+
+/* -------------------------------------------- */
+/*  0.4.11 (hard round H-4)                     */
+/* -------------------------------------------- */
+
+/** Oracles whose route() runs out of time (null, unfinished) for the ids in `slow`; routeLong finishes it. */
+function slowOracles(g, anchor, slow, log = []) {
+  let unfinished = false;
+  return oracles(g, anchor, {
+    route: (m, from, to, opts) => {
+      unfinished = false;
+      if (slow.has(m.id)) { unfinished = true; log.push(["route", m.id]); return null; }
+      return g.route(m, from, to, opts);
+    },
+    routeLong: function* (m, from, to, opts) {
+      unfinished = false;
+      log.push(["long", m.id]);
+      yield "route";
+      yield "route";
+      return g.route(m, from, to, opts);
+    },
+    unfinished: () => unfinished,
+  });
+}
+
+test("H4-01: the grabbed one's search only ran out: the plan finishes it, never 'no route there' for a way that is there", () => {
+  const d = { x: 15, y: 0 };
+  const ms = [member("a", { x: 4.5, y: 3.5 }, d), member("b", { x: 4.5, y: 2.5 }, d)];
+  const g = gridWorld(CORRIDOR);
+  const log = [];
+  const res = finish(planGroup({ members: ms, anchorId: "a" }, slowOracles(g, ms[0], new Set(["a"]), log)));
+  assert.equal(res.result, "plan", JSON.stringify(res));
+  assert.deepEqual(log.slice(0, 2), [["route", "a"], ["long", "a"]]);
+  // Without the long search (an older oracle set), the same run-out is a budget fallback, still not anchorNoRoute.
+  const o = slowOracles(g, ms[0], new Set(["a"]));
+  delete o.routeLong;
+  const res2 = finish(planGroup({ members: ms, anchorId: "a" }, o));
+  assert.equal(res2.reason, "anchorNoRoute", "no routeLong: the old behaviour is kept for oracles that cannot resume");
+});
+
+test("H4-01: a grabbed one with truly no way there (search finished) is still anchorNoRoute", () => {
+  const d = { x: 0, y: 0 };
+  const ms = [member("a", { x: 4.5, y: 3.5 }, d), member("b", { x: 4.5, y: 2.5 }, d)];
+  const g = gridWorld(CORRIDOR);
+  const o = oracles(g, ms[0], { route: () => null, routeLong: function* () { assert.fail("not asked when the search finished"); }, unfinished: () => false });
+  const res = finish(planGroup({ members: ms, anchorId: "a" }, o));
+  assert.deepEqual(res, { result: "core", reason: "anchorNoRoute" });
+});
+
+test("H4-02: a member whose search only ran out is planned, not left to core", () => {
+  const d = { x: 15, y: 0 };
+  const ms = [member("a", { x: 4.5, y: 3.5 }, d), member("b", { x: 4.5, y: 2.5 }, d), member("c", { x: 3.5, y: 3.5 }, d)];
+  const g = gridWorld(CORRIDOR);
+  const res = finish(planGroup({ members: ms, anchorId: "a" }, slowOracles(g, ms[0], new Set(["b"]))));
+  assert.equal(res.result, "plan");
+  assert.deepEqual(res.excluded, []);
+  assert.equal(res.members.b.core, false);
+});
+
+test("H4-03 / H4-04: a token outside the group walking through the corridor now: nobody sets off into it", () => {
+  const d = { x: 15, y: 0 };
+  const ms = [member("a", { x: 4.5, y: 3.5 }, d), member("b", { x: 4.5, y: 2.5 }, d)];
+  // Alone: the anchor sets off at once.
+  const { res: alone } = plan(CORRIDOR, ms, "a");
+  assert.equal(alone.members.a.delay, 0);
+  // Another token walks the corridor the other way, from its far end into the room, right now.
+  const moving = [{ id: "x", r: 0.5, points: [{ x: 24.5, y: 3.5 }, { x: 8.5, y: 3.5 }, { x: 3.5, y: 5.5 }], speed: MOTION.speed }];
+  const { res } = plan(CORRIDOR, ms, "a", { moving });
+  assert.equal(res.result, "plan");
+  const other = delayed(trajectory(moving[0].points), 0);
+  for (const id of ["a", "b"]) {
+    const e = res.members[id];
+    const mine = traj(e);
+    let best = Infinity;
+    for (let t = mine.start; t <= Math.max(mine.end, other.end); t += 5) best = Math.min(best, dist(positionAt(mine, t), positionAt(other, t)));
+    assert.ok(best >= 2 * R - 1e-6, `${id} comes within ${best.toFixed(3)} of the walking token (delay ${e.delay}, level ${e.level})`);
+  }
+  assert.ok(res.members.a.delay > 0, "the grabbed one waits for the corridor");
 });

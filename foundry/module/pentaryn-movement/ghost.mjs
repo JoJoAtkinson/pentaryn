@@ -351,6 +351,8 @@ function rerenderControls(force = false, now = liveState()) {
   const key = JSON.stringify([now.policy, core.playerTool({ isGM: game.user.isGM, ...now })]);
   if (!force && key === lastToolKey) return false;
   lastToolKey = key;
+  // The button under the pointer is drawn again: its tooltip would stay on screen with nothing under it (H4-14).
+  try { game.tooltip?.deactivate?.(); } catch (err) { log?.debug?.("tooltip", err); }
   if (ui.controls?.rendered) ui.controls.render({ reset: true });
   return true;
 }

@@ -322,6 +322,16 @@ export function routeAhead(points, at) {
 }
 
 /**
+ * What is left of a route (`points`, origin first) for a token drawn at `at`: `at`, then the points it has
+ * still to reach; null when it is at the end or the route has no segment. Any units.
+ */
+export function remainingFrom(points, at) {
+  const k = routeAhead(points, at);
+  if (k === null) return null;
+  return [{ x: at.x, y: at.y }, ...points.slice(k).map(p => ({ x: p.x, y: p.y }))];
+}
+
+/**
  * Of a route ahead (`from` then `points`), the index in `points` of the first one whose leg crosses the
  * wall a–b, or -1. Centres, any units.
  */
