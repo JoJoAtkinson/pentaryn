@@ -22,7 +22,10 @@ test("appended keys: sceneId, version, settings (key → scope), combatExempt, a
   assert.deepEqual(s.combatExempt, []);
   assert.equal(s.sceneId, SCENE);
   assert.equal(s.version, VERSION);
-  assert.deepEqual(s.settings, { ghostPolicy: "world", ghostPolicyLast: "world", ghost: "client", ownedOnTop: "client" });
+  assert.deepEqual(s.settings, {
+    ghostPolicy: "world", ghostPolicyLast: "world", ghost: "client", ownedOnTop: "client",
+    pathfinding: "world", pathfindMine: "client", smoothCorners: "client",
+  });
 });
 
 test("the status row's returns names every status() key, and every patched key", () => {

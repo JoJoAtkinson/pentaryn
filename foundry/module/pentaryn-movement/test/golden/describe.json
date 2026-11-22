@@ -144,6 +144,45 @@
       "doc": "Read-only ghost-in-combat state of one creature, plain JSON: flag (the GM override flags.pentaryn-movement.ghostInCombat), feat (the incorporeal feat's name, or null) and ghostInCombat (either grants it). Options are ignored."
     },
     {
+      "path": "pathfind.status",
+      "params": [],
+      "returns": "{ mode, mine, smoothCorners, patched, gridType, memo, limits, last: { at, tokenId, legs, found, nodes, ms, reached, of, arcs, improved, async, memo } | null }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.3.0",
+      "doc": "Drag pathfinding on this client: the world mode (everyone / gm / off), this client's two settings, whether Token#findMovementPath is wrapped, the step-cache size, the search limits, and what the last search did (nodes expanded, ms, explicit waypoints reached of how many, arcs placed, whether it beat the straight drag)."
+    },
+    {
+      "path": "pathfind.route",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "token",
+          "type": "Token | TokenDocument | uuid | id | exact name",
+          "doc": "a token on the scene this client's canvas shows"
+        },
+        {
+          "name": "opts",
+          "type": "{ to: { x, y }, preview?: boolean, smooth?: boolean }",
+          "doc": "to: the destination top-left in pixels; preview: count only walls this user has seen (default false); smooth: corner arcs (default this client's setting)"
+        }
+      ],
+      "returns": "{ ok, reached, straight, waypoints: [{ x, y, explicit }], cost, arcs, legs: [{ state, nodes, corners, arcs }], ms } | { ok: false, reason }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.3.0",
+      "doc": "Dry run of a drag: the path the pathfinder would give that token to opts.to, without moving it. Needs a drawn canvas (a browser tab, not the headless GM). straight: the plain drag already got there; cost in feet as the ruler measures it."
+    },
+    {
       "path": "selftest",
       "params": [],
       "returns": "{ ok, checks: [{ label, ok, detail }] }",
@@ -183,6 +222,27 @@
       "type": "Boolean",
       "default": true,
       "doc": "Draw this player's own tokens on top, on their screen only. Client scope."
+    },
+    {
+      "key": "pathfinding",
+      "scope": "world",
+      "type": "String",
+      "default": "everyone",
+      "doc": "Drag pathfinding around walls: everyone (default), gm (GM drags only) or off. Read live on every drag."
+    },
+    {
+      "key": "pathfindMine",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "This client's drags find a path around walls (when the world setting allows it). Client scope."
+    },
+    {
+      "key": "smoothCorners",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Round a found path's corners into arcs where that stays clear of walls and costs no extra movement. Client scope."
     }
   ],
   "events": [],
@@ -254,6 +314,66 @@
     {
       "name": "renderTokenHUD",
       "label": "renderTokenHUD: ghost in combat toggle (GM)"
+    },
+    {
+      "name": "setup",
+      "label": "setup: wrap findMovementPath"
+    },
+    {
+      "name": "createWall",
+      "label": "createWall: drop path cache"
+    },
+    {
+      "name": "updateWall",
+      "label": "updateWall: drop path cache"
+    },
+    {
+      "name": "deleteWall",
+      "label": "deleteWall: drop path cache"
+    },
+    {
+      "name": "createRegion",
+      "label": "createRegion: drop path cache"
+    },
+    {
+      "name": "updateRegion",
+      "label": "updateRegion: drop path cache"
+    },
+    {
+      "name": "deleteRegion",
+      "label": "deleteRegion: drop path cache"
+    },
+    {
+      "name": "createRegionBehavior",
+      "label": "createRegionBehavior: drop path cache"
+    },
+    {
+      "name": "updateRegionBehavior",
+      "label": "updateRegionBehavior: drop path cache"
+    },
+    {
+      "name": "deleteRegionBehavior",
+      "label": "deleteRegionBehavior: drop path cache"
+    },
+    {
+      "name": "createToken",
+      "label": "createToken: drop path cache"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: drop path cache"
+    },
+    {
+      "name": "deleteToken",
+      "label": "deleteToken: drop path cache"
+    },
+    {
+      "name": "controlToken",
+      "label": "controlToken: drop path cache"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: drop path cache, watch fog explored"
     }
   ],
   "patches": [
@@ -266,6 +386,11 @@
       "label": "TokenLayer#_prepareKeyboardMovementUpdates",
       "marker": "__pentarynMovement",
       "adjustments": "movement-keyboard-constrain-ghost"
+    },
+    {
+      "label": "Token#findMovementPath",
+      "marker": "__pentarynMovementPath",
+      "adjustments": "movement-pathfind-find-path"
     },
     {
       "label": "TokenLayer.objects#sortChildren",

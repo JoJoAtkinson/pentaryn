@@ -47,6 +47,7 @@ function selftest(ctx) {
     { label: "settings readable", ok: unreadable.length === 0, detail: unreadable },
     { label: "Token#_getDragConstrainOptions wrapped", ok: patched.drag === true },
     { label: "TokenLayer#_prepareKeyboardMovementUpdates wrapped", ok: patched.keyboard === true },
+    { label: "Token#findMovementPath wrapped (drag pathfinding)", ok: ctx.exposed.pathfindPatched?.() === true },
     { label: "hooks registered", ok: ctx.reg.ids().length > 0, detail: ctx.reg.ids().length },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
@@ -71,6 +72,8 @@ export function buildApiFor(ctx) {
     pinsUnderTokens,
     // `ref` is resolved by the kit per call (an Actor; a token gives its synthetic actor); reads throw coded.
     inspect: actor => toPlain(x.inspectActor(actor)),
+    "pathfind.status": () => x.pathfindStatus(),
+    "pathfind.route": (token, opts) => x.pathfindRoute(token, opts),
     selftest: () => selftest(ctx),
     core,
   }, {

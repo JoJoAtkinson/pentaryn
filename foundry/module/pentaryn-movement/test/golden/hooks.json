@@ -73,6 +73,66 @@
   },
   {
     "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "on",
+    "name": "createWall"
+  },
+  {
+    "kind": "on",
+    "name": "updateWall"
+  },
+  {
+    "kind": "on",
+    "name": "deleteWall"
+  },
+  {
+    "kind": "on",
+    "name": "createRegion"
+  },
+  {
+    "kind": "on",
+    "name": "updateRegion"
+  },
+  {
+    "kind": "on",
+    "name": "deleteRegion"
+  },
+  {
+    "kind": "on",
+    "name": "createRegionBehavior"
+  },
+  {
+    "kind": "on",
+    "name": "updateRegionBehavior"
+  },
+  {
+    "kind": "on",
+    "name": "deleteRegionBehavior"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "controlToken"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "once",
     "name": "ready"
   }
 ]

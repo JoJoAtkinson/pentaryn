@@ -46,5 +46,42 @@
     "name": "PENTARYN_MOVEMENT.settings.ownedOnTop.name",
     "hint": "PENTARYN_MOVEMENT.settings.ownedOnTop.hint",
     "onChange": true
+  },
+  {
+    "key": "pathfinding",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "default": "everyone",
+    "choices": {
+      "everyone": "PENTARYN_MOVEMENT.settings.pathfinding.everyone",
+      "gm": "PENTARYN_MOVEMENT.settings.pathfinding.gm",
+      "off": "PENTARYN_MOVEMENT.settings.pathfinding.off"
+    },
+    "name": "PENTARYN_MOVEMENT.settings.pathfinding.name",
+    "hint": "PENTARYN_MOVEMENT.settings.pathfinding.hint",
+    "onChange": true
+  },
+  {
+    "key": "pathfindMine",
+    "scope": "client",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "choices": null,
+    "name": "PENTARYN_MOVEMENT.settings.pathfindMine.name",
+    "hint": "PENTARYN_MOVEMENT.settings.pathfindMine.hint",
+    "onChange": true
+  },
+  {
+    "key": "smoothCorners",
+    "scope": "client",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "choices": null,
+    "name": "PENTARYN_MOVEMENT.settings.smoothCorners.name",
+    "hint": "PENTARYN_MOVEMENT.settings.smoothCorners.hint",
+    "onChange": true
   }
 ]

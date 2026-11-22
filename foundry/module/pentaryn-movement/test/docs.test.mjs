@@ -11,7 +11,7 @@ test("README cites no Foundry source line numbers", () => {
   assert.deepEqual(README.match(/\.mjs:\d{3,}/g) ?? [], []);
 });
 
-test("README names inspect and selftest as the two non-legacy rows", () => {
-  assert.deepEqual(MANIFEST.rows.filter((r) => !r.legacy).map((r) => r.path), ["inspect", "selftest"]);
-  assert.ok(README.includes("Every row except `inspect` and `selftest` is `legacy`"));
+test("README names the four non-legacy rows", () => {
+  assert.deepEqual(MANIFEST.rows.filter((r) => !r.legacy).map((r) => r.path), ["inspect", "pathfind.status", "pathfind.route", "selftest"]);
+  assert.ok(README.includes("Every row except `inspect`, `pathfind.status`, `pathfind.route` and `selftest` is `legacy`"));
 });

@@ -4,6 +4,8 @@
   "describe": "function",
   "ghostFor": "ghostFor",
   "inspect": "inspect",
+  "pathfind.route": "pathfind.route",
+  "pathfind.status": "pathfind.status",
   "pinsUnderTokens": "pinsUnderTokens",
   "selftest": "selftest",
   "setGhost": "setGhost",
