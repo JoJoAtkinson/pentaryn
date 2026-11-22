@@ -353,7 +353,7 @@ function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = 
     const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
     const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!crosses });
     const cap = Math.min(maxMs, LIMITS.totalMs);
-    while (plan.step(LIMITS.sliceMs) === "more" && now() - t0 < cap);
+    while (plan.step(Math.min(LIMITS.sliceMs, cap)) === "more" && now() - t0 < cap);
     path = plan.result();
     if (crosses && path === base.result) path = null;   // no way round: the caller keeps what it had
     legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));

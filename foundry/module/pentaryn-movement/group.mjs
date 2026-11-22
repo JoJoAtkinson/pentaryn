@@ -115,7 +115,7 @@ function withCheckpoints(token, path) {
     if (flat && Number.isInteger(di) && Number.isInteger(dj)) {
       const cells = cellChain([{ i: 0, j: 0 }, { i: di, j: dj }]);
       for (const c of cells.slice(1, -1)) {
-        out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: true });
+        out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: c.checkpoint });
       }
     }
     out.push({ ...b, checkpoint: true });
@@ -182,14 +182,16 @@ function oraclesFor(members, anchor, { combat, constrain }) {
     const rec = byId.get(m.id);
     const doc = rec.token.document;
     const tl = toTopLeft(to, rec.w, rec.h, s);
-    const atFormation = tl.x === rec.dest.x && tl.y === rec.dest.y;
+    const atFormation = tl.x === Math.round(rec.dest.x) && tl.y === Math.round(rec.dest.y);
     const last = rec.corePathRaw?.at(-1) ?? {};
     // The grabbed token to its drop point: the route its drag preview showed (already pathfound and
     // constrained while dragging), so it walks what the player saw and the drop never searches it again.
     const shown = rec.corePathRaw ?? [];
     const src = doc._source;
-    if (m.id === anchor.id && !avoid.length && atFormation && shown.length >= 2 && last.x === tl.x && last.y === tl.y
-      && shown[0].x === src.x && shown[0].y === src.y) return measured(shown);
+    // A search the drag had not finished (`searching`) is never reused.
+    if (m.id === anchor.id && !avoid.length && atFormation && !rec.searching && shown.length >= 2
+      && Math.round(last.x) === tl.x && Math.round(last.y) === tl.y
+      && shown[0].x === src.x && shown[0].y === src.y) return measured(shown.map(p => ({ ...p })));
     const origin = feature.exposed.pathfindOrigin(doc);
     const dest = {
       ...origin, x: tl.x, y: tl.y, elevation: rec.dest.elevation ?? origin.elevation,
@@ -218,7 +220,7 @@ function oraclesFor(members, anchor, { combat, constrain }) {
 /** Members, the anchor and the plan generator for a drop (or a dry run). */
 function prepare(grabbed, contexts, info) {
   const s = gridSize(grabbed);
-  const members = contexts.map(c => ({ ...memberOf(c, s), corePathRaw: c.foundPath ?? [] }));
+  const members = contexts.map(c => ({ ...memberOf(c, s), corePathRaw: c.foundPath ?? [], searching: !!c.searching }));
   const anchor = members.find(m => m.id === grabbed.document.id);
   if (!anchor) return null;
   const spec = { members, anchorId: anchor.id, combat: info.combat, mode: info.mode, others: othersOf(members, s) };
@@ -313,7 +315,9 @@ function schedule(later, base, members, { scene, seq, starts, endMs = 0 }) {
   for (const wave of later) {
     group.timers.push(setTimeout(() => {
       if (group.stopped) return;
-      send(scene, seq, starts, wave.updates, { ...base, movement: wave.movement }, "wave");
+      // A member a relay stop took out of the group (groupCancel only) is not sent.
+      const updates = wave.updates.filter(u => group.ids.has(u._id));
+      if (updates.length) send(scene, seq, starts, updates, { ...base, movement: wave.movement }, "wave");
     }, wave.at));
   }
 }
@@ -406,6 +410,7 @@ function onDrop(grabbed, event, result) {
     if (updates.length) send(scene, seq, starts, updates, options, "move");
   };
   const tick = () => {
+    if (!feature) return;                  // uninstalled while planning: nothing is sent
     let b;
     try {
       if (now() - t0 > GROUP_LIMITS.totalMs) b = finish({ result: "core", reason: "budget" });

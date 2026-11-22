@@ -54,6 +54,18 @@ use-doc `context/foundry/movement.md`).
 - Files: `motion-core.mjs`, `group-core.mjs` (pure), `group-adapter.mjs`, `group.mjs`, `stop.mjs`.
   Tests: `group-core.test` (the plan's twelve unit acceptance tests and the decision tables),
   `group.test` (the two wraps). Not yet play-tested live (the plan's live list).
+- Correctness review (against core 14.370), merged with the table review above (the overlapping
+  fixes are one implementation: the reused drag route, the capped route call at `memberMs - 30`
+  ms via `routeTo`'s `maxMs`, the drop's scene for late commits and waves, followers pathfound on
+  a drop core commits, planned moves untouched). In addition:
+  - The reused drag route is never one the drag was still searching (`searching`).
+  - `MOTION.checkpointEvery` is honoured (every in-combat cell was a checkpoint).
+  - A wave leaves out a member a relay stop took out of the group.
+  - Click to stop on this client's own pending move calls `stopMovement()` before the displace, so
+    core's continuation cannot race the displace and carry the token on.
+  - An async plan finishing after `uninstall()` sends nothing.
+- Property tests: `group-props.test` (300 seeded random maps: termination, walls, rest slots,
+  no overlap in motion; `firstConflict` against brute force; 17 edge cases).
 
 ## 0.3.0 — 2026-11-21
 
