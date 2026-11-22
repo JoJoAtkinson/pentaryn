@@ -150,3 +150,45 @@ export function movementFacts(token) {
   try { animating = !!token.animationContexts?.has?.(token.movementAnimationName); } catch { animating = false; }
   return { state: m?.state ?? "completed", animating, initiatorSelf: !!m?.user?.isSelf, user: m?.user ?? null };
 }
+
+/**
+ * A later wave's waypoints, cut where a wall now blocks them (live R2-5: the GM closed a door after the
+ * drop, core then cut the member's path at the door and left it straddling the door line). Each segment
+ * from `origin` is tested against move-blocking walls as they are now; at the first blocked one the path
+ * ends on the furthest whole cell before the wall along that segment that the member's centre reaches
+ * without crossing a wall, else on the last waypoint before it. Returns `{ waypoints, cut }`; an empty
+ * list means the member cannot move at all. Reads only.
+ */
+export function cutAtWalls(token, origin, waypoints) {
+  const s = gridSize(token);
+  const src = token.document?._source ?? {};
+  const centre = p => {
+    const w = p.width ?? src.width ?? 1, h = p.height ?? src.height ?? 1;
+    return { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: p.elevation ?? src.elevation ?? 0 };
+  };
+  const blocked = (a, b) => {
+    try { return !!token.checkCollision(centre(b), { origin: centre(a), type: "move", mode: "any" }); } catch { return false; }
+  };
+  let prev = origin;
+  for (let k = 0; k < waypoints.length; k++) {
+    const w = waypoints[k];
+    if (!blocked(prev, w)) { prev = w; continue; }
+    const kept = waypoints.slice(0, k);
+    const ww = w.width ?? src.width ?? 1, hh = w.height ?? src.height ?? 1;
+    const a = centre(prev), b = centre(w);
+    const L = Math.hypot(b.x - a.x, b.y - a.y);
+    const n = Math.max(Math.ceil(L / (s / 4)), 1);
+    const at = { x: prev.x, y: prev.y };
+    for (let q = n; q >= 0; q--) {
+      const c = { x: a.x + (b.x - a.x) * (q / n), y: a.y + (b.y - a.y) * (q / n) };
+      const cand = { ...w, x: Math.round((c.x - (ww * s) / 2) / s) * s, y: Math.round((c.y - (hh * s) / 2) / s) * s };
+      if (cand.x === at.x && cand.y === at.y) break;                  // back where the segment starts
+      if (blocked(prev, cand)) continue;
+      kept.push({ ...cand, snapped: true, explicit: true, checkpoint: true });
+      return { waypoints: kept, cut: true };
+    }
+    if (kept.length) kept[kept.length - 1] = { ...kept.at(-1), explicit: true, checkpoint: true };
+    return { waypoints: kept, cut: true };
+  }
+  return { waypoints, cut: false };
+}

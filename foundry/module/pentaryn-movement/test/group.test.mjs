@@ -210,6 +210,40 @@ test("a group through a door: each member its own route and spot, in waves, neve
   assert.equal(last.waves, later.length + 1);
 });
 
+test("R2-5: a door closed after the drop cuts a waiting member's wave on a whole cell before it, never on the door line", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("drA0000000000001", 400, 200), makeToken("drB0000000000001", 300, 200), makeToken("drC0000000000001", 500, 200)];
+  const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+  const first = new Set(out[0].map(u => u._id));
+  const waiting = ts.filter(t => !first.has(t.document.id));
+  assert.ok(waiting.length > 0, "at least one member waits for a later wave");
+  // The GM closes the door (x 400–500 on y = 400) before the later waves go out.
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  const from = F.calls.length;
+  try {
+    mock.timers.tick(5000);
+  } finally {
+    world.walls.pop();
+  }
+  const moves = Object.assign({}, ...sent(from).map(c => c.options.movement));
+  for (const t of waiting) {
+    const wps = moves[t.document.id]?.waypoints;
+    if (!wps) continue;                                // could not move at all: nothing sent, it stays put
+    const path = [t.document._source, ...wps];
+    world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+    try {
+      for (let k = 1; k < path.length; k++) assert.equal(crossing(center(path[k - 1]), center(path[k])).length, 0, `${t.document.id} leg ${k} crosses the closed door`);
+    } finally {
+      world.walls.pop();
+    }
+    const end = wps.at(-1);
+    assert.ok(end.x % S === 0 && end.y % S === 0, `${t.document.id} ends on a whole cell: ${JSON.stringify(end)}`);
+    assert.ok(center(end).y < 400, `${t.document.id} stays on its own side of the door`);
+    assert.equal(end.explicit, true);
+  }
+});
+
 test("planGroup(refs, point) is the same plan as a dry run: slots, delays, levels; nothing moves", () => {
   F.canvas.ready = true;
   const ts = [makeToken("dryA000000000001", 400, 200), makeToken("dryB000000000001", 300, 200)];

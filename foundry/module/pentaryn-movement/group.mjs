@@ -23,7 +23,7 @@ import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, groupMode, radiusOf, waves } from "./motion-core.mjs";
 import { GROUP_LIMITS, flood, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
 import { skipReason } from "./pathfind-core.mjs";
-import { gridSize, inCombat, memberOf, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { cutAtWalls, gridSize, inCombat, memberOf, narrowPoints, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -357,11 +357,33 @@ function stillOurs(ids, scene, starts, seq) {
   });
 }
 
+/**
+ * A member's waypoints as they may still be walked now: a wall that closed since the plan (a door the
+ * GM shut mid-walk, live R2-5) cuts them on a clean spot before it, never on the wall line, where core's
+ * own cut would leave the member. null when it cannot move at all. Ghost and unconstrained moves pass.
+ */
+function walkableNow(scene, id, m, options) {
+  if (!m?.waypoints?.length || options?.constrainOptions?.ignoreWalls || m.planned) return m;
+  const doc = scene?.tokens?.get(id);
+  const token = doc?.object;
+  if (!token?.checkCollision) return m;
+  const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
+  const { waypoints, cut } = cutAtWalls(token, origin, m.waypoints);
+  if (!cut) return m;
+  return waypoints.length ? { ...m, waypoints } : null;
+}
+
 /** Send one batch for drop `seq`, only for the members still ours. */
 function send(scene, seq, starts, updates, options, what) {
-  const ids = stillOurs(updates.map(u => u._id), scene, starts, seq);
+  let ids = stillOurs(updates.map(u => u._id), scene, starts, seq);
   if (!ids.length) return;
-  const movement = Object.fromEntries(ids.map(id => [id, options.movement?.[id]]).filter(([, m]) => m));
+  const movement = {};
+  for (const id of ids) {
+    const m = options.movement?.[id] ? walkableNow(scene, id, options.movement[id], options) : options.movement?.[id];
+    if (m) movement[id] = m;
+  }
+  ids = ids.filter(id => movement[id] || !options.movement?.[id]);
+  if (!ids.length) return;
   scene.updateEmbeddedDocuments("Token", updates.filter(u => ids.includes(u._id)), { ...options, movement })
     .catch(err => log.warnOnce(`group-${what}`, `a group ${what} failed (further errors suppressed)`, err));
 }
