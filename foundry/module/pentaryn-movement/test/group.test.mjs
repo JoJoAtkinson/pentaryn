@@ -82,6 +82,9 @@ F.foundry.documents.TokenDocument ??= { arePositionsEqual: (a, b) => a.x === b.x
 F.game.activeTool = "select";
 
 const layer = { _draggedToken: null, _movementPlanningContext: null };
+// The tokens' own Scene (TokenDocument#parent): waves go to it, not to whatever the canvas shows.
+const viewedScene = F.canvas.scene;
+const sceneDoc = { id: SCENE, grid, regions: [], tokens: sceneTokens, updateEmbeddedDocuments: (...a) => viewedScene.updateEmbeddedDocuments(...a) };
 let combatFlag = false;
 
 function makeToken(id, x, y, { size = 1 } = {}) {
@@ -91,7 +94,7 @@ function makeToken(id, x, y, { size = 1 } = {}) {
   t.animationContexts = new Map();
   t.document = {
     documentName: "Token", id, uuid: `Scene.${SCENE}.Token.${id}`, name: id, movementAction: "walk", isOwner: true,
-    parent: { grid, regions: [], tokens: sceneTokens },
+    parent: sceneDoc,
     _source: { x, y, elevation: 0, width: size, height: size, level: "L" },
     x, y, elevation: 0,
     movement: { state: "completed", user: { isSelf: true } },
@@ -406,4 +409,130 @@ test("groupMovement off: a group drop is core's, followers are pathfound again",
   assert.equal(ts[0]._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } }), core);
   assert.equal(api.status().group.last.reason, "off");
   await game.settings.set(MOD, "groupMovement", true);
+});
+
+/* -------------------------------------------- */
+/*  UX review fixes (0.4.0 review)              */
+/* -------------------------------------------- */
+
+test("the grabbed token walks the route its drag preview showed", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("shwA000000000001", 400, 200), makeToken("shwB000000000001", 300, 200)];
+  const ctx = contextsFor(ts, 0, 400);
+  // The drag's own (pathfound) route for the grabbed token: through the door with one bend.
+  const shown = [wp(400, 200, { snapped: false, explicit: false, checkpoint: false }), wp(420, 300, { explicit: false, checkpoint: false, snapped: false }), wp(400, 600)];
+  ctx.shwA000000000001.foundPath = shown;
+  const from = F.calls.length;
+  const out = dropWith(ts[0], ctx);
+  mock.timers.tick(5000);
+  const later = sent(from);
+  const moves = { ...out[1].movement, ...Object.assign({}, ...later.map(c => c.options.movement)) };
+  assert.deepEqual(moves.shwA000000000001.waypoints.map(w => [w.x, w.y]), [[420, 300], [400, 600]]);
+});
+
+test("a click on any member stops the whole group after its last wave went out, and in a one-wave group", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("hldA000000000001", 400, 200), makeToken("hldB000000000001", 300, 200), makeToken("hldC000000000001", 500, 200)];
+  dropWith(ts[0], contextsFor(ts, 0, 400));
+  mock.timers.tick(1200);                              // every wave is out; they are still walking
+  for (const t of ts) t.animationContexts.set(t.movementAnimationName, {});
+  let from = F.calls.length;
+  ts[1]._onClickLeft({});
+  let moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
+  assert.deepEqual(moved, ts.map(t => t.document.id).sort(), "every member is stopped where drawn");
+  for (const t of ts) t.animationContexts.clear();
+
+  // Ghost: one batch, no later wave; still one group.
+  const gs = [makeToken("hldD000000000001", 400, 200), makeToken("hldE000000000001", 300, 200)];
+  for (const t of gs) t._getDragConstrainOptions = () => ({ ignoreWalls: true, ignoreCost: true });
+  const ctx = {};
+  for (const t of gs) {
+    const src = t.document._source;
+    ctx[t.document.id] = { token: t, destination: wp(src.x, src.y + 400), foundPath: [wp(src.x, src.y), wp(src.x, src.y + 400)], waypoints: [] };
+  }
+  const out = dropWith(gs[0], ctx);
+  assert.equal(out[0].length, 2, "one batch");
+  for (const t of gs) t.animationContexts.set(t.movementAnimationName, {});
+  from = F.calls.length;
+  gs[0]._onClickLeft({});
+  moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
+  assert.deepEqual(moved, gs.map(t => t.document.id).sort());
+  for (const t of gs) t.animationContexts.clear();
+  mock.timers.tick(60000);
+  assert.equal(api.status().group.groups, 0, "groups are let go once everyone is at rest");
+});
+
+test("a newer drop of a member cancels its older pending wave, and waves go to the drop's scene", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("supA000000000001", 400, 200), makeToken("supB000000000001", 300, 200), makeToken("supC000000000001", 500, 200)];
+  const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+  const first = new Set(out[0].map(u => u._id));
+  const waiting = ts.filter(t => !first.has(t.document.id));
+  assert.ok(waiting.length > 0);
+  // The GM grabs a waiting member again before its wave went out (its source has not changed yet).
+  const again = waiting[0];
+  const solo = contextsFor([again], 100, 0);
+  drop.result = coreDrop(solo);
+  again._prepareDragLeftDropUpdates({ interactionData: { contexts: solo } });
+  // …and switches the view to another scene.
+  const viewed = F.canvas.scene;
+  const elsewhere = { id: "sceneB", tokens: new Map(), async updateEmbeddedDocuments() { F.calls.push({ op: "wrong-scene" }); return []; } };
+  const from = F.calls.length;
+  F.canvas.scene = elsewhere;
+  try { mock.timers.tick(5000); } finally { F.canvas.scene = viewed; }
+  const calls = F.calls.slice(from);
+  assert.equal(calls.filter(c => c.op === "wrong-scene").length, 0, "never the viewed scene");
+  const ids = calls.filter(c => c.op === "scene.update").flatMap(c => c.ids);
+  assert.ok(!ids.includes(again.document.id), "the re-dropped member's old wave is not sent");
+  for (const t of waiting.slice(1)) assert.ok(ids.includes(t.document.id), "the others still go");
+});
+
+test("a group drag with Ctrl-click waypoints keeps every member's own pathfinding", () => {
+  const ts = [makeToken("wptA000000000001", 400, 200), makeToken("wptB000000000001", 300, 200)];
+  const contexts = contextsFor(ts, 0, 400);
+  for (const c of Object.values(contexts)) c.waypoints = [wp(c.token.document._source.x, 300)];
+  layer._draggedToken = ts[0];
+  ts[0].mouseInteractionManager = { interactionData: { contexts } };
+  try {
+    const follower = ts[1].findMovementPath([wp(300, 200), wp(300, 600)], { preview: true, constrainOptions: {}, measureOptions: {}, terrainOptions: {} });
+    assert.ok(follower.result === undefined || follower.result.length > 1, "searched, not left at the wall");
+  } finally {
+    layer._draggedToken = null;
+  }
+});
+
+test("in combat a planned (API) move keeps its own waypoints", () => {
+  combatFlag = true;
+  const a = makeToken("plnA000000000001", 0, 0);
+  const ctx = { [a.document.id]: { token: a, destination: wp(400, 200), foundPath: [wp(0, 0, { explicit: false }), wp(400, 200)], waypoints: [] } };
+  drop.result = coreDrop(ctx);
+  drop.result[1].movement[a.document.id].planned = true;
+  const out = a._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+  assert.equal(out[1].movement[a.document.id].waypoints.length, 1);
+  combatFlag = false;
+});
+
+test("a refused or failed stop-in-place puts the token back where the server has it", async () => {
+  combatFlag = false;
+  for (const outcome of ["refused", "threw"]) {
+    const t = makeToken(outcome === "refused" ? "rfsA000000000001" : "rfsB000000000001", 100, 100);
+    t.document.x = 320;
+    t.animationContexts.set(t.movementAnimationName, {});
+    t.document.move = async () => { if (outcome === "threw") throw new Error("nope"); return false; };
+    const from = F.calls.length;
+    const saved = console.warn;
+    console.warn = () => {};
+    try {
+      t._onClickLeft({});
+      await new Promise(r => setImmediate(r));
+    } finally { console.warn = saved; }
+    const stops = F.calls.slice(from).filter(c => c.op === "stopAnimation" && c.id === t.document.id);
+    assert.equal(stops.length, 2, outcome);
+    assert.equal(stops[0].opts.reset, false);
+    assert.equal(stops[1].opts, undefined, "the second is a full reset to the source");
+    t.animationContexts.clear();
+  }
 });

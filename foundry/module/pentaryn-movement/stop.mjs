@@ -31,14 +31,31 @@ let clickHandle = null;
 let clickPatched = false;
 let lastStop = null;
 
-/** Put a token where it is drawn, out of combat (one frame here: the tween stops before the write). */
+/**
+ * Put a token where it is drawn, out of combat (one frame here: the tween stops before the write).
+ * When the write is refused or fails, the token is put back where the server has it (a full
+ * stopAnimation resets it to its source), so this client never shows it frozen somewhere it is not.
+ */
 function displace(token) {
   const doc = token.document;
   const p = drawnPosition(token);
   try { token.stopAnimation?.({ reset: false }); } catch (err) { log.debug?.("stopAnimation", err); }
   const wp = { x: p.x, y: p.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
-  return doc.move([wp], { animate: false, method: "api" })
-    .catch(err => log.warnOnce("stop-displace", "could not stop a token where it was drawn (further errors suppressed)", err));
+  const resync = () => {
+    try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log.debug?.("stopAnimation reset", err); }
+  };
+  let pending;
+  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api" })); }
+  catch (err) { pending = Promise.reject(err); }
+  return pending
+    .then(moved => {
+      if (moved === false) resync();
+      return moved;
+    })
+    .catch(err => {
+      resync();
+      log.warnOnce("stop-displace", "could not stop a token where it was drawn (further errors suppressed)", err);
+    });
 }
 
 /** Stop one token by the table's decision. */

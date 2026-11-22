@@ -324,9 +324,11 @@ function originOf(tokenDoc) {
  *   avoid: circles { x, y, r } (pixel centres) the route keeps out of (group re-plan); a plain path
  *          that crosses one is searched round it.
  *   smooth: corner arcs (default this client's setting; never in combat).
+ *   maxMs:  wall-clock cap for this one call (default LIMITS.totalMs). Group planning passes less
+ *           than its per-member budget, so one long or impossible route never freezes the drop.
  * Returns { reached, straight, path, cost, legs, arcs, ms }.
  */
-function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = null, constrainOptions = {} } = {}) {
+function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = null, constrainOptions = {}, maxMs = LIMITS.totalMs } = {}) {
   const options = { preview, constrainOptions, measureOptions: {}, terrainOptions: {} };
   const call = (w, o) => {
     bypass = true;
@@ -350,7 +352,8 @@ function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = 
   if (reached === 1 || crosses) {
     const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
     const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!crosses });
-    while (plan.step(LIMITS.sliceMs) === "more" && now() - t0 < LIMITS.totalMs);
+    const cap = Math.min(maxMs, LIMITS.totalMs);
+    while (plan.step(LIMITS.sliceMs) === "more" && now() - t0 < cap);
     path = plan.result();
     if (crosses && path === base.result) path = null;   // no way round: the caller keeps what it had
     legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));
