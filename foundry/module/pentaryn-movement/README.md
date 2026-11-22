@@ -67,12 +67,19 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   where they are (0.4.8). The grabbed token lands exactly where dropped, unless that is on another token:
   then the nearest clear spot it can reach (0.4.8). A plan whose own work takes over 1.2 s, or that has
   not finished 2.5 s after the drop, is core's own drop. Dropped where the grabbed token has no way to go,
-  the others stay put and a notice says so (0.4.8). A big token never walks where its body does not fit
-  (core tests walls at the centre only): its drag stops where it last fits (0.4.8).
-- **Click a moving token to stop it** where it is, once it has moved 400 ms (a click right after the drop,
-  or a double click for the sheet, is a plain click). In a fight it stops at the next square, so dnd5e's
-  spent movement stays exact; a GM may stop anyone's move. Only the clicked token stops (0.4.8): the
-  rest of its group walks on, out of combat round it (or, with no way round, stops short of it).
+  nobody moves and the dragger gets a short "No route there" warning (0.4.9; a single token too). A big
+  token never walks where its body does not fit (core tests walls at the centre only): it takes a wider way
+  round when there is one, else it stops before the gap, clear of the frame, and the GM is told (0.4.9).
+- **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
+  click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never
+  across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so
+  dnd5e's spent movement stays exact; a GM may stop anyone's move. A click on one member of a group stops the
+  whole group (0.4.9); when you do not own every member (a player's token in the GM's group), only your own
+  members stop, and the GM's client walks the rest round them.
+- **The GM's drag-help button** (Token controls, the route icon, next to the ghost button): one click turns
+  pathfinding and group movement off for the whole table, so every drag is plain Foundry dragging; click again
+  to turn them back on (world setting `assist`, 0.4.9). Players: if the GM has it off, a drag goes straight
+  and stops at the first wall, as Foundry's own does.
 - **A door shut or a wall raised across a move** (0.4.6) stops each token walking toward it on its own free
   whole square before it, the nearest one first; out of combat it stops at once where it is drawn (0.4.7) and walks on to that square from where it is
   drawn, in a fight it finishes its square and walks on, costed. `status().group.cut`.
@@ -99,6 +106,7 @@ mover's own client. Verified on core 14.370 / dnd5e 6.1.1.
 | `pathfindMine` | client | `true` | this client's drags find a path |
 | `smoothCorners` | client | `true` | round a found path's corners into arcs |
 | `groupMovement` | world | `true` | a group drag plans each member's route, spot and start (0.4.0) |
+| `assist` | world | `true` | the table's drag help; off = plain Foundry dragging for everyone (pathfinding reads off, group movement false); the GM's toolbar button flips it (0.4.9) |
 | `clickToStop` | client | `true` | a click on a moving token stops it (0.4.0) |
 
 `status().settings` lists the same keys with their scopes. Client settings live in the browser's
@@ -159,7 +167,8 @@ Listens to (pinned in `test/golden/hooks.json`, in this order): `init` (once), `
 the scene's fog "explored", which drops it too), group's and stop's `setup` (once each), stop's `moveToken`
 (when a move started, for the 400 ms arming), stop's `updateToken` (0.4.2: after an unanimated move, every
 client puts the token where the server has it), stop's `canvasReady` (the board pointerdown fallback), and
-`ready` (once).
+`ready` (once). Group's `updateToken` rows (0.4.4 a turn change stops the group; 0.4.9 the group tag every
+client keeps, and a member another user stopped) come between group's `ready` and its `createWall`.
 
 ## Patches and adjustments
 

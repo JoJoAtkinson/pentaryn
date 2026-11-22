@@ -13,7 +13,7 @@
 export const MODULE = "pentaryn-movement";
 export const SHORT = "movement";
 export const NS = "movement";                          // game.pentaryn.movement
-export const VERSION = "0.4.8";                        // === module.json version (a test pins it)
+export const VERSION = "0.4.9";                        // === module.json version (a test pins it)
 export const CONTRACT = "pentaryn-movement/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_MOVEMENT";
 export const CSS = Object.freeze({ blocked: "pm-blocked", hud: "pm-ghost-combat" });
@@ -36,6 +36,13 @@ export const HOOKS = Object.freeze({});
 /** Scene-control tool names (token tools) and the ghost look. */
 export const TOOL = "pentarynGhost";
 export const GM_TOOL = "pentarynGhostPolicy";
+/** The GM's one-click switch for the table's drag help (pathfinding, group movement), 0.4.9. */
+export const ASSIST_TOOL = "pentarynDragAssist";
+export const ASSIST_KEYS = Object.freeze({
+  on: "PENTARYN_MOVEMENT.assist.on",
+  off: "PENTARYN_MOVEMENT.assist.off",
+  clip: "PENTARYN_MOVEMENT.assist.clip"
+});
 export const GHOST_ALPHA = 0.55;
 export const GM_ICONS = Object.freeze({
   off: "fa-solid fa-road-barrier",

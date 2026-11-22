@@ -30,8 +30,12 @@ export const GROUP_LIMITS = Object.freeze({
 });
 
 const EPS = 1e-6;
+/** A member bigger than one square (2×2 and up): out of combat too it rests on whole squares. */
+const isBig = m => (m.w ?? 1) > 1 || (m.h ?? 1) > 1;
 /** How many clear spots a grabbed token dropped on another token tries a route to (H1-08). */
 const ANCHOR_TRIES = 4;
+/** How far (rings of half a square) a grabbed token dropped on another token looks for a clear spot. */
+const ANCHOR_RINGS = 10;
 
 /* -------------------------------------------- */
 /*  Candidates                                  */
@@ -153,8 +157,13 @@ export function assignSlots({ members, anchorId, walkable, walkDistance, others 
   const placed = [{ c: anchor.formation, r: anchor.r }];
   const hex = combat ? null : hexCandidates(anchor.formation, 2 * rmax + gap, rings);
   const reslotted = [], missing = [];
-  const latticeFor = m => (combat
-    ? cellCandidates(anchor.tl ?? { x: anchor.formation.x - anchor.w / 2, y: anchor.formation.y - anchor.h / 2 }, m.w, m.h, rings)
+  // A big member (2×2 and up) rests on whole squares out of combat too (live H2-01): the route search's lattice
+  // is anchored on the goal, so a hex slot put a Large's centre 32 px off the middle of a 2-wide double door,
+  // where its body no longer fits, and its route was refused.
+  const tl0 = anchor.tl ?? { x: anchor.formation.x - anchor.w / 2, y: anchor.formation.y - anchor.h / 2 };
+  const cellTl = { x: Math.round(tl0.x), y: Math.round(tl0.y) };
+  const latticeFor = m => (combat || isBig(m)
+    ? cellCandidates(combat ? tl0 : cellTl, m.w, m.h, rings)
     : hex);
   /** Place m on the candidate with the smallest key (null = not allowed); false when none. */
   const place = (m, key) => {
@@ -179,9 +188,12 @@ export function assignSlots({ members, anchorId, walkable, walkDistance, others 
     // its own formation spot among equals): the first through goes furthest, nobody rests in the way.
     // Members ahead of the anchor in the file take spots at least as deep as it, those behind spots no
     // deeper (within one radius: beside it counts as both).
-    const big = members.reduce((a, b) => (b.r > a.r ? b : a));
+    // The pool is for the members of up to one square; a big one takes its own whole-square spot after them.
+    const small = members.filter(m => !isBig(m));
+    const big = (small.length ? small : members).reduce((a, b) => (b.r > a.r ? b : a));
     const byId = new Map(members.map(m => [m.id, m]));
-    const file = rank.map(id => byId.get(id)).filter(Boolean);
+    const bigs = combat ? [] : members.filter(m => m.id !== anchorId && isBig(m));
+    const file = rank.map(id => byId.get(id)).filter(m => m && !bigs.includes(m));
     const ia = Math.max(file.indexOf(anchor), 0);
     const ahead = file.slice(0, ia), behind = file.slice(ia + 1);
     const base = depthOf(anchor.formation);
@@ -227,6 +239,7 @@ export function assignSlots({ members, anchorId, walkable, walkDistance, others 
         reslotted.push(m.id);
       } else if (!place(m, near(m))) missing.push(m.id);
     }
+    for (const m of bigs) if (!place(m, near(m))) missing.push(m.id);
     return { slots, formation: false, reslotted, missing };
   }
 
@@ -247,13 +260,51 @@ export function delaySteps(max = MOTION.maxDelay, step = MOTION.delayStep) {
   return out;
 }
 
+/**
+ * Conflict answers per pair of routes (their point arrays) and relative start (live H2-04: on a slow tab a
+ * six-member funnel spent 650 ms of a plan in the timing passes alone, asking the same pairs at the same
+ * relative delays pass after pass, and fell back to core). A pair whose routes never come within reach of
+ * each other (bounding boxes) is clear without a look.
+ */
+const pairMemo = new WeakMap();
+const boxMemo = new WeakMap();
+function boxOf(pts) {
+  let b = boxMemo.get(pts);
+  if (!b) {
+    b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    for (const p of pts) { b.x0 = Math.min(b.x0, p.x); b.y0 = Math.min(b.y0, p.y); b.x1 = Math.max(b.x1, p.x); b.y1 = Math.max(b.y1, p.y); }
+    boxMemo.set(pts, b);
+  }
+  return b;
+}
+function conflicts(mine, r, f, combat, sameWave) {
+  const a = boxOf(mine.pts), b = boxOf(f.tr.pts);
+  const reach = r + f.r + MOTION.motionGap;
+  if (a.x0 - reach > b.x1 || b.x0 - reach > a.x1 || a.y0 - reach > b.y1 || b.y0 - reach > a.y1) return false;
+  let inner = pairMemo.get(mine.pts);
+  if (!inner) { inner = new WeakMap(); pairMemo.set(mine.pts, inner); }
+  let m = inner.get(f.tr.pts);
+  if (!m) { m = new Map(); inner.set(f.tr.pts, m); }
+  const key = `${Math.round((mine.start - f.tr.start) * 1000)}|${r}|${f.r}|${combat ? 1 : 0}|${sameWave ? 1 : 0}`;
+  let v = m.get(key);
+  if (v === undefined) { v = firstConflict(mine, f.tr, r, f.r, { combat, sameWave }) !== null; m.set(key, v); }
+  return v;
+}
+
 /** The fixed trajectories `tr` (delay 0 shape) conflicts with at `delay`, or [] when clear. */
 function conflictsAt(tr, r, delay, fixed, combat) {
   const mine = delayed(tr, delay);
   const wave = Math.ceil(delay / MOTION.waveMs - 1e-9);
-  return fixed.filter(f => firstConflict(mine, f.tr, r, f.r, {
-    combat, sameWave: f.wave === wave,
-  }) !== null);
+  return fixed.filter(f => conflicts(mine, r, f, combat, f.wave === wave));
+}
+
+/** One trajectory per route point array (the passes ask the same routes again). */
+const trMemo = new WeakMap();
+function trajectoryOf(points, speed) {
+  let byS = trMemo.get(points);
+  if (!byS) { byS = new Map(); trMemo.set(points, byS); }
+  if (!byS.has(speed)) byS.set(speed, trajectory(points, { speed }));
+  return byS.get(speed);
 }
 
 /** The smallest delay with no conflict, or null. */
@@ -293,10 +344,21 @@ export function* planGroup(spec, o) {
     const clear = c => others.every(q => dist(c, q) >= anchor.r + q.r - EPS);
     if (!clear(anchor.formation)) {
       const roomy = c => !o.narrow?.([c, { x: c.x + 0.01, y: c.y }], anchor.r)?.length && !o.narrow?.([c, { x: c.x, y: c.y + 0.01 }], anchor.r)?.length;
-      const cands = hexCandidates(anchor.formation, anchor.r, GROUP_LIMITS.rings + 1)
-        .filter(c => clear(c) && o.walkable(anchor, c))
-        .sort((a, b) => (roomy(b) - roomy(a)) || dist(a, anchor.formation) - dist(b, anchor.formation));
-      if (cands.length) goals = cands.slice(0, ANCHOR_TRIES);
+      // Only spots it can walk to from the drop point (live H2-03: walls enclose no rock, so a spot in the rock
+      // beside a full closet passed `walkable`; every try searched the whole scene, and the drop went to core
+      // with the grabbed one in the one-wide connector). Open floor before any spot in a gap, nearest first:
+      // as far as ANCHOR_RINGS out, so a full closet sends it to the room outside, not into the connector.
+      const reached = c => { try { return o.walkDistance?.(c) !== null; } catch { return true; } };
+      const cands = hexCandidates(anchor.formation, anchor.r, ANCHOR_RINGS)
+        .filter(c => clear(c) && o.walkable(anchor, c) && reached(c))
+        .sort((a, b) => dist(a, anchor.formation) - dist(b, anchor.formation));
+      const open = [], tight = [];
+      for (const c of cands) {
+        if (open.length >= ANCHOR_TRIES) break;
+        (roomy(c) ? open : tight).push(c);
+      }
+      const pick = open.length ? open : tight;
+      if (pick.length) goals = pick.slice(0, ANCHOR_TRIES);
     }
   }
   const rmax = Math.max(...members.map(m => m.r));
@@ -383,8 +445,12 @@ export function* planGroup(spec, o) {
     const entries = {};
     const relaxed = [];
     for (const m of seq) {
+      // The timing is the plan's own work: it counts toward the whole plan's budget, not one member's routes,
+      // and it yields, so a slow tab draws its frames between members.
+      timer.member();
+      yield "time";
       let route = routes.get(m.id);
-      let tr = trajectory(route.points, { speed: m.speed });
+      let tr = trajectoryOf(route.points, m.speed);
       let level = 0;
       let delay = firstFreeDelay(tr, m.r, fixed, combat);
       if (delay === null && !combat) {
@@ -402,7 +468,7 @@ export function* planGroup(spec, o) {
           if (timer.over()) return null;
         }
         if (again) {
-          const tr2 = trajectory(again.points, { speed: m.speed });
+          const tr2 = trajectoryOf(again.points, m.speed);
           const d2 = firstFreeDelay(tr2, m.r, fixed, combat);
           if (d2 !== null) { route = again; tr = tr2; delay = d2; level = 1; }
         }

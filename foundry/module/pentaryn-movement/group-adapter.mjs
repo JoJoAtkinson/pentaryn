@@ -95,6 +95,8 @@ export function restWalkable(member, c, s, ratio = 0.9, rays = 8) {
 
 /** How much of a big token's radius must stay clear of walls along its path (fitPath). */
 const FIT_RATIO = 0.75;
+/** Where a cut big token comes to rest: its whole circle clear of walls (touching is fine). */
+const WHOLE_RATIO = 0.98;
 
 /**
  * A big token's path (top-left waypoints) cut where its body no longer fits between the walls (live H1-04:
@@ -112,10 +114,20 @@ export function fitPath(token, path) {
   const s = gridSize(token);
   const sz = p => ({ w: p.width ?? w0, h: p.height ?? h0 });
   const member = { token, r: radiusOf(w0, h0) };
-  const fits = (x, y, w, h) => restWalkable(member, { x: (x + (w * s) / 2) / s, y: (y + (h * s) / 2) / s }, s, FIT_RATIO, 16);
+  const centreAt = (x, y, w, h) => ({ x: (x + (w * s) / 2) / s, y: (y + (h * s) / 2) / s });
+  const fits = (x, y, w, h) => restWalkable(member, centreAt(x, y, w, h), s, FIT_RATIO, 16);
+  // Where it stops, its whole body is clear (live H2-11: a Large cut at a one-square door rested 21-27 px into
+  // the door frame, which FIT_RATIO lets it brush while it walks).
+  const blocking = blockingSegments(token);
+  const whole = (x, y, w, h) => {
+    const c = centreAt(x, y, w, h);
+    const p = { x: c.x * s, y: c.y * s }, rr = member.r * s * WHOLE_RATIO;
+    // Rays alone miss a door frame's corner poking into the circle between two of them.
+    return restWalkable(member, c, s, WHOLE_RATIO, 16) && blocking.every(([a, b]) => pointSegment(p, a, b) >= rr);
+  };
   const first = path[0], f0 = sz(first);
   if (!fits(first.x, first.y, f0.w, f0.h)) return { path, cut: false };
-  let lastOk = { x: first.x, y: first.y };
+  const seen = [{ x: first.x, y: first.y, k: 0, w: f0.w, h: f0.h }];
   for (let k = 1; k < path.length; k++) {
     const a = path[k - 1], b = path[k], { w, h } = sz(b);
     const L = Math.hypot(b.x - a.x, b.y - a.y) / s;
@@ -123,13 +135,18 @@ export function fitPath(token, path) {
     for (let i = 1; i <= n; i++) {
       const t = i / n, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
       if (!fits(x, y, w, h)) {
-        const out = path.slice(0, k).map(p => ({ ...p }));
-        const end = { ...b, x: Math.round(lastOk.x), y: Math.round(lastOk.y), snapped: false, explicit: true, checkpoint: true };
+        // Back along what it walked to the last point its whole body fits (the start when none does).
+        let q = seen.length - 1;
+        while (q > 0 && !whole(seen[q].x, seen[q].y, seen[q].w, seen[q].h)) q -= 1;
+        const at = seen[q];
+        const kk = Math.max(at.k, 1);
+        const out = path.slice(0, kk).map(p => ({ ...p }));
+        const end = { ...path[kk], x: Math.round(at.x), y: Math.round(at.y), snapped: false, explicit: true, checkpoint: true };
         if (out.length && Math.round(out.at(-1).x) === end.x && Math.round(out.at(-1).y) === end.y) out[out.length - 1] = { ...out.at(-1), explicit: true, checkpoint: true };
         else out.push(end);
         return { path: out, cut: true };
       }
-      lastOk = { x, y };
+      seen.push({ x, y, k: i === n ? k + 1 : k, w, h });
     }
   }
   return { path, cut: false };
@@ -256,8 +273,13 @@ export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
     const w = p.width ?? src.width ?? 1, h = p.height ?? src.height ?? 1;
     return { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: p.elevation ?? src.elevation ?? 0 };
   };
+  // One pixel past the end too: a vertex lying exactly on a door's line (an arc through a door's middle) is not
+  // a proper crossing of either leg it joins.
   const blocked = (a, b) => {
-    try { return !!token.checkCollision(centre(b), { origin: centre(a), type: "move", mode: "any" }); } catch { return false; }
+    const o = centre(a), d = centre(b);
+    const L = Math.hypot(d.x - o.x, d.y - o.y);
+    const e = L > 0 ? { ...d, x: d.x + (d.x - o.x) / L, y: d.y + (d.y - o.y) / L } : d;
+    try { return !!token.checkCollision(e, { origin: o, type: "move", mode: "any" }); } catch { return false; }
   };
   const isTaken = p => { try { return !!taken?.(p); } catch { return false; } };
   let prev = origin;
@@ -303,7 +325,7 @@ export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
  * nearby fits.
  * Reads only.
  */
-export function clearOfWalls(token, p, { taken = null } = {}) {
+export function clearOfWalls(token, p, { taken = null, snap = false } = {}) {
   const s = gridSize(token);
   const src = token.document?._source ?? {};
   const w = src.width ?? 1, h = src.height ?? 1;
@@ -322,20 +344,40 @@ export function clearOfWalls(token, p, { taken = null } = {}) {
   };
   const fits = q => restWalkable(member, at(q), s) && !straddles(q);
   const free = q => !taken?.(q);
-  if (fits(p) && free(p)) return p;
+  // snap (a click-stop, Joe's decision 2): only a whole square, the nearest free one.
+  const onGrid = q => Math.abs(q.x / s - Math.round(q.x / s)) < 1e-6 && Math.abs(q.y / s - Math.round(q.y / s)) < 1e-6;
+  if ((!snap || onGrid(p)) && fits(p) && free(p)) return p;
   const z = p.elevation ?? src.elevation ?? 0;
   const from = { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: z };
   const bx = Math.floor(p.x / s), by = Math.floor(p.y / s);
   const cands = [];
-  const reach = taken ? 2 : 1;
+  const reach = snap ? 3 : taken ? 2 : 1;
   for (let dy = -reach; dy <= reach + 1; dy++) for (let dx = -reach; dx <= reach + 1; dx++) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
   cands.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
   const ok = c => fits(c) && open(token, from, { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z });
   const pick = cands.find(c => free(c) && ok(c));
   if (pick) return { ...p, x: pick.x, y: pick.y };
+  if (snap) {
+    // Never on another token: a free square that fits even past a corner, else the nearest that fits.
+    const any = cands.find(c => free(c) && fits(c)) ?? cands.find(c => ok(c));
+    if (any) return { ...p, x: any.x, y: any.y };
+  }
   if (fits(p)) return p;
   const near = cands.find(c => Math.hypot(c.x - p.x, c.y - p.y) <= 1.5 * s && ok(c));
   return near ? { ...p, x: near.x, y: near.y } : p;
+}
+
+/** The scene's walls that block movement now (shut doors included, open ones not) as point pairs (pixels). */
+function blockingSegments(token) {
+  const out = [];
+  for (const wall of token.document?.parent?.walls ?? []) {
+    const c = wall?.c;
+    if (!Array.isArray(c) || c.length < 4) continue;
+    if (Number(wall.move ?? 1) <= 0) continue;
+    if (Number(wall.door) > 0 && Number(wall.ds) === 1) continue;
+    out.push([{ x: c[0], y: c[1] }, { x: c[2], y: c[3] }]);
+  }
+  return out;
 }
 
 /** The scene's door segments (any door type, open or shut) as point pairs (pixels). */

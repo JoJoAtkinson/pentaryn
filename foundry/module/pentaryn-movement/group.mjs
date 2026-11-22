@@ -21,7 +21,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
-import { GROUP_LIMITS, flood, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
+import { GROUP_LIMITS, flood, hexCandidates, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
 import { skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, continuationInFlight, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, narrowPoints, othersOf, restWalkable, stopWhereDrawn, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
@@ -38,6 +38,12 @@ let dropPatched = false;
 /** Groups this client committed: id → { ids, timers, stopped }. */
 const groups = new Map();
 const groupOf = new Map();                 // token id → group id
+/** Every client: token id → { gid, at } from the update options of a group's moves (GROUP_OPT). */
+const tagOf = new Map();
+/** The update option that names the group a move belongs to, so every client knows its members (decision 3). */
+const GROUP_OPT = "pentarynMovementGroup";
+/** How long a group tag names a token's group (ms). */
+const TAG_TTL_MS = 60000;
 let last = null;                           // the last drop, for status()
 let resumedLast = null;                    // the last reload that picked up unsent waves, for status()
 let stoppedAt = null;                      // the last time a turn change stopped a group, for status()
@@ -619,9 +625,16 @@ function roundStopped(scene, id, m, options, avoid) {
     const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
     const r = feature.exposed.pathfindRouteTo?.(token, origin, { ...origin, ...m.waypoints.at(-1), explicit: true, checkpoint: true },
       { avoid: circles, maxMs: AROUND_MS });
-    if (!r?.reached || !(r.path?.length >= 2)) return m;
-    const wps = r.path.slice(1).map((p, k, all) => ({ ...p, checkpoint: k === all.length - 1, explicit: k === all.length - 1 ? true : p.explicit }));
-    return { ...m, waypoints: wps };
+    const from = { x: doc._source.x, y: doc._source.y };
+    if (r?.reached && r.path?.length >= 2 && !tooLong(from, m.waypoints, r.path.slice(1), s)) {
+      const wps = r.path.slice(1).map((p, k, all) => ({ ...p, checkpoint: k === all.length - 1, explicit: k === all.length - 1 ? true : p.explicit }));
+      return { ...m, waypoints: wps };
+    }
+    // No way round, or only the long way (H2-02: round the whole dungeon): it walks only as far as open floor
+    // short of the first stopped member on its way, or does not set off.
+    const hitC = circles.find(cc => { let p = centre(doc._source); return m.waypoints.map(centre).some(q => { const d = segDist(cc, p, q) < cc.r; p = q; return d; }); }) ?? circles[0];
+    const wps = restShortOf(token, { from, waypoints: m.waypoints }, hitC, hitC.r, takenFor(scene, id, []), s);
+    return wps.length ? { ...m, waypoints: wps } : null;
   } catch (err) { log?.debug?.("a wave round a stopped member", err); return m; }
 }
 
@@ -657,9 +670,8 @@ function send(scene, seq, starts, updates, options, what, claims = [], avoid = [
  * members have not moved or been dropped again. Waves go to the drop's own scene, also when this
  * client has switched to another view meanwhile.
  */
-function schedule(later, base, members, { scene, seq, starts, endMs = 0 }) {
+function schedule(later, base, members, { scene, seq, starts, endMs = 0, gid = foundry.utils.randomID() }) {
   if (!base || members.length < 2) return;
-  const gid = foundry.utils.randomID();
   const group = { ids: new Set(members.map(m => m.id)), timers: [], stopped: false, claims: [], avoid: [], pinned: new Set(), scene };
   const order = members.map(m => m.id);
   groups.set(gid, group);
@@ -802,6 +814,41 @@ function groupCancel(tokenId, { only = false } = {}) {
   return ids;
 }
 
+/**
+ * The members of the group a token moves with (decision 3): `held` when this client sent the group (its live
+ * members, the token included), else the tokens every client saw tagged with the same group in the last
+ * TAG_TTL_MS. `{ held: false, ids: [] }` when it is in no group.
+ */
+function groupMembers(tokenId) {
+  const gid = groupOf.get(tokenId);
+  const g = gid ? groups.get(gid) : null;
+  if (g) return { held: true, ids: [...g.ids] };
+  const tag = tagOf.get(tokenId);
+  if (!tag || Date.now() - tag.at > TAG_TTL_MS) return { held: false, ids: [] };
+  const ids = [];
+  for (const [id, t] of tagOf) if (t.gid === tag.gid && Date.now() - t.at <= TAG_TTL_MS) ids.push(id);
+  return { held: false, ids };
+}
+
+/** updateToken, every client: remember which group a move belongs to (its update option). */
+function onGroupTag(doc, options) {
+  const gid = options?.[GROUP_OPT];
+  if (!doc?.id || typeof gid !== "string") return;
+  tagOf.set(doc.id, { gid, at: Date.now() });
+  if (tagOf.size > 500) tagOf.delete(tagOf.keys().next().value);
+}
+
+/**
+ * updateToken, the client that sent a group: another user stopped one of its members (a player's own token in
+ * the GM's group, decision 3: an unanimated position write by someone else). It leaves the group, and the
+ * others walk round where it now rests (groupStopOne), as they would for a stop on this client.
+ */
+function onForeignStop(doc, changes, options, userId) {
+  if (!doc?.id || !groupOf.has(doc.id) || options?.animate !== false) return;
+  if (!changes || !("x" in changes || "y" in changes) || !userId || userId === game.user?.id) return;
+  try { groupStopOne(doc.id, { x: doc._source.x, y: doc._source.y }); } catch (err) { log?.debug?.("a member stopped elsewhere", err); }
+}
+
 /** Distance from point c to segment a-b. */
 function segDist(c, a, b) {
   const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
@@ -838,6 +885,94 @@ function shortOf(route, c, reach, w, h, s) {
 
 /** One route call when walking round a stopped member (ms): short, the token is already walking. */
 const AROUND_MS = 60;
+/** A way round a stopped member may add this many squares, or half the way left, whichever is more (H2-02). */
+const DETOUR_SQUARES = 4;
+
+/** Length of a top-left path from `from` (squares). */
+function pathSquares(from, wps, s) {
+  let L = 0, prev = from;
+  for (const p of wps) { L += Math.hypot(p.x - prev.x, p.y - prev.y) / s; prev = p; }
+  return L;
+}
+
+/**
+ * Is a way round a stopped member a detour nobody wants (live H2-02: a member stopped in a one-wide corridor
+ * sent the others round the whole dungeon, 35 s)? Longer than the way left by DETOUR_SQUARES or half of it.
+ */
+function tooLong(from, aheadWps, roundWps, s) {
+  const ahead = pathSquares(from, aheadWps, s);
+  return pathSquares(from, roundWps, s) > ahead + Math.max(DETOUR_SQUARES, ahead / 2);
+}
+
+/** Room round centre `c` (pixels) for a circle of radius r squares: not in a gap narrower than two of it. */
+function roomyAt(token, c, r, s) {
+  const p = { x: c.x / s, y: c.y / s };
+  try {
+    return !narrowPoints(token, [p, { x: p.x + 0.01, y: p.y }], r, s).length && !narrowPoints(token, [p, { x: p.x, y: p.y + 0.01 }], r, s).length;
+  } catch { return true; }
+}
+
+/**
+ * With no way round a member stopped ahead (circle `c`, pixels; `reach` the centre distance to keep), where a
+ * member walking `route` (from + top-left waypoints) rests instead (live H2-02: members were left in the
+ * one-wide corridor behind it, and walked through it): short of it on its way, on open floor (not in a gap,
+ * where it would block whoever comes after), clear of walls and of `taken`. Along its way back from the stop
+ * point first; if it is already in the gap, the nearest open spot it can walk back to. Returns top-left
+ * waypoints (empty: stay where it is drawn).
+ */
+function restShortOf(token, route, c, reach, taken, s) {
+  const doc = token.document;
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1, r = radiusOf(w, h);
+  const member = { token, r };
+  const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
+  const fine = p => {
+    const q = centre(p);
+    return Math.hypot(q.x - c.x, q.y - c.y) >= reach && !taken?.(p) && restWalkable(member, toSquares(p, w, h, s), s) && roomyAt(token, q, r, s);
+  };
+  const keep = (k, p) => [...route.waypoints.slice(0, k).map(q => ({ ...q, checkpoint: false })),
+    { ...(route.waypoints[k] ?? route.waypoints.at(-1)), x: Math.round(p.x), y: Math.round(p.y), snapped: false, explicit: true, checkpoint: true }];
+  const short = shortOf(route, c, reach, w, h, s);
+  // Back along the way ahead, from the stop point to where it is drawn, every quarter square.
+  const pts = [route.from, ...route.waypoints];
+  const kStop = short?.k ?? 0;
+  const stopAt = short ?? route.from;
+  const seq = [];
+  let prev = stopAt;
+  for (let k = kStop; k >= 0; k--) {
+    const a = pts[k];
+    const L = Math.hypot(prev.x - a.x, prev.y - a.y);
+    const n = Math.max(1, Math.ceil(L / (s / 4)));
+    for (let i = 0; i <= n; i++) seq.push({ k, p: { x: prev.x + (a.x - prev.x) * (i / n), y: prev.y + (a.y - prev.y) * (i / n) } });
+    prev = a;
+  }
+  for (const { k, p } of seq) {
+    if (!fine(p)) continue;
+    if (Math.hypot(p.x - route.from.x, p.y - route.from.y) < 1) return [];
+    return keep(k, p);
+  }
+  // Already in the gap: the nearest open spot round where it is drawn that it can walk to without passing the stopped one.
+  const here = toSquares(route.from, w, h, s);
+  const hereC = centre(route.from);
+  const away = q => { const k = centre(q); return Math.hypot(k.x - c.x, k.y - c.y) > Math.hypot(hereC.x - c.x, hereC.y - c.y); };
+  const cands = hexCandidates(here, 0.5, 8).map(q => toTopLeft(q, w, h, s)).filter(q => away(q) && fine(q))
+    .sort((a, b) => Math.hypot(a.x - route.from.x, a.y - route.from.y) - Math.hypot(b.x - route.from.x, b.y - route.from.y));
+  const origin = { ...(feature.exposed.pathfindOrigin?.(doc) ?? doc._source), x: route.from.x, y: route.from.y };
+  for (const q of cands.slice(0, 3)) {
+    let r2 = null;
+    try {
+      r2 = feature.exposed.pathfindRouteTo?.(token, origin, { ...origin, x: q.x, y: q.y, snapped: false, explicit: true, checkpoint: true },
+        { avoid: [{ x: c.x, y: c.y, r: reach }], maxMs: AROUND_MS });
+    } catch (err) { log?.debug?.("stop one: a way back", err); r2 = null; }
+    if (!r2?.reached || !(r2.path?.length >= 2)) continue;
+    if (pathSquares(route.from, r2.path.slice(1), s) > 3 * Math.hypot(q.x - route.from.x, q.y - route.from.y) / s + 2) continue;
+    return r2.path.slice(1).map((p, k, all) => ({ ...p, checkpoint: k === all.length - 1, explicit: k === all.length - 1 ? true : p.explicit }));
+  }
+  // Nowhere open nearby: short of it on its way, as clear as it can be.
+  let spot = stopAt;
+  try { spot = clearOfWalls(token, stopAt, { taken }); } catch (err) { log?.debug?.("stop one: a clear spot", err); }
+  if (Math.hypot(spot.x - route.from.x, spot.y - route.from.y) < 1) return [];
+  return keep(kStop, spot);
+}
 
 /**
  * A click stopped one member of a group this client sent (live H1-05: the whole group froze mid-room,
@@ -884,18 +1019,16 @@ function groupStopOne(tokenId, spot = null) {
         { avoid: [{ x: c.x, y: c.y, r: reach }], maxMs: AROUND_MS });
     } catch (err) { log?.debug?.("stop one: a route round it", err); r = null; }
     let wps;
-    if (r?.reached && r.path?.length >= 2) {
-      wps = r.path.slice(1).map((p, k, all) => ({ ...p, checkpoint: k === all.length - 1, explicit: k === all.length - 1 ? true : p.explicit }));
+    const round = r?.reached && r.path?.length >= 2 ? r.path.slice(1) : null;
+    if (round && !tooLong(route.from, route.waypoints, round, s)) {
+      wps = round.map((p, k, all) => ({ ...p, checkpoint: k === all.length - 1, explicit: k === all.length - 1 ? true : p.explicit }));
     } else {
-      // No way round (a one-wide corridor): it stops short of the stopped one, on a spot nobody else takes
-      // (it walked through it before, live H1-05 harness: -73 px), and the next one behind stops short of it.
-      const short = shortOf(route, c, reach, dw, dh, s);
-      let spot = short ?? route.from;
-      try { spot = clearOfWalls(token, spot, { taken: takenFor(scene, id, g.claims) }); } catch (err) { log?.debug?.("stop one: a clear spot", err); }
-      const k = short?.k ?? 0;
-      wps = [...route.waypoints.slice(0, k).map(p => ({ ...p, checkpoint: false })),
-        { ...(route.waypoints[k] ?? route.waypoints.at(-1)), x: spot.x, y: spot.y, snapped: false, explicit: true, checkpoint: true }];
-      if (spot.x === route.from.x && spot.y === route.from.y) wps = [];
+      // No way round (a one-wide corridor), or only the long way (H2-02): it stops short of the stopped one, on
+      // open floor nobody else takes (it walked through it before, live H1-05 harness: -73 px; it was left in
+      // the corridor, H2-02), and the next one behind stops short of it.
+      wps = [];
+      try { wps = restShortOf(token, route, c, reach, takenFor(scene, id, g.claims), s); } catch (err) { log?.debug?.("stop one: rest short", err); }
+      const spot = wps.at(-1) ?? route.from;
       const sc = { id, x: spot.x + (dw * s) / 2, y: spot.y + (dh * s) / 2, r: radiusOf(dw, dh) * s };
       g.claims.push(sc);
       g.avoid.push({ x: sc.x, y: sc.y, r: sc.r });
@@ -1152,8 +1285,45 @@ function debugThrow() {
   if (globalThis.CONFIG?.debug?.[`${MODULE}.throw`]) throw new Error("debug: forced planner throw");
 }
 
+/**
+ * A fast flick (live H2-08): core's drag handler takes at most one pointer move per frame, so when the last
+ * moves of a quick drag land inside one frame the drag's destination stays where an earlier move left it
+ * (in the rock between two rooms, for a flick from room A to room B) and the drop is planned there:
+ * "no way there", nobody moves. A group drop whose pointer-up is elsewhere takes the pointer-up's point,
+ * as core's next move would have set it (same delta for every member, snapped as the drag snaps). Their
+ * found paths still end at the old point; the plan searches its own routes. Returns true when it moved them.
+ */
+function catchUpDestination(grabbed, event, contexts) {
+  if (contexts.length < 2 || contexts.some(c => c.waypoints?.length) || grabbed.layer?._movementPlanningContext) return false;
+  // The pointer-up's point (core's pointer-up handler writes it to interactionData.destination; the contexts keep
+  // what the last move they saw gave them).
+  let p = event?.interactionData?.destination ?? null;
+  if (!Number.isFinite(p?.x) || !Number.isFinite(p?.y)) {
+    try { p = event?.getLocalPosition?.(grabbed.layer) ?? null; } catch { p = null; }
+  }
+  if (!Number.isFinite(p?.x) || !Number.isFinite(p?.y)) return false;
+  const origin = grabbed._getDragOrigin?.();
+  if (!origin || typeof grabbed._getDragWaypointPosition !== "function") return false;
+  const snap = !event.shiftKey && !globalThis.canvas?.grid?.isGridless;
+  const dx = p.x - origin.x, dy = p.y - origin.y;
+  const next = [];
+  for (const c of contexts) {
+    const { x, y } = c.token.document._source;
+    const dest = c.token._getDragWaypointPosition(c.destination, { x: x + dx, y: y + dy }, { snap });
+    if (!Number.isFinite(dest?.x) || !Number.isFinite(dest?.y)) return false;
+    next.push([c, { ...dest, action: undefined, snapped: snap, explicit: true, checkpoint: true }]);
+  }
+  // Nothing to catch up: the grabbed one's destination is where the pointer came up.
+  const mine = next.find(([c]) => c.token === grabbed)?.[1];
+  const had = contexts.find(c => c.token === grabbed)?.destination;
+  if (!mine || (had && Math.round(had.x) === Math.round(mine.x) && Math.round(had.y) === Math.round(mine.y))) return false;
+  for (const [c, dest] of next) c.destination = dest;
+  return true;
+}
+
 /** Does no member of this drop go anywhere (every waypoint is where it stands)? */
-function droppedInPlace(contexts, [updates, options]) {
+function droppedInPlace(contexts, [updates, options], caughtUp = false) {
+  if (caughtUp) return contexts.every(c => c.destination?.x === c.token.document._source.x && c.destination?.y === c.token.document._source.y);
   return contexts.every(c => {
     const doc = c.token.document;
     const wps = options.movement?.[doc.id]?.waypoints ?? [];
@@ -1161,27 +1331,130 @@ function droppedInPlace(contexts, [updates, options]) {
   }) || !updates.length;
 }
 
-/** Feedback on a drop with no way to where it was dropped (live H1-12: a group dropped in the rock, a Large on a one-square door, said nothing). */
+/**
+ * Feedback on a drop with no way to where it was dropped (live H1-12; Joe's decision 7, 2026-11-22: nobody
+ * moves, and a short warning to the dragger only). A big token with no way it fits through (decision 8) stops
+ * before the gap instead, and the GM is told.
+ */
 const NO_ROUTE = "PENTARYN_MOVEMENT.notify.noRoute";
 const NO_ROUTE_GROUP = "PENTARYN_MOVEMENT.notify.noRouteGroup";
-function tellNoRoute(key) {
-  try { globalThis.ui?.notifications?.info?.(key, { localize: true }); } catch (err) { log?.debug?.("no-route notice", err); }
+const TOO_NARROW = "PENTARYN_MOVEMENT.notify.tooNarrow";
+function tellNoRoute(key, data = null) {
+  try {
+    const n = globalThis.ui?.notifications;
+    if (data) n?.warn?.(game.i18n?.format?.(key, data) ?? key);
+    else n?.warn?.(key, { localize: true });
+  } catch (err) { log?.debug?.("no-route notice", err); }
 }
 
+/** A big token stopped before a gap it does not fit: the GM hears of it, also when a player dragged it (a whisper). */
+function tellNarrow(token) {
+  const name = token?.document?.name ?? "";
+  tellNoRoute(TOO_NARROW, { name });
+  if (game.user?.isGM) return;
+  try {
+    const gms = (game.users?.filter?.(u => u.isGM && u.active) ?? []).map(u => u.id);
+    if (!gms.length) return;
+    globalThis.ChatMessage?.create?.({ content: `<p>${foundry.utils.escapeHTML?.(game.i18n.format(TOO_NARROW, { name })) ?? name}</p>`, whisper: gms,
+      speaker: { alias: "Pentaryn Movement" } });
+  } catch (err) { log?.debug?.("narrow: tell the GM", err); }
+}
+
+/** One route call that checks a drop the drag's own path fell short of (ms). */
+const CONFIRM_MS = 250;
+
 /**
- * Out of combat, when the grabbed token's path (as the drag found it) ends short of where it was dropped:
- * one notice. Not in a fight (a path cut by the movement left would read as "no way"), not for ghost or
- * the unconstrained tool, not when this client's pathfinding is off.
+ * A single drop out of combat, when its path (as the drag found it) ends short of where it was dropped.
+ * The drag's path can be short only because its search was still running at the drop (live H2-12: a false
+ * "no way" for a reachable maze drop, 1 of 11), so one search confirms it first. Returns
+ *   false       it gets there (`route`: the confirmed path, when the drag's was short), or nothing to say
+ *   "none"      no way there at all
+ *   "narrow"    a big token with no way its body fits: it goes as far as it fits (decision 8)
+ * Not in a fight (a path cut by the movement left would read as "no way"), not for ghost or the
+ * unconstrained tool, not when this client's pathfinding is off. An unfinished search says nothing.
  */
-function noteNoRoute(grabbed, contexts) {
+function noteNoRoute(grabbed, contexts, out = {}) {
+  // A group's plan searches the grabbed one's route itself (anchorNoRoute): no second search here.
+  if (contexts.length !== 1) return false;
   const c = contexts.find(x => x.token === grabbed) ?? contexts[0];
   const doc = c?.token?.document;
-  if (!doc || inCombat(doc) || !c.destination) return false;
+  if (!doc || inCombat(doc) || !c.destination || c.waypoints?.length) return false;
   const end = c.foundPath?.at?.(-1);
   if (!end) return false;
   try { if (grabbed._getDragConstrainOptions?.()?.ignoreWalls) return false; } catch (err) { log?.debug?.("drag constrain options", err); }
   if (feature.exposed.pathfindSkip?.(grabbed)) return false;
   if (Math.round(end.x) === Math.round(c.destination.x) && Math.round(end.y) === Math.round(c.destination.y)) return false;
+  const big = (doc._source.width ?? 1) > 1 || (doc._source.height ?? 1) > 1;
+  let r = null;
+  try {
+    const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
+    r = feature.exposed.pathfindRouteTo?.(grabbed, origin, { ...origin, ...c.destination, explicit: true, checkpoint: true }, { preview: true, maxMs: CONFIRM_MS });
+  } catch (err) { log?.debug?.("no-route: confirm", err); r = null; }
+  if (!r) return false;
+  if (r.reached && r.path?.length >= 2) { out.route = r.path; return false; }
+  const legs = r.legs ?? [];
+  const done = legs.length > 0 && legs.every(l => l.state !== "more");
+  if (!done) return false;
+  if (big && legs.some(l => l.state === "found")) return "narrow";
+  if (big && (c.foundPath?.length ?? 0) >= 2) return "narrow";
+  return "none";
+}
+
+/** One route call for a single drop round the tokens that stay (ms). */
+const SINGLE_MS = 150;
+
+/**
+ * A single token dropped out of combat (live H2-09, H2-07): core walks it straight through a token standing
+ * in its way (dnd5e blocks only hostile creatures) and stacks it on one it is dropped on. Dropped on another
+ * token it takes the nearest clear spot it can reach (as the grabbed one of a group does); its way there goes
+ * round the tokens that stay, when there is such a way that is not a long detour. Mutates core's result. Not
+ * with Ctrl waypoints, a planned move, ghost or the unconstrained tool, or when this client's pathfinding is off.
+ */
+function aroundOthers(grabbed, c, result) {
+  const doc = grabbed.document;
+  const m = result?.[1]?.movement?.[doc.id];
+  if (!m?.waypoints?.length || m.planned || c?.waypoints?.length || grabbed.layer?._movementPlanningContext) return false;
+  if (result[1].constrainOptions?.ignoreWalls || feature.exposed.pathfindSkip?.(grabbed)) return false;
+  if (m.waypoints.some(w => (CONFIG.Token?.movement?.actions?.[w.action]?.walls ?? "move") === null)) return false;
+  const s = gridSize(grabbed);
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1, r = radiusOf(w, h);
+  const others = othersOf([{ id: doc.id, token: grabbed }], s);
+  if (!others.length) return false;
+  const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
+  const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
+  const start = centre(origin);
+  const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1 }));
+  const taken = p => { const q = centre(p); return circles.some(o => Math.hypot(q.x - o.x, q.y - o.y) < o.r); };
+  let end = m.waypoints.at(-1);
+  let moved = false;
+  if (taken(end)) {
+    let spot = end;
+    try { spot = clearOfWalls(grabbed, end, { taken }); } catch (err) { log.debug?.("single: a clear spot", err); }
+    if (taken(spot)) return false;
+    end = { ...end, x: spot.x, y: spot.y, snapped: false };
+    moved = true;
+  }
+  // Does its way pass through one that stays (not one it starts on)?
+  const live = circles.filter(o => Math.hypot(start.x - o.x, start.y - o.y) >= o.r);
+  let prev = start, through = false;
+  const wps = moved ? [...m.waypoints.slice(0, -1), end] : m.waypoints;
+  for (const q of wps.map(centre)) { if (live.some(o => segDist(o, prev, q) < o.r)) { through = true; break; } prev = q; }
+  if (!through && !moved) return false;
+  const dest = { ...origin, ...end, explicit: true, checkpoint: true };
+  let r1 = null;
+  try { r1 = feature.exposed.pathfindRouteTo?.(grabbed, origin, dest, { preview: true, avoid: live, maxMs: SINGLE_MS }); } catch (err) { log.debug?.("single: a route round", err); }
+  let path = r1?.reached && r1.path?.length >= 2 && !tooLong(origin, wps, r1.path.slice(1), s) ? r1.path : null;
+  if (!path && moved) {
+    try { const r2 = feature.exposed.pathfindRouteTo?.(grabbed, origin, dest, { preview: true, maxMs: SINGLE_MS }); if (r2?.reached && r2.path?.length >= 2) path = r2.path; }
+    catch (err) { log.debug?.("single: a route", err); }
+  }
+  if (!path) {
+    if (!moved) return false;
+    // The spot beside it, at the end of core's own way (the last leg bent to it).
+    m.waypoints = wps.map((p, k) => (k === wps.length - 1 ? { ...p, explicit: true, checkpoint: true } : p));
+    return true;
+  }
+  m.waypoints = path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
   return true;
 }
 
@@ -1190,9 +1463,23 @@ function onDrop(grabbed, event, result) {
   if (!Array.isArray(result) || !Array.isArray(result[0]) || !result[1]?.movement) return result;
   const contexts = contextsOf(event).filter(c => c?.token?.document);
   if (!contexts.length) return result;
+  let caughtUp = false;
+  try { caughtUp = setting("groupMovement") && catchUpDestination(grabbed, event, contexts); } catch (err) { log.debug?.("drop: catch up the destination", err); }
   let noRoute = false;
-  try { noRoute = noteNoRoute(grabbed, contexts); } catch (err) { log.debug?.("no-route check", err); }
-  if (noRoute && contexts.length === 1) tellNoRoute(NO_ROUTE);
+  const confirmed = {};
+  try { noRoute = noteNoRoute(grabbed, contexts, confirmed); } catch (err) { log.debug?.("no-route check", err); }
+  if (contexts.length === 1 && noRoute === "none") {
+    // Decision 7: a single token with no way there does not move at all.
+    tellNoRoute(NO_ROUTE);
+    last = { at: new Date().toISOString(), mode: "core", reason: "noRoute", combat: false, members: 1, result: "none", ms: 0, async: false, relaxed: 0, replans: 0, waves: 0 };
+    return null;
+  }
+  if (contexts.length === 1 && noRoute === "narrow") tellNarrow(grabbed);
+  if (contexts.length === 1 && confirmed.route) {
+    // The drag's search was still running at the drop: the confirmed route, not core's short line.
+    const m = result[1].movement?.[grabbed.document.id];
+    if (m) m.waypoints = confirmed.route.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
+  }
   // Every drop, whatever its mode, supersedes this client's pending plan or waves for those tokens.
   const seq = ++dropSeq;
   for (const c of contexts) latestDrop.set(c.token.document.id, seq);
@@ -1204,11 +1491,14 @@ function onDrop(grabbed, event, result) {
     result: null, ms: null, async: false, relaxed: 0, replans: 0, waves: 0 };
 
   // Dropped where it stands: nobody moves, nothing to plan (live R4-11: it spent 316 ms and fell back on budget).
-  if (droppedInPlace(contexts, result)) {
+  if (droppedInPlace(contexts, result, caughtUp)) {
     Object.assign(last, { mode: "core", reason: "still", result: "core", ms: 0 });
     return result;
   }
   if (info.mode === "core") {
+    if (info.reason === "single" && !info.combat) {
+      try { aroundOthers(grabbed, contexts[0], result); } catch (err) { log.debug?.("single: round the tokens that stay", err); }
+    }
     if (unstackable(info.reason)) unstack(contexts, result, grabbed.document.id, info.combat);
     if (info.combat) checkpointAll(contexts, result[1]);
     last.result = "core";
@@ -1222,22 +1512,11 @@ function onDrop(grabbed, event, result) {
   const finish = plan => {
     last.ms = Math.round((now() - t0) * 10) / 10;
     if (plan?.reason === "anchorNoRoute") {
-      // No way for the grabbed token to the drop: the group does not half-move (H1-12). The grabbed one
-      // goes as core takes it (up to where its way ends), the others stay where they stand.
+      // No way for the grabbed token to the drop: nobody moves (H1-12; Joe's decision 7), and the dragger is told.
       fellBack("anchorNoRoute");
-      Object.assign(last, { result: "core", reason: "anchorNoRoute" });
-      const gid = grabbed.document.id;
-      const [ups, opts] = result;
-      const kept = [ups.filter(u => u._id === gid), { ...opts, movement: Object.fromEntries(Object.entries(opts.movement ?? {}).filter(([id]) => id === gid)) }];
-      const mine = contexts.filter(c => c.token.document.id === gid);
-      // Core's path for it never ends on a token that stays (the others of the drop, anyone else: H1-08).
-      try {
-        const stay = [...othersOf(prep.members, gridSize(grabbed)), ...prep.members.filter(m => m.id !== gid).map(m => ({ x: m.start.x, y: m.start.y, r: m.r }))];
-        unstack(mine, kept, gid, info.combat, stay);
-      } catch (err) { log.debug?.("unstack the grabbed token", err); }
-      if (info.combat) checkpointAll(mine, kept[1]);
+      Object.assign(last, { result: "none", reason: "anchorNoRoute" });
       tellNoRoute(NO_ROUTE_GROUP);
-      return { first: kept, later: [], base: null };
+      return { first: [[], { ...result[1], movement: {} }], later: [], base: null };
     }
     if (plan?.result !== "plan") {
       fellBack(plan?.reason ?? "noPlan");
@@ -1257,10 +1536,18 @@ function onDrop(grabbed, event, result) {
 
   const scene = grabbed.document.parent ?? canvas.scene;
   const starts = new Map(prep.members.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
-  const hold = b => ({ scene, seq, starts, endMs: b.endMs ?? 0 });
+  // Every client learns the group's members from its moves' update options (a click on one stops them all, decision 3).
+  const gid = foundry.utils.randomID();
+  const tag = b => {
+    if (prep.members.length < 2) return b;
+    if (b.first?.[1]) b.first[1] = { ...b.first[1], [GROUP_OPT]: gid };
+    if (b.base) b.base = { ...b.base, [GROUP_OPT]: gid };
+    return b;
+  };
+  const hold = b => ({ scene, seq, starts, endMs: b.endMs ?? 0, gid });
   const step = clock.run(() => runPlan(prep.gen, GROUP_LIMITS.syncMs, clock.now));
   if (step.done) {
-    const b = finish(step.value);
+    const b = tag(finish(step.value));
     schedule(b.later, b.base, prep.members, hold(b));
     return b.first[0].length ? b.first : null;
   }
@@ -1289,6 +1576,7 @@ function onDrop(grabbed, event, result) {
       catch (e) { log.debug?.("unstack after a planning throw", e); }
       b = { first: result, later: [], base: null };
     }
+    b = tag(b);
     commit(b.first);
     schedule(b.later, b.base, prep.members, hold(b));
   };
@@ -1417,10 +1705,12 @@ export function install(reg, ctx) {
   // A turn change clears every combatant's movement history, and core stops a token whose history is
   // cleared: the rest of its group stops with it (live R4-3).
   reg.on("updateToken", (doc, _changes, options) => onHistoryCleared(doc, options), { label: "updateToken: a turn change stops the whole group" });
+  reg.on("updateToken", (doc, _changes, options) => onGroupTag(doc, options), { label: "updateToken: which group a move belongs to (click stops the group)" });
+  reg.on("updateToken", (doc, changes, options, userId) => onForeignStop(doc, changes, options, userId), { label: "updateToken: a member another user stopped (the rest walk round it)" });
   // A door shut or a wall raised across a move this client started cuts it before the wall (live R6-3, R6-1).
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: cut moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: cut moves across a shut door" });
-  ctx.expose({ groupFollower, groupCancel, groupStopOne, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
+  ctx.expose({ groupFollower, groupCancel, groupMembers, groupStopOne, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
 }
 
 export function uninstall() {
@@ -1432,6 +1722,7 @@ export function uninstall() {
   for (const g of groups.values()) for (const t of g.timers) clearTimeout(t);
   groups.clear();
   groupOf.clear();
+  tagOf.clear();
   last = null;
   resumedLast = null;
   stoppedAt = null;

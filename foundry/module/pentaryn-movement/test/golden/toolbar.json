@@ -106,6 +106,23 @@
           }
         ]
       }
+    },
+    "pentarynDragAssist": {
+      "name": "pentarynDragAssist",
+      "order": 4.7,
+      "title": "PENTARYN_MOVEMENT.assist.on",
+      "icon": "fa-solid fa-route",
+      "toggle": true,
+      "active": true,
+      "toolclip": {
+        "heading": "PENTARYN_MOVEMENT.assist.on",
+        "items": [
+          {
+            "paragraph": "PENTARYN_MOVEMENT.assist.clip",
+            "built": true
+          }
+        ]
+      }
     }
   },
   "gmAlways": {
@@ -129,6 +146,23 @@
           },
           {
             "paragraph": "PENTARYN_MOVEMENT.gm.clip.combat",
+            "built": true
+          }
+        ]
+      }
+    },
+    "pentarynDragAssist": {
+      "name": "pentarynDragAssist",
+      "order": 4.7,
+      "title": "PENTARYN_MOVEMENT.assist.on",
+      "icon": "fa-solid fa-route",
+      "toggle": true,
+      "active": true,
+      "toolclip": {
+        "heading": "PENTARYN_MOVEMENT.assist.on",
+        "items": [
+          {
+            "paragraph": "PENTARYN_MOVEMENT.assist.clip",
             "built": true
           }
         ]

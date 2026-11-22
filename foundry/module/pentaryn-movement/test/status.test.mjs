@@ -24,7 +24,7 @@ test("appended keys: sceneId, version, settings (key → scope), combatExempt, g
   assert.equal(s.version, VERSION);
   assert.deepEqual(s.settings, {
     ghostPolicy: "world", ghostPolicyLast: "world", ghost: "client", ownedOnTop: "client",
-    pathfinding: "world", pathfindMine: "client", smoothCorners: "client", groupMovement: "world", clickToStop: "client",
+    pathfinding: "world", pathfindMine: "client", smoothCorners: "client", groupMovement: "world", assist: "world", clickToStop: "client",
   });
 });
 

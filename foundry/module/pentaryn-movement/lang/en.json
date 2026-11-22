@@ -46,8 +46,9 @@
         "off": "The GM allows ghost movement again. Click the ghost button under the Ruler to use it.",
         "exempt": "Your incorporeal creature may move through walls during the fight. Click the ghost button under the Ruler to use it."
       },
-      "noRoute": "No way there: it stops where the way ends.",
-      "noRouteGroup": "No way there: the group stays where it is."
+      "noRoute": "No route there.",
+      "noRouteGroup": "No route there: the group stays where it is.",
+      "tooNarrow": "{name} does not fit through there: it stops before the gap."
     },
     "settings": {
       "policy": {
@@ -91,7 +92,16 @@
       "clickToStop": {
         "name": "Click a moving token to stop it",
         "hint": "Clicking one of your tokens while it is moving stops it where it is, then selects it. In a fight it stops at the next square, so the movement spent stays exact. Only on your screen."
+      },
+      "assist": {
+        "name": "Drag help for the table",
+        "hint": "Off: every drag is plain Foundry dragging (no path round walls, no group plan). The GM's toolbar button (route icon, Token controls) flips it in one click."
       }
+    },
+    "assist": {
+      "on": "Drag help on: paths round walls, groups walk together",
+      "off": "Drag help off: plain Foundry dragging for everyone",
+      "clip": "One click turns pathfinding and group movement off for the whole table, and back on. Click to stop still works."
     }
   }
 }

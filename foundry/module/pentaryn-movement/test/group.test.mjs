@@ -21,7 +21,7 @@ const F = await movementWorld();
 const clock = { t: 0, step: 0 };
 Object.defineProperty(globalThis, "performance", { value: { now: () => (clock.t += clock.step) }, configurable: true, writable: true });
 
-/** Segment intersection (proper crossing), the wall test. */
+/** Segment intersection (proper crossing), the wall test; a move that ends on a wall's line, inside it, hits it too (as core's does). */
 function hit(p, q, a, b) {
   const d = (u, v, w) => (v.x - u.x) * (w.y - u.y) - (v.y - u.y) * (w.x - u.x);
   const d1 = d(a, b, p), d2 = d(a, b, q), d3 = d(p, q, a), d4 = d(p, q, b);
@@ -29,6 +29,8 @@ function hit(p, q, a, b) {
     const t = d3 / (d3 - d4);
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
   }
+  const inside = r => Math.min(a.x, b.x) < r.x && r.x < Math.max(a.x, b.x) || Math.min(a.y, b.y) < r.y && r.y < Math.max(a.y, b.y);
+  if (Math.abs(d2) < 1e-9 && Math.abs(d1) > 1e-9 && inside(q)) return { x: q.x, y: q.y };
   return null;
 }
 // A wall across y = 400 with a one-square door at x 400–500.
@@ -85,7 +87,12 @@ F.game.activeTool = "select";
 const layer = { _draggedToken: null, _movementPlanningContext: null };
 // The tokens' own Scene (TokenDocument#parent): waves go to it, not to whatever the canvas shows.
 const viewedScene = F.canvas.scene;
-const sceneDoc = { id: SCENE, grid, regions: [], tokens: sceneTokens, updateEmbeddedDocuments: (...a) => viewedScene.updateEmbeddedDocuments(...a) };
+const sceneDoc = { id: SCENE, grid, regions: [], tokens: sceneTokens, updateEmbeddedDocuments: (...a) => viewedScene.updateEmbeddedDocuments(...a),
+  // The walls as the adapter reads them (wall ends a smoothed route keeps its body clear of).
+  // A test may set its own list (null: back to the world's).
+  _walls: null,
+  get walls() { return this._walls ?? world.walls.map(([a, b]) => ({ c: [a.x, a.y, b.x, b.y], door: 0, ds: 0, move: 20 })); },
+  set walls(v) { this._walls = v; } };
 let combatFlag = false;
 
 function makeToken(id, x, y, { size = 1 } = {}) {
@@ -110,6 +117,13 @@ function makeToken(id, x, y, { size = 1 } = {}) {
   };
   sceneTokens.set(id, t.document);
   return t;
+}
+/** Take every token but `keep` off the scene for a test; returns them, to put back. */
+function keepOnly(keep) {
+  const ids = new Set(keep.map(t => t.document.id));
+  const out = new Map([...sceneTokens].filter(([k]) => !ids.has(k)));
+  for (const k of out.keys()) sceneTokens.delete(k);
+  return out;
 }
 const wp = (x, y, extra = {}) => ({ x, y, elevation: 0, width: 1, height: 1, level: "L", action: "walk", snapped: true, explicit: true, checkpoint: true, ...extra });
 
@@ -477,7 +491,7 @@ test("planGroup(refs, point) is the same plan as a dry run: slots, delays, level
   assert.deepEqual(api.planGroup(ts.map(t => t.document), { x: "x" }).code, "BAD_ARGS");
 });
 
-test("H1-05: a click on one member sends no later wave of its own; only it is stopped", () => {
+test("decision 3: a click on one member sends no later wave at all; the group stops, and only this user's own members when it does not own them all", () => {
   combatFlag = false;
   const ts = [makeToken("stpA000000000001", 400, 200), makeToken("stpB000000000001", 300, 200), makeToken("stpC000000000001", 500, 200)];
   const out = dropWith(ts[0], contextsFor(ts, 0, 400));
@@ -488,11 +502,26 @@ test("H1-05: a click on one member sends no later wave of its own; only it is st
   const from = F.calls.length;
   moving._onClickLeft({});
   mock.timers.tick(5000);
-  assert.ok(!sent(from).some(c => c.ids.includes(moving.document.id)), "no wave of the clicked member went out");
+  assert.equal(sent(from).length, 0, "no later wave went out");
   const moves = F.calls.slice(from).filter(c => c.op === "move" && c.options?.animate === false);
-  assert.deepEqual([...new Set(moves.map(m => m.id))], [moving.document.id], "only the clicked member is displaced");
+  assert.deepEqual([...new Set(moves.map(m => m.id))], [moving.document.id], "only the moving member is displaced (the waiting ones never set off)");
   assert.equal(clicks.at(-1).token, moving, "then core's click runs (select)");
   moving.animationContexts.clear();
+  // Not every member is the clicker's: only the clicker's own stop, and the rest still go.
+  const us = [makeToken("stpD000000000001", 400, 200), makeToken("stpE000000000001", 300, 200), makeToken("stpF000000000001", 500, 200)];
+  const out2 = dropWith(us[0], contextsFor(us, 0, 400));
+  const firstIds = new Set(out2[0].map(u => u._id));
+  for (const t of us) if (!firstIds.has(t.document.id)) t.document.testUserPermission = () => false;
+  const mv = sceneTokens.get(out2[0][0]._id).object;
+  mv.animationContexts.set(mv.movementAnimationName, {});
+  clock.t += MOTION.armMs;
+  const f2 = F.calls.length;
+  mv._onClickLeft({});
+  mock.timers.tick(5000);
+  const later = sent(f2).flatMap(c => c.ids);
+  assert.ok(!later.includes(mv.document.id), "the clicked one sends nothing more");
+  assert.ok(us.filter(t => !firstIds.has(t.document.id)).every(t => later.includes(t.document.id)), `the others' waves still go: ${JSON.stringify(later)}`);
+  mv.animationContexts.clear();
 });
 
 test("a wave whose member has moved meanwhile is dropped for that member", () => {
@@ -668,6 +697,8 @@ test("H1-05: a member still walking through where another was clicked to a stop 
   clock.step = 0;
   const a = makeToken("arnA000000000001", 400, 100), b = makeToken("arnB000000000001", 100, 100);
   dropWith(a, contextsFor([a, b], 0, 100));
+  b.document.testUserPermission = () => false;         // not the clicker's: only a stops (decision 3), b walks round it
+  const others = keepOnly([a, b]);                     // a stops on its own square: nobody else's in the way
   mock.timers.tick(100);                               // still held as a group (until its members rest)
   clock.t += 2000;
   // a walks, drawn at (400, 200); b walks east along y = 200 from (100, 200) to (700, 200), straight through a.
@@ -698,6 +729,7 @@ test("H1-05: a member still walking through where another was clicked to a stop 
       prev = q;
     }
   } finally {
+    for (const [k, v] of others) sceneTokens.set(k, v);
     for (const t of [a, b]) t.animationContexts.clear();
     b.document.movement = { state: "completed", user: { isSelf: true } };
     mock.timers.tick(60000);
@@ -709,6 +741,8 @@ test("H1-05: with no way round the stopped member (it stands in the only door), 
   clock.step = 0;
   const a = makeToken("crdA000000000001", 400, 100), b = makeToken("crdB000000000001", 300, 100);
   dropWith(a, contextsFor([a, b], 0, 100));
+  b.document.testUserPermission = () => false;         // not the clicker's: only a stops (decision 3)
+  const others = keepOnly([a, b]);
   mock.timers.tick(100);
   clock.t += 2000;
   a.document.x = 400; a.document.y = 400; a.position = { x: 400, y: 400 };   // just through the door
@@ -729,6 +763,7 @@ test("H1-05: with no way round the stopped member (it stands in the only door), 
     assert.ok(end.y + 50 <= 400, `b stays on its side of the door: ${JSON.stringify(end)}`);
     assert.ok(Math.hypot(end.x - am.x, end.y - am.y) >= 99, `b rests clear of a: ${JSON.stringify([end, am])}`);
   } finally {
+    for (const [k, v] of others) sceneTokens.set(k, v);
     for (const t of [a, b]) t.animationContexts.clear();
     b.document.movement = { state: "completed", user: { isSelf: true } };
     mock.timers.tick(60000);
@@ -753,7 +788,7 @@ test("H1-04: a 2x2 token's straight drag through a one-square door stops where i
   sceneTokens.delete(big.document.id); sceneTokens.delete(small.document.id);
 });
 
-test("H1-12: a group dropped where the grabbed token has no way to go stays put (no half-move) and says so; a single drag cut short says so", () => {
+test("H1-12 / decision 7: a group dropped where the grabbed token has no way to go stays put, nobody moves, and says so; a single drag there does not move and says so", () => {
   combatFlag = false;
   clock.step = 0;
   world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);          // the door shut: nothing south is reachable
@@ -767,15 +802,16 @@ test("H1-12: a group dropped where the grabbed token has no way to go stays put 
     mock.timers.tick(5000);
     assert.equal(api.status().group.last.reason, "anchorNoRoute");
     const moved = [...(out?.[0] ?? []).map(u => u._id), ...sent(from).flatMap(c => c.ids)];
-    assert.ok(!moved.includes(ts[1].document.id) && !moved.includes(ts[2].document.id), `the others stay: ${JSON.stringify(moved)}`);
-    assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.noRouteGroup"), "one notice");
-    // A single token dropped there: core's own move up to the wall, and a notice.
+    assert.deepEqual(moved, [], `nobody moves, the grabbed one neither (decision 7): ${JSON.stringify(moved)}`);
+    assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.level === "warn" && c.message === "PENTARYN_MOVEMENT.notify.noRouteGroup"), "one warning");
+    // A single token dropped there: it does not move at all (decision 7), and a warning.
     const one = makeToken("nrtD000000000001", 700, 200);
     const c1 = contextsFor([one], 0, 400);
     c1[one.document.id].foundPath.push(wp(700, 300));
     const f2 = F.calls.length;
-    dropWith(one, c1);
-    assert.ok(F.calls.slice(f2).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.noRoute"));
+    assert.equal(dropWith(one, c1), null, "no move");
+    assert.equal(api.status().group.last.reason, "noRoute");
+    assert.ok(F.calls.slice(f2).some(c => c.op === "notify" && c.level === "warn" && c.message === "PENTARYN_MOVEMENT.notify.noRoute"));
     // Dropped where its way does go: no notice.
     const f3 = F.calls.length;
     dropWith(one, contextsFor([one], 0, 100));
@@ -832,7 +868,7 @@ test("while a group is dragged only the grabbed token is pathfound", () => {
   }
 });
 
-test("click to stop out of combat: displaced where drawn (animate false), then core's click", () => {
+test("click to stop out of combat: displaced to the nearest free whole square (animate false; decision 2), then core's click", () => {
   combatFlag = false;
   const t = makeToken("clkA000000000001", 100, 100);
   t.document._source = { ...t.document._source, x: 600, y: 100 };   // the server holds the end
@@ -841,7 +877,7 @@ test("click to stop out of combat: displaced where drawn (animate false), then c
   const from = F.calls.length;
   t._onClickLeft({});
   const move = F.calls.slice(from).find(c => c.op === "move");
-  assert.deepEqual(move.waypoints, [{ x: 320, y: 100, elevation: 0, action: "displace", snapped: false, explicit: true, checkpoint: true }]);
+  assert.deepEqual(move.waypoints, [{ x: 300, y: 100, elevation: 0, action: "displace", snapped: false, explicit: true, checkpoint: true }]);
   assert.equal(move.options.animate, false);
   assert.ok(F.calls.slice(from).some(c => c.op === "stopAnimation" && c.opts.reset === false), "the tween stops here at once");
   assert.equal(clicks.at(-1).token, t);
@@ -921,7 +957,7 @@ test("R5-3: a click-stop in an open doorway, its body across the door's line, re
     assert.ok(p.y === 300 || p.y === 400, `beside the door, not across it (${p.y})`);
     assert.equal(p.x, 400);
   } finally {
-    delete sceneDoc.walls;
+    sceneDoc.walls = null;
     t.animationContexts.clear();
   }
 });
@@ -980,7 +1016,7 @@ test("R7-4: a click-stop whose box would rest 5 px across an open door's line re
     const p = F.calls.slice(from).find(c => c.op === "move").waypoints[0];
     assert.deepEqual([p.x, p.y], [400, 300], "the whole cell before the line");
   } finally {
-    delete sceneDoc.walls;
+    sceneDoc.walls = null;
     t.animationContexts.clear();
   }
 });
@@ -1084,7 +1120,7 @@ test("the grabbed token walks the route its drag preview showed", () => {
   assert.deepEqual(moves.shwA000000000001.waypoints.map(w => [w.x, w.y]), [[420, 300], [400, 600]]);
 });
 
-test("H1-05: a click on any member stops only that member, after its last wave went out and in a one-wave group", () => {
+test("decision 3: a click on any member stops the whole group (the clicker owns every member), after its last wave went out and in a one-wave group", () => {
   combatFlag = false;
   clock.step = 0;
   const ts = [makeToken("hldA000000000001", 400, 200), makeToken("hldB000000000001", 300, 200), makeToken("hldC000000000001", 500, 200)];
@@ -1095,7 +1131,10 @@ test("H1-05: a click on any member stops only that member, after its last wave w
   let from = F.calls.length;
   ts[1]._onClickLeft({});
   let moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
-  assert.deepEqual(moved, [ts[1].document.id], "only the clicked member is stopped where drawn");
+  assert.deepEqual(moved, ts.map(t => t.document.id).sort(), "every member stops");
+  const spots = F.calls.slice(from).filter(c => c.op === "move").map(c => c.waypoints[0]);
+  assert.ok(spots.every(p => p.x % 100 === 0 && p.y % 100 === 0), `each on a whole square: ${JSON.stringify(spots)}`);
+  assert.equal(new Set(spots.map(p => `${p.x},${p.y}`)).size, spots.length, "no two on one square");
   for (const t of ts) t.animationContexts.clear();
 
   // Ghost: one batch, no later wave; still one group.
@@ -1113,7 +1152,7 @@ test("H1-05: a click on any member stops only that member, after its last wave w
   from = F.calls.length;
   gs[0]._onClickLeft({});
   moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
-  assert.deepEqual(moved, [gs[0].document.id]);
+  assert.deepEqual(moved, gs.map(t => t.document.id).sort());
   for (const t of gs) t.animationContexts.clear();
   mock.timers.tick(60000);
   assert.equal(api.status().group.groups, 0, "groups are let go once everyone is at rest");
@@ -1265,7 +1304,7 @@ test("a click within 400 ms of a drop is core's click (habit click, double click
   from = F.calls.length;
   ts[0]._onClickLeft({});
   const moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
-  assert.deepEqual(moved, [ts[0].document.id], "armed: the clicked member stops where drawn (H1-05: only it)");
+  assert.deepEqual(moved, ts.map(t => t.document.id).sort(), "armed: the whole group stops (decision 3)");
   for (const t of ts) t.animationContexts.clear();
   mock.timers.tick(60000);
 });
@@ -1415,12 +1454,12 @@ test("D-4: once the displace is in, a drawn position off the source is reset to 
   t._onClickLeft({});
   for (let i = 0; i < 10; i++) await Promise.resolve();
   assert.deepEqual(stops, [{ reset: false }, undefined], "the off-source drawn position is reset to the source");
-  assert.equal(t.document.x, 320);
+  assert.equal(t.document.x, 300);
   // A late stale frame: caught by the second check.
   t.document.x = 390;
   mock.timers.tick(300);
   assert.equal(stops.length, 3);
-  assert.equal(t.document.x, 320);
+  assert.equal(t.document.x, 300);
   // In step: nothing more.
   mock.timers.tick(300);
   assert.equal(stops.length, 3);
@@ -1453,7 +1492,9 @@ test("D-2: a board pointerdown the click wrap did not see stops the moving token
     from = F.calls.length;
     board[0].fn({ type: "pointerdown", button: 0, clientX: 395, clientY: 160, timeStamp: 2 });
     const moves = F.calls.slice(from).filter(c => c.op === "move");
-    assert.deepEqual(moves.map(m => [m.id, m.waypoints[0].x, m.waypoints[0].y, m.waypoints[0].action]), [["brdA000000000001", 320, 100, "displace"]]);
+    assert.deepEqual(moves.map(m => [m.id, m.waypoints[0].action]), [["brdA000000000001", "displace"]]);
+    const at = moves[0].waypoints[0];
+    assert.ok(at.x % 100 === 0 && at.y % 100 === 0 && Math.hypot(at.x - 320, at.y - 100) <= 150, `a free whole square near where it was drawn: ${JSON.stringify(at)}`);
     assert.deepEqual(controlled, [{ releaseOthers: true }]);
     // The same pointerdown already handled by the click wrap is not stopped twice; a right press never.
     t.animationContexts.set(t.movementAnimationName, {});
@@ -1621,8 +1662,8 @@ test("R3-4: a click while a moving token's document was just re-prepared (derive
   const from = F.calls.length;
   t._onClickLeft({});
   const move = F.calls.slice(from).find(c => c.op === "move");
-  assert.equal(move.waypoints[0].x, 420, "not put at its destination");
-  assert.equal(move.waypoints[0].y, 100);
+  const p0 = move.waypoints[0];
+  assert.ok(p0.x % 100 === 0 && Math.hypot(p0.x - 420, p0.y - 100) <= 150, `not put at its destination: near where drawn, on a whole square: ${JSON.stringify(p0)}`);
   // Mid-frame (derived ≠ source) the document's own derived position is the drawn one, as before.
   const u = makeToken("drwB000000000001", 100, 100);
   u.document._source = { ...u.document._source, x: 1800, y: 100 };
@@ -1631,7 +1672,8 @@ test("R3-4: a click while a moving token's document was just re-prepared (derive
   u.animationContexts.set(u.movementAnimationName, {});
   const n = F.calls.length;
   u._onClickLeft({});
-  assert.equal(F.calls.slice(n).find(c => c.op === "move").waypoints[0].x, 610);
+  const p1 = F.calls.slice(n).find(c => c.op === "move").waypoints[0];
+  assert.ok(p1.x % 100 === 0 && Math.hypot(p1.x - 610, p1.y - 100) <= 150, JSON.stringify(p1));
   t.animationContexts.clear();
   u.animationContexts.clear();
 });
@@ -1901,5 +1943,223 @@ test("R6-1: in a fight, members walking to a door that shuts stop at their next 
     combatFlag = false;
     sceneTokens.clear();
     for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("H2-08: a fast flick whose last pointer move core skipped plans to the pointer-up point, not the stale destination", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("flkA000000000001", 100, 100), makeToken("flkB000000000001", 200, 100)];
+  // Core took the drag only as far as +100 px (its one-move-per-frame throttle); the pointer came up 400 px lower, past the door.
+  const ctx = contextsFor(ts, 100, 0);
+  const proto = Token5e.prototype;
+  const saved = [proto._getDragOrigin, proto._getDragWaypointPosition];
+  proto._getDragOrigin = function () { return center(this.document._source); };
+  proto._getDragWaypointPosition = function (cur, p, { snap }) { return { ...cur, x: snap ? Math.round(p.x / S) * S : p.x, y: snap ? Math.round(p.y / S) * S : p.y }; };
+  try {
+    const grabbedCentre = center(ts[0].document._source);
+    const staleDest = { x: grabbedCentre.x + 100, y: grabbedCentre.y };
+    const up = { x: grabbedCentre.x + 300, y: grabbedCentre.y + 400 };
+    drop.result = coreDrop(ctx);
+    const from = F.calls.length;
+    // Core's pointer-up writes the up point to interactionData.destination; the contexts keep the stale one.
+    assert.equal(ctx[ts[0].document.id].destination.x, staleDest.x - 50);
+    const out = ts[0]._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx, destination: { ...up } }, shiftKey: false });
+    mock.timers.tick(5000);
+    const moves = { ...(out?.[1]?.movement ?? {}), ...Object.assign({}, ...sent(from).map(c => c.options.movement)) };
+    const end = moves[ts[0].document.id]?.waypoints?.at(-1);
+    assert.deepEqual([end?.x, end?.y], [400, 500], `the grabbed one goes where the pointer came up: ${JSON.stringify(end)}`);
+    assert.ok(moves[ts[1].document.id]?.waypoints?.at(-1)?.y >= 400, "the other follows past the door");
+  } finally { [proto._getDragOrigin, proto._getDragWaypointPosition] = saved; }
+});
+
+test("H2-02: when the only way round the stopped member is the long way, the one behind stops short on open floor instead", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = world.walls;
+  // A second gap far east (x 900-1000): round the door the long way is 12 squares for a 6-square walk.
+  world.walls = [[{ x: 0, y: 400 }, { x: 400, y: 400 }], [{ x: 500, y: 400 }, { x: 900, y: 400 }]];
+  F.fire("updateWall");
+  const a = makeToken("dtrA000000000001", 400, 100), b = makeToken("dtrB000000000001", 300, 100);
+  dropWith(a, contextsFor([a, b], 0, 100));
+  mock.timers.tick(100);
+  clock.t += 2000;
+  a.document.x = 400; a.document.y = 400; a.position = { x: 400, y: 400 };   // just through the door
+  a.animationContexts.set(a.movementAnimationName, {});
+  b.document._source.x = 400; b.document._source.y = 700;
+  b.document.x = 400; b.document.y = 100; b.position = { x: 400, y: 100 };
+  b.animationContexts.set(b.movementAnimationName, {});
+  b.document.movement = { state: "completed", user: { isSelf: true }, constrainOptions: {}, origin: wp(400, 100),
+    passed: { waypoints: [wp(400, 700)] }, pending: { waypoints: [] } };
+  const from = F.calls.length;
+  try {
+    a._onClickLeft({});
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    const bm = F.calls.slice(from).filter(c => c.op === "move" && c.id === b.document.id);
+    const walk = bm[1]?.waypoints ?? [];
+    assert.ok(walk.every(p => p.x <= 600), `no detour by the far gap: ${JSON.stringify(walk.map(p => [p.x, p.y]))}`);
+    const end = walk.at(-1) ?? bm[0].waypoints[0];
+    assert.ok(end.y + 50 <= 400, `b stays on its side of the door: ${JSON.stringify(end)}`);
+  } finally {
+    for (const t of [a, b]) t.animationContexts.clear();
+    b.document.movement = { state: "completed", user: { isSelf: true } };
+    world.walls = saved;
+    F.fire("updateWall");
+    mock.timers.tick(60000);
+  }
+});
+
+test("H2-07 / H2-09: a single drag out of combat goes round a standing token, and dropped on one takes the nearest clear spot", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const a = makeToken("sngA000000000001", 100, 100);
+  const rest = makeToken("sngR000000000001", 300, 100);
+  rest.visible = true;
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [a, rest];
+  const segOff = (c, p, q) => {
+    const L2 = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((c.x - p.x) * (q.x - p.x) + (c.y - p.y) * (q.y - p.y)) / L2, 0), 1) : 0;
+    return Math.hypot(c.x - (p.x + (q.x - p.x) * t), c.y - (p.y + (q.y - p.y) * t));
+  };
+  try {
+    // Straight east through the one standing at (300, 100).
+    let ctx = contextsFor([a], 400, 0);
+    drop.result = coreDrop(ctx);
+    let out = a._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+    let wps = out[1].movement[a.document.id].waypoints;
+    assert.deepEqual([wps.at(-1).x, wps.at(-1).y], [500, 100], "it still ends where it was dropped");
+    let prev = { x: 150, y: 150 };
+    for (const p of wps) { const q = { x: p.x + 50, y: p.y + 50 }; assert.ok(segOff({ x: 350, y: 150 }, prev, q) >= 98, `round it: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`); prev = q; }
+    // Dropped on it.
+    ctx = contextsFor([a], 200, 0);
+    drop.result = coreDrop(ctx);
+    out = a._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+    wps = out[1].movement[a.document.id].waypoints;
+    const end = wps.at(-1);
+    assert.ok(Math.hypot(end.x - 300, end.y - 100) >= 99, `not on top of it: ${JSON.stringify(end)}`);
+    assert.ok(Math.hypot(end.x - 300, end.y - 100) <= 150, `beside it: ${JSON.stringify(end)}`);
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(rest.document.id); sceneTokens.delete(a.document.id);
+    mock.timers.tick(60000);
+  }
+});
+
+test("H2-12: a single drop whose drag path fell short only because its search was still running goes the confirmed route, with no warning", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const one = makeToken("cnfA000000000001", 100, 200);
+  const c1 = contextsFor([one], 300, 400);            // through the door at x 400-500
+  // The drag's path as it stood at the drop: core's line, cut at the wall.
+  c1[one.document.id].foundPath = [wp(100, 200, { snapped: false, explicit: false, checkpoint: false }), wp(250, 300)];
+  const from = F.calls.length;
+  const out = dropWith(one, c1);
+  assert.ok(!F.calls.slice(from).some(c => c.op === "notify"), "no false warning");
+  const wps = out[1].movement[one.document.id].waypoints;
+  assert.deepEqual([wps.at(-1).x, wps.at(-1).y], [400, 600], "it goes all the way");
+  assert.ok(wps.length >= 2, "round the wall");
+  mock.timers.tick(60000);
+});
+
+test("decision 8: a 2x2 with no way its body fits stops before the gap and the dragger is warned", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const big = makeToken("nrwL000000000001", 350, 100, { size: 2 });
+  const c1 = {};
+  const origin = wp(350, 100, { width: 2, height: 2, snapped: false, explicit: false, checkpoint: false });
+  const dest = wp(350, 600, { width: 2, height: 2 });
+  c1[big.document.id] = { token: big, destination: dest, foundPath: [origin, wp(350, 150, { width: 2, height: 2 })], waypoints: [] };
+  const from = F.calls.length;
+  const out = dropWith(big, c1);
+  assert.ok(out, "it still moves up to the gap");
+  assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.level === "warn" && /nrwL000000000001|tooNarrow/.test(c.message)), JSON.stringify(F.calls.slice(from).filter(c => c.op === "notify")));
+  sceneTokens.delete(big.document.id);
+});
+
+test("decision 3: every client learns a group's members from its moves' update option; a click there stops this user's own members of it", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const a = makeToken("tagA000000000001", 400, 100), b = makeToken("tagB000000000001", 100, 100);
+  const c = makeToken("tagC000000000001", 700, 700), d = makeToken("tagD000000000001", 900, 700), e = makeToken("tagE000000000001", 700, 900);
+  const others = keepOnly([a, b, c, d, e]);
+  try {
+    const out = dropWith(a, contextsFor([a, b], 0, 100));
+    const opts = [out?.[1], ...F.calls.filter(x => x.op === "scene.update").map(x => x.options)].filter(Boolean);
+    assert.ok(opts.some(o => typeof o.pentarynMovementGroup === "string"), "the moves name their group");
+    mock.timers.tick(60000);
+    // Another client's group (seen here only through its updates): c and d are ours, e is not.
+    for (const t of [c, d, e]) F.fire("updateToken", t.document, { y: 800 }, { pentarynMovementGroup: "grpOther00000001" }, "u2");
+    e.document.testUserPermission = () => false;
+    for (const t of [c, d, e]) {
+      t.animationContexts.set(t.movementAnimationName, {});
+      t.document.movement = { state: "pending", user: { isSelf: false } };
+    }
+    clock.t += MOTION.armMs;
+    const from = F.calls.length;
+    c._onClickLeft({});
+    const moved = [...new Set(F.calls.slice(from).filter(x => x.op === "move").map(x => x.id))].sort();
+    assert.deepEqual(moved, [c.document.id, d.document.id], "c and d stop, e (not ours) walks on");
+  } finally {
+    for (const t of [c, d, e]) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; }
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    mock.timers.tick(60000);
+  }
+});
+
+test("decision 3: a member of this client's group stopped by another user (an unanimated write) is walked round by the rest", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const a = makeToken("frnA000000000001", 400, 100), b = makeToken("frnB000000000001", 100, 100);
+  const others = keepOnly([a, b]);
+  dropWith(a, contextsFor([a, b], 0, 100));
+  mock.timers.tick(100);
+  clock.t += 2000;
+  a.document._source.x = 400; a.document._source.y = 200;
+  b.document._source.x = 700; b.document._source.y = 200;
+  b.document.x = 100; b.document.y = 200; b.position = { x: 100, y: 200 };
+  b.animationContexts.set(b.movementAnimationName, {});
+  b.document.movement = { state: "completed", user: { isSelf: true }, constrainOptions: {}, origin: wp(100, 200),
+    passed: { waypoints: [wp(700, 200)] }, pending: { waypoints: [] } };
+  const from = F.calls.length;
+  try {
+    F.fire("updateToken", a.document, { x: 400, y: 200 }, { animate: false }, "someoneElse");
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    const bm = F.calls.slice(from).filter(x => x.op === "move" && x.id === b.document.id);
+    assert.equal(bm[0]?.options?.animate, false, "b stops where it is drawn");
+    assert.ok(bm[1], "then walks on round a");
+    assert.deepEqual([bm[1].waypoints.at(-1).x, bm[1].waypoints.at(-1).y], [700, 200]);
+    // This user's own unanimated write (a stop it made itself) is not a foreign stop.
+    const f2 = F.calls.length;
+    F.fire("updateToken", a.document, { x: 400, y: 200 }, { animate: false }, game.user.id);
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    assert.equal(F.calls.slice(f2).filter(x => x.op === "move").length, 0);
+  } finally {
+    b.animationContexts.clear();
+    b.document.movement = { state: "completed", user: { isSelf: true } };
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    mock.timers.tick(60000);
+  }
+});
+
+test("the GM's drag-help switch (assist) off: every drag is core's (pathfinding off, no group plan), whatever the two settings say", async () => {
+  combatFlag = false;
+  await game.settings.set(MOD, "assist", false);
+  try {
+    assert.equal(api.status().group.enabled, false);
+    const ts = [makeToken("asfA000000000001", 400, 200), makeToken("asfB000000000001", 300, 200)];
+    const ctx = contextsFor(ts, 0, 400);
+    const core = coreDrop(ctx);
+    const out = dropWith(ts[0], ctx);
+    assert.equal(api.status().group.last.mode, "core");
+    assert.equal(api.status().group.last.reason, "off");
+    assert.deepEqual(out[1].movement, core[1].movement, "core's own moves");
+    const one = makeToken("asfC000000000001", 100, 200);
+    const job = one.findMovementPath([wp(100, 200, { snapped: false, explicit: false, checkpoint: false }), wp(400, 600)], { preview: true, constrainOptions: {} });
+    const path = job.result ?? await job.promise;
+    assert.ok(path.length <= 2, `no route round the wall: ${JSON.stringify(path)}`);
+  } finally {
+    await game.settings.set(MOD, "assist", true);
+    mock.timers.tick(60000);
   }
 });

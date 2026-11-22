@@ -59,13 +59,13 @@ function randomScenario(seed) {
 const oracles = (g, anchor, extra = {}) => ({ walkable: g.walkable, walkDistance: g.walkDistanceFrom(anchor.formation), route: g.route, narrow: g.narrow, now: () => 0, ...extra });
 const traj = e => delayed(trajectory(e.points), e.delay);
 
-/** Drive a plan to the end, counting route calls (yields). */
+/** Drive a plan to the end, counting route calls (its "route" yields; the timing passes yield "time" too). */
 function drive(gen) {
   let yields = 0;
   for (;;) {
     const s = gen.next();
     if (s.done) return { value: s.value, yields };
-    yields += 1;
+    if (s.value === "route") yields += 1;
   }
 }
 

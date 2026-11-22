@@ -90,6 +90,13 @@ export const SETTINGS = Object.freeze([
     doc: "Several tokens dragged together each walk their own route to their own spot, started in turn so they do not overlap (0.4.0).",
   },
   {
+    key: "assist", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_MOVEMENT.settings.assist.name",
+    hint: "PENTARYN_MOVEMENT.settings.assist.hint",
+    onChange: forward("assist"),
+    doc: "The table's drag help (0.4.9): off, every drag is plain Foundry dragging (no pathfinding, no group plan, no single-drop routing); the GM's toolbar button flips it. Pathfinding and Group movement keep their own values.",
+  },
+  {
     key: "clickToStop", scope: "client", config: true, type: Boolean, default: true,
     name: "PENTARYN_MOVEMENT.settings.clickToStop.name",
     hint: "PENTARYN_MOVEMENT.settings.clickToStop.hint",
@@ -103,8 +110,15 @@ export function registerSettings() {
   defineSettings(MODULE, SETTINGS);
 }
 
-/** The live value; the row default when unregistered or unreadable. */
-export const setting = settingReader(MODULE, SETTINGS);
+const rawSetting = settingReader(MODULE, SETTINGS);
+/**
+ * The live value; the row default when unregistered or unreadable. With the table's drag help off (`assist`,
+ * the GM's toolbar button) pathfinding reads "off" and group movement false, whatever they are set to.
+ */
+export const setting = key => {
+  if ((key === "pathfinding" || key === "groupMovement") && rawSetting("assist") === false) return key === "pathfinding" ? "off" : false;
+  return rawSetting(key);
+};
 
 /**
  * Keys whose row is not registered, or whose raw read throws or returns a value of another type

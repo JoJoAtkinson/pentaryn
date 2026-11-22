@@ -66,7 +66,7 @@ test("described settings are exactly the SETTINGS table; settings() snapshots th
   assert.deepEqual(api.describe().settings.map(s => s.key), SETTINGS.map(r => r.key));
   assert.deepEqual(api.settings(), {
     ghostPolicy: "exploration", ghostPolicyLast: "exploration", ghost: false, ownedOnTop: true,
-    pathfinding: "everyone", pathfindMine: true, smoothCorners: true, groupMovement: true, clickToStop: true,
+    pathfinding: "everyone", pathfindMine: true, smoothCorners: true, groupMovement: true, assist: true, clickToStop: true,
   });
 });
 

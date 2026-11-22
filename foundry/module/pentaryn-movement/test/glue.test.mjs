@@ -48,7 +48,7 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
-test("init registers the nine settings (golden/settings-register.json)", () => {
+test("init registers the ten settings (golden/settings-register.json)", () => {
   F.fire("init");
   const rows = [...game.settings.settings.values()].filter(s => s.namespace === MOD).map(s => ({
     key: s.key, scope: s.scope, config: s.config, type: s.type?.name ?? null, default: s.default,
@@ -56,7 +56,7 @@ test("init registers the nine settings (golden/settings-register.json)", () => {
   }));
   pinJSON("settings-register", rows, import.meta.url);
   assert.deepEqual(rows.map(r => r.key), ["ghostPolicy", "ghostPolicyLast", "ghost", "ownedOnTop", "pathfinding", "pathfindMine", "smoothCorners",
-    "groupMovement", "clickToStop"]);
+    "groupMovement", "assist", "clickToStop"]);
 });
 
 test("setup wraps both prototypes and marks them __pentarynMovement", () => {
@@ -432,7 +432,7 @@ test("toolbar (getSceneControlButtons): player and GM tools pinned (golden/toolb
   F.fire("getSceneControlButtons", {});                 // no tokens group: nothing, no throw
   pinJSON("toolbar", rows, import.meta.url);
   assert.deepEqual(Object.keys(rows.playerOff), []);
-  assert.deepEqual(Object.keys(rows.gmAlways), ["pentarynGhostPolicy"]);
+  assert.deepEqual(Object.keys(rows.gmAlways), ["pentarynGhostPolicy", "pentarynDragAssist"]);
 });
 
 test("player button onChange: blocked by combat → warn, ghost false, forced redraw", async () => {

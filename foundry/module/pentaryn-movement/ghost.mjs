@@ -17,7 +17,7 @@
 
 import * as core from "./movement-core.mjs";
 import {
-  CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
+  ASSIST_KEYS, ASSIST_TOOL, CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
 import { SETTINGS, policyWrite, setting } from "./settings.mjs";
@@ -271,6 +271,32 @@ function addTools(controls) {
       toolclip: toolclip(GM_KEYS[gt.state], GM_CLIP_KEYS)
     };
   }
+
+  // The table's drag help, one click (Joe, 2026-11-22): off, everyone drags as plain Foundry does.
+  if (game.user.isGM) {
+    const on = setting("assist") !== false;
+    tools[ASSIST_TOOL] = {
+      name: ASSIST_TOOL,
+      order: 4.7,
+      title: on ? ASSIST_KEYS.on : ASSIST_KEYS.off,
+      icon: on ? "fa-solid fa-route" : "fa-solid fa-arrows-up-down-left-right",
+      toggle: true,
+      active: on,
+      onChange: (_event, active) => onAssistFlip(active),
+      toolclip: toolclip(on ? ASSIST_KEYS.on : ASSIST_KEYS.off, [ASSIST_KEYS.clip])
+    };
+  }
+}
+
+/** The GM's drag-help button: writes the world setting, the toast names the state now in effect. */
+async function onAssistFlip(active) {
+  if (!game.user.isGM) return;
+  try {
+    await game.settings.set(MODULE, "assist", !!active);
+    ui.notifications.info(game.i18n.localize(active ? ASSIST_KEYS.on : ASSIST_KEYS.off));
+  } catch (err) {
+    log.warn("drag help flip failed", err);
+  }
 }
 
 /** The player's button, and `setGhost` on the API. */
@@ -384,6 +410,8 @@ const ON_SETTING = Object.freeze({
   ghostPolicy: () => { invalidate(); queueRefresh(); },
   ghost: () => { invalidate(); queueRefresh(); },
   ownedOnTop: () => { invalidate(); refreshTokens(); },
+  // The drag help switch: the GM's button redraws, any drag in progress is planned again.
+  assist: () => { rerenderControls(true); canvas?.tokens?.recalculatePlannedMovementPaths?.(); },
 });
 
 /**

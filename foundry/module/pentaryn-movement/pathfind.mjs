@@ -120,7 +120,7 @@ function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   const f = fieldFor(token, a, b, {
     preview: !!options.preview, constrain: options.constrainOptions ?? {},
     measureOptions: options.measureOptions ?? {}, terrainOptions: options.terrainOptions ?? {},
-    memo: avoid ? new Map() : memoNow(), automation: dnd5eMovementAutomation(), avoid,
+    memo: memoNow(), automation: dnd5eMovementAutomation(), avoid, rounded: !inCombat(token),
   });
   leg.field = f;
   // An unsnapped start joins the lattice at its nearest node, if that first move is open.
@@ -128,6 +128,9 @@ function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   const lead = f.onLattice(a) ? null : f.pos(start);
   if (lead && !f.clear(a, lead)) { leg.state = "none"; return leg; }
   leg.lead = lead;
+  // A goal off the lattice (H2-01): the route ends on its node, then one short hop to the goal, which must be open.
+  const tail = f.onLattice(b) ? null : f.pos(f.goal);
+  if (tail && !(f.clear(tail, b) || (tail.x === Math.round(b.x) && tail.y === Math.round(b.y)))) { leg.state = "none"; return leg; }
   leg.job = pf.searchWide({
     start, goal: f.goal, edge: f.edge, wall: f.wall, unit: f.unit, maxNodes: LIMITS.maxNodes, now,
   }, f.lattice);
@@ -141,9 +144,9 @@ function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
       const r = pf.fillet(pts, { maxT: LIMITS.arcMaxCells * f.s, clear: f.clear, cost: f.cost,
         maxError: MOTION.chordError * f.s, cornerPoints: MOTION.cornerPoints, maxPoints: MOTION.routePoints });
       leg.arcs = r.arcs;
-      leg.smoothed = r.points.slice(1, -1);
+      leg.smoothed = r.points.slice(1, tail ? undefined : -1);
     }
-    leg.points = pts.slice(1, -1);
+    leg.points = pts.slice(1, tail ? undefined : -1);
   };
   return leg;
 }
@@ -162,7 +165,7 @@ function cornerWaypoints(leg, useArcs) {
  * Plan every leg from `from` (index of the last explicit waypoint the plain path reached), then
  * rebuild through the original. Returns { step(budgetMs) → "done"|"more", result() }.
  */
-function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid = null, force = false } = {}) {
+function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid = null, force = false, accept = null } = {}) {
   const legs = [];
   for (let k = from; k < waypoints.length - 1; k++) legs.push(legPlan(token, waypoints[k], waypoints[k + 1], options, smooth, { avoid }));
   const t0 = now();
@@ -204,6 +207,9 @@ function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid
         const r = wrapped(build(useArcs), options);
         const path = r?.result;
         if (!Array.isArray(path)) continue;
+        // A big token's arcs can bend its body into a door frame the straight corners clear (live H2-01): then
+        // the corners without arcs.
+        if (accept && !accept(path)) continue;
         const n = pf.reachedCount(path, waypoints, same);
         // force (a group re-plan round resting members): a found route that gets there replaces the plain one.
         if (n > reach || (force && n === waypoints.length && best === base.result)) {
@@ -248,6 +254,9 @@ function fitted(token, path, options) {
   try { return fitPath(token, path).path; } catch (err) { log?.debug?.("fitPath", err); return path; }
 }
 
+/** A big token's path is taken only where its body fits all the way (fitPath). */
+const fitsWhole = token => path => { try { return !fitPath(token, path).cut; } catch { return true; } };
+
 /** A finished job for `path`. */
 const doneJob = path => ({ result: path, promise: Promise.resolve(path), cancel: () => {} });
 
@@ -272,7 +281,7 @@ function pathfindJob(token, waypoints, options, wrapped, base) {
   if (force && !squeezed && !entersTrap(token, waypoints, base.result, options)) return null;
 
   const smooth = !!setting("smoothCorners") && !inCombat(token);
-  const plan = planner(token, waypoints, options, force ? 0 : reached - 1, wrapped, base, smooth, { force });
+  const plan = planner(token, waypoints, options, force ? 0 : reached - 1, wrapped, base, smooth, { force, accept: big ? fitsWhole(token) : null });
   if (plan.step(LIMITS.sliceMs) === "done") return doneJob(big ? fitted(token, plan.result(), options) : plan.result());
 
   let cancelled = false;
@@ -397,7 +406,8 @@ function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = 
   let path = base.result, legs = [], arcs = 0;
   if (reached === 1 || crosses || risky || squeezed) {
     const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
-    const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!(crosses || risky || squeezed) });
+    const big = !constrainOptions?.ignoreWalls && ((w > 1) || (h > 1));
+    const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!(crosses || risky || squeezed), accept: big ? fitsWhole(token) : null });
     const cap = Math.min(maxMs, LIMITS.totalMs);
     while (plan.step(Math.min(LIMITS.sliceMs, cap)) === "more" && now() - t0 < cap);
     path = plan.result();

@@ -142,9 +142,22 @@ test("a drag into a wall comes back routed around it: explicit ends kept, corner
   assert.equal(s.reached, 2);
   assert.equal(s.improved, true);
   assert.equal(s.arcs, 0);
-  // The cost equals the grid optimum: 5 squares across, 4 down and back up → max(5, 8) with diagonals.
-  assert.equal(t.measureMovementPath(path).cost, 40);
+  // The grid optimum is 40 (5 across, 4 down and back up, diagonals at 5 ft), but its one diagonal step past the
+  // wall's end takes the body over that end: out of combat the corner is rounded, one square more (H2-14).
+  assert.equal(t.measureMovementPath(path).cost, 45);
+  assert.ok(clearOfEnd(path, { x: 300, y: 400 }), "the body never passes over the wall's end");
 });
+
+/** Every leg's centre line keeps a 1×1 body (48 px) off a wall end. */
+function clearOfEnd(path, c) {
+  for (let k = 1; k < path.length; k++) {
+    const a = center(path[k - 1]), b = center(path[k]);
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+    if (Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < 48 - 1e-6) return false;
+  }
+  return true;
+}
 
 test("smooth corners: arcs are placed where clear, and the cost stays the grid optimum", async () => {
   await set("smoothCorners", true);
@@ -152,7 +165,8 @@ test("smooth corners: arcs are placed where clear, and the cost stays the grid o
   const t = makeToken();
   const path = drag(t, [wp(0, 0), wp(500, 0)]).result;
   for (let k = 1; k < path.length; k++) assert.equal(crossing(center(path[k - 1]), center(path[k])).length, 0);
-  assert.equal(t.measureMovementPath(path).cost, 40);
+  assert.equal(t.measureMovementPath(path).cost, 45, "the rounded corner's square, no more (the arcs cost nothing)");
+  assert.ok(clearOfEnd(path, { x: 300, y: 400 }), `arcs keep the body off the wall's end: ${JSON.stringify(path.map(w => [w.x, w.y]))}`);
   assert.ok(api.pathfind.status().last.arcs > 0, JSON.stringify(path.map(w => [w.x, w.y])));
   assert.ok(path.some(w => w.snapped === false), "arc points are unsnapped");
 });
@@ -465,4 +479,31 @@ test("fog: a player's route never plans through ground that player has not explo
     F.fire("updateWall");
     await set("smoothCorners", true);
   }
+});
+
+test("H2-11: a 2×2 cut at a one-square door rests with its whole body clear of the frame", async () => {
+  await set("smoothCorners", false);
+  // A wall along x = 500 with a one-square door gap at y 300..400; the Large walks straight at it.
+  world.walls = [[{ x: 500, y: 0 }, { x: 500, y: 300 }], [{ x: 500, y: 400 }, { x: 500, y: 1000 }]];
+  F.fire("updateWall");
+  const big = drag(makeToken({ x: 100, y: 250, size: 2 }), [wp(100, 250, 2), wp(700, 250, 2)]).result;
+  const end = big.at(-1);
+  assert.ok(end.x + 2 * S <= 500 + 2 * S * 0.01 + 1, `the box (x ${end.x}..${end.x + 2 * S}) stays west of the frame at x 500`);
+  assert.ok(end.x >= 250, `it still walks up to the door: ${end.x}`);
+  await set("smoothCorners", true);
+});
+
+test("H2-04: on a scene with no terrain, a search measures each step direction once (not every step)", async () => {
+  await set("smoothCorners", false);
+  world.walls = [[{ x: 650, y: 50 }, { x: 650, y: 850 }]];
+  F.fire("updateWall");
+  const orig = Token5e.prototype.measureMovementPath;
+  let steps = 0;
+  Token5e.prototype.measureMovementPath = function (wps, o) { if (wps.length === 2) steps += 1; return orig.call(this, wps, o); };
+  try {
+    const job = drag(makeToken({ x: 400, y: 400 }), [wp(400, 400), wp(900, 400)]);
+    assert.deepEqual([job.result.at(-1).x, job.result.at(-1).y], [900, 400]);
+  } finally { Token5e.prototype.measureMovementPath = orig; }
+  assert.ok(steps <= 8, `two-waypoint measures: ${steps}`);
+  await set("smoothCorners", true);
 });

@@ -19,7 +19,7 @@ test("registration manifest equals golden/hooks.json (42 entries, today's order;
     "createCombatant", "updateCombatant", "deleteCombatant", "createToken", "deleteToken", "renderTokenHUD",
     "once setup", "createWall", "updateWall", "deleteWall", "createRegion", "updateRegion", "deleteRegion",
     "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior", "createToken", "updateToken", "deleteToken", "controlToken",
-    "canvasReady", "once setup", "once ready", "updateToken", "createWall", "updateWall", "once setup", "moveToken", "updateToken", "canvasReady", "once ready",
+    "canvasReady", "once setup", "once ready", "updateToken", "updateToken", "updateToken", "createWall", "updateWall", "once setup", "moveToken", "updateToken", "canvasReady", "once ready",
   ]);
 });
 

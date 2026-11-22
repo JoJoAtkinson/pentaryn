@@ -21,8 +21,10 @@
  * out of habit, or the first press of a double click, is core's own (Fable's verdict). The start is
  * when this client saw the drop (noteDrop) or the move's first moveToken; a move it never saw start
  * is armed. The API's stop() is never held back.
- * When the client that sent a group stops one member, only that member stops (live H1-05); the others
- * walk round it out of combat (group.mjs groupStopOne).
+ * A click on one member of a group stops the whole group when the clicker owns every member; otherwise only
+ * the clicker's own members stop, and the client that sent the group walks the others round them out of
+ * combat (group.mjs groupStopOne). Out of combat each stops on the nearest free whole square (Joe's
+ * decisions 2 and 3, 2026-11-22; 0.4.8 stopped only the clicked one, where it was drawn).
  *
  * The click also reaches a moving token core's MouseInteractionManager drops (0.4.1, live R1 D-2): a
  * DOM pointerdown on the board that the wrap did not see (the token's manager was not in its hover
@@ -36,7 +38,7 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { MOTION, clickStop } from "./motion-core.mjs";
+import { MOTION, clickStop, radiusOf } from "./motion-core.mjs";
 import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, inCombat, movementFacts, stopWhereDrawn } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -140,11 +142,14 @@ function resync(token) {
  * When it succeeds, the drawn position is checked against the source once the write is in and again
  * RESYNC_MS later (resync).
  */
-/** Where a click-stop out of combat puts a token: where it is drawn, or the nearest clear cell (live R4-5). */
-function stopSpot(token) {
+/**
+ * Where a click-stop out of combat puts a token (Joe's decision 2, 2026-11-22): the nearest free whole square
+ * to where it is drawn, its body across no wall and no door's line, on no other token (`taken`).
+ */
+function stopSpot(token, taken = null) {
   const drawn = drawnPosition(token);
   let p = drawn;
-  try { p = clearOfWalls(token, p); } catch (err) { log?.debug?.("clearOfWalls", err); }
+  try { p = clearOfWalls(token, p, { taken, snap: true }); } catch (err) { log?.debug?.("clearOfWalls", err); }
   return { drawn, p };
 }
 
@@ -305,21 +310,88 @@ function decide(token, { tool = game.activeTool, modifiers = false, armed = fals
 }
 
 /**
- * Stop `token`, and only it (live H1-05: a click on one member froze the whole group mid-room; Joe: only
- * the clicked one stops). When this client sent its group, that member leaves it; out of combat the
- * others still walking through where it now rests walk round it (group.mjs groupStopOne).
+ * Who else a token's stop takes with it, and the spots they stop on (Joe's decisions 2 and 3, 2026-11-22).
+ * A click on one member of a moving group stops the whole group when the clicker owns every member (the GM, or
+ * the player who dragged it); otherwise only the clicker's own tokens of that group stop, and the client that
+ * sent the group walks the rest round them (group.mjs). Out of combat each stops on the nearest free whole
+ * square (never on a door's line, never on another token, nor on a square another of this stop took).
+ */
+function takenAround(token, skip, claims) {
+  const doc = token.document;
+  const scene = doc?.parent;
+  const s = gridSize(token);
+  const src = doc?._source ?? {};
+  const w = src.width ?? 1, h = src.height ?? 1;
+  const r = radiusOf(w, h) * s;
+  const circles = claims.filter(c => c.id !== doc?.id);
+  const all = typeof scene?.tokens?.values === "function" ? [...scene.tokens.values()] : [];
+  for (const o of all) {
+    if (!o?._source || o.id === doc.id || skip.has(o.id)) continue;
+    if (o.hidden && !game.user?.isGM) continue;
+    if (src.level !== undefined && o._source.level !== undefined && o._source.level !== src.level) continue;
+    const ow = o._source.width ?? 1, oh = o._source.height ?? 1, orr = radiusOf(ow, oh) * s;
+    circles.push({ x: o._source.x + (ow * s) / 2, y: o._source.y + (oh * s) / 2, r: orr });
+    // One still walking: where it is drawn now counts too.
+    const t = o.object;
+    try {
+      if (t && !t.destroyed && movementFacts(t).animating) {
+        const d = drawnPosition(t);
+        circles.push({ x: d.x + (ow * s) / 2, y: d.y + (oh * s) / 2, r: orr });
+      }
+    } catch (err) { log?.debug?.("taken: a walking token", err); }
+  }
+  return p => {
+    const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
+    return circles.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1e-6);
+  };
+}
+
+/** Does this user own the token (a GM owns all)? */
+function owns(token) {
+  try { return !!(token.document.testUserPermission?.(game.user, "OWNER") ?? token.document.isOwner); } catch { return false; }
+}
+
+/**
+ * Stop `token` by the table's decision `how`, and with it the rest of its group (decision 3): all of it when
+ * this user owns every member, else only this user's own members. Returns the stops' promises.
  */
 function stopToken(token, how) {
   const doc = token.document;
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how };
-  if (how === "displace") {
-    const at = stopSpot(token);
-    const out = [displace(token, at)];
-    try { lastStop.rerouted = feature.exposed.groupStopOne?.(doc.id, at.p)?.length ?? 0; } catch (err) { log?.debug?.("stop one", err); }
-    return out;
+  if (how === "query") return [act(token, how)];
+  let held = false, ids = [];
+  try { ({ held, ids } = feature.exposed.groupMembers?.(doc.id) ?? { held: false, ids: [] }); } catch (err) { log?.debug?.("group members", err); }
+  const scene = doc.parent;
+  const others = ids.filter(id => id !== doc.id).map(id => scene?.tokens?.get(id)?.object).filter(t => t && !t.destroyed);
+  const whole = others.every(owns);
+  const list = [token, ...others.filter(owns)];
+  // The whole group: its unsent waves go too. Only some: each leaves the group, and the rest walk round it.
+  if (held && whole) { try { feature.exposed.groupCancel?.(doc.id); } catch (err) { log?.debug?.("stop the group", err); } }
+  const skip = new Set(list.map(t => t.document.id));
+  const claims = [];
+  const out = [];
+  let rerouted = 0;
+  for (const t of list) {
+    const tdoc = t.document;
+    const next = t === token ? how : decide(t, { tool: "select", armed: true });
+    if (next !== "displace" && next !== "stop") continue;
+    if (next === "displace") {
+      const at = stopSpot(t, takenAround(t, skip, claims));
+      const s = gridSize(t), w = tdoc._source.width ?? 1, h = tdoc._source.height ?? 1;
+      claims.push({ id: tdoc.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s });
+      out.push(displace(t, at));
+      if (!(held && whole)) {
+        try { rerouted += feature.exposed.groupStopOne?.(tdoc.id, at.p)?.length ?? 0; } catch (err) { log?.debug?.("stop one", err); }
+      }
+    } else {
+      if (!(held && whole)) { try { feature.exposed.groupStopOne?.(tdoc.id, null); } catch (err) { log?.debug?.("stop one", err); } }
+      out.push(act(t, next));
+    }
   }
-  if (how === "stop") { try { feature.exposed.groupStopOne?.(doc.id, null); } catch (err) { log?.debug?.("stop one", err); } }
-  return [act(token, how)];
+  lastStop.members = out.length;
+  lastStop.whole = held && whole;
+  lastStop.rerouted = rerouted;
+  return out;
 }
 
 function onClick(token, event) {
@@ -447,7 +519,7 @@ function onDoorDown(event) {
 }
 
 /** How far beyond a moving token's drawn circle a press on a door icon still stops it (squares). */
-const DOOR_SLACK = 0.4;
+const DOOR_SLACK = 0.9;
 
 /** The stage this client listens on for door icon presses. */
 let doorLayer = null;
@@ -560,9 +632,16 @@ async function stopOwn(data = {}, qctx = {}) {
   try { doc = typeof data?.ref === "string" ? globalThis.fromUuidSync?.(data.ref) ?? null : null; } catch { doc = null; }
   if (doc?.documentName !== "Token") return { ok: false, code: "NOT_FOUND", reason: "no such token" };
   if (!doc.movement?.user?.isSelf) return { ok: false, code: "NOT_INITIATOR", reason: "this client did not start that move" };
-  // Only that token (live H1-05): it leaves this client's group, the others carry on.
-  try { feature?.exposed?.groupStopOne?.(doc.id, null); } catch (err) { log?.debug?.("stop one", err); }
-  const ok = await stopSafely(doc);
+  // A GM owns every member: the whole group this client sent stops with it (decision 3).
+  let ids = [];
+  try { ids = feature?.exposed?.groupCancel?.(doc.id) ?? []; } catch (err) { log?.debug?.("stop the group", err); }
+  let ok = false;
+  for (const id of new Set([doc.id, ...ids])) {
+    const d = id === doc.id ? doc : doc.parent?.tokens?.get(id);
+    if (!d) continue;
+    if (id !== doc.id && (!d.movement?.user?.isSelf || d.movement.state === "completed" || d.movement.state === "stopped")) continue;
+    if ((await stopSafely(d)) && id === doc.id) ok = true;
+  }
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how: "stopOwn", by: sender.id ?? null };
   return { ok, how: "stop", tokenId: doc.id };
 }

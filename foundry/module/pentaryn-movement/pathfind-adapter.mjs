@@ -129,7 +129,7 @@ function creatureBlocking(token, constrain, automation) {
  * settings.mjs). Results are memoised in `memo` (a Map the feature keeps and clears when walls,
  * regions, doors or tokens change).
  */
-export function fieldFor(token, from, to, { preview = false, constrain = {}, measureOptions = {}, terrainOptions = {}, memo = new Map(), automation = "none", avoid = null } = {}) {
+export function fieldFor(token, from, to, { preview = false, constrain = {}, measureOptions = {}, terrainOptions = {}, memo = new Map(), automation = "none", avoid = null, rounded = false } = {}) {
   const doc = token.document;
   const grid = doc.parent?.grid ?? canvas.grid;
   const s = grid.size;
@@ -147,12 +147,22 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   // The mover is in the key: creature blocking and dnd5e's creature difficult terrain depend on who
   // moves (its disposition, and its own squares are never in its way).
   const circles = avoid?.length ? avoid : null;
-  const sub = `${doc.id}|${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}|${hz.key}`
-    + (circles ? `|a${circles.map(c => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.r)}`).join(";")}` : "");
+  const base = `${doc.id}|${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}|${hz.key}|${rounded ? "r" : ""}`;
+  const sub = base + (circles ? `|a${circles.map(c => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.r)}`).join(";")}` : "");
 
-  const pos = n => ({ x: to.x + n.j * s, y: to.y + n.i * s });
-  const nodeOf = p => ({ i: Math.round((p.y - to.y) / s), j: Math.round((p.x - to.x) / s) });
-  const onLattice = p => Number.isInteger((p.x - to.x) / s) && Number.isInteger((p.y - to.y) / s);
+  // The lattice: whole squares from the goal, or, for a goal off the grid (a group slot, a spot beside a stopped
+  // token), from the grid position nearest it, the goal then one short hop from its node (live H2-01, H2-06,
+  // H2-14: a lattice anchored on an off-grid slot ran every route 30-45 px off the middle of doors and corridors,
+  // so a Large no longer fitted a 2-wide double door, members brushed door frames and the crowd beside a
+  // corridor's mouth, and a route round that crowd was refused).
+  const lat = (() => {
+    if (to.snapped || !Number.isFinite(to.x) || !Number.isFinite(to.y)) return { x: to.x, y: to.y };
+    const snapC = (c, n) => (Number.isInteger(n) && n % 2 === 0 ? Math.round(c / s) * s : (Math.floor(c / s) + 0.5) * s);
+    return { x: snapC(to.x + (width * s) / 2, width) - (width * s) / 2, y: snapC(to.y + (height * s) / 2, height) - (height * s) / 2 };
+  })();
+  const pos = n => ({ x: lat.x + n.j * s, y: lat.y + n.i * s });
+  const nodeOf = p => ({ i: Math.round((p.y - lat.y) / s), j: Math.round((p.x - lat.x) / s) });
+  const onLattice = p => Number.isInteger((p.x - lat.x) / s) && Number.isInteger((p.y - lat.y) / s);
   const waypoint = (p, extra = {}) => ({
     x: Math.round(p.x), y: Math.round(p.y), elevation, width, height, depth, shape, level, action,
     snapped: false, explicit: false, checkpoint: false, ...extra,
@@ -177,6 +187,42 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     if (!look) return !token.checkCollision(d, { origin: o, type: wallType, mode: "any" });
     const hits = token.checkCollision(d, { origin: o, type: wallType, mode: "all" }) ?? [];
     return !hits.some(seen);
+  };
+
+  // Wall ends (door frames, room corners) a smoothed line keeps its body clear of (live H2-14: string pulling and
+  // arcs ran the centre past a door frame's corner, the circle 22-49 px in the rock).
+  const corners = [];
+  if (wallType && !constrain.ignoreWalls) {
+    const seenEnd = new Set();
+    for (const w of doc.parent?.walls ?? []) {
+      const c = w?.c;
+      if (!Array.isArray(c) || c.length < 4) continue;
+      if (Number(w[wallType] ?? w.move ?? 1) <= 0) continue;
+      if (Number(w.door) > 0 && Number(w.ds) === 1 && Number(w.door) !== SECRET_DOOR) continue;
+      for (const [x, y] of [[c[0], c[1]], [c[2], c[3]]]) {
+        const k = `${x},${y}`;
+        if (!seenEnd.has(k)) { seenEnd.add(k); corners.push({ x, y }); }
+      }
+    }
+  }
+  const clearance = Math.max(Math.min(width, height) * s / 2 - 2, 0);
+  const segPoint = (c, a, b) => {
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+    return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t));
+  };
+  /** Does the centre's straight move p→q (top-lefts) keep its body clear of every wall end? */
+  const roundCorners = (p, q) => {
+    if (!corners.length || !clearance) return true;
+    const a = { x: p.x + (width * s) / 2, y: p.y + (height * s) / 2 }, b = { x: q.x + (width * s) / 2, y: q.y + (height * s) / 2 };
+    const x0 = Math.min(a.x, b.x) - clearance, x1 = Math.max(a.x, b.x) + clearance, y0 = Math.min(a.y, b.y) - clearance, y1 = Math.max(a.y, b.y) + clearance;
+    for (const c of corners) {
+      if (c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+      // A wall end the move starts or ends beside (a token resting by a door frame) does not count.
+      if (Math.hypot(c.x - a.x, c.y - a.y) < clearance || Math.hypot(c.x - b.x, c.y - b.y) < clearance) continue;
+      if (segPoint(c, a, b) < clearance - 1e-6) return false;
+    }
+    return true;
   };
 
   /** Pixel-position wall test (fillets use it directly). */
@@ -218,8 +264,38 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     return Number.isFinite(r?.cost) ? r.cost : null;
   };
 
+  // A step's cost on a scene with no terrain regions depends only on its direction, unless an end is on
+  // another token's squares (dnd5e's creature difficult terrain): such steps share one answer per direction
+  // (live H2-04: measuring every step was 500 of a six-member funnel plan's 830 ms on a slow tab).
+  let occupied = null;
+  const othersAt = () => {
+    if (occupied) return occupied;
+    occupied = new Set();
+    try {
+      for (const t of doc.parent?.tokens ?? []) {
+        if (!t || t.id === doc.id) continue;
+        for (const o of t.getOccupiedGridSpaceOffsets?.() ?? []) occupied.add(`${o.i},${o.j}`);
+      }
+    } catch { occupied = null; return null; }
+    return occupied;
+  };
+  const freeOfOthers = p => memoGet("o", `${p.x},${p.y}`, () => {
+    const occ = othersAt();
+    if (!occ) return false;
+    try {
+      return doc.getOccupiedGridSpaceOffsets({ x: p.x, y: p.y, elevation, width, height, depth, shape }).every(o => !occ.has(`${o.i},${o.j}`));
+    } catch { return false; }
+  });
+  const stepCost = (p, q) => {
+    if (terrain || !freeOfOthers(p) || !freeOfOthers(q)) return measure([p, q]);
+    return memoGet("u", `${q.x - p.x},${q.y - p.y}`, () => measure([p, q]));
+  };
+
+  // Walls, others' squares and step costs do not depend on the avoid circles: a group's re-plans round its
+  // resting members share them with every other search (live H2-04).
+  const SHARED = new Set(["w", "o", "u"]);
   const memoGet = (kind, k, fn) => {
-    const mk = `${kind}|${sub}|${k}`;
+    const mk = `${kind}|${SHARED.has(kind) ? base : sub}|${k}`;
     if (memo.has(mk)) return memo.get(mk);
     const v = fn();
     memo.set(mk, v);
@@ -233,25 +309,28 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   const wall = (a, b) => memoGet("w", pair(a, b), () => inside(pos(b)) && wallPx(pos(a), pos(b)));
   const edge = (a, b) => memoGet("e", pair(a, b), () => {
     if (blocked(b) || !wall(a, b) || grazes(pos(a), pos(b)) || !hz.line(pos(a), pos(b), { fog: false })) return null;
-    return measure([pos(a), pos(b)]);
+    // Out of combat a step never takes its body over a wall end (a diagonal past a door frame or round a bend;
+    // H2-14). In a fight the grid's own diagonal stays (the movement costs are the grid's).
+    if (rounded && a.i !== b.i && a.j !== b.j && !roundCorners(pos(a), pos(b))) return null;
+    return stepCost(pos(a), pos(b));
   });
   /** The whole straight line a→b (string pulling): the real footprint rays of that one move. */
-  const lineOk = (a, b) => memoGet("l", pair(a, b), () => wallPx(pos(a), pos(b)) && !grazes(pos(a), pos(b)) && hz.line(pos(a), pos(b)));
+  const lineOk = (a, b) => memoGet("l", pair(a, b), () => wallPx(pos(a), pos(b)) && !grazes(pos(a), pos(b)) && hz.line(pos(a), pos(b)) && roundCorners(pos(a), pos(b)));
 
   /** Fillet tests, in pixels: the straight move p→q is open (walls on the footprint, creatures on the squares crossed). */
   const clear = (p, q) => {
-    if (!inside(q) || !wallPx(p, q) || grazes(p, q) || !hz.line(p, q)) return false;
+    if (!inside(q) || !wallPx(p, q) || grazes(p, q) || !hz.line(p, q) || !roundCorners(p, q)) return false;
     if (!blocking) return true;
     const steps = doc.getCompleteMovementPath([waypoint(p), waypoint(q)]);
     return !steps.slice(1).some(w => blockedPx(w));
   };
 
   return {
-    s, unit: grid.distance, pos, nodeOf, onLattice, waypoint, start: nodeOf(from), goal: { i: 0, j: 0 },
+    s, unit: grid.distance, pos, nodeOf, onLattice, waypoint, start: nodeOf(from), goal: nodeOf(to),
     edge, wall, lineOk, clear, cost: measure, blocked, look, terrain, blocking, avoided: hz,
     lattice: rect ? {
-      minI: Math.floor((rect.y - to.y) / s), maxI: Math.ceil((rect.y + rect.height - to.y) / s),
-      minJ: Math.floor((rect.x - to.x) / s), maxJ: Math.ceil((rect.x + rect.width - to.x) / s),
+      minI: Math.floor((rect.y - lat.y) / s), maxI: Math.ceil((rect.y + rect.height - lat.y) / s),
+      minJ: Math.floor((rect.x - lat.x) / s), maxJ: Math.ceil((rect.x + rect.width - lat.x) / s),
     } : null,
   };
 }

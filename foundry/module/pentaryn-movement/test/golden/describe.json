@@ -304,6 +304,13 @@
       "doc": "Several tokens dragged together each walk their own route to their own spot, started in turn so they do not overlap (0.4.0)."
     },
     {
+      "key": "assist",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "The table's drag help (0.4.9): off, every drag is plain Foundry dragging (no pathfinding, no group plan, no single-drop routing); the GM's toolbar button flips it. Pathfinding and Group movement keep their own values."
+    },
+    {
       "key": "clickToStop",
       "scope": "client",
       "type": "Boolean",
@@ -452,6 +459,14 @@
     {
       "name": "updateToken",
       "label": "updateToken: a turn change stops the whole group"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: which group a move belongs to (click stops the group)"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: a member another user stopped (the rest walk round it)"
     },
     {
       "name": "createWall",

@@ -96,6 +96,17 @@
     "onChange": true
   },
   {
+    "key": "assist",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "choices": null,
+    "name": "PENTARYN_MOVEMENT.settings.assist.name",
+    "hint": "PENTARYN_MOVEMENT.settings.assist.hint",
+    "onChange": true
+  },
+  {
     "key": "clickToStop",
     "scope": "client",
     "config": true,

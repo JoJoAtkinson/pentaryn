@@ -141,10 +141,11 @@ test("5. mixed sizes: the Large is placed first and nothing overlaps at rest", (
   const out = assignSlots({ members: [anchor, medium, large], anchorId: "a", walkable, walkDistance: c => dist(c, anchor.formation) });
   assert.deepEqual(out.missing, []);
   const s = out.slots;
-  // The spot both want (nearest their formation spots): the Large, placed first, has it.
-  const want = hexCandidates(anchor.formation, 2 * 1 + MOTION.restGap).filter(c => walkable(null, c) && dist(c, anchor.formation) >= 1.5 + MOTION.restGap)
+  // The spot both want (nearest their formation spots): the Large, placed first, has it, on whole squares (H2-01).
+  const want = cellCandidates({ x: 5, y: 5 }, 2, 2).filter(c => walkable(null, c) && dist(c, anchor.formation) >= 1.5 + MOTION.restGap)
     .sort((p, q) => dist(p, large.formation) - dist(q, large.formation))[0];
   assert.deepEqual(s.L, want);
+  assert.ok(Number.isInteger(s.L.x - 1) && Number.isInteger(s.L.y - 1), `the Large's top-left is on the grid: ${JSON.stringify(s.L)}`);
   assert.notDeepEqual(s.m, want);
   assert.ok(dist(s.L, s.a) >= 1.5 + MOTION.restGap - 1e-6);
   assert.ok(dist(s.m, s.a) >= 1 + MOTION.restGap - 1e-6);
@@ -563,4 +564,63 @@ test("H1-08: a group dropped with the grabbed one on top of a token outside the 
   assert.ok(dist(slot, big) >= 0.5 + 1 - 1e-6, `clear of the Large: ${JSON.stringify(slot)}`);
   assert.ok(dist(slot, d) <= 2, `still near the drop: ${JSON.stringify(slot)}`);
   assert.ok(dist(res.members.b.slot, slot) >= 1 - 1e-6);
+});
+
+const DOUBLE = `
+################
+#..............#
+#..............#
+#..............#
+#..............#
+#######..#######
+#..............#
+#..............#
+#..............#
+#..............#
+################`;
+
+test("H2-01: a Large in a group through a 2-wide door gets a whole-square slot and its route (not excluded)", () => {
+  const d = { x: 0, y: 5 };
+  const ms = [
+    member("a", { x: 7.5, y: 3.5 }, d),
+    member("L", { x: 5, y: 2 }, d, { w: 2 }),
+    member("b", { x: 9.5, y: 2.5 }, d),
+    member("c", { x: 10.5, y: 3.5 }, d),
+    member("t", { x: 3.5, y: 3.5 }, d),
+  ];
+  const { res } = plan(DOUBLE, ms, "a");
+  assert.equal(res.result, "plan");
+  assert.equal(res.constricted, true);
+  assert.deepEqual(res.excluded, [], "nobody left to core");
+  const L = res.members.L;
+  assert.equal(L.core, false);
+  assert.ok(L.slot.y > 6, `the Large ends in the lower room: ${JSON.stringify(L.slot)}`);
+  assert.ok(Number.isInteger(L.slot.x - 1) && Number.isInteger(L.slot.y - 1), `on whole squares: ${JSON.stringify(L.slot)}`);
+});
+
+const CLOSET = `
+##########
+#........#
+#........#
+#........#
+#........#
+#####.####
+#####.####
+####...###
+####...###
+##########`;
+
+test("H2-03: dropped on a token in a full closet, the grabbed one takes the nearest open spot in the room, never in the rock or the connector", () => {
+  // The closet rows 7-8, cols 4-6, full: a Large on cols 4-5, mediums on col 6; the connector is col 5, rows 5-6.
+  const others = [{ x: 5, y: 8, r: 1 }, { x: 6.5, y: 7.5, r: 0.5 }, { x: 6.5, y: 8.5, r: 0.5 }];
+  const d = { x: 3, y: 6 };
+  const ms = [member("a", { x: 2.5, y: 2.5 }, d), member("b", { x: 3.5, y: 2.5 }, d)];
+  const g = gridWorld(CLOSET);
+  // The rock round the closet has no walls of its own: walkable says yes there (as restWalkable does live).
+  const walkable = (m, c) => c.y > 9 || c.x > 7.6 || g.walkable(m, c);
+  const res = finish(planGroup({ members: ms, anchorId: "a", others }, { ...oracles(g, ms[0]), walkable }));
+  assert.equal(res.result, "plan", JSON.stringify(res));
+  const s = res.members.a.slot;
+  assert.ok(s.y < 5, `in the room, not the connector or the rock: ${JSON.stringify(s)}`);
+  for (const o of others) assert.ok(dist(s, o) >= 0.5 + o.r - 1e-6);
 });

@@ -1,5 +1,45 @@
 # Changelog — pentaryn-movement
 
+## 0.4.9 — 2026-11-22
+
+Hard-case round H-2, and Joe's decisions of 2026-11-22.
+
+- **[declared] A click on one member stops the whole group (decision 3; reverts 0.4.8's H1-05).** When the
+  clicker owns every member; otherwise only the clicker's own members of it stop, and the client that sent the
+  group walks the others round them. Every client learns a group's members from its moves' update option
+  (`pentarynMovementGroup`); the sender walks the rest round a member another user stopped. A GM's stop of a
+  player's move in a fight (`stopOwn`) stops that player's whole group too.
+- **[declared] Out of combat a click-stop puts the token on the nearest free whole square (decision 2):** never
+  across a door's line or a wall, never on another token or on a square another member of the same stop took.
+- **[declared] No route there: nothing moves (decision 7).** A single drop with no way there does not move at
+  all (it walked to where its way ended), a group stays where it is with the grabbed one too, and the dragger
+  alone gets a short warning ("No route there"). The drag's own path is confirmed by one search first: it can
+  be short only because its search was still running at the drop (H2-12: a false "no way" on a reachable maze
+  drop), and then the drop takes the confirmed route.
+- **[declared] A Large (2×2 and up) that fits no way through stops before the gap and the GM is told
+  (decision 8)**: a warning to the dragger, and a whisper to the GMs when a player dragged it. A wider way round
+  is taken when there is one (its arcs refused where they bend its body into a door frame, H2-01), and where it
+  stops its whole body is clear of the frame (H2-11: 21-27 px in it).
+- **[declared] The GM's drag-help switch (Token controls, route icon; world setting `assist`).** Off, every
+  drag is plain Foundry dragging for the whole table: no path round walls, no group plan, no single-drop
+  routing. Pathfinding and Group movement keep their own values for when it is on again.
+- **[declared] H2-01: a Large in a group gets a whole-square spot** (a hex spot put its centre 32 px off the
+  middle of the 2-wide double door, and its route was refused), and the route lattice is anchored on the grid
+  for an off-grid goal, so routes run down the middle of doors and corridors (H2-14: fewer door-frame cuts; a
+  smoothed step never takes its body over a wall end out of combat).
+- **[declared] H2-03: a drop onto a token in a full room** sends the grabbed one to the nearest open spot it can
+  walk to, open floor before any gap (it was parked in the one-wide connector, or on the Large).
+- **[declared] H2-04: group planning on a slow tab** shares step costs and conflict answers between passes and
+  yields between members (a six-member funnel spent 650 ms in the timing passes and fell back to core).
+- **[declared] H2-02: no marathon detours.** A way round a stopped member longer than the way left by 4 squares
+  (or half of it) is refused; the member stops short of it on open floor instead, never in a one-wide gap.
+- **[declared] H2-07 / H2-09: a single drag out of combat goes round a standing token**, and one dropped on
+  another token takes the nearest clear spot (they stacked, −100 px).
+- **[declared] H2-07: a press on a door's icon** stops a moving token within 0.9 square of it (was 0.4) and
+  leaves the door alone.
+- **[declared] H2-08: a fast flick** whose last pointer move core skipped is planned to where the pointer came
+  up, not to core's stale destination in the rock.
+
 ## 0.4.8 — 2026-11-22
 
 Hard-case round H-1 (walls, doors, crowds, mixed sizes; a Mac browser through the tunnel, the BOSS harness).
