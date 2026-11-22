@@ -1,5 +1,13 @@
 # Changelog — Pentaryn Pins (`pentaryn-pins`)
 
+## 0.5.3 — 2026-11-22
+
+- **Fixed [declared]** A cross-scene pins teleport left the player's view where it was (live play-test round 7,
+  R7-13): into the scene the player already viewed nothing is drawn, so core never panned, and back through the
+  safety net's view the view sat at the scene's default centre. The pinned player's client now centres on the
+  pinned token (a 250 ms pan) when it is created on the scene that client shows, and after any view pins itself
+  asks for. New hook `createToken: arrival pan`.
+
 ## 0.5.2 — 2026-11-22
 
 - **Fixed [declared]** `teleport` refused with AMBIGUOUS, and the audit reported MANY_TOKENS, when unlinked

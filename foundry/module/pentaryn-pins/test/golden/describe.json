@@ -231,6 +231,10 @@
       "label": "moveToken: level gap"
     },
     {
+      "name": "createToken",
+      "label": "createToken: arrival pan"
+    },
+    {
       "name": "renderSceneNavigation",
       "label": "renderSceneNavigation: back tab"
     },

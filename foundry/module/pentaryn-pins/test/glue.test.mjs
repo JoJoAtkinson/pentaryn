@@ -747,6 +747,42 @@ test("14b wild shape the dnd5e 6.0.6 linked way: token → form actor (actorLink
   }
 });
 
+test("R7-13: a cross-scene teleport centres the view on the pinned token, into the scene already viewed and through the safety net's view", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const pans = [];
+  const before = { animatePan: canvas.animatePan, tokens: canvas.tokens };
+  canvas.animatePan = o => { pans.push(o); return Promise.resolve(true); };
+  canvas.tokens = { get: id => (taloTok().find(d => d.id === id) ? { center: { x: 2250, y: 1550 } } : undefined) };
+  try {
+    // Already viewing C: the token arrives there, nothing is drawn, the view is centred on it.
+    reset();
+    at(C);
+    carryTalo(IDS.sceneC);
+    await flush();
+    assert.deepEqual(F.views, [], "no draw: the scene is already viewed");
+    assert.deepEqual(pans.map(p => [p.x, p.y]), [[2250, 1550]], "centred on the arrived token");
+    // Back to B, viewed from C: the safety net views B, then centres on the token there.
+    pans.length = 0;
+    reset();
+    at(C);
+    carryTalo(IDS.sceneB);
+    t.mock.timers.tick(NET_GRACE_MS);
+    await flush();
+    assert.deepEqual(F.views.map(v => v[0]), [IDS.sceneB], "the safety net's view");
+    assert.deepEqual(pans.map(p => [p.x, p.y]), [[2250, 1550]], "then centred on it");
+    // A token of someone else's arriving pans nothing.
+    pans.length = 0;
+    F.createToken(IDS.sceneB, { id: "otherTok00000001", name: "Mira", actorId: IDS.mira ?? "miraActor0000001", level: null });
+    await flush();
+    assert.deepEqual(pans, [], "not my pin: no pan");
+  } finally {
+    canvas.animatePan = before.animatePan;
+    canvas.tokens = before.tokens;
+    restoreTalo();
+    at(B, IDS.levelB2);
+  }
+});
+
 test("15 a GM and an unpinned player are unaffected", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   for (const userId of [IDS.miraUser, IDS.gm]) {

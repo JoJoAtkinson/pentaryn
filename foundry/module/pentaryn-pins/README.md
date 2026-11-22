@@ -19,7 +19,7 @@ the token moves them. A move reaches them the way core moves anyone: whoever mov
 Teleport), core's Teleport Token region, a portal hop. Pins only fills the gaps: a GM cut-and-paste
 across scenes (nobody pulls) is caught by a safety net after 1.5 s, a level change core's own level
 switch will not follow is followed, and a pull that lands while their map is still loading (core
-drops it with "cannot switch Scenes") is carried out when the load ends. Activating the token's own
+drops it with "cannot switch Scenes") is carried out when the load ends. When the pinned token arrives on the scene the player views (a cross-scene teleport, 0.5.3), and after any view pins asks for, the view is centred on it. Activating the token's own
 scene while they look elsewhere lands them on the token's floor, controlling it. They may click the
 scene nav to look at another map (nothing redirects them); while they do, the nav shows a
 **"⟵ {character}"** tab (unreleased, triage A) that takes them back to the token's scene and floor
@@ -124,7 +124,7 @@ before each pull it sends, and pins' `prepull.mjs` answers it.
 | `pentaryn-pins.audited` | `(result)` | the switch went on; on the GM client whose user changed it |
 | `pentaryn-pins.ready` | `(api)` | the API is published |
 
-Listens to: `deleteToken`, `moveToken`, `renderSceneNavigation`, `createToken`, `renderBaseActorSheet`, `updateUser`, `deleteUser`,
+Listens to: `deleteToken`, `moveToken`, `createToken` (the arrival pan), `renderSceneNavigation`, `createToken`, `renderBaseActorSheet`, `updateUser`, `deleteUser`,
 `canvasReady`, `canvasTearDown`, `canvasPan`, `ready` and `pentaryn-portals.prePull` (pinned in
 `test/golden/hooks.json`), and core's own `pullToScene` socket event (`game.socket.on`, attached at
 `ready`, after core's `Game#activateSocketListeners`; never emitted by pins).

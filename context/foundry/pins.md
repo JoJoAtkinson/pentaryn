@@ -40,7 +40,8 @@ never by copying it. A **pin** binds a character (Actor) to a player (User). Wit
   GM cut-and-paste to another scene is caught by a safety net about 1.5 s later. A level change on
   the same scene is followed by core, or by pins where core will not (the player keeps a pet with
   sight on the old floor). A pull that arrives while their map is still loading shows core's
-  "cannot switch Scenes" warning once, then is carried out when the load ends.
+  "cannot switch Scenes" warning once, then is carried out when the load ends. When the character
+  arrives on the map they view (a cross-scene teleport), the view is centred on it (0.5.3).
 - They may **click the scene nav to look at another map**; nothing sends them back until their
   token moves, its scene is activated, or the GM pulls them.
 - **The way back** (triage A, `fpnsNR`; unreleased): while they look at another map, the scene nav

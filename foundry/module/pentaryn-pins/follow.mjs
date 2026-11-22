@@ -15,6 +15,10 @@
  *                        view it. A loading canvas is waited out, never given up on.
  *   moveToken            a level gap-filler (§5.2): the token moved to another level of the viewed
  *                        scene and core's own level switch will not follow (a sighted pet left behind).
+ *   createToken          the arrival pan (R7-13): the pinned token created on the scene the player
+ *                        views (a cross-scene teleport into it), or a pins view of its scene, centres
+ *                        the view on it. Core's own draw pans only when it draws, and a teleport to the
+ *                        scene already viewed draws nothing.
  *   renderSceneNavigation  the way back (triage A): while the player views another scene and core
  *                        draws no tab for the token's (a map with `navigation: false`), a
  *                        "⟵ {character}" tab; a click views the token's scene and level with the
@@ -118,8 +122,39 @@ function viewTo(sceneId, options, reason, since) {
   if (lastPull > since) return false;
   pendingPull = null;
   C.emit("followed", { scene: sceneId, level: options?.level ?? null, reason });
-  Promise.resolve(scene.view(options)).catch(err => C.log.error("view failed", err));
+  Promise.resolve(scene.view(options))
+    .then(() => panToPin("view: pan to the pin"))
+    .catch(err => C.log.error("view failed", err));
   return true;
+}
+
+/* ── R7-13 the arrival pan ─────────────────────────────────────────────── */
+
+/** How long the arrival pan takes (ms). */
+const PAN_MS = 250;
+
+/**
+ * Once the canvas has settled: when this client's pinned token is on the scene it shows, centre the
+ * view on it (live R7-13: a cross-scene pins teleport left the view at (550, 1350), or at the scene's
+ * default centre, while the token stood elsewhere; a same-scene teleport already recentred).
+ */
+function panToPin(where) {
+  whenSettled(() => {
+    const t = safeTarget(where);
+    if (!t || !canvas?.ready || canvas.scene?.id !== t.scene) return;
+    const obj = canvas.tokens?.get?.(t.token.id) ?? t.token.doc?.object ?? null;
+    const c = obj?.center;
+    if (!c || !Number.isFinite(c.x) || !Number.isFinite(c.y) || typeof canvas.animatePan !== "function") return;
+    Promise.resolve(canvas.animatePan({ x: c.x, y: c.y, duration: PAN_MS })).catch(err => C.log.warn("pan failed", err));
+  }, where);
+}
+
+/** createToken, the pinned player's client: the pinned token arrived; centre on it if it is on the viewed scene. */
+function onCreateToken(doc) {
+  const root = myRoot();
+  if (!root || rootOfToken(doc) !== root) return;
+  if (doc.parent?.id !== canvas?.scene?.id) return;     // created elsewhere: a view of it pans when it comes
+  panToPin("createToken: arrival pan");
 }
 
 /** Run `fn` now when the canvas is not loading, else once it stops (poll every NET_POLL_MS, no cap). */
@@ -345,6 +380,7 @@ export function install(reg, ctx) {
   installPatches(ctx);
   reg.on("deleteToken", doc => onDeleteToken(doc), { label: "deleteToken: safety net" });
   reg.on("moveToken", (doc, movement, _operation, user) => onMoveToken(doc, movement, user), { label: "moveToken: level gap" });
+  reg.on("createToken", doc => onCreateToken(doc), { label: "createToken: arrival pan" });
   reg.on("renderSceneNavigation", (app, element) => decorateNav(app, element), { label: "renderSceneNavigation: back tab" });
   navUnsubscribe = onPinningChange(() => globalThis.ui?.nav?.render?.());
   if (globalThis.game?.ready) attachPullReplay(ctx);              // a hot re-import after ready

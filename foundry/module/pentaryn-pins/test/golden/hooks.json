@@ -21,6 +21,10 @@
   },
   {
     "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
     "name": "renderSceneNavigation"
   },
   {
