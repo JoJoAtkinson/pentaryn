@@ -13,7 +13,7 @@
 export const MODULE = "pentaryn-movement";
 export const SHORT = "movement";
 export const NS = "movement";                          // game.pentaryn.movement
-export const VERSION = "0.4.4";                        // === module.json version (a test pins it)
+export const VERSION = "0.4.5";                        // === module.json version (a test pins it)
 export const CONTRACT = "pentaryn-movement/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_MOVEMENT";
 export const CSS = Object.freeze({ blocked: "pm-blocked", hud: "pm-ghost-combat" });

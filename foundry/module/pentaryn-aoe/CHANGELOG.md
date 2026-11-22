@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **0.8.5 (2026-11-22). Live play-test round 5.**
+  - **[declared] The wall panel hint names the gesture that rotates (R5-7).** A plain mouse wheel zooms the
+    canvas during placement; Shift+wheel turns the panel (15° a notch). The counter now reads "Panel n of N:
+    Shift+wheel rotates, Esc to finish, right-click skips a panel".
 - **0.8.4 (2026-11-22). Live play-test round 4.**
   - **[declared] Wall panels keep their turn (R4-10).** Core starts each shape of a multi-panel placement at
     its own data's rotation, so panels turned one by one came out as a comb. Each new panel now starts, on

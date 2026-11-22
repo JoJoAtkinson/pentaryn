@@ -1,5 +1,30 @@
 # Changelog — pentaryn-movement
 
+## 0.4.5 — 2026-11-22
+
+Live play-test round 5 (a Mac browser through the tunnel, the BOSS harness).
+
+- **[declared] A reload mid group move no longer loses the last waves (R5-2).** Between a reload's start and
+  the old page's end its timers still fire: 0.4.3/0.4.4 took the due wave off the tab's record, then sent it
+  over a socket that was closing, so the update was lost and the reloaded page had nothing to resume (the
+  grabbed token, in the last wave, stayed at its start; reproduced on BOSS: `pend` held the anchor's wave
+  1.2 s in, `resumed` null after). On `beforeunload` / `pagehide` a due wave is held in the record (sent
+  2 s later if the page stays), and a wave leaves the record only once the server answered the update.
+- **[declared] No member rests on another when a door shuts mid-walk (R5-1).** The free-square check before
+  a shut door now also counts where core will stop a token that is still walking with waypoints to go (its
+  own `constrainMovementPath` over its pending waypoints), and once a group this client sent is at rest a
+  member left on top of another token steps to the nearest free whole cell it reaches in a straight line
+  (a walk; a displace in a fight). `status().group.destacked`.
+- **[declared] A click on a moving token over a door's icon stops the token, not the door (R5-3).**
+  `DoorControl#_onMouseDown` is wrapped (row `movement-click-stop-door`, marker `__pentarynMovementDoor`;
+  eight patches): a press there with a token this client could stop drawn under it stops and selects the
+  token and never toggles the door. A click-stop whose body would rest across a door's line, open or shut,
+  rests on the nearest whole cell beside it.
+- **[declared] A straight drag bends round a teleport / change-level region (R5-4).** Core's whole path was
+  returned untouched when no wall cut it, so a single drag walked into a scene link (the player's view jumped
+  to its destination). When core's line enters such a region the drag neither starts nor ends in, every leg
+  is searched round it; with no way round, core's line stays.
+
 ## 0.4.4 — 2026-11-22
 
 Live play-test round 4 (a Mac browser through the tunnel, the BOSS harness).
