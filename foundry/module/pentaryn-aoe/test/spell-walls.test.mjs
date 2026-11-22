@@ -317,10 +317,12 @@ test("B2: breaking a section (GM) cuts the region's shape, its walls follow, a t
   assert.deepEqual(F.calls.filter(c => c.op === "notify").map(c => [c.level, c.message]), [["info", "Wall of Stone: a section is broken."]], "one toast");
   assert.deepEqual(SW.wallsFor(r.id)?.walls.length, 2);
   assert.equal(SW.wallsFor(r.id)?.repairable, true);
+  assert.deepEqual(SW.wallsFor(r.id)?.broken, ["1:0"], "the knocked-out section is listed (live R1 D-6), against the panels as cast");
 
   await SW.breakWallSection(r, 0, 0);
   await flush();
   assert.deepEqual(r.shapes.map(x => x.x), [1400]);
+  assert.deepEqual(SW.wallsFor(r.id)?.broken, ["0:0", "1:0"]);
   const back = await SW.repairWall(r);
   await flush();
   assert.deepEqual(back, { regionId: r.id, panels: 3 });
@@ -523,4 +525,15 @@ test("0.8.1: a wall spell's handle sits just outside its wall (half a square bef
   assert.equal(wallHandleCentre({ type: "line", x: 20, y: 500, rotation: 0, length: 200 }, { gridSize: 100, bounds: { width: 3000, height: 2000 } }), null, "off the scene: the caller keeps the anchor");
   assert.equal(wallHandleCentre({ type: "rectangle", x: 0, y: 0, width: 10, height: 10 }), null);
   assert.equal(wallHandleCentre(null), null);
+});
+
+test("B2 (live R1 D-6): brokenLineSections lists a section cut out of the middle of a long panel, against the panel as cast", async () => {
+  const { brokenLineSections, breakSection } = await import("../core.mjs");
+  const panel = { type: "line", x: 100, y: 200, length: 600, rotation: 90, width: 10 };
+  const cut = breakSection([panel], 0, 2, 100).shapes;
+  assert.equal(cut.length, 2, "split in two");
+  assert.deepEqual(brokenLineSections([panel], cut, 100), ["0:2"]);
+  assert.deepEqual(brokenLineSections([panel], [panel], 100), [], "nothing cut, nothing listed");
+  const again = breakSection(cut, 1, 0, 100).shapes;          // the first section of the far piece: the cast panel's section 3
+  assert.deepEqual(brokenLineSections([panel], again, 100), ["0:2", "0:3"]);
 });

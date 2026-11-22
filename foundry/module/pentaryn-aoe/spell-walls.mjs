@@ -33,7 +33,7 @@
  * with concentration, as its region does).
  */
 
-import { MODULE, aoeFlags, alreadyExists, breakSections, diffWalls, doesNotExist, isClearAll, isTemplateRegion, restoreShapes, sectionPixels, wallMidpoint, wallPlan, wallStanding } from "./core.mjs";
+import { MODULE, aoeFlags, alreadyExists, breakSections, brokenLineSections, diffWalls, doesNotExist, isClearAll, isTemplateRegion, restoreShapes, sectionPixels, wallMidpoint, wallPlan, wallStanding } from "./core.mjs";
 import { handleFor, shapesOf, spellWallsOf, wallKindOf } from "./scene-adapter.mjs";
 import { onSettingChange, setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -246,7 +246,22 @@ async function repairRegion(region) {
   return { regionId: region.id, panels: shapes.length };
 }
 
-/** GM, read: a region's wall spell, its walls, what is broken. null for anything that is not a wall spell. */
+/** The broken sections of a wall spell's region: its round chords and its cut line sections. */
+function brokenOf(region, flags) {
+  const out = [...(flags.wallBroken ?? [])];
+  if (flags.wallOriginal) {
+    const grid = region.parent?.grid;
+    const lines = brokenLineSections(restoreShapes(flags.wallOriginal, handleAt(region)), shapesOf(region), sectionPixels(grid?.size, grid?.distance));
+    for (const k of lines) if (!out.includes(k)) out.push(k);
+  }
+  return out;
+}
+
+/**
+ * GM, read: a region's wall spell, its walls, what is broken. null for anything that is not a wall spell.
+ * `broken` lists the sections knocked out, as "panel:section" against the panels the wall was cast with:
+ * a round wall's chords (its flags) and a line panel's cut sections (against its original shapes).
+ */
 export function wallsFor(ref) {
   const region = regionOf(ref);
   const kind = region ? wallKindOf(region) : null;
@@ -256,7 +271,7 @@ export function wallsFor(ref) {
     regionId: region.id, spell: kind.id,
     blocks: { move: kind.move > 0, sight: kind.sight > 0, areas: kind.move > 0 && (kind.sight > 0 || kind.clipsAreas) },
     walls: spellWallsOf(region.parent, region.id).map(w => ({ id: w.id, panel: w.flags[MODULE].panel, section: w.flags[MODULE].section, c: [...(w._source?.c ?? w.c)] })),
-    broken: [...(flags.wallBroken ?? [])], repairable: !!flags.wallOriginal || !!(flags.wallBroken ?? []).length,
+    broken: brokenOf(region, flags), repairable: !!flags.wallOriginal || !!(flags.wallBroken ?? []).length,
   };
 }
 

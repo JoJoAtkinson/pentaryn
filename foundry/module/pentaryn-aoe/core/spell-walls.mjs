@@ -267,6 +267,34 @@ export function breakSections(shapes, list, secPx) {
 }
 
 /**
+ * B2: the sections knocked out of a wall's line panels, as brokenKey strings against the panels it was
+ * cast with (0.8.2, live R1 D-6: a cut line panel was listed nowhere). An original section is broken
+ * when no current line panel covers its midpoint. A round wall's chords are listed in its flags instead.
+ * @param {object[]} original  the shapes before the first break, moved to where the wall is now (restoreShapes)
+ * @param {object[]} current   the region's shapes now
+ * @param {number} secPx       sectionPixels()
+ * @returns {string[]}
+ */
+export function brokenLineSections(original, current, secPx) {
+  const lines = (current ?? []).filter(sh => sh?.type === "line" && Number(sh.length) > 0);
+  const covered = p => lines.some(sh => {
+    const a = (Number(sh.rotation) || 0) * Math.PI / 180;
+    const ux = Math.cos(a), uy = Math.sin(a);
+    const dx = p.x - (Number(sh.x) || 0), dy = p.y - (Number(sh.y) || 0);
+    const along = dx * ux + dy * uy, across = Math.abs(dy * ux - dx * uy);
+    return across < 1 && along > -0.5 && along < Number(sh.length) + 0.5;
+  });
+  const out = [];
+  (original ?? []).forEach((shape, panel) => {
+    if (shape?.type !== "line") return;
+    panelSections(shape, secPx).forEach(([x1, y1, x2, y2], section) => {
+      if (!covered({ x: (x1 + x2) / 2, y: (y1 + y2) / 2 })) out.push(brokenKey(panel, section));
+    });
+  });
+  return out;
+}
+
+/**
  * B2: the shapes a broken wall had before its first break, moved by however far the wall has been
  * dragged since (`at` = the handle's position then, `now` = its position now; no handle → as stored).
  * @param {{ shapes: object[], at?: {x: number, y: number}|null }} original  flags.pentaryn-aoe.wallOriginal
