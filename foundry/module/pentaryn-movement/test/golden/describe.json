@@ -446,6 +446,10 @@
       "label": "setup: wrap _prepareDragLeftDropUpdates (group movement)"
     },
     {
+      "name": "ready",
+      "label": "ready: resume a group's waves after a reload"
+    },
+    {
       "name": "setup",
       "label": "setup: wrap _onClickLeft (click to stop)"
     },

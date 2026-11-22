@@ -106,6 +106,11 @@ export function narrowPoints(token, points, rmax, s) {
   const out = [];
   const reach = 4 * rmax * s;
   const z = token.document?._source?.elevation ?? 0;
+  // Core computes no polygon from an origin off the canvas: it warns once per ray (live R3-6, 330 warnings
+  // in one planGroup near the scene edge). Such a point has no room at all; it is narrow, no ray cast.
+  const dims = globalThis.canvas?.dimensions;
+  const inside = o => !dims || !(dims.width > 0) || !(dims.height > 0)
+    || (o.x >= 0 && o.x <= dims.width && o.y >= 0 && o.y <= dims.height);
   const across = (o, dir, side) => {
     let best = reach;
     for (const a of PROBE) {
@@ -127,7 +132,7 @@ export function narrowPoints(token, points, rmax, s) {
     const dir = { x: (q.x - p.x) / L, y: (q.y - p.y) / L };
     for (let t = 0; t <= L + 1e-9; t += 0.25) {
       const o = { x: (p.x + dir.x * t) * s, y: (p.y + dir.y * t) * s, elevation: z };
-      if (across(o, dir, 1) + across(o, dir, -1) < reach - 1e-6) out.push({ x: o.x / s, y: o.y / s });
+      if (!inside(o) || across(o, dir, 1) + across(o, dir, -1) < reach - 1e-6) out.push({ x: o.x / s, y: o.y / s });
     }
   }
   return out;
@@ -136,10 +141,22 @@ export function narrowPoints(token, points, rmax, s) {
 /**
  * Where a token is drawn now (top-left pixels): during a movement animation core writes the tween's
  * values onto the document's derived x / y, while `_source` already holds the checkpoint ahead.
+ * One exception (live R3-3 / R3-4): any re-preparation of a moving token's document (an update that
+ * moves nothing, an effect, a delta) puts its derived x / y back on the source, the destination, until
+ * the tween's next frame writes them again. In that window the document says "at the destination"
+ * while the screen still shows the token where the last frame drew it; a click-stop that read it put
+ * the token at its destination (a member "jumped 1456 px into the group"). While a movement tween runs
+ * and the derived position equals the source, the placeable's own position (what was last drawn) is
+ * the answer.
  */
 export function drawnPosition(token) {
   const doc = token.document;
-  return { x: Math.round(doc.x), y: Math.round(doc.y), elevation: doc.elevation };
+  const src = doc?._source;
+  const pos = token.position;
+  let x = doc.x, y = doc.y;
+  if (src && pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) && doc.x === src.x && doc.y === src.y
+    && movementFacts(token).animating) { x = pos.x; y = pos.y; }
+  return { x: Math.round(x), y: Math.round(y), elevation: doc.elevation };
 }
 
 /** The movement facts click-to-stop decides on. */

@@ -442,7 +442,7 @@ test("R2-9: another client that receives a stop's displace and still draws the t
   F.fire("updateToken", t.document, { x: 900, y: 200 }, {}, "otherUser0000001");
   F.fire("updateToken", t.document, { name: "x" }, { animate: false }, "otherUser0000001");
   mock.timers.tick(1000);
-  assert.equal(F.calls.slice(n).filter(c => c.op === "stopAnimation" && c.id === t.document.id).length, 1, "only the R2-9 resync's own second check, 250 ms on");
+  assert.equal(F.calls.slice(n).filter(c => c.op === "stopAnimation" && c.id === t.document.id).length, 1, "only the watch's next check (100 ms on)");
 });
 
 test("click to stop in combat: the initiator calls stopMovement, another client asks the GM", () => {
@@ -933,4 +933,167 @@ test("D-1: a group drop that runs out of planning time is core's, but no two mem
   }
   for (const e of Object.values(ends)) assert.equal(e.checkpoint, true);
   mock.timers.tick(60000);
+});
+
+/* ---- Live play-test round 3 ---- */
+
+const PENDING = "pentaryn-movement.pendingWaves";
+function fakeSession() {
+  const store = new Map();
+  globalThis.sessionStorage = {
+    getItem: k => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => { store.set(k, String(v)); },
+    removeItem: k => { store.delete(k); },
+  };
+  return store;
+}
+
+test("R3-1: a group's unsent waves are kept in this tab's sessionStorage (for a reload) and taken off as they go out", () => {
+  const store = fakeSession();
+  try {
+    combatFlag = false;
+    clock.step = 0;
+    const ts = [makeToken("pnA0000000000001", 400, 200), makeToken("pnB0000000000001", 300, 200), makeToken("pnC0000000000001", 500, 200)];
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    const first = new Set(out[0].map(u => u._id));
+    const waiting = ts.map(t => t.document.id).filter(id => !first.has(id));
+    assert.ok(waiting.length > 0, "at least one member waits for a later wave");
+    const recs = JSON.parse(store.get(PENDING));
+    assert.equal(recs.length, 1);
+    const rec = recs[0];
+    assert.equal(rec.sceneId, SCENE);
+    assert.equal(rec.user, game.user.id);
+    assert.equal(rec.world, game.world.id);
+    assert.deepEqual(rec.waves.flatMap(w => w.updates.map(u => u._id)).sort(), [...waiting].sort(), "exactly the waiting members");
+    for (const w of rec.waves) for (const u of w.updates) assert.ok(w.movement[u._id]?.waypoints?.length, "each with its route");
+    assert.deepEqual(rec.starts[waiting[0]], { x: sceneTokens.get(waiting[0])._source.x, y: sceneTokens.get(waiting[0])._source.y });
+    for (let i = 0; i < 80; i++) mock.timers.tick(100);
+    assert.equal(store.has(PENDING), false, "all sent: nothing left to resume");
+  } finally {
+    delete globalThis.sessionStorage;
+  }
+});
+
+test("R3-1: a stopped group leaves nothing to resume after a reload", () => {
+  const store = fakeSession();
+  try {
+    combatFlag = false;
+    clock.step = 0;
+    const ts = [makeToken("psA0000000000001", 400, 200), makeToken("psB0000000000001", 300, 200), makeToken("psC0000000000001", 500, 200)];
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.ok(store.has(PENDING));
+    const moving = sceneTokens.get(out[0][0]._id).object;
+    moving.animationContexts.set(moving.movementAnimationName, {});
+    clock.t += MOTION.armMs;
+    moving._onClickLeft({});
+    assert.equal(store.has(PENDING), false);
+    moving.animationContexts.clear();
+  } finally {
+    delete globalThis.sessionStorage;
+  }
+});
+
+test("R3-2: after a stop's displace a movement tween that runs on (no newer movement) is stopped at the source, and a drawn position left off it is reset", () => {
+  combatFlag = false;
+  const t = makeToken("strA000000000001", 100, 100);
+  t.document.movement = { id: "mvStop0000000001", state: "completed", user: { isSelf: true } };
+  t.document._source = { ...t.document._source, x: 1800, y: 800 };
+  t.document.x = 1800; t.document.y = 800;
+  t.animationContexts.clear();
+  const stops = [];
+  t.stopAnimation = function (opts) {
+    stops.push(opts ?? null);
+    if (!opts) { this.animationContexts.clear(); this.document.x = this.document._source.x; this.document.y = this.document._source.y; }
+  };
+  F.fire("updateToken", t.document, { x: 1800, y: 800 }, { animate: false }, "otherUser0000001");
+  mock.timers.tick(0);
+  assert.deepEqual(stops, [], "in step: nothing to do");
+  // 400 ms on, the token walks on through the door with no newer movement (live R3-2).
+  for (let i = 0; i < 4; i++) mock.timers.tick(100);
+  t.animationContexts.set(t.movementAnimationName, {});
+  t.document.x = 1650; t.document.y = 830;
+  mock.timers.tick(100);
+  assert.deepEqual(stops, [null], "the stray tween is stopped");
+  assert.deepEqual([t.document.x, t.document.y], [1800, 800], "drawn where the server has it");
+  // A stale frame later, at rest: reset again.
+  for (let i = 0; i < 5; i++) mock.timers.tick(100);
+  t.document.x = 1200;
+  mock.timers.tick(100);
+  assert.equal(stops.length, 2);
+  assert.equal(t.document.x, 1800);
+  // A newer movement is its own: never touched.
+  t.document.movement = { id: "mvNewer000000001", state: "completed", user: { isSelf: true } };
+  t.animationContexts.set(t.movementAnimationName, {});
+  t.document.x = 1500;
+  for (let i = 0; i < 10; i++) mock.timers.tick(100);
+  assert.equal(stops.length, 2);
+  assert.equal(t.document.x, 1500);
+  t.animationContexts.clear();
+  // And the watch ends: a fresh unanimated move 3 s later is a new watch, the old one is gone.
+  t.document.movement = { id: "mvStop0000000002", state: "completed", user: { isSelf: true } };
+  t.document.x = 1800;
+  F.fire("updateToken", t.document, { x: 1800, y: 800 }, { animate: false }, "otherUser0000001");
+  for (let i = 0; i < 35; i++) mock.timers.tick(100);
+  t.document.x = 1000;
+  for (let i = 0; i < 5; i++) mock.timers.tick(100);
+  assert.equal(stops.length, 2, "past the watch window the token is left alone");
+});
+
+test("R3-4: a click while a moving token's document was just re-prepared (derived position = its destination) stops it where it is drawn", () => {
+  combatFlag = false;
+  const t = makeToken("drwA000000000001", 100, 100);
+  t.document._source = { ...t.document._source, x: 1800, y: 100 };   // the destination
+  t.document.x = 1800; t.document.y = 100;                           // re-prepared: derived = source until the next frame
+  t.position = { x: 420, y: 100 };                                   // where the last frame drew it
+  t.animationContexts.set(t.movementAnimationName, {});
+  const from = F.calls.length;
+  t._onClickLeft({});
+  const move = F.calls.slice(from).find(c => c.op === "move");
+  assert.equal(move.waypoints[0].x, 420, "not put at its destination");
+  assert.equal(move.waypoints[0].y, 100);
+  // Mid-frame (derived ≠ source) the document's own derived position is the drawn one, as before.
+  const u = makeToken("drwB000000000001", 100, 100);
+  u.document._source = { ...u.document._source, x: 1800, y: 100 };
+  u.document.x = 610; u.document.y = 100;
+  u.position = { x: 600, y: 100 };
+  u.animationContexts.set(u.movementAnimationName, {});
+  const n = F.calls.length;
+  u._onClickLeft({});
+  assert.equal(F.calls.slice(n).find(c => c.op === "move").waypoints[0].x, 610);
+  t.animationContexts.clear();
+  u.animationContexts.clear();
+});
+
+test("R3-6: the width probe casts no ray from a point off the canvas (core warns once per ray there); such a point has no room", async () => {
+  const { narrowPoints } = await import("../group-adapter.mjs");
+  const saved = F.canvas.dimensions;
+  F.canvas.dimensions = { ...saved, width: 1000, height: 1000 };
+  const t = makeToken("nrwA000000000001", 100, 100);
+  const origins = [];
+  t.checkCollision = (dest, { origin }) => { origins.push(origin); return null; };
+  try {
+    // A probe beside a slot candidate just off the left edge (x -0.5 squares), and one on open ground.
+    const off = narrowPoints(t, [{ x: -0.5, y: 4 }, { x: -0.49, y: 4 }], 0.5, S);
+    assert.equal(origins.filter(o => o.x < 0 || o.y < 0 || o.x > 1000 || o.y > 1000).length, 0, "no ray from off the canvas");
+    assert.ok(off.length > 0, "off the canvas is narrow (no room)");
+    origins.length = 0;
+    const open = narrowPoints(t, [{ x: 5, y: 5 }, { x: 5.01, y: 5 }], 0.5, S);
+    assert.deepEqual(open, [], "open ground is not narrow");
+    assert.ok(origins.length > 0, "rays are cast inside");
+  } finally {
+    F.canvas.dimensions = saved;
+  }
+});
+
+test("R3-5: planGroup's grabbed token walks the route its drag preview would show (the pathfinder's full budget), as a drop does", () => {
+  F.canvas.ready = true;
+  combatFlag = false;
+  const ts = [makeToken("dr5A000000000001", 100, 200), makeToken("dr5B000000000001", 400, 200)];
+  clock.step = 0;
+  const r = api.planGroup(ts.map(t => t.document), { x: 100, y: 600 });
+  assert.equal(r.ok, true);
+  assert.equal(r.result, "plan", JSON.stringify(r));
+  assert.equal(r.anchorRoute?.reached, true, "searched before the plan, as the drag preview is");
+  assert.ok(r.anchorRoute.waypoints > 2, "round the wall, through the door");
+  assert.deepEqual(r.members[0].slot, { x: 100, y: 600 });
 });

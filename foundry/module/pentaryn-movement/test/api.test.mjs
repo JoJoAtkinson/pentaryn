@@ -121,7 +121,7 @@ test("uninstall() leaves no hook and no patch behind; a hot re-import re-wires a
   const again = game.modules.get(MODULE).api;
   assert.notEqual(again, api);
   assert.equal(game.pentaryn.movement, again);
-  assert.deepEqual([...new Set(again.describe().hooks.map(h => h.name))], names.filter(n => n !== "setup"), "late: patched at once, no setup hook");
+  assert.deepEqual([...new Set(again.describe().hooks.map(h => h.name))], names.filter(n => n !== "setup" && n !== "ready"), "late: patched at once, no setup or ready hook (a reload's waves are resumed at once)");
   assert.equal(CONFIG.Token.objectClass.prototype._getDragConstrainOptions.__pentarynMovement, true);
   assert.equal(again.selftest().ok, true, JSON.stringify(again.selftest().checks));
   mock.timers.tick(60);

@@ -137,6 +137,10 @@
   },
   {
     "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "once",
     "name": "setup"
   },
   {

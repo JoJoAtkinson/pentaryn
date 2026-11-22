@@ -172,13 +172,63 @@ function displace(token) {
     });
 }
 
-/** updateToken, every client: after an unanimated move (a stop's displace), check the drawn position now and again shortly. */
+/** How long after an unanimated move its token is watched, and how often (ms). */
+const WATCH_MS = 3000;
+const WATCH_EVERY_MS = 100;
+/** token id → the watch on it (one per token; a newer unanimated move replaces it). */
+const watches = new Map();
+
+/**
+ * After an unanimated move (a stop's displace, a teleport), until a newer movement starts or WATCH_MS
+ * pass: a movement tween still running is a stray (the update stopped every tween; nothing may walk
+ * the token on without a newer movement), so it is stopped at the source; at rest, a drawn position
+ * off the source is reset to it. Live R3-2: the document stopped east of a door while the drawn token
+ * walked on through it and stayed there; the 0 / 250 ms checks of 0.4.2 found it still animating and
+ * never looked again.
+ */
+function settle(token, movementId) {
+  try {
+    if (!token || token.destroyed) return false;
+    const doc = token.document;
+    if (!doc?._source || (doc.movement?.id ?? null) !== movementId) return false;
+    if (movementFacts(token).animating) {
+      token.stopAnimation?.();
+      return true;
+    }
+    return resync(token);
+  } catch (err) {
+    log?.debug?.("settle", err);
+    return false;
+  }
+}
+
+function watch(token) {
+  const doc = token?.document;
+  if (!doc?.id) return;
+  const id = doc.id;
+  const movementId = doc.movement?.id ?? null;
+  const w = { movementId, left: Math.ceil(WATCH_MS / WATCH_EVERY_MS), timer: null };
+  const prior = watches.get(id);
+  if (prior) clearTimeout(prior.timer);
+  watches.set(id, w);
+  const tick = () => {
+    if (watches.get(id) !== w) return;
+    if (!feature || token.destroyed || (doc.movement?.id ?? null) !== movementId || w.left-- <= 0) {
+      watches.delete(id);
+      return;
+    }
+    settle(token, movementId);
+    w.timer = setTimeout(tick, WATCH_EVERY_MS);
+  };
+  w.timer = setTimeout(tick, 0);
+}
+
+/** updateToken, every client: after an unanimated move (a stop's displace), watch the token until it is drawn where the server has it. */
 function onUnanimatedMove(doc, changes, options) {
   if (options?.animate !== false || !changes || !("x" in changes || "y" in changes)) return;
   const token = doc?.object;
   if (!token) return;
-  setTimeout(() => resync(token), 0);
-  setTimeout(() => resync(token), RESYNC_MS);
+  watch(token);
 }
 
 /** Stop one token by the table's decision. */
@@ -253,7 +303,8 @@ export function movingTokenAt(p, { modifiers = false } = {}) {
     if (!doc || t.isPreview || t.destroyed) continue;
     const s = gridSize(t);
     const w = doc._source?.width ?? doc.width ?? 1, h = doc._source?.height ?? doc.height ?? 1;
-    const d = Math.hypot(p.x - (doc.x + (w * s) / 2), p.y - (doc.y + (h * s) / 2));
+    const at = drawnPosition(t);
+    const d = Math.hypot(p.x - (at.x + (w * s) / 2), p.y - (at.y + (h * s) / 2));
     if (d > (Math.max(w, h) * s) / 2 || d >= bestD) continue;
     const how = decide(t, { modifiers });
     if (!how) continue;
@@ -394,6 +445,8 @@ export function uninstall() {
   lastNative = null;
   unlistenBoard();
   starts.clear();
+  for (const w of watches.values()) clearTimeout(w.timer);
+  watches.clear();
   if (globalThis.CONFIG?.queries?.[STOP_OWN] === stopOwn) delete globalThis.CONFIG.queries[STOP_OWN];
   feature = null;
 }

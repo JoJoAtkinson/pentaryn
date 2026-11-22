@@ -39,6 +39,7 @@ let dropPatched = false;
 const groups = new Map();
 const groupOf = new Map();                 // token id → group id
 let last = null;                           // the last drop, for status()
+let resumedLast = null;                    // the last reload that picked up unsent waves, for status()
 const fallbacks = [];                      // the last few reasons a drop went to core
 /** token id → the sequence number of this client's latest drop of it: an older plan or wave never overrides a newer drop. */
 const latestDrop = new Map();
@@ -51,6 +52,104 @@ const SLICE_MS = 8;
 const ROUTE_MS = Math.max(GROUP_LIMITS.memberMs - 30, 20);
 /** How long after its last member should be at rest a group is still held as one (ms). */
 const GROUP_HOLD_MS = 1000;
+
+/* -------------------------------------------- */
+/*  Pending waves survive a reload (live R3-1)  */
+/* -------------------------------------------- */
+
+/**
+ * The later waves live in this client's timers; a reload (or a crash of the tab) used to drop them, and
+ * a member of a later wave never moved (live R3-1: Hero 3 stayed at its start). Each scheduled group's
+ * unsent waves are kept in this tab's sessionStorage (it survives a reload of the tab, nothing else
+ * reads it) and taken off as they go out; on the next `ready` this client sends what is left, the
+ * waves keeping their spacing (the first unsent one at once when it is overdue). The usual checks
+ * still apply when each goes out: the member has not moved since the drop and no newer drop of it.
+ * Records are this user's and this world's only, and older than PENDING_TTL_MS are dropped unsent.
+ */
+const PENDING_KEY = `${MODULE}.pendingWaves`;
+/** How long after its drop a group's unsent waves are still sent after a reload (ms). */
+const PENDING_TTL_MS = 60000;
+
+function sessionStore() {
+  try { return globalThis.sessionStorage ?? null; } catch { return null; }
+}
+
+function readPending() {
+  const store = sessionStore();
+  if (!store) return [];
+  try {
+    const list = JSON.parse(store.getItem(PENDING_KEY) ?? "[]");
+    return Array.isArray(list) ? list.filter(r => r && typeof r === "object") : [];
+  } catch { return []; }
+}
+
+function writePending(list) {
+  const store = sessionStore();
+  if (!store) return;
+  try {
+    if (list.length) store.setItem(PENDING_KEY, JSON.stringify(list));
+    else store.removeItem(PENDING_KEY);
+  } catch (err) { log?.debug?.("pending waves (sessionStorage)", err); }
+}
+
+/** Keep (or replace) group `gid`'s record; stale records are dropped on the way. */
+function savePending(rec) {
+  const t = Date.now();
+  let copy;
+  try { copy = JSON.parse(JSON.stringify(rec)); } catch (err) { log?.debug?.("pending waves (serialise)", err); return; }
+  writePending([...readPending().filter(r => r.gid !== rec.gid && t - (r.t0 ?? 0) <= PENDING_TTL_MS), copy]);
+}
+
+/** Take a wave (`at`), one member (`id`) or the whole group off group `gid`'s record. */
+function prunePending(gid, { at = null, id = null } = {}) {
+  const list = readPending();
+  const i = list.findIndex(r => r.gid === gid);
+  if (i < 0) return;
+  const rec = list[i];
+  if (at !== null) rec.waves = (rec.waves ?? []).filter(w => w.at !== at);
+  else if (id !== null) {
+    rec.waves = (rec.waves ?? []).map(w => ({ ...w, ids: (w.ids ?? []).filter(x => x !== id),
+      updates: (w.updates ?? []).filter(u => u?._id !== id) })).filter(w => w.updates.length);
+  } else rec.waves = [];
+  if (rec.waves.length) list[i] = rec;
+  else list.splice(i, 1);
+  writePending(list);
+}
+
+/**
+ * After a reload: send what this client's groups had left, spaced as planned. Returns how many
+ * groups were picked up (status().group.resumed.groups).
+ */
+function resumePending() {
+  const list = readPending();
+  if (!list.length) return 0;
+  writePending([]);
+  let resumed = 0;
+  const t = Date.now();
+  for (const r of list) {
+    try {
+      if ((r.world ?? null) !== (game.world?.id ?? null) || r.user !== game.user?.id) continue;
+      const age = t - (r.t0 ?? 0);
+      if (!(age >= 0) || age > PENDING_TTL_MS) continue;
+      const scene = globalThis.game?.scenes?.get?.(r.sceneId);
+      const waves = (r.waves ?? []).filter(w => Array.isArray(w?.updates) && w.updates.length).sort((a, b) => a.at - b.at);
+      if (!scene || !waves.length || !r.base) continue;
+      // Each wave as late as the first unsent one (or on time): they keep their spacing to each other.
+      const off = Math.min(age, waves[0].at);
+      const later = waves.map(w => ({ ...w, at: Math.max(w.at - off, 0) }));
+      const seq = ++dropSeq;
+      for (const w of later) for (const u of w.updates) latestDrop.set(u._id, seq);
+      const starts = new Map(Object.entries(r.starts ?? {}));
+      const ids = [...new Set([...(r.ids ?? []), ...later.flatMap(w => w.updates.map(u => u._id))])];
+      schedule(later, r.base, ids.map(id => ({ id })), { scene, seq, starts, endMs: Math.max((r.endMs ?? 0) - off, 0) });
+      resumed += 1;
+    } catch (err) {
+      log?.warnOnce?.("group-resume", "a group's waves could not be resumed after a reload (further errors suppressed)", err);
+    }
+  }
+  if (resumed) resumedLast = { at: new Date().toISOString(), groups: resumed };
+  return resumed;
+}
 
 function fellBack(reason) {
   fallbacks.unshift({ at: new Date().toISOString(), reason });
@@ -402,8 +501,14 @@ function schedule(later, base, members, { scene, seq, starts, endMs = 0 }) {
   for (const id of group.ids) groupOf.set(id, gid);
   const lastWave = later.at(-1)?.at ?? 0;
   group.timers.push(setTimeout(() => forget(gid), Math.max(endMs, lastWave) + GROUP_HOLD_MS));
+  if (later.length && scene?.id) {
+    savePending({ gid, world: game.world?.id ?? null, user: game.user?.id ?? null, sceneId: scene.id, t0: Date.now(),
+      endMs, base, ids: [...group.ids], starts: Object.fromEntries(starts ?? []),
+      waves: later.map(w => ({ at: w.at, ids: w.ids, updates: w.updates, movement: w.movement })) });
+  }
   for (const wave of later) {
     group.timers.push(setTimeout(() => {
+      prunePending(gid, { at: wave.at });
       if (group.stopped) return;
       // A member a relay stop took out of the group (groupCancel only) is not sent.
       const updates = wave.updates.filter(u => group.ids.has(u._id));
@@ -418,6 +523,7 @@ function forget(gid) {
   for (const t of g.timers) clearTimeout(t);
   for (const id of g.ids) if (groupOf.get(id) === gid) groupOf.delete(id);
   groups.delete(gid);
+  prunePending(gid);
 }
 
 /**
@@ -429,7 +535,7 @@ function groupCancel(tokenId, { only = false } = {}) {
   const gid = groupOf.get(tokenId);
   const g = gid ? groups.get(gid) : null;
   if (!g) return [];
-  if (only) { g.ids.delete(tokenId); groupOf.delete(tokenId); return [tokenId]; }
+  if (only) { g.ids.delete(tokenId); groupOf.delete(tokenId); prunePending(gid, { id: tokenId }); return [tokenId]; }
   g.stopped = true;
   const ids = [...g.ids];
   forget(gid);
@@ -572,6 +678,7 @@ function groupStatus() {
     groups: groups.size,
     last: last ? { ...last } : null,
     fallbacks: fallbacks.map(f => ({ ...f })),
+    resumed: resumedLast ? { ...resumedLast } : null,
   };
 }
 
@@ -589,21 +696,34 @@ function dryRun(refs, point) {
   if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return { ok: false, code: "BAD_ARGS", reason: "point { x, y } (top-left pixels) is required" };
   const lead = tokens[0].document._source;
   const dx = point.x - lead.x, dy = point.y - lead.y;
-  const contexts = tokens.map(t => {
+  let anchorRoute = null;
+  const contexts = tokens.map((t, k) => {
     const origin = feature.exposed.pathfindOrigin(t.document);
     const dest = { ...origin, x: origin.x + dx, y: origin.y + dy, snapped: true, explicit: true, checkpoint: true };
-    return { token: t, destination: dest, foundPath: [origin], waypoints: [] };
+    // The grabbed token gets the route its drag preview would have shown (the pathfinder's own, full
+    // budget): a real drop reuses that route, so the dry run must too. Without it the anchor was searched
+    // inside the plan's per-member budget and a maze dry run read "anchorNoRoute" / "budget" where a drop
+    // plans (live R3-5).
+    let foundPath = [origin];
+    if (k === 0) {
+      try {
+        const r = feature.exposed.pathfindRouteTo?.(t, origin, dest, { preview: true });
+        anchorRoute = { reached: !!r?.reached, ms: r?.ms ?? null, waypoints: r?.path?.length ?? 0 };
+        if (r?.reached && r.path?.length >= 2) foundPath = r.path;
+      } catch (err) { log.debug?.("dry run: the anchor's route", err); }
+    }
+    return { token: t, destination: dest, foundPath, waypoints: [] };
   });
   const info = modeFor(tokens[0], contexts);
-  if (info.mode === "core" && tokens.length > 1) return { ok: true, result: "core", reason: info.reason, members: [] };
+  if (info.mode === "core" && tokens.length > 1) return { ok: true, result: "core", reason: info.reason, anchorRoute, members: [] };
   const prep = prepare(tokens[0], contexts, { ...info, mode: info.mode === "core" ? "plan" : info.mode });
   let r = runPlan(prep.gen, GROUP_LIMITS.totalMs, now);
   while (!r.done) r = runPlan(prep.gen, GROUP_LIMITS.totalMs, now);
   const plan = r.value;
-  if (plan.result !== "plan") return { ok: true, result: "core", reason: plan.reason, members: [] };
+  if (plan.result !== "plan") return { ok: true, result: "core", reason: plan.reason, anchorRoute, members: [] };
   const s = gridSize(tokens[0]);
   return {
-    ok: true, result: "plan", reason: info.reason, combat: info.combat, constricted: plan.constricted,
+    ok: true, result: "plan", reason: info.reason, combat: info.combat, constricted: plan.constricted, anchorRoute,
     formation: plan.formation, replans: plan.replans, relaxed: plan.relaxed, ms: plan.ms,
     members: prep.members.map(m => {
       const e = plan.members[m.id];
@@ -624,6 +744,9 @@ export function install(reg, ctx) {
   log = ctx.log;
   if (ctx.late) dropPatched = patchDrop();
   else reg.once("setup", () => { dropPatched = patchDrop(); }, { guard: false, label: "setup: wrap _prepareDragLeftDropUpdates (group movement)" });
+  // A reload mid-move: this tab's unsent waves go out now (live R3-1).
+  if (ctx.late) resumePending();
+  else reg.once("ready", () => { resumePending(); }, { label: "ready: resume a group's waves after a reload" });
   ctx.expose({ groupFollower, groupCancel, groupStatus, groupDryRun: dryRun, groupPatched: () => dropPatched });
 }
 
@@ -631,11 +754,12 @@ export function uninstall() {
   dropHandle?.unwrap();
   dropHandle = null;
   dropPatched = false;
-  for (const gid of [...groups.keys()]) {
-    for (const t of groups.get(gid).timers) clearTimeout(t);
-    forget(gid);
-  }
+  // The unsent waves' records stay: a hot patch's re-import (or the next reload) sends them.
+  for (const g of groups.values()) for (const t of g.timers) clearTimeout(t);
+  groups.clear();
+  groupOf.clear();
   last = null;
+  resumedLast = null;
   fallbacks.length = 0;
   latestDrop.clear();
   feature = null;
