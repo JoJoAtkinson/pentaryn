@@ -12,6 +12,14 @@
     "name": "ready"
   },
   {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "userConnected"
+  },
+  {
     "kind": "on",
     "name": "preCreateRegion"
   },

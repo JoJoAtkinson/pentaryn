@@ -31,6 +31,40 @@ export function aoeFlags(doc) {
 /** Is this token (a TokenDocument) one of our area handles? The token flag only; see isHandleTarget. */
 export const isHandle = t => !!aoeFlags(t).handle;
 
+/**
+ * R2-2: one GM account open in two sessions (two tabs, two machines) is the active GM twice over:
+ * `activeGM.isSelf` is true on both, so both wrote the same spell walls and handles and the server
+ * refused the second (red "already exists" / "does not exist" toasts). The sessions of the active GM
+ * user elect one lead over this module's socket: the oldest session (the smallest key) that has been
+ * heard from within SESSION_TTL_MS. A background tab's timers can run once a minute, hence the long TTL;
+ * a session that closes says so (pagehide), so the next takes over at once.
+ */
+export const SESSION_BEAT_MS = 20_000;
+export const SESSION_TTL_MS = 150_000;
+/** How long a new session listens for older ones before it may lead. */
+export const SESSION_SETTLE_MS = 1500;
+
+/** A session's election key: its start time (sortable base 36) and a random tail. */
+export function sessionKey(at, rand) {
+  return `${Math.max(0, Math.floor(Number(at) || 0)).toString(36).padStart(10, "0")}-${rand}`;
+}
+
+/**
+ * R2-2: does the session `me` lead its user's sessions? `peers`: key → when it was last heard (ms).
+ * A peer not heard within `ttl` is gone; the smallest live key leads.
+ * @param {string} me
+ * @param {Map<string, number>|Iterable<[string, number]>} peers
+ * @param {number} now
+ * @param {number} [ttl]
+ */
+export function leadSession(me, peers, now, ttl = SESSION_TTL_MS) {
+  for (const [key, seen] of peers ?? []) {
+    if (!(now - seen <= ttl)) continue;
+    if (key < me) return false;
+  }
+  return true;
+}
+
 /** A server refusal because the document is already there (the other session's create won). */
 export const alreadyExists = err => /already exists/i.test(err?.message ?? "");
 

@@ -190,8 +190,8 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   go with the region and with concentration through Part A): `core.wallPlan` puts one Wall per 10-ft
   break section on each panel's centre line (a circle: a ring of chords, at least 8), and
   `core.diffWalls` turns plan versus existing walls into creates, updates and deletes. Wall ids are
-  fixed per region, panel and section (`core.wallId`) and created with `keepId`, so a second GM tab's
-  create is refused like a handle's. Each Wall is flagged `{ regionId, panel, section, spell,
+  fixed per region, panel and section (`core.wallId`) and created with `keepId`; only the active GM's lead
+  session writes them (`sessions.mjs`), and a second create, should one still happen, is refused like a handle's. Each Wall is flagged `{ regionId, panel, section, spell,
   clipsAreas }`. One sync per region at a time; `canvasReady` re-syncs the viewed scene and deletes walls
   whose region is gone (`syncWalls`).
   **Breaking.** The GM sees a small break control (a dark disc with a crack) on every section, in a
@@ -370,13 +370,23 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
 - **Player save matching** (`matchSave`, on the save message): a save that answers a waiting
   row is claimed the same way, so one tab fills the row. A save that answers no open tray is not
   claimed (no flag write on every save).
-- **Spell walls** (B2): the active GM writes them; ids fixed per region, panel and section with `keepId`,
-  so a second GM tab's create is refused ("already exists", swallowed); updates write the same values;
-  a delete the other tab made first ("does not exist") counts as done.
-- **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
+- **One lead session per account** (`sessions.mjs`, 0.8.3, live R2-2): a server refusal is caught, but
+  Foundry still shows it as a red toast and a console error, so two tabs of one GM account writing the
+  same spell walls gave four red toasts per Wall of Stone cast. The sessions of each account elect one
+  lead over the `module.pentaryn-aoe` socket (hello / here every 20 s / bye on pagehide; the oldest
+  session heard within 150 s leads; a new tab listens 1.5 s first). Spell walls, handles, concentration
+  cleanup and the sweeps run on the active GM's lead session only (`isLeadGM`); a handle create or delete
+  by the region's own author runs on that author's lead session (`isLeadSession`). A session that takes
+  the lead late (settled, or an older one gone) re-runs the startup work and syncs the viewed scene's
+  walls. Without a connected socket it is `activeGM.isSelf`, as before.
+- **Spell walls** (B2): the active GM's lead session writes them; ids fixed per region, panel and section
+  with `keepId`, so should two sessions still both write (the moment a lead hands over), a second create
+  is refused ("already exists", swallowed); updates write the same values; a delete the other tab made
+  first ("does not exist") counts as done.
+- **Everything else** on a broadcast hook runs where `isLeadGM()` (concentration cleanup, the
   ready sweep, the `canvasReady` sweep of each newly viewed scene — wired at setup on every
-  client, so a GM who takes over after ready sweeps too — the delete backstop). Two GM tabs both
-  run these. A delete the server refuses as "does not exist" (handle deletes, the concentration
+  client, so a GM who takes over after ready sweeps too — the delete backstop). Before 0.8.3 two GM
+  tabs both ran these. A delete the server refuses as "does not exist" (handle deletes, the concentration
   cleanup, the sweep's orphans) means the other tab already deleted it: that counts as done,
   nothing is logged, and the job carries on (the next scene, the rest of the sweep). Any other
   refusal is still an error.
@@ -433,6 +443,7 @@ feature's function is reached through `ctx.exposed`, never an import.
 | File | Role |
 |---|---|
 | `aoe.mjs` | entry: FEATURES, ctx, init/setup/ready, the hot-patch `install()` |
+| `sessions.mjs` | feature: one GM account in several sessions elects one lead session to write (R2-2) |
 | `core/areas.mjs` | pure area geometry behind the core barrel: centres, handle spots, which walls clip |
 | `core/spell-walls.mjs` | pure B2 rules behind the core barrel: which spells raise walls, the wall plan and diff, breaking and repairing |
 | `core.mjs` | pure: constants, rows, saves, matching, aiming, summaries |

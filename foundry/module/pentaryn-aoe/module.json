@@ -15,7 +15,7 @@
   "esmodules": ["aoe.mjs"],
   "styles": ["styles/aoe.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
-  "socket": false,
+  "socket": true,
   "protected": false,
   "flags": {
     "pentaryn": {

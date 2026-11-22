@@ -1,7 +1,7 @@
 ---
 title: "Spell areas, saves and damage (pentaryn-aoe)"
 status: active
-last_modified: 2026-11-21
+last_modified: 2026-11-22
 tags: [context, foundry, dnd5e, module]
 ---
 
@@ -48,7 +48,7 @@ area is measured on the real panel.
 **Wall spells are real walls (0.8.0, Joe's ruling 2026-11-21).** Walls are for storytelling and behave
 like the real thing: a party behind its own Wall of Stone does not know what is happening on the other
 side. The GM's client puts Wall documents along every panel (players cannot create walls, so it needs
-the GM online):
+the GM online; with the GM account open in two tabs or on two machines, only one of them writes, 0.8.3):
 
 | Spell | Blocks movement | Blocks sight |
 |---|---|---|

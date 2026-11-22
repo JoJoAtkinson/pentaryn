@@ -4,7 +4,7 @@
 // A spell's own walls never clip its own area.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, flush, MODULE } from "./fixtures/world.mjs";
+import { advance, boot, flush, MODULE } from "./fixtures/world.mjs";
 import { seams } from "./fixtures/seams.mjs";
 import {
   SPELL_WALLS, WALL_NORMAL, WALL_NONE, spellWallKind, sectionPixels, panelSections, wallId, wallPlan, diffWalls,
@@ -550,4 +550,51 @@ test("B2 (live R2-3): brokenLineSections lists a broken panel whose stretch an o
   const mid = breakSection(panels, 1, 0, 200).shapes;
   assert.deepEqual(brokenLineSections(panels, mid, 200), ["1:0"]);
   assert.deepEqual(brokenLineSections(panels, panels, 200), []);
+});
+
+/* ── R2-2: one GM account in two sessions ─────────────────────────────── */
+
+test("R2-2: leadSession — the oldest live session leads; a silent one past the TTL no longer counts", async () => {
+  const { leadSession, sessionKey, SESSION_TTL_MS } = await import("../core.mjs");
+  const old = sessionKey(1000, "aaaa"), mine = sessionKey(5000, "zzzz"), newer = sessionKey(9000, "0000");
+  assert.ok(old < mine && mine < newer, "keys sort by start time, whatever the random tail");
+  assert.equal(leadSession(mine, new Map(), 0), true, "alone: leads");
+  assert.equal(leadSession(mine, new Map([[newer, 0]]), 10), true, "a newer session never takes the lead");
+  assert.equal(leadSession(mine, new Map([[old, 0]]), 10), false, "an older live session leads");
+  assert.equal(leadSession(mine, new Map([[old, 0]]), SESSION_TTL_MS + 1), true, "an older session not heard within the TTL is gone");
+});
+
+test("R2-2: two sessions of the active GM's account — only the lead writes spell walls; the other takes over when it leaves", async () => {
+  const SS = S.sessions;
+  const handlers = {}, sent = [];
+  const saved = game.socket;
+  game.socket = { id: "socket-gm-2", connected: true, on: (ch, fn) => { handlers[ch] = fn; }, off() {}, emit: (ch, msg) => sent.push([ch, msg]) };
+  try {
+    SS.stop();
+    SS.start();
+    const ch = `module.${MODULE}`;
+    assert.deepEqual(sent.map(([c, m]) => [c, m.t]), [[ch, "hello"]]);
+    const s = wallScene("WallSessScene001");
+    const r = wallRegion(s, "regWallSess00001", stoneItem, square.map(x => ({ ...x })));
+    assert.equal(SS.isLeadGM(), false, "a new session listens before it leads");
+    assert.equal(await SW.syncRegion(r), null);
+    await advance(1600);
+    assert.equal(SS.isLeadGM(), true, "nobody older answered: it leads");
+    // An older session of the same account says hello (its tab was open first): this one answers and stands down.
+    handlers[ch]({ kind: "session", t: "hello", user: game.user.id, key: "0000000001-older" });
+    assert.equal(sent.at(-1)[1].t, "here");
+    assert.equal(SS.isLeadGM(), false);
+    assert.equal(await SW.syncRegion(r), null, "the other session writes; this one sends nothing to the server");
+    assert.equal([...s.walls.values()].length, 0);
+    // Another user's session is not part of this account's election.
+    handlers[ch]({ kind: "session", t: "bye", user: "someoneElse00001", key: "0000000001-older" });
+    assert.equal(SS.isLeadGM(), false);
+    // The older session closes: this one leads again and catches up.
+    handlers[ch]({ kind: "session", t: "bye", user: game.user.id, key: "0000000001-older" });
+    assert.equal(SS.isLeadGM(), true);
+    assert.deepEqual(await SW.syncRegion(r), { created: 3, updated: 0, deleted: 0 });
+  } finally {
+    SS.stop();
+    game.socket = saved;
+  }
 });

@@ -837,6 +837,14 @@
   "events": [],
   "hooks": [
     {
+      "name": "ready",
+      "label": "ready(sessions)"
+    },
+    {
+      "name": "userConnected",
+      "label": "userConnected(sessions)"
+    },
+    {
       "name": "preCreateRegion",
       "label": "preCreateRegion"
     },

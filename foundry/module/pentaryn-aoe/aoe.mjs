@@ -2,6 +2,7 @@
  * Pentaryn AoE (pentaryn-aoe) — ENTRY: esmodules[0]. Wiring only, no logic.
  *
  * Features, in load order (FEATURES; the file map is in README.md "Files"):
+ *   sessions.mjs     R2-2  one GM account in several sessions: only its lead session writes
  *   areas.mjs    Part A  ownership, handle tokens, delete cascade, Remove all templates, cleanup, sweep
  *   token-areas.mjs  A  areas that follow a token: instantaneous ones stay put; the Token HUD eraser
  *   careful.mjs  Part B  Careful Spell: the player picks who; the next save spell's tray protects them
@@ -37,6 +38,7 @@ import { registerQueries } from "./lib/queries.mjs";
 import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import { guardArgonBind, unguardArgonBind } from "./argon.mjs";
+import * as sessions from "./sessions.mjs";
 import * as areas from "./areas.mjs";
 import * as tokenAreas from "./token-areas.mjs";
 import * as careful from "./careful.mjs";
@@ -53,7 +55,7 @@ import * as spellWalls from "./spell-walls.mjs";
 import * as apply from "./apply.mjs";
 
 /** Features in load order: their hooks register in this order, and order within a hook name is behaviour. */
-const FEATURES = [areas, tokenAreas, careful, resolvePart, tray, attacks, effects, refund, aim, escape, walls, wallSpells, spellWalls, apply];
+const FEATURES = [sessions, areas, tokenAreas, careful, resolvePart, tray, attacks, effects, refund, aim, escape, walls, wallSpells, spellWalls, apply];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

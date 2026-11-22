@@ -16,8 +16,9 @@
  * client sees (createRegion, updateRegion — a handle drag moves the region's shapes —, deleteRegion,
  * so the walls go with the region and with concentration through Part A's cleanup). Each sync diffs the
  * region's walls against its plan (core.diffWalls). Wall ids are fixed per region, panel and section
- * (core.wallId), so a second GM session's create is refused by the server, as with handles. Syncs of one
- * region run one at a time. On canvasReady the GM re-syncs the viewed scene and deletes walls whose
+ * (core.wallId). Only the lead session of the active GM's account writes (sessions.mjs, R2-2: two
+ * sessions of one GM both wrote, and every refused duplicate was a red toast). Syncs of one region run
+ * one at a time. On canvasReady the GM re-syncs the viewed scene and deletes walls whose
  * region is gone.
  *
  * Breaking (GM only): every section has a small break control on the map, drawn in canvas.controls
@@ -41,10 +42,17 @@ import { FEATURE_ROWS } from "./api-manifest.mjs";
 
 let log = makeLog(MODULE);   // the entry's ctx.log once installed
 
+/** sessions.mjs through ctx.exposed (R2-2): the active GM's lead session; without it, activeGM.isSelf. */
+let exposed = {};
+const isLeadGM = () => (exposed.isLeadGM ? exposed.isLeadGM() : game.users?.activeGM?.isSelf === true);
+const isLeadSession = () => (exposed.isLeadSession ? exposed.isLeadSession() : true);
+const onBecomeLead = fn => exposed.onBecomeLead?.(fn);
+
 /** Option on this module's own Wall writes: deleteWall then knows the delete is not a GM's break. */
 const SYNC = "pentarynAoeWalls";
 
-const isActiveGM = () => game.users?.activeGM?.isSelf === true;
+/** The active GM, and its account's lead session (R2-2: two sessions of one GM wrote every wall twice). */
+const isActiveGM = () => isLeadGM();
 
 /* -------------------------------------------- */
 /*  The plan and the sync (active GM)           */
@@ -297,7 +305,7 @@ function onDeleteWall(wall, options, userId) {
     return;
   }
   // spellWalls off (above): a leftover wall the GM deletes is just cleanup, never a break of the area.
-  if (userId !== game.user?.id || !game.user?.isGM) return;
+  if (userId !== game.user?.id || !game.user?.isGM || !isLeadSession()) return;
   const f = wall?.flags?.[MODULE];
   const region = f?.regionId ? wall.parent?.regions?.get(f.regionId) : null;
   if (!region) return;
@@ -436,6 +444,7 @@ export function drawControls(region) {
 
 export function install(reg, ctx) {
   log = ctx.log;
+  exposed = ctx.exposed ?? {};
   const sync = label => reg.guardSwallowAsync(label, (region, ...rest) => {
     if (!isTemplateRegion(region) || !isActiveGM()) return;
     return syncRegion(region, { gone: label === "deleteRegion(walls)" });
@@ -450,6 +459,8 @@ export function install(reg, ctx) {
   reg.on("destroyRegion", reg.guardSwallowAsync("destroyRegion(wall controls)", region => (region?.isPreview ? null : dropControls(region?.document?.id))), { guard: false, label: "destroyRegion(wall controls)" });
   reg.on("canvasTearDown", reg.guardSwallowAsync("canvasTearDown(wall controls)", dropAllControls), { guard: false, label: "canvasTearDown(wall controls)" });
   reg.on("canvasReady", reg.guardSwallowAsync("canvasReady(walls)", c => isActiveGM() && syncScene(c?.scene)), { guard: false, label: "canvasReady(walls)" });
+  // The lead taken late (a new session settling, or an older one gone): catch up on the viewed scene.
+  onBecomeLead(() => syncScene(canvas?.scene));
   onSettingChange("spellWalls", () => {
     for (const region of canvas?.regions?.placeables ?? []) {
       try { drawControls(region); } catch (err) { log.warn("wall controls", err); }

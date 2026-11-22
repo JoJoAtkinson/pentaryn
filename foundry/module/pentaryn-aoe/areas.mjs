@@ -28,6 +28,12 @@ import { setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { FEATURE_ROWS } from "./api-manifest.mjs";
 
+/** sessions.mjs through ctx.exposed (R2-2): the active GM's lead session; without it, activeGM.isSelf. */
+let exposed = {};
+const isLeadGM = () => (exposed.isLeadGM ? exposed.isLeadGM() : game.users?.activeGM?.isSelf === true);
+const isLeadSession = () => (exposed.isLeadSession ? exposed.isLeadSession() : true);
+const onBecomeLead = fn => exposed.onBecomeLead?.(fn);
+
 const OWNER = 3;
 const HANDLE_ICON = "icons/svg/target.svg";
 /** The handle actor's and its prototype token's name (aoe-mnt-10: written once). */
@@ -434,6 +440,7 @@ function actionRow(html) {
 
 export function install(reg, ctx) {
   hooks = reg;
+  exposed = ctx.exposed ?? {};
   log = ctx.log;
   // Ownership on the creating client, before the document exists.
   reg.on("preCreateRegion", reg.guardSwallowAsync("preCreateRegion", (doc, data) => {
@@ -443,10 +450,10 @@ export function install(reg, ctx) {
 
   reg.on("createRegion", reg.guardSwallowAsync("createRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
-    const gm = game.users.activeGM?.isSelf;
+    const gm = isLeadGM();
     if (gm && region.ownership.default !== OWNER) await region.update({ "ownership.default": OWNER });
     if (!setting("handleTokens") || !region.shapes.length || attachedElsewhere(region)) return;
-    if (userId === game.user.id) await createHandle(region);
+    if (userId === game.user.id && isLeadSession()) await createHandle(region);
     else if (gm) {
       // Backstop for a creator whose client has no module (or no handle actor): wait, then repair.
       setTimeout(() => {
@@ -460,8 +467,8 @@ export function install(reg, ctx) {
   // repeats it shortly after in case that client couldn't.
   reg.on("deleteRegion", reg.guardSwallowAsync("deleteRegion", async (region, options, userId) => {
     if (!isTemplateRegion(region)) return;
-    if (userId === game.user.id) await deleteHandlesOf(region);
-    else if (game.users.activeGM?.isSelf) {
+    if (userId === game.user.id && isLeadSession()) await deleteHandlesOf(region);
+    else if (isLeadGM()) {
       // -9: the handle is often gone already (the deleting client got there); deleteHandlesOf
       // takes that as success, so only another error is news.
       setTimeout(() => deleteHandlesOf(region).catch(err => log.warn("backstop handle delete", err)), 1500);
@@ -489,7 +496,7 @@ export function install(reg, ctx) {
 
   // Concentration ends → that spell's areas go, on every scene.
   reg.on("deleteActiveEffect", reg.guardSwallowAsync("deleteActiveEffect", async (effect, options, userId) => {
-    if (!game.users.activeGM?.isSelf || !setting("concentrationCleanup")) return;
+    if (!isLeadGM() || !setting("concentrationCleanup")) return;
     if (!effect.statuses?.has?.(CONFIG.specialStatusEffects.CONCENTRATING ?? "concentrating")) return;
     const itemUuid = concentrationItemUuid(effect);
     if (!itemUuid) return;
@@ -501,7 +508,10 @@ export function install(reg, ctx) {
 
   // A new scene is swept by whoever is the active GM then ([declared] aoe-edge-3): wired here on
   // every client, not after readyAreas' awaits, so a failed startup or a GM handover keeps it.
-  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady", c => game.users.activeGM?.isSelf && sweep(c.scene)), { guard: false, label: "canvasReady" });
+  reg.on("canvasReady", reg.guardSwallowAsync("canvasReady", c => isLeadGM() && sweep(c.scene)), { guard: false, label: "canvasReady" });
+
+  // The lead taken late (a new session settling, or an older one gone, R2-2): its startup work now.
+  onBecomeLead(() => readyAreas());
 
   return { rows: FEATURE_ROWS.areas, impl: { sweep, ensureHandleActor, createHandle } };
 }
@@ -523,7 +533,7 @@ function concentrationItemUuid(effect) {
 
 /** Startup work for the active GM: the actor, then a sweep of the viewed scene (install() wires later scenes). */
 export async function readyAreas({ sweepOnReady = true } = {}) {
-  if (!game.users.activeGM?.isSelf) return;
+  if (!isLeadGM()) return;
   await ensureHandleActor();
   if (sweepOnReady) await sweep(canvas.scene);
 }
