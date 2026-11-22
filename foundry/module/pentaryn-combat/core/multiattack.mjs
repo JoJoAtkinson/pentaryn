@@ -20,8 +20,12 @@ function numberOf(word) {
  * Handles what dnd5e's 2024 MM and this world's homebrew write:
  *   "makes two [[/item .id]] attacks"
  *   "makes one [[/item .a]] attack and one [[/item .b]] attack" / "… and two [[/item Tail]] attacks"
- *   "makes three attacks, using [[/item .a]] or [[/item .b]] in any combination"
- *   "makes two [[/item .a]] or [[/item .b]] attacks"
+ *   "makes three attacks, using [[/item .a]] or [[/item .b]] in any combination"   → a `mix` group
+ *   "makes one [[/item .bite]] attack and three other attacks, using [[/item .a]] or [[/item .b]] in
+ *    any combination"  (Tarrasque: a fixed group, then a `mix` group)
+ *   "makes two [[/item .a]] or [[/item .b]] attacks"   (one choice for the whole group, not a mix)
+ *   "makes one [[/item .a]] attack and one [[/item .b]] attack, or it makes two [[/item .c]] attacks"
+ *    (Barbed Devil, Medusa, Clay Golem: the first routine only — the other is instead, not more swings)
  *   "makes a number of [[/item Slam]] attacks equal to half this spell's level … [[floor(@x / 2)]]{…}"
  *   "makes one Slam attack and uses Pacifying Spores"  (bare names)
  * "It can replace one attack with …" and "… uses [[/item X]]" (non-attacks) are ignored.
@@ -30,7 +34,10 @@ function numberOf(word) {
  * @param {{id: string, name: string, isAttack: boolean}[]} items  the actor's items
  * @param {object} [opts]
  * @param {(formula: string) => number|null} [opts.evalFormula]  for the summon-level formula
- * @returns {{total: number, groups: {count: number, choices: string[]}[], formula?: string}|null}
+ * A group whose text lets each swing use any of its choices ("N attacks, using A or B in any
+ * combination") carries `mix: true`: every swing of it may be a different choice. Any other group
+ * is one choice for all its swings.
+ * @returns {{total: number, groups: {count: number, choices: string[], mix?: true}[], formula?: string}|null}
  */
 export function parseMultiattack(description, items = [], { evalFormula = null } = {}) {
   if (!description) return null;
@@ -63,8 +70,13 @@ export function parseMultiattack(description, items = [], { evalFormula = null }
   text = text.replace(/\s+/g, " ").trim();
 
   // Only the sentence that says what it makes; "It can replace one attack…" is a later sentence.
-  const sentence = (text.match(/makes[^.]*\./i) ?? text.match(/makes.*/i))?.[0] ?? "";
+  // The MM's Weretiger drops the verb ("The weretiger two attacks, using …"): its "N attacks, using"
+  // clause stands in for it.
+  let sentence = (text.match(/makes[^.]*\./i) ?? text.match(/makes.*/i)
+    ?? text.match(/\b\w+\s+attacks?\s*,?\s*using\b[^.]*\.?/i))?.[0] ?? "";
   if (!sentence) return null;
+  // "…, or it makes two [C] attacks (if …)" is another routine instead of this one, never more swings.
+  sentence = sentence.replace(/\s*,?\s+or\s+(?:it|the\s+\w+)\s+makes\b.*$/i, "");
 
   const ids = s => [...s.matchAll(/⟦([^⟧]+)⟧/g)].map(m => m[1]).filter(id => id !== "-");
 
@@ -81,13 +93,16 @@ export function parseMultiattack(description, items = [], { evalFormula = null }
     return { total: count, groups: [{ count, choices }], formula };
   }
 
-  // N attacks, using [A] or/and [B] (in any combination)
-  const anyCombo = sentence.match(/makes\s+(\w+)\s+attacks?\s*,?\s*using\s+(.*?)(?:\s+in any combination|\.|$)/i);
+  // N (other) attacks, using [A] or/and [B] (in any combination): each swing picks its own.
+  // Groups named before it ("one [Bite] attack and three other attacks, using …") stay fixed.
+  const anyCombo = sentence.match(/\b(\w+)\s+(?:other\s+)?attacks?\s*,?\s*using\s+(.*?)(?:\s*in any combination|,\s*and\b|\.|$)/i);
+  let mix = null;
   if (anyCombo) {
     const count = numberOf(anyCombo[1]);
     const choices = ids(anyCombo[2]);
     if (!count || !choices.length) return null;
-    return { total: count, groups: [{ count, choices }] };
+    mix = { count, choices, mix: true };
+    sentence = sentence.slice(0, anyCombo.index);
   }
 
   // one or more "N [A] (or [B]) attack(s)" groups
@@ -109,6 +124,7 @@ export function parseMultiattack(description, items = [], { evalFormula = null }
     }
     prevEnd = m.index + m[0].length;
   }
+  if (mix) groups.push(mix);
   if (groups.length) return { total: groups.reduce((s, g) => s + g.count, 0), groups };
 
   // "makes two attacks" with no item named: only if the creature has exactly one attack.
@@ -125,7 +141,10 @@ export function multiattackPlan(parsed, { pick = {} } = {}) {
   // the HUD's picker shows the first group with a choice, which need not be group 0.
   return parsed.groups.map((g, i) => {
     const want = (pick[i] && g.choices.includes(pick[i])) ? pick[i] : (pick["*"] && g.choices.includes(pick["*"]) ? pick["*"] : null);
-    return { itemId: want ?? g.choices[0], count: g.count };
+    const row = { itemId: want ?? g.choices[0], count: g.count };
+    // A mix group's swings may each take another of its choices (the swing strip's chooser).
+    if (g.mix && g.choices.length > 1) Object.assign(row, { group: i, choices: [...g.choices] });
+    return row;
   });
 }
 

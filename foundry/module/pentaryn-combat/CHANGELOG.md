@@ -1,5 +1,29 @@
 # Changelog — Pentaryn Combat (`pentaryn-combat`)
 
+## 0.3.2 — 2026-11-21 (Multiattack "in any combination")
+
+A patch again: 0.4.0 stays reserved for the declared legacy `pentarynCombat.*` event sunset.
+
+- **Each swing chooses its weapon** when a Multiattack says "in any combination" (Bandit Captain:
+  "makes two attacks, using Scimitar and Pistol in any combination"; 64 of the 2024 MM's 306
+  Multiattacks). While Full Attack runs, the swing strip shows **This swing: [Scimitar] [Pistol]**
+  with the swing's weapon marked. One click switches this swing and the rest of its group, so the
+  GM clicks at most once per change (all Pistol = one click; Pistol then Scimitar = two). A roll
+  window already open for the old weapon closes unrolled and the swing is rolled again with the new
+  one, with no pause. A usage card left with nothing rolled under it is tidied as before.
+  Fixed-composition Multiattacks ("one Bite and two Claws") show no chooser and plan as before.
+- **Parser** (`core/multiattack.mjs`): a "N attacks, using A or B (in any combination)" group carries
+  `mix: true`, and its plan row carries `group` and `choices`. The parser checked against every
+  Multiattack in `dnd-monster-manual.actors` (read-only, live world, 2026-11-21) now also reads:
+  the Tarrasque's "one Bite attack and three other attacks, using Claw or Tail in any combination"
+  (1 + 3, was 1); the Weretiger's text, which drops "makes" (2, was not parsed); and
+  "…, or it makes two [C] attacks" as the other routine instead of more swings. The last fixes Barbed
+  Devil (2, was 4), Medusa (3, was 6) and Clay Golem (2, was 5). No other MM creature parses
+  differently.
+- Pure core: `sequenceReducer` action `choose`, `swingChoices(state)` (core export), `planSequence`
+  carries a mix row's `group` / `choices` onto its swings. The Full Attack tooltip says where to
+  choose. i18n `Hud.AnyCombination`, `Strip.ThisSwing`, `Strip.ChooseHint`; style `.pc-choose-label`.
+
 ## 0.3.1 — 2026-11-07 (feedback triage 2026-11, clusters K and L6)
 
 A patch, not a minor, on purpose: the legacy `pentarynCombat.*` event names sunset at 0.4.0 (`HOOKS`

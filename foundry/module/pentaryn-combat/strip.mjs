@@ -66,6 +66,12 @@ function paint(ctx) {
     ? `<div class="pc-weapons">${ctx.weapons.map(w =>
       `<button type="button" data-pc="swap" data-id="${esc(w.id)}" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.SwapHint", { weapon: w.name }))}"><img src="${esc(w.img)}" alt=""><span class="pc-name">${esc(w.name)}</span>${w.stats ? `<span class="pc-stats">${esc(w.stats)}</span>` : ""}</button>`).join("")}</div>`
     : "";
+  // Multiattack "in any combination": which of its weapons this swing uses; one click switches this
+  // swing and the rest of the group (the open roll window is rolled again with the new weapon).
+  const chooser = !paused && ctx.choices?.length > 1
+    ? `<div class="pc-weapons pc-choose"><span class="pc-choose-label">${esc(_loc("PENTARYN_COMBAT.Strip.ThisSwing"))}</span>${ctx.choices.map(w =>
+      `<button type="button" data-pc="choose" data-id="${esc(w.id)}" class="${w.active ? "active" : ""}" aria-pressed="${w.active ? "true" : "false"}" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.ChooseHint", { weapon: w.name }))}"><img src="${esc(w.img)}" alt=""><span class="pc-name">${esc(w.name)}</span>${w.stats ? `<span class="pc-stats">${esc(w.stats)}</span>` : ""}</button>`).join("")}</div>`
+    : "";
   // Enter takes the roll window's highlighted (autofocused) button: Advantage under Reckless or Steady
   // Aim, not always Normal (usability Area 3, D1).
   const keys = paused ? _loc("PENTARYN_COMBAT.Strip.KeysPaused")
@@ -87,7 +93,7 @@ function paint(ctx) {
       <label class="pc-quick" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.QuickHint"))}"><input type="checkbox" data-pc="quick" ${ctx.quick ? "checked" : ""}> ${esc(_loc("PENTARYN_COMBAT.Strip.Quick"))}</label>
       <button type="button" data-pc="stop" class="pc-stop" data-tooltip="${esc(_loc("PENTARYN_COMBAT.Strip.StopHint"))}">${esc(_loc("PENTARYN_COMBAT.Strip.Stop"))}</button>
     </div>
-    ${tiles}`;
+    ${chooser}${tiles}`;
   el.style.bottom = `${anchor()}px`;
 }
 
@@ -108,6 +114,7 @@ function onClick(ev) {
   } else if (what === "resume") choose({ type: "resume" });
   else if (what === "retarget") choose({ type: "retarget" });
   else if (what === "swap") choose({ type: "swap", weaponId: b.dataset.id });
+  else if (what === "choose") handlers.onChoose?.(b.dataset.id);
 }
 
 function onChange(ev) {

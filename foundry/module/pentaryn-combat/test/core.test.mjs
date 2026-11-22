@@ -33,7 +33,9 @@ const ADDED_EXT13 = ["ARGON"];
 const ADDED_EXT8 = ["turnEffectData"];
 // Feedback triage 2026-11 (K, L6): the HP box's arithmetic and Roll manually's d20 dice configuration (core/dice-input.mjs).
 const ADDED_TRIAGE = ["arithmeticAssignment", "arithmeticExpression", "manualDiceConfig"];
-const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13, ...ADDED_EXT8, ...ADDED_TRIAGE];
+// 0.3.2: Multiattack "in any combination" — the swing strip's chooser for the swing about to be rolled.
+const ADDED_MIX = ["swingChoices"];
+const ADDED = [...ADDED_S2, ...ADDED_S4, ...ADDED_S8, ...ADDED_29, ...ADDED_37, ...ADDED_EXT11, ...ADDED_EXT13, ...ADDED_EXT8, ...ADDED_TRIAGE, ...ADDED_MIX];
 
 test("export surface (golden/core-exports.json): 81 names", () => {
   const names = Object.keys(core).sort();
@@ -55,8 +57,11 @@ test("object exports are frozen tables, rows and arrays included", () => {
 // kept)": combat ships the blueprint migration as 0.3.0, with combat-core VERSION. 0.3.1 (2026-11-07):
 // feedback triage K (HP box arithmetic) and L6 (Roll manually); a patch, not a minor, because the
 // legacy pentarynCombat.* event names sunset at 0.4.0 (HOOKS `until`) and that is its own declared change.
-test("module.json version is 0.3.1 (feedback triage K + L6)", () => {
-  assert.equal(manifest.version, "0.3.1");
+// 0.3.2 (2026-11-21): Multiattack "in any combination" — each swing's weapon is chosen on the strip.
+// A patch again: 0.4.0 stays the declared legacy event sunset.
+test("module.json version is 0.3.2 (Multiattack in any combination)", () => {
+  assert.equal(manifest.version, "0.3.2");
+  assert.equal(core.VERSION, manifest.version);
   assert.equal(manifest.id, core.MOD);
 });
 

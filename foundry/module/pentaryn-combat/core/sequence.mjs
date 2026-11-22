@@ -21,7 +21,11 @@ import { extraSwings } from "./weapons.mjs";
 export function planSequence({ weaponId = null, count = 1, done = 0, extras = [], multiattack = null } = {}) {
   const out = [];
   if (Array.isArray(multiattack) && multiattack.length) {
-    for (const g of multiattack) for (let i = 0; i < (g.count ?? 0); i++) out.push({ weaponId: g.itemId, mode: null, kind: "main" });
+    for (const g of multiattack) {
+      // A mix row ("in any combination") lets each of its swings be another choice: the swing says so.
+      const mix = Array.isArray(g.choices) && g.choices.length > 1 ? { group: g.group ?? 0, choices: [...g.choices] } : null;
+      for (let i = 0; i < (g.count ?? 0); i++) out.push({ weaponId: g.itemId, mode: null, kind: "main", ...(mix ? { group: mix.group, choices: [...mix.choices] } : {}) });
+    }
     return out.slice(Math.max(0, done));
   }
   if (!weaponId) return [];
@@ -68,12 +72,30 @@ export function sequenceReducer(state, action) {
       // `extras` (Area 10): the Nick swing the new main weapon earns replaces the planned one.
       return { ...state, swings: mainLeft ? replanExtras({ ...state, swings }, action.extras ?? null) : swings };
     }
+    case "choose": {   // Multiattack "in any combination": this swing, and the rest of its group, use another choice
+      if (!state || (state.status !== "running" && state.status !== "paused")) return state;
+      const now = state.swings[state.index];
+      if (!now || !Array.isArray(now.choices) || !now.choices.includes(action.weaponId) || now.weaponId === action.weaponId) return state;
+      const swings = state.swings.map((s, i) => (i >= state.index && s.kind === "main" && s.group === now.group
+        && Array.isArray(s.choices) && s.choices.includes(action.weaponId) ? { ...s, weaponId: action.weaponId } : s));
+      return { ...state, swings };
+    }
     case "stop":
       if (!state || state.status === "done") return state;
       return { ...state, status: "stopped" };
     default:
       return state;
   }
+}
+
+/**
+ * The swing strip's chooser for the swing about to be rolled: its choices (item ids) and which one it
+ * uses now, when its Multiattack group is "in any combination"; null for any other swing.
+ */
+export function swingChoices(state) {
+  const s = state?.swings?.[state.index];
+  if (!s || s.kind !== "main" || !Array.isArray(s.choices) || s.choices.length < 2) return null;
+  return { choices: [...s.choices], current: s.weaponId };
 }
 
 /** "Swing 2 of 3" numbers for the strip. */
