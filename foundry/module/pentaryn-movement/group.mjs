@@ -21,7 +21,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
-import { GROUP_LIMITS, flood, hexCandidates, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
+import { DETOUR_SQUARES, GROUP_LIMITS, detourTooLong, flood, hexCandidates, planGroup, restOnPaths, runPlan } from "./group-core.mjs";
 import { skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, continuationInFlight, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, narrowPoints, othersOf, restWalkable, stopWhereDrawn, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
@@ -422,12 +422,25 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     const crowd = combat || constrain?.ignoreWalls ? [] : stillOthers()
       .map(c => ({ x: c.x, y: c.y, r: c.r + rec.r }))
       .filter(c => Math.hypot(c.x - from.x, c.y - from.y) >= c.r - 1e-6 && Math.hypot(c.x - to.x, c.y - to.y) >= c.r - 1e-6);
+    const lengthOf = path => {
+      const pts = path.map(p => toSquares(p, rec.w, rec.h, s));
+      let length = 0;
+      for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+      return { pts, length };
+    };
     let r = crowd.length ? search([...avoid, ...crowd]) : null;
+    if (r?.reached && r.path?.length) {
+      // Round the crowd, but never the long way round (live H3-03): past the H2-02 rule against the way
+      // that ignores the crowd, that way wins (the rest check keeps the ends apart).
+      const round = lengthOf(r.path).length;
+      if (round > Math.hypot(to.x - from.x, to.y - from.y) + DETOUR_SQUARES) {
+        const plain = search(avoid);
+        if (plain?.reached && plain.path?.length && detourTooLong(lengthOf(plain.path).length, round)) r = plain;
+      }
+    }
     if (!r?.reached || !r.path?.length) r = search(avoid);
     if (!r?.reached || !r.path?.length) return null;
-    const pts = r.path.map(p => toSquares(p, rec.w, rec.h, s));
-    let length = 0;
-    for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+    const { pts, length } = lengthOf(r.path);
     return { points: pts, length, data: { path: r.path, cost: r.cost } };
   };
   return {
@@ -671,7 +684,7 @@ function send(scene, seq, starts, updates, options, what, claims = [], avoid = [
  * client has switched to another view meanwhile.
  */
 function schedule(later, base, members, { scene, seq, starts, endMs = 0, gid = foundry.utils.randomID() }) {
-  if (!base || members.length < 2) return;
+  if (!base || members.length < 2) return null;
   const group = { ids: new Set(members.map(m => m.id)), timers: [], stopped: false, claims: [], avoid: [], pinned: new Set(), scene };
   const order = members.map(m => m.id);
   groups.set(gid, group);
@@ -701,13 +714,43 @@ function schedule(later, base, members, { scene, seq, starts, endMs = 0, gid = f
     const updates = wave.updates.filter(u => group.ids.has(u._id));
     if (!updates.length) { prunePending(gid, { at: wave.at }); return; }
     send(scene, seq, starts, updates, { ...base, movement: wave.movement }, "wave", group.claims, group.avoid)
-      .then(done => { if (done) prunePending(gid, { at: wave.at }); });
+      .then(done => {
+        if (done) prunePending(gid, { at: wave.at });
+        // Stopped while this wave was on its way to the server (live H3-05: a click 950 ms after the drop on the
+        // Mac, over the tunnel, let the wave's two members walk on into the far room): they stop as soon as they move.
+        if (group.stopped) lateStop(scene, updates.map(u => u._id));
+      });
   };
   for (const wave of later) group.timers.push(setTimeout(() => fire(wave), wave.at));
+  return group;
+}
+
+/** How often, and how many times, a member whose wave landed after its group was stopped is tried (ms). */
+const LATE_STOP_EVERY_MS = 50;
+const LATE_STOP_TRIES = 10;
+
+/**
+ * Members of a stopped group whose moves were already on their way to the server: stop each as a click
+ * would (stop.mjs), as soon as this client sees it moving. A member that never moves is left alone.
+ */
+function lateStop(scene, ids, tries = LATE_STOP_TRIES) {
+  if (!feature || !ids?.length) return;
+  const left = [];
+  for (const id of ids) {
+    const doc = scene?.tokens?.get(id);
+    if (!doc?.object || doc.object.destroyed) continue;
+    const st = doc.movement?.state;
+    const moving = st === "pending" || st === "paused" || (() => { try { return !!doc.object.animationContexts?.has?.(doc.object.movementAnimationName); } catch { return false; } })();
+    if (!moving) { left.push(id); continue; }
+    Promise.resolve().then(() => feature?.exposed?.stop?.(doc)).catch(err => log?.debug?.("stop a late wave", err));
+  }
+  if (left.length && tries > 0) setTimeout(() => lateStop(scene, left, tries - 1), LATE_STOP_EVERY_MS);
 }
 
 /** How often, and how many times, the rest check waits for a member still walking (ms). */
 const DESTACK_EVERY_MS = 500;
+/** How far round a stacked member the rest check looks for a free square (squares): a file of six in a 1-wide corridor needs 3 (H3-01). */
+const DESTACK_REACH = 3;
 const DESTACK_TRIES = 6;
 
 /**
@@ -742,7 +785,7 @@ function destack(ids, sceneOf) {
     if (!blockers.length && !claims.some(c => Math.hypot(c.x - self.x, c.y - self.y) < r + c.r - 1e-6)) continue;
     const bx = Math.round(here.x / s), by = Math.round(here.y / s);
     const cands = [];
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx || dy) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
+    for (let dy = -DESTACK_REACH; dy <= DESTACK_REACH; dy++) for (let dx = -DESTACK_REACH; dx <= DESTACK_REACH; dx++) if (dx || dy) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
     cands.sort((a, b) => Math.hypot(a.x - here.x, a.y - here.y) - Math.hypot(b.x - here.x, b.y - here.y));
     const member = { token, r: radiusOf(w, h) };
     const z = doc._source.elevation ?? 0;
@@ -819,6 +862,22 @@ function groupCancel(tokenId, { only = false } = {}) {
  * members, the token included), else the tokens every client saw tagged with the same group in the last
  * TAG_TTL_MS. `{ held: false, ids: [] }` when it is in no group.
  */
+/** A click (or the API) stopped a group, or members of one (stop.mjs): recorded for status().group.stopped (H3-16). */
+function groupNoteStop({ why = "click", members = 0, whole = false } = {}) {
+  stoppedAt = { at: new Date().toISOString(), why, members, whole };
+}
+
+/**
+ * A group stopped in a fight (stop.mjs): each member finishes the square it is in, and two that walked
+ * close together can finish on the same square (live H3-01: 3 of 4 corridor clicks left two on one square).
+ * Once they are all at rest, the later of a stacked pair steps to the nearest free whole square (a displace:
+ * free, dnd5e records nothing for it), as the rest check does.
+ */
+function groupSettle(ids, scene) {
+  if (!ids?.length || !scene) return;
+  settleGroup(ids, scene);
+}
+
 function groupMembers(tokenId) {
   const gid = groupOf.get(tokenId);
   const g = gid ? groups.get(gid) : null;
@@ -885,8 +944,6 @@ function shortOf(route, c, reach, w, h, s) {
 
 /** One route call when walking round a stopped member (ms): short, the token is already walking. */
 const AROUND_MS = 60;
-/** A way round a stopped member may add this many squares, or half the way left, whichever is more (H2-02). */
-const DETOUR_SQUARES = 4;
 
 /** Length of a top-left path from `from` (squares). */
 function pathSquares(from, wps, s) {
@@ -900,8 +957,7 @@ function pathSquares(from, wps, s) {
  * sent the others round the whole dungeon, 35 s)? Longer than the way left by DETOUR_SQUARES or half of it.
  */
 function tooLong(from, aheadWps, roundWps, s) {
-  const ahead = pathSquares(from, aheadWps, s);
-  return pathSquares(from, roundWps, s) > ahead + Math.max(DETOUR_SQUARES, ahead / 2);
+  return detourTooLong(pathSquares(from, aheadWps, s), pathSquares(from, roundWps, s));
 }
 
 /** Room round centre `c` (pixels) for a circle of radius r squares: not in a gap narrower than two of it. */
@@ -1294,7 +1350,14 @@ function debugThrow() {
  * found paths still end at the old point; the plan searches its own routes. Returns true when it moved them.
  */
 function catchUpDestination(grabbed, event, contexts) {
-  if (contexts.length < 2 || contexts.some(c => c.waypoints?.length) || grabbed.layer?._movementPlanningContext) return false;
+  if (!contexts.length || contexts.some(c => c.waypoints?.length) || grabbed.layer?._movementPlanningContext) return false;
+  // A single drop too (live H3-13: released soon after the last move it landed 1-3 squares short), when the
+  // drop's own route search (noteNoRoute) takes it to the new point: out of combat, pathfinding on, no ghost.
+  if (contexts.length === 1) {
+    const doc = grabbed.document;
+    if (contexts[0].token !== grabbed || inCombat(doc) || feature.exposed.pathfindSkip?.(grabbed)) return false;
+    try { if (grabbed._getDragConstrainOptions?.()?.ignoreWalls) return false; } catch { return false; }
+  }
   // The pointer-up's point (core's pointer-up handler writes it to interactionData.destination; the contexts keep
   // what the last move they saw gave them).
   let p = event?.interactionData?.destination ?? null;
@@ -1360,6 +1423,20 @@ function tellNarrow(token) {
   } catch (err) { log?.debug?.("narrow: tell the GM", err); }
 }
 
+/**
+ * Group drop: each big member the plan left to core (no route its body fits) that core stops short of its
+ * spot gets the "does not fit" notice, as a single drag does (decision 8; live H3-09: no notice in the group case).
+ */
+function tellExcludedNarrow(members, excluded, result) {
+  for (const id of excluded ?? []) {
+    const m = members.find(x => x.id === id);
+    if (!m?.token || (m.w ?? 1) <= 1 && (m.h ?? 1) <= 1) continue;
+    const end = result?.[1]?.movement?.[id]?.waypoints?.at(-1) ?? m.token.document._source;
+    if (Math.round(end.x) === Math.round(m.dest?.x) && Math.round(end.y) === Math.round(m.dest?.y)) continue;
+    tellNarrow(m.token);
+  }
+}
+
 /** One route call that checks a drop the drag's own path fell short of (ms). */
 const CONFIRM_MS = 250;
 
@@ -1394,10 +1471,68 @@ function noteNoRoute(grabbed, contexts, out = {}) {
   if (r.reached && r.path?.length >= 2) { out.route = r.path; return false; }
   const legs = r.legs ?? [];
   const done = legs.length > 0 && legs.every(l => l.state !== "more");
-  if (!done) return false;
+  // Still searching (a long maze route, live H3-04): the drop finishes the search in timer slices (confirmLater).
+  if (!done) return legs.length ? "pending" : false;
   if (big && legs.some(l => l.state === "found")) return "narrow";
   if (big && (c.foundPath?.length ?? 0) >= 2) return "narrow";
   return "none";
+}
+
+/**
+ * A single drop out of combat whose route search had not finished at the drop, nor in one more short search
+ * (live H3-04: a 495 ft maze route released 150 ms after the last pointer move; core's own update went nowhere,
+ * so nothing moved and nobody was told). The search finishes in timer slices; then the token takes the route,
+ * or, with no way there, stays and the dragger is warned (decision 7). A big token with no way it fits goes as
+ * far as core's line takes it, with the narrow warning. Past the search's cap, core's own line, as before.
+ * Nothing is sent when the token was moved or dropped again meanwhile. Returns null (the drop sends nothing now).
+ */
+function confirmLater(grabbed, c, result) {
+  const doc = grabbed.document;
+  const scene = doc.parent ?? canvas.scene;
+  const seq = ++dropSeq;
+  latestDrop.set(doc.id, seq);
+  try { feature.exposed.noteDrop?.([doc.id]); } catch (err) { log.debug?.("noteDrop", err); }
+  const starts = new Map([[doc.id, { x: doc._source.x, y: doc._source.y }]]);
+  const t0 = now();
+  const rec = { at: new Date().toISOString(), mode: "core", reason: "single", combat: false, members: 1, result: null, ms: null, async: true, relaxed: 0, replans: 0, waves: 1 };
+  last = rec;
+  const big = (doc._source.width ?? 1) > 1 || (doc._source.height ?? 1) > 1;
+  const coreGoes = !droppedInPlace([c], result);
+  const go = waypoints => {
+    const m = result[1].movement?.[doc.id] ?? { planned: false };
+    const updates = result[0].length ? result[0] : [{ _id: doc.id }];
+    return send(scene, seq, starts, updates, { ...result[1], movement: { [doc.id]: { ...m, waypoints } } }, "move");
+  };
+  const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
+  const search = feature.exposed.pathfindRouteToAsync;
+  Promise.resolve(typeof search === "function" ? search(grabbed, origin, { ...origin, ...c.destination, explicit: true, checkpoint: true }, { preview: true }) : null)
+    .then(r => {
+      rec.ms = Math.round((now() - t0) * 10) / 10;
+      if (!feature || !stillOurs([doc.id], scene, starts, seq).length) { rec.result = "superseded"; return; }
+      if (r?.reached && r.path?.length >= 2) {
+        rec.result = "route";
+        go(r.path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false })));
+        return;
+      }
+      const legs = r?.legs ?? [];
+      const done = legs.length > 0 && legs.every(l => l.state !== "more");
+      if (done && big && (legs.some(l => l.state === "found") || (c.foundPath?.length ?? 0) >= 2)) {
+        tellNarrow(grabbed);
+        rec.result = "narrow";
+        if (coreGoes) go(result[1].movement[doc.id].waypoints);
+        return;
+      }
+      if (done || !coreGoes) {
+        // No way there (or the search ran out with nothing to go on): it stays, and the dragger is told.
+        rec.reason = "noRoute"; rec.result = "none";
+        tellNoRoute(NO_ROUTE);
+        return;
+      }
+      rec.result = "core";
+      go(result[1].movement[doc.id].waypoints);
+    })
+    .catch(err => log.warnOnce?.("single-confirm", "a single drop's route search failed (further errors suppressed)", err));
+  return null;
 }
 
 /** One route call for a single drop round the tokens that stay (ms). */
@@ -1474,6 +1609,7 @@ function onDrop(grabbed, event, result) {
     last = { at: new Date().toISOString(), mode: "core", reason: "noRoute", combat: false, members: 1, result: "none", ms: 0, async: false, relaxed: 0, replans: 0, waves: 0 };
     return null;
   }
+  if (contexts.length === 1 && noRoute === "pending") return confirmLater(grabbed, contexts[0], result);
   if (contexts.length === 1 && noRoute === "narrow") tellNarrow(grabbed);
   if (contexts.length === 1 && confirmed.route) {
     // The drag's search was still running at the drop: the confirmed route, not core's short line.
@@ -1529,6 +1665,8 @@ function onDrop(grabbed, event, result) {
     last.result = "plan";
     Object.assign(last, { relaxed: plan.relaxed, replans: plan.replans, constricted: plan.constricted,
       formation: plan.formation, excluded: plan.excluded, planMs: plan.ms });
+    // A big member with no route its body fits stops short where core leaves it: told as a single drag is (H3-09).
+    try { tellExcludedNarrow(prep.members, plan.excluded, result); } catch (err) { log.debug?.("narrow: a group member", err); }
     const b = batches(plan, prep.members, result, info.combat);
     last.waves = b.later.length + 1;
     return b;
@@ -1555,9 +1693,7 @@ function onDrop(grabbed, event, result) {
   // Async: finish in timer slices, then commit the same shape core would have, for the members
   // nobody moved and this client did not drop again in the meantime.
   last.async = true;
-  const commit = ([updates, options]) => {
-    if (updates.length) send(scene, seq, starts, updates, options, "move");
-  };
+  const commit = ([updates, options]) => (updates.length ? send(scene, seq, starts, updates, options, "move") : null);
   const tick = () => {
     if (!feature) return;                  // uninstalled while planning: nothing is sent
     let b;
@@ -1577,8 +1713,10 @@ function onDrop(grabbed, event, result) {
       b = { first: result, later: [], base: null };
     }
     b = tag(b);
-    commit(b.first);
-    schedule(b.later, b.base, prep.members, hold(b));
+    const sent = commit(b.first);
+    const g = schedule(b.later, b.base, prep.members, hold(b));
+    // A click while the first wave was on its way stopped the group: that wave stops too (H3-05).
+    sent?.then?.(() => { if (g?.stopped) lateStop(scene, b.first[0].map(u => u._id)); });
   };
   setTimeout(tick, 0);
   return null;
@@ -1710,7 +1848,7 @@ export function install(reg, ctx) {
   // A door shut or a wall raised across a move this client started cuts it before the wall (live R6-3, R6-1).
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: cut moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: cut moves across a shut door" });
-  ctx.expose({ groupFollower, groupCancel, groupMembers, groupStopOne, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
+  ctx.expose({ groupFollower, groupCancel, groupMembers, groupStopOne, groupSettle, groupNoteStop, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
 }
 
 export function uninstall() {

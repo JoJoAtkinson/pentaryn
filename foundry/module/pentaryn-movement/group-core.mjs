@@ -18,6 +18,14 @@
 
 import { MOTION, dist, firstConflict, trajectory, delayed, GROUP_MAX } from "./motion-core.mjs";
 
+/** A way round may add this many squares, or half the direct way, whichever is more (H2-02, H3-03). */
+export const DETOUR_SQUARES = 4;
+/** Is a way round (`round` squares) a detour nobody wants, against the direct way (`direct` squares)? */
+export function detourTooLong(direct, round) {
+  if (!Number.isFinite(direct) || !Number.isFinite(round)) return false;
+  return round > direct + Math.max(DETOUR_SQUARES, direct / 2);
+}
+
 export const GROUP_LIMITS = Object.freeze({
   maxMembers: GROUP_MAX,
   memberMs: 400,       // one member's routes, all tries (planning time: the clock runs only while the plan does)
@@ -467,7 +475,9 @@ export function* planGroup(spec, o) {
           yield "route";
           if (timer.over()) return null;
         }
-        if (again) {
+        // Never the long way round (live H3-03: a member re-planned round the others' rest spots walked 83 squares
+        // round the dungeon for a 9-square walk through the door): the H2-02 rule; else it waits its turn.
+        if (again && !detourTooLong(route.length, again.length)) {
           const tr2 = trajectoryOf(again.points, m.speed);
           const d2 = firstFreeDelay(tr2, m.r, fixed, combat);
           if (d2 !== null) { route = again; tr = tr2; delay = d2; level = 1; }

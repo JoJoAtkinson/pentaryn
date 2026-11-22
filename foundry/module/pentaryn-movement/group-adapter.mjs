@@ -325,7 +325,7 @@ export function cutAtWalls(token, origin, waypoints, { taken = null } = {}) {
  * nearby fits.
  * Reads only.
  */
-export function clearOfWalls(token, p, { taken = null, snap = false } = {}) {
+export function clearOfWalls(token, p, { taken = null, snap = false, prefer = null } = {}) {
   const s = gridSize(token);
   const src = token.document?._source ?? {};
   const w = src.width ?? 1, h = src.height ?? 1;
@@ -346,7 +346,7 @@ export function clearOfWalls(token, p, { taken = null, snap = false } = {}) {
   const free = q => !taken?.(q);
   // snap (a click-stop, Joe's decision 2): only a whole square, the nearest free one.
   const onGrid = q => Math.abs(q.x / s - Math.round(q.x / s)) < 1e-6 && Math.abs(q.y / s - Math.round(q.y / s)) < 1e-6;
-  if ((!snap || onGrid(p)) && fits(p) && free(p)) return p;
+  if ((!snap || onGrid(p)) && fits(p) && free(p) && (!prefer || prefer(p))) return p;
   const z = p.elevation ?? src.elevation ?? 0;
   const from = { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: z };
   const bx = Math.floor(p.x / s), by = Math.floor(p.y / s);
@@ -355,6 +355,10 @@ export function clearOfWalls(token, p, { taken = null, snap = false } = {}) {
   for (let dy = -reach; dy <= reach + 1; dy++) for (let dx = -reach; dx <= reach + 1; dx++) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
   cands.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
   const ok = c => fits(c) && open(token, from, { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z });
+  // `prefer` (a stop that leaves others walking, H3-05: not in a one-wide corridor they must pass): the nearest
+  // square it also likes, when there is one in reach; else the nearest, as before.
+  const liked = prefer ? cands.find(c => free(c) && ok(c) && prefer(c)) : null;
+  if (liked) return { ...p, x: liked.x, y: liked.y };
   const pick = cands.find(c => free(c) && ok(c));
   if (pick) return { ...p, x: pick.x, y: pick.y };
   if (snap) {

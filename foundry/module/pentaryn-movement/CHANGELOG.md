@@ -1,5 +1,33 @@
 # Changelog — pentaryn-movement
 
+## 0.4.10 — 2026-11-22
+
+Hard-case round H-3 (fixes only).
+
+- **[declared] H3-01: a group clicked to a stop in a fight never rests two on one square.** Each member finishes
+  the square it is in (spent movement stays exact); two that walked close finished on the same square. Once at
+  rest the later of a pair steps to the nearest free whole square (a displace: free), the rest check looking up
+  to 3 squares round it (a file of six in a one-wide corridor). Also after a GM's `stopOwn` of a player's group.
+- **[declared] H3-05: a wave still on its way to the server when its group is clicked to a stop stops too**, as
+  soon as it moves (over the tunnel, a click 950 ms after the drop let two members walk on into the far room).
+  A player's stop of its own members, with members it does not own still walking, puts each on the nearest free
+  whole square out of any gap narrower than two of it (a one-wide corridor, a doorway) when one is within 3
+  squares, so the others can pass.
+- **[declared] H3-03: never the long way round in a group plan.** A member re-planned round the others' rest
+  spots, or round the tokens standing in the way, takes that way only when it is at most 4 squares, or half the
+  direct way, longer (the H2-02 rule); else it waits its turn for the direct way (83 squares round the dungeon
+  for a 9-square walk through the door before).
+- **[declared] H3-04: a single drop released before its route search finished is no longer lost.** The search
+  finishes in timer slices after the drop (as long as a drag's own search may run), then the token takes the
+  route; with no way there it stays and the dragger is told "No route there" (decision 7).
+- **[declared] H3-13: a single drop lands where the pointer comes up** (out of combat, pathfinding on), as a
+  group drop has since H2-08: core's drag destination can lag the pointer by 1-3 squares. The single drop into
+  rock on the Mac (H3-08, core/single, moved to the nearest square) was that lag; it now refuses as on BOSS.
+- **[declared] H3-09: a group drop whose Large member has no way its body fits gives the "does not fit" notice**
+  (and the GM whisper for a player), as a single drag does.
+- **[declared] H3-16: `status().group.stopped` records click and API stops** (`why: "click"`, or `"gm"` for a
+  GM's stop of a player's group in a fight; `members`, `whole`), as it already did for a turn change.
+
 ## 0.4.9 — 2026-11-22
 
 Hard-case round H-2, and Joe's decisions of 2026-11-22.

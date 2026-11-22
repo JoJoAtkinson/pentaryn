@@ -39,7 +39,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop, radiusOf } from "./motion-core.mjs";
-import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, inCombat, movementFacts, stopWhereDrawn } from "./group-adapter.mjs";
+import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, inCombat, movementFacts, narrowPoints, stopWhereDrawn } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
@@ -146,11 +146,28 @@ function resync(token) {
  * Where a click-stop out of combat puts a token (Joe's decision 2, 2026-11-22): the nearest free whole square
  * to where it is drawn, its body across no wall and no door's line, on no other token (`taken`).
  */
-function stopSpot(token, taken = null) {
+function stopSpot(token, taken = null, { roomy = false } = {}) {
   const drawn = drawnPosition(token);
   let p = drawn;
-  try { p = clearOfWalls(token, p, { taken, snap: true }); } catch (err) { log?.debug?.("clearOfWalls", err); }
+  try { p = clearOfWalls(token, p, { taken, snap: true, prefer: roomy ? roomyFor(token) : null }); } catch (err) { log?.debug?.("clearOfWalls", err); }
   return { drawn, p };
+}
+
+/**
+ * Top-left → is the token's circle there out of any gap narrower than two of it (a one-wide corridor, a door)?
+ * A stop that leaves other members walking prefers such a square (live H3-05: a player's token stopped in the
+ * one-wide corridor and the GM's members behind it could not pass).
+ */
+function roomyFor(token) {
+  const s = gridSize(token);
+  const src = token.document?._source ?? {};
+  const w = src.width ?? 1, h = src.height ?? 1, r = radiusOf(w, h);
+  return q => {
+    const c = { x: (q.x + (w * s) / 2) / s, y: (q.y + (h * s) / 2) / s };
+    try {
+      return !narrowPoints(token, [c, { x: c.x + 0.01, y: c.y }], r, s).length && !narrowPoints(token, [c, { x: c.x, y: c.y + 0.01 }], r, s).length;
+    } catch { return true; }
+  };
 }
 
 function displace(token, at = stopSpot(token)) {
@@ -365,18 +382,21 @@ function stopToken(token, how) {
   const others = ids.filter(id => id !== doc.id).map(id => scene?.tokens?.get(id)?.object).filter(t => t && !t.destroyed);
   const whole = others.every(owns);
   const list = [token, ...others.filter(owns)];
+  // Others of the group walk on (not this user's): this user's stop keeps out of the gaps they must pass.
+  const partial = !whole && others.length > 0;
   // The whole group: its unsent waves go too. Only some: each leaves the group, and the rest walk round it.
   if (held && whole) { try { feature.exposed.groupCancel?.(doc.id); } catch (err) { log?.debug?.("stop the group", err); } }
   const skip = new Set(list.map(t => t.document.id));
   const claims = [];
   const out = [];
+  const combatStopped = [];
   let rerouted = 0;
   for (const t of list) {
     const tdoc = t.document;
     const next = t === token ? how : decide(t, { tool: "select", armed: true });
     if (next !== "displace" && next !== "stop") continue;
     if (next === "displace") {
-      const at = stopSpot(t, takenAround(t, skip, claims));
+      const at = stopSpot(t, takenAround(t, skip, claims), { roomy: partial });
       const s = gridSize(t), w = tdoc._source.width ?? 1, h = tdoc._source.height ?? 1;
       claims.push({ id: tdoc.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s });
       out.push(displace(t, at));
@@ -386,12 +406,25 @@ function stopToken(token, how) {
     } else {
       if (!(held && whole)) { try { feature.exposed.groupStopOne?.(tdoc.id, null); } catch (err) { log?.debug?.("stop one", err); } }
       out.push(act(t, next));
+      combatStopped.push(tdoc.id);
     }
   }
   lastStop.members = out.length;
   lastStop.whole = held && whole;
   lastStop.rerouted = rerouted;
+  if (list.length > 1 || held) {
+    try { feature.exposed.groupNoteStop?.({ why: "click", members: out.length, whole: held && whole }); } catch (err) { log?.debug?.("note the stop", err); }
+  }
+  // In a fight each finishes the square it is in; two can finish on one (live H3-01): once at rest, apart.
+  if (combatStopped.length > 1) settleAfter(out, combatStopped, scene);
   return out;
+}
+
+/** Once the stops are made, the stopped members (ids, in order) are set apart at rest (group.mjs groupSettle). */
+function settleAfter(promises, ids, scene) {
+  Promise.allSettled(promises)
+    .then(() => { if (feature) feature.exposed.groupSettle?.(ids, scene); })
+    .catch(err => log?.debug?.("settle after a stop", err));
 }
 
 function onClick(token, event) {
@@ -636,13 +669,19 @@ async function stopOwn(data = {}, qctx = {}) {
   let ids = [];
   try { ids = feature?.exposed?.groupCancel?.(doc.id) ?? []; } catch (err) { log?.debug?.("stop the group", err); }
   let ok = false;
+  const stopped = [];
   for (const id of new Set([doc.id, ...ids])) {
     const d = id === doc.id ? doc : doc.parent?.tokens?.get(id);
     if (!d) continue;
     if (id !== doc.id && (!d.movement?.user?.isSelf || d.movement.state === "completed" || d.movement.state === "stopped")) continue;
-    if ((await stopSafely(d)) && id === doc.id) ok = true;
+    const r = await stopSafely(d);
+    if (r && id === doc.id) ok = true;
+    stopped.push(id);
   }
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how: "stopOwn", by: sender.id ?? null };
+  if (ids.length) { try { feature?.exposed?.groupNoteStop?.({ why: "gm", members: stopped.length, whole: true }); } catch (err) { log?.debug?.("note the stop", err); } }
+  // Two that finish their squares on one square are set apart at rest (H3-01).
+  if (stopped.length > 1) { try { feature?.exposed?.groupSettle?.(stopped, doc.parent); } catch (err) { log?.debug?.("settle after a stop", err); } }
   return { ok, how: "stop", tokenId: doc.id };
 }
 

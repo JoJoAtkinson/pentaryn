@@ -67,7 +67,10 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   where they are (0.4.8). The grabbed token lands exactly where dropped, unless that is on another token:
   then the nearest clear spot it can reach (0.4.8). A plan whose own work takes over 1.2 s, or that has
   not finished 2.5 s after the drop, is core's own drop. Dropped where the grabbed token has no way to go,
-  nobody moves and the dragger gets a short "No route there" warning (0.4.9; a single token too). A big
+  nobody moves and the dragger gets a short "No route there" warning (0.4.9; a single token too). A single
+  drop lands where the pointer comes up, and one released before its route search has finished goes once
+  the search is done (0.4.10). A way round others is never more than 4 squares, or half the direct way,
+  longer: past that a member waits its turn instead (0.4.10). A big
   token never walks where its body does not fit (core tests walls at the centre only): it takes a wider way
   round when there is one, else it stops before the gap, clear of the frame, and the GM is told (0.4.9).
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
@@ -75,7 +78,9 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so
   dnd5e's spent movement stays exact; a GM may stop anyone's move. A click on one member of a group stops the
   whole group (0.4.9); when you do not own every member (a player's token in the GM's group), only your own
-  members stop, and the GM's client walks the rest round them.
+  members stop, out of any one-wide corridor or doorway when there is room within 3 squares (0.4.10), and the
+  GM's client walks the rest round them. In a fight, two that finish their squares on one square are set apart
+  once at rest (0.4.10).
 - **The GM's drag-help button** (Token controls, the route icon, next to the ghost button): one click turns
   pathfinding and group movement off for the whole table, so every drag is plain Foundry dragging; click again
   to turn them back on (world setting `assist`, 0.4.9). Players: if the GM has it off, a drag goes straight

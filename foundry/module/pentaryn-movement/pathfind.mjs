@@ -375,7 +375,46 @@ function originOf(tokenDoc) {
  *           than its per-member budget, so one long or impossible route never freezes the drop.
  * Returns { reached, straight, path, cost, legs, arcs, ms }.
  */
-function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = null, constrainOptions = {}, maxMs = LIMITS.totalMs } = {}) {
+function routeTo(token, origin, dest, opts = {}) {
+  const t0 = now();
+  const cap = Math.min(opts.maxMs ?? LIMITS.totalMs, LIMITS.totalMs);
+  const gen = routeSteps(token, origin, dest, opts);
+  for (;;) {
+    const r = gen.next(now() - t0 >= cap);
+    if (r.done) return r.value;
+  }
+}
+
+/**
+ * routeTo, finished in timer slices instead of at once (H3-04: a single drop released before the drag's own
+ * long search finished was lost). The cap is the search's own slices (LIMITS.totalMs) and the wall clock
+ * (LIMITS.waitMs), as the drag's search. Resolves the same shape as routeTo.
+ */
+function routeToAsync(token, origin, dest, opts = {}) {
+  return new Promise(resolve => {
+    const started = now();
+    let busy = 0;
+    let gen;
+    try { gen = routeSteps(token, origin, dest, opts); } catch (err) { log?.debug?.("route (async)", err); resolve(null); return; }
+    const tick = () => {
+      try {
+        const t = now();
+        let r = gen.next(pf.searchOver({ busy, wall: now() - started }));
+        while (!r.done && now() - t < LIMITS.sliceMs) r = gen.next(pf.searchOver({ busy: busy + now() - t, wall: now() - started }));
+        busy += now() - t;
+        if (r.done) { resolve(r.value); return; }
+        setTimeout(tick, 0);
+      } catch (err) {
+        log?.warnOnce?.("pathfind-route-async", "a route search failed (further errors suppressed)", err);
+        resolve(null);
+      }
+    };
+    setTimeout(tick, 0);
+  });
+}
+
+/** routeTo's body: yields between search slices; `gen.next(true)` stops the search where it is. */
+function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoid = null, constrainOptions = {} } = {}) {
   const options = { preview, constrainOptions, measureOptions: {}, terrainOptions: {} };
   const call = (w, o) => {
     bypass = true;
@@ -408,8 +447,9 @@ function routeTo(token, origin, dest, { preview = false, smooth = null, avoid = 
     const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
     const big = !constrainOptions?.ignoreWalls && ((w > 1) || (h > 1));
     const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!(crosses || risky || squeezed), accept: big ? fitsWhole(token) : null });
-    const cap = Math.min(maxMs, LIMITS.totalMs);
-    while (plan.step(Math.min(LIMITS.sliceMs, cap)) === "more" && now() - t0 < cap);
+    while (plan.step(LIMITS.sliceMs) === "more") {
+      if (yield "more") break;
+    }
     path = plan.result();
     if ((crosses || risky || squeezed) && path === base.result) path = null;   // no way round: the caller keeps what it had
     else if (path && !constrainOptions?.ignoreWalls && fitPath(token, path).cut) path = null;
@@ -477,6 +517,7 @@ export function install(reg, ctx) {
     pathfindStatus: status,
     pathfindRoute: route,
     pathfindRouteTo: routeTo,
+    pathfindRouteToAsync: routeToAsync,
     pathfindOrigin: originOf,
     pathfindSkip: token => !!skipFor(token, [null, null], { constrainOptions: {} }),
     pathfindPatched: () => findPatched,

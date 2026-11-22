@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld, member, finish } from "./fixtures/grid.mjs";
-import { planGroup, assignSlots, runPlan, hexCandidates, cellCandidates, flood, alongRoute, GROUP_LIMITS } from "../group-core.mjs";
+import { planGroup, assignSlots, runPlan, hexCandidates, cellCandidates, flood, alongRoute, GROUP_LIMITS, detourTooLong } from "../group-core.mjs";
 import {
   MOTION, trajectory, delayed, positionAt, firstConflict, minSeparation, waves, cellChain, groupMode, clickStop, dist,
 } from "../motion-core.mjs";
@@ -623,4 +623,32 @@ test("H2-03: dropped on a token in a full closet, the grabbed one takes the near
   const s = res.members.a.slot;
   assert.ok(s.y < 5, `in the room, not the connector or the rock: ${JSON.stringify(s)}`);
   for (const o of others) assert.ok(dist(s, o) >= 0.5 + o.r - 1e-6);
+});
+
+test("H3-03: a member re-planned round the others' rest spots never takes the long way round; it waits its turn instead", () => {
+  const g = gridWorld(DOOR);
+  const d = { x: 0, y: 4 };
+  for (const [ax, bx] of [[2, 2], [2, 3], [2, 6]]) {
+    const ms = [member("a", { x: ax + 0.5, y: 2.5 }, d), member("b", { x: bx + 0.5, y: 1.5 }, d), member("c", { x: bx + 0.5, y: 3.5 }, d)];
+    // Every way round the rest spots is the marathon: 60 squares more than the plain route.
+    let asked = 0;
+    const route = (m, f, t, o) => {
+      const r = g.route(m, f, t, o);
+      if (!o?.avoid?.length || !r) return r;
+      asked += 1;
+      return { ...r, length: r.length + 60 };
+    };
+    const res = finish(planGroup({ members: ms, anchorId: "a" }, oracles(g, ms[0], { route })));
+    assert.equal(res.result, "plan");
+    assert.ok(asked > 0, "the case re-plans");
+    for (const e of Object.values(res.members)) assert.ok(e.length < 30, `${e.id} at ${ax}/${bx}: no marathon (${e.length}, level ${e.level})`);
+  }
+});
+
+test("H3-03: detourTooLong is the H2-02 rule (4 squares, or half the direct way)", () => {
+  assert.equal(detourTooLong(9, 13), false);
+  assert.equal(detourTooLong(9, 13.6), true);
+  assert.equal(detourTooLong(20, 30), false);
+  assert.equal(detourTooLong(20, 31), true);
+  assert.equal(detourTooLong(9, 83), true);
 });
