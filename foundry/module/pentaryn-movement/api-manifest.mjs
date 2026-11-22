@@ -20,12 +20,17 @@ export const MANIFEST = Object.freeze({
       params: [{ name: "opts", type: "{ sceneId?: string | Scene } | string | Scene", optional: true,
         doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
-        + "sceneId, version, settings: { <key>: scope }, combatExempt: string[] }",
+        + "sceneId, version, settings: { <key>: scope }, combatExempt: string[], "
+        + "group: { enabled, clickToStop, patched: { drop, click }, regime, limits, groups, last, fallbacks } }",
       gm: false, writes: false, legacy: true,
       doc: "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM "
         + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
         + "are wrapped, every setting key with its scope (ghost and ownedOnTop are client settings), and combatExempt: the ids "
-        + "of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks).",
+        + "of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks). "
+        + "group (0.4.0): group movement and click to stop on this client — the two settings, whether the drop and click "
+        + "wraps are in, the regime of your controlled tokens (combat when one is in a started combat, else free), the "
+        + "limits, groups still sending waves, the last drop (mode, reason, result, ms, async, waves, relaxed, replans) "
+        + "and the last few reasons a drop went to core.",
     },
     {
       path: "ghostFor",
@@ -116,11 +121,44 @@ export const MANIFEST = Object.freeze({
         + "canvas (a browser tab, not the headless GM). straight: the plain drag already got there; cost in feet as the ruler measures it.",
     },
     {
+      path: "planGroup",
+      params: [
+        { name: "refs", type: "(Token | TokenDocument | uuid | id | exact name)[]",
+          doc: "the tokens, the first being the one grabbed (the anchor); all drawn on this canvas" },
+        { name: "point", type: "{ x, y }", doc: "the anchor's drop point, top-left pixels; the others keep their offsets" },
+      ],
+      returns: "{ ok, result: \"plan\" | \"core\", reason, combat, constricted, formation, replans, relaxed, ms, "
+        + "members: [{ id, name, core, level, delay, slot: { x, y }, waypoints }] } | { ok: false, code, reason }",
+      gm: false, writes: false,
+      since: "0.4.0",
+      doc: "Dry run of a group drop: each member's rest slot (top-left pixels), start delay (ms), how hard it was "
+        + "(level 0 a delay, 1 a lateral re-plan, 2 go last, 3 relaxed: may brush another while moving; \"core\": no "
+        + "route, left to core) and the route's waypoint count. Nothing moves. Needs a drawn canvas (a browser tab, "
+        + "not the headless GM). NOT_FOUND / BAD_ARGS / NO_CANVAS as a refusal object.",
+    },
+    {
+      path: "stop",
+      params: [
+        { name: "ref", kind: "token", type: "Token | TokenDocument | uuid | id | exact name", doc: "a moving token" },
+        { name: "opts", type: "{}", optional: true, doc: "none yet" },
+      ],
+      returns: "Promise<{ ok: true, how: \"displace\" | \"stop\", tokenId } | { ok, how: \"stop\", tokenId } (relay) | { ok: false, code, reason }>",
+      gm: false, writes: true, query: true, relay: true,
+      since: "0.4.0",
+      sideEffects: ["Token position (displace, out of combat)", "the token's pending movement (stopMovement, in combat)"],
+      doc: "Stop a moving token as a click on it would: out of combat it is put where it is drawn; in a started combat "
+        + "the client that started the move stops it at the next square (stopMovement), and another client asks the "
+        + "active GM through this row's relay, which stops it only when it started the move and the sender owns the "
+        + "token (NOT_INITIATOR / NOT_OWNER otherwise). Stopping a member of a group this client sent stops the group "
+        + "and cancels its unsent waves. NOT_MOVING when it is not moving or you cannot control it.",
+    },
+    {
       path: "selftest",
       params: [],
       returns: "{ ok, checks: [{ label, ok, detail }] }",
       gm: false, writes: false,
-      doc: "Live smoke checks after a sync: published, settings readable, both core methods wrapped, hooks registered.",
+      doc: "Live smoke checks after a sync: published, settings readable, the core methods wrapped (drag, keyboard, "
+        + "pathfinding, group drop, click to stop), hooks registered.",
     },
   ],
   flags: { writes: ["flags.pentaryn-movement.ghostInCombat"], reads: [] },

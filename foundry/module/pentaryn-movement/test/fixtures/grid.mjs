@@ -1,0 +1,138 @@
+/**
+ * A synthetic ASCII floor for the pure group planner: '#' is wall, anything else floor. Cell (i, j)
+ * is row i, column j; a centre { x, y } in squares lies in cell (floor(y), floor(x)). Gives the
+ * oracles group-core's planGroup() asks for, built on the real pathfind-core A* and string pulling,
+ * so the routes are the shapes the module itself would find (on a 1-square lattice, cost 1 a step).
+ */
+
+import { search, stringPull, directPath } from "../../pathfind-core.mjs";
+import { flood } from "../../group-core.mjs";
+
+export function gridWorld(ascii, { clock = null } = {}) {
+  const rows = ascii.trim().split("\n").map(r => r.trim());
+  const H = rows.length, W = rows[0].length;
+  const free = (i, j) => i >= 0 && j >= 0 && i < H && j < W && rows[i][j] !== "#";
+  const EPS = 1e-6;
+  const calls = { route: 0, avoid: 0 };
+
+  /** Every cell a w×h box at top-left cell (i, j) covers is floor. */
+  const fits = (i, j, w = 1, h = w) => {
+    for (let a = 0; a < h; a++) for (let b = 0; b < w; b++) if (!free(i + a, j + b)) return false;
+    return true;
+  };
+  /**
+   * A point-sampled straight move between two centres: every covered square's centre stays on floor
+   * (the adapter casts one wall ray per covered square, core one from the centre).
+   */
+  const lineFits = (p, q, w = 1, h = w) => {
+    const n = Math.max(2, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / 0.05));
+    for (let k = 0; k <= n; k++) {
+      const x = p.x + (q.x - p.x) * k / n, y = p.y + (q.y - p.y) * k / n;
+      for (let a = 0; a < h; a++) for (let b = 0; b < w; b++) {
+        if (!free(Math.floor(y - h / 2 + a + 0.5), Math.floor(x - w / 2 + b + 0.5))) return false;
+      }
+    }
+    return true;
+  };
+  /** At rest: the token's box (inset 0.1 square) is on floor. */
+  const walkableAt = (x, y, w = 1, h = w) => {
+    const x0 = x - w / 2 + 0.1, x1 = x + w / 2 - 0.1, y0 = y - h / 2 + 0.1, y1 = y + h / 2 - 0.1;
+    for (let i = Math.floor(y0); i <= Math.floor(y1); i++) for (let j = Math.floor(x0); j <= Math.floor(x1); j++) {
+      if (!free(i, j)) return false;
+    }
+    return true;
+  };
+
+  const walkable = (m, c) => walkableAt(c.x, c.y, m.w, m.h);
+
+  let floodMap = null, floodFrom = null;
+  const walkDistanceFrom = anchor => {
+    const o = { i: Math.floor(anchor.y), j: Math.floor(anchor.x) };
+    if (!floodFrom || floodFrom.i !== o.i || floodFrom.j !== o.j) {
+      floodFrom = o;
+      floodMap = flood(o, (a, b) => free(b.i, b.j) && (a.i === b.i || a.j === b.j || (free(a.i, b.j) && free(b.i, a.j))), 20);
+    }
+    return c => {
+      const d = floodMap.get(`${Math.floor(c.y)},${Math.floor(c.x)}`);
+      return d === undefined ? null : d;
+    };
+  };
+
+  /**
+   * A* for a w×h member on a 1-square lattice anchored on the destination (as pathfind-adapter's
+   * fieldFor anchors it), string-pulled; avoid circles block nodes and steps that come inside them.
+   * An off-lattice start joins at its nearest node.
+   */
+  const route = (m, from, to, { avoid = [] } = {}) => {
+    calls.route += 1;
+    if (avoid.length) calls.avoid += 1;
+    if (clock) clock.t += clock.perRoute ?? 0;
+    const w = m.w ?? 1, h = m.h ?? w;
+    const centre = n => ({ x: to.x + n.j, y: to.y + n.i });
+    const start = { i: Math.round(from.y - to.y), j: Math.round(from.x - to.x) }, goal = { i: 0, j: 0 };
+    const grazes = (p, q) => avoid.some(a => segDist(p, q, a) < a.r - EPS);
+    const blocked = n => !lineFits(centre(n), centre(n), w, h) || avoid.some(a => Math.hypot(centre(n).x - a.x, centre(n).y - a.y) < a.r - EPS);
+    const open = (p, q) => lineFits(p, q, w, h) && !grazes(p, q);
+    const edge = (a, b) => (blocked(b) || !open(centre(a), centre(b)) ? null : 1);
+    const wall = (a, b) => !blocked(b) && lineFits(centre(a), centre(b), w, h);
+    if (!walkable(m, to) || !walkable(m, from)) return null;
+    const lead = centre(start);
+    if (Math.hypot(lead.x - from.x, lead.y - from.y) > EPS && !open(from, lead)) return null;
+    const job = search({ start, goal, edge, wall, unit: 1, bounds: { minI: -H - 2, maxI: H + 2, minJ: -W - 2, maxJ: W + 2 } });
+    if (job.run() !== "found") return null;
+    const lineOk = (a, b) => open(centre(a), centre(b)) && directPath(a, b).every(n => !blocked(n));
+    const pulled = stringPull(job.path, job.costs, { edge, wall, lineOk });
+    let pts = [from, ...pulled.map(centre)];
+    pts = pts.filter((p, k) => k === 0 || Math.hypot(p.x - pts[k - 1].x, p.y - pts[k - 1].y) > EPS);
+    // The exact start replaces its lattice node where the straight hop past the node is open.
+    if (pts.length > 2 && open(pts[0], pts[2])) pts.splice(1, 1);
+    let length = 0;
+    for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+    return { points: pts, length };
+  };
+
+  /** Free width across the route (both perpendicular sides), every quarter square; narrow below 4·rmax. */
+  const narrow = (points, rmax) => {
+    const out = [];
+    for (let k = 1; k < points.length; k++) {
+      const p = points[k - 1], q = points[k];
+      const L = Math.hypot(q.x - p.x, q.y - p.y);
+      if (L < EPS) continue;
+      const nx = -(q.y - p.y) / L, ny = (q.x - p.x) / L;
+      for (let s = 0; s <= L; s += 0.25) {
+        const x = p.x + (q.x - p.x) * s / L, y = p.y + (q.y - p.y) * s / L;
+        let width = 0;
+        for (const side of [1, -1]) {
+          let t = 0;
+          while (t < 4 * rmax && free(Math.floor(y + side * ny * t), Math.floor(x + side * nx * t))) t += 0.05;
+          width += t;
+        }
+        if (width < 4 * rmax - EPS) out.push({ x, y });
+      }
+    }
+    return out;
+  };
+
+  return { rows, free, walkable, walkDistanceFrom, route, narrow, calls, lineFits };
+}
+
+/** Distance from point c to segment p–q. */
+export function segDist(p, q, c) {
+  const L2 = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+  const t = L2 ? Math.min(Math.max(((c.x - p.x) * (q.x - p.x) + (c.y - p.y) * (q.y - p.y)) / L2, 0), 1) : 0;
+  return Math.hypot(c.x - (p.x + (q.x - p.x) * t), c.y - (p.y + (q.y - p.y) * t));
+}
+
+/** A member record as group.mjs builds it: centre start, same-delta formation, radius from size. */
+export function member(id, start, delta, { w = 1, h = w, speed = 6 } = {}) {
+  const formation = { x: start.x + delta.x, y: start.y + delta.y };
+  return { id, w, h, r: Math.max(w, h) / 2, start, formation, speed, tl: { x: formation.x - w / 2, y: formation.y - h / 2 } };
+}
+
+/** Run a planGroup generator to the end (no budget). */
+export function finish(gen) {
+  for (;;) {
+    const s = gen.next();
+    if (s.done) return s.value;
+  }
+}

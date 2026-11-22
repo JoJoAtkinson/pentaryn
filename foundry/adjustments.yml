@@ -1157,6 +1157,39 @@ adjustments:
     retire_class: guarded
     check: make foundry-movement-check
 
+  - id: movement-group-drop
+    packages: [core, dnd5e]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/group.mjs]
+    markers: ["_prepareDragLeftDropUpdates", "__pentarynMovementGroup"]
+    what: wraps Token#_prepareDragLeftDropUpdates on Token5e; takes core's [updates, { method "dragging", movement }] and, for a multi-token drag, replaces each member's movement[id].waypoints with its planned route to its own rest slot and sends later start-delay waves as further batched updates in the same shape from this client; in a started combat inserts a snapped checkpoint at every cell (kept only at the same measured cost); returns null (no updates) while a slow plan finishes, then commits through Scene#updateEmbeddedDocuments
+    why: core moves every dragged token by the same offset, each along its own path with no knowledge of the others, so a group overlaps and jams in doors; core commits no per-cell checkpoints, so a stop in combat could not land on a cell
+    native_when: core plans multi-token drags as a group (formation slots, staggered starts) or offers a per-cell checkpoint drag option
+    retire_class: guarded
+    check: make foundry-movement-check
+
+  - id: movement-click-stop
+    packages: [core]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/stop.mjs]
+    markers: ["_onClickLeft", "__pentarynMovementStop", "stopMovement", "displace"]
+    what: wraps Token#_onClickLeft; when the select tool is active, no modifier is held, the user can control the token and its movement is pending, paused or animating, stops it first (out of combat a displace move to where it is drawn with animate false; in a started combat stopMovement() by the initiating client, or the stop relay query to the active GM), then calls the original so selecting still works
+    why: core has no way to stop a moving token from the canvas; stopMovement() is initiator-only and does not stop the tween
+    native_when: core stops a token's movement when it is clicked mid-move
+    retire_class: guarded
+    check: make foundry-movement-check
+
+  - id: core-movement-group-drag-internals
+    packages: [core]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/group.mjs, foundry/module/pentaryn-movement/group-adapter.mjs]
+    markers: ["_draggedToken", "_movementPlanningContext", "interactionData", "animationContexts", "movementAnimationName", "_shouldRecordMovementHistory"]
+    what: reads core's drag state (TokenLayer#_draggedToken, its mouseInteractionManager.interactionData.contexts with destination / foundPath / waypoints, TokenLayer#_movementPlanningContext and its direct flag), the movement tween (Token#animationContexts by movementAnimationName; TokenDocument x / y carry the drawn position during it) and TokenDocument#_shouldRecordMovementHistory (the combat regime)
+    why: the group plan needs every member's drag destination and core path; click to stop needs to know a token is mid-tween and where it is drawn; none of it has a public accessor
+    native_when: core exposes the drag contexts and a "token is animating" / drawn-position accessor
+    retire_class: guarded
+    check: make foundry-movement-check
+
   - id: movement-layer-sort-owned
     packages: [core]
     modules: [pentaryn-movement]

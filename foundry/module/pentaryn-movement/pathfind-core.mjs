@@ -258,7 +258,7 @@ export function stringPull(path, costs, { edge, wall, lineOk = null, line = dire
  * The arc points that replace corner B of A→B→C, for tangent length t (same units as the points).
  * Returns [T1, …, T2] or null when there is no turn (collinear) or t does not fit.
  */
-export function filletPoints(A, B, C, t, stepDeg = LIMITS.arcStepDeg) {
+export function filletPoints(A, B, C, t, stepDeg = LIMITS.arcStepDeg, { maxError = null } = {}) {
   const ux = B.x - A.x, uy = B.y - A.y;
   const vx = C.x - B.x, vy = C.y - B.y;
   const lu = Math.hypot(ux, uy), lv = Math.hypot(vx, vy);
@@ -276,13 +276,25 @@ export function filletPoints(A, B, C, t, stepDeg = LIMITS.arcStepDeg) {
   const nx = -duy * side, ny = dux * side;
   const O = { x: T1.x + nx * r, y: T1.y + ny * r };
   const a0 = Math.atan2(T1.y - O.y, T1.x - O.x);
-  const n = Math.max(2, Math.ceil((theta * 180 / Math.PI) / stepDeg));
+  let n = Math.max(2, Math.ceil((theta * 180 / Math.PI) / stepDeg));
+  if (maxError) n = Math.max(n, arcSegments(theta, r, maxError));
   const pts = [];
   for (let k = 0; k <= n; k++) {
     const a = a0 + side * theta * (k / n);
     pts.push({ x: O.x + Math.cos(a) * r, y: O.y + Math.sin(a) * r });
   }
   return pts;
+}
+
+/**
+ * Chords needed so a turn of `theta` radians on radius `r` stays within `maxError` of the circle (the
+ * sagitta r·(1 − cos(θ / 2n)) of each chord). Same units for r and maxError.
+ */
+export function arcSegments(theta, r, maxError) {
+  if (!(r > 0) || !(maxError > 0) || !(theta > 0)) return 1;
+  if (maxError >= r) return 1;
+  const half = Math.acos(1 - maxError / r);                  // the largest half-angle one chord may span
+  return Math.max(1, Math.ceil(theta / (2 * half) - 1e-9));
 }
 
 /**
@@ -296,9 +308,13 @@ export function filletPoints(A, B, C, t, stepDeg = LIMITS.arcStepDeg) {
  * @param {(p, q) => boolean} o.clear                  is the straight move p→q open (walls, creatures, footprint)?
  * @param {(pts) => number|null} o.cost                measured cost of moving along pts (null = refused)
  * @param {number} [o.tries]
+ * @param {number} [o.maxError]                        chord error bound (pixels): a finer arc where the radius needs it (0.4.0)
+ * @param {number} [o.cornerPoints]                    at most this many points per arc, or the corner stays sharp
+ * @param {number} [o.maxPoints]                       at most this many points in the whole route
  * @returns {{ points: {x,y,arc?:true}[], arcs: number }}
  */
-export function fillet(pts, { maxT, clear, cost, tries = LIMITS.arcTries, stepDeg = LIMITS.arcStepDeg }) {
+export function fillet(pts, { maxT, clear, cost, tries = LIMITS.arcTries, stepDeg = LIMITS.arcStepDeg,
+  maxError = null, cornerPoints = Infinity, maxPoints = Infinity }) {
   if (pts.length < 3) return { points: pts.map(p => ({ ...p })), arcs: 0 };
   const out = [{ ...pts[0] }];
   let arcs = 0;
@@ -311,8 +327,12 @@ export function fillet(pts, { maxT, clear, cost, tries = LIMITS.arcTries, stepDe
     let placed = null;
     const sharp = cost([A, B, C]);
     for (let n = 0; n < tries && t > 1; n++, t /= 2) {
-      const arc = filletPoints(A, B, C, t, stepDeg);
+      const arc = filletPoints(A, B, C, t, stepDeg, { maxError });
       if (!arc) break;
+      // 0.4.0 caps: points per arc, and the whole route (what is placed, this arc, one point per corner to come).
+      // A smaller tangent needs fewer chords, so both try the next size.
+      if (arc.length > cornerPoints) continue;
+      if (out.length + arc.length + (pts.length - k - 1) > maxPoints) continue;
       const seq = [A, ...arc, C];
       let ok = true;
       for (let s = 1; s < seq.length && ok; s++) ok = clear(seq[s - 1], seq[s]);

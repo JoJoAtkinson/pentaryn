@@ -16,6 +16,11 @@
  *   pathfind-core.mjs    PURE A*, string pulling and corner arcs (drag pathfinding, 0.3.0)
  *   pathfind-adapter.mjs a Token and its drag options → the step tests the search uses (reads only)
  *   pathfind.mjs         the feature: wraps Token#findMovementPath
+ *   motion-core.mjs      PURE trajectories, conflicts, waves, the cell chain, the group / click decision tables (0.4.0)
+ *   group-core.mjs       PURE group planning: rest slots, routes, start delays (0.4.0)
+ *   group-adapter.mjs    tokens and drag contexts → member records and oracles (reads only)
+ *   group.mjs            the feature: wraps Token#_prepareDragLeftDropUpdates (group movement)
+ *   stop.mjs             the feature: wraps Token#_onClickLeft (click to stop)
  *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the feature installs synchronously in this body (where its module-scope Hooks.on
@@ -32,14 +37,18 @@ import { MODULE, NS } from "./movement-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
+import { registerQueries } from "./lib/queries.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
 import { onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import * as ghost from "./ghost.mjs";
 import * as ghostCombat from "./ghost-combat.mjs";
 import * as pathfind from "./pathfind.mjs";
+import * as group from "./group.mjs";
+import * as stop from "./stop.mjs";
 
-/** Features in load order (ghost first: its hooks have always registered first; pathfind last, 0.3.0). */
-const FEATURES = [ghost, ghostCombat, pathfind];
+/** Features in load order (ghost first: its hooks have always registered first; pathfind 0.3.0; group and stop 0.4.0). */
+const FEATURES = [ghost, ghostCombat, pathfind, group, stop];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -86,6 +95,9 @@ function onReady() {
   }
   publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
+
+// The manifest's relay row (stop: a player's click asks the active GM), on every client: the sender needs the name too.
+registerQueries(MANIFEST, () => ctx.api, { log });
 
 // Registration order is the module's historic one: init, then the feature's hooks (installed
 // synchronously, at the moment its module-scope Hooks.on calls used to run), then ready.

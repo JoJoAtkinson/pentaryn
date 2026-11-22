@@ -83,5 +83,27 @@
     "name": "PENTARYN_MOVEMENT.settings.smoothCorners.name",
     "hint": "PENTARYN_MOVEMENT.settings.smoothCorners.hint",
     "onChange": true
+  },
+  {
+    "key": "groupMovement",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "choices": null,
+    "name": "PENTARYN_MOVEMENT.settings.groupMovement.name",
+    "hint": "PENTARYN_MOVEMENT.settings.groupMovement.hint",
+    "onChange": true
+  },
+  {
+    "key": "clickToStop",
+    "scope": "client",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "choices": null,
+    "name": "PENTARYN_MOVEMENT.settings.clickToStop.name",
+    "hint": "PENTARYN_MOVEMENT.settings.clickToStop.hint",
+    "onChange": true
   }
 ]
