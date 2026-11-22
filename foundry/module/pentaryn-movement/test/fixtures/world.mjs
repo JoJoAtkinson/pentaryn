@@ -47,6 +47,11 @@ export async function movementWorld({ patchable = true } = {}) {
       _onClickLeft(event) {
         clicks.push({ token: this, event });
       }
+      /** Core's stopAnimation: resolves (does not empty) each context's chain, then clears the contexts. */
+      stopAnimation() {
+        for (const ctx of this.animationContexts?.values?.() ?? []) for (const link of ctx?.chain ?? []) link?.resolve?.();
+        this.animationContexts?.clear?.();
+      }
     };
     F.CONFIG.Canvas = { layers: { tokens: { layerClass: class TokenLayer5e {
       _prepareKeyboardMovementUpdates() {

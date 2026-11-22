@@ -541,6 +541,18 @@ test("R4-5: a click-stop in a doorway, the body across the wall beside the door,
   t.animationContexts.clear();
 });
 
+test("R4-4: core's own stopAnimation (an unanimated update seen by another client) empties each tween's queued links first", () => {
+  assert.equal(Token5e.prototype.stopAnimation.__pentarynMovementDefuse, true, "stopAnimation is wrapped");
+  const t = makeToken("dfuA000000000001", 100, 100);
+  let resolved = 0;
+  const ctx = { chain: [{ resolve: () => { resolved += 1; } }, { resolve: () => { resolved += 1; } }] };
+  t.animationContexts.set(t.movementAnimationName, ctx);
+  t.stopAnimation({ reset: false });
+  assert.equal(ctx.chain.length, 0, "no link left for a terminated tween's last frame to resume");
+  assert.equal(resolved, 2, "each link resolved once");
+  assert.ok(F.calls.some(c => c.op === "stopAnimation" && c.id === t.document.id && c.opts?.reset === false), "core's stopAnimation still runs");
+});
+
 test("R2-9: another client that receives a stop's displace and still draws the token elsewhere puts it where the server has it", () => {
   combatFlag = false;
   const t = makeToken("rsyA000000000001", 100, 100);

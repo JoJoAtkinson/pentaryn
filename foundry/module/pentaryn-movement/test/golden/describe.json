@@ -497,6 +497,11 @@
       "adjustments": "movement-click-stop"
     },
     {
+      "label": "Token#stopAnimation",
+      "marker": "__pentarynMovementDefuse",
+      "adjustments": "movement-stop-animation-defuse"
+    },
+    {
       "label": "TokenLayer.objects#sortChildren",
       "marker": "__pentarynMovement",
       "adjustments": "movement-layer-sort-owned"

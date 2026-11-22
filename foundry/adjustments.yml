@@ -1179,6 +1179,17 @@ adjustments:
     retire_class: guarded
     check: make foundry-movement-check
 
+  - id: movement-stop-animation-defuse
+    packages: [core]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/stop.mjs]
+    markers: ["stopAnimation", "__pentarynMovementDefuse", "chain.splice"]
+    what: wraps Token#stopAnimation on every client; before the original runs it empties each animation context's chain (resolving each link, as core then would), so a tween terminated within its due frame has no queued link to resume
+    why: core's stopAnimation resolves but leaves the chain; a terminated tween ticked once more and its completion resumed a link with no context (TypeError reading 'chain'); core calls stopAnimation({reset false}) itself for an unanimated update, so another client that sees a click-stop's displace threw it (live R4-4)
+    native_when: core's stopAnimation (or #completeAnimation) empties the chain or skips a terminated context
+    retire_class: guarded
+    check: make foundry-movement-check
+
   - id: core-movement-group-drag-internals
     packages: [core]
     modules: [pentaryn-movement]

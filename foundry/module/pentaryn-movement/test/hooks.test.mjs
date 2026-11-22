@@ -23,7 +23,7 @@ test("registration manifest equals golden/hooks.json (40 entries, today's order;
   ]);
 });
 
-test("setup with none of the five methods: five warns, byte for byte; status().patched both false", () => {
+test("setup with none of the six methods: six warns, byte for byte; status().patched both false", () => {
   const warns = [];
   const saved = console.warn;
   console.warn = (...a) => warns.push(a.map(String).join(" "));
@@ -39,6 +39,7 @@ test("setup with none of the five methods: five warns, byte for byte; status().p
     "pentaryn-movement | no Token#findMovementPath; drag pathfinding disabled",
     "pentaryn-movement | no Token#_prepareDragLeftDropUpdates; group movement disabled",
     "pentaryn-movement | no Token#_onClickLeft; click to stop disabled",
+    "pentaryn-movement | no Token#stopAnimation; a stop seen by another client may log core's 'chain' TypeError",
   ]);
   F.fire("ready");
   mock.timers.tick(0);

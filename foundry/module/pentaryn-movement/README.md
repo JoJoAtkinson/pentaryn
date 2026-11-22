@@ -162,6 +162,7 @@ client puts the token where the server has it), stop's `canvasReady` (the board 
 | `Token#findMovementPath` | `movement-pathfind-find-path` | drag pathfinding: splices the found corners in and runs the original again (marker `__pentarynMovementPath`) |
 | `Token#_prepareDragLeftDropUpdates` | `movement-group-drop` | group movement: core's updates, then the plan's routes and waves; combat cell checkpoints (marker `__pentarynMovementGroup`) |
 | `Token#_onClickLeft` | `movement-click-stop` | click to stop, before core's click (marker `__pentarynMovementStop`) |
+| `Token#stopAnimation` | `movement-stop-animation-defuse` | every client: empties the tweens' queued links before core terminates them, so no stop throws core's "reading 'chain'" (marker `__pentarynMovementDefuse`) |
 
 Not patches: `dnd5e-movement-pathfind-blocking` (the search asks dnd5e's
 `TokenLayer5e#isOccupiedGridSpaceBlocking` which squares a creature blocks) and

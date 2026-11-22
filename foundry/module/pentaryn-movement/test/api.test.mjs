@@ -56,9 +56,9 @@ test("surface equals golden/surface.json (core.* is the pure module: checked aga
   assert.deepEqual(Object.keys(api.core).sort(), Object.keys(coreModule).sort());
 });
 
-test("every patch record names an adjustments row; six patches (0.3.0: findMovementPath; 0.4.0: the drop and the click)", () => {
+test("every patch record names an adjustments row; seven patches (0.3.0: findMovementPath; 0.4.0: the drop and the click; 0.4.4: stopAnimation)", () => {
   const listed = api.describe().patches;
-  assert.equal(listed.length, 6);
+  assert.equal(listed.length, 7);
   for (const p of listed) assert.ok(p.adjustments?.startsWith("movement-"), p.label);
 });
 

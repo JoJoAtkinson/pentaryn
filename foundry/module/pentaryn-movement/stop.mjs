@@ -45,6 +45,7 @@ import { queryGM } from "./lib/queries.mjs";
 let log = null;
 let feature = null;
 let clickHandle = null;
+let defuseHandle = null;
 let clickPatched = false;
 let lastStop = null;
 /** The DOM pointerdown the click wrap saw last (the board listener leaves that one alone). */
@@ -352,6 +353,28 @@ function unlistenBoard() {
 /*  The wrap                                    */
 /* -------------------------------------------- */
 
+/**
+ * Every client: Token#stopAnimation empties each tween's queued links before core terminates them
+ * (defuse). Core's own stopAnimation({ reset: false }) for an unanimated update (a stop's displace seen
+ * by another client) left the links queued, and the terminated tween's last frame resumed one with no
+ * context: the same TypeError "reading 'chain'" as D-4, now on the observing client (live R4-4). Core
+ * resolves the links itself; this only empties the list first.
+ */
+function patchStopAnimation() {
+  const proto = CONFIG.Token?.objectClass?.prototype;
+  if (typeof proto?.stopAnimation !== "function") {
+    log.warn("no Token#stopAnimation; a stop seen by another client may log core's 'chain' TypeError");
+    return null;
+  }
+  return wrapMethod(MODULE, {
+    target: proto, name: "stopAnimation", label: "Token#stopAnimation",
+    marker: "__pentarynMovementDefuse", adjustments: "movement-stop-animation-defuse",
+  }, function (wrapped, ...args) {
+    try { defuse(this); } catch (err) { log?.debug?.("defuse (stopAnimation)", err); }
+    return wrapped(...args);
+  });
+}
+
 function patchClick() {
   const proto = CONFIG.Token?.objectClass?.prototype;
   if (typeof proto?._onClickLeft !== "function") {
@@ -423,8 +446,8 @@ async function stopOwn(data = {}, qctx = {}) {
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  if (ctx.late) clickPatched = patchClick();
-  else reg.once("setup", () => { clickPatched = patchClick(); }, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
+  if (ctx.late) { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); }
+  else reg.once("setup", () => { clickPatched = patchClick(); defuseHandle = patchStopAnimation(); }, { guard: false, label: "setup: wrap _onClickLeft (click to stop)" });
   reg.on("moveToken", (doc, movement) => onMoveToken(doc, movement), { label: "moveToken: when a move started (click-to-stop arming)" });
   // Every client: a stop's displace (an unanimated position write) must leave the token drawn where the
   // server has it here too, not only on the client that clicked (live R2-9: both clients showed it away
@@ -442,6 +465,8 @@ export function install(reg, ctx) {
 export function uninstall() {
   clickHandle?.unwrap();
   clickHandle = null;
+  defuseHandle?.unwrap();
+  defuseHandle = null;
   clickPatched = false;
   lastStop = null;
   lastNative = null;
