@@ -261,6 +261,24 @@ test("17 refusals: a right-drag pan, a chord, a live drag, a stale record, a tok
   refuse("on a door control");
   canvas.walls.placeables = [];
 
+  // live R1 D-5: pentaryn-aoe's wall break disc (an interactive control in a non-interactive-children
+  // container on the controls layer) repairs the wall on a right press; the menu must not open too,
+  // even when the repair has redrawn the disc away before the release.
+  const savedControls = canvas.controls;
+  const disc = { eventMode: "static", visible: true, interactiveChildren: false, hitArea: { contains: (x, y) => Math.hypot(x - 400, y - 300) <= 11 },
+    toLocal: p => ({ x: p.x, y: p.y }), children: [{ eventMode: "static", hitArea: { contains: () => { throw new Error("never walked"); } } }] };
+  canvas.controls = { children: [{ eventMode: "passive", children: [disc] }] };
+  dispatch(board, "pointerdown", { button: 2, buttons: 2, clientX: 400, clientY: 300 });
+  canvas.controls = { children: [] };                 // the repair redrew the controls before the release
+  dispatch(board, "pointerup", { button: 2, buttons: 0, clientX: 400, clientY: 300 });
+  dispatch(board, "contextmenu", { button: 2, clientX: 400, clientY: 300 });
+  assert.equal(menuEl(), null, "on a wall break disc");
+  canvas.controls = { children: [{ eventMode: "passive", children: [{ ...disc, hitArea: { contains: () => false } }] }] };
+  rightClick();
+  assert.notEqual(menuEl(), null, "beside the disc: the menu opens");
+  close();
+  canvas.controls = savedControls;
+
   const stop = ev => ev.stopPropagation();          // pentaryn-portals' badge listener (capture, stops)
   board.addEventListener("contextmenu", stop, true);
   refuse("on a portal badge (propagation stopped before the parent)");

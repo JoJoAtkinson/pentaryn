@@ -26,7 +26,8 @@
  * on #board's parent element, filtered to `target === board`. The portal badge's capture listener stops propagation on a badge,
  * so a badge right-click never reaches it. The menu opens once BOTH the contextmenu and the right
  * pointerup arrived (either order, `menuTrigger`), and only past every gate (`menuAllowed`):
- * right-drag pans, token right-clicks (the HUD), other layers and players are untouched.
+ * right-drag pans, token right-clicks (the HUD), a right-click on an interactive control on the
+ * controls layer (another module's map button, read at the press), other layers and players are untouched.
  * Other modules are reached only through their published APIs.
  */
 
@@ -61,6 +62,30 @@ function hitAt(pt) {
     if (!w.isDoor || !w.doorControl || w.doorControl.visible === false) continue;
     const [mx, my] = w.midpoint ?? [NaN, NaN];
     if (Math.abs(pt.x - mx) <= half && Math.abs(pt.y - my) <= half) return true;
+  }
+  return false;
+}
+
+/**
+ * An interactive control another module draws on the controls layer (pentaryn-aoe's wall break discs:
+ * live R1 D-5, a right-click repaired the wall AND opened this menu) under a canvas point. Read at the
+ * press: the control's own right-press handler may redraw or remove it before the release. Anything
+ * with a pointer event mode and a hit area there counts; children of a container that turned
+ * interactiveChildren off are not walked.
+ */
+function controlAt(pt) {
+  const root = canvas?.controls;
+  if (!pt || !root?.children) return false;
+  const stack = [...root.children];
+  while (stack.length) {
+    const o = stack.pop();
+    if (!o || o.destroyed || o.visible === false || o.renderable === false) continue;
+    if ((o.eventMode === "static" || o.eventMode === "dynamic") && typeof o.hitArea?.contains === "function") {
+      let local = null;
+      try { local = o.toLocal?.(pt, canvas.stage) ?? null; } catch (err) { C?.log?.debug?.("controlAt", err); }
+      if (local && o.hitArea.contains(local.x, local.y)) return true;
+    }
+    if (o.children?.length && o.interactiveChildren !== false) stack.push(...o.children);
   }
   return false;
 }
@@ -286,7 +311,7 @@ function decide() {
     onBoard: seq.some(e => e.type === "contextmenu" && e.onBoard),
     down, release,
     // review F4: the hit test walks the placeables; skip it when a cheap gate already says no
-    hit: pt && isGM && enabled && tokensLayer ? hitAt(pt) : true,
+    hit: pt && isGM && enabled && tokensLayer ? (down.control || hitAt(pt)) : true,
   });
   if (allowed) openAt(release, pt);
 }
@@ -304,8 +329,9 @@ function bind() {
   const onDown = ev => {
     if (ev.target !== board) return;
     if (ev.button === 2) {
+      const at = canvas?.ready && game.user?.isGM ? canvas.canvasCoordinatesFromClient?.({ x: ev.clientX, y: ev.clientY }) ?? null : null;
       rec = { down: { x: ev.clientX, y: ev.clientY, buttons: ev.buttons, dragging: canvas?.currentMouseManager != null,
-        placing: placing(), travel: 0 },
+        placing: placing(), travel: 0, control: controlAt(at) },
       seq: [{ type: "down", button: 2, x: ev.clientX, y: ev.clientY }] };
       return;
     }
