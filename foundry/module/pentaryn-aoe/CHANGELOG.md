@@ -25,6 +25,11 @@
     (`repairWall`, moved with the handle). The last section deletes the region. Deleting spell walls on
     the Walls layer breaks those sections too (`breakSections`, last first), so a drag does not bring
     them back. API: `wallsFor`, `breakWallSection`, `repairWall`, `syncWalls` (describe golden updated).
+  - **Review fixes.** A second break click (or a repair) on the same wall while the first
+    `region.update` is still on its server round trip is dropped (`exclusive`): it read the old shapes
+    and section numbers, so it put the first break back or knocked out the wrong stretch of a split
+    panel. With `spellWalls` off, the GM deleting a leftover spell wall on the Walls layer is just
+    cleanup and no longer cuts the area.
   - **[declared] Part H.** A spell's own walls never clip its own area, and a Wall of Force's walls clip
     other areas although they block no sight (`core.areaEdgeClips`; `walls.mjs` passes the region id in
     the polygon config). Under `areaWalls: move`, core's polygon is used as before unless the scene has

@@ -168,14 +168,35 @@ function handleAt(region) {
 }
 
 /**
+ * Region id → a break or repair in flight on this client. A second click (or a Walls-layer delete) on the
+ * same wall before the first region.update returns would read the old shapes and section numbering: it
+ * would put the first break back, or knock out the wrong stretch once a panel had been split. It is
+ * dropped instead; the controls are redrawn from the new shapes when the update lands.
+ */
+const busy = new Set();
+
+async function exclusive(region, fn) {
+  if (busy.has(region.id)) {
+    log.debug(`wall ${region.id}: a break or repair is still in flight, this one is dropped`);
+    return null;
+  }
+  busy.add(region.id);
+  try { return await fn(); } finally { busy.delete(region.id); }
+}
+
+/**
  * GM: knock sections out of a wall spell's region. `sections`: `[{ panel, section }]`. A line panel is
  * cut, a round wall's chord is listed as broken; the walls follow through updateRegion. The last section
  * gone deletes the region. Returns `{ regionId, broken, panels, destroyed }`, or null (not a GM, not a
- * wall spell, no such section).
+ * wall spell, no such section, or a break or repair of this wall still in flight).
  */
 export async function breakWall(ref, sections) {
   const region = regionOf(ref);
   if (!game.user?.isGM || !region || !wallKindOf(region)) return null;
+  return exclusive(region, () => breakRegion(region, sections));
+}
+
+async function breakRegion(region, sections) {
   const scene = region.parent;
   const shapes = shapesOf(region);
   const out = breakSections(shapes, sections, sectionPixels(scene.grid?.size, scene.grid?.distance));
@@ -207,6 +228,10 @@ export const breakWallSection = (ref, panel, section) => breakWall(ref, [{ panel
 export async function repairWall(ref) {
   const region = regionOf(ref);
   if (!game.user?.isGM || !region || !wallKindOf(region)) return null;
+  return exclusive(region, () => repairRegion(region));
+}
+
+async function repairRegion(region) {
   const flags = aoeFlags(region);
   if (!flags.wallOriginal && !(flags.wallBroken ?? []).length) {
     ui.notifications.info(_loc("PENTARYN_AOE.Walls.NothingToRepair", { spell: spellName(region) }));
@@ -236,7 +261,8 @@ export function wallsFor(ref) {
 const deleted = new Map();
 
 function onDeleteWall(wall, options, userId) {
-  if (options?.[SYNC] || userId !== game.user?.id || !game.user?.isGM) return;
+  // spellWalls off: a leftover wall the GM deletes is just cleanup, never a break of the area.
+  if (options?.[SYNC] || userId !== game.user?.id || !game.user?.isGM || !setting("spellWalls")) return;
   const f = wall?.flags?.[MODULE];
   const region = f?.regionId ? wall.parent?.regions?.get(f.regionId) : null;
   if (!region) return;
@@ -389,7 +415,8 @@ export function uninstall() {
   onSettingChange("spellWalls", null);
   try { dropAllControls(); } catch (err) { log.warn("wall controls uninstall", err); }
   deleted.clear();
+  busy.clear();
 }
 
 // Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only. Not part of the API.
-export const _internals = { planFor, syncRegion, syncScene, breakWall, breakWallSection, repairWall, wallsFor, drawControls, dropControls, onDeleteWall, regionOf, SYNC, ROOT, queues };
+export const _internals = { planFor, syncRegion, syncScene, breakWall, breakWallSection, repairWall, wallsFor, drawControls, dropControls, onDeleteWall, regionOf, SYNC, ROOT, queues, busy };

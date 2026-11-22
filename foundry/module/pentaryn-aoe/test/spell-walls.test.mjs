@@ -359,6 +359,40 @@ test("B2: the GM deleting spell walls on the Walls layer breaks those sections (
   assert.equal(s.walls.size, 1);
 });
 
+test("B2 review: a second click on the same wall while the first break is in flight is dropped (it would undo the first, or break the wrong stretch)", async () => {
+  const s = wallScene("WallSyncScene010");
+  const r = wallRegion(s, "regWallSync00010", stoneItem, square.map(x => ({ ...x })));
+  await SW.syncRegion(r);
+  const apply = r.update;
+  let land;
+  const roundTrip = new Promise(res => { land = res; });
+  r.update = async function (changes) { await roundTrip; return apply.call(this, changes); };   // the server round trip
+  const first = SW.breakWallSection(r, 0, 0);
+  const second = SW.breakWallSection(r, 2, 0);   // before the first region.update has landed
+  land();
+  const [a, b] = await Promise.all([first, second]);
+  r.update = apply;
+  assert.equal(b, null, "dropped");
+  assert.equal(a?.broken, 1);
+  await flush();
+  assert.deepEqual(r.shapes.map(x => x.x), [1200, 1400], "only the first break, and it held");
+  assert.equal(SW.busy.size, 0, "nothing left in flight");
+  assert.equal((await SW.breakWallSection(r, 1, 0))?.broken, 1, "a later click works");
+});
+
+test("B2 review: with spellWalls off, the GM deleting a leftover spell wall on the Walls layer does not break the area", async () => {
+  const s = wallScene("WallSyncScene011");
+  const r = wallRegion(s, "regWallSync00011", stoneItem, square.map(x => ({ ...x })));
+  await SW.syncRegion(r);
+  await game.settings.set(MODULE, "spellWalls", false);
+  try {
+    const [one] = [...s.walls.keys()];
+    await s.deleteEmbeddedDocuments("Wall", [one], {});
+    await flush(); await flush();
+    assert.equal(r.shapes.length, 3, "the area is untouched");
+  } finally { await game.settings.set(MODULE, "spellWalls", true); }
+});
+
 test("B2: the GM gets one break control per section on canvas.controls; click breaks, right-click repairs; a player gets none", async () => {
   const s = wallScene("WallSyncScene009");
   F.canvas.scene = s;
