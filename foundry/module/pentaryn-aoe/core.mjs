@@ -19,6 +19,9 @@ export const HOOKS = Object.freeze({});
 // Area geometry: centreOf, handleTopLeft, AREA_WALL_RULES, edgeClipsArea, areaClipOrigin, instantaneous,
 // instantSpellArea.
 export * from "./core/areas.mjs";
+// B2 spell walls: SPELL_WALLS, spellWallKind, sectionPixels, panelSections, wallId, wallPlan, diffWalls,
+// breakSection, restoreShapes, areaEdgeClips.
+export * from "./core/spell-walls.mjs";
 
 /** Read this module's flags without getFlag(): getFlag throws while the module is inactive (hot-patch). */
 export function aoeFlags(doc) {

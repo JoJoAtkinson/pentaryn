@@ -201,6 +201,16 @@
   },
   {
     "ns": "pentaryn-aoe",
+    "key": "spellWalls",
+    "name": "PENTARYN_AOE.Setting.spellWalls.Name",
+    "hint": "PENTARYN_AOE.Setting.spellWalls.Hint",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true
+  },
+  {
+    "ns": "pentaryn-aoe",
     "key": "showAppliedBy",
     "name": "PENTARYN_AOE.Setting.showAppliedBy.Name",
     "hint": "PENTARYN_AOE.Setting.showAppliedBy.Hint",

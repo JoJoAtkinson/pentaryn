@@ -57,7 +57,7 @@ test("settings register at init in BOOLS order, then showAppliedBy and npcSaveRo
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
     "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "autoDamageOnSave",
-    "applyFromCard", "hitMissLabels", "showAppliedBy", "npcSaveRollMode", "areaWalls",
+    "applyFromCard", "hitMissLabels", "spellWalls", "showAppliedBy", "npcSaveRollMode", "areaWalls",
   ]);
 });
 
@@ -70,13 +70,13 @@ test("the Escape keybinding registers once at init: PRIORITY, editable Escape, l
       editable: [{ key: "Escape" }], precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY, onDown: "function" });
 });
 
-test("-13 BOOLS is the literal 20-name list; DEFAULTS has 23 keys; showAppliedBy, npcSaveRollMode and areaWalls stay out of BOOLS", () => {
+test("-13 BOOLS is the literal 21-name list; DEFAULTS has 24 keys; showAppliedBy, npcSaveRollMode and areaWalls stay out of BOOLS", () => {
   const { BOOLS, DEFAULTS } = S.settings;
   assert.deepEqual(BOOLS, [
     "handleTokens", "removeAreaButton", "instantCleanup", "concentrationCleanup", "resolveSaves", "autoApplyNpc",
     "promptPlayers", "autoDamageOnHit", "autoApplySelf", "highlightUnapplied", "carefulSpell", "refundCancelledArea",
     "playerStatus", "untargetedSelf", "noSpellStacking", "aimSelfAreas", "stationaryInstantAreas", "autoDamageOnSave", "applyFromCard",
-    "hitMissLabels",
+    "hitMissLabels", "spellWalls",
   ]);
   assert.equal(typeof DEFAULTS.npcSaveRollMode, "string");
   assert.deepEqual({ ...DEFAULTS }, {
@@ -84,7 +84,7 @@ test("-13 BOOLS is the literal 20-name list; DEFAULTS has 23 keys; showAppliedBy
     npcSaveRollMode: "gm", autoApplyNpc: false, promptPlayers: true, autoDamageOnHit: true, autoApplySelf: true,
     highlightUnapplied: true, carefulSpell: true, refundCancelledArea: true, playerStatus: true, untargetedSelf: true,
     noSpellStacking: true, aimSelfAreas: true, stationaryInstantAreas: true, autoDamageOnSave: true, applyFromCard: true, areaWalls: "cover",
-    showAppliedBy: "owners", hitMissLabels: true,
+    showAppliedBy: "owners", hitMissLabels: true, spellWalls: true,
   });
   assert.deepEqual(S.settings.LEGACY_ROLL_MODES, ["gmroll", "blindroll", "publicroll"]);
 });
@@ -124,6 +124,7 @@ const LEGACY = [
 test("[declared] D-A3 -10 the published API keeps the 20 legacy names and adds the kit members, the -10 reads and Part I's relay", () => {
   assert.deepEqual(Object.keys(game.pentaryn.aoe).sort(), [...LEGACY,
     "applyRelay", "contract", "describe", "inspect", "isHandle", "latestResolution", "resolution", "settings", "summary", "trace", "version",
+    "breakWallSection", "repairWall", "syncWalls", "wallsFor",
   ].sort());
   for (const k of LEGACY) assert.equal(typeof game.pentaryn.aoe[k], "function", k);
 });
@@ -149,8 +150,8 @@ test("[declared] aoe-edge-3 a canvasReady sweep is registered through on() at se
 });
 
 test("[declared] D-A4 ready without ui.ARGON: the once canvasReady fallback is registered through the registry (in hookIds)", () => {
-  assert.equal(F.listeners("canvasReady"), 2);
-  assert.equal(S.hooks.hookIds().filter(h => h.name === "canvasReady").length, 2);
+  assert.equal(F.listeners("canvasReady"), 3);   // + the spell-wall sync (0.8.0)
+  assert.equal(S.hooks.hookIds().filter(h => h.name === "canvasReady").length, 3);
 });
 
 test("hookIds() is [{ name, id }] in registration order, ids increasing", () => {
@@ -166,7 +167,7 @@ test("the raw once canvasReady fallback runs guardArgonBind when Argon arrives l
   F.fire("canvasReady", { scene: null });
   await flush();
   assert.equal(F.ui.ARGON.bind._aoeGuard, true);
-  assert.equal(F.listeners("canvasReady"), 1, "the once listener is spent; the sweep stays");
+  assert.equal(F.listeners("canvasReady"), 2, "the once listener is spent; the sweep and the spell-wall sync stay");
   delete F.ui.ARGON;
 });
 

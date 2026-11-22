@@ -140,6 +140,10 @@
       "hitMissLabels": {
         "Name": "Say Hit or Miss on attacks",
         "Hint": "An attack card says Hit (blue) or Miss (orange) in its title (on each target when there are several), a miss adds a \"Miss — no damage\" line, and the damage roll after a hit gets a blue title. Shown only when dnd5e's attack roll visibility lets players know hit or miss (not when it is None); the AC stays hidden with \"Hide AC\"."
+      },
+      "spellWalls": {
+        "Name": "Wall spells raise real walls",
+        "Hint": "Wall of Stone and Wall of Ice block movement and sight, Wall of Force blocks movement only (it is invisible), Wall of Fire blocks sight only. The GM knocks a section down with the small break control on each section (right-click one: put the whole wall back). Blade Barrier and Wind Wall raise none. Off: no walls, and the viewed scene's are removed."
       }
     },
     "Keybinding": {
@@ -188,6 +192,13 @@
     },
     "Panels": {
       "Counter": "Panel {n} of {total}: Esc to finish, right-click skips a panel"
+    },
+    "Walls": {
+      "Break": "Click: break this section · Right-click: repair the whole wall",
+      "Broken": "{spell}: a section is broken.",
+      "Destroyed": "{spell}: the last section is broken, the wall is gone.",
+      "Repaired": "{spell}: the wall is whole again.",
+      "NothingToRepair": "{spell} has no broken section."
     }
   }
 }

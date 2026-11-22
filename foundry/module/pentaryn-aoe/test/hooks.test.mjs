@@ -38,7 +38,7 @@ test("registration manifest (init + setup + ready as the active GM) equals golde
   pinJSON("hooks", golden, import.meta.url);
 });
 
-test("setup registers the feature hooks in Part order: areas, token areas, resolve, tray, attacks, effects, refund, aim, escape, walls, wall spells, apply", () => {
+test("setup registers the feature hooks in Part order: areas, token areas, resolve, tray, attacks, effects, refund, aim, escape, walls, wall spells, spell walls, apply", () => {
   assert.deepEqual(atSetup.map(h => `${h.kind} ${h.name}`), [
     "on preCreateRegion", "on createRegion", "on deleteRegion", "on preCreateCombatant", "on targetToken", "on preMoveToken",
     "on dnd5e.renderChatMessage", "on deleteActiveEffect", "on canvasReady",
@@ -50,6 +50,8 @@ test("setup registers the feature hooks in Part order: areas, token areas, resol
     "on dnd5e.postUseActivity",
     "on dnd5e.preCreateMeasuredTemplate",
     "on refreshRegion",
+    "on createRegion", "on updateRegion", "on deleteRegion", "on deleteRegion", "on deleteWall", "on refreshRegion",
+    "on destroyRegion", "on canvasTearDown", "on canvasReady",
     "on preCreateChatMessage", "on dnd5e.renderChatMessage", "on targetToken", "on deleteChatMessage",
   ]);
 });

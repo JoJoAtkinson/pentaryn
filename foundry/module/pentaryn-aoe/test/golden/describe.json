@@ -538,6 +538,106 @@
       "doc": "The region placement following the mouse right now (core's placement context), or null."
     },
     {
+      "path": "wallsFor",
+      "params": [
+        {
+          "name": "region",
+          "type": "RegionDocument|Region|id|uuid",
+          "resolve": false,
+          "doc": "a wall spell's template region; an id is looked up on the viewed scene, then every scene"
+        }
+      ],
+      "returns": "{ regionId, spell, blocks: { move, sight, areas }, walls: { id, panel, section, c }[], broken: string[], repairable }|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no such region, or it is not a wall spell that raises walls (Blade Barrier, Wind Wall, any other area)",
+      "since": "0.8.0",
+      "doc": "B2: a wall spell's region — which spell, what its walls block, its Wall documents by panel and 10-ft section, the round-wall sections knocked out, and whether repairWall has anything to put back."
+    },
+    {
+      "path": "breakWallSection",
+      "params": [
+        {
+          "name": "region",
+          "type": "RegionDocument|Region|id|uuid",
+          "resolve": false,
+          "doc": "a wall spell's template region; an id is looked up on the viewed scene, then every scene"
+        },
+        {
+          "name": "panel",
+          "type": "number",
+          "resolve": false,
+          "doc": "the region's shape index (a placed panel)"
+        },
+        {
+          "name": "section",
+          "type": "number",
+          "resolve": false,
+          "doc": "the 10-ft section along that panel (a round wall: the chord), from 0"
+        }
+      ],
+      "returns": "Promise<{ regionId, broken, panels, destroyed }|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Region shapes (the panel cut) or flags.pentaryn-aoe.wallBroken",
+        "flags.pentaryn-aoe.wallOriginal",
+        "Wall (deleted by the sync)",
+        "Region (deleted with its last section)"
+      ],
+      "nullWhen": "not a GM, not a wall spell, or no such panel or section",
+      "since": "0.8.0",
+      "doc": "B2: knock one section out of a wall, as the map's break control does: a line panel's shape is cut so the area shows the gap, a round wall's section is listed as broken; the active GM's sync then removes its Wall document. An info toast names the spell."
+    },
+    {
+      "path": "repairWall",
+      "params": [
+        {
+          "name": "region",
+          "type": "RegionDocument|Region|id|uuid",
+          "resolve": false,
+          "doc": "a wall spell's template region; an id is looked up on the viewed scene, then every scene"
+        }
+      ],
+      "returns": "Promise<{ regionId, panels }|null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Region shapes",
+        "flags.pentaryn-aoe.wallOriginal",
+        "flags.pentaryn-aoe.wallBroken",
+        "Wall (re-created by the sync)"
+      ],
+      "nullWhen": "not a GM, not a wall spell, or nothing is broken (an info toast)",
+      "since": "0.8.0",
+      "doc": "B2: put a broken wall back as it was before its first break, moved with its handle since (right-click a break control does the same)."
+    },
+    {
+      "path": "syncWalls",
+      "params": [
+        {
+          "name": "scene",
+          "type": "Scene",
+          "resolve": false,
+          "optional": true,
+          "doc": "default: canvas.scene"
+        }
+      ],
+      "returns": "Promise<{ regions, created, updated, deleted, orphans }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Wall (created/updated/deleted, flags.pentaryn-aoe.regionId)"
+      ],
+      "since": "0.8.0",
+      "doc": "B2, active GM: repair one scene's spell walls — every wall spell's region gets the walls its panels call for (none with spellWalls off), walls whose region is gone are deleted. All zeros on any other client. Runs on canvasReady."
+    },
+    {
       "path": "applyRelay",
       "params": [
         {
@@ -706,6 +806,13 @@
       "doc": "Part C (D2): an attack card says Hit (blue) or Miss (orange) in its title, or on each target with several, a miss adds a \"Miss — no damage\" line, and the damage card after a hit has a blue title; nothing while dnd5e.attackRollVisibility is none."
     },
     {
+      "key": "spellWalls",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "B2: Wall of Stone and Wall of Ice raise walls that block movement and sight, Wall of Force movement only, Wall of Fire sight only; the GM breaks a section with its map control. Off: the active GM's client removes them (the viewed scene now, any other when it is next viewed)."
+    },
+    {
       "key": "showAppliedBy",
       "scope": "world",
       "type": "String",
@@ -834,6 +941,42 @@
       "label": "refreshRegion(wall)"
     },
     {
+      "name": "createRegion",
+      "label": "createRegion(walls)"
+    },
+    {
+      "name": "updateRegion",
+      "label": "updateRegion(walls)"
+    },
+    {
+      "name": "deleteRegion",
+      "label": "deleteRegion(walls)"
+    },
+    {
+      "name": "deleteRegion",
+      "label": "deleteRegion(wall controls)"
+    },
+    {
+      "name": "deleteWall",
+      "label": "deleteWall(break)"
+    },
+    {
+      "name": "refreshRegion",
+      "label": "refreshRegion(wall controls)"
+    },
+    {
+      "name": "destroyRegion",
+      "label": "destroyRegion(wall controls)"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "canvasTearDown(wall controls)"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady(walls)"
+    },
+    {
       "name": "preCreateChatMessage",
       "label": "preCreateChatMessage(self)"
     },
@@ -884,6 +1027,13 @@
       "flags.pentaryn-aoe.recordedTargets",
       "flags.pentaryn-aoe.applied",
       "flags.pentaryn-aoe.appliedLog",
+      "flags.pentaryn-aoe.regionId",
+      "flags.pentaryn-aoe.panel",
+      "flags.pentaryn-aoe.section",
+      "flags.pentaryn-aoe.spell",
+      "flags.pentaryn-aoe.clipsAreas",
+      "flags.pentaryn-aoe.wallOriginal",
+      "flags.pentaryn-aoe.wallBroken",
       "flags.dnd5e.lockSize",
       "flags.dnd5e.requestResult"
     ],

@@ -117,6 +117,42 @@
   },
   {
     "kind": "on",
+    "name": "createRegion"
+  },
+  {
+    "kind": "on",
+    "name": "updateRegion"
+  },
+  {
+    "kind": "on",
+    "name": "deleteRegion"
+  },
+  {
+    "kind": "on",
+    "name": "deleteRegion"
+  },
+  {
+    "kind": "on",
+    "name": "deleteWall"
+  },
+  {
+    "kind": "on",
+    "name": "refreshRegion"
+  },
+  {
+    "kind": "on",
+    "name": "destroyRegion"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
     "name": "preCreateChatMessage"
   },
   {

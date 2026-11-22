@@ -176,8 +176,32 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   every shape a line, from an activity whose area type is `wall`, else one with dnd5e's
   `dimensions.height`) gets one `PIXI.Graphics` child on the Region placeable: every panel drawn
   `core.wallThickness` thick (its width, or a fifth of a square when thinner) in neutral stone grey with
-  a dark stroke. Drawing only: the shapes (who is in the area) never change, and no Wall documents are
-  made (B2 is a separate decision).
+  a dark stroke. Drawing only: the shapes (who is in the area) never change. A round wall that raises
+  walls (Wall of Force's sphere, Wall of Ice's globe, Wall of Fire's ring) is drawn as its ring of
+  sections, a broken one left open (0.8.0).
+- **Wall spells raise real walls (B2, 0.8.0)** (`spell-walls.mjs`, pure rules in `core/spell-walls.mjs`;
+  setting `spellWalls`, default on). Joe's ruling (2026-11-21): walls behave like the real thing.
+  `core.SPELL_WALLS` by dnd5e item identifier: Wall of Stone and Wall of Ice block movement and sight
+  (and light, sound), Wall of Force movement only (it is invisible; `clipsAreas`), Wall of Fire sight
+  only; Blade Barrier and Wind Wall none. The active GM's client (players cannot create Walls) writes
+  them on `createRegion`, `updateRegion` (a handle drag moves the shapes) and `deleteRegion` (so they
+  go with the region and with concentration through Part A): `core.wallPlan` puts one Wall per 10-ft
+  break section on each panel's centre line (a circle: a ring of chords, at least 8), and
+  `core.diffWalls` turns plan versus existing walls into creates, updates and deletes. Wall ids are
+  fixed per region, panel and section (`core.wallId`) and created with `keepId`, so a second GM tab's
+  create is refused like a handle's. Each Wall is flagged `{ regionId, panel, section, spell,
+  clipsAreas }`. One sync per region at a time; `canvasReady` re-syncs the viewed scene and deletes walls
+  whose region is gone (`syncWalls`).
+  **Breaking.** The GM sees a small break control (a dark disc with a crack) on every section, in a
+  container on `canvas.controls` (interactive on every layer, like core's door controls). Click: the
+  section is knocked out (`core.breakSection`): a line panel's shape is cut into the pieces before and
+  after it, so the region shows the gap and its creatures follow; a round wall's chord goes into
+  `flags.pentaryn-aoe.wallBroken`. The first break stores the whole wall in `wallOriginal` with its
+  handle's position; right-click any control of the wall puts it back (`repairWall`, moved with the
+  handle since). The last section broken deletes the region. Deleting spell walls on the Walls layer
+  breaks those sections the same way (`breakSections`, last first), so a later drag does not bring
+  them back. Not built: Wall of Stone made permanent after a full duration of concentration — its
+  walls go with concentration, as its region does.
 - **Part H — walls** (`walls.mjs`). Which walls clip a spell area (setting `areaWalls`). dnd5e 6
   restricts every template region with the core `move` polygon, so every movement wall clipped it,
   including invisible walls. With `cover` (the default) only a wall that blocks movement **and**
@@ -186,6 +210,9 @@ dnd5e 6 only. Chat data is read from typed messages (`message.type` `usage` / `a
   clipped from its new centre: a second wrap, of `_computeShapeConstraints`, hands the update's new
   shapes to the first. Changing `areaWalls` asks core to recompute the `move` constraints on the
   levels each client views (`Level#updateRegionShapeConstraints`; core's designated user writes).
+  B2: a spell's own walls never clip its own area, and a Wall of Force's walls clip every other area
+  although they block no sight (`core.areaEdgeClips`; the region id rides in the polygon config as
+  `pentarynRegionId`). Under `move`, core's polygon is used unchanged unless the scene has spell walls.
   Once uninstalled, a wrapper that could not be removed passes straight through to core.
 
 ## Settings
@@ -216,6 +243,7 @@ live through `setting()`, so a change applies without a reload).
 | `autoDamageOnSave` | on | C | J1: using a save activity with damage and a recorded target rolls the damage at once (not an area spell; not with no target) |
 | `applyFromCard` | on | I | Apply on a damage / healing card: unowned rows relayed to the active GM, late targets fill an untargeted card, a typed total per row |
 | `hitMissLabels` | on | C | D2: an attack card says Hit (blue) / Miss (orange) in its title (each pill with several targets), a "Miss — no damage" line on a miss, a blue title on the damage card after a hit; nothing while `dnd5e.attackRollVisibility` is `none` |
+| `spellWalls` | on | B2 | wall spells raise Wall documents (Stone, Ice: movement and sight; Force: movement; Fire: sight) and the GM gets a break control per section; off: the active GM removes the viewed scene's spell walls |
 | `showAppliedBy` | `owners` | I | G2: who reads "Applied by <user> → <token> (±n)" under a card's tray: `gm`, `owners` (the GM, the card's roller, the owners of a row's token) or `all`; a player never reads a monster's row |
 | `areaWalls` | `cover` | H | which walls clip an area: `cover` (block movement and sight), `move` (dnd5e: every movement wall), `none` |
 
@@ -245,6 +273,10 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `pendingFor(message, { effects? })` | `Promise<string[]>` | any |
 | `cardEffects(message)` | `Promise<ActiveEffect[]>` | any |
 | `activePlacement()` | `object \| null` | this client |
+| `wallsFor(region)` | `{ regionId, spell, blocks, walls[], broken[], repairable } \| null` | any; null: not a wall spell that raises walls |
+| `breakWallSection(region, panel, section)` | `Promise<{ regionId, broken, panels, destroyed } \| null>` | GM; what the map's break control does; the last section deletes the region |
+| `repairWall(region)` | `Promise<{ regionId, panels } \| null>` | GM; the wall as before its first break (right-click a break control); null + info toast when nothing is broken |
+| `syncWalls(scene = canvas.scene)` | `Promise<{ regions, created, updated, deleted, orphans }>` | active GM (zeros otherwise); runs on `canvasReady` |
 | `setting(key)` | value | any; the default when unregistered |
 | `hookIds()` | `{ name, id }[]` | this client |
 | `resolution(messageOrId)` | a copy of the tray state, or null | GM data |
@@ -271,6 +303,9 @@ row with its params, returns and null cases (`api-manifest.mjs`). Kit members: `
 | `flags.pentaryn-aoe.handle`, `.region` | a handle token | `true`, the region id |
 | `flags.pentaryn-aoe.handle` | a template region | its handle token's id (plus core's `attachment.token`) |
 | `flags.pentaryn-aoe.handleActor` | the "Area handle" actor | `true` |
+| `flags.pentaryn-aoe.regionId`, `.panel`, `.section`, `.spell`, `.clipsAreas` | a Wall a wall spell raised (B2) | its region, the shape index, the 10-ft section, the spell identifier, whether it stops other areas (Wall of Force) |
+| `flags.pentaryn-aoe.wallOriginal` | a wall spell's region once broken | `{ shapes, at }`: the shapes before the first break and the handle's position then (null once repaired) |
+| `flags.pentaryn-aoe.wallBroken` | a round wall spell's region | `["<panel>:<section>", …]`: its knocked-out chords |
 | `flags.dnd5e.lockSize` | a handle token and the "Area handle" actor's prototype token | `true` (dnd5e never resizes a handle) |
 | `flags.dnd5e.requestResult` | a save roll message | `{ actorUuid, requestId }`: threads the save under the players' request card |
 
@@ -309,7 +344,7 @@ with a `move` restriction only) with `RegionDocument.prototype._computeShapeCons
 `core-region-delete-handle-race`, `core-token-auto-rotate-handle`, `core-private-roll-rows-hidden`, `dnd5e-chat-message-types`,
 `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock`, `dnd5e-careful-spell-protected-rows`,
 `dnd5e-supersede-same-usage`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`,
-`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, `core-region-wall-panels`, `core-region-placement-panel-counter`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
+`dnd5e-cancelled-area-refund`, `dnd5e-self-card-targets-caster`, `dnd5e-card-applied-by-line`, `dnd5e-attack-card-hit-miss`, `core-region-wall-panels`, `core-region-placement-panel-counter`, `core-region-spell-walls`, `core-controls-layer-wall-breaks`, and for Item Piles `itempiles-aoe-skip-piles` (in the adjustments
 batch; only `scene-adapter.mjs` touches `game.itempiles`).
 
 ## Two sessions / who writes
@@ -329,6 +364,9 @@ pass `activeGM.isSelf` and `userId === game.user.id`.
 - **Player save matching** (`matchSave`, on the save message): a save that answers a waiting
   row is claimed the same way, so one tab fills the row. A save that answers no open tray is not
   claimed (no flag write on every save).
+- **Spell walls** (B2): the active GM writes them; ids fixed per region, panel and section with `keepId`,
+  so a second GM tab's create is refused ("already exists", swallowed); updates write the same values;
+  a delete the other tab made first ("does not exist") counts as done.
 - **Everything else** on a broadcast hook runs where `activeGM.isSelf` (concentration cleanup, the
   ready sweep, the `canvasReady` sweep of each newly viewed scene — wired at setup on every
   client, so a GM who takes over after ready sweeps too — the delete backstop). Two GM tabs both
@@ -390,11 +428,12 @@ feature's function is reached through `ctx.exposed`, never an import.
 |---|---|
 | `aoe.mjs` | entry: FEATURES, ctx, init/setup/ready, the hot-patch `install()` |
 | `core/areas.mjs` | pure area geometry behind the core barrel: centres, handle spots, which walls clip |
+| `core/spell-walls.mjs` | pure B2 rules behind the core barrel: which spells raise walls, the wall plan and diff, breaking and repairing |
 | `core.mjs` | pure: constants, rows, saves, matching, aiming, summaries |
 | `settings.mjs` | SETTINGS, `setting()`, the roll-mode migration |
 | `api-manifest.mjs`, `api.mjs` | API rows; own implementations, `inspect`, `buildApiFor` |
 | `scene-adapter.mjs`, `messages-adapter.mjs`, `argon.mjs` | adapters: scenes/regions/Item Piles, dnd5e messages, Argon |
-| `areas.mjs`, `token-areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs`, `walls.mjs`, `wall-spells.mjs`, `apply.mjs` | features (Parts A–I; `wall-spells.mjs` is B1, wall spells drawn visible) |
+| `areas.mjs`, `token-areas.mjs`, `careful.mjs`, `resolve.mjs`, `tray.mjs`, `attacks.mjs`, `effects.mjs`, `refund.mjs`, `aim.mjs`, `escape.mjs`, `walls.mjs`, `wall-spells.mjs`, `spell-walls.mjs`, `apply.mjs` | features (Parts A–I; `wall-spells.mjs` is B1, wall spells drawn visible; `spell-walls.mjs` is B2, real breakable walls) |
 | `styles/aoe.css`, `lang/en.json`, `lib/` | styles; strings; vendored kit |
 | `test/` | node:test suites, goldens, fixtures (`seams.mjs` maps the checkpoint names) |
 

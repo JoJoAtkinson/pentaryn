@@ -89,7 +89,7 @@ test("a Wall of Stone region gets one stone overlay, every panel at 10 px on a 5
   assert.deepEqual(polys[0], [100, 105, 300, 105, 300, 95, 100, 95]);
   assert.deepEqual(g.ops.find(o => o[0] === "beginFill"), ["beginFill", 0x8f949b, 0.7], "neutral stone, not the user colour");
   assert.equal(JSON.stringify(doc.shapes), before, "the area itself is untouched");
-  assert.equal(F.calls.some(c => c.op === "createEmbedded" && c.documentName === "Wall"), false, "no Wall documents (B2 is out)");
+  assert.equal(F.calls.some(c => c.op === "createEmbedded" && c.documentName === "Wall"), false, "the drawing makes no Wall documents (B2 is spell-walls.mjs, on the GM, for an item it can read)");
 });
 
 test("Lightning Bolt, a scene region, and a region whose shapes stop being a wall get no overlay (an old one goes)", () => {

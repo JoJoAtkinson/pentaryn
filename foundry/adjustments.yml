@@ -1759,6 +1759,28 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check; live, Wall of Stone on a 50 px grid is visible in a dark user colour
 
+  - id: core-region-spell-walls
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/spell-walls.mjs, foundry/module/pentaryn-aoe/core/spell-walls.mjs, foundry/module/pentaryn-aoe/walls.mjs]
+    markers: ["syncRegion", "wallPlan", "areaEdgeClips", "pentarynRegionId"]
+    what: the active GM's client creates/updates/deletes Wall documents (fixed ids, keepId, flags.pentaryn-aoe.regionId) along a wall spell's template region (dnd5e item identifier wall-of-stone / -ice / -force / -fire) on createRegion, updateRegion and deleteRegion; the RegionDocument#_computeShapeConstraint wrap (row aoe-area-walls) leaves a region's own spell walls out of its move polygon and keeps Wall of Force walls (move only) in for other areas
+    why: Joe 2026-11-21 (feedback 8t6Nn1) — wall spells must block movement and sight like the real thing; dnd5e 6 places a ray-shaped region and no walls
+    native_when: dnd5e creates Wall documents (or region behaviours that block sight) for wall-type templates
+    retire_class: guarded
+    check: make foundry-aoe-check; live, Wall of Stone blocks a player token's vision and movement, Wall of Force blocks movement only
+
+  - id: core-controls-layer-wall-breaks
+    packages: [core]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/spell-walls.mjs]
+    markers: ["canvas?.controls", "drawControls"]
+    what: one PIXI.Container added to canvas.controls (ControlsLayer keeps interactiveChildren true on every tool, as for DoorControl) with a GM-only static-eventMode break control per wall section; redrawn on refreshRegion, removed on deleteRegion / destroyRegion / canvasTearDown
+    why: a Region placeable is not interactive unless the Regions layer is active, and the GM must break a wall section with one click from the token layer
+    native_when: core gives region placeables an interactive control on every layer, or a context menu on regions outside the Regions layer
+    retire_class: safe
+    check: make foundry-aoe-check; live, the break controls show on the GM's token layer and a click breaks one section
+
   - id: core-region-placement-panel-counter
     packages: [core, dnd5e]
     modules: [pentaryn-aoe]

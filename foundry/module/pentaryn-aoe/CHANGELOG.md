@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+- **0.8.0 (2026-11-21). B2 — wall spells raise real, breakable walls** (feedback 8t6Nn1; plan
+  feedback-triage-2026-11-19 §B and §H4, with Joe's final ruling of 2026-11-21 replacing the §H4 table
+  where they differ).
+  - **[declared] Wall documents per spell** (`spell-walls.mjs`, pure `core/spell-walls.mjs`; setting
+    `spellWalls`, default on). Joe: walls are for storytelling and behave like the real thing — a party
+    behind its own wall does not know what happens on the other side. `core.SPELL_WALLS` by dnd5e item
+    identifier: Wall of Stone and Wall of Ice block movement and sight (Ice was "see-through" on
+    2026-11-20; Joe reversed it), Wall of Force movement only (invisible) and still stops other areas,
+    Wall of Fire sight only; Blade Barrier and Wind Wall none. One Wall per 10-ft section on each panel's
+    centre line (`wallPlan`; a sphere / cylinder: a ring of at least 8 chords), flagged `{ regionId,
+    panel, section, spell, clipsAreas }`, with fixed ids (`wallId`, `keepId`) so two GM tabs make one.
+    The active GM's client writes them (players cannot create Walls) on createRegion, updateRegion (a
+    handle drag moves them in place, `diffWalls`) and deleteRegion (so they go with the area and with
+    concentration through Part A's cleanup); canvasReady re-syncs the viewed scene and deletes orphans.
+  - **[declared] Breaking a section (GM).** Each section has a small break control (a dark disc with a
+    crack) in a container on `canvas.controls`, interactive on every layer like core's door controls.
+    Click: the section is knocked out (`breakSection`) — a line panel's shape is cut so the drawn area shows
+    the gap, a round wall's chord goes in `flags.pentaryn-aoe.wallBroken` (`wall-spells.mjs` draws round
+    walls as their ring of sections, gaps open) — and an info toast names the spell. The first break keeps
+    the whole wall in `wallOriginal` with its handle's position; right-click any control repairs it
+    (`repairWall`, moved with the handle). The last section deletes the region. Deleting spell walls on
+    the Walls layer breaks those sections too (`breakSections`, last first), so a drag does not bring
+    them back. API: `wallsFor`, `breakWallSection`, `repairWall`, `syncWalls` (describe golden updated).
+  - **[declared] Part H.** A spell's own walls never clip its own area, and a Wall of Force's walls clip
+    other areas although they block no sight (`core.areaEdgeClips`; `walls.mjs` passes the region id in
+    the polygon config). Under `areaWalls: move`, core's polygon is used as before unless the scene has
+    spell walls.
+  - Not built: Wall of Stone made permanent after a full duration of concentration (its walls go with
+    concentration, as its region does). B1 (visible thickness) and B3 (panel counter) unchanged; their
+    tests pass.
+  - Adjustment rows `core-region-spell-walls`, `core-controls-layer-wall-breaks`. Tests:
+    `spell-walls.test.mjs` (per-spell walls, sections, ids, diff, break geometry, repair, own-wall
+    clipping exclusion, the GM sync, the Walls-layer break, the controls); hooks / settings / describe /
+    surface goldens regenerated for the new hooks, setting and rows.
+
 - **0.7.1 (2026-11-21). Browser playtest of 0.7.0** (four findings, live on BOSS).
   - **[declared] A relay that timed out is no longer reported as "no GM".** The GM's client was slow
     (over `RELAY_TIMEOUT_MS`, 8 s), the heal landed late, and the player had been told "No GM is

@@ -3,6 +3,7 @@
   "applyRelay": "applyRelay",
   "applyRows": "applyRows",
   "areasFor": "areasFor",
+  "breakWallSection": "breakWallSection",
   "cardEffects": "cardEffects",
   "contract": "string",
   "createHandle": "createHandle",
@@ -16,6 +17,7 @@
   "pendingFor": "pendingFor",
   "pingPlayers": "pingPlayers",
   "removeArea": "removeArea",
+  "repairWall": "repairWall",
   "resolution": "resolution",
   "resolve": "resolve",
   "rollForPlayer": "rollForPlayer",
@@ -27,7 +29,9 @@
   "spellAreas": "spellAreas",
   "summary": "summary",
   "sweep": "sweep",
+  "syncWalls": "syncScene",
   "trace": "trace",
   "uninstall": "uninstall",
-  "version": "string"
+  "version": "string",
+  "wallsFor": "wallsFor"
 }

@@ -42,7 +42,33 @@ Everyone owns the handle and the area.
 **Wall spells (Wall of Stone, Wall of Fire, Blade Barrier).** Each panel is drawn in solid stone grey,
 at least a fifth of a square thick, whatever the caster's user colour or the grid size, so a 3-inch
 Wall of Stone panel no longer vanishes on a 50 px map. Only the drawing is thicker: who is inside the
-area is measured on the real panel. The panels do not block movement or sight yet (no Wall documents).
+area is measured on the real panel.
+
+**Wall spells are real walls (0.8.0, Joe's ruling 2026-11-21).** Walls are for storytelling and behave
+like the real thing: a party behind its own Wall of Stone does not know what is happening on the other
+side. The GM's client puts Wall documents along every panel (players cannot create walls, so it needs
+the GM online):
+
+| Spell | Blocks movement | Blocks sight |
+|---|---|---|
+| Wall of Stone | yes | yes |
+| Wall of Ice | yes | yes |
+| Wall of Force | yes | no (it is invisible), and other spell areas stop at it |
+| Wall of Fire | no (walk through and burn) | yes |
+| Blade Barrier, Wind Wall | no walls | |
+
+A round wall (Wall of Force's sphere, Wall of Ice's globe, Wall of Fire's ring) gets a ring of walls.
+The walls move when the wall's handle is dragged and go when the area is deleted or concentration ends.
+A spell's own walls never cut its own area. Setting *Wall spells raise real walls* (on).
+
+**Knocking a wall down (GM).** Every 10-foot section of a wall (a Wall of Stone panel, a Wall of Ice
+section, a 10-foot stretch of a Wall of Fire, one arc of a ring) has a small dark disc with a crack on it,
+on the GM's map only, on any layer. **Click** it: that section is gone. Its walls go and the drawn wall shows
+the hole, so players see (and walk) through it, and a toast says "Wall of Stone: a section is broken".
+**Right-click** any disc of that wall: the whole wall is put back (also `game.pentaryn.aoe.repairWall(regionId)`).
+Breaking the last section removes the wall and its area. Deleting the spell's walls on the Walls layer
+breaks those sections too, so they do not come back on the next drag. Wall of Stone becoming permanent
+after a full 10 minutes of concentration is not built: its walls go with concentration, like its area.
 
 **Which walls stop an area.** The PHB's rule is that an area spreads from its point of origin, and
 only total cover blocks it. On the map, total cover is a wall that blocks **both movement and
@@ -184,6 +210,7 @@ mouse and the wheel turns it.
 | Instantaneous areas stay where they were cast | on | Thunder Step's ring stays behind with a handle |
 | Say Hit or Miss on attacks | on | the labels and the miss line; nothing while dnd5e's attack roll visibility is None |
 | Who sees "Applied by" under a card | The GM, the card's roller and the owners of who took it | `gm` · `owners` · `all`; a player never sees a monster's row |
+| Wall spells raise real walls | on | Stone and Ice block movement and sight, Force movement, Fire sight; the GM's break discs; off removes the viewed scene's spell walls |
 | Walls that stop a spell area | Total cover | `cover` · `move` (dnd5e's default) · `none`; Part H |
 
 ## Console (`game.pentaryn.aoe`)
@@ -201,6 +228,8 @@ game.pentaryn.aoe.areasFor(activityUuid, scene)
 game.pentaryn.aoe.removeArea(regionIds, scene)
 game.pentaryn.aoe.resolve(messageId)    // (re)build the tray on a damage message
 game.pentaryn.aoe.applyRows(messageId[, rowIds])
+game.pentaryn.aoe.wallsFor(regionId)     // a wall spell's walls by panel and section, what is broken
+game.pentaryn.aoe.repairWall(regionId)   // GM: put a broken wall back
 ```
 
 ## Gotchas
