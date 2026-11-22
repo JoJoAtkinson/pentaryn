@@ -37,7 +37,9 @@ check("linked with combatants, round 0 → combat", combatOnScene([linked()], S)
 check("linked, started → combat", combatOnScene([linked({ combatantSceneIds: [], started: true })], S), true);
 check("linked, empty and not started → not yet", combatOnScene([linked({ combatantSceneIds: [] })], S), false);
 check("linked to another scene → not here", combatOnScene([linked()], T), false);
-check("inactive encounter ignored", combatOnScene([linked({ active: false, started: true })], S), false);
+check("inactive, not started encounter ignored", combatOnScene([linked({ active: false })], S), false);
+check("inactive but started encounter counts (core records movement in it; live R1 D-9)", combatOnScene([linked({ active: false, started: true })], S), true);
+check("unlinked, inactive but started, combatant here → combat", combatOnScene([{ active: false, sceneId: null, started: true, combatantSceneIds: [S] }], S), true);
 check("unlinked, combatant here → combat", combatOnScene([{ active: true, sceneId: null, started: true, combatantSceneIds: [T, S] }], S), true);
 check("unlinked, combatants elsewhere → not here", combatOnScene([{ active: true, sceneId: null, started: true, combatantSceneIds: [T] }], S), false);
 check("unlinked, no combatants → not here", combatOnScene([{ active: true, sceneId: null, started: true, combatantSceneIds: [] }], S), false);
@@ -167,8 +169,8 @@ check("beside is fine", hits.some(h => h.noteId === "n3"), false);
 check("no notes → []", pinsUnderTokens([], toks), []);
 check("junk skipped", pinsUnderTokens([null, { id: "x" }], [null, { id: "t", x: "a" }]), []);
 
-test("all 89 legacy checks are ported", () => {
-  assert.equal(count, 89);
+test("all 91 legacy checks are ported (89, plus 0.4.1's two started-encounter rows)", () => {
+  assert.equal(count, 91);
 });
 
 test("pinsUnderTokens drops pairs on different scene levels; an unlevelled note or token still pairs (movement-edge-5)", () => {

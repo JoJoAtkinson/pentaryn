@@ -117,7 +117,10 @@ export function normalizePolicy(value) {
  *
  * `combats` are plain summaries: { active, sceneId, started, combatantSceneIds: string[] }, where
  * combatantSceneIds lists only combatants the players can see (the caller drops hidden ones).
- *  - Only `active` encounters count (an encounter the GM has prepared but not activated doesn't).
+ *  - Only `active` or started encounters count (an encounter the GM has prepared but not activated
+ *    doesn't). A started one counts even when it is not the active one: core records movement in it
+ *    (TokenDocument#_shouldRecordMovementHistory only asks that its combat has started), so every
+ *    rule keyed to "in a fight" agrees (0.4.1, live R1 D-9).
  *  - A combat linked to a scene counts on that scene once it has a combatant or has started.
  *  - An unlinked combat (sceneId null) counts on any scene where one of its combatants stands.
  * An empty encounter made by mistake does not switch ghost off.
@@ -125,7 +128,7 @@ export function normalizePolicy(value) {
 export function combatOnScene(combats, sceneId) {
   if (!sceneId) return false;
   for (const c of combats ?? []) {
-    if (!c || !c.active) continue;
+    if (!c || !(c.active || c.started)) continue;
     const where = Array.isArray(c.combatantSceneIds) ? c.combatantSceneIds : [];
     if (c.sceneId) {
       if (c.sceneId === sceneId && (c.started || where.length > 0)) return true;
@@ -143,7 +146,7 @@ export function combatOnScene(combats, sceneId) {
 export function combatSceneIds(combats) {
   const out = new Set();
   for (const c of combats ?? []) {
-    if (!c || !c.active) continue;
+    if (!c || !(c.active || c.started)) continue;
     const where = Array.isArray(c.combatantSceneIds) ? c.combatantSceneIds : [];
     if (c.sceneId) {
       if (c.started || where.length > 0) out.add(c.sceneId);

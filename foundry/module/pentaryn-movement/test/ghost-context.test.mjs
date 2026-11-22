@@ -38,6 +38,8 @@ test("combatSceneIds contains a scene exactly when combatOnScene is true", () =>
     [null, {}, { active: true }],
     [{ active: true, sceneId: null, started: true, combatantSceneIds: ["", T, S, null] }],
     [linked({ started: true, combatantSceneIds: [] }), linked({ sceneId: T, active: false })],
+    [linked({ active: false, started: true })],
+    [{ active: false, sceneId: null, started: true, combatantSceneIds: [T] }],
   ];
   for (const combats of [...COMBATS, ...extra]) {
     const ids = combatSceneIds(combats);
