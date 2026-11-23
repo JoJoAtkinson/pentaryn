@@ -25,9 +25,9 @@
  */
 
 import { GUARD, aroundOf, asideSpot, cellHorizon, conflictAhead, hashOf, nearby, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "./guard-core.mjs";
-import { dist, radiusOf, routeAhead } from "./motion-core.mjs";
+import { dist, radiusOf, routeAhead, segmentsCross } from "./motion-core.mjs";
 import { detourTooLong } from "./group-core.mjs";
-import { clearOfWalls, continuationInFlight, countsForRoutes, crossesDoor, doorwayAt, drawnPosition, gridSize, inCombat, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { clearOfWalls, continuationInFlight, countsForRoutes, crossesDoor, cutAtWalls, doorwayAt, drawnPosition, gridSize, inCombat, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
 import { setting } from "./settings.mjs";
 
@@ -43,7 +43,7 @@ const yields = new Map();
 let ticking = null;
 let lastRun = 0;
 const counts = { fired: 0, standing: 0, movers: 0, late: 0, resumed: 0, rerouted: 0, noRoute: 0, rested: 0, aside: 0, cancelled: 0, errors: 0,
-  inside: 0, offDoor: 0, overridden: 0, detour: 0, gated: 0 };
+  inside: 0, offDoor: 0, overridden: 0, detour: 0, gated: 0, wallCut: 0, resumeCut: 0 };
 const firings = [];
 const perf = { ticks: 0, checks: 0, maxMs: 0, over4: 0, over16: 0 };
 /** token id → { mid, wps, pts } (the movement's waypoints, top-left, and their centres in squares). */
@@ -122,6 +122,106 @@ function aheadOf(pts, c) {
   return pts.length && dist(pts.at(-1), c) > 1e-3 ? pts.length - 1 : null;
 }
 
+/* -------------------------------------------- */
+/*  The wall watch (FR2-03 / FR2-04)            */
+/* -------------------------------------------- */
+
+/** Walls that shut or were raised lately (id → when, ms): the only ones a planned way can newly cross. */
+const fresh = new Map();
+/** How long a wall that shut stays watched (ms), and how far ahead along a mover's way it is looked for (squares). */
+const FRESH_MS = 30_000;
+const WALL_REACH = 1.5;
+
+function noteWall(wall, changes) {
+  if (!wall?.id) return;
+  if (changes && !["ds", "door", "move", "c", "dir"].some(k => k in changes)) return;
+  fresh.set(wall.id, clock());
+  if (fresh.size > 200) fresh.delete(fresh.keys().next().value);
+  if (yields.size) lastRun = 0;
+}
+
+/** Does this wall block movement now (a shut door, a solid wall)? */
+function blocksNow(wall) {
+  const w = wall?._source ?? wall;
+  if (!w || !(Number(w.move) > 0)) return false;
+  return !(Number(w.door) > 0 && Number(w.ds) === 1);
+}
+
+/**
+ * A wall shut or raised lately that the way ahead of a move this client started (`pts`, square centres, the first
+ * where it is drawn) now crosses within WALL_REACH squares, and that really stops this token there (its own collision
+ * test), or null. The door cut at the shut misses a move that was not under way at that instant (live FR2-03 / FR2-04:
+ * members walked through the shut door 1-2.5 s after it shut); the guard looks at every move it watches, so the cut
+ * runs again as soon as such a move nears the wall. Reads only.
+ */
+function wallAhead(token, pts, s) {
+  if (!fresh.size || !(pts?.length >= 2)) return null;
+  const scene = token.document?.parent;
+  const now = clock();
+  const walls = [];
+  for (const [id, at] of fresh) {
+    if (now - at > FRESH_MS) { fresh.delete(id); continue; }
+    const w = scene?.walls?.get?.(id);
+    if (w && blocksNow(w)) walls.push(w);
+  }
+  if (!walls.length) return null;
+  const z = token.document._source.elevation ?? 0;
+  let left = WALL_REACH;
+  for (let k = 1; k < pts.length && left > 0; k++) {
+    const a = pts[k - 1], b0 = pts[k];
+    const L = dist(a, b0);
+    if (L < 1e-9) continue;
+    const f = Math.min(1, left / L);
+    const b = { x: a.x + (b0.x - a.x) * f, y: a.y + (b0.y - a.y) * f };
+    left -= L;
+    for (const w of walls) {
+      const c = w._source?.c ?? w.c;
+      if (!Array.isArray(c) || c.length < 4) continue;
+      if (!segmentsCross(a, b, { x: c[0] / s, y: c[1] / s }, { x: c[2] / s, y: c[3] / s })) continue;
+      let stops = true;
+      try { stops = !!token.checkCollision({ x: b.x * s, y: b.y * s, elevation: z }, { origin: { x: a.x * s, y: a.y * s, elevation: z }, type: "move", mode: "any" }); }
+      catch { stops = true; }
+      if (stops) return w;
+    }
+  }
+  return null;
+}
+
+/** The wall watch for one mover: a fresh wall across its way ahead cuts the moves across it, once per wall per move. */
+function watchWalls(y, token, me, s) {
+  if (!fresh.size || typeof feature?.exposed?.groupCutAcross !== "function") return false;
+  const pts = me.points?.length >= 2 ? [me.c, ...me.points.slice(1)] : null;
+  const wall = wallAhead(token, pts, s);
+  if (!wall) return false;
+  y.walls ??= new Set();
+  if (y.walls.has(wall.id)) return false;
+  y.walls.add(wall.id);
+  counts.wallCut += 1;
+  log?.info?.(`yield guard: ${token.document?.name ?? token.id} nears a wall shut since its move began: cut before it`);
+  try { feature.exposed.groupCutAcross(wall); } catch (err) { counts.errors += 1; log?.debug?.("guard: wall cut", err); }
+  return true;
+}
+
+/**
+ * A held way out of combat cut where a wall now blocks it (cutAtWalls: on a free whole square before it, or nothing
+ * when it would not get off where it waits). Tokens standing anywhere count as taken.
+ */
+function cutHeldRoute(token, from, wps) {
+  const doc = token.document;
+  const s = gridSize(token);
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+  const r = radiusOf(w, h) * s;
+  const circles = [];
+  for (const o of doc.parent?.tokens?.values?.() ?? []) {
+    if (!o?._source || o.id === doc.id) continue;
+    if (o.hidden && !globalThis.game?.user?.isGM) continue;
+    const ow = o._source.width ?? 1, oh = o._source.height ?? 1;
+    circles.push({ x: o._source.x + (ow * s) / 2, y: o._source.y + (oh * s) / 2, r: radiusOf(ow, oh) * s });
+  }
+  const taken = p => circles.some(c => Math.hypot(p.x + (w * s) / 2 - c.x, p.y + (h * s) / 2 - c.y) < r + c.r - 1e-6);
+  return cutAtWalls(token, { ...from, elevation: doc._source.elevation ?? 0 }, wps, { taken });
+}
+
 /** Every token on the board (those this user counts in a bucket grid), this tick. */
 function snapshot(s) {
   const byId = new Map();
@@ -169,6 +269,15 @@ function othersFor(me, snap, horizonMs, { resuming = false } = {}) {
     o.samePlan = Number.isFinite(me.prio?.ord) && me.prio.ord === e.prio?.ord;
     out.push(o);
     if (moving && e.combat && e.target && dist(e.c, e.target) > 1e-6) out.push({ ...o, points: [e.c, e.target], yieldTo: true, committed: true });
+    // A mover it does not give way to that comes to rest within the look ahead is a standing token there from then
+    // on, and standing tokens never yield (FR2-05: Player8B's Hero 7 walked on into the GM's Hero 1 coming to rest at
+    // its slot, -97 px for 427 ms; the GM's later move put Hero 1 after Hero 7 in the order, so neither gave way).
+    if (moving && !o.yieldTo && !o.samePlan && e.points?.length >= 2) {
+      const end = e.points.at(-1);
+      let L = 0;
+      for (let k = 1; k < e.points.length; k++) L += dist(e.points[k - 1], e.points[k]);
+      if ((L / (o.speed || 6)) * 1000 <= horizonMs) out.push({ ...o, c: end, points: null, standing: true, yieldTo: true, restsSoon: true });
+    }
     if (resuming && paused && e.pending?.length >= 2 && yieldsTo(me, { standing: false, prio: e.prio, hidden: e.hidden, byPlayer: e.byPlayer })) {
       out.push({ ...o, c: e.target, points: e.pending, standing: false, yieldTo: true });
     }
@@ -269,6 +378,7 @@ function look(y, snap, now, s) {
       horizonMs = way.horizonMs;
     }
     if (!(me.points?.length >= 2)) return;
+    if (watchWalls(y, token, me, s)) return;
     perf.checks += 1;
     const hit = conflictAhead(me, othersFor(me, snap, horizonMs), { horizonMs });
     if (!hit) return;
@@ -293,7 +403,7 @@ function look(y, snap, now, s) {
   const mine = { ...me, points: pts.length >= 2 ? pts : null };
   perf.checks += 1;
   const hit = mine.points ? conflictAhead(mine, othersFor(mine, snap, horizonMs, { resuming: true }), { horizonMs }) : null;
-  const blocked = mine.points ? standingOnRoute(mine.points, me.r, standingOf(snap, me)) : null;
+  const blocked = mine.points ? standingOnRoute(mine.points, me.r, standingOf(snap, me), { tol: GUARD.standTol }) : null;
   const act = stepYield(y, { now, clear: !hit && !blocked });
   if (act === "resume") resume(y, token, combat);
   else if (act === "reroute") reroute(y, token, snap, me, combat);
@@ -420,6 +530,16 @@ function resume(y, token, combat) {
     if (hits) wps = [{ ...wps[0], x: y.pauseAt.x, y: y.pauseAt.y, explicit: false, checkpoint: false }, ...wps];
   }
   y.aside = false;
+  // A wall shut while it waited (FR2-04: a held member walked its old way on through the shut door): its way is cut
+  // before the wall, and with no square to walk to it stays where it waits.
+  try {
+    const cut = cutHeldRoute(token, from, wps);
+    if (cut.cut) {
+      counts.resumeCut += 1;
+      if (!cut.waypoints.length) { drop(doc.id); return; }
+      wps = cut.waypoints.map((p, i, all) => plain(p, i === all.length - 1));
+    }
+  } catch (err) { log?.debug?.("guard: resume across a wall", err); }
   y.busy = true;
   Promise.resolve(doc.move(wps, { method: "api", [GUARD_OPT]: true, ...republish(doc, from, wps) }))
     .catch(err => { counts.errors += 1; log?.debug?.("guard: resume", err); })
@@ -678,7 +798,39 @@ function firstClear(token, waypoints) {
 
 function guardStatus() {
   const held = [...yields.values()].filter(y => y.phase === "held").map(y => ({ id: y.id, since: y.firstAt, rerouted: y.rerouted, firings: y.firings }));
-  return { enabled: enabled(), watching: yields.size, held, ticking: !!ticking, ...counts, perf: { ...perf }, last: firings.slice(-5).map(f => ({ ...f })) };
+  return { enabled: enabled(), watching: yields.size, held, ticking: !!ticking, ...counts, perf: { ...perf }, last: firings.slice(-5).map(f => ({ ...f })),
+    errorsSeen: errorsSeen.map(e => ({ ...e })) };
+}
+
+/**
+ * Uncaught page errors this tab saw that name this module, or an array frozen by core (FR2-10: 19 uncaught "Cannot
+ * assign to read only property '0' of object '[object Array]'" on a player tab, no package and no stack in the
+ * console): the last five, with where they were thrown, for status().guard.errorsSeen. Reads only.
+ */
+const errorsSeen = [];
+let errorTarget = null;
+function onPageError(ev) {
+  try {
+    const err = ev?.error ?? ev?.reason ?? null;
+    const message = String(err?.message ?? ev?.message ?? err ?? "");
+    const stack = String(err?.stack ?? "");
+    const where = `${ev?.filename ?? ""}:${ev?.lineno ?? ""}:${ev?.colno ?? ""}`;
+    if (!/pentaryn-movement/.test(stack + where) && !/read only property/.test(message)) return;
+    errorsSeen.push({ at: new Date().toISOString(), message: message.slice(0, 200), where, stack: stack.split("\n").slice(0, 6).join(" | ").slice(0, 800) });
+    if (errorsSeen.length > 5) errorsSeen.shift();
+  } catch (err) { log?.debug?.("guard: a page error", err); }
+}
+function listenErrors() {
+  const w = globalThis.window;
+  if (!w || typeof w.addEventListener !== "function" || errorTarget === w) return;
+  w.addEventListener("error", onPageError);
+  w.addEventListener("unhandledrejection", onPageError);
+  errorTarget = w;
+}
+function unlistenErrors() {
+  try { errorTarget?.removeEventListener?.("error", onPageError); errorTarget?.removeEventListener?.("unhandledrejection", onPageError); }
+  catch (err) { log?.debug?.("guard: page error listener", err); }
+  errorTarget = null;
 }
 
 function clearAll() {
@@ -694,14 +846,20 @@ function clearAll() {
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
+  listenErrors();
   reg.on("moveToken", (doc, movement, operation) => onMove(doc, movement, operation), { label: "moveToken: the runtime yield guard watches the moves this client started" });
   reg.on("stopToken", doc => onStop(doc), { label: "stopToken: a stop the guard did not make lets go of the token" });
-  reg.on("canvasTearDown", () => clearAll(), { label: "canvasTearDown: the yield guard forgets this scene's moves" });
+  reg.on("canvasTearDown", () => { clearAll(); fresh.clear(); }, { label: "canvasTearDown: the yield guard forgets this scene's moves" });
+  reg.on("updateWall", (wall, changes) => noteWall(wall, changes), { label: "updateWall: the guard's wall watch notes a door shut" });
+  reg.on("createWall", wall => noteWall(wall, null), { label: "createWall: the guard's wall watch notes a wall raised" });
   ctx.expose({ guardStatus, guardCancel, guardFirstClear: firstClear, guardInstalled: () => true });
 }
 
 export function uninstall() {
   clearAll();
+  fresh.clear();
+  unlistenErrors();
+  errorsSeen.length = 0;
   for (const k of Object.keys(counts)) counts[k] = 0;
   for (const k of Object.keys(perf)) perf[k] = 0;
   firings.length = 0;

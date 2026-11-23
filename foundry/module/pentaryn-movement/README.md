@@ -108,7 +108,9 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   first waited it looks for a way round once (not one far longer than the way it had, 0.7.1); at 8 s it stays where
   it is (the nearest free spot, never on a door's line) and says so quietly. A step aside never goes through a
   doorway or onto another token, and a token another user moves meanwhile (a player stopping their own member of
-  the GM's group) is theirs: the guard lets go of it (0.7.1). Each time it fires is logged in the console and in
+  the GM's group) is theirs: the guard lets go of it (0.7.1). A door shut or a wall raised since a move set off cuts
+  that move before it as it nears it (0.7.5, the wall watch), and a mover about to come to rest in another's way
+  counts as standing there from then on (0.7.5). Each time it fires is logged in the console and in
   `status().guard`: it means a plan missed something.
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
   click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never

@@ -454,7 +454,15 @@
     },
     {
       "name": "ready",
-      "label": "ready: resume a group's waves after a reload"
+      "label": "ready: resume a group's waves and a fight's walks after a reload"
+    },
+    {
+      "name": "moveToken",
+      "label": "moveToken: a fight walk's squares still to go (reload)"
+    },
+    {
+      "name": "stopToken",
+      "label": "stopToken: a fight walk stopped has nothing to resume"
     },
     {
       "name": "updateToken",
@@ -519,6 +527,14 @@
     {
       "name": "canvasTearDown",
       "label": "canvasTearDown: the yield guard forgets this scene's moves"
+    },
+    {
+      "name": "updateWall",
+      "label": "updateWall: the guard's wall watch notes a door shut"
+    },
+    {
+      "name": "createWall",
+      "label": "createWall: the guard's wall watch notes a wall raised"
     }
   ],
   "patches": [

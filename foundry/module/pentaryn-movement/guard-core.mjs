@@ -24,7 +24,8 @@ export const GUARD = Object.freeze({
   everyMs: 50,          // out of combat, a check this often (a fight checks every frame: a square is ~170 ms)
   horizonMs: 450,       // how far ahead a walk is looked at (a pause on the sender reaches the others a latency later)
   sampleMs: 15,         // sampling step along the horizon (0.09 square at 6 squares per second)
-  tol: 0.1,             // squares two circles may come inside touching before the guard fires (acceptance: 0.1)
+  tol: 0.1,             // squares two movers may come inside touching before the guard fires (acceptance: 0.1)
+  standTol: 0.04,       // squares a mover may come inside a standing token (acceptance: none; FR2-06 grazes of 5-11 px)
   clearMs: 150,         // its way clear this long before a yield resumes
   minHoldMs: 250,       // a yield holds at least this long (no flicker)
   rerouteMs: 3000,      // from the first yield: re-route once
@@ -143,7 +144,7 @@ export function conflictAhead(me, others, { horizonMs = GUARD.horizonMs, sampleM
     if (d0 > myReach + reach + tol) continue;
     // Already inside touching by more than `tol` (a stack, a miss before): never closer than now (less a hair; a
     // member of the same plan less what its planner lets a pair that starts overlapped brush, MOTION.contact).
-    const lim = Math.min(me.r + o.r - tol, d0 - (o.samePlan ? MOTION.contact : HAIR));
+    const lim = Math.min(me.r + o.r - (o.standing ? Math.min(tol, GUARD.standTol) : tol), d0 - (o.samePlan ? MOTION.contact : HAIR));
     const until = best ? best.t : horizonMs;
     // Two movers of different moves already inside each other by more than `tol` must come apart: walking on side by
     // side or one behind the other at that depth is the overlap itself (S3R1-03: a player's stopped member walking

@@ -2586,6 +2586,42 @@ test("FR1-02: in a fight, a door cut's undo never puts a member back on a square
   }
 });
 
+test("FR2-03: in a fight, a door cut's undo is never refused for where core would stop another member being cut (only where the others stand counts)", async () => {
+  combatFlag = true;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const hist = ys => ys.map(y => wp(400, y, { movementId: "mv1" }));
+  const updates = [];
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  try {
+    // Hero 5 (a): drawn 30 px short of the door line, entering the square past it; it walked (400,200) and (400,300).
+    const a = walking("fr3A000000000001", { x: 400, y: 330 }, { x: 400, y: 400 }, [{ x: 400, y: 300 }, { x: 400, y: 400 }],
+      { combat: true, pending: [{ x: 400, y: 500 }] });
+    a.document._source._movementHistory = hist([200, 300, 400]);
+    a.document.update = async (changes, options) => { updates.push({ id: a.document.id, changes, options }); return true; };
+    // Hero 3 (b): following on (400,200), its next squares through the door; core would stop it on (400,300), the square
+    // Hero 5 walked off (live FR2-03: that predicted stop refused Hero 5's undo, 10 of 10, and it rested past the door).
+    const b = walking("fr3B000000000001", { x: 400, y: 190 }, { x: 400, y: 200 }, [{ x: 400, y: 100 }, { x: 400, y: 200 }],
+      { combat: true, pending: [{ x: 400, y: 300 }, { x: 400, y: 400 }, { x: 400, y: 500 }] });
+    b.constrainMovementPath = path => [[path[0], { ...path[1], x: 400, y: 300 }], true];
+    const from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    // Hero 3 stays pending (still finishing its square) when Hero 5's stop lands.
+    tickBy(100);
+    const undo = updates.find(u => u.id === a.document.id);
+    assert.ok(undo, `Hero 5's square past the door is undone: ${JSON.stringify(F.calls.slice(from).map(c => c.op))}`);
+    assert.deepEqual([undo.changes.x, undo.changes.y], [400, 300], "back on the square before the door");
+    assert.equal(undo.options.isUndo, true);
+    void b;
+  } finally {
+    world.walls.pop();
+    combatFlag = false;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+    tickBy(5000);
+  }
+});
+
 test("FR1-05: a move this client sent before a door shut, landing after it, is cut once it lands (looked at again 250 and 600 ms after the shut)", async () => {
   combatFlag = true;
   const saved = new Map(sceneTokens);

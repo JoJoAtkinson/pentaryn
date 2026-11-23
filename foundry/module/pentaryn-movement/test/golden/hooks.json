@@ -141,6 +141,14 @@
   },
   {
     "kind": "on",
+    "name": "moveToken"
+  },
+  {
+    "kind": "on",
+    "name": "stopToken"
+  },
+  {
+    "kind": "on",
     "name": "updateToken"
   },
   {
@@ -202,6 +210,14 @@
   {
     "kind": "on",
     "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "updateWall"
+  },
+  {
+    "kind": "on",
+    "name": "createWall"
   },
   {
     "kind": "once",

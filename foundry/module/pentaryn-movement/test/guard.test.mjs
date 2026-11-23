@@ -433,3 +433,59 @@ test("S3R1-04: a re-route far longer than the way it replaces is not taken; it w
   for (let t = 0; t < GUARD.restMs; t += 100) { frame(100); await flush(); }
   assert.equal(ctx.exposed.guardStatus().watching, 0, "rested");
 });
+
+test("FR2-05: a mover it does not give way to that comes to rest in its way within the look ahead counts as standing there", async () => {
+  reset();
+  // A's move first (the higher), then B's: B walks into A's way and stops there in ~130 ms.
+  const a = tok("A", 2, 5, { way: [{ x: 1.5, y: 5 }, { x: 9, y: 5 }] });
+  arrive(a);
+  const b = tok("B", 3.6, 4.2, { way: [{ x: 3.6, y: 4.2 }, { x: 3.6, y: 5 }], user: player });
+  arrive(b);
+  frame();
+  await flush();
+  assert.equal(calls.filter(c => c.op === "displace" && c.id === "A").length, 1, "A gives way to where B comes to rest (0.7.4: neither did, FR2-05, -97 px)");
+  // B's end beyond the look ahead (a long walk): A does not give way to the later mover.
+  reset();
+  const a2 = tok("A", 2, 5, { way: [{ x: 1.5, y: 5 }, { x: 9, y: 5 }] });
+  arrive(a2);
+  const b2 = tok("B", 3.6, -6, { way: [{ x: 3.6, y: -6 }, { x: 3.6, y: 5 }], user: player });
+  arrive(b2);
+  frame();
+  await flush();
+  assert.equal(calls.filter(c => c.op === "displace" && c.id === "A").length, 0, "a later mover still walking: never yielded to");
+});
+
+test("FR2-04: the wall watch cuts a guarded move that nears a wall shut since it set off (once per wall per move)", async () => {
+  reset();
+  const cuts = [];
+  ctx.exposed.groupCutAcross = w => { cuts.push(w.id); return []; };
+  walls.get = id => walls.find(w => w.id === id);
+  try {
+    const a = tok("A", 2, 5, { way: [{ x: 1.5, y: 5 }, { x: 9, y: 5 }] });
+    a.checkCollision = (dest, { origin }) => (origin.x < 300 && dest.x > 300) || (origin.x > 300 && dest.x < 300);
+    arrive(a);
+    frame();
+    assert.equal(cuts.length, 0, "no wall shut: nothing");
+    const door = { id: "door1", _source: { c: [300, 400, 300, 600], move: 20, door: 1, ds: 0 } };
+    walls.push(door);
+    fire("updateWall", door, { ds: 0 });
+    frame();
+    assert.deepEqual(cuts, ["door1"], "cut as it nears the shut door");
+    frame(); frame();
+    assert.deepEqual(cuts, ["door1"], "once per wall per move");
+    assert.ok(ctx.exposed.guardStatus().wallCut >= 1);
+    // A door opened again: not a wall in its way.
+    reset();
+    const b = tok("B", 2, 5, { way: [{ x: 1.5, y: 5 }, { x: 9, y: 5 }] });
+    b.checkCollision = () => false;
+    const open = { id: "door2", _source: { c: [300, 400, 300, 600], move: 20, door: 1, ds: 1 } };
+    walls.push(open);
+    fire("updateWall", open, { ds: 1 });
+    arrive(b);
+    frame();
+    assert.deepEqual(cuts, ["door1"], "an open door cuts nothing");
+  } finally {
+    delete ctx.exposed.groupCutAcross;
+    delete walls.get;
+  }
+});

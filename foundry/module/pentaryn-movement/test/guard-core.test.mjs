@@ -50,7 +50,7 @@ test("conflictAhead: a standing token in its way fires; touching does not; one i
   const me = { c: { x: 0, y: 0 }, r: 0.5, points: [{ x: 0, y: 0 }, { x: 5, y: 0 }], speed: 6 };
   const hit = conflictAhead(me, [{ id: "s", c: { x: 2, y: 0 }, r: 0.5, standing: true, yieldTo: true }]);
   assert.ok(hit && hit.id === "s" && hit.standing && hit.t > 0 && hit.t <= GUARD.horizonMs);
-  assert.ok(hit.d < 1 - GUARD.tol);
+  assert.ok(hit.d < 1 - GUARD.standTol, "a standing token: inside touching by more than standTol (FR2-06)");
   // Beyond the horizon: not yet.
   assert.equal(conflictAhead(me, [{ id: "s", c: { x: 4.5, y: 0 }, r: 0.5, standing: true, yieldTo: true }]), null);
   // Passing it touching (1 square apart, centre to centre): never fires.

@@ -1,5 +1,35 @@
 # Changelog — pentaryn-movement
 
+## 0.7.5 — 2026-11-23
+
+Final acceptance round 2 (FR2a / FR2b; plan `context/plans/pathfinding-2026-11.md` §15.13). Fixes only.
+
+- **[declared] A fight's door cut puts the member past the shut door back before it (FR2-03, 10 of 10 at 500 ms).**
+  Its undo was refused because the squares before the door counted where core would stop the other members being
+  cut too (Hero 3's predicted stop on the very square Hero 5 had walked off), so Hero 5 rested past the shut door in
+  the corridor. The undo now counts the other cut members where they stand, never where core would stop them; the
+  members' claims still keep them apart. `status().group.cut.undoWhy` names what refused an undo.
+- **[declared] The wall watch (FR2-04).** The yield guard notes every door shut and wall raised (30 s); a move it
+  watches whose way ahead (1.5 squares) crosses one that really stops it runs the door cut again, once per wall per
+  move. A held move out of combat resuming after a door shut is cut before the wall (or stays). The cut at the shut
+  only sees moves under way at that instant. `status().guard.wallCut` / `resumeCut`.
+- **[declared] A mover the guard does not give way to that comes to rest in its way within the look ahead is a
+  standing token there from then on (FR2-05).** A later move of the GM's Hero 1 put it after Player8B's Hero 7 in the
+  server's order, so neither gave way and Hero 7 walked into Hero 1 at rest (-97 px, 427 ms).
+- **[declared] Against a standing token the guard fires at 0.04 square inside touching, not 0.1 (FR2-06 grazes of 5
+  to 11 px for 56 ms).** `GUARD.standTol`.
+- **[declared] Members a stop left short of their spot go on to it once their group is at rest (FR2-06),** by a
+  sliced search round every token, no long detour, never onto a spot another token holds (`status().group.short`).
+- **[declared] A fight's walk goes on after a reload (FR2-09 / FR1-06).** Each client records, per tab, the squares
+  still to walk of the fight moves it started; after a reload (within a minute, once its scene is drawn) the walk goes
+  on from the square it rests on, costed, its first square only when clear (`status().group.fightResumed`). Live on
+  BOSS: Hero 4 and Hero 3 walked on from the corridor to room B.
+- **[declared] A drop that moves nobody says so (FR2-08):** a plan where every member stays tells the dragger "No
+  route there: the group stays where it is"; a drop whose reservation could not be published still goes, without it.
+- **A diagnostic for FR2-10** (an uncaught "Cannot assign to read only property '0'" on a player tab, no stack
+  captured): `status().guard.errorsSeen` keeps the last five page errors naming this module or a frozen array, with
+  where they were thrown. Not reproduced on BOSS.
+
 ## 0.7.4 — 2026-11-23
 
 Final acceptance round 1 (FR1a; plan `context/plans/pathfinding-2026-11.md` §15.12). Fixes only.
