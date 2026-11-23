@@ -18,7 +18,7 @@
  * Units as motion-core.mjs: centres in grid squares, ms, squares per second.
  */
 
-import { MOTION, dist } from "./motion-core.mjs";
+import { MOTION, dist, firstConflict, trajectory } from "./motion-core.mjs";
 import { onCell, settle, walkersMeet } from "./group-core.mjs";
 
 export const RESERVE = Object.freeze({
@@ -275,11 +275,20 @@ export function singleCut(member, walkers, { combat = false, restOk = null } = {
  * Should a plan queue (wait for the reserved walks in its way to pass, then be made again)? Only when some member was
  * stopped short, cut or left standing (`short`: their full walks, { points, r, speed, delay }) and one of those walks
  * meets a reserved walk: the time (ms from now, at most RESERVE.queueMs) by when those are at rest; else null.
+ * `blamed`: ids of the walks the plan's settle gave way to (see below).
  */
-export function queueUntil(short, walkers, { combat = false } = {}) {
+export function queueUntil(short, walkers, { combat = false, blamed = null } = {}) {
   const ws = (walkers ?? []).filter(w => w.points?.length >= 2);
-  if (!ws.length || !short?.length) return null;
-  const until = clearAfter(short, ws, { combat });
+  let until = ws.length && short?.length ? clearAfter(short, ws, { combat }) : null;
+  // A member the plan cut back or left standing for a walk of another move (settle's `walks`, S2R2-01) queues for it
+  // too when its whole way from now meets it no more: met at the start delay the timing gave it (behind its own
+  // members), or gone since the plan read it (a walk at its end, a reservation expired or stopped while the plan ran).
+  // Gone: one delay step, then the plan is made again with what is read then; never committed short for a walk.
+  if (blamed?.size) {
+    let b = 0;
+    for (const w of ws) if (blamed.has(w.id)) b = Math.max(b, (w.delay ?? 0) + durationOf(w));
+    until = Math.max(until ?? 0, b);
+  }
   return until === null ? null : Math.min(Math.max(until, MOTION.delayStep), RESERVE.queueMs);
 }
 
@@ -293,4 +302,20 @@ export function queueNext(waited, until) {
   if (until === null || until === undefined || !(until > 0)) return null;
   const w = Math.min(until, RESERVE.queueMs - (waited > 0 ? waited : 0));
   return w >= MOTION.delayStep - EPS ? w : null;
+}
+
+/**
+ * When does one of `walkers` come through a token standing at `c` (radius `r`, squares; `margin` more)? The time (ms
+ * from now) of the first, or null when none does (S2R2-03: a hidden token waiting at its start where a player's
+ * group, which cannot see it, is reserved to walk).
+ */
+export function throughStanding(c, r, walkers, { margin = 0.1 } = {}) {
+  const me = trajectory([{ x: c.x, y: c.y }]);
+  let first = null;
+  for (const w of walkers ?? []) {
+    if (!(w.points?.length >= 2)) continue;
+    const hit = firstConflict(me, trajectory(w.points, { speed: w.speed ?? MOTION.speed, delay: w.delay ?? 0 }), r + margin, w.r ?? 0.5);
+    if (hit && (first === null || hit.t < first)) first = hit.t;
+  }
+  return first;
 }

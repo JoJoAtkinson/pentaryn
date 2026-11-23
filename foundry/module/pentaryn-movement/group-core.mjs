@@ -312,7 +312,10 @@ function conflicts(mine, r, f, combat, sameWave) {
 function conflictsAt(tr, r, delay, fixed, combat) {
   const mine = delayed(tr, delay);
   const wave = Math.ceil(delay / MOTION.waveMs - 1e-9);
-  return fixed.filter(f => conflicts(mine, r, f, combat, f.wave === wave));
+  // One batch is the drop's own wave: a walk of another move (foreign) is never in it, whatever its wave number, so
+  // it keeps the latency buffer as settle and walkersMeet do (S2R2-01: wave 0 against another move's walk had no
+  // buffer here and set off at once; settle then cut it back, or left the grabbed one standing).
+  return fixed.filter(f => conflicts(mine, r, f, combat, !f.foreign && f.wave === wave));
 }
 
 /** One trajectory per route point array (the passes ask the same routes again). */
@@ -521,7 +524,7 @@ export function* settle(list, { statics = [], walkers = [], combat = false, allo
   const findConflict = () => {
     for (let i = 0; i < cur.length; i++) {
       const e = cur[i];
-      for (const f of fixed) { const hit = clash(e, f); if (hit) return { victim: e, hit }; }
+      for (const f of fixed) { const hit = clash(e, f); if (hit) return { victim: e, hit, by: f }; }
       for (let j = i + 1; j < cur.length; j++) {
         const f = cur[j];
         const hit = clash(e, f);
@@ -531,7 +534,7 @@ export function* settle(list, { statics = [], walkers = [], combat = false, allo
         let victim = f.still ? e : f;
         const other = victim === f ? e : f;
         if (keep && victim.id === keep && !other.still) victim = other;
-        return { victim, hit };
+        return { victim, hit, by: victim === f ? e : f };
       }
     }
     return null;
@@ -579,9 +582,12 @@ export function* settle(list, { statics = [], walkers = [], combat = false, allo
       if (round >= cap + cur.length + 1) break;
       continue;
     }
+    // What it gave way to (S2R2-01): a walk of another move is what a drop queues for (the queue reads it again).
+    if (c.by?.walker && c.by.id) (c.victim.walks ??= new Set()).add(c.by.id);
     shrink(c.victim, c.hit);
   }
-  return new Map(cur.map(e => [e.id, { cut: e.cut, delay: e.still ? 0 : (e.delay ?? 0), points: e.pts, still: e.still, changed: e.changed }]));
+  return new Map(cur.map(e => [e.id, { cut: e.cut, delay: e.still ? 0 : (e.delay ?? 0), points: e.pts, still: e.still, changed: e.changed,
+    walks: e.changed && e.walks ? [...e.walks] : [] }]));
 }
 
 /* -------------------------------------------- */
@@ -966,7 +972,7 @@ export function* planGroup(spec, o) {
     else if (s.still) stayed.push(m.id);
     const level = s.still ? "stay" : s.changed ? "cut" : route.short ? "short" : e.level;
     out[m.id] = { id: m.id, core: false, slot: s.points.at(-1), points: s.points, data: route.data ?? null, cut: s.cut ?? null,
-      delay: s.still ? 0 : s.delay, level, length: pathLength(s.points), short };
+      delay: s.still ? 0 : s.delay, level, length: pathLength(s.points), short, walks: s.walks ?? [] };
   }
   return {
     result: "plan", members: out, anchorId, constricted, formation: slots?.formation ?? true,

@@ -94,6 +94,10 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   With another player online a drop sets off one network round trip after you let go (it checks nobody reserved
   the same space first); if two drops cross at the same instant, the second the server saw plans again round the
   first. Hidden tokens are never announced to players. `status().group.reservations`.
+- **A hidden token the GM drags steps out of the players' way (0.6.2).** The players' drops cannot see it, so they
+  plan through where it stands; when the GM's drop has to wait (a start delay, or a queue) where one of their walks
+  will pass, it first steps to the nearest free spot off every walk, then goes on to where it was dropped. Out of
+  combat only; a hidden token nobody is moving stays where it is. `status().group.reservations.aside`.
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
   click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never
   across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so

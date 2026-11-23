@@ -3322,3 +3322,57 @@ test("S2R1-01: a group drop whose way is still taken when its queue is over queu
     performance.now = perfNow;
   }
 });
+
+/* -------------------------------------------- */
+/*  Stage 2 round 2 (S2R2)                      */
+/* -------------------------------------------- */
+
+test("S2R2-03: a hidden token the GM drags that must wait where a player's reserved walk passes steps aside first, then goes", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const perfNow = performance.now;
+  performance.now = () => Date.now();
+  const user = game.user;
+  const wasGM = user.isGM;
+  Object.defineProperty(user, "isGM", { value: true, configurable: true, writable: true });
+  const h = makeToken("s2rH000000000001", 500, 100), f = makeToken("s2rF000000000001", 100, 100);
+  h.document.hidden = true;
+  const steps = [];
+  // The step aside lands where it was sent (the server's echo before the promise resolves, as core's).
+  h.document.move = async (waypoints, options) => {
+    steps.push({ waypoints, options });
+    Object.assign(h.document._source, { x: waypoints.at(-1).x, y: waypoints.at(-1).y });
+    Object.assign(h.document, { x: waypoints.at(-1).x, y: waypoints.at(-1).y });
+    return true;
+  };
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [h, f];
+  const way = [{ x: 1.5, y: 1.5 }, { x: 9.5, y: 1.5 }];
+  try {
+    // A player's group member, which cannot see H, is reserved to walk along H's row, through where H stands.
+    reserveWalk(f.document, "ridS2rF000000001", way, 1);
+    const from = F.calls.length;
+    // The GM drags H head-on along that row: no start delay clears it, so it would wait at its start.
+    assert.equal(dropWith(h, contextsFor([h], -300, 0)), null, "it waits");
+    for (let k = 0; k < 40; k++) { tickBy(500); await flush(); }
+    assert.equal(steps.length, 1, `it stepped aside once: ${JSON.stringify(api.status().group.last)}`);
+    const at = steps[0].waypoints.at(-1);
+    const c = { x: (at.x + 50) / 100, y: (at.y + 50) / 100 };
+    // Off the walk: never inside it (the walker's circle plus its own).
+    assert.ok(Math.abs(c.y - 1.5) >= 1 - 1e-6, `clear of the walk: ${JSON.stringify(c)}`);
+    assert.ok(c.y < 4, "on its own side of the wall");
+    const go = sent(from);
+    assert.equal(go.length, 1, `then it goes: ${JSON.stringify(api.status().group.last)}`);
+    const end = go[0].options.movement[h.document.id].waypoints.at(-1);
+    assert.deepEqual([end.x, end.y], [200, 100], "to where it was dropped");
+    assert.equal(api.status().group.reservations.aside, 1);
+  } finally {
+    Object.defineProperty(user, "isGM", { value: wasGM, configurable: true, writable: true });
+    F.canvas.tokens.placeables = saved;
+    for (const t of [h, f]) sceneTokens.delete(t.document.id);
+    reserveMod.reset();
+    tickBy(60000);
+    performance.now = perfNow;
+  }
+});

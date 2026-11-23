@@ -27,7 +27,7 @@ let log = null;
 /** May this user count a token (group-adapter countsForRoutes, given by group.mjs: an adapter imports no adapter). */
 let countsToken = () => !!globalThis.game?.user?.isGM;
 let reg = registry();
-const counts = { received: 0, published: 0, inline: 0, raced: 0, replans: 0, queued: 0, fallback: 0, dropped: 0, republished: 0 };
+const counts = { received: 0, published: 0, inline: 0, raced: 0, replans: 0, queued: 0, fallback: 0, dropped: 0, republished: 0, aside: 0 };
 let lastRace = null;
 
 function configure({ log: l = null, counts: c = null } = {}) {

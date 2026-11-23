@@ -1,5 +1,29 @@
 # Changelog — pentaryn-movement
 
+## 0.6.2 — 2026-11-22
+
+Overlap redesign stage 2, round S2R2 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.6).
+
+- **[declared] S2R2-01: a member is never left short for another move's walk without queueing for it.** Two causes,
+  one outcome (the grabbed Hero 5 of a second group stayed at its start with "Another move is still in the way: it
+  stays where it is" while the corridor was clear). The timing pass held a member of the drop's first wave to "one
+  batch, no latency buffer" against another move's walk (the drop's wave 0 is its own batch, never theirs), so it set
+  off at once where settle keeps the 0.75-square buffer, and settle cut it back or left it standing; now a walk of
+  another move keeps the buffer in every wave, and the member waits its start delay instead. And the queue read the
+  walks again at delivery and asked only whether a short member's whole way from now meets one: a member cut for a
+  walk it meets only at the delay the timing gave it, or for one gone while the plan ran (a loaded tab draws 300 ms
+  frames between a plan's slices; a reserved walk counts until 1 s past its end), was committed short. Settle now
+  says which walk a member gave way to (`walks`), and the drop queues for it (one delay step when it is gone), then
+  plans again; the 8 s budget still bounds it.
+- **[declared] S2R2-03: a hidden token the GM drags never waits where a player's walk passes.** The players'
+  planners cannot see it, so they plan through it; the design's rule is that the GM-side mover yields. A hidden
+  token whose single drop has to wait (a start delay or a queue) at a spot a walk this client reads will pass through
+  steps aside first, to the nearest free spot no walk passes (a short straight step clear of walls, on open floor,
+  clear of tokens at rest and of reserved ends), finds its way to the drop point again from there and goes on
+  waiting or goes; while it queues it looks again every 500 ms. Out of combat only. `status().group.reservations.aside`
+  counts the steps. A hidden token that nobody moves still stands where it is (Joe's call: moving it is a gameplay
+  decision).
+
 ## 0.6.1 — 2026-11-22
 
 Overlap redesign stage 2, round S2R1 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.5).

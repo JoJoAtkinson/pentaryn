@@ -30,7 +30,7 @@ import { wrapMethod } from "./lib/patch.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
 import { errorCode } from "./lib/errors.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
-import { RESERVE, lostRace, queueNext, queueUntil, singleCut, singleTiming } from "./reserve-core.mjs";
+import { RESERVE, lostRace, queueNext, queueUntil, singleCut, singleTiming, throughStanding } from "./reserve-core.mjs";
 
 let log = null;
 let feature = null;
@@ -2406,6 +2406,7 @@ function queueFor(d, plan) {
   const ids = new Set([...(plan.cut ?? []), ...(plan.stayed ?? []), ...Object.values(plan.members ?? {}).filter(e => e.short).map(e => e.id)]);
   if (!ids.size) return null;
   const s = gridSize(d.grabbed);
+  const blamed = new Set(Object.values(plan.members ?? {}).filter(e => ids.has(e.id)).flatMap(e => e.walks ?? []));
   const full = [];
   for (const m of prep.members) {
     const e = plan.members?.[m.id];
@@ -2413,8 +2414,8 @@ function queueFor(d, plan) {
     const path = d.info.combat ? onSquares(e.data.path, s) : e.data.path;
     full.push({ points: path.map(p => toSquares(p, m.w, m.h, s)), r: m.r, speed: m.speed, delay: e.delay ?? 0 });
   }
-  if (!full.length) return null;
-  return queueUntil(full, walkersNow(prep.members, s), { combat: d.info.combat });
+  if (!full.length && !blamed.size) return null;
+  return queueUntil(full, walkersNow(prep.members, s), { combat: d.info.combat, blamed });
 }
 
 /** Wait `ms` on a timer this client holds (nothing when uninstalled meanwhile). */
@@ -2571,6 +2572,61 @@ function singleOut(grabbed, contexts, result, info, seq) {
 const YIELDED = "PENTARYN_MOVEMENT.notify.yielded";
 const YIELDED_STAY = "PENTARYN_MOVEMENT.notify.yieldedStay";
 
+/** How often a hidden token's single drop steps aside at most, and how long it waits between looks while it queues. */
+const ASIDE_TRIES = 3;
+const ASIDE_LOOK_MS = 500;
+
+/**
+ * S2R2-03 (the design's visibility rule: "a player's token never yields to something unseen; the GM-side mover yields
+ * instead"). A hidden token the GM drags that has to wait at its start (a start delay, or a queue) where another
+ * move's walk will pass through it steps aside first: to the nearest free spot no walk this client reads passes
+ * through, a short straight walk clear of walls, on open floor (not in a doorway), clear of every token at rest and of
+ * the reserved walks' ends. The players' planners cannot see it, so they plan through it: it must not stand there.
+ * Out of combat only (in a fight a step costs movement). Then its way to the drop point is found again from there.
+ * Returns { waypoints, at } (the new way, top-left pixels, and where it now stands), { stop: true } when it stepped
+ * aside but has no way on from there, or null (not needed, or nowhere to go).
+ */
+async function stepAside(ctx, read, waypoints) {
+  const { grabbed, scene, combat } = ctx;
+  const doc = grabbed.document;
+  if (combat || !doc.hidden || !game.user?.isGM) return null;
+  const s = gridSize(grabbed);
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1, r = radiusOf(w, h);
+  const here = toSquares(doc._source, w, h, s);
+  if (throughStanding(here, r, read.walkers) === null) return null;
+  const taken = takenFor(scene, doc.id, []);
+  const member = { token: grabbed, r };
+  const z = doc._source.elevation ?? 0;
+  const px = c => ({ x: c.x * s, y: c.y * s, elevation: z });
+  const blocked = (a, b) => { try { return !!grabbed.checkCollision(px(b), { origin: px(a), type: "move", mode: "any" }); } catch { return true; } };
+  const cands = hexCandidates(here, 0.5, 8).filter(c => Math.hypot(c.x - here.x, c.y - here.y) > 1e-6)
+    .sort((a, b) => Math.hypot(a.x - here.x, a.y - here.y) - Math.hypot(b.x - here.x, b.y - here.y));
+  let spot = null;
+  for (const c of cands) {
+    const tl = toTopLeft(c, w, h, s);
+    if (taken(tl) || !restWalkable(member, c, s) || !roomyAt(grabbed, px(c), r, s) || blocked(here, c)) continue;
+    if (throughStanding(c, r, read.walkers) !== null) continue;
+    spot = tl;
+    break;
+  }
+  if (!spot) return null;
+  const from = { ...(feature.exposed.pathfindOrigin?.(doc) ?? doc._source) };
+  try {
+    await doc.move([{ ...from, x: spot.x, y: spot.y, snapped: false, explicit: true, checkpoint: true }], { method: "api" });
+  } catch (err) { log.debug?.("aside: the step", err); return null; }
+  reserve.note("aside");
+  const at = { x: doc._source.x, y: doc._source.y };
+  const dest = waypoints?.at(-1);
+  if (!dest) return { stop: true, at };
+  const origin = { ...(feature.exposed.pathfindOrigin?.(doc) ?? doc._source), x: at.x, y: at.y };
+  let r1 = null;
+  try { r1 = feature.exposed.pathfindRouteTo?.(grabbed, origin, { ...origin, ...dest, explicit: true, checkpoint: true }, { preview: true, maxMs: 4 * SINGLE_MS }); }
+  catch (err) { log.debug?.("aside: the way on", err); }
+  if (!r1?.reached || !(r1.path?.length >= 2)) return { stop: true, at };
+  const wps = r1.path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
+  return { waypoints: wps, at };
+}
+
 /**
  * A single drop that waits, queues or publishes first (0.6.0). Each round reads the walks anew; a race lost at the
  * echo (a reservation earlier in the server's order that it had not read and that it meets) goes round again, at most
@@ -2586,19 +2642,36 @@ async function singleFlow(ctx) {
   const updates = result[0].length ? result[0] : [{ _id: doc.id }];
   let waypoints = ctx.waypoints;
   let read = ctx.first ?? null;
-  let waited = 0, races = 0, replaces = null;
-  const rounds = RESERVE.replans + 2 + Math.ceil(RESERVE.queueMs / MOTION.delayStep);
+  let waited = 0, races = 0, replaces = null, asides = 0;
+  // A hidden token of the GM's looks again every ASIDE_LOOK_MS while it queues (a walk reserved meanwhile through it).
+  const looks = doc.hidden && game.user?.isGM && !combat;
+  const rounds = RESERVE.replans + 2 + Math.ceil(RESERVE.queueMs / (looks ? Math.min(MOTION.delayStep, ASIDE_LOOK_MS) : MOTION.delayStep)) + ASIDE_TRIES;
   for (let round = 0; round <= rounds; round++) {
     if (!feature || !stillOurs([doc.id], scene, starts, seq).length) { if (rec) rec.result = "superseded"; return; }
     read ??= singleRead(grabbed, waypoints, combat);
     let delay = read.timing.delay;
+    // S2R2-03: it waits where a walk passes that cannot see it (a hidden token): it steps aside first.
+    if ((delay === null || delay > 0) && looks && asides < ASIDE_TRIES) {
+      let aside = null;
+      try { aside = await stepAside(ctx, read, waypoints); } catch (err) { log.debug?.("aside", err); }
+      if (aside) {
+        asides += 1;
+        starts.set(doc.id, aside.at);
+        if (rec) rec.aside = asides;
+        if (aside.stop) { if (rec) Object.assign(rec, { result: "aside", reason: "yielded" }); return; }
+        waypoints = aside.waypoints;
+        read = null;
+        continue;
+      }
+    }
     if (delay === null) {
       const until = queueNext(waited, read.timing.until);
       if (until !== null) {
-        waited += until;
+        const step = looks ? Math.min(until, ASIDE_LOOK_MS) : until;
+        waited += step;
         reserve.note("queued");
         if (rec) rec.queued = Math.round(waited);
-        await wait(until);
+        await wait(step);
         read = null;
         continue;
       }
