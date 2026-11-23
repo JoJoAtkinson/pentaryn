@@ -219,7 +219,11 @@ function displace(token, at = stopSpot(token)) {
     if (!near || !feature || token.destroyed) return;
     const z = p.elevation ?? doc._source.elevation ?? 0;
     try {
-      Promise.resolve(doc.move([{ x: p.x, y: p.y, elevation: z, action: doc.movementAction ?? "walk", snapped: true, explicit: true, checkpoint: true }], { method: "api" }))
+      const wps = [{ x: p.x, y: p.y, elevation: z, action: doc.movementAction ?? "walk", snapped: true, explicit: true, checkpoint: true }];
+      // The walk on re-publishes its reservation (0.6.0, group.mjs): every planner sees where the stop puts it.
+      let extra = {};
+      try { extra = feature.exposed.groupRepublish?.(doc, { x: first.x, y: first.y }, wps) ?? {}; } catch (err) { log.debug?.("stop: re-publish", err); }
+      Promise.resolve(doc.move(wps, { method: "api", ...extra }))
         .catch(err => log.debug?.("stop: walk to the square", err));
     } catch (err) { log.debug?.("stop: walk to the square", err); }
   };

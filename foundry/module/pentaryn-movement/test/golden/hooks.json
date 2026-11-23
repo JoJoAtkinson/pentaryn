@@ -153,6 +153,18 @@
   },
   {
     "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "moveToken"
+  },
+  {
+    "kind": "on",
+    "name": "stopToken"
+  },
+  {
+    "kind": "on",
     "name": "createWall"
   },
   {

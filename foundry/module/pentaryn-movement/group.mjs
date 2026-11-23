@@ -23,12 +23,14 @@ import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
 import { GROUP_LIMITS, detourTooLong, flood, freePrefix, hexCandidates, onCell, planGroup, prefixOf, restOnPaths, runPlan, walkersMeet } from "./group-core.mjs";
 import { LIMITS, skipReason } from "./pathfind-core.mjs";
-import { clearOfWalls, continuationInFlight, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, movingOthers, narrowPoints, othersOf, pinDrawn, restWalkable, speedOf, stopWhereDrawn, toSquares, toTopLeft, unpin } from "./group-adapter.mjs";
+import { clearOfWalls, continuationInFlight, countsForRoutes, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, movingOthers, narrowPoints, othersOf, pinDrawn, restWalkable, speedOf, stopWhereDrawn, toSquares, toTopLeft, unpin } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
 import { errorCode } from "./lib/errors.mjs";
+import { reservations as reserve } from "./reserve-adapter.mjs";
+import { RESERVE, lostRace, queueUntil, singleCut, singleTiming } from "./reserve-core.mjs";
 
 let log = null;
 let feature = null;
@@ -605,8 +607,20 @@ function prepare(grabbed, contexts, info) {
   if (!anchor) return null;
   let moving = [];
   try { moving = info.mode === "plan" ? movingOthers(members, s) : []; } catch (err) { log?.debug?.("tokens walking outside the group", err); }
-  const spec = { members, anchorId: anchor.id, combat: info.combat, mode: info.mode, others: othersOf(members, s), moving };
-  return { members, anchor, gen: planGroup(spec, oraclesFor(members, anchor, info)) };
+  // The reservations this client has received (0.6.0): every other move's whole plan, its later waves too, in the
+  // server's order. Read up to `snap`: one arriving after it, and before this plan's own publish comes back, came
+  // first and was not read (the race, decided at the echo).
+  const snap = reserve.seqNow();
+  let reserved = [];
+  if (info.mode === "plan") {
+    try {
+      const live = reserve.liveFor(members, { skip: new Set(moving.map(w => w.id)) });
+      moving = [...moving, ...live.walkers];
+      reserved = live.rests;
+    } catch (err) { log?.debug?.("reservations", err); }
+  }
+  const spec = { members, anchorId: anchor.id, combat: info.combat, mode: info.mode, others: othersOf(members, s), moving, reserved };
+  return { members, anchor, snap, walkers: moving, gen: planGroup(spec, oraclesFor(members, anchor, info)) };
 }
 
 /**
@@ -720,6 +734,8 @@ function takenFor(scene, id, claims) {
     if (stop) circles.push({ x: stop.x + (ow * s) / 2, y: stop.y + (oh * s) / 2, r });
   }
   for (const c of claims ?? []) if (c.id !== id) circles.push(c);
+  // Where other moves' reserved walks end (0.6.0): taken too.
+  try { circles.push(...reserve.restCircles(scene, id)); } catch (err) { log?.debug?.("taken: reserved rests", err); }
   return p => {
     const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
     return circles.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1e-6);
@@ -811,15 +827,20 @@ function send(scene, seq, starts, updates, options, what, claims = [], avoid = [
   let ids = stillOurs(updates.map(u => u._id), scene, starts, seq);
   if (!ids.length) return Promise.resolve(true);
   const movement = {};
+  let rids = options?.[reserve.RID_OPT] ? { ...options[reserve.RID_OPT] } : null;
   for (const id of ids) {
     let m = options.movement?.[id] ? walkableNow(scene, id, options.movement[id], options, claims) : options.movement?.[id];
     if (m && avoid.length) m = roundStopped(scene, id, m, options, avoid);
     if (m) movement[id] = m;
+    // Its walk is not the one reserved any more (cut at a wall shut since, round a member stopped since): the move
+    // does not name the reservation, so every client drops it and counts the token as it walks.
+    if (rids && m !== options.movement?.[id]) delete rids[id];
   }
   ids = ids.filter(id => movement[id] || !options.movement?.[id]);
   if (!ids.length) return Promise.resolve(true);
+  const opts = rids ? { ...options, movement, [reserve.RID_OPT]: rids } : { ...options, movement };
   let pending;
-  try { pending = Promise.resolve(scene.updateEmbeddedDocuments("Token", updates.filter(u => ids.includes(u._id)), { ...options, movement })); }
+  try { pending = Promise.resolve(scene.updateEmbeddedDocuments("Token", updates.filter(u => ids.includes(u._id)), opts)); }
   catch (err) { pending = Promise.reject(err); }
   return pending.then(() => true, err => {
     if (unloading) return false;
@@ -1465,7 +1486,9 @@ function groupStopOne(tokenId, spot = null) {
       .then(moved => {
         unpin(token);
         if (g.walkOn?.get(id) === entry) g.walkOn.delete(id);
-        return moved === false || entry.cancelled || !feature || token.destroyed || !entry.wps.length ? null : d.move(entry.wps, { method: "api" });
+        // Its walk round the stopped one re-publishes its reservation (0.6.0).
+        return moved === false || entry.cancelled || !feature || token.destroyed || !entry.wps.length ? null
+          : d.move(entry.wps, { method: "api", ...republish(d, route.from, entry.wps) });
       })
       .catch(err => { unpin(token); if (g.walkOn?.get(id) === entry) g.walkOn.delete(id); log?.debug?.("stop one: walk round", err); });
   }
@@ -1602,7 +1625,7 @@ function walkOnAfterStop(doc, waypoints, left = Math.ceil(CUT_WAIT_MS / CUT_POLL
       action: doc.movementAction ?? "walk", snapped: true, explicit: true, checkpoint: true }];
   }
   try {
-    Promise.resolve(doc.move(waypoints, { method: "api" })).catch(err => log?.debug?.("cut: walk on", err));
+    Promise.resolve(doc.move(waypoints, { method: "api", ...republish(doc, doc._source, waypoints) })).catch(err => log?.debug?.("cut: walk on", err));
   } catch (err) { log?.debug?.("cut: walk on", err); }
 }
 
@@ -1722,7 +1745,8 @@ function cutAcross(wall) {
             unpin(token);
             if (moved === false) { try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log?.debug?.("cut: reset", err); } return null; }
             if (!kept.length || !feature || token.destroyed) return null;
-            return doc.move(kept, { method: "api" });
+            // The walk to its square re-publishes its reservation (0.6.0): every planner sees where it goes.
+            return doc.move(kept, { method: "api", ...republish(doc, route.from, kept) });
           })
           .catch(err => { unpin(token); log?.debug?.("cut: move", err); });
       }
@@ -1914,11 +1938,9 @@ function confirmLater(grabbed, c, result) {
   last = rec;
   const big = (doc._source.width ?? 1) > 1 || (doc._source.height ?? 1) > 1;
   const coreGoes = !droppedInPlace([c], result);
-  const go = waypoints => {
-    const m = result[1].movement?.[doc.id] ?? { planned: false };
-    const updates = result[0].length ? result[0] : [{ _id: doc.id }];
-    return send(scene, seq, starts, updates, { ...result[1], movement: { [doc.id]: { ...m, waypoints } } }, "move");
-  };
+  // Through the reservations (0.6.0): it waits for, or queues behind, the walks in its way.
+  const go = waypoints => singleFlow({ grabbed, result, waypoints, seq, starts, scene, combat: false, rec })
+    .catch(err => log.warnOnce?.("single-reserve", "a single drop's reservation failed (further errors suppressed)", err));
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
   const search = feature.exposed.pathfindRouteToAsync;
   Promise.resolve(typeof search === "function" ? search(grabbed, origin, { ...origin, ...c.destination, explicit: true, checkpoint: true }, { preview: true }) : null)
@@ -2075,11 +2097,11 @@ function aroundLater(grabbed, result, { origin, dest, avoid, wps }) {
   last = rec;
   const s = gridSize(grabbed);
   const go = waypoints => {
-    const m = result[1].movement?.[doc.id] ?? { planned: false };
-    const updates = result[0].length ? result[0] : [{ _id: doc.id }];
     // In a fight a checkpoint at every cell, as every other combat move (S1R1-04).
     const wps = inCombat(doc) && setting("clickToStop") ? withCheckpoints(grabbed, [origin, ...waypoints]) : waypoints;
-    return send(scene, seq, starts, updates, { ...result[1], movement: { [doc.id]: { ...m, waypoints: wps } } }, "move");
+    // Through the reservations (0.6.0): it waits for, or queues behind, the walks in its way.
+    return singleFlow({ grabbed, result, waypoints: wps, seq, starts, scene, combat: inCombat(doc), rec })
+      .catch(err => log.warnOnce?.("single-reserve", "a single drop's reservation failed (further errors suppressed)", err));
   };
   Promise.resolve(feature.exposed.pathfindRouteToAsync(grabbed, origin, dest, { preview: true, avoid }))
     .then(r => {
@@ -2154,8 +2176,12 @@ function onDrop(grabbed, event, result) {
         Object.assign(last, { reason: "noRoute", result: around.stay ? "none" : "short", ms: 0 });
         if (around.stay) return null;
         if (info.combat) checkpointAll(contexts, result[1]);
-        return result;
+        return singleOut(grabbed, contexts, result, info, seq);
       }
+      if (info.combat) checkpointAll(contexts, result[1]);
+      last.result = "core";
+      // The reserved walks and the tokens walking now (0.6.0): it waits for them, queues, or reserves its own.
+      return singleOut(grabbed, contexts, result, info, seq);
     }
     if (unstackable(info.reason)) unstack(contexts, result, grabbed.document.id, info.combat);
     if (info.combat) checkpointAll(contexts, result[1]);
@@ -2167,84 +2193,414 @@ function onDrop(grabbed, event, result) {
   const prep = prepare(grabbed, contexts, { ...info, clock });
   if (!prep) { fellBack("noAnchor"); return result; }
 
-  const finish = plan => {
-    last.ms = Math.round((now() - t0) * 10) / 10;
-    if (plan?.reason === "anchorNoRoute") {
-      // No way for the grabbed token to the drop: nobody moves (H1-12; Joe's decision 7), and the dragger is told.
-      fellBack("anchorNoRoute");
-      // Where it was dropped (top-left px), so a refusal can be checked against the map (H4-01).
-      const d = prep.anchor?.dest;
-      Object.assign(last, { result: "none", reason: "anchorNoRoute", dest: d ? { x: Math.round(d.x), y: Math.round(d.y) } : null });
-      tellNoRoute(NO_ROUTE_GROUP);
-      return { first: [[], { ...result[1], movement: {} }], later: [], base: null };
-    }
-    if (plan?.result !== "plan") {
-      fellBack(plan?.reason ?? "noPlan");
-      last.result = "core";
-      last.reason = plan?.reason ?? "noPlan";
-      unstack(contexts, result, grabbed.document.id, info.combat);
-      if (info.combat) checkpointAll(contexts, result[1]);
-      return { first: result, later: [], base: null };
-    }
-    last.result = "plan";
-    Object.assign(last, { cut: plan.cut?.length ?? 0, stayed: plan.stayed?.length ?? 0, replans: plan.replans, constricted: plan.constricted,
-      formation: plan.formation, excluded: plan.excluded, short: Object.values(plan.members).filter(e => e.short).map(e => e.id), planMs: plan.ms });
-    // A big member with no route its body fits stops short before the gap: told as a single drag is (H3-09); the
-    // grabbed one stopped short of its drop by a token in the way: the dragger hears "No route there" (0.5.0).
-    try { tellShort(prep.members, plan); } catch (err) { log.debug?.("narrow: a group member", err); }
-    const b = batches(plan, prep.members, result, info.combat);
-    last.waves = b.later.length + 1;
-    return b;
-  };
-
   const scene = grabbed.document.parent ?? canvas.scene;
   const starts = new Map(prep.members.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
   // Every client learns the group's members from its moves' update options (a click on one stops them all, decision 3).
-  const gid = foundry.utils.randomID();
-  const tag = b => {
-    if (prep.members.length < 2) return b;
-    if (b.first?.[1]) b.first[1] = { ...b.first[1], [GROUP_OPT]: gid };
-    if (b.base) b.base = { ...b.base, [GROUP_OPT]: gid };
-    return b;
-  };
-  const hold = b => ({ scene, seq, starts, endMs: b.endMs ?? 0, gid });
+  const d = { grabbed, contexts, info, result, seq, t0, scene, starts, gid: foundry.utils.randomID(), prep, sync: true,
+    attempt: 0, queued: false, rid: null, rec: last, level: grabbed.document._source?.level };
   const step = clock.run(() => runPlan(prep.gen, GROUP_LIMITS.syncMs, clock.now));
-  if (step.done) {
-    const b = tag(finish(step.value));
-    schedule(b.later, b.base, prep.members, hold(b));
-    return b.first[0].length ? b.first : null;
-  }
+  if (step.done) return deliver(d, step.value);
 
   // Async: finish in timer slices, then commit the same shape core would have, for the members
   // nobody moved and this client did not drop again in the meantime.
   last.async = true;
-  const commit = ([updates, options]) => (updates.length ? send(scene, seq, starts, updates, options, "move") : null);
+  d.sync = false;
+  runAsync(prep, clock, t0, plan => {
+    if (!feature || !plan) return;                  // uninstalled while planning: nothing is sent
+    deliver(d, plan);
+  });
+  return null;
+}
+
+/** A finished plan (or a fallback) as update batches, recorded on the drop's status record (`d.rec`). */
+function finishFor(d, plan) {
+  const { prep, result, contexts, info, grabbed } = d;
+  const rec = d.rec;
+  rec.ms = Math.round((now() - d.t0) * 10) / 10;
+  if (plan?.reason === "anchorNoRoute") {
+    // No way for the grabbed token to the drop: nobody moves (H1-12; Joe's decision 7), and the dragger is told.
+    fellBack("anchorNoRoute");
+    // Where it was dropped (top-left px), so a refusal can be checked against the map (H4-01).
+    const dd = prep.anchor?.dest;
+    Object.assign(rec, { result: "none", reason: "anchorNoRoute", dest: dd ? { x: Math.round(dd.x), y: Math.round(dd.y) } : null });
+    tellNoRoute(NO_ROUTE_GROUP);
+    return { first: [[], { ...result[1], movement: {} }], later: [], base: null };
+  }
+  if (plan?.result !== "plan") {
+    fellBack(plan?.reason ?? "noPlan");
+    rec.result = "core";
+    rec.reason = plan?.reason ?? "noPlan";
+    // A planning throw (live R4-11: status read mode "plan", result null).
+    if (plan?.reason === "throw") Object.assign(rec, { mode: "core", waves: 0 });
+    unstack(contexts, result, grabbed.document.id, info.combat);
+    if (info.combat) checkpointAll(contexts, result[1]);
+    return { first: result, later: [], base: null };
+  }
+  rec.result = "plan";
+  Object.assign(rec, { cut: plan.cut?.length ?? 0, stayed: plan.stayed?.length ?? 0, replans: plan.replans, constricted: plan.constricted,
+    formation: plan.formation, excluded: plan.excluded, short: Object.values(plan.members).filter(e => e.short).map(e => e.id), planMs: plan.ms });
+  // A big member with no route its body fits stops short before the gap: told as a single drag is (H3-09); the
+  // grabbed one stopped short of its drop by a token in the way: the dragger hears "No route there" (0.5.0).
+  try { tellShort(prep.members, plan); } catch (err) { log.debug?.("narrow: a group member", err); }
+  const b = batches(plan, prep.members, result, info.combat);
+  rec.waves = b.later.length + 1;
+  return b;
+}
+
+/** The group's tag on its batches (GROUP_OPT). */
+function tagFor(d, b) {
+  if (d.prep.members.length < 2) return b;
+  if (b.first?.[1]) b.first[1] = { ...b.first[1], [GROUP_OPT]: d.gid };
+  if (b.base) b.base = { ...b.base, [GROUP_OPT]: d.gid };
+  return b;
+}
+
+/**
+ * A plan's generator run to its end in timer slices (or its budget), then `done(plan)` in the same timer tick (the
+ * plan, or a fallback's { result: "core", reason }; null when uninstalled meanwhile).
+ */
+function runAsync(prep, clock, t0, done) {
+  const finish = plan => {
+    try { done(plan); } catch (err) { log.warnOnce("group-deliver", "a group drop could not be sent (further errors suppressed)", err); }
+  };
   const tick = () => {
-    if (!feature) return;                  // uninstalled while planning: nothing is sent
-    let b;
+    if (!feature) { finish(null); return; }
+    let plan;
     try {
-      if (clock.now() > GROUP_LIMITS.totalMs || now() - t0 > GROUP_LIMITS.waitMs) b = finish({ result: "core", reason: "budget" });
+      if (clock.now() > GROUP_LIMITS.totalMs || now() - t0 > GROUP_LIMITS.waitMs) plan = { result: "core", reason: "budget" };
       else {
         const r = clock.run(() => runPlan(prep.gen, SLICE_MS, clock.now));
         if (!r.done) { setTimeout(tick, 0); return; }
-        b = finish(r.value);
+        plan = r.value;
       }
     } catch (err) {
       log.warnOnce("group-plan", "group planning failed; the move goes as core's (further errors suppressed)", err);
-      fellBack("throw");
-      noteThrow(t0);
-      try { unstack(contexts, result, grabbed.document.id, info.combat); }
-      catch (e) { log.debug?.("unstack after a planning throw", e); }
-      b = { first: result, later: [], base: null };
+      plan = { result: "core", reason: "throw" };
     }
-    b = tag(b);
-    const sent = commit(b.first);
-    const g = schedule(b.later, b.base, prep.members, hold(b));
-    // A click while the first wave was on its way stopped the group: that wave stops too (H3-05).
-    sent?.then?.(() => { if (g?.stopped) lateStop(scene, b.first[0].map(u => u._id)); });
+    finish(plan);
   };
   setTimeout(tick, 0);
+}
+
+/* -------------------------------------------- */
+/*  Reservations (0.6.0, stage 2)               */
+/* -------------------------------------------- */
+
+/**
+ * Publish a reservation ahead of its move (0.6.0): an empty update of `doc` (one this user owns) carrying it, with
+ * `diff: false` as core's own stop / resume relays, so it goes through the server's order and comes back here before
+ * the update resolves. Resolves to { seq } (where it arrived here, in that order), or null when it did not come back
+ * within RESERVE.echoMs or the update failed (the caller then commits after RESERVE.commitMs: the commit fallback).
+ */
+function publish(doc, wire) {
+  reserve.note("published");
+  return new Promise(resolve => {
+    let done = false;
+    const finish = v => { if (!done) { done = true; resolve(v); } };
+    const timer = setTimeout(() => { reserve.note("fallback"); finish(null); }, RESERVE.echoMs);
+    let p;
+    try { p = Promise.resolve(doc.update({}, { diff: false, [reserve.PLAN_OPT]: wire })); }
+    catch (err) { p = Promise.reject(err); }
+    p.then(() => {
+      clearTimeout(timer);
+      const seq = reserve.seqOf(wire.rid);
+      if (seq === null) reserve.note("fallback");
+      finish(seq === null ? null : { seq });
+    }, err => {
+      clearTimeout(timer);
+      log?.debug?.("reservation: publish", err);
+      reserve.note("fallback");
+      finish(null);
+    });
+  });
+}
+
+/**
+ * A repair's move (a door cut's walk to its square) re-publishes (0.6.0): a one-token reservation riding the move
+ * itself (it sets off now). `from`, `waypoints`: top-left pixels. The options to add ({} for a hidden token).
+ */
+function republish(doc, from, waypoints) {
+  try {
+    const token = doc?.object;
+    if (!token || !waypoints?.length || doc.hidden) return {};
+    const s = gridSize(token);
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    const points = [from, ...waypoints].map(p => toSquares(p, w, h, s));
+    const wire = reserve.wireFor(doc.parent, [{ id: doc.id, r: radiusOf(w, h), speed: speedOf(token), delay: 0, points }],
+      { combat: inCombat(doc), level: doc._source.level });
+    if (!wire) return {};
+    reserve.note("republished");
+    return reserve.optionsFor(wire);
+  } catch (err) {
+    log?.debug?.("reservation: republish", err);
+    return {};
+  }
+}
+
+/** A plan's walks as reserved: { id, r, speed, delay, points } (centres, squares; the walk as cut). */
+function walksOf(prep, plan) {
+  const out = [];
+  for (const m of prep.members) {
+    const e = plan.members?.[m.id];
+    if (!e || e.core || !(e.points?.length >= 2)) continue;
+    out.push({ id: m.id, r: m.r, w: m.w, h: m.h, speed: m.speed, delay: e.delay ?? 0, points: e.points });
+  }
+  return out;
+}
+
+/** Every walk this client reads for `members` now: tokens drawn walking, and the reservations it has. */
+function walkersNow(members, s) {
+  let walking = [];
+  try { walking = movingOthers(members, s); } catch (err) { log?.debug?.("tokens walking now", err); }
+  let live = { walkers: [] };
+  try { live = reserve.liveFor(members, { skip: new Set(walking.map(w => w.id)) }); } catch (err) { log?.debug?.("reservations", err); }
+  return [...walking, ...live.walkers];
+}
+
+/**
+ * Does the drop queue (a later plan waits at its start for a reserved walk in its way to pass, rather than stop short
+ * of it)? Its members cut short, left standing or stopped short: their full ways against every walk read now. The
+ * wait (ms), or null.
+ */
+function queueFor(d, plan) {
+  const { prep } = d;
+  const ids = new Set([...(plan.cut ?? []), ...(plan.stayed ?? []), ...Object.values(plan.members ?? {}).filter(e => e.short).map(e => e.id)]);
+  if (!ids.size) return null;
+  const s = gridSize(d.grabbed);
+  const full = [];
+  for (const m of prep.members) {
+    const e = plan.members?.[m.id];
+    if (!ids.has(m.id) || !e?.data?.path?.length) continue;
+    const path = d.info.combat ? onSquares(e.data.path, s) : e.data.path;
+    full.push({ points: path.map(p => toSquares(p, m.w, m.h, s)), r: m.r, speed: m.speed, delay: e.delay ?? 0 });
+  }
+  if (!full.length) return null;
+  return queueUntil(full, walkersNow(prep.members, s), { combat: d.info.combat });
+}
+
+/** Wait `ms` on a timer this client holds (nothing when uninstalled meanwhile). */
+const wait = ms => new Promise(resolve => setTimeout(resolve, Math.max(ms, 0)));
+
+/** Batches with `extra` options on the first wave and the later ones. */
+function withOptions(b, extra) {
+  if (b.first?.[1]) b.first[1] = { ...b.first[1], ...extra };
+  if (b.base) b.base = { ...b.base, ...extra };
+  return b;
+}
+
+/** Are the drop's members still where it found them, and not dropped again since? */
+const stillMine = d => stillOurs(d.prep.members.map(m => m.id), d.scene, d.starts, d.seq).length > 0;
+
+/** Send a drop's batches: the first wave (returned to core when the drop is still synchronous) and the later waves. */
+function commit(d, b) {
+  const hold = { scene: d.scene, seq: d.seq, starts: d.starts, endMs: b.endMs ?? 0, gid: d.gid };
+  if (d.sync) {
+    schedule(b.later, b.base, d.prep.members, hold);
+    return b.first[0].length ? b.first : null;
+  }
+  const [updates, options] = b.first;
+  const sent = updates.length ? send(d.scene, d.seq, d.starts, updates, options, "move") : null;
+  const g = schedule(b.later, b.base, d.prep.members, hold);
+  // A click while the first wave was on its way stopped the group: that wave stops too (H3-05).
+  sent?.then?.(() => { if (g?.stopped) lateStop(d.scene, updates.map(u => u._id)); });
   return null;
+}
+
+/**
+ * A planned group drop's way out (0.6.0): it queues when a reserved walk is in the way of a member it would cut
+ * short; else it reserves its walks. Alone on the table the reservation rides the first wave itself; with another
+ * client that could be planning at the same moment it is published first, and the move follows at its echo: a
+ * reservation that came back before it (earlier in the server's order) and that this plan had not read, when the
+ * two meet, makes this plan the later one: it is made again, round it (RESERVE.replans times at most). Returns the
+ * first wave for core (synchronous, nothing to wait for) or null.
+ */
+function deliver(d, plan) {
+  if (plan?.result !== "plan" || plan.straight) return commit(d, tagFor(d, finishFor(d, plan)));
+  // Before its batches (and its notices): a drop that queues is planned again, and tells then.
+  if (!d.queued) {
+    let until = null;
+    try { until = queueFor(d, plan); } catch (err) { log.debug?.("queue: the walks in the way", err); }
+    if (until !== null) {
+      d.queued = true;
+      reserve.note("queued");
+      Object.assign(d.rec, { result: "queued", queued: Math.round(until) });
+      if (d.sync) d.sync = false;
+      setTimeout(() => replan(d), until);
+      return null;
+    }
+  }
+  const b = tagFor(d, finishFor(d, plan));
+  const walks = walksOf(d.prep, plan);
+  const wire = reserve.wireFor(d.scene, walks, { combat: d.info.combat, replaces: d.rid, level: d.level });
+  if (!wire) return commit(d, b);
+  d.rid = wire.rid;
+  d.rec.reserved = walks.length;
+  if (!reserve.racers()) {
+    reserve.note("inline");
+    // The plan rides the first wave (every wave when the first is empty: a receiver records it once); every wave names it.
+    const names = reserve.optionsFor(wire, { inline: false });
+    if (b.first?.[0]?.length) {
+      withOptions(b, names);
+      b.first[1] = { ...b.first[1], ...reserve.optionsFor(wire) };
+      return commit(d, b);
+    }
+    return commit(d, withOptions(b, reserve.optionsFor(wire)));
+  }
+  d.sync = false;
+  publish(d.grabbed.document, wire)
+    .then(echo => (echo ? echo : wait(RESERVE.commitMs).then(() => null)))
+    .then(echo => {
+      if (!feature || !stillMine(d)) return;
+      const theirs = reserve.raceWindow(d.prep.members, d.prep.snap, echo?.seq ?? Infinity).filter(w => w.rid !== wire.rid);
+      if (theirs.length && d.attempt < RESERVE.replans && lostRace(walks, theirs, { combat: d.info.combat })) {
+        d.attempt += 1;
+        d.rec.raced = d.attempt;
+        reserve.note("raced");
+        reserve.noteRace({ members: walks.length, against: theirs.length, attempt: d.attempt, single: false });
+        replan(d);
+        return;
+      }
+      // Its echo read: the plan is already where every client has it. Without an echo it rides the move as well.
+      commit(d, withOptions(b, reserve.optionsFor(wire, { inline: !echo })));
+    })
+    .catch(err => log.warnOnce("group-reserve", "a group's reservation could not be published (further errors suppressed)", err));
+  return null;
+}
+
+/** The drop planned again (after a race lost, or once its queue is over): read what is reserved now, plan, deliver. */
+function replan(d) {
+  if (!feature || !stillMine(d)) return;
+  reserve.note("replans");
+  const clock = planClock();
+  let prep = null;
+  try { prep = prepare(d.grabbed, d.contexts, { ...d.info, clock }); } catch (err) { log.debug?.("re-plan: prepare", err); }
+  if (!prep) return;
+  d.prep = prep;
+  d.sync = false;
+  runAsync(prep, clock, now(), plan => {
+    if (!feature || !plan || !stillMine(d)) return;
+    deliver(d, plan);
+  });
+}
+
+/**
+ * A single token's walk (`waypoints` after its origin, top-left pixels) against the walks this client reads: the
+ * member record, the walkers and the timing (reserve-core singleTiming).
+ */
+function singleRead(grabbed, waypoints, combat) {
+  const doc = grabbed.document;
+  const s = gridSize(grabbed);
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+  const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
+  const path = combat ? onSquares([origin, ...waypoints], s) : [origin, ...waypoints];
+  const member = { id: doc.id, r: radiusOf(w, h), w, h, speed: speedOf(grabbed), points: path.map(p => toSquares(p, w, h, s)), delay: 0 };
+  const snap = reserve.seqNow();
+  const walkers = walkersNow([{ id: doc.id, token: grabbed }], s);
+  return { member, walkers, path, snap, timing: singleTiming(member, walkers, { combat }) };
+}
+
+/**
+ * A single drop (0.6.0): it reads the reserved walks and the tokens walking now, and sets off with the smallest start
+ * delay that meets none of them; with none, it queues until they are past, then goes as far as it is free of them.
+ * Alone on the table with nothing to wait for, its reservation rides the move (returned to core now); otherwise it
+ * goes by singleFlow. Returns core's result or null.
+ */
+function singleOut(grabbed, contexts, result, info, seq) {
+  const doc = grabbed.document;
+  const c = contexts[0];
+  const m = result?.[1]?.movement?.[doc.id];
+  if (!m?.waypoints?.length || m.planned || c?.waypoints?.length || grabbed.layer?._movementPlanningContext) return result;
+  if (result[1].constrainOptions?.ignoreWalls || feature.exposed.ghostFor?.(grabbed)) return result;
+  let read = null;
+  try { read = singleRead(grabbed, m.waypoints, info.combat); } catch (err) { log.debug?.("single: the walks in its way", err); return result; }
+  const scene = doc.parent ?? canvas.scene;
+  if (read.timing.delay === 0 && !reserve.racers()) {
+    const wire = reserve.wireFor(scene, [read.member], { combat: info.combat, level: doc._source.level });
+    if (wire) { Object.assign(result[1], reserve.optionsFor(wire)); reserve.note("inline"); }
+    return result;
+  }
+  const starts = new Map([[doc.id, { x: doc._source.x, y: doc._source.y }]]);
+  singleFlow({ grabbed, result, waypoints: m.waypoints, seq, starts, scene, combat: info.combat, rec: last, first: read })
+    .catch(err => log.warnOnce("single-reserve", "a single drop's reservation failed (further errors suppressed)", err));
+  return null;
+}
+
+const YIELDED = "PENTARYN_MOVEMENT.notify.yielded";
+
+/**
+ * A single drop that waits, queues or publishes first (0.6.0). Each round reads the walks anew; a race lost at the
+ * echo (a reservation earlier in the server's order that it had not read and that it meets) goes round again, at most
+ * RESERVE.replans times. A queue happens once: after it, the walk goes as far as it meets nothing (on a whole square in
+ * a fight), or not at all, with a quiet notice. Nothing is sent when the token was moved or dropped again meanwhile.
+ */
+async function singleFlow(ctx) {
+  const { grabbed, result, seq, starts, scene, combat, rec } = ctx;
+  const doc = grabbed.document;
+  const base = result[1].movement?.[doc.id] ?? { planned: false };
+  const updates = result[0].length ? result[0] : [{ _id: doc.id }];
+  let waypoints = ctx.waypoints;
+  let read = ctx.first ?? null;
+  let queued = false, replaces = null;
+  for (let attempt = 0; attempt <= RESERVE.replans + 2; attempt++) {
+    if (!feature || !stillOurs([doc.id], scene, starts, seq).length) { if (rec) rec.result = "superseded"; return; }
+    read ??= singleRead(grabbed, waypoints, combat);
+    let delay = read.timing.delay;
+    if (delay === null) {
+      if (!queued) {
+        queued = true;
+        reserve.note("queued");
+        if (rec) rec.queued = Math.round(read.timing.until);
+        await wait(read.timing.until);
+        read = null;
+        continue;
+      }
+      // Queued once already: as far as it meets nothing, then it stands (a whole square in a fight).
+      const cut = singleCut(read.member, read.walkers, { combat });
+      if (cut.still) {
+        if (rec) Object.assign(rec, { result: "stay", reason: "yielded" });
+        tellNoRoute(YIELDED);
+        return;
+      }
+      let path = cutPath(read.path, cut.cut, combat);
+      if (path.length < 2) return;
+      let wps = path.slice(1);
+      wps[wps.length - 1] = { ...wps.at(-1), explicit: true, checkpoint: true };
+      if (combat && setting("clickToStop")) wps = withCheckpoints(grabbed, path);
+      waypoints = wps;
+      if (rec) Object.assign(rec, { result: "short", reason: "yielded" });
+      tellNoRoute(YIELDED);
+      read = singleRead(grabbed, waypoints, combat);
+      delay = 0;
+    }
+    const racing = reserve.racers();
+    const wire = reserve.wireFor(scene, [{ ...read.member, delay: racing ? delay : 0 }], { combat, replaces, level: doc._source.level });
+    let echo = null;
+    if (racing && wire) {
+      echo = await publish(doc, wire);
+      if (!echo) await wait(RESERVE.commitMs);
+      if (!feature) return;
+      const theirs = reserve.raceWindow([{ id: doc.id, token: grabbed }], read.snap, echo?.seq ?? Infinity).filter(w => w.rid !== wire.rid);
+      if (theirs.length && attempt < RESERVE.replans && lostRace([{ ...read.member, delay }], theirs, { combat })) {
+        replaces = wire.rid;
+        reserve.note("raced");
+        reserve.noteRace({ members: 1, against: theirs.length, attempt: attempt + 1, single: true });
+        if (rec) rec.raced = attempt + 1;
+        read = null;
+        continue;
+      }
+    }
+    if (delay > 0) {
+      if (rec) rec.delay = delay;
+      await wait(delay);
+    }
+    if (!feature || !stillOurs([doc.id], scene, starts, seq).length) return;
+    // Published and read back: every client has the plan; else (alone, or no echo) it rides the move.
+    const inline = !(racing && echo);
+    const extra = wire ? reserve.optionsFor(wire, { inline }) : {};
+    if (wire && inline) reserve.note("inline");
+    await send(scene, seq, starts, updates, { ...result[1], ...extra, movement: { [doc.id]: { ...base, waypoints } } }, "move");
+    return;
+  }
 }
 
 /* -------------------------------------------- */
@@ -2298,6 +2654,7 @@ function groupStatus() {
     destacked: destacked ? { ...destacked } : null,
     cut: cutLast ? { ...cutLast } : null,
     held: heldLast ? { ...heldLast } : null,
+    reservations: reserve.status(),
   };
 }
 
@@ -2371,10 +2728,15 @@ export function install(reg, ctx) {
   reg.on("updateToken", (doc, _changes, options) => onHistoryCleared(doc, options), { label: "updateToken: a turn change stops the whole group" });
   reg.on("updateToken", (doc, _changes, options) => onGroupTag(doc, options), { label: "updateToken: which group a move belongs to (click stops the group)" });
   reg.on("updateToken", (doc, changes, options, userId) => onForeignStop(doc, changes, options, userId), { label: "updateToken: a member another user stopped (the rest walk round it)" });
+  // Server-ordered reservations (0.6.0): every client records each plan as it arrives, sets it off, drops it.
+  reserve.configure({ log, counts: countsForRoutes });
+  reg.on("updateToken", (doc, changes, options) => reserve.onUpdate(doc, changes, options), { label: "updateToken: a move's reservation (the server's order)" });
+  reg.on("moveToken", (doc, movement, operation) => reserve.onMove(doc, movement, operation), { label: "moveToken: a reserved token sets off, walks on, or its reservation goes" });
+  reg.on("stopToken", doc => reserve.onStop(doc), { label: "stopToken: a stopped token's reservation goes" });
   // A door shut or a wall raised across a move this client started cuts it before the wall (live R6-3, R6-1).
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: cut moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: cut moves across a shut door" });
-  ctx.expose({ groupFollower, singleAvoid, groupCancel, groupMembers, groupStopOne, groupSettle, groupNoteStop, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
+  ctx.expose({ groupFollower, singleAvoid, groupCancel, groupMembers, groupStopOne, groupSettle, groupNoteStop, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched, groupRepublish: republish });
 }
 
 export function uninstall() {
@@ -2395,5 +2757,6 @@ export function uninstall() {
   heldLast = null;
   fallbacks.length = 0;
   latestDrop.clear();
+  reserve.reset();
   feature = null;
 }

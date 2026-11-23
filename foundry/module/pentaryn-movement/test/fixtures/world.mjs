@@ -30,6 +30,11 @@ export async function movementWorld({ patchable = true } = {}) {
     modules: ["pentaryn-movement"],
   });
 
+  // A drop publishes its reservation first only while another client could be planning (reserve.mjs racers): the
+  // fixture's GM is an active user, so the suites keep the alone-on-the-table path unless a test opts in (0.6.0).
+  F.CONFIG.debug ??= {};
+  F.CONFIG.debug["pentaryn-movement.publishFirst"] = false;
+
   if (patchable) {
     F.CONFIG.Token.objectClass = class Token5e {
       _getDragConstrainOptions() {

@@ -331,12 +331,14 @@ function trajectoryOf(points, speed) {
  * plan was made before the other group moved, and their later waves walked into each other, -49 to -96 px).
  */
 export function walkersMeet(mine, walkers, { combat = false } = {}) {
+  // A walker's `delay` (ms from now, 0.6.0): a reservation's member that sets off later (it stands at its start
+  // until then), or one that set off earlier (negative: it is part way along).
   const ws = (walkers ?? []).filter(f => f.points?.length >= 2)
-    .map(f => ({ r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed }) }));
+    .map(f => ({ r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed, delay: f.delay ?? 0 }) }));
   if (!ws.length) return false;
   for (const m of mine ?? []) {
     if (!(m.points?.length >= 2)) continue;
-    const tr = trajectory(m.points, { speed: m.speed ?? MOTION.speed });
+    const tr = trajectory(m.points, { speed: m.speed ?? MOTION.speed, delay: m.delay ?? 0 });
     if (ws.some(f => firstConflict(tr, f.tr, m.r, f.r, { combat }) !== null)) return true;
   }
   return false;
@@ -507,7 +509,7 @@ export function* settle(list, { statics = [], walkers = [], combat = false, allo
   const fixed = [
     ...(statics ?? []).map(c => ({ id: c.id ?? null, r: c.r, tr: trajectory([{ x: c.x, y: c.y }]), still: true, foreign: true })),
     ...(walkers ?? []).filter(w => w.points?.length >= 2)
-      .map(w => ({ id: w.id ?? null, r: w.r, tr: trajectory(w.points, { speed: w.speed ?? MOTION.speed }), walker: true, foreign: true })),
+      .map(w => ({ id: w.id ?? null, r: w.r, tr: trajectory(w.points, { speed: w.speed ?? MOTION.speed, delay: w.delay ?? 0 }), walker: true, foreign: true })),
   ];
   const clash = (e, f) => {
     if (e.still && f.walker) return null;
@@ -602,13 +604,15 @@ export function* settle(list, { statics = [], walkers = [], combat = false, allo
  * @param {boolean} [spec.combat]
  * @param {"plan"|"straight"} [spec.mode]
  * @param {{x,y,r}[]} [spec.others] tokens standing outside the group (circles, squares)
- * @param {{id,r,points,speed?}[]} [spec.moving]   tokens outside the group walking now
+ * @param {{id,r,points,speed?,delay?}[]} [spec.moving]   tokens outside the group walking now, or reserved to walk
+ *                                  (0.6.0: `delay` ms from now, negative when it set off earlier)
+ * @param {{x,y,r}[]} [spec.reserved] where reserved walks of other moves end (0.6.0): no rest spot there
  * @param {object} o                the oracles (see the file header); toward(member, from, to) → { points, length,
  *                                  data? } or null: the way that ignores the tokens (for a big one as far as it fits)
  * @returns {Generator<string, object>}   the result: { result: "plan", members: { id → entry }, ... } or { result: "core", reason }
  */
 export function* planGroup(spec, o) {
-  const { anchorId, combat = false, mode = "plan", others = [], moving = [] } = spec;
+  const { anchorId, combat = false, mode = "plan", others = [], moving = [], reserved = [] } = spec;
   let { members } = spec;
   if (members.length > GROUP_LIMITS.maxMembers) return { result: "core", reason: "tooMany" };
   let anchor = members.find(m => m.id === anchorId);
@@ -624,7 +628,7 @@ export function* planGroup(spec, o) {
   // too, on whole squares (0.5.0: no rest on another token anywhere).
   let goals = [anchor.formation];
   {
-    const clear = c => others.every(q => dist(c, q) >= anchor.r + q.r - EPS);
+    const clear = c => [...others, ...reserved].every(q => dist(c, q) >= anchor.r + q.r - EPS);
     if (!clear(anchor.formation)) {
       const roomy = c => !o.narrow?.([c, { x: c.x + 0.01, y: c.y }], anchor.r)?.length && !o.narrow?.([c, { x: c.x, y: c.y + 0.01 }], anchor.r)?.length;
       // Only spots it can walk to from the drop point (live H2-03: walls enclose no rock, so a spot in the rock
@@ -719,7 +723,7 @@ export function* planGroup(spec, o) {
   const routes = new Map([[anchorId, anchorRoute]]);
   let slots = null;
   for (let round = 0; round < 2; round++) {
-    const obstacles = [...others, ...excluded.map(m => ({ ...(routes.has(m.id) ? pathOf(routes.get(m.id)).at(-1) : m.start), r: m.r }))];
+    const obstacles = [...others, ...reserved, ...excluded.map(m => ({ ...(routes.has(m.id) ? pathOf(routes.get(m.id)).at(-1) : m.start), r: m.r }))];
     const live = members.filter(m => !excluded.includes(m));
     const a = assignSlots({ members: live, anchorId, walkable: o.walkable, walkDistance: o.walkDistance,
       others: obstacles, constricted, combat, rank, depthOf, route: anchorRoute.points, narrowPts, openAt, anchorLast });
@@ -757,7 +761,7 @@ export function* planGroup(spec, o) {
   // Members that do not move at all (no free way): standing where they are, for everyone.
   const stays = members.filter(m => routes.has(m.id) && pathOf(routes.get(m.id)).length < 2);
   const base = [
-    ...walkers.map(f => ({ id: `moving:${f.id}`, r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed }), wave: 0, foreign: true })),
+    ...walkers.map(f => ({ id: `moving:${f.id}`, r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed, delay: f.delay ?? 0 }), wave: 0, foreign: true })),
     ...statics,
     ...stays.map(m => ({ id: m.id, r: m.r, tr: trajectoryOf(pathOf(routes.get(m.id)), m.speed), wave: 0, still: true })),
   ];

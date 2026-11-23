@@ -1,5 +1,36 @@
 # Changelog — pentaryn-movement
 
+## 0.6.0 — 2026-11-22
+
+Overlap redesign, stage 2 of 3: server-ordered reservations (plan `context/plans/pathfinding-2026-11.md` §15.4).
+
+- **[declared] Every move reserves its whole plan, in the server's order.** A drop's reservation (every member's walk,
+  its later waves and their start delays) rides a token update (`pentarynMovementPlan`); every move names it
+  (`pentarynMovementRid`). Every client keeps the reservations it receives in arrival order, which is the server's
+  order, and the later one yields. A reserved token's own move sets it off (and fixes its clock on that client), a
+  fight's next square keeps it, any other move or a stop drops it; one overdue to set off, or long at rest, expires.
+- **[declared] Every planner reads them, single drags included.** A group plans round the reserved walks in time (a
+  start delay, a re-route, another spot) and never rests where one ends; a single drag takes the smallest start delay
+  that meets none (up to 3 s). Repairs keep off where reserved walks end.
+- **[declared] Publish first, decide at the echo.** With another user online a drop publishes its reservation first
+  (an empty `diff: false` update of the grabbed token, as core's own stop relay) and moves when it comes back: a
+  reservation that came back before it, that it had not read and that it meets, makes it the later one, and it plans
+  again round it (twice at most). No echo in 1.5 s: it waits 150 ms and goes (the commit fallback). Alone on the
+  table nothing waits: the plan rides the first wave.
+- **[declared] Queue rather than stop short.** A drop whose member would be cut short by a reserved walk (a one-wide
+  corridor walked the other way) waits at its start until those walks are at rest, at most 8 s, and plans again
+  once; then it goes as far as it meets nothing ("Another move is still in the way" for a single token).
+- **[declared] Stops and door cuts re-publish.** A stopped token's reservation goes on every client; a walk-on after a
+  stop, a group's walk round a stopped member and a door cut's walk to its square carry their own reservation. A
+  wave whose walk was changed at send (a door shut since) no longer names the old one.
+- **[declared] Hidden tokens are never in a reservation**; a player's planner reads only the tokens it counts (what it
+  sees, its own, its party). `status().group.reservations` (live, counts, the last race); `status().group.last` adds
+  `reserved`, `queued`, `delay`, `raced`.
+- New pure core `reserve-core.mjs` (wire, registry, race, delay, queue, cut) and `reserve-adapter.mjs` (the registry
+  each client keeps); hooks `updateToken`, `moveToken`, `stopToken` appended (golden `hooks.json`); tests
+  `reserve-core.test.mjs`, `reserve-props.test.mjs` (seeded: a later or racing plan never meets an earlier one, a
+  single drag waits or is cut, liveness), glue cases in `group.test.mjs`.
+
 ## 0.5.2 — 2026-11-22
 
 Overlap redesign stage 1, round S1R2 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.3).

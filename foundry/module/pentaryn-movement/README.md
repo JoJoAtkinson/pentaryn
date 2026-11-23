@@ -85,6 +85,14 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   (0.4.10). A big
   token never walks where its body does not fit (core tests walls at the centre only): it takes a wider way
   round when there is one, else it stops before the gap, clear of the frame, and the GM is told (0.4.9).
+- **Two people dragging at the same moment never walk through each other (0.6.0).** Every drop, a single token's
+  too, reads the moves already reserved (every other client's whole plan, its later members too) and walks round
+  them in time: it waits a moment, or takes another spot, rather than meet one. When the way is shut by a move
+  still walking it (a one-wide corridor someone is coming down), it waits at its start until that one is through,
+  up to 8 s, then goes; still in the way, it walks as far as it can and says "Another move is still in the way".
+  With another player online a drop sets off one network round trip after you let go (it checks nobody reserved
+  the same space first); if two drops cross at the same instant, the second the server saw plans again round the
+  first. Hidden tokens are never announced to players. `status().group.reservations`.
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
   click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never
   across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so
@@ -188,7 +196,9 @@ the scene's fog "explored", which drops it too), group's and stop's `setup` (onc
 (when a move started, for the 400 ms arming), stop's `updateToken` (0.4.2: after an unanimated move, every
 client puts the token where the server has it), stop's `canvasReady` (the board pointerdown fallback), and
 `ready` (once). Group's `updateToken` rows (0.4.4 a turn change stops the group; 0.4.9 the group tag every
-client keeps, and a member another user stopped) come between group's `ready` and its `createWall`.
+client keeps, and a member another user stopped) come between group's `ready` and its `createWall`, then (0.6.0)
+the reservation rows: `updateToken` (a reservation arrives), `moveToken` (a reserved token sets off, walks on or its
+reservation goes) and `stopToken` (a stopped token's reservation goes).
 
 ## Patches and adjustments
 
@@ -215,7 +225,9 @@ The first three carry the `__pentarynMovement` marker and go through the kit (`w
 
 Client-only: nothing is elected and nothing runs on one client for everyone. Each client decides
 ghost and the sort for its own user; a group's later waves are timers on the client that dropped it
-(never the headless GM, which has no canvas). The `stop` relay is answered by the active GM only for a
+(never the headless GM, which has no canvas). Every client keeps the reservations it receives (update options
+`pentarynMovementPlan` / `pentarynMovementRid`), in the server's order; the client that dropped publishes and
+decides at its echo, nobody else acts on it (0.6.0). The `stop` relay is answered by the active GM only for a
 move that client started; `stopOwn` by the client that started it, for a GM. A player's client clears its
 own `ghost` setting when ghost stops being allowed; only a GM writes the world settings and the
 `ghostInCombat` flag (from the GM client that clicked or called; the headless GM bot is a GM client too).
@@ -239,6 +251,8 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 - Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag disabled`).
 - The GM never ghosts through this module (core's own tool is the GM's).
 - Group waves run on the dropping client (closing it mid-move strands unsent members); Ctrl+Z undoes one wave.
+- A drop that waits for, or queues behind, another reserved move shows nothing until it sets off (up to 8 s): that
+  is the yield, not a hang. `status().group.last.queued` / `.delay` / `.raced` say which.
 - The incorporeal test is by **feat name** (`INCORPOREAL_FEATS`); a differently named trait needs the GM toggle.
 - Errors in the per-frame hooks (`refreshToken`, `renderSceneControls`) warn once per session.
 
@@ -256,6 +270,7 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `pathfind-adapter.mjs` | a token and its drag options → wall / creature / cost step tests (reads only) |
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
 | `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, decision tables; slots, routes, delays |
+| `reserve-core.mjs`, `reserve-adapter.mjs` | pure: the reservation wire, registry, race, delay, queue and cut; the registry each client keeps and its reads (0.6.0) |
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and gap tests (reads only) |
 | `group.mjs`, `stop.mjs` | the features: the drop wrap and its waves; the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
@@ -269,7 +284,9 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 goldens, i18n keys and logging; `pathfind-core.test` (A* on synthetic wall maps: corners, doors,
 one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equality) and
 `pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-core.test`
-(the plan's unit acceptance tests on ASCII floors) and `group.test` (the drop and click wraps). Fixtures are
+(the plan's unit acceptance tests on ASCII floors) and `group.test` (the drop and click wraps); `reserve-core.test`
+and `reserve-props.test` (the reservations: the registry, and seeded scenarios where a later or racing plan never
+meets an earlier one, a single drag waits or is cut, and everything rests in bounded time). Fixtures are
 synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.
 
 **Verify live (as a player):**

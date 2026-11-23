@@ -469,6 +469,18 @@
       "label": "updateToken: a member another user stopped (the rest walk round it)"
     },
     {
+      "name": "updateToken",
+      "label": "updateToken: a move's reservation (the server's order)"
+    },
+    {
+      "name": "moveToken",
+      "label": "moveToken: a reserved token sets off, walks on, or its reservation goes"
+    },
+    {
+      "name": "stopToken",
+      "label": "stopToken: a stopped token's reservation goes"
+    },
+    {
       "name": "createWall",
       "label": "createWall: cut moves across a new wall"
     },

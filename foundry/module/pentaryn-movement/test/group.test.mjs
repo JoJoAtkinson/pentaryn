@@ -10,6 +10,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { movementWorld, drop, clicks, doors, SCENE } from "./fixtures/world.mjs";
 import { MOTION } from "../motion-core.mjs";
+import { RESERVE } from "../reserve-core.mjs";
 import { fitPath } from "../group-adapter.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: Date.now() });
@@ -2929,5 +2930,228 @@ test("S1R2-03: a big token whose way stops fitting on a slanted line (no whole s
     assert.equal(end.explicit, true);
   } finally {
     sceneTokens.delete(big.document.id);
+  }
+});
+
+/* -------------------------------------------- */
+/*  0.6.0: server-ordered reservations          */
+/* -------------------------------------------- */
+
+const { reservations: reserveMod } = await import("../reserve-adapter.mjs");
+const { PLAN_OPT, RID_OPT } = reserveMod;
+const { encode: encodeWire } = await import("../reserve-core.mjs");
+const flush = async (n = 6) => { for (let k = 0; k < n; k++) await new Promise(r => setImmediate(r)); };
+/** A reservation another client published: token `id` walking `points` (centres, squares) from now. */
+const foreignWire = (rid, id, points, extra = {}) => encodeWire({ rid, scene: SCENE, user: "other00000000001", members: [{ id, r: 0.5, speed: 6, delay: 0, points }], ...extra });
+
+test("0.6.0: a group drop alone on the table carries its whole reservation on its first wave, and every wave names it", () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const ts = [makeToken("rsvA000000000001", 400, 200), makeToken("rsvB000000000001", 300, 200), makeToken("rsvC000000000001", 500, 200)];
+  const from = F.calls.length;
+  const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+  assert.ok(Array.isArray(out), "planned synchronously (nobody else could be planning)");
+  const plan = out[1][PLAN_OPT];
+  assert.ok(plan?.rid, "the plan rides the first wave");
+  assert.deepEqual(plan.members.map(m => m.id).sort(), ts.map(t => t.document.id).sort(), "every member's walk, later waves too");
+  for (const m of plan.members) assert.ok(m.p.length >= 4 && m.d >= 0 && m.d % MOTION.delayStep === 0, JSON.stringify(m));
+  for (const id of out[0].map(u => u._id)) assert.equal(out[1][RID_OPT][id], plan.rid);
+  tickBy(5000);
+  for (const b of sent(from)) {
+    assert.equal(b.options[PLAN_OPT], undefined, "later waves do not repeat the plan");
+    for (const id of b.ids) assert.equal(b.options[RID_OPT]?.[id], plan.rid, "a later wave names its reservation");
+  }
+  assert.equal(api.status().group.last.reserved, plan.members.length);
+  assert.ok(api.status().group.reservations.inline >= 1);
+  tickBy(60000);
+});
+
+test("0.6.0: every client records a reservation once; its own move sets it off, any other move or a stop drops it", () => {
+  reserveMod.reset();
+  const a = makeToken("rsvD000000000001", 100, 100), b = makeToken("rsvE000000000001", 100, 300);
+  const w = encodeWire({ rid: "ridAB00000000001", scene: SCENE, members: [
+    { id: a.document.id, r: 0.5, speed: 6, delay: 0, points: [{ x: 1.5, y: 1.5 }, { x: 5.5, y: 1.5 }] },
+    { id: b.document.id, r: 0.5, speed: 6, delay: 300, points: [{ x: 1.5, y: 3.5 }, { x: 5.5, y: 3.5 }] }] });
+  F.fire("updateToken", a.document, {}, { [PLAN_OPT]: w }, "other00000000001");
+  F.fire("updateToken", b.document, {}, { [PLAN_OPT]: w }, "other00000000001");
+  let st = api.status().group.reservations;
+  assert.equal(st.live, 1);
+  assert.equal(st.received, 1, "one update, two tokens: recorded once");
+  F.fire("moveToken", a.document, { id: "mvA", chain: [] }, { [RID_OPT]: { [a.document.id]: w.rid } }, null);
+  F.fire("moveToken", a.document, { id: "mvA2", chain: ["mvA"] }, {}, null);
+  assert.equal(api.status().group.reservations.reservations[0].members, 2, "a fight's next square keeps it");
+  F.fire("moveToken", a.document, { id: "other", chain: [] }, {}, null);
+  assert.equal(api.status().group.reservations.reservations[0].members, 1, "a move that is not the reservation's drops it");
+  F.fire("stopToken", b.document);
+  st = api.status().group.reservations;
+  assert.equal(st.live, 0, "a stop drops it");
+  assert.equal(st.dropped, 1);
+  sceneTokens.delete(a.document.id);
+  sceneTokens.delete(b.document.id);
+});
+
+test("0.6.0: a single drag across another client's reserved walk waits for it, then carries its own reservation", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const s = makeToken("rsvS000000000001", 100, 600), f = makeToken("rsvF000000000001", 400, 900);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [s, f];
+  try {
+    // F walks north across S's way, from now.
+    const w = foreignWire("ridF000000000001", f.document.id, [{ x: 4.5, y: 9.5 }, { x: 4.5, y: 5.5 }]);
+    F.fire("updateToken", f.document, {}, { [PLAN_OPT]: w }, "other00000000001");
+    F.fire("moveToken", f.document, { id: "mvF", chain: [] }, { [RID_OPT]: { [f.document.id]: w.rid } }, null);
+    const from = F.calls.length;
+    const out = dropWith(s, contextsFor([s], 600, 0));
+    assert.equal(out, null, "it waits: the drop sends nothing now");
+    const delay = api.status().group.last.delay;
+    assert.ok(delay > 0 && delay % MOTION.delayStep === 0, `a start delay: ${delay}`);
+    tickBy(delay - 50);
+    await flush();
+    assert.equal(sent(from).length, 0, "not before its delay");
+    tickBy(100);
+    await flush();
+    const go = sent(from);
+    assert.equal(go.length, 1);
+    assert.deepEqual(go[0].ids, [s.document.id]);
+    assert.equal(go[0].options[PLAN_OPT].members[0].id, s.document.id, "its own reservation rides the move");
+    assert.equal(go[0].options[PLAN_OPT].members[0].d, 0, "set off now");
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(f.document.id);
+    sceneTokens.delete(s.document.id);
+    reserveMod.reset();
+    tickBy(60000);
+  }
+});
+
+test("0.6.0: with another client planning, a drop publishes first; a reservation that came back before its echo and meets it makes it the later one: planned again, round it", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  F.CONFIG.debug["pentaryn-movement.publishFirst"] = true;
+  const s = makeToken("rsvT000000000001", 100, 600), f = makeToken("rsvG000000000001", 400, 900);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [s, f];
+  const publishes = [];
+  let competitor = true;
+  // The server's order: the other client's reservation is applied (and broadcast) before this one's publish.
+  s.document.update = async (changes, options) => {
+    publishes.push(options);
+    if (competitor) {
+      competitor = false;
+      const w = foreignWire("ridG000000000001", f.document.id, [{ x: 4.5, y: 9.5 }, { x: 4.5, y: 5.5 }]);
+      F.fire("updateToken", f.document, {}, { [PLAN_OPT]: w }, "other00000000001");
+    }
+    F.fire("updateToken", s.document, changes, options, game.user.id);
+    return s.document;
+  };
+  try {
+    const from = F.calls.length;
+    assert.equal(dropWith(s, contextsFor([s], 600, 0)), null, "published first: nothing sent with the drop");
+    await flush();
+    assert.equal(publishes.length, 2, "the race lost at the echo: published again");
+    assert.ok(publishes[0][PLAN_OPT] && publishes[0].diff === false);
+    assert.equal(publishes[1][PLAN_OPT].replaces, publishes[0][PLAN_OPT].rid, "the new reservation replaces the first");
+    assert.ok(publishes[1][PLAN_OPT].members[0].d > 0, "planned round the earlier one: it waits");
+    const st = api.status().group.reservations;
+    assert.equal(st.raced, 1);
+    assert.equal(st.race.single, true);
+    tickBy(RESERVE.singleMs + 200);
+    await flush();
+    const go = sent(from);
+    assert.equal(go.length, 1, "then it moves, once");
+    assert.equal(go[0].options[PLAN_OPT], undefined, "its echo was read: the move only names it");
+    assert.equal(go[0].options[RID_OPT][s.document.id], publishes[1][PLAN_OPT].rid);
+  } finally {
+    F.CONFIG.debug["pentaryn-movement.publishFirst"] = false;
+    delete s.document.update;
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(f.document.id);
+    sceneTokens.delete(s.document.id);
+    reserveMod.reset();
+    tickBy(60000);
+  }
+});
+
+test("0.6.0: with another client planning, a group drop publishes first and moves at its echo when nothing came before it", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  F.CONFIG.debug["pentaryn-movement.publishFirst"] = true;
+  const ts = [makeToken("rsvH000000000001", 400, 200), makeToken("rsvI000000000001", 300, 200), makeToken("rsvJ000000000001", 500, 200)];
+  const publishes = [];
+  ts[0].document.update = async (changes, options) => {
+    publishes.push(options);
+    F.fire("updateToken", ts[0].document, changes, options, game.user.id);
+    return ts[0].document;
+  };
+  try {
+    const from = F.calls.length;
+    assert.equal(dropWith(ts[0], contextsFor(ts, 0, 400)), null);
+    await flush();
+    assert.equal(publishes.length, 1);
+    const first = sent(from)[0];
+    assert.ok(first, "the first wave goes at the echo");
+    assert.equal(first.options[PLAN_OPT], undefined);
+    for (const id of first.ids) assert.equal(first.options[RID_OPT][id], publishes[0][PLAN_OPT].rid);
+    assert.equal(api.status().group.reservations.raced, 0);
+  } finally {
+    F.CONFIG.debug["pentaryn-movement.publishFirst"] = false;
+    delete ts[0].document.update;
+    reserveMod.reset();
+    tickBy(60000);
+  }
+});
+
+test("0.6.0: a hidden member is never in a reservation (players receive every option)", () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const ts = [makeToken("rsvK000000000001", 400, 200), makeToken("rsvL000000000001", 300, 200)];
+  ts[1].document.hidden = true;
+  try {
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    const plan = out?.[1]?.[PLAN_OPT];
+    assert.ok(plan);
+    assert.deepEqual(plan.members.map(m => m.id), [ts[0].document.id]);
+    assert.equal(out[1][RID_OPT][ts[1].document.id], undefined);
+  } finally {
+    ts[1].document.hidden = false;
+    tickBy(60000);
+  }
+});
+
+test("0.6.0: a group dropped where another move's reserved walk ends rests clear of that spot", () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const f = makeToken("rsvM000000000001", 800, 800);
+  const ts = [makeToken("rsvN000000000001", 100, 100), makeToken("rsvO000000000001", 200, 100)];
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts, f];
+  try {
+    // F is reserved to come to rest at (6.5, 1.5): the grabbed one's drop point.
+    const w = foreignWire("ridM000000000001", f.document.id, [{ x: 8.5, y: 8.5 }, { x: 8.5, y: 4.5 }, { x: 6.5, y: 1.5 }]);
+    F.fire("updateToken", f.document, {}, { [PLAN_OPT]: w }, "other00000000001");
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 500, 0));
+    tickBy(9000);
+    const ends = [];
+    // It may queue first (the reserved walk passes by the spot it takes instead), then go: every batch it sends.
+    const all = [...(out ? [{ options: out[1] }] : []), ...sent(from)];
+    for (const b of all) for (const [id, m] of Object.entries(b.options.movement ?? {})) ends.push({ id, end: m.waypoints.at(-1) });
+    assert.ok(ends.length >= 1, "it moves");
+    for (const { end } of ends) {
+      const c = { x: (end.x + 50) / 100, y: (end.y + 50) / 100 };
+      assert.ok(Math.hypot(c.x - 6.5, c.y - 1.5) >= 1 - 1e-6, `rests clear of the reserved spot: ${JSON.stringify(c)}`);
+    }
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(f.document.id);
+    reserveMod.reset();
+    tickBy(60000);
   }
 });

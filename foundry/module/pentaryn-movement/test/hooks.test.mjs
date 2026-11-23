@@ -11,7 +11,7 @@ const F = await movementWorld({ patchable: false });
 await import("../movement.mjs");
 const atLoad = F.hooks.slice();
 
-test("registration manifest equals golden/hooks.json (42 entries, today's order; 0.3.0 appends pathfind's 15, 0.4.0 group's and stop's setup and stop's moveToken, 0.4.1 stop's canvasReady, 0.4.2 stop's updateToken, 0.4.3 group's ready, 0.4.4 group's updateToken, 0.4.6 group's createWall and updateWall, 0.4.11 stop's refreshToken)", () => {
+test("registration manifest equals golden/hooks.json (42 entries, today's order; 0.3.0 appends pathfind's 15, 0.4.0 group's and stop's setup and stop's moveToken, 0.4.1 stop's canvasReady, 0.4.2 stop's updateToken, 0.4.3 group's ready, 0.4.4 group's updateToken, 0.4.6 group's createWall and updateWall, 0.4.11 stop's refreshToken, 0.6.0 group's reservation updateToken, moveToken and stopToken)", () => {
   pinJSON("hooks", atLoad, import.meta.url);
   assert.deepEqual(atLoad.map(h => (h.kind === "once" ? `once ${h.name}` : h.name)), [
     "once init", "once setup", "getSceneControlButtons", "renderSceneControls", "drawTokenLayer", "canvasReady",
@@ -19,7 +19,7 @@ test("registration manifest equals golden/hooks.json (42 entries, today's order;
     "createCombatant", "updateCombatant", "deleteCombatant", "createToken", "deleteToken", "renderTokenHUD",
     "once setup", "createWall", "updateWall", "deleteWall", "createRegion", "updateRegion", "deleteRegion",
     "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior", "createToken", "updateToken", "deleteToken", "controlToken",
-    "canvasReady", "once setup", "once ready", "updateToken", "updateToken", "updateToken", "createWall", "updateWall", "once setup", "moveToken", "updateToken", "canvasReady", "refreshToken", "once ready",
+    "canvasReady", "once setup", "once ready", "updateToken", "updateToken", "updateToken", "updateToken", "moveToken", "stopToken", "createWall", "updateWall", "once setup", "moveToken", "updateToken", "canvasReady", "refreshToken", "once ready",
   ]);
 });
 
