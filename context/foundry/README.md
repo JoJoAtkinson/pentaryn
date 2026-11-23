@@ -107,6 +107,7 @@ The table is generated from each `module.json`, the module's code and its
 | Day-to-day server ops — start/stop, tunnel, OneDrive backups (world snapshots ~95 MB + module bundles, §3; `make vtt-down` uploads in the background, `make foundry-cloud` shows progress) and the boot choice between the Mac and BOSS (`host.py`), module install | [`ops.md`](ops.md) |
 | Who can reach vtt.atjoseph.com — the Google login, whitelisting a player's Gmail (**two lists: Google test users + Cloudflare policy**), session length | [`cloudflare-access.md`](cloudflare-access.md) |
 | Adding or changing an MCP bridge tool (`mcp__foundry__*`), the fork repo, its build, logs and upstream footprint | [`mcp-fork.md`](mcp-fork.md) |
+| Play-testing a change in a real browser end to end — feel, timing, several players at once; the BOSS GPU Chrome over CDP (accepted path), the Mac (`home-pro`), the WSL harness | [`browser-testing.md`](browser-testing.md) |
 | Bridge not connected on BOSS, or the always-on headless GM user "Claude" (role 3) — its unit, Chrome, login, states | [`headless-gm.md`](headless-gm.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
 | "Process the prompt markers" / "replace the prompts" — `Prompt · <size>` tokens with typed text | [`prompt-markers.md`](prompt-markers.md) |

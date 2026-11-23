@@ -1,0 +1,13 @@
+import { createRequire } from "node:module";
+const require = createRequire("/home/joe/code/pentaryn/automation/headless-gm/package.json");
+const puppeteer = require("puppeteer-core");
+const b = await puppeteer.connect({ browserURL: process.env.CDP_URL || `http://${(await import("node:child_process")).execSync("ip route").toString().match(/default via (\S+)/)[1]}:9334` });
+const s = await b.target().createCDPSession();
+const info = await s.send("SystemInfo.getInfo");
+console.log(JSON.stringify({ gpu: info.gpu.devices.map(d => d.deviceString + " " + (d.driverVersion||"")), aux: info.gpu.auxAttributes?.glRenderer, feat: Object.fromEntries(Object.entries(info.gpu.featureStatus).filter(([k]) => /webgl|gpu_compositing|rasterization/.test(k))) }));
+const p = await b.newPage(); await p.setViewport({ width: 1600, height: 1000 });
+await p.goto("http://127.0.0.1:30000/join", { waitUntil: "domcontentloaded", timeout: 30000 });
+const r = await p.evaluate(() => { const c = document.createElement("canvas"); const gl = c.getContext("webgl2"); const e = gl && gl.getExtension("WEBGL_debug_renderer_info"); return { title: document.title, renderer: gl && e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : null }; });
+const fps = await p.evaluate(() => new Promise(res => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else res(n / 2); }; requestAnimationFrame(f); }));
+console.log(JSON.stringify({ ...r, rafFps: fps }));
+await p.close(); b.disconnect();
