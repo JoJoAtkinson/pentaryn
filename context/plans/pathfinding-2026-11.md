@@ -630,3 +630,21 @@ AR1 ran on frozen 0.8.2 (BOSS three headless clients plus the Mac relay; LOADED,
 Not changed: AR1-10 (movers 0.11-0.13 square apart on the loaded Mac: §16.9 class 1, drawn late after a stall or loss); AR1-11 (the harness measures square footprints; tokens are circles, whose clearance the routes keep; the Mac saw no frame inside); AR1-13 (a player's route never crosses unexplored ground, by decision 7 and C8: the test script's A1, A4 and A7 expectations change, not the module). AR1-04's notices did fire (`tooNarrow`, `anchorShort` in the telemetry) but Foundry dismisses a notice after a few seconds, before the harness read the DOM: the next round's harness hooks `ui.notifications.warn` instead.
 
 The next-square handler is Joe's combat door rule (each next square tested against the current walls before it is sent) carried to the case core skips (an undrawn token) and to tokens standing still. It touches only the moves the module drove: a drag (`method: "dragging"`) or a move carrying `pentarynMovement*` options, and their continuations by core's movement chain; a macro, MCP `move-token`, Argon's Dash and forced movement are core's (C10). Simulator, seeds 1-2,000 (same scenarios as 0.8.2): 424 → 383 failing; out of combat 202 → 201 of 1,196; tier C off 207 → 140 of 407; tier C 15 → 42 of 397, but 0.8.2's tier C left about a third of its members unmoved, which no invariant counted (`sim.test` "AR1-02" counts it now); the new tier C failures are on a client that had just stalled or lost a packet (members now walk closer behind one another: the drawn-late class 1), and one undisturbed seed (208) keeps a long walk's reservation past its run (class 5).
+
+### 16.12 pentaryn-movement 0.8.4: acceptance round 2 (AR2, frozen 0.8.3) (2026-11-23)
+
+AR2 ran on frozen 0.8.3 on the BOSS GPU Chrome (three foreground clients over CDP) and the BOSS headless clients. No tier passed. Fixed in 0.8.4, each with a test that fails on 0.8.3 (CHANGELOG 0.8.4):
+
+| ID | Tier | What | Fix |
+|---|---|---|---|
+| AR2-01 | A | AR1-01 again: through a door shut mid-move, 0 ft, the GM viewing another scene | core's `_shouldRecordMovementHistory` reads `game.combat` (the VIEWED scene's): `inCombat` also counts the token's own scene's active started combat; a drag's first square sent after the page left the scene is refused too |
+| AR2-02 | C (off) | two members rested on one square | a fight step is not sent into a token that will stay (its own next square barred, three deep), onto the square another is about to step to, or into a trade of squares |
+| AR2-03 / 06 | B / A | the mounted pair's way through standing Huge (0.49 sq), corners 0.1 sq into standing tokens | out of combat routes keep a square's clearance (Chebyshev box), and the standing tokens are passed to every single-drop search |
+| AR2-04 / 05 / 09 / 11 / 12 | A-C | members unmoved or short with no notice | every drop watched to rest: unmoved or the grabbed one short, nothing told → "Stopped short, way blocked." |
+| AR2-08 | B | a player's click on its own token in the GM's group ignored | only the dropping page arms a click 400 ms; another user's move is armed at once |
+| AR2-14 | B | "reading 'position'" when the GM activated another scene | destroyed placeables read through `positionOf` |
+
+Simulator, seeds 1-2,000: 383 → 298 failing; tier C off 140 → 57 of 382. Not changed, for the next review: AR2-07 (mover-vs-mover by the harness's squares: the timing pass separates circles, and a square-metric timing pass is a redesign of `firstConflict`); AR2-10 (long frames at 4× CPU, unprofiled); AR2-13 (a rider dragged alone dismounts, 0.8.3's decision; "stacked stay stacked" is about the module never parting them); why the live C-1 / B3 members stay (the simulator's unmoved members are legitimate: a Large that fits no door, a corridor blocked by a standing token; now each is told).
+
+The harness measures square footprints. Out of combat 0.8.4 keeps standing tokens' squares clear; in a fight routes stay on circles (a diagonal step past an ally's corner is 5e-legal and the ruler charges it), so a fight's diagonal past a standing token still overlaps square footprints at the corner.
+

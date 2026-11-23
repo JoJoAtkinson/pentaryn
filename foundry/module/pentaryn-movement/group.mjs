@@ -31,7 +31,7 @@ import { GROUP_LIMITS, coalesceHistory, flood, freePrefix, hexCandidates, onCell
 import { LIFE, capped, expired, left as lifeLeft, newRun, over, step as lifeStep } from "./lifecycle-core.mjs";
 import { cutsFor, onWay, sequence, stacksOf } from "./sequence-core.mjs";
 import { hideCue, showCue } from "./cue-ui.mjs";
-import { LIMITS, skipReason } from "./pathfind-core.mjs";
+import { LIMITS, avoidDist, skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, continuationInFlight, countsForRoutes, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, movingOthers, narrowPoints, othersOf, pinDrawn, restWalkable, sameLayer, speedOf, stopWhereDrawn, toSquares, toTopLeft, unpin } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
@@ -746,7 +746,7 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
   const search = (rec, to, list, maxMs = ROUTE_MS) => {
     const { origin, dest } = destOf(rec, to);
     return feature.exposed.pathfindRouteTo(rec.token, origin, dest, {
-      preview: true, avoid: list.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
+      preview: true, avoid: list.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s, box: !combat })), constrainOptions: constrain ?? {},
       maxMs,
     });
   };
@@ -762,7 +762,7 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     // dragging), so it walks what the player saw, unless it passes through a token that stays (HX1-01: the drag's
     // preview routes round walls only) or a search the drag had not finished (`searching`).
     const shown = shownFor(m, to);
-    if (shown && !throughAny(shown.map(p => toSquares(p, rec.w, rec.h, s)), avoid)) return measured(shown.map(p => ({ ...p })));
+    if (shown && !throughAny(shown.map(p => toSquares(p, rec.w, rec.h, s)), avoid, !combat)) return measured(shown.map(p => ({ ...p })));
     const r = search(rec, to, avoid);
     if (!r?.reached || !r.path?.length) { unfinished = !!r?.unfinished; return null; }
     return asRoute(rec, r.path, r.cost);
@@ -793,7 +793,7 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     const steps = feature.exposed.pathfindRouteSteps;
     const { origin, dest } = destOf(rec, to);
     const gen = steps(rec.token, origin, dest, {
-      preview: true, avoid: avoid.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
+      preview: true, avoid: avoid.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s, box: !combat })), constrainOptions: constrain ?? {},
     });
     let busy = 0, v;
     for (;;) {
@@ -817,7 +817,7 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     unfinished = false;
     const rec = byId.get(m.id);
     const shown = shownFor(m, to);
-    if (shown && !throughAny(shown.map(p => toSquares(p, rec.w, rec.h, s)), avoid)) return measured(shown.map(p => ({ ...p })));
+    if (shown && !throughAny(shown.map(p => toSquares(p, rec.w, rec.h, s)), avoid, !combat)) return measured(shown.map(p => ({ ...p })));
     if (!rec || typeof feature.exposed.pathfindRouteSteps !== "function") return route(m, from, to, { avoid });
     return yield* sliced(rec, to, avoid, ROUTE_MS);
   };
@@ -875,11 +875,13 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
  * check (settle): S1R1-02, a drag line slanting into a corridor's mouth grazed a token standing beside it by 0.01
  * square, passed a 0.02 slack, and settle then cut the grabbed one back into the corridor.
  */
-function throughAny(pts, circles) {
+function throughAny(pts, circles, box = false) {
   if (!circles?.length || pts.length < 2) return false;
   for (let k = 1; k < pts.length; k++) {
     const a = pts[k - 1], b = pts[k];
-    if (circles.some(c => segDist(c, a, b) < c.r - 1e-4)) return true;
+    // AR2-06 / AR2-03: out of combat a square's clearance (the drag preview of the mounted pair ran Horse 0.49 square
+    // into standing Huge's square at a corner its circle cleared).
+    if (circles.some(c => (box ? avoidDist({ ...c, box: true }, a, b) : segDist(c, a, b)) < c.r - 1e-4)) return true;
   }
   return false;
 }
@@ -1205,7 +1207,11 @@ function send(scene, seq, starts, updates, options, what, claims = [], avoid = [
     if (hid.length) calls.push(scene.updateEmbeddedDocuments("Token", hid, plainOptions(opts, movement, hiddenIds)));
     pending = Promise.all(calls);
   } catch (err) { pending = Promise.reject(err); }
+  // Sent (for the silent watch, watchGoals) until the server refuses it.
+  const sentKeys = Object.keys(movement);
+  noteSent(sentKeys, movement);
   return pending.then(() => true, err => {
+    for (const id of sentKeys) sentAt.delete(id);
     if (unloading) return false;
     log.warnOnce(`group-${what}`, `a group ${what} failed (further errors suppressed)`, err);
     return true;
@@ -1748,14 +1754,18 @@ function onPreMove(doc, move, options) {
   if (!cont) {
     // A fresh move: a drag, or one the module sends (its options name it).
     const mine = move.method === "dragging" || Object.keys(options ?? {}).some(k => k.startsWith("pentarynMovement"));
-    if (mine && move.id) {
+    if (!mine) return true;
+    if (move.id) {
       driven.set(move.id, now);
       if (driven.size > 200) for (const [k, t] of driven) if (now - t > DRIVEN_TTL_MS) driven.delete(k);
     }
-    return true;
+    // AR2-01: a drag's first square (or a wave, a queued single drop) sent after this page left the scene is as
+    // unmeasured as a continuation: in a fight it is not sent; out of one, not across a wall that blocks it now.
+    if (doc.rendered !== false) return true;
+  } else {
+    if (!chain.some(id => driven.has(id))) return true;
+    if (move.id) driven.set(move.id, now);
   }
-  if (!chain.some(id => driven.has(id))) return true;
-  if (move.id) driven.set(move.id, now);
   const scene = doc.parent;
   const fight = inCombat(doc);
   const s = scene?.grid?.size ?? gridSize(doc.object ?? { document: doc });
@@ -1766,22 +1776,15 @@ function onPreMove(doc, move, options) {
   let why = null;
   if (!doc.rendered) {
     if (fight) why = "unrendered";
-    else if (stepThroughWall(scene, { x: a.x * s, y: a.y * s }, { x: b.x * s, y: b.y * s })) why = "wallUnrendered";
-  } else if (fight) {
-    const mates = stackmates(doc.id);
-    for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
-      const o = t?.document;
-      if (!o?._source || o.id === doc.id || t.isPreview || mates.has(o.id) || !countsForRoutes(t)) continue;
-      if (o._source.level !== undefined && doc._source.level !== undefined && o._source.level !== doc._source.level) continue;
-      if (!sameLayer(doc, o)) continue;
-      const f = movementFacts(t);
-      if (f.animating || o.movement?.state === "pending") continue;
-      const c = stepCircle(o, o._source, s);
-      const rr = b.r + c.r - 0.02;
-      // One it already overlaps where it stands (it started stacked or pressed together): not a new block.
-      if (Math.hypot(a.x - c.x, a.y - c.y) < rr) continue;
-      if (segPt(c, a, b) < rr) { why = "standing"; break; }
+    else {
+      // Every leg it would walk now (a fresh move's passed part is its whole way), not only first to last.
+      const legs = [from, ...(move.passed?.waypoints ?? []).filter(w => !w?.intermediate), to].map(p => stepCircle(doc, p, s));
+      for (let k = 1; k < legs.length && !why; k++) {
+        if (stepThroughWall(scene, { x: legs[k - 1].x * s, y: legs[k - 1].y * s }, { x: legs[k].x * s, y: legs[k].y * s })) why = "wallUnrendered";
+      }
     }
+  } else if (fight) {
+    if (stepMeetsStill(doc, a, b, s, scene)) why = "standing";
   }
   if (!why) return true;
   feature.exposed.tele?.("cut", { reason: `step:${why}`, id: doc.id });
@@ -1790,6 +1793,81 @@ function onPreMove(doc, move, options) {
   return false;
 }
 let stepLast = null;
+
+/** The tokens a fight step of `doc` can meet on this page: drawn, counted for routes, same level and layer, not its stack mates. */
+function stepOthers(doc) {
+  const mates = stackmates(doc.id);
+  const out = [];
+  for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
+    const o = t?.document;
+    if (!o?._source || o.id === doc.id || t.isPreview || mates.has(o.id) || !countsForRoutes(t)) continue;
+    if (o._source.level !== undefined && doc._source.level !== undefined && o._source.level !== doc._source.level) continue;
+    if (!sameLayer(doc, o)) continue;
+    out.push(t);
+  }
+  return out;
+}
+
+/** The next square a token's own pending fight move will step to (top-left pixels), or null. */
+function nextSquareOf(o) {
+  const wps = o?.movement?.pending?.waypoints;
+  if (!Array.isArray(wps)) return null;
+  return wps.find(w => w && !w.intermediate) ?? null;
+}
+
+/**
+ * Will token `t` stay on the square it holds (AR2-02)? A token at rest stays. A token this page moves in a fight that
+ * is between two squares (core's state "pending": drawn walking into its square, or waiting there; core sends the
+ * next square before the animation ends) stays too when its own next square is barred
+ * now: a wall that blocks movement, or a token that will itself stay where it stands (looked up `depth` deep). 0.8.3
+ * read every pending token as about to leave: in a fight's group (tier C off) the one behind stepped into the square
+ * of the one ahead, which was then stopped by its own next square, and both rested on it (live C-11: Heroes 1 and 2
+ * on (12,15), overlap 1.0; C-2: Heroes 4 and 5 on (22,10) behind a shut door). A token another user moves is taken
+ * to leave (its own page tests its next square).
+ */
+function staysPut(t, s, scene, depth = 3) {
+  const o = t.document;
+  if (o.movement?.state !== "pending") return true;
+  if (!o.movement?.user?.isSelf) return false;
+  const next = nextSquareOf(o);
+  if (!next) return true;
+  if (depth <= 0) return true;
+  const a = stepCircle(o, o._source, s), b = stepCircle(o, next, s);
+  if (stepThroughWall(scene, { x: a.x * s, y: a.y * s }, { x: b.x * s, y: b.y * s })) return true;
+  return stepMeetsStill(o, a, b, s, scene, depth - 1);
+}
+
+/**
+ * Does the fight step a → b (squares, centres) of `doc` come inside a token that stays where it stands, or end on the
+ * square another token is about to step to (two continuations sent in one moment, live C-2 off / the simulator's
+ * head-on groups), or trade squares with one?
+ */
+function stepMeetsStill(doc, a, b, s, scene, depth = 3) {
+  for (const t of stepOthers(doc)) {
+    const o = t.document;
+    const c = stepCircle(o, o._source, s);
+    const rr = b.r + c.r - 0.02;
+    const next = o.movement?.state === "pending" ? nextSquareOf(o) : null;
+    if (next) {
+      const n = stepCircle(o, next, s);
+      // Its next square is the one this step ends on, or the one this token stands on (head-on).
+      if (Math.hypot(n.x - b.x, n.y - b.y) < n.r + b.r - 0.02) return true;
+      if (Math.hypot(n.x - a.x, n.y - a.y) < n.r + a.r - 0.02 && Math.hypot(a.x - c.x, a.y - c.y) >= rr) return true;
+    }
+    // One it already overlaps where it stands (it started stacked or pressed together): not a new block.
+    if (Math.hypot(a.x - c.x, a.y - c.y) < rr) continue;
+    if (segPt(c, a, b) >= rr) continue;
+    // Drawn walking into its last square: it comes to rest there; a step ending there is barred (AR2-02).
+    const f = movementFacts(t);
+    if (f.animating && o.movement?.state !== "pending") {
+      if (Math.hypot(b.x - c.x, b.y - c.y) < rr) return true;
+      continue;
+    }
+    // At rest, or between squares (drawn walking into its square or waiting there) with its own next square barred.
+    if (staysPut(t, s, scene, depth)) return true;
+  }
+  return false;
+}
 
 /* -------------------------------------------- */
 /*  One Ctrl+Z for one move (0.8.3)              */
@@ -2141,9 +2219,81 @@ function droppedInPlace(contexts, [updates, options], caughtUp = false) {
 const NOTICES = Object.freeze({ noRoute: "PENTARYN_MOVEMENT.notify.noRoute", short: "PENTARYN_MOVEMENT.notify.stoppedShort" });
 const NOTICE_GAP_MS = 1000;
 const noticeAt = {};
+/** When this client last told its user anything (a notice of either kind). */
+let toldAt = -Infinity;
+
+/**
+ * Nothing stops silently (0.8.4, AR2-04 / 05 / 09 / 11 / 12; review C3). Every drop of this client is watched until
+ * its tokens are at rest (or its one deadline, plus the time a last square takes): a member that never left its start
+ * though its drop point is a square or more away, or the grabbed one come to rest more than a square from where it
+ * was dropped, means the drop stopped short; when this client told its user nothing since the drop, it says
+ * "Stopped short, way blocked" then. A token dropped again, moved by someone else first, or deleted is not watched.
+ * The ways a drop ends short are many (a plan's stay, a wave held to the deadline, a refused next square, a queue, a
+ * cut, a lost race); this one test covers all of them, whichever path the drop took.
+ */
+const goals = new Map();                   // drop seq → { t0, scene, members: [{ id, start, dest, grabbed }] }
+const sentAt = new Map();                  // token id → when this client last sent (or handed core) a move of it
+function noteSent(ids, movement = null) {
+  const t = Date.now();
+  for (const id of ids) {
+    const end = movement?.[id]?.waypoints?.at?.(-1);
+    sentAt.set(id, { t, end: end && Number.isFinite(end.x) && Number.isFinite(end.y) ? { x: end.x, y: end.y } : null });
+  }
+  if (sentAt.size > 400) for (const [k, v] of sentAt) if (t - v.t > 2 * LIFE.deadlineMs) sentAt.delete(k);
+}
+const GOAL_LOOK_MS = 400;
+const GOAL_GRACE_MS = 2000;
+
+function watchGoals(seq, grabbed, contexts) {
+  const scene = grabbed?.document?.parent ?? null;
+  if (!scene) return;
+  const members = [];
+  for (const c of contexts) {
+    const doc = c?.token?.document;
+    const dest = c?.destination ?? c?.foundPath?.at?.(-1);
+    if (!doc?._source || !dest || !Number.isFinite(dest.x) || !Number.isFinite(dest.y)) continue;
+    members.push({ id: doc.id, start: { x: doc._source.x, y: doc._source.y }, dest: { x: dest.x, y: dest.y }, grabbed: doc.id === grabbed.document.id });
+  }
+  if (!members.length) return;
+  const g = { t0: Date.now(), scene, members };
+  goals.set(seq, g);
+  if (goals.size > 50) for (const k of [...goals.keys()].slice(0, 25)) goals.delete(k);
+  const look = () => {
+    if (!feature || goals.get(seq) !== g) return;
+    const now = Date.now();
+    const s = scene.grid?.size ?? 100;
+    const live = g.members.filter(m => latestDrop.get(m.id) === seq && scene.tokens?.get?.(m.id));
+    const sent = m => { const v = sentAt.get(m.id); return v && v.t >= g.t0 ? v : null; };
+    // At rest: nothing drawn walking or between squares, no group of this client holding one, and something sent
+    // (a drop still planning or queued has sent nothing yet; its deadline ends the wait).
+    const resting = live.some(sent) && live.every(m => {
+      const doc = scene.tokens.get(m.id);
+      const t = doc.object;
+      return !(t && movementFacts(t).animating) && doc.movement?.state !== "pending" && !groups.has(groupOf.get(m.id));
+    });
+    if (!resting && now - g.t0 < LIFE.deadlineMs + GOAL_GRACE_MS) { setTimeout(look, GOAL_LOOK_MS); return; }
+    goals.delete(seq);
+    if (toldAt >= g.t0) return;
+    const short = live.filter(m => {
+      const src = scene.tokens.get(m.id)._source;
+      const far = Math.hypot(m.dest.x - m.start.x, m.dest.y - m.start.y) / s >= 1 - 1e-6;
+      const v = sent(m);
+      const unmoved = src.x === m.start.x && src.y === m.start.y && !v;
+      // The grabbed one: where its last move sent was to end (a refused square is told where it is refused).
+      const end = v?.end ?? (unmoved ? m.start : null);
+      return (far && unmoved) || (m.grabbed && end && Math.hypot(end.x - m.dest.x, end.y - m.dest.y) / s > 1 + 1e-6);
+    });
+    if (!short.length) return;
+    goalsLast = { at: new Date().toISOString(), ids: short.map(m => m.id), names: short.map(m => scene.tokens.get(m.id)?.name ?? m.id) };
+    tell("short", "silentShort");
+  };
+  setTimeout(look, Math.max(GOAL_LOOK_MS, MOTION.armMs));
+}
+let goalsLast = null;
 function tell(kind, reason = kind) {
   feature?.exposed?.tele?.("notice", { notice: kind, reason });
   const t = Date.now();
+  toldAt = t;
   if (t - (noticeAt[kind] ?? -Infinity) < NOTICE_GAP_MS) return;
   noticeAt[kind] = t;
   try { globalThis.ui?.notifications?.warn?.(NOTICES[kind] ?? NOTICES.short, { localize: true }); }
@@ -2242,6 +2392,7 @@ function confirmLater(grabbed, c, result) {
   const scene = doc.parent ?? canvas.scene;
   const seq = ++dropSeq;
   latestDrop.set(doc.id, seq);
+  try { watchGoals(seq, grabbed, [c]); } catch (err) { log.debug?.("drop: watch its goals", err); }
   try { feature.exposed.noteDrop?.([doc.id]); } catch (err) { log.debug?.("noteDrop", err); }
   const starts = new Map([[doc.id, { x: doc._source.x, y: doc._source.y }]]);
   const t0 = now();
@@ -2308,7 +2459,11 @@ function aroundOthers(grabbed, c, result) {
   const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
   const start = centre(origin);
-  const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1 }));
+  // AR2-06: out of combat its way keeps its square clear of theirs (a box), not only its circle (a smoothed corner
+  // passed 0.11 square into a standing token's square); in a fight on whole squares, the circle (5e's diagonal past a
+  // standing ally).
+  const box = !inCombat(doc);
+  const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box }));
   const taken = p => { const q = centre(p); return circles.some(o => Math.hypot(q.x - o.x, q.y - o.y) < o.r); };
   let end = m.waypoints.at(-1);
   let moved = false;
@@ -2320,10 +2475,10 @@ function aroundOthers(grabbed, c, result) {
     moved = true;
   }
   // Does its way pass through one that stays (not one it starts on)?
-  const live = circles.filter(o => Math.hypot(start.x - o.x, start.y - o.y) >= o.r);
+  const live = circles.filter(o => avoidDist(o, start, start) >= o.r);
   let prev = start, through = false;
   const wps = moved ? [...m.waypoints.slice(0, -1), end] : m.waypoints;
-  for (const q of wps.map(centre)) { if (live.some(o => segDist(o, prev, q) < o.r)) { through = true; break; } prev = q; }
+  for (const q of wps.map(centre)) { if (live.some(o => avoidDist(o, prev, q) < o.r)) { through = true; break; } prev = q; }
   if (!through && !moved) return false;
   const dest = { ...origin, ...end, explicit: true, checkpoint: true };
   let r1 = null;
@@ -2367,8 +2522,9 @@ function singleAvoid(token, waypoints, options = {}) {
   if (!others.length) return null;
   const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
   const a = centre(waypoints[0]), b = centre(waypoints[1]);
-  const out = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1 }))
-    .filter(o => Math.hypot(a.x - o.x, a.y - o.y) >= o.r && Math.hypot(b.x - o.x, b.y - o.y) >= o.r);
+  const box = !inCombat(doc);
+  const out = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box }))
+    .filter(o => avoidDist(o, a, a) >= o.r && avoidDist(o, b, b) >= o.r);
   return out.length ? out : null;
 }
 
@@ -2401,6 +2557,7 @@ function aroundLater(grabbed, result, { origin, dest, avoid, wps }) {
   const scene = doc.parent ?? canvas.scene;
   const seq = ++dropSeq;
   latestDrop.set(doc.id, seq);
+  try { watchGoals(seq, grabbed, [{ token: grabbed, destination: dest }]); } catch (err) { log.debug?.("drop: watch its goals", err); }
   try { feature.exposed.noteDrop?.([doc.id]); } catch (err) { log.debug?.("noteDrop", err); }
   const starts = new Map([[doc.id, { x: doc._source.x, y: doc._source.y }]]);
   const t0 = now();
@@ -2501,6 +2658,7 @@ function onDrop(grabbed, event, result) {
   // Every drop, whatever its mode, supersedes this client's pending plan or waves for those tokens.
   const seq = ++dropSeq;
   for (const c of contexts) latestDrop.set(c.token.document.id, seq);
+  try { watchGoals(seq, grabbed, contexts); } catch (err) { log.debug?.("drop: watch its goals", err); }
   // Click-to-stop arms MOTION.armMs after the drop (stop.mjs).
   try { feature.exposed.noteDrop?.(contexts.map(c => c.token.document.id)); } catch (err) { log.debug?.("noteDrop", err); }
   const info = modeFor(grabbed, contexts);
@@ -3325,8 +3483,8 @@ async function stepAside(ctx, read, waypoints) {
   // however long, searched in slices; with no way round, core's way as far as it meets none of them.
   const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
   const a0 = centre(origin), b0 = centre(target);
-  const avoid = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1 }))
-    .filter(o => Math.hypot(a0.x - o.x, a0.y - o.y) >= o.r && Math.hypot(b0.x - o.x, b0.y - o.y) >= o.r);
+  const avoid = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box: true }))
+    .filter(o => avoidDist(o, a0, a0) >= o.r && avoidDist(o, b0, b0) >= o.r);
   const opts = { preview: true, avoid: avoid.length ? avoid : null, maxMs: 4 * SINGLE_MS };
   let r1 = null;
   try {
@@ -3473,7 +3631,11 @@ function patchDrop() {
     marker: "__pentarynMovementGroup", adjustments: "movement-group-drop",
   }, function (wrapped, event) {
     const result = wrapped(event);
-    try { return onDrop(this, event, result); }
+    try {
+      const out = onDrop(this, event, result);
+      if (Array.isArray(out) && out[1]?.movement) noteSent(Object.keys(out[1].movement).filter(id => out[1].movement[id]?.waypoints?.length), out[1].movement);
+      return out;
+    }
     catch (err) {
       log.warnOnce("group", "group movement skipped; the move goes as core's (further errors suppressed)", err);
       feature?.exposed?.tele?.("error", { reason: "drop", message: String(err?.message ?? err).slice(0, 120) });
@@ -3516,6 +3678,7 @@ function groupStatus() {
     undo: undoLast ? { ...undoLast } : null,
     reservations: reserve.status(),
     perf: { ...perf },
+    silent: goalsLast ? { ...goalsLast } : null,
   };
 }
 
@@ -3653,6 +3816,9 @@ export function uninstall() {
   heldLast = null;
   fallbacks.length = 0;
   latestDrop.clear();
+  goals.clear();
+  sentAt.clear();
+  goalsLast = null;
   reserve.reset();
   feature = null;
 }

@@ -10,7 +10,7 @@
  *   node scripts/foundry/movement_sim.mjs [--seeds 2000] [--from 1] [--seed N] [--json] [--only inv1,inv2] [--map hard] [--opts JSON]
  *
  * --opts fixes scenario choices (scenario.mjs): combat, tierC, loss, fog, background, door, click, two (booleans), and
- * the model's switches that turn a fix off (noStay, noVet, noFlushFix; 0.8.3 noSequenced, noFollow, noStep; followGap). A seed names a scenario only with its options.
+ * the model's switches that turn a fix off (noStay, noVet, noFlushFix; 0.8.3 noSequenced, noFollow, noStep; followGap; 0.8.4 noStays). A seed names a scenario only with its options.
  */
 
 import { runSeed } from "../../foundry/module/pentaryn-movement/test/sim/scenario.mjs";

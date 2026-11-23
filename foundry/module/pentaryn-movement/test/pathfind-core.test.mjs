@@ -298,3 +298,17 @@ test("H1-10: a drag's search is over on its own slices' time, or on a much longe
   assert.equal(searchOver({ busy: 10, wall: LIMITS.waitMs + 1 }), true);
   assert.ok(LIMITS.waitMs > LIMITS.totalMs);
 });
+
+test("AR2-06: avoidDist is the circle's distance, or for a box the Chebyshev distance from a segment to its centre", () => {
+  const c = { x: 0, y: 0, r: 1 };
+  assert.equal(pf.avoidDist(c, { x: -2, y: 1 }, { x: 2, y: 1 }), 1);
+  assert.equal(pf.avoidDist({ ...c, box: true }, { x: -2, y: 1 }, { x: 2, y: 1 }), 1);
+  // A diagonal past the corner: 0.99 from the centre by Euclid (clear of a 0.95 circle), 0.7 by Chebyshev.
+  const a = { x: 1.4, y: 0 }, b = { x: 0, y: 1.4 };
+  assert.ok(pf.avoidDist(c, a, b) > 0.95);
+  assert.ok(Math.abs(pf.avoidDist({ ...c, box: true }, a, b) - 0.7) < 1e-9);
+  // A point: its own distance.
+  assert.equal(pf.avoidDist({ ...c, box: true }, { x: 0.5, y: -0.8 }, { x: 0.5, y: -0.8 }), 0.8);
+  // A segment through the centre: 0.
+  assert.equal(pf.avoidDist({ ...c, box: true }, { x: -3, y: -1 }, { x: 3, y: 1 }), 0);
+});

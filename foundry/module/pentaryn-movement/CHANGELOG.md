@@ -1,5 +1,47 @@
 # Changelog — pentaryn-movement
 
+## 0.8.4 — 2026-11-23
+
+Acceptance round 2 (AR2, frozen 0.8.3) defects for the tiers not yet passed (plan §16.12). Each fix has a test that
+fails without it (`test/group.test.mjs` "AR2-…", `test/pathfind.test.mjs` / `test/pathfind-core.test.mjs` "AR2-06",
+`test/sim/sim.test.mjs` "AR2-02").
+
+- **[declared] A fight move went on through a door shut mid-move, charged 0 ft, once the GM viewed another scene
+  (AR2-01, blocker; AR1-01 was not fixed).** Core's fight test (`_shouldRecordMovementHistory`) reads `game.combat`,
+  the combat of the scene the page VIEWS: on the GM's page viewing M2 a token on M3 read as out of combat, so the
+  0.8.3 handler let its squares through as a free walk (only a wall crossed exactly was refused) and core recorded
+  nothing. `inCombat` now also counts the token's own scene's active, started combat; and a drag's first square (or a
+  wave, a queued single drop) sent after the page left the scene is refused like a continuation (in a fight always;
+  out of one across a wall that blocks movement now, every leg of it).
+- **[declared] Tier C off left two members stacked on one square at rest (AR2-02, blocker).** The next-square
+  handler read every token between two squares as about to leave. A fight step is now not sent when it comes inside
+  a token that will stay (at rest, or this page's token whose own next square is barred by a wall or by a token that
+  stays, looked up three deep), when it ends on the square another token is about to step to (two continuations sent
+  in one moment), or when two tokens would trade squares. Simulator, 400 tier C off fights: 149 → 61 failing (rest
+  overlaps 10 → 1, mover-vs-mover 106 → 7), no more members unmoved; 2,000 seeds of every mode: 383 → 298.
+- **[declared] Drawn movers clipped standing tokens by 0.1 square at smoothed corners (AR2-06), and the mounted
+  pair's way ran through standing Huge by 0.49 square (AR2-03, blocker; its click-stop then rested inside Huge).**
+  Out of combat a route now keeps its square clear of a standing token's square (a box: `pathfind-core avoidDist`,
+  Chebyshev), not only its circle; and the tokens to keep out of are passed to every route search of a single drag,
+  not only when core's straight line crossed one. The grabbed one's drag route is reused only when it keeps that
+  clearance (`throughAny`). In a fight routes stay on circles (5e's diagonal past a standing ally). The guard's
+  re-route keeps boxes too.
+- **[declared] Nothing stops silently (AR2-04, AR2-05, AR2-09, AR2-11, AR2-12; review C3).** Every drop of this
+  client is watched until its tokens are at rest (or its deadline plus 2 s): a member that never left its start
+  though its drop point was a square or more away, or the grabbed one sent to end more than a square from where it
+  was dropped, with nothing told since the drop, gets "Stopped short, way blocked." (`status().group.silent`). The
+  causes (a plan's stay, a wave held to the deadline, a refused square, a queue, a cut, a lost race) are unchanged.
+- **[declared] A player's click on its own token in a GM-started group did not stop it (AR2-08).** A click is armed
+  400 ms after a drop only on the page that dropped (the click that follows a drop); a move another user started is
+  armed at once.
+- **[declared] A client error when another scene was activated during a group walk (AR2-14).** A destroyed token's
+  PIXI `position` getter throws; `drawnPosition` and the pin helpers read it through `positionOf`.
+
+Not changed: AR2-07 (mover-vs-mover over 0.1 square for 150 ms: the timing pass keeps circles apart and the harness
+measures squares; §16.9 class 1 on late-drawn clients); AR2-10 (long frames at 4× CPU: not profiled; no fix without
+the frames' stacks); AR2-13 (a rider dragged alone dismounts, as decided in 0.8.3); the root causes of AR2-04's and
+AR2-09's unmoved members, which only the live maps reproduce (now told, not silent).
+
 ## 0.8.3 — 2026-11-23
 
 Acceptance round 1 (AR1, frozen 0.8.2) defects for the tiers not yet passed (plan §16.11). Each fix has a test that

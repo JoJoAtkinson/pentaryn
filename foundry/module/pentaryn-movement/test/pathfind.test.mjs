@@ -526,3 +526,19 @@ test("H2-04: on a scene with no terrain, a search measures each step direction o
   assert.ok(steps <= 8, `two-waypoint measures: ${steps}`);
   await arcs(true);
 });
+
+test("AR2-06: out of combat a route keeps its square clear of a standing token's square (a box), not only its circle: a smoothed corner passed 0.11 square into it", async () => {
+  const { fieldFor } = await import("../pathfind-adapter.mjs");
+  world.walls = [];
+  const t = makeToken({ x: 0, y: 0 });
+  // A standing 1x1 token centred at (350, 150); the mover is 1x1: centres closer than 100 px on both axes overlap.
+  const stand = { x: 350, y: 150, r: 99 };
+  // The mover's centre from (50, 50) to (260, 230) (top-lefts (0,0) → (210,180)): its closest point to the standing
+  // centre is ~107 px away (clear of the circle) but at (260, 230) it is 90 px off on x and 80 on y (inside the box).
+  const p = { x: 0, y: 0 }, q = { x: 210, y: 180 };
+  const circle = fieldFor(t, wp(0, 0), wp(500, 0), { avoid: [stand] });
+  assert.equal(circle.clear(p, q), true, "a circle lets the corner through");
+  const box = fieldFor(t, wp(0, 0), wp(500, 0), { avoid: [{ ...stand, box: true }] });
+  assert.equal(box.clear(p, q), false, "a box does not");
+  assert.equal(box.clear({ x: 0, y: 0 }, { x: 0, y: 200 }), true, "a way a whole square off it is clear");
+});

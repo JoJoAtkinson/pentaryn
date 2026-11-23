@@ -40,7 +40,7 @@ for (const [seed, inv] of [[14, "passThrough"], [156, "moverBound"]]) {
     const r = runSeed(seed);
     assert.equal(r.meta.tierC, true);
     assert.deepEqual(invs(r), []);
-    assert.ok(invs(runSeed(seed, { noVet: true })).includes(inv), "without the fix the seed still shows it");
+    assert.ok(invs(runSeed(seed, { noVet: true, noStays: true })).includes(inv), "without the fix (nor 0.8.4's step test, which now also catches it) the seed still shows it");
   });
 }
 
@@ -74,4 +74,25 @@ test("AR1-02: tier C moves the members of a file, not one at a time until the de
   assert.ok(now.share >= 0.85, `share of members that moved: ${now.share.toFixed(3)}`);
   const before = movedShare({ noFollow: true, noSequenced: true });
   assert.ok(before.share < now.share - 0.1, `0.8.2's way moved fewer: ${before.share.toFixed(3)}`);
+});
+
+// AR2-02 (0.8.4): tier C off (core's move, every member at once, a square at a time) read every token between two
+// squares as about to leave; the one behind stepped into the square of one ahead that its own next square then
+// stopped, two continuations sent in one moment took one square, and head-on members traded squares through each
+// other: both rested on one square (live C-11, C-2 off). A fight step is now never sent into a token that will stay,
+// onto the square another is about to step to, or into a trade.
+const OFF = { combat: true, tierC: false };
+for (const seed of [132, 266]) {
+  test(`AR2-02 (seed ${seed}): tier C off leaves no two members on one square`, () => {
+    const r = runSeed(seed, OFF);
+    assert.equal(r.meta.tierC, false);
+    assert.deepEqual(invs(r).filter(i => i === "restOverlap"), []);
+    assert.ok(invs(runSeed(seed, { ...OFF, noStays: true })).includes("restOverlap"), "without the fix the seed still shows it");
+  });
+}
+test("AR2-02: tier C off over 200 seeds: at most 2 rest overlaps (0.8.3: 6), mover-vs-mover far fewer", () => {
+  const count = extra => { const t = { rest: 0, mm: 0 }; for (let s = 1; s <= 200; s++) { const v = invs(runSeed(s, { ...OFF, ...extra })); if (v.includes("restOverlap")) t.rest++; if (v.includes("moverBound")) t.mm++; } return t; };
+  const now = count({}), before = count({ noStays: true });
+  assert.ok(now.rest <= 2, `rest overlaps: ${now.rest}`);
+  assert.ok(now.rest < before.rest && now.mm < before.mm / 2, `now ${JSON.stringify(now)} vs 0.8.3 ${JSON.stringify(before)}`);
 });

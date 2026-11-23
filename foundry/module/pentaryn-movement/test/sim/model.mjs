@@ -120,21 +120,56 @@ export class Movement {
 
   /** group.mjs onPreMove (0.8.3): a fight's next square never comes inside a token standing still on this client's view. */
   preStep(id, a, b) {
+    const against = this.env.noStays ? this.stepMeetsStanding083(id, a, b) : this.stepMeetsStill(id, a, b, 3);
+    if (against === null) return true;
+    this.env.record?.("cut", { why: "step", id, against });
+    this.tell("short", "step:standing");
+    return false;
+  }
+  /** 0.8.3's test (env.noStays): only a token at rest and not drawn walking; every token between squares leaves. */
+  stepMeetsStanding083(id, a, b) {
     const me = this.doc(id);
-    if (!me) return true;
+    if (!me) return null;
     for (const [oid, o] of this.c.view) {
       if (oid === id || this.moving(oid)) continue;
       const rr = me.r + o.r - 0.02;
       if (dist(a, o) < rr) continue;
       const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
       const t = L2 > 1e-12 ? Math.min(Math.max(((o.x - a.x) * (b.x - a.x) + (o.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
-      if (Math.hypot(o.x - (a.x + (b.x - a.x) * t), o.y - (a.y + (b.y - a.y) * t)) < rr) {
-        this.env.record?.("cut", { why: "step", id, against: oid });
-        this.tell("short", "step:standing");
-        return false;
-      }
+      if (Math.hypot(o.x - (a.x + (b.x - a.x) * t), o.y - (a.y + (b.y - a.y) * t)) < rr) return oid;
     }
-    return true;
+    return null;
+  }
+  /** group.mjs stepMeetsStill (0.8.4, AR2-02): the token the step a → b of `id` comes inside that stays where it stands, or null. */
+  stepMeetsStill(id, a, b, depth) {
+    const me = this.doc(id);
+    if (!me) return null;
+    for (const [oid, o] of this.c.view) {
+      if (oid === id) continue;
+      const rr = me.r + o.r - 0.02;
+      const next = o.mv?.state === "pending" ? o.mv.rest?.[0] : null;
+      if (next && (dist(next, b) < rr || (dist(next, a) < rr && dist(a, o) >= rr))) return oid;
+      if (dist(a, o) < rr) continue;
+      const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+      const t = L2 > 1e-12 ? Math.min(Math.max(((o.x - a.x) * (b.x - a.x) + (o.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+      if (Math.hypot(o.x - (a.x + (b.x - a.x) * t), o.y - (a.y + (b.y - a.y) * t)) >= rr) continue;
+      if (this.c.animating(oid) && o.mv?.state !== "pending") {
+        if (dist(b, o) < rr) return oid;
+        continue;
+      }
+      if (this.staysPut(oid, depth)) return oid;
+    }
+    return null;
+  }
+  /** group.mjs staysPut (0.8.4): at rest, or waiting between squares on this client with its own next square barred. */
+  staysPut(oid, depth) {
+    const o = this.doc(oid);
+    if (o?.mv?.state !== "pending") return true;
+    if (o.mv.user !== this.c.id) return false;
+    const next = o.mv.rest?.[0];
+    if (!next || depth <= 0) return true;
+    if (this.blocked(o, o, next)) return true;
+    return this.stepMeetsStill(oid, { x: o.x, y: o.y }, next, depth - 1) !== null;
   }
 
   get now() { return this.c.sim.now; }

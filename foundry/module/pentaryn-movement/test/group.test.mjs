@@ -14,6 +14,7 @@ import { MOTION } from "../motion-core.mjs";
 import { RESERVE } from "../reserve-core.mjs";
 import { LIFE } from "../lifecycle-core.mjs";
 import { fitPath } from "../group-adapter.mjs";
+import { avoidDist } from "../pathfind-core.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: Date.now() });
 /** Advance the mocked clock in 50 ms steps, as a page's timers run (a wave is timed from the one before it, HX1-06). */
@@ -1253,7 +1254,14 @@ test("a click within 400 ms of a drop is core's click (habit click, double click
   tickBy(60000);
 });
 
-test("a move another client started arms 400 ms after this client first saw it (moveToken); the API stop is never held back", async () => {
+/** This client drops `t` (a drop marks the click's arming start, stop.mjs noteDrop). */
+function noteDropOf(t) {
+  const saved = t.animationContexts;
+  t.animationContexts = new Map();
+  try { dropWith(t, contextsFor([t], 100, 0)); } finally { t.animationContexts = saved; }
+}
+
+test("AR2-08: a move another client started is armed at once (a player's click on its own token as the GM's group sets off stops it); one this client dropped arms after 400 ms; the API stop is never held back", async () => {
   combatFlag = false;
   clock.step = 0;
   const t = makeToken("hbtC000000000001", 100, 100);
@@ -1262,18 +1270,21 @@ test("a move another client started arms 400 ms after this client first saw it (
   F.fire("moveToken", t.document, t.document.movement, {}, { id: "other" });
   let from = F.calls.length;
   t._onClickLeft({});
-  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0, "just started: not armed");
-  // A continuation of the same move keeps the first start.
-  clock.t += 300;
-  t.document.movement = { id: "mov0000000000002", chain: ["mov0000000000001"], state: "pending", user: { isSelf: false } };
-  F.fire("moveToken", t.document, t.document.movement, {}, { id: "other" });
-  clock.t += 150;
+  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 1, "another user's move, just started: stopped");
+  // One this client dropped: the click that follows its own drop is core's for 400 ms.
+  t.document.movement = { id: "mov0000000000003", chain: [], state: "pending", user: { isSelf: true } };
+  noteDropOf(t);
+  F.fire("moveToken", t.document, t.document.movement, {}, { id: game.user.id });
   from = F.calls.length;
   t._onClickLeft({});
-  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 1, "450 ms into the move: stopped");
-  // A new move: unarmed again, but api.stop() stops it at once.
-  t.document.movement = { id: "mov0000000000003", chain: [], state: "pending", user: { isSelf: false } };
-  F.fire("moveToken", t.document, t.document.movement, {}, { id: "other" });
+  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0, "its own drop, just started: not armed");
+  clock.t += MOTION.armMs + 50;
+  from = F.calls.length;
+  t._onClickLeft({});
+  assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 1, "450 ms into its own move: stopped");
+  t.document.movement = { id: "mov0000000000004", chain: [], state: "pending", user: { isSelf: true } };
+  noteDropOf(t);
+  F.fire("moveToken", t.document, t.document.movement, {}, { id: game.user.id });
   from = F.calls.length;
   t._onClickLeft({});
   assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0);
@@ -3969,5 +3980,170 @@ test("AR1-02: tier C, a file through one corridor: the one behind sets off once 
     for (const t of ts) sceneTokens.delete(t.document.id);
     for (const [k, v] of others) sceneTokens.set(k, v);
     tickBy(60000);
+  }
+});
+
+/* -------------------------------------------- */
+/*  Acceptance round 2 (AR2, 0.8.4)              */
+/* -------------------------------------------- */
+
+test("AR2-01: once the GM views another scene, a fight there is still a fight (core reads game.combat, the viewed scene's): no square of the drag, first or next, is sent unmeasured from a page that no longer draws the token", () => {
+  combatFlag = false;                              // core's test reads the viewed scene's combat: none there
+  const t = makeToken("ar2aA00000000001", 2200, 1000);
+  const others = keepOnly([t]);
+  const savedCombats = F.game.combats;
+  F.game.combats = { contents: [{ active: true, started: true, scene: { id: SCENE }, _source: { scene: SCENE },
+    combatants: { contents: [{ tokenId: t.document.id, sceneId: SCENE }] } }] };
+  try {
+    t.document.rendered = false;
+    // The drag's first square, sent after the switch (a queued single drop, a group's wave).
+    const first = moveOp("mvAR2a0000000001", { x: 2200, y: 1000 }, { x: 2200, y: 900 });
+    assert.equal(F.fireCall("preMoveToken", t.document, first, {}), false, "the first square is not sent unmeasured");
+    assert.equal(api.status().group.step.why, "unrendered");
+    // Its continuation (the drag's first square went while drawn).
+    t.document.rendered = true;
+    F.fireCall("preMoveToken", t.document, moveOp("mvAR2a0000000002", { x: 2200, y: 1000 }, { x: 2200, y: 900 }), {});
+    t.document.rendered = false;
+    const cont = moveOp("mvAR2a0000000003", { x: 2200, y: 900 }, { x: 2200, y: 800 }, { chain: ["mvAR2a0000000002"] });
+    assert.equal(F.fireCall("preMoveToken", t.document, cont, { _movementArguments: { continuationId: "c1" } }), false, "nor the next");
+    assert.equal(api.status().group.step.fight, true, "read as the fight it is");
+    // A combat on another scene (or not started) is no fight here.
+    F.game.combats = { contents: [{ active: true, started: true, scene: { id: "other" }, _source: { scene: "other" },
+      combatants: { contents: [{ tokenId: t.document.id, sceneId: "other" }] } }] };
+    const free = moveOp("mvAR2a0000000004", { x: 2200, y: 1000 }, { x: 2200, y: 900 });
+    assert.notEqual(F.fireCall("preMoveToken", t.document, free, {}), false, "out of combat, no wall crossed: it goes");
+    // A move the module did not drive stays core's (C10).
+    assert.notEqual(F.fireCall("preMoveToken", t.document, moveOp("mvAR2a0000000005", { x: 2200, y: 1000 }, { x: 2200, y: 900 }, { method: "api" }), {}), false);
+  } finally {
+    F.game.combats = savedCombats;
+    delete t.document.rendered;
+    sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  }
+});
+
+test("AR2-02: in a fight (tier C off), the one behind never steps into the square of one ahead that will stay there: its own next square barred by a token at rest or a wall (0.8.3 read every waiting token as leaving, and both rested on one square)", () => {
+  combatFlag = true;
+  const back = makeToken("ar2bA00000000001", 100, 100);     // the one behind, at (1,1)
+  const ahead = makeToken("ar2bB00000000001", 200, 100);    // the one ahead, at (2,1), between two squares
+  const block = makeToken("ar2bC00000000001", 300, 100);    // at rest at (3,1)
+  const others = keepOnly([back, ahead, block]);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [back, ahead, block];
+  try {
+    back.document.rendered = true;
+    F.fireCall("preMoveToken", back.document, moveOp("mvAR2b0000000001", { x: 0, y: 100 }, { x: 100, y: 100 }), {});
+    // The one ahead waits between squares (its animation over), its next square (3,1) taken by a token at rest.
+    ahead.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(300, 100)] } };
+    const into = moveOp("mvAR2b0000000002", { x: 100, y: 100 }, { x: 200, y: 100 }, { chain: ["mvAR2b0000000001"] });
+    assert.equal(F.fireCall("preMoveToken", back.document, into, { _movementArguments: { continuationId: "c1" } }), false, "it would stay: not sent");
+    // Its next square free (it goes down to (2,2)): the one behind follows.
+    ahead.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(200, 200)] } };
+    const follow = moveOp("mvAR2b0000000003", { x: 100, y: 100 }, { x: 200, y: 100 }, { chain: ["mvAR2b0000000001"] });
+    assert.notEqual(F.fireCall("preMoveToken", back.document, follow, { _movementArguments: { continuationId: "c2" } }), false, "it leaves: sent");
+    // Its next square across the wall along y = 400 (no door there): it stays.
+    ahead.document._source.y = 300; block.document._source.x = 900;
+    ahead.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(200, 400)] } };
+    const wall = moveOp("mvAR2b0000000004", { x: 200, y: 200 }, { x: 200, y: 300 }, { chain: ["mvAR2b0000000001"] });
+    assert.equal(F.fireCall("preMoveToken", back.document, wall, { _movementArguments: { continuationId: "c3" } }), false, "barred by a wall: it stays");
+    // Two continuations in one moment (a hidden tab, head-on groups): the one about to step to the same square has it.
+    ahead.document._source.x = 400; ahead.document._source.y = 200;
+    ahead.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(300, 200)] } };
+    const same = moveOp("mvAR2b0000000005", { x: 200, y: 200 }, { x: 300, y: 200 }, { chain: ["mvAR2b0000000001"] });
+    assert.equal(F.fireCall("preMoveToken", back.document, same, { _movementArguments: { continuationId: "c4" } }), false, "the square another is stepping to: not sent");
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const x of [back, ahead, block]) x.document.movement = { state: "completed", user: { isSelf: true } };
+    delete back.document.rendered;
+    combatFlag = false;
+    for (const x of [back, ahead, block]) sceneTokens.delete(x.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  }
+});
+
+test("AR2-03 / AR2-06: out of combat the grabbed one's drag route is not reused when it passes a token that stays corner to corner (its circle clear, its square not); its route keeps a square's clearance", () => {
+  combatFlag = false;
+  clock.step = 0;
+  // a walks a 45° line whose centre passes the standing token's centre (350, 250) 100 px off: 71 px on each axis.
+  const a = makeToken("ar2cA00000000001", 342, 100), b = makeToken("ar2cB00000000001", 700, 0);
+  const rest = makeToken("ar2cR00000000001", 300, 200);
+  const others = keepOnly([a, b, rest]);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [a, b, rest];
+  try {
+    const ctx = contextsFor([a, b], 200, 200);
+    ctx.ar2cA00000000001.foundPath = [wp(342, 100, { snapped: false, explicit: false, checkpoint: false }), wp(542, 300)];
+    const from = F.calls.length;
+    const out = dropWith(a, ctx);
+    tickBy(5000);
+    const batches = [...(out ? [{ options: out[1] }] : []), ...sent(from)];
+    const ma = batches.map(x => x.options.movement?.[a.document.id]).find(Boolean);
+    assert.ok(ma, "a moves");
+    let prev = { x: 392, y: 150 };
+    const c = { x: 350, y: 250 };
+    for (const p of ma.waypoints) {
+      const q = { x: p.x + 50, y: p.y + 50 };
+      const d = avoidDist({ ...c, box: true }, prev, q);
+      assert.ok(d >= 98, `a's square never comes inside the standing one's (${d.toFixed(1)} px): ${JSON.stringify(ma.waypoints.map(w => [w.x, w.y]))}`);
+      prev = q;
+    }
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const x of [a, b, rest]) sceneTokens.delete(x.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("AR2-04 / AR2-05 / AR2-09: nothing stops silently: a group whose later wave never went (here the server refused it) tells the dragger once its tokens are at rest", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("ar2dA00000000001", 400, 200), makeToken("ar2dB00000000001", 300, 200), makeToken("ar2dC00000000001", 500, 200)];
+  const others = keepOnly(ts);
+  const saved = viewedScene.updateEmbeddedDocuments;
+  viewedScene.updateEmbeddedDocuments = async () => { throw new Error("refused"); };
+  try {
+    const warns = await noticesOf(async () => {
+      const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+      assert.ok(Array.isArray(out), "the first wave goes with the drop");
+      for (let k = 0; k < 30; k++) { tickBy(500); await flush(); }
+    });
+    assert.deepEqual(warns, ["PENTARYN_MOVEMENT.notify.stoppedShort"], `told: ${JSON.stringify(api.status().group.silent)}`);
+    assert.ok(api.status().group.silent.ids.length >= 1);
+    // A group whose every wave went says nothing more than it did.
+    viewedScene.updateEmbeddedDocuments = saved;
+    const ts2 = [makeToken("ar2dD00000000001", 400, 100), makeToken("ar2dE00000000001", 300, 100), makeToken("ar2dF00000000001", 500, 100)];
+    const quiet = await noticesOf(async () => {
+      dropWith(ts2[0], contextsFor(ts2, 0, 400));
+      for (let k = 0; k < 30; k++) { tickBy(500); await flush(); }
+    });
+    assert.deepEqual(quiet, []);
+    for (const t of ts2) sceneTokens.delete(t.document.id);
+  } finally {
+    viewedScene.updateEmbeddedDocuments = saved;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("AR2-14: a token destroyed under a timer (the GM activated another scene mid-walk) is read without a throw: a destroyed PIXI object's position getter throws", async () => {
+  const { drawnPosition, positionOf, holdPinned, pinDrawn } = await import("../group-adapter.mjs");
+  const t = makeToken("ar2eA00000000001", 300, 100);
+  const others = keepOnly([t]);
+  try {
+    Object.defineProperty(t, "position", { configurable: true, get() { throw new TypeError("Cannot read properties of null (reading 'position')"); } });
+    t.animationContexts.set(t.movementAnimationName, {});
+    assert.doesNotThrow(() => drawnPosition(t));
+    assert.deepEqual(drawnPosition(t), { x: 300, y: 100, elevation: 0 });
+    assert.equal(positionOf(t), null);
+    t.destroyed = true;
+    pinDrawn(t, { x: 200, y: 100 }, { x: 250, y: 100 });
+    assert.doesNotThrow(() => holdPinned(t));
+  } finally {
+    delete t.position;
+    t.animationContexts.clear();
+    sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
   }
 });

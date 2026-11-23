@@ -488,3 +488,31 @@ export function avoidRegion(region, { isGM = false } = {}) {
   if (!region || (region.hidden && !isGM)) return false;
   return [...(region.behaviors ?? [])].some(b => b && !b.disabled && MOVE_ON_ENTER.includes(b.type));
 }
+
+/**
+ * How close the segment a → b comes to an avoid entry `c` ({ x, y, r }, pixels; AR2-06): Euclidean for a circle, the
+ * Chebyshev distance for one marked `box` (a token's square footprint: the acceptance harness and the eye see two
+ * square tokens overlap when |dx| and |dy| are both under the sum of their half sizes, which a circle's clearance lets
+ * a smoothed corner do by 0.1 square). Compare it with c.r.
+ */
+export function avoidDist(c, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  if (!c.box) {
+    const L2 = dx * dx + dy * dy;
+    const t = L2 ? Math.min(Math.max(((c.x - a.x) * dx + (c.y - a.y) * dy) / L2, 0), 1) : 0;
+    return Math.hypot(c.x - (a.x + dx * t), c.y - (a.y + dy * t));
+  }
+  // min over t in [0,1] of max(|ax + dx t - cx|, |ay + dy t - cy|): a convex piecewise-linear function; its minimum
+  // is at an end or where one term crosses zero or the two terms are equal.
+  const f = t => Math.max(Math.abs(a.x + dx * t - c.x), Math.abs(a.y + dy * t - c.y));
+  const ts = [0, 1];
+  if (dx) ts.push((c.x - a.x) / dx);
+  if (dy) ts.push((c.y - a.y) / dy);
+  for (const sx of [1, -1]) {
+    const k = dx - sx * dy;
+    if (k) ts.push((sx * (a.y - c.y) - (a.x - c.x)) / k);
+  }
+  let best = Infinity;
+  for (const t of ts) if (t >= 0 && t <= 1) best = Math.min(best, f(t));
+  return best;
+}

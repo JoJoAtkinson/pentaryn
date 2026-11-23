@@ -28,6 +28,7 @@
 import { GUARD, aroundOf, asideSpot, conflictAhead, hashOf, nearby, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "./guard-core.mjs";
 import { dist, radiusOf, routeAhead, segmentsCross } from "./motion-core.mjs";
 import { LIFE } from "./lifecycle-core.mjs";
+import { avoidDist } from "./pathfind-core.mjs";
 import { clearOfWalls, countsForRoutes, crossesDoor, cutAtWalls, doorwayAt, drawnPosition, gridSize, inCombat, layerOf, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
 import { setting } from "./settings.mjs";
@@ -517,10 +518,11 @@ function reroute(y, token, snap, me) {
   const r = me.r;
   const cen = p => ({ x: p.x + (me.w * s) / 2, y: p.y + (me.h * s) / 2 });
   const a0 = cen(origin), b0 = cen(dest);
-  const circles = standingOf(snap, me).map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1 }));
+  // Out of combat (the guard's only regime) a square's clearance (AR2-06): its way round keeps out of their squares.
+  const circles = standingOf(snap, me).map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box: true }));
   const blocker = y.blocker ? snap.byId.get(y.blocker) : null;
-  if (blocker) circles.push({ x: blocker.c.x * s, y: blocker.c.y * s, r: (blocker.r + r) * s - 1 });
-  const avoid = circles.filter(o => Math.hypot(a0.x - o.x, a0.y - o.y) >= o.r && Math.hypot(b0.x - o.x, b0.y - o.y) >= o.r);
+  if (blocker) circles.push({ x: blocker.c.x * s, y: blocker.c.y * s, r: (blocker.r + r) * s - 1, box: true });
+  const avoid = circles.filter(o => avoidDist(o, a0, a0) >= o.r && avoidDist(o, b0, b0) >= o.r);
   const mid0 = doc.movement?.id ?? null;
   y.busy = true;
   Promise.resolve(feature.exposed.pathfindRouteToAsync(token, origin, { ...origin, ...dest, explicit: true, checkpoint: true },

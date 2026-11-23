@@ -28,7 +28,7 @@
  * routes this module invents.
  */
 
-import { SECRET_DOOR, avoidRegion, segmentsCross } from "./pathfind-core.mjs";
+import { SECRET_DOOR, avoidDist, avoidRegion, segmentsCross } from "./pathfind-core.mjs";
 
 /** Is a token with these dimensions at waypoint `w` inside `region` (core's own test)? */
 function insideRegion(doc, region, w) {
@@ -148,7 +148,7 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   // moves (its disposition, and its own squares are never in its way).
   const circles = avoid?.length ? avoid : null;
   const base = `${doc.id}|${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}|${hz.key}|${rounded ? "r" : ""}`;
-  const sub = base + (circles ? `|a${circles.map(c => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.r)}`).join(";")}` : "");
+  const sub = base + (circles ? `|a${circles.map(c => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.r)}${c.box ? "b" : ""}`).join(";")}` : "");
 
   // The lattice: whole squares from the goal, or, for a goal off the grid (a group slot, a spot beside a stopped
   // token), from the grid position nearest it, the goal then one short hop from its node (live H2-01, H2-06,
@@ -243,11 +243,7 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   const grazes = (p, q) => {
     if (!circles) return false;
     const a = centreOf(p), b = centreOf(q);
-    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
-    return circles.some(c => {
-      const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
-      return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < c.r - 1e-6;
-    });
+    return circles.some(c => avoidDist(c, a, b) < c.r - 1e-6);
   };
   const blockedPx = p => {
     if (grazes(p, p) || hz.at(p)) return true;

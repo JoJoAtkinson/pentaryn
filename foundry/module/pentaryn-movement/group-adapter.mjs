@@ -19,9 +19,27 @@ export function gridSize(token) {
   return token.document?.parent?.grid?.size ?? globalThis.canvas?.grid?.size ?? 100;
 }
 
-/** Is this token's movement recorded by dnd5e (its combatant in a started combat)? */
+/**
+ * Is this token in a fight (its combatant in a started combat)? Core's own test (`_shouldRecordMovementHistory`)
+ * reads `game.combat`, the combat of the scene this page VIEWS: once the GM views another scene mid-walk, a token on
+ * the first scene reads as out of combat there, its next squares are sent as a free walk and core records nothing
+ * (live AR2-01: through a door shut mid-move, charged 0 ft). So the scene's own active, started combat counts too.
+ */
 export function inCombat(tokenDoc) {
-  try { return tokenDoc?._shouldRecordMovementHistory?.() === true; } catch { return false; }
+  try { if (tokenDoc?._shouldRecordMovementHistory?.() === true) return true; } catch (err) { globalThis.console?.debug?.("pentaryn-movement | core's combat test", err); }
+  try {
+    const sid = tokenDoc?.parent?.id, tid = tokenDoc?.id;
+    if (!sid || !tid) return false;
+    const combats = globalThis.game?.combats;
+    for (const c of combats?.contents ?? (combats ? [...combats] : [])) {
+      if (!c?.active || !c?.started) continue;
+      const cs = c.scene?.id ?? c._source?.scene ?? null;
+      if (cs && cs !== sid) continue;
+      const list = c.combatants?.contents ?? (c.combatants ? [...c.combatants] : []);
+      if (list.some(cb => cb?.tokenId === tid && (cb.sceneId ?? cs ?? sid) === sid)) return true;
+    }
+  } catch (err) { globalThis.console?.debug?.("pentaryn-movement | the scene's combat", err); }
+  return false;
 }
 
 /**
@@ -303,10 +321,20 @@ export function narrowPoints(token, points, rmax, s) {
  * and the derived position equals the source, the placeable's own position (what was last drawn) is
  * the answer.
  */
+/**
+ * The placeable's drawn position, or null. A destroyed PIXI object's `position` getter throws (its transform is null):
+ * live AR2-14, "Cannot read properties of null (reading 'position')" on a player's page when the GM activated another
+ * scene during a group walk (the old scene's tokens destroyed under a timer that read them).
+ */
+export function positionOf(token) {
+  if (!token || token.destroyed) return null;
+  try { return token.position ?? null; } catch { return null; }
+}
+
 export function drawnPosition(token) {
   const doc = token.document;
   const src = doc?._source;
-  const pos = token.position;
+  const pos = positionOf(token);
   let x = doc.x, y = doc.y;
   if (src && pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) && doc.x === src.x && doc.y === src.y
     && movementFacts(token).animating) { x = pos.x; y = pos.y; }
@@ -359,7 +387,8 @@ function letGo(token, pin) {
   if (movementFacts(token).animating) return;
   const src = doc._source ?? {};
   if (doc.x === pin.x && doc.y === pin.y && (src.x !== pin.x || src.y !== pin.y)) { doc.x = src.x; doc.y = src.y; }
-  if (token.position && (token.position.x !== doc.x || token.position.y !== doc.y)) token.position.set?.(doc.x, doc.y);
+  const pos = positionOf(token);
+  if (pos && (pos.x !== doc.x || pos.y !== doc.y)) pos.set?.(doc.x, doc.y);
 }
 
 /** Let go of a pinned token (its displace landed, was refused, or failed). */
@@ -381,7 +410,8 @@ export function holdPinned(token) {
   // Ran out, or the server has it somewhere else than before and than its target (another user moved it): let go.
   const moved = Number.isFinite(pin.sx) && (Math.round(src.x) !== pin.sx || Math.round(src.y) !== pin.sy);
   if (pinClock() > pin.until || moved) { letGo(token, pin); return false; }
-  if (doc.x === pin.x && doc.y === pin.y && token.position?.x === pin.x && token.position?.y === pin.y) return false;
+  const pos = positionOf(token);
+  if (doc.x === pin.x && doc.y === pin.y && pos?.x === pin.x && pos?.y === pin.y) return false;
   if (movementFacts(token).animating) {
     queueMicrotask(() => {
       try { if (pins.get(doc.id) === pin && !token.destroyed) stopWhereDrawn(token, pin); }
@@ -390,7 +420,7 @@ export function holdPinned(token) {
     return true;
   }
   doc.x = pin.x; doc.y = pin.y;
-  token.position?.set?.(pin.x, pin.y);
+  pos?.set?.(pin.x, pin.y);
   return true;
 }
 

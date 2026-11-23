@@ -17,10 +17,11 @@
  *             kit's queries only reach the active GM; exceptions.json C56, Fable's verdict
  *             2026-11-21 "let the GM stop any move in combat"). 400 ms, and on any failure nothing
  *             happens.
- * A click is armed only once the move has run MOTION.armMs (400 ms): the click that follows a drop
- * out of habit, or the first press of a double click, is core's own (Fable's verdict). The start is
- * when this client saw the drop (noteDrop) or the move's first moveToken; a move it never saw start
- * is armed. The API's stop() is never held back.
+ * A click on a move this client dropped is armed only once the move has run MOTION.armMs (400 ms): the click
+ * that follows a drop out of habit, or the first press of a double click, is core's own (Fable's verdict). The
+ * start is when this client saw the drop (noteDrop). A move another user started is armed at once (0.8.4, AR2-08:
+ * a player clicking its own token as the GM's group set off was ignored, and the token walked on); so is a move
+ * this client never saw start. The API's stop() is never held back.
  * A click on one member of a group stops the whole group when the clicker owns every member; otherwise only
  * the clicker's own members stop, and the client that sent the group stops the others short behind them out of
  * combat (group.mjs groupStopOne). Out of combat each stops exactly where it is drawn; one whose body is across a
@@ -86,7 +87,8 @@ function onMoveToken(doc, movement) {
   const rec = starts.get(doc.id);
   if (rec?.id === first) return;
   if (rec && rec.id === null && clock() - rec.at < DROP_WAIT_MS) { rec.id = first; return; }
-  starts.set(doc.id, { id: first, at: clock() });
+  // A move this client did not drop (AR2-08): no click of this user's follows its drop, so it is armed at once.
+  starts.set(doc.id, { id: first, at: clock(), foreign: true });
   if (starts.size > 500) starts.delete(starts.keys().next().value);
 }
 
@@ -99,6 +101,7 @@ function elapsedOf(doc) {
   if (!rec) return Infinity;
   const first = firstIdOf(doc.movement);
   if (rec.id && first && rec.id !== first) return Infinity;
+  if (rec.foreign) return Infinity;
   return clock() - rec.at;
 }
 

@@ -61,7 +61,7 @@ tiers, each with its own switch, and a tier that has not passed its acceptance r
   where an arc costs nothing extra (always, 0.8.0). Players route only round walls they have seen, over ground they
   have explored or can see; never a secret door, never through a teleport / change-level region unless it ends there.
   What the ruler shows is what the drop walks and charges. No way there: nothing moves, "No route there".
-- **Click a moving token to stop it** (always on, 0.8.0) once it has moved 400 ms: out of combat it stops **exactly
+- **Click a moving token to stop it** (always on, 0.8.0) once it has moved 400 ms (a move you dropped; one another user started stops at once, 0.8.4): out of combat it stops **exactly
   where it is drawn** (Joe, 2026-11-23); one whose body is across a door's line is carried just past the line along
   its own route. In a fight it finishes the square it is in, so the movement spent stays exact; a GM may stop anyone's
   move. A click on one member of a group stops the whole group, or only the clicker's own members when it does not own

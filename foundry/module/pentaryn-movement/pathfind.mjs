@@ -272,9 +272,7 @@ function crossesCircles(path, avoid, token, { w = null, h = null, s = null } = {
   return path.some((p, k) => k > 0 && avoid.some(c => {
     const a = { x: path[k - 1].x + (W * S) / 2, y: path[k - 1].y + (H * S) / 2 };
     const b = { x: p.x + (W * S) / 2, y: p.y + (H * S) / 2 };
-    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
-    const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
-    return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < c.r;
+    return pf.avoidDist(c, a, b) < c.r;
   }));
 }
 
@@ -311,7 +309,7 @@ function pathfindJob(token, waypoints, options, wrapped, base) {
 
   const smooth = arcsOn() && !inCombat(token);
   const plan = planner(token, waypoints, options, force || crosses ? 0 : reached - 1, wrapped, base, smooth,
-    { avoid: crosses ? avoid : null, force: force || crosses, accept: big ? fitsWhole(token) : null });
+    { avoid, force: force || crosses, accept: big ? fitsWhole(token) : null });
   if (plan.step(LIMITS.sliceMs) === "done") return doneJob(big ? fitted(token, plan.result(), options) : plan.result());
 
   let cancelled = false;
