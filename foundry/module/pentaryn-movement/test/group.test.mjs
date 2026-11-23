@@ -2514,6 +2514,87 @@ test("S3R1-08: in a fight, a member whose square under way (or whose next square
   }
 });
 
+test("S3R3-03: in a fight, a cut member's walk on is never sent while its first square is where another token is drawn (core commits the first square with the move; the guard cannot withhold it)", async () => {
+  combatFlag = true;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const placed = F.canvas.tokens.placeables;
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  try {
+    // a walks east, then south through the door (y = 400) at x 400-500; drawn entering (300,300).
+    const a = walking("s33A000000000001", { x: 280, y: 300 }, { x: 300, y: 300 }, [{ x: 200, y: 300 }, { x: 300, y: 300 }],
+      { combat: true, pending: [{ x: 400, y: 300 }, { x: 400, y: 400 }, { x: 400, y: 500 }] });
+    // b (one of the same group) is drawn on (400,300), the square before the door, just setting off north out of it
+    // (live S3R2-02: Hero 3 stepped off the square the cut gave Hero 4 as Hero 4 walked into it, -66 px for 264 ms).
+    const b = walking("s33B000000000001", { x: 400, y: 295 }, { x: 400, y: 200 }, [{ x: 400, y: 300 }, { x: 400, y: 200 }], { combat: true });
+    F.canvas.tokens.placeables = [a, b];
+    const from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    assert.ok(F.calls.slice(from).some(c => c.op === "stopMovement" && c.id === a.document.id), "a is stopped at its square");
+    a.animationContexts.clear(); a.document.movement.state = "stopped";
+    a.document.x = 300; a.document.y = 300; a.position = { x: 300, y: 300 };
+    tickBy(200);
+    const walks = () => F.calls.slice(from).filter(c => c.op === "move" && c.id === a.document.id);
+    assert.equal(walks().length, 0, `not sent while b is drawn on its first square: ${JSON.stringify(walks().map(m => m.waypoints))}`);
+    // b arrives on (400,200): the square is free, and a walks on to it.
+    b.animationContexts.clear(); b.document.x = 400; b.document.y = 200; b.position = { x: 400, y: 200 };
+    tickBy(200);
+    assert.equal(walks().length, 1, "sent once the square is clear");
+    assert.deepEqual([walks()[0].waypoints[0].x, walks()[0].waypoints[0].y], [400, 300]);
+  } finally {
+    world.walls.pop();
+    F.canvas.tokens.placeables = placed;
+    combatFlag = false;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+    tickBy(5000);
+  }
+});
+
+test("S3R3-04: in a fight a later wave waits while a member's first square is where one of its own group stands paused (core commits the first square with the move)", () => {
+  const store = fakeSession();
+  combatFlag = true;
+  clock.step = 0;
+  const ts = [makeToken("s34A000000000001", 400, 200), makeToken("s34B000000000001", 300, 200), makeToken("s34C000000000001", 500, 200)];
+  const others = keepOnly(ts);
+  const placed = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = ts;
+  try {
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.ok(Array.isArray(out), "planned synchronously");
+    const first = new Set(out[0].map(u => u._id));
+    const rec = JSON.parse(store.get(PENDING))[0];
+    const wave = rec.waves[0];
+    const id = wave.updates[0]._id;
+    const sq = wave.movement[id].waypoints[0];
+    const blocker = ts.find(t => first.has(t.document.id));
+    // The member sent first lags behind the plan (each square's round trip) and stands paused by its guard on the
+    // later member's first square when that member's wave is due (live combat six: -20 px for 264 ms).
+    blocker.document.x = sq.x; blocker.document.y = sq.y; blocker.position = { x: sq.x, y: sq.y };
+    blocker.document._source.x = sq.x; blocker.document._source.y = sq.y;
+    blocker.animationContexts.clear();
+    blocker.document.movement = { state: "paused", user: { isSelf: true }, constrainOptions: {}, origin: wp(sq.x, sq.y - 100),
+      passed: { waypoints: [wp(sq.x, sq.y)] }, pending: { waypoints: [wp(sq.x, sq.y + 100)] } };
+    const from = F.calls.length;
+    tickBy(wave.at + 600);
+    const sentIds = () => sent(from).flatMap(c => c.ids);
+    assert.ok(!sentIds().includes(id), `not sent while one of its group stands paused on its first square: ${JSON.stringify(sentIds())}`);
+    // It goes on and clears the square: the wave follows.
+    blocker.document.x = sq.x; blocker.document.y = sq.y + 300; blocker.position = { x: sq.x, y: sq.y + 300 };
+    blocker.document._source.y = sq.y + 300;
+    blocker.document.movement = { state: "completed", user: { isSelf: true } };
+    tickBy(300);
+    assert.ok(sentIds().includes(id), "sent once its first square is clear");
+  } finally {
+    delete globalThis.sessionStorage;
+    F.canvas.tokens.placeables = placed;
+    combatFlag = false;
+    for (const t of ts) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; }
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
 /** A corridor stop (S3R1-03 / S3R2-01 / S3R2-04): `a` ours in the corridor at (ax, 400), `b` walking east up it behind. */
 async function corridorStop(tag, { partial = true, deadEnd = false, ax = 500 } = {}) {
   combatFlag = false;
@@ -2581,6 +2662,70 @@ test("S3R2-04: a whole-group stop never reads its own members, stopped by the sa
   const p = mv[1].waypoints.at(-1);
   assert.ok(p.x <= 200, `out of the corridor: ${JSON.stringify(p)}`);
   assert.equal(last?.walkOnBlocked, undefined, JSON.stringify(last));
+});
+
+test("S3R3-02: a player's stop of its own member in a short corridor between two rooms walks on round the room wall's corner to a roomy square off every walk, never resting in the corridor", async () => {
+  // The live dungeon's A-B corridor: two squares (300-500) at y 400-500, its ends in two rooms' walls (x 300, x 500), so a
+  // roomy square off the corridor's line is no straight walk from it. b, c and e walk east behind a to slots in room B
+  // either side of the row and past it, sweeping every square a straight walk from the corridor reaches (live: the GM's Hero 5 and Hero 6 behind Player8A's Hero 2, which rested on the corridor square in 7
+  // of 7 runs and stranded them in room A).
+  combatFlag = false;
+  clock.step = 0;
+  const saved = world.walls;
+  world.walls = [
+    [{ x: 300, y: 400 }, { x: 500, y: 400 }], [{ x: 300, y: 500 }, { x: 500, y: 500 }],
+    [{ x: 300, y: 0 }, { x: 300, y: 400 }], [{ x: 300, y: 500 }, { x: 300, y: 1000 }],
+    [{ x: 500, y: 0 }, { x: 500, y: 400 }], [{ x: 500, y: 500 }, { x: 500, y: 1000 }],
+  ];
+  F.fire("updateWall");
+  const a = makeToken("s32A000000000001", 320, 400);
+  const b = makeToken("s32B000000000001", 170, 400), c = makeToken("s32C000000000001", 40, 400);
+  const e = makeToken("s32E000000000001", -60, 400);
+  // One of this player's members already stopped in room B, standing beside the corridor's mouth (live: Hero 4 at (14,4)).
+  const d1 = makeToken("s32D000000000001", 600, 300);
+  const others = keepOnly([a, b, c, e, d1]);
+  const from = F.calls.length;
+  try {
+    for (const t of [a, b, c, e]) F.fire("updateToken", t.document, { x: 900 }, { pentarynMovementGroup: "grps32000000001" }, "u2");
+    for (const t of [b, c, e]) t.document.testUserPermission = () => false;
+    for (const t of [a, b, c, e]) { t.animationContexts.set(t.movementAnimationName, {}); t.document.movement = { state: "pending", user: { isSelf: false } }; }
+    a.document._source.x = 800; a.document._source.y = 400;
+    b.document._source.x = 800; b.document._source.y = 300;
+    b.document.movement = { state: "pending", user: { isSelf: false }, origin: wp(0, 400),
+      passed: { waypoints: [wp(300, 400), wp(500, 400), wp(800, 300)] }, pending: { waypoints: [] } };
+    c.document._source.x = 800; c.document._source.y = 500;
+    c.document.movement = { state: "pending", user: { isSelf: false }, origin: wp(-100, 400),
+      passed: { waypoints: [wp(300, 400), wp(500, 400), wp(800, 500)] }, pending: { waypoints: [] } };
+    e.document._source.x = 900; e.document._source.y = 400;
+    e.document.movement = { state: "pending", user: { isSelf: false }, origin: wp(-200, 400),
+      passed: { waypoints: [wp(300, 400), wp(900, 400)] }, pending: { waypoints: [] } };
+    clock.t += MOTION.armMs;
+    const placed = F.canvas.tokens.placeables;
+    F.canvas.tokens.placeables = [a, b, c, e, d1];
+    a._onClickLeft({});
+    F.canvas.tokens.placeables = placed;
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const mv = F.calls.slice(from).filter(x => x.op === "move" && x.id === a.document.id);
+    const last = game.pentaryn.movement.status().stop.last;
+    const end = mv.at(-1)?.waypoints.at(-1);
+    assert.ok(end, "it moves");
+    const inCorridor = e => e.x >= 300 && e.x < 500 && e.y === 400;
+    assert.ok(!inCorridor(end), `never at rest in the corridor: ${JSON.stringify(mv.map(m => m.waypoints))} ${JSON.stringify(last)}`);
+    assert.ok(end.x >= 500, `out ahead into room B, never back through b and c: ${JSON.stringify(end)}`);
+    assert.equal(mv[0].waypoints[0].action, "displace");
+    assert.ok(Math.hypot(mv[0].waypoints[0].x - 320, mv[0].waypoints[0].y - 400) <= 75, "the displace is to the near square (no jump)");
+    // Its walk on never crosses a wall: every leg from the near square is open.
+    const legs = [mv[0].waypoints[0], ...mv[1].waypoints];
+    for (let k = 1; k < legs.length; k++) assert.ok(!crossing(center(legs[k - 1]), center(legs[k])).length, `leg ${k} crosses a wall: ${JSON.stringify(legs)}`);
+    assert.notEqual(mv[1].waypoints.at(-1).action, "displace", "walked, not jumped");
+    assert.equal(last?.walkOnBlocked, undefined, JSON.stringify(last));
+  } finally {
+    for (const t of [a, b, c, e]) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; }
+    world.walls = saved;
+    F.fire("updateWall");
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
 });
 
 test("HX1-08: out of combat, a member cut back on the square it is drawn in rests on that whole square, not where it is drawn", async () => {

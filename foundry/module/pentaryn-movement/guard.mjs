@@ -43,7 +43,7 @@ const yields = new Map();
 let ticking = null;
 let lastRun = 0;
 const counts = { fired: 0, standing: 0, movers: 0, late: 0, resumed: 0, rerouted: 0, noRoute: 0, rested: 0, aside: 0, cancelled: 0, errors: 0,
-  inside: 0, offDoor: 0, overridden: 0, detour: 0 };
+  inside: 0, offDoor: 0, overridden: 0, detour: 0, gated: 0 };
 const firings = [];
 const perf = { ticks: 0, checks: 0, maxMs: 0, over4: 0, over16: 0 };
 /** token id → { mid, wps, pts } (the movement's waypoints, top-left, and their centres in squares). */
@@ -466,8 +466,10 @@ function reroute(y, token, snap, me, combat) {
       if (detourTooLong(direct, lenOf(rt.path))) { counts.detour += 1; counts.noRoute += 1; y.phase = "held"; return; }
       let wps = rt.path.slice(1).map((p, k, all) => plain(p, k === all.length - 1));
       if (combat) {
-        await stopOwn(y, doc);
         try { wps = feature.exposed.groupCheckpoints?.(token, [origin, ...wps]) ?? wps; } catch (err) { log?.debug?.("guard: checkpoints", err); }
+        // Its first square is committed with the move (S3R3-03): not while it is taken; it waits on to the 8 s rest.
+        if (!firstClear(token, wps)) { counts.noRoute += 1; y.phase = "held"; return; }
+        await stopOwn(y, doc);
       }
       if (!ours(y, doc)) return;
       y.route = wps;
@@ -630,6 +632,50 @@ function guardCancel(id, via = "api") {
   return true;
 }
 
+/**
+ * Is the first square of a fight's move `token` is about to send clear (S3R3-03)? Core sends a fight's first square
+ * with the move itself, so the guard can withhold only the squares after it (deviation 6): whoever sends such a move
+ * (a door cut's walk on, a later wave, a re-route) asks this first. The walk from where it is drawn to its first
+ * waypoint, plus GUARD.cellSlackMs, must come inside touching (less GUARD.tol) of nothing: no token standing (a paused
+ * one where its square ends), no square under way, no way a token walking now takes in that time. A move about to be
+ * sent comes after every move already under way in the server's order, so it gives way to all of them; to a reserved
+ * walk still to set off it gives way by the order (reserve-core), so two waves held for each other never wait on
+ * each other. Live S3R2-02 / S3R3-03: after a door cut at 1.5 s Hero 4's walk on to the square before the door was
+ * sent while Hero 3 still stood on it, and Hero 3 stepped off it as Hero 4 walked in (-65 to -67 px for 264-282 ms,
+ * 3 of 3 runs); the guard fired "late", inside a square it could not withhold. `waypoints`: top-left pixels. Reads only.
+ */
+function firstClear(token, waypoints) {
+  try {
+    const doc = token?.document;
+    if (!doc?._source || !Array.isArray(waypoints) || !globalThis.canvas?.tokens?.placeables) return true;
+    // Read only on a canvas that shows its scene (what is drawn is all it can go by).
+    const viewed = globalThis.canvas?.scene?.id;
+    if (viewed && doc.parent?.id && viewed !== doc.parent.id) return true;
+    const first = waypoints.find(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
+    if (!first) return true;
+    const s = gridSize(token);
+    const snap = snapshot(s);
+    const me = { ...(snap.byId.get(doc.id) ?? entryOf(token, s)) };
+    me.speed = me.speed > 0 ? me.speed : speedOf(token);
+    const to = toSquares(first, first.width ?? me.w, first.height ?? me.h, s);
+    if (dist(me.c, to) < 1e-6) return true;
+    me.points = [me.c, to];
+    me.moving = true;
+    me.prio = reserve.priority(doc.id) ?? { ord: Infinity, id: doc.id };
+    const horizonMs = (dist(me.c, to) / me.speed) * 1000 + GUARD.cellSlackMs;
+    const others = othersFor(me, snap, horizonMs, { resuming: true })
+      .map(o => (Number.isFinite(o.delay) && o.delay > 0 ? o : { ...o, yieldTo: true }));
+    perf.checks += 1;
+    const hit = conflictAhead(me, others, { horizonMs }) ?? standingOnRoute(me.points, me.r, standingOf(snap, me));
+    if (hit) { counts.gated += 1; return false; }
+    return true;
+  } catch (err) {
+    counts.errors += 1;
+    log?.debug?.("guard: a first square", err);
+    return true;
+  }
+}
+
 function guardStatus() {
   const held = [...yields.values()].filter(y => y.phase === "held").map(y => ({ id: y.id, since: y.firstAt, rerouted: y.rerouted, firings: y.firings }));
   return { enabled: enabled(), watching: yields.size, held, ticking: !!ticking, ...counts, perf: { ...perf }, last: firings.slice(-5).map(f => ({ ...f })) };
@@ -651,7 +697,7 @@ export function install(reg, ctx) {
   reg.on("moveToken", (doc, movement, operation) => onMove(doc, movement, operation), { label: "moveToken: the runtime yield guard watches the moves this client started" });
   reg.on("stopToken", doc => onStop(doc), { label: "stopToken: a stop the guard did not make lets go of the token" });
   reg.on("canvasTearDown", () => clearAll(), { label: "canvasTearDown: the yield guard forgets this scene's moves" });
-  ctx.expose({ guardStatus, guardCancel, guardInstalled: () => true });
+  ctx.expose({ guardStatus, guardCancel, guardFirstClear: firstClear, guardInstalled: () => true });
 }
 
 export function uninstall() {

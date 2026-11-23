@@ -221,7 +221,8 @@ function displace(token, at = stopSpot(token), extra = {}) {
     if (!near || !feature || token.destroyed) return;
     const z = p.elevation ?? doc._source.elevation ?? 0;
     try {
-      const wps = [{ x: p.x, y: p.y, elevation: z, action: doc.movementAction ?? "walk", snapped: true, explicit: true, checkpoint: true }];
+      // Round a corner (S3R3-02): the squares of its walk out first.
+      const wps = [...(at.via ?? []), p].map(q => ({ x: q.x, y: q.y, elevation: z, action: doc.movementAction ?? "walk", snapped: true, explicit: true, checkpoint: true }));
       // The walk on re-publishes its reservation (0.6.0, group.mjs): every planner sees where the stop puts it.
       let extra = {};
       try { extra = feature.exposed.groupRepublish?.(doc, { x: first.x, y: first.y }, wps) ?? {}; } catch (err) { log.debug?.("stop: re-publish", err); }
@@ -404,10 +405,13 @@ function takenAround(token, skip, claims) {
       }
     } catch (err) { log?.debug?.("taken: a walking token", err); }
   }
-  return p => {
+  const taken = p => {
     const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
     return circles.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1e-6);
   };
+  // The circles themselves (pixel centres, each grown by this token's radius): what a walk out keeps round (S3R3-02).
+  taken.circles = circles.map(c => ({ x: c.x, y: c.y, r: c.r + r }));
+  return taken;
 }
 
 /**
@@ -432,15 +436,109 @@ function walkOnTest(token, skip = null) {
   if (skip?.size) walkers = walkers.filter(x => !skip.has(x.id));
   if (!walkers.length) return () => false;
   const r = radiusOf(w, h), speed = speedOf(token);
-  return (near, p) => {
+  // `via`: the squares of a walk round a corner between them (S3R3-02), top-lefts. `file` (a walk out, S3R3-02): a walker
+  // coming up behind along the way it walks out by is a file, not a meeting. It keeps its distance or gives way to it
+  // standing (the runtime guard), so it is held to touching without the latency buffer; a way that meets it head-on or
+  // crosses it keeps the buffer (S3R1-03).
+  return (near, p, via = null, { file = false } = {}) => {
     if (!near || !p) return false;
-    const mine = [{ points: [toSquares(near, w, h, s), toSquares(p, w, h, s)], r, speed, delay: 0 }];
-    try { return walkersMeet(mine, walkers); } catch (err) { log?.debug?.("stop: walk on", err); return true; }
+    const pts = [near, ...(via ?? []), p].map(q => toSquares(q, w, h, s));
+    const mine = [{ points: pts, r, speed, delay: 0 }];
+    try {
+      if (!file) return walkersMeet(mine, walkers);
+      return walkers.some(x => walkersMeet(mine, [x], following(x, pts) ? { gap: 0 } : {}));
+    } catch (err) { log?.debug?.("stop: walk on", err); return true; }
   };
 }
 
+/**
+ * Is walker `x` (squares: points from where it is drawn, delay) coming up behind along the way `pts` walks off by: heading
+ * the same way as its first leg (within about 45 degrees) and behind its start? A walker still to set off is never one.
+ */
+function following(x, pts) {
+  if ((x.delay ?? 0) > 0 || !(x.points?.length >= 2) || pts.length < 2) return false;
+  const unit = (a, b) => { const L = Math.hypot(b.x - a.x, b.y - a.y); return L > 1e-9 ? { x: (b.x - a.x) / L, y: (b.y - a.y) / L } : null; };
+  const hx = unit(x.points[0], x.points[1]), mx = unit(pts[0], pts[1]);
+  if (!hx || !mx || hx.x * mx.x + hx.y * mx.y < Math.SQRT1_2) return false;
+  return (pts[0].x - x.points[0].x) * mx.x + (pts[0].y - x.points[0].y) * mx.y > 0;
+}
+
 function walkOnMeets(token, at, skip = null, meets = walkOnTest(token, skip)) {
-  return !!at?.near && meets(at.near, at.p);
+  return !!at?.near && meets(at.near, at.p, at.via);
+}
+
+/** A stop's walk out of a gap (S3R3-02): squares around its near square, squares of walk at most, ms of search in all. */
+const OUT = Object.freeze({ reach: 3, walk: 6, ms: 24, legMs: 8 });
+
+/**
+ * A stopped member left in a gap the others of its group must pass (a one-wide corridor, a door) walks out of it to a
+ * roomy square whose walk meets no walker (S3R3-02). Live, the A-B corridor's ends are in the two rooms' walls, so from
+ * the corridor the only roomy squares a straight walk reaches lie on the corridor's own line, and every one of them is
+ * on the walk of the GM's members filing up behind (to their slots just past it); 0.7.2 asked only straight walks
+ * (clearOfWalls' line of sight), found none, and left Player8A's Hero 2 on the corridor square (11,5) in 7 of 7 runs,
+ * stranding the GM's Hero 5 and Hero 6 in room A. Here a square off the line is reached round the room wall's corner:
+ * the pathfinder's short route from the near square (walls, open doors), every point of it clear of every token
+ * (`taken`), no longer than OUT.walk, and the whole walk tested against the walkers. Never a jump: the displace goes to
+ * the near square, the walk on follows the route. null when there is none (then stopping short stays the answer).
+ */
+function walkOut(token, taken, at, meets) {
+  const doc = token.document;
+  const s = gridSize(token);
+  const src = doc._source ?? {};
+  const w = src.width ?? 1, h = src.height ?? 1, z = src.elevation ?? 0;
+  let from = at.near;
+  if (!from) {
+    const base = stopSpot(token, taken);
+    from = base.near ?? base.p;
+  }
+  if (!from) return null;
+  from = { x: Math.round(from.x / s) * s, y: Math.round(from.y / s) * s };
+  const liked = roomyFor(token);
+  const centre = q => ({ x: q.x + (w * s) / 2, y: q.y + (h * s) / 2, elevation: z });
+  const clearAlong = pts => {
+    for (let k = 1; k < pts.length; k++) {
+      const a = pts[k - 1], b = pts[k];
+      const n = Math.max(Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (s / 4)), 1);
+      for (let q = 1; q <= n; q++) if (taken?.({ x: a.x + ((b.x - a.x) * q) / n, y: a.y + ((b.y - a.y) * q) / n })) return false;
+    }
+    return true;
+  };
+  const length = pts => pts.reduce((L, q, k) => (k ? L + Math.hypot(q.x - pts[k - 1].x, q.y - pts[k - 1].y) / s : 0), 0);
+  const bx = Math.round(from.x / s), by = Math.round(from.y / s);
+  const cands = [];
+  for (let dy = -OUT.reach; dy <= OUT.reach; dy++) for (let dx = -OUT.reach; dx <= OUT.reach; dx++) if (dx || dy) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
+  cands.sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y));
+  const t0 = performance.now();
+  for (const c of cands) {
+    if (performance.now() - t0 > OUT.ms) break;
+    if (taken?.(c) || !liked(c)) continue;
+    let spot = null;
+    try { spot = clearOfWalls(token, c, { taken, snap: true }); } catch { spot = null; }
+    if (!spot || spot.x !== c.x || spot.y !== c.y) continue;
+    let pts = null;
+    try {
+      if (!token.checkCollision(centre(c), { origin: centre(from), type: "move", mode: "any" })) pts = [from, c];
+    } catch { pts = null; }
+    if (!pts) {
+      let rt = null;
+      try {
+        const origin = { ...(feature?.exposed?.pathfindOrigin?.(doc) ?? src), x: from.x, y: from.y };
+        const a = centre(from), b = centre(c);
+        // Round every token standing or claimed near it, as a group member's route goes round them (0.5.0).
+        const avoid = (taken?.circles ?? []).filter(o => Math.hypot(o.x - a.x, o.y - a.y) >= o.r && Math.hypot(o.x - b.x, o.y - b.y) >= o.r);
+        rt = feature?.exposed?.pathfindRouteTo?.(token, origin, { ...origin, x: c.x, y: c.y, snapped: true, explicit: true, checkpoint: true },
+          { smooth: false, avoid, maxMs: Math.max(1, Math.min(OUT.legMs, OUT.ms - (performance.now() - t0))) });
+      } catch (err) { log?.debug?.("stop: a walk out", err); rt = null; }
+      const end = rt?.path?.at(-1);
+      if (!rt?.reached || !(rt.path?.length >= 2) || Math.round(end.x) !== c.x || Math.round(end.y) !== c.y) continue;
+      pts = [from, ...rt.path.slice(1).map(q => ({ x: Math.round(q.x), y: Math.round(q.y) }))];
+    }
+    if (length(pts) > OUT.walk + 1e-6 || !clearAlong(pts)) continue;
+    const via = pts.slice(1, -1);
+    if (meets(from, c, via, { file: true })) continue;
+    return { drawn: at.drawn, p: { ...at.p, x: c.x, y: c.y }, near: from, via };
+  }
+  return null;
 }
 
 /** Does this user own the token (a GM owns all)? */
@@ -493,16 +591,24 @@ function stopToken(token, how, via = "api") {
       // Player8A's Hero 2 on the corridor square (11,5) in 7 of 7 runs, and every member behind it stopped short in
       // room A; room B ahead, the way they all walk, was free). Only with none, the nearest free square (stopping short
       // of the roomy square beats walking through anyone; a walker behind it gives way to it standing).
-      if (at.near && walkOnMeets(t, at, skip, meets)) {
+      // S3R3-02: and one left in a gap (no roomy square a straight walk reaches) walks out round a corner when it can.
+      const blocked = !!at.near && walkOnMeets(t, at, skip, meets);
+      const stuck = roomy && !blocked && !roomyFor(t)(at.p);
+      if (blocked || stuck) {
         let alt = null;
         if (roomy) {
           const liked = roomyFor(t), from = at.near;
-          alt = stopSpot(t, taken, { prefer: q => liked(q) && !meets(from, q) });
-          // Never a jump (HX1-07): a far square it could not walk to from the near one is no way out.
-          const far = Math.hypot(alt.p.x - alt.drawn.x, alt.p.y - alt.drawn.y) > JUMP_SQUARES * gridSize(t);
-          if (!liked(alt.p) || (far && !alt.near) || walkOnMeets(t, alt, skip, meets)) alt = null;
+          if (from) {
+            alt = stopSpot(t, taken, { prefer: q => liked(q) && !meets(from, q) });
+            // Never a jump (HX1-07): a far square it could not walk to from the near one is no way out.
+            const far = Math.hypot(alt.p.x - alt.drawn.x, alt.p.y - alt.drawn.y) > JUMP_SQUARES * gridSize(t);
+            if (!liked(alt.p) || (far && !alt.near) || walkOnMeets(t, alt, skip, meets)) alt = null;
+          }
+          // None a straight walk reaches: round the corner of the wall the gap ends in.
+          if (!alt) alt = walkOut(t, taken, at, meets);
         }
         if (alt) { at = alt; rec.walkOnAround = (rec.walkOnAround ?? 0) + 1; }
+        else if (stuck) { /* nothing better: it stops where it is (stopping short beats overlapping) */ }
         else {
           const plain = stopSpot(t, taken);
           at = plain.near && walkOnMeets(t, plain, skip, meets) ? { drawn: at.drawn, p: at.near, near: null } : plain;

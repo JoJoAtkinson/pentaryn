@@ -1,5 +1,23 @@
 # Changelog — pentaryn-movement
 
+## 0.7.3 — 2026-11-23
+
+Stage 3, round S3R3 (plan `context/plans/pathfinding-2026-11.md` §15.11). Fixes only.
+
+- **[declared] A click-stopped member in a corridor walks out round the room wall's corner (S3R3-02, S3R2-01 not fixed
+  in 0.7.2).** The A-B corridor ends in the two rooms' walls, so from inside it the only roomy squares a straight walk
+  reaches lie on the corridor's own line, all of them on the walk of the GM's members filing up behind; 0.7.2 asked
+  straight walks only and still left Player8A's Hero 2 on (11,5) in 7 of 7 runs. The stop now also asks the squares
+  round the corner: a short route from the near square (walls, open doors, round every token), at most 6 squares, its
+  whole walk tested against the walkers. A walker coming up behind along the way it walks out by is a file, held to
+  touching without the latency buffer; a head-on or crossing way keeps the buffer (S3R1-03). Never a jump.
+- **[declared] In a fight no move is sent while its first square is not clear (S3R3-03, S3R3-04).** Core sends a
+  fight's first square with the move, so the runtime guard could not withhold it: after a door cut Hero 4's walk on
+  to the square before the door went while Hero 3 still stood on it (-65 to -67 px for 264-282 ms, 3 of 3), and in
+  combat six a later wave on time walked into a member paused behind the plan (-20 px for 264 ms). A door cut's walk
+  on, a later wave and the guard's re-route now ask the guard first (`guardFirstClear`), wait while it is not clear
+  (50 ms looks, 4 s at most) and then stay where they are (`status().guard.gated`, `status().group.cut.gaveUp`).
+
 ## 0.7.2 — 2026-11-23
 
 Stage 3, round S3R2 (plan `context/plans/pathfinding-2026-11.md` §15.10). Fixes only.

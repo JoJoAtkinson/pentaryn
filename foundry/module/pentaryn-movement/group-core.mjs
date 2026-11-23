@@ -332,8 +332,9 @@ function trajectoryOf(points, speed) {
  * (tokens outside the group walking now: { points: the rest of their walk from where they are drawn, r, speed })?
  * Both from now (HX1-02: two players dragged opposite groups through a one-wide corridor at the same moment; each
  * plan was made before the other group moved, and their later waves walked into each other, -49 to -96 px).
+ * `gap`: the latency buffer (squares; MOTION.motionGap when not given).
  */
-export function walkersMeet(mine, walkers, { combat = false } = {}) {
+export function walkersMeet(mine, walkers, { combat = false, gap = undefined } = {}) {
   // A walker's `delay` (ms from now, 0.6.0): a reservation's member that sets off later (it stands at its start
   // until then), or one that set off earlier (negative: it is part way along).
   const ws = (walkers ?? []).filter(f => f.points?.length >= 2)
@@ -342,7 +343,7 @@ export function walkersMeet(mine, walkers, { combat = false } = {}) {
   for (const m of mine ?? []) {
     if (!(m.points?.length >= 2)) continue;
     const tr = trajectory(m.points, { speed: m.speed ?? MOTION.speed, delay: m.delay ?? 0 });
-    if (ws.some(f => firstConflict(tr, f.tr, m.r, f.r, { combat }) !== null)) return true;
+    if (ws.some(f => firstConflict(tr, f.tr, m.r, f.r, { combat, gap }) !== null)) return true;
   }
   return false;
 }

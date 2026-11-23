@@ -961,12 +961,31 @@ function schedule(later, base, members, { scene, seq, starts, endMs = 0, gid = f
       heldLast = { at: new Date().toISOString(), members: updates.length, ms: wave.heldMs };
       return;
     }
-    send(scene, seq, starts, updates, { ...base, movement: wave.movement }, "wave", group.claims, group.avoid)
+    // In a fight a member's first square is committed with the move (S3R3-03 / S3R3-04): the wave waits while any of
+    // its members' first squares is not clear of what is drawn now (its own group's members too: each square's round
+    // trip puts the earlier members behind the plan's timing, and a later wave on time walked into one paused there,
+    // -20 px for 264 ms). Past GATE_WAIT_MS only the members whose first square is clear go; the others stay.
+    let gated = [];
+    try { gated = updates.filter(u => inCombat(scene.tokens?.get(u._id)) && !firstSquareClear(scene.tokens?.get(u._id)?.object, wave.movement?.[u._id]?.waypoints)).map(u => u._id); }
+    catch (err) { log?.debug?.("a wave: first squares", err); gated = []; }
+    wave.gatedMs ??= 0;
+    if (gated.length && wave.gatedMs < GATE_WAIT_MS) {
+      wave.gatedMs += GATE_POLL_MS;
+      group.held += GATE_POLL_MS;
+      group.waiting += 1;
+      group.timers.push(setTimeout(() => { group.waiting -= 1; fire(wave); }, GATE_POLL_MS));
+      heldLast = { at: new Date().toISOString(), members: gated.length, ms: wave.gatedMs, why: "first square" };
+      return;
+    }
+    const go = gated.length ? updates.filter(u => !gated.includes(u._id)) : updates;
+    if (gated.length) gateGaveUp += gated.length;
+    if (!go.length) { prunePending(gid, { at: wave.at }); return; }
+    send(scene, seq, starts, go, { ...base, movement: wave.movement }, "wave", group.claims, group.avoid)
       .then(done => {
         if (done) prunePending(gid, { at: wave.at });
         // Stopped while this wave was on its way to the server (live H3-05: a click 950 ms after the drop on the
         // Mac, over the tunnel, let the wave's two members walk on into the far room): they stop as soon as they move.
-        if (group.stopped) lateStop(scene, updates.map(u => u._id));
+        if (group.stopped) lateStop(scene, go.map(u => u._id));
       });
   };
   for (const wave of later) group.timers.push(setTimeout(() => fire(wave), wave.at));
@@ -1643,12 +1662,12 @@ function takenForCut(scene, id, movers, claims) {
  * token's, it steps to the nearest free clear whole square (costed), at once rather than by the rest check
  * 4 s later (live H1-07: two members on one square for 3.4-4.1 s, then one jumped aside).
  */
-function walkOnAfterStop(doc, waypoints, left = Math.ceil(CUT_WAIT_MS / CUT_POLL_MS), taken = null) {
+function walkOnAfterStop(doc, waypoints, left = Math.ceil(CUT_WAIT_MS / CUT_POLL_MS), taken = null, gate = Math.ceil(GATE_WAIT_MS / CUT_POLL_MS)) {
   const token = doc.object;
   if (!feature || !token || token.destroyed) return;
   const st = doc.movement?.state;
   if ((movementFacts(token).animating || st === "pending" || continuationInFlight(doc)) && left > 0) {
-    setTimeout(() => walkOnAfterStop(doc, waypoints, left - 1, taken), CUT_POLL_MS);
+    setTimeout(() => walkOnAfterStop(doc, waypoints, left - 1, taken, gate), CUT_POLL_MS);
     return;
   }
   if (!waypoints?.length) {
@@ -1661,9 +1680,29 @@ function walkOnAfterStop(doc, waypoints, left = Math.ceil(CUT_WAIT_MS / CUT_POLL
     waypoints = [{ x: spot.x, y: spot.y, elevation: here.elevation, width: src.width ?? 1, height: src.height ?? 1, level: src.level,
       action: doc.movementAction ?? "walk", snapped: true, explicit: true, checkpoint: true }];
   }
+  // Its first square is committed with the move (S3R3-03): never sent while it is not clear. It waits for it, a
+  // brief yield; past GATE_WAIT_MS it stays where it stopped (stopping short beats walking into anyone).
+  if (inCombat(doc) && !firstSquareClear(token, waypoints)) {
+    if (gate > 0) setTimeout(() => walkOnAfterStop(doc, waypoints, 0, taken, gate - 1), CUT_POLL_MS);
+    else gateGaveUp += 1;
+    return;
+  }
   try {
     Promise.resolve(doc.move(waypoints, { method: "api", ...republish(doc, doc._source, waypoints) })).catch(err => log?.debug?.("cut: walk on", err));
   } catch (err) { log?.debug?.("cut: walk on", err); }
+}
+
+/** How long a fight's move waits for its first square to be clear before it is given up, and how often it looks (ms; S3R3-03). */
+const GATE_WAIT_MS = 4000;
+const GATE_POLL_MS = 50;
+/** Fight moves given up because their first square never came clear (status().group.cut.gaveUp). */
+let gateGaveUp = 0;
+
+/** The runtime guard's first-square check (S3R3-03), when it is installed. */
+function firstSquareClear(token, waypoints) {
+  const fn = feature?.exposed?.guardFirstClear;
+  if (typeof fn !== "function") return true;
+  try { return fn(token, waypoints) !== false; } catch (err) { log?.debug?.("first square", err); return true; }
 }
 
 /**
@@ -2859,7 +2898,7 @@ function groupStatus() {
     resumed: resumedLast ? { ...resumedLast } : null,
     stopped: stoppedAt ? { ...stoppedAt } : null,
     destacked: destacked ? { ...destacked } : null,
-    cut: cutLast ? { ...cutLast, undone } : null,
+    cut: cutLast ? { ...cutLast, undone, gaveUp: gateGaveUp } : null,
     held: heldLast ? { ...heldLast } : null,
     reservations: reserve.status(),
     perf: { ...perf },
@@ -2963,6 +3002,7 @@ export function uninstall() {
   destacked = null;
   cutLast = null;
   undone = 0;
+  gateGaveUp = 0;
   heldLast = null;
   fallbacks.length = 0;
   latestDrop.clear();
