@@ -1,15 +1,18 @@
 /**
  * Pentaryn Movement — settings. The only file outside lib/ that calls game.settings.register/get.
  *
- * Nine rows: the four ghost / owned-on-top rows in their historic order, the three pathfinding
- * rows (0.3.0), then group movement and click to stop (0.4.0). Every row carries full literal label keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
+ * Nine rows: the four ghost / owned-on-top rows in their historic order, then the drag help's five (0.8.0, plan
+ * §16.6): world `pathfinding` and client `pathfindMine` (tier A), the tier gates `groupDrags` (B) and
+ * `fightGroupDrags` (C), and the GM toolbar's `assist`. 0.8.0 folded smoothCorners and clickToStop in (always on)
+ * and renamed groupMovement to groupDrags; migrateSettings() carries old values over once. Every row carries full
+ * literal label keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
  * i18n gate proves each one. A row's onChange calls whatever the feature registered for that key with
  * onSettingChange(); the feature does that during its synchronous install, before `init`.
  */
 
 import { DEFAULT_POLICY, MODULE } from "./movement-core.mjs";
 import { DEFAULT_PATHFIND } from "./pathfind-core.mjs";
-import { defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
+import { defineKeybindings, defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 
 /** key → the feature's change handler. */
 const handlers = {};
@@ -66,59 +69,142 @@ export const SETTINGS = Object.freeze([
       off: "PENTARYN_MOVEMENT.settings.pathfinding.off"
     },
     onChange: forward("pathfinding"),
-    doc: "Drag pathfinding around walls: everyone (default), gm (GM drags only) or off. Read live on every drag.",
+    doc: "Tier A, drag pathfinding round walls and standing tokens (with the ruler and a single token's click-stop): everyone (default), gm (GM drags only) or off. Read live on every drag.",
   },
   {
     key: "pathfindMine", scope: "client", config: true, type: Boolean, default: true,
     name: "PENTARYN_MOVEMENT.settings.pathfindMine.name",
     hint: "PENTARYN_MOVEMENT.settings.pathfindMine.hint",
     onChange: forward("pathfindMine"),
-    doc: "This client's drags find a path around walls (when the world setting allows it). Client scope.",
+    doc: "This client's drags find a path (when the world setting allows it). Client scope. Corners are always rounded where that costs nothing (0.8.0 folded smoothCorners in).",
   },
   {
-    key: "smoothCorners", scope: "client", config: true, type: Boolean, default: true,
-    name: "PENTARYN_MOVEMENT.settings.smoothCorners.name",
-    hint: "PENTARYN_MOVEMENT.settings.smoothCorners.hint",
-    onChange: forward("smoothCorners"),
-    doc: "Round a found path's corners into arcs where that stays clear of walls and costs no extra movement. Client scope.",
+    key: "groupDrags", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_MOVEMENT.settings.groupDrags.name",
+    hint: "PENTARYN_MOVEMENT.settings.groupDrags.hint",
+    onChange: forward("groupDrags"),
+    doc: "Tier B (0.8.0; was groupMovement): several tokens dragged together out of combat each walk their own way to their own spot, filing through doors. Off: core's move, cut before standing tokens.",
   },
   {
-    key: "groupMovement", scope: "world", config: true, type: Boolean, default: true,
-    name: "PENTARYN_MOVEMENT.settings.groupMovement.name",
-    hint: "PENTARYN_MOVEMENT.settings.groupMovement.hint",
-    onChange: forward("groupMovement"),
-    doc: "Several tokens dragged together each walk their own route to their own spot, started in turn so they do not overlap (0.4.0).",
+    key: "fightGroupDrags", scope: "world", config: true, type: Boolean, default: false,
+    name: "PENTARYN_MOVEMENT.settings.fightGroupDrags.name",
+    hint: "PENTARYN_MOVEMENT.settings.fightGroupDrags.hint",
+    onChange: forward("fightGroupDrags"),
+    doc: "Tier C (0.8.0): several tokens dragged together in a fight, by space (moves whose ways do not meet go together, the others one after the other's arrival). Off (the default until tier C passes): core's move with hard-obstacle cuts.",
   },
   {
     key: "assist", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_MOVEMENT.settings.assist.name",
     hint: "PENTARYN_MOVEMENT.settings.assist.hint",
     onChange: forward("assist"),
-    doc: "The table's drag help (0.4.9): off, every drag is plain Foundry dragging (no pathfinding, no group plan, no single-drop routing); the GM's toolbar button flips it. Pathfinding and Group movement keep their own values.",
+    doc: "The table's drag help (0.4.9): off, every drag is plain Foundry dragging (no pathfinding, no group plan, no single-drop routing); the GM's toolbar button flips it. Pathfinding and the tier gates keep their own values. The circuit breaker (0.8.0) switches it off after repeated failures.",
   },
+]);
+
+/** key → the feature's keybinding handler (telemetry.mjs registers it with onKey during its synchronous install). */
+const keyHandlers = {};
+
+/** Route a keybinding's onDown to `fn` (one handler per key; null removes it). */
+export function onKey(key, fn) {
+  keyHandlers[key] = fn;
+}
+
+/** Keybinding rows (0.8.0). onDown forwards to what the feature registered with onKey(). */
+export const KEYBINDINGS = Object.freeze([
   {
-    key: "clickToStop", scope: "client", config: true, type: Boolean, default: true,
-    name: "PENTARYN_MOVEMENT.settings.clickToStop.name",
-    hint: "PENTARYN_MOVEMENT.settings.clickToStop.hint",
-    onChange: forward("clickToStop"),
-    doc: "Clicking a moving token stops it where it is (in combat, at the next square). Client scope (0.4.0).",
+    key: "wrongMove",
+    name: "PENTARYN_MOVEMENT.telemetry.wrongMove.name",
+    hint: "PENTARYN_MOVEMENT.telemetry.wrongMove.hint",
+    editable: [{ key: "KeyW", modifiers: ["Alt"] }],
+    onDown: () => keyHandlers.wrongMove?.() ?? false,
+    doc: "That move was wrong: files the last ten seconds of this client's drag movement through pentaryn-feedback (telemetry.mjs).",
   },
 ]);
 
 /** Called from the entry's `init` handler (rows already registered are skipped). */
 export function registerSettings() {
   defineSettings(MODULE, SETTINGS);
+  try { defineKeybindings(MODULE, KEYBINDINGS); }
+  catch (err) { globalThis.console?.debug?.(`${MODULE} | keybindings not registered`, err); }
 }
 
 const rawSetting = settingReader(MODULE, SETTINGS);
+
+/** The drag help's keys the table switch (`assist`) and the circuit breaker turn off. */
+const ASSISTED = Object.freeze({ pathfinding: "off", groupDrags: false, fightGroupDrags: false });
+
+/**
+ * The circuit breaker (0.8.0, telemetry.mjs): after repeated fallbacks or errors in a session the drag help switches
+ * itself off on this client at once (the GM's client also turns `assist` off for the table). Cleared by a reload, or by
+ * the GM turning `assist` back on.
+ */
+let tripped = null;
+export function tripAssist(why = "errors") { tripped = { at: new Date().toISOString(), why }; }
+export function untripAssist() { tripped = null; }
+export const assistTripped = () => (tripped ? { ...tripped } : null);
+
 /**
  * The live value; the row default when unregistered or unreadable. With the table's drag help off (`assist`,
- * the GM's toolbar button) pathfinding reads "off" and group movement false, whatever they are set to.
+ * the GM's toolbar button) or the breaker tripped, pathfinding reads "off" and both group tiers false, whatever they
+ * are set to.
  */
 export const setting = key => {
-  if ((key === "pathfinding" || key === "groupMovement") && rawSetting("assist") === false) return key === "pathfinding" ? "off" : false;
+  if (key in ASSISTED && (tripped || rawSetting("assist") === false)) return ASSISTED[key];
   return rawSetting(key);
 };
+
+/* -------------------------------------------- */
+/*  0.8.0: the old rows' values carried over     */
+/* -------------------------------------------- */
+
+/** Rows 0.8.0 removed: world key → the row it became (or null: folded in, always on). */
+export const RETIRED = Object.freeze({
+  world: { groupMovement: "groupDrags" },
+  client: { smoothCorners: null, clickToStop: null },
+});
+
+/** A stored setting's value, parsed (stored values are JSON strings). */
+function parsed(raw) {
+  if (typeof raw !== "string") return raw;
+  try { return JSON.parse(raw); } catch { return raw; }
+}
+
+/**
+ * Once, at ready: an old world row's stored value moves to its new row (the active GM writes, then deletes the old
+ * Setting document), and the folded client rows are dropped from this browser's storage. Returns what it did, for
+ * status() and the CHANGELOG's migration line. Never throws.
+ */
+export async function migrateSettings() {
+  const out = { world: {}, client: {} };
+  try {
+    const store = game.settings?.storage?.get?.("world");
+    const gm = !!game.user?.isGM && (game.users?.activeGM?.id ?? game.user.id) === game.user.id;
+    for (const [old, now] of Object.entries(RETIRED.world)) {
+      const doc = store?.getSetting?.(`${MODULE}.${old}`);
+      if (!doc) continue;
+      const value = parsed(doc.value);
+      out.world[old] = { value, to: now, moved: false };
+      if (!gm) continue;
+      if (now && typeof value === "boolean" && game.settings.settings.has(`${MODULE}.${now}`)) await game.settings.set(MODULE, now, value);
+      await doc.delete?.();
+      out.world[old].moved = true;
+    }
+  } catch (err) { out.error = String(err?.message ?? err); }
+  try {
+    const local = globalThis.localStorage;
+    for (const old of Object.keys(RETIRED.client)) {
+      const id = `${MODULE}.${old}`;
+      const raw = local?.getItem?.(id);
+      if (raw === null || raw === undefined) continue;
+      out.client[old] = { value: parsed(raw), folded: true };
+      local.removeItem(id);
+    }
+  } catch (err) { out.error ??= String(err?.message ?? err); }
+  migrated = out;
+  return out;
+}
+let migrated = null;
+export const settingsMigrated = () => migrated;
 
 /**
  * Keys whose row is not registered, or whose raw read throws or returns a value of another type

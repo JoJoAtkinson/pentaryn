@@ -11,34 +11,36 @@
  *              reserve-core claim), so a mover never yields to a lower one and two clients never both yield for
  *              one meeting. A hidden mover yields to a player's mover (that player cannot see it); a player's
  *              mover never yields to what it cannot count (countsForRoutes).
- *   when       its walk, looked at GUARD.horizonMs ahead (a fight: the rest of its square and the next, two when the
- *              next is a doorway), would come closer than touching less GUARD.tol to one it gives way to.
- *   yield      out of combat: stopped where it is drawn (stop.mjs's displace, unanimated, marked as a guard move),
- *              backing out to the nearest spot off a higher mover's way when it would stand in it; it waits, and
- *              walks the rest of its way again once that way is clear. In a fight: core's pauseMovement withholds
- *              the next square's continuation (free; no displace, ever), so it rests on whole squares, pays for the
- *              squares it walked, and stops before a door rather than in it. 3 s after its first yield it re-routes
- *              once round what stands; at 8 s it rests on the nearest free spot with a quiet notice. Nothing waits
- *              forever and nothing accepts overlap.
- *   cost       a check costs O(tokens nearby) (guard-core's bucket grid); out of combat every GUARD.everyMs, in a
- *              fight every frame while a square is being walked; nothing runs while this client moves nothing.
+ *   when       its walk, looked at GUARD.horizonMs ahead, would come closer than touching less GUARD.tol to one it
+ *              gives way to (less GUARD.standTol to one standing).
+ *   yield      stopped where it is drawn (stop.mjs's displace, unanimated, marked as a guard move), backing out to the
+ *              nearest spot off a higher mover's way when it would stand in it; it waits (the amber cue on), and walks
+ *              the rest of its way again once that way is clear. 3 s after its first yield it re-routes once round what
+ *              stands, when that way fits before the move's deadline; it rests on the nearest free spot at 8 s or the
+ *              move's deadline, whichever first ("Stopped short, way blocked"). Nothing waits forever and nothing
+ *              accepts overlap. Stack mates (tokens that started stacked, group.mjs) never yield to each other.
+ *   where      out of combat only (0.8.0): a fight's group is kept apart by space (tier C) or is core's move (the
+ *              fallback); the 0.7 fight pause guard and its first-square gate are gone.
+ *   cost       a check costs O(tokens nearby) (guard-core's bucket grid), every GUARD.everyMs; nothing runs while this
+ *              client moves nothing.
  */
 
-import { GUARD, aroundOf, asideSpot, cellHorizon, conflictAhead, hashOf, nearby, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "./guard-core.mjs";
+import { GUARD, aroundOf, asideSpot, conflictAhead, hashOf, nearby, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "./guard-core.mjs";
 import { dist, radiusOf, routeAhead, segmentsCross } from "./motion-core.mjs";
-import { detourTooLong } from "./group-core.mjs";
-import { clearOfWalls, continuationInFlight, countsForRoutes, crossesDoor, cutAtWalls, doorwayAt, drawnPosition, gridSize, inCombat, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { LIFE } from "./lifecycle-core.mjs";
+import { clearOfWalls, countsForRoutes, crossesDoor, cutAtWalls, doorwayAt, drawnPosition, gridSize, inCombat, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
 import { setting } from "./settings.mjs";
+import { hideCue, showCue } from "./cue-ui.mjs";
 
 const GUARD_OPT = reserve.GUARD_OPT;
-const REST = "PENTARYN_MOVEMENT.notify.guardRest";
+const REST = "PENTARYN_MOVEMENT.notify.stoppedShort";
 /** How long a re-route's search may run (its own slices; ms). */
 const REROUTE_MS = 600;
 
 let feature = null;
 let log = null;
-/** token id → its yield record (guard-core newYield, plus: mid, busy, route, dest, resume, pauseAt, selfStop). */
+/** token id → its yield record (guard-core newYield, plus: mid, busy, route, dest, pauseAt, aside, blocker, restAt). */
 const yields = new Map();
 let ticking = null;
 let lastRun = 0;
@@ -50,7 +52,8 @@ const perf = { ticks: 0, checks: 0, maxMs: 0, over4: 0, over16: 0 };
 const ways = new Map();
 
 const clock = () => globalThis.performance?.now?.() ?? Date.now();
-const enabled = () => { try { return !!setting("groupMovement"); } catch { return false; } };
+const enabled = () => { try { return setting("pathfinding") !== "off" || !!setting("groupDrags"); } catch { return false; } };
+const tele = (kind, data) => { try { feature?.exposed?.tele?.(kind, data); } catch (err) { log?.debug?.("guard: telemetry", err); } };
 
 /* -------------------------------------------- */
 /*  What is on the board                        */
@@ -257,8 +260,11 @@ function reservedOf(snap, token) {
 function othersFor(me, snap, horizonMs, { resuming = false } = {}) {
   const reach = (me.speed * horizonMs) / 1000 + me.r + snap.reach + GUARD.tol;
   const out = [];
+  // Tokens that started stacked with it (a rider and its mount, 0.8.0) walk together and never part.
+  let mates = null;
+  try { mates = feature?.exposed?.groupStackmates?.(me.id) ?? null; } catch { mates = null; }
   for (const e of nearby(snap.hash, me.c, reach)) {
-    if (e.id === me.id) continue;
+    if (e.id === me.id || mates?.has?.(e.id)) continue;
     if (me.level !== undefined && e.level !== undefined && e.level !== me.level) continue;
     const paused = !!e.paused;
     const moving = e.moving && !paused;
@@ -318,24 +324,9 @@ function ours(y, doc) {
 /*  The check                                   */
 /* -------------------------------------------- */
 
-/** A fight's mover: its way (from where it is drawn: this square, then the pending ones) and how far ahead to look. */
-function combatWay(me, doc, s) {
-  const src = toSquares(doc._source, me.w, me.h, s);
-  const pending = (doc.movement?.pending?.waypoints ?? []).filter(p => !p.intermediate).map(p => toSquares(p, me.w, me.h, s));
-  const pts = [me.c];
-  if (dist(me.c, src) > 1e-6) pts.push(src);
-  pts.push(...pending);
-  const next = [];
-  let prev = src;
-  for (const p of pending.slice(0, 2)) { next.push(dist(prev, p)); prev = p; }
-  let doorway = false;
-  try { doorway = !!pending[0] && doorwayAt(me.token, { x: pending[0].x * s, y: pending[0].y * s }); } catch (err) { log?.debug?.("guard: doorway", err); }
-  const segLeft = dist(me.c, src);
-  return { pts, pending, segLeftMs: (segLeft / (me.speed > 0 ? me.speed : 6)) * 1000, horizonMs: cellHorizon(me.speed, segLeft, next, { doorway }) };
-}
-
 /** Record and log one firing (the design: every firing is a planner miss). */
 function fire(y, doc, hit, { combat = false, late = false } = {}) {
+  tele("fire", { id: doc.id, against: hit.id, standing: !!hit.standing, inMs: Math.round(hit.t) });
   counts.fired += 1;
   counts[hit.standing ? "standing" : "movers"] += 1;
   if (late) counts.late += 1;
@@ -351,63 +342,41 @@ function fire(y, doc, hit, { combat = false, late = false } = {}) {
   y.blocker = hit.id;
 }
 
-/** One look at one of this client's movers. */
+/** One look at one of this client's movers (out of combat only, 0.8.0: a fight is never paused by the guard). */
 function look(y, snap, now, s) {
-  if (y.busy) return;                                          // its own write (a pause, a walk on) is on its way
+  if (y.busy) return;                                          // its own write (a stop, a walk on) is on its way
   const token = globalThis.canvas?.tokens?.get?.(y.id);
   if (!token || token.destroyed || !token.document?._source) { drop(y.id); return; }
   const doc = token.document;
   const m = doc.movement;
-  if (!m?.user?.isSelf) { drop(y.id); return; }
-  const combat = inCombat(doc);
+  if (!m?.user?.isSelf || inCombat(doc)) { drop(y.id); return; }
   const me = snap.byId.get(y.id) ?? entryOf(token, s);
   if (!(me.speed > 0)) me.speed = speedOf(token);
   if (y.phase === "walk") {
-    if (!me.moving) {
-      // Between two squares of a fight it is about to go on; otherwise it is at rest: nothing to guard.
-      if (combat && m.state === "pending") return;
-      if (m.state !== "paused") drop(y.id);
-      return;
-    }
+    if (!me.moving) { drop(y.id); return; }
     if (m.constrainOptions?.ignoreTokens || m.constrainOptions?.ignoreWalls) return;          // ghost, unconstrained
-    let horizonMs = GUARD.horizonMs, way = null;
-    if (combat) {
-      way = combatWay(me, doc, s);
-      if (!way.pending.length) return;                         // its last square: nothing left to withhold
-      me.points = way.pts;
-      horizonMs = way.horizonMs;
-    }
     if (!(me.points?.length >= 2)) return;
     if (watchWalls(y, token, me, s)) return;
     perf.checks += 1;
-    const hit = conflictAhead(me, othersFor(me, snap, horizonMs), { horizonMs });
+    const hit = conflictAhead(me, othersFor(me, snap, GUARD.horizonMs), { horizonMs: GUARD.horizonMs });
     if (!hit) return;
-    const late = combat && hit.t < way.segLeftMs;
-    if (combat && continuationInFlight(doc)) return;           // its next square is on its way: the next look decides
     const act = stepYield(y, { now, conflict: true });
-    fire(y, doc, hit, { combat, late });
-    if (act === "pause") { pause(y, token, hit, snap, me, combat, way); lastRun = 0; }
-    else if (act === "rest") rest(y, token, snap, me, combat);
+    fire(y, doc, hit);
+    if (act === "pause") { pause(y, token, hit, snap, me); lastRun = 0; }
+    else if (act === "rest") rest(y, token, snap, me);
     return;
   }
   if (y.phase !== "held") return;
   // Held: would its way, if it went on now, be clear?
-  let pts, horizonMs = GUARD.horizonMs;
-  if (combat) {
-    const way = combatWay(me, doc, s);
-    pts = way.pts;
-    horizonMs = way.horizonMs;
-  } else {
-    pts = [me.c, ...(y.route ?? []).map(p => toSquares(p, me.w, me.h, s))];
-  }
+  const pts = [me.c, ...(y.route ?? []).map(p => toSquares(p, me.w, me.h, s))];
   const mine = { ...me, points: pts.length >= 2 ? pts : null };
   perf.checks += 1;
-  const hit = mine.points ? conflictAhead(mine, othersFor(mine, snap, horizonMs, { resuming: true }), { horizonMs }) : null;
+  const hit = mine.points ? conflictAhead(mine, othersFor(mine, snap, GUARD.horizonMs, { resuming: true }), { horizonMs: GUARD.horizonMs }) : null;
   const blocked = mine.points ? standingOnRoute(mine.points, me.r, standingOf(snap, me), { tol: GUARD.standTol }) : null;
   const act = stepYield(y, { now, clear: !hit && !blocked });
-  if (act === "resume") resume(y, token, combat);
-  else if (act === "reroute") reroute(y, token, snap, me, combat);
-  else if (act === "rest") rest(y, token, snap, me, combat);
+  if (act === "resume") resume(y, token);
+  else if (act === "reroute") reroute(y, token, snap, me);
+  else if (act === "rest") rest(y, token, snap, me);
 }
 
 /* -------------------------------------------- */
@@ -465,17 +434,11 @@ function standNow(snap, me, spot = null) {
   if (spot) e.c = { x: spot.x, y: spot.y };
 }
 
-/** Pause: out of combat stop where it is drawn (backing out of a higher mover's way); in a fight withhold the next square. */
-function pause(y, token, hit, snap, me, combat, way) {
+/** Pause: stop where it is drawn (backing out of a higher mover's way, or off a door's line). */
+function pause(y, token, hit, snap, me) {
   const doc = token.document;
-  if (combat) {
-    let cb = null;
-    try { cb = doc.pauseMovement(); } catch (err) { log?.debug?.("guard: pause", err); }
-    if (typeof cb !== "function") { y.phase = "walk"; return; }
-    y.resume = cb;
-    y.dest = plain((doc.movement?.pending?.waypoints ?? []).filter(p => !p.intermediate).at(-1) ?? doc._source, true);
-    return;
-  }
+  tele("yield", { id: doc.id, against: hit.id, standing: !!hit.standing });
+  showCue(doc.id, "yield");
   const s = gridSize(token);
   const drawn = drawnPosition(token);
   const { wps, pts } = polyline(token, s, me.w, me.h);
@@ -507,16 +470,11 @@ function pause(y, token, hit, snap, me, combat, way) {
     .finally(() => { y.busy = false; });
 }
 
-/** Resume: out of combat the rest of its way from where it waits; in a fight core's continuation. */
-function resume(y, token, combat) {
+/** Resume: the rest of its way from where it waits (cut before a wall shut since). */
+function resume(y, token) {
   const doc = token.document;
   counts.resumed += 1;
-  if (combat) {
-    const cb = y.resume;
-    y.resume = null;
-    if (typeof cb === "function") Promise.resolve().then(cb).catch(err => log?.debug?.("guard: resume", err));
-    return;
-  }
+  hideCue(doc.id);
   if (!y.route?.length || !ours(y, doc)) { drop(doc.id); return; }
   const s = gridSize(token);
   const from = { x: doc._source.x, y: doc._source.y };
@@ -546,18 +504,8 @@ function resume(y, token, combat) {
     .finally(() => { y.busy = false; });
 }
 
-/** Stop a fight's paused or pending move this guard holds (core's stop; the stop hook knows it is ours). */
-async function stopOwn(y, doc) {
-  const st = doc.movement?.state;
-  if (st !== "paused" && st !== "pending") return;
-  y.selfStop = true;
-  try { await feature?.exposed?.stopSafely?.(doc); } catch (err) { log?.debug?.("guard: stop", err); }
-  y.selfStop = false;
-  y.resume = null;
-}
-
 /** 3 s after the first yield: one way round what stands now (and the mover it gave way to), however long. */
-function reroute(y, token, snap, me, combat) {
+function reroute(y, token, snap, me) {
   const doc = token.document;
   counts.rerouted += 1;
   const dest = y.dest;
@@ -578,19 +526,14 @@ function reroute(y, token, snap, me, combat) {
     .then(async rt => {
       if (!ours(y, doc) || (doc.movement?.id ?? null) !== mid0) return;
       if (!rt?.reached || !(rt.path?.length >= 2)) { counts.noRoute += 1; y.phase = "held"; return; }
-      // A way round no longer than a detour anyone wants (S3R1-04: one re-route went round the whole dungeon, 42
-      // squares, and came to rest about 60 s after the drop): longer, it waits on and rests at 8 s, short of its spot.
+      // A way round it can walk before its move's deadline (0.8.0, the one 10 s clock; S3R1-04: one re-route went round
+      // the whole dungeon, 42 squares, and came to rest about 60 s after the drop): longer, it waits on and rests at
+      // the deadline, short of its spot. (This replaces the "too long" detour test.)
       const sq = q => ({ x: (q.x + (me.w * s) / 2) / s, y: (q.y + (me.h * s) / 2) / s });
       const lenOf = list => { let L = 0; for (let k = 1; k < list.length; k++) L += dist(sq(list[k - 1]), sq(list[k])); return L; };
-      const direct = lenOf([origin, ...(y.route?.length ? y.route : [dest])]);
-      if (detourTooLong(direct, lenOf(rt.path))) { counts.detour += 1; counts.noRoute += 1; y.phase = "held"; return; }
-      let wps = rt.path.slice(1).map((p, k, all) => plain(p, k === all.length - 1));
-      if (combat) {
-        try { wps = feature.exposed.groupCheckpoints?.(token, [origin, ...wps]) ?? wps; } catch (err) { log?.debug?.("guard: checkpoints", err); }
-        // Its first square is committed with the move (S3R3-03): not while it is taken; it waits on to the 8 s rest.
-        if (!firstClear(token, wps)) { counts.noRoute += 1; y.phase = "held"; return; }
-        await stopOwn(y, doc);
-      }
+      const walkMs = (lenOf(rt.path) / (me.speed > 0 ? me.speed : 6)) * 1000;
+      if (Number.isFinite(y.restAt) && clock() + walkMs > y.restAt) { counts.detour += 1; counts.noRoute += 1; y.phase = "held"; return; }
+      const wps = rt.path.slice(1).map((p, k, all) => plain(p, k === all.length - 1));
       if (!ours(y, doc)) return;
       y.route = wps;
       await doc.move(wps, { method: "api", [GUARD_OPT]: true, ...republish(doc, { x: origin.x, y: origin.y }, wps) });
@@ -599,19 +542,20 @@ function reroute(y, token, snap, me, combat) {
     .finally(() => { y.busy = false; });
 }
 
-/** 8 s after the first yield: it rests on the nearest free spot (in a fight, the square it is on), quietly told. */
-function rest(y, token, snap, me, combat) {
+/** 8 s after the first yield, or at the move's deadline: it rests on the nearest free spot, "Stopped short". */
+function rest(y, token, snap, me) {
   const doc = token.document;
   counts.rested += 1;
   y.phase = "done";
   y.busy = true;
+  hideCue(doc.id);
   const s = gridSize(token);
   const tell = () => {
-    try { globalThis.ui?.notifications?.info?.(globalThis.game?.i18n?.format?.(REST, { name: doc.name ?? "" }) ?? REST); }
+    tele("notice", { notice: "short", reason: "guardRest", id: doc.id });
+    try { globalThis.ui?.notifications?.warn?.(REST, { localize: true }); }
     catch (err) { log?.debug?.("guard: notice", err); }
   };
   const settle = async () => {
-    if (combat) { await stopOwn(y, doc); return; }
     if (movementFacts(token).animating) {
       const drawn = drawnPosition(token);
       await feature?.exposed?.stopDisplace?.(token, { drawn, p: { ...drawn }, near: null }, { [GUARD_OPT]: true });
@@ -642,6 +586,7 @@ function rest(y, token, snap, me, combat) {
 /* -------------------------------------------- */
 
 function drop(id) {
+  if (yields.get(id)?.phase === "held") hideCue(id);
   yields.delete(id);
   ways.delete(id);
   if (!yields.size) stopTicker();
@@ -651,15 +596,9 @@ function tick() {
   if (!feature) return;
   if (!yields.size) { stopTicker(); return; }
   const now = clock();
-  const due = now - lastRun >= GUARD.everyMs;
-  let list = [...yields.values()].filter(y => {
-    if (due) return true;
-    // In a fight, every frame while a square is walked (its next square is decided before this one ends).
-    const d = globalThis.canvas?.tokens?.get?.(y.id)?.document;
-    return y.phase === "walk" && !!d && inCombat(d);
-  });
-  if (!list.length) return;
-  if (due) lastRun = now;
+  if (now - lastRun < GUARD.everyMs) return;
+  let list = [...yields.values()];
+  lastRun = now;
   // The table's drag help switched off: no new yields; the ones held finish (resume, re-route or rest).
   if (!enabled()) {
     for (const y of list) if (y.phase === "walk") drop(y.id);
@@ -723,8 +662,13 @@ function onMove(doc, movement, operation) {
     return;
   }
   if (y) drop(doc.id);
-  if (!enabled() || operation?.animate === false) return;
-  yields.set(doc.id, { ...newYield(), id: doc.id, mid, busy: false, route: null, dest: null, resume: null, pauseAt: null, aside: false, selfStop: false, blocker: null });
+  // A fight's move is never guarded (0.8.0): its group is kept apart by space (tier C) or is core's move (the fallback).
+  if (!enabled() || operation?.animate === false || inCombat(doc)) return;
+  // Its yields end by its move's one deadline (lifecycle-core): from the drop this client saw, else from now.
+  let startedAt = null;
+  try { startedAt = feature.exposed.moveStartedAt?.(doc.id) ?? null; } catch { startedAt = null; }
+  yields.set(doc.id, { ...newYield(), id: doc.id, mid, busy: false, route: null, dest: null, pauseAt: null, aside: false, blocker: null,
+    restAt: (Number.isFinite(startedAt) ? startedAt : clock()) + LIFE.deadlineMs });
   lastRun = 0;
   startTicker();
 }
@@ -732,68 +676,20 @@ function onMove(doc, movement, operation) {
 /** stopToken: a stop the guard did not make lets go of the token (a click, a turn change, another user). */
 function onStop(doc) {
   if (yields.size) lastRun = 0;
-  const y = doc?.id ? yields.get(doc.id) : null;
-  if (y && !y.selfStop) drop(doc.id);
+  if (doc?.id && yields.has(doc.id)) drop(doc.id);
 }
 
 /**
- * A click-stop (or any stop) of a token the guard holds: it stays where it waits (stop.mjs calls this first). In a
- * fight the paused move is stopped here. Returns true when the guard held it.
+ * A click-stop (or any stop) of a token the guard holds: it stays where it waits (stop.mjs calls this first).
+ * Returns true when the guard held it.
  */
 function guardCancel(id, via = "api") {
   const y = yields.get(id);
   if (!y || (y.phase !== "held" && !y.busy)) return false;
   counts.cancelled += 1;
-  const doc = globalThis.canvas?.tokens?.get?.(id)?.document;
+  tele("stop", { reason: `guardCancel:${via}`, id });
   drop(id);
-  if (doc && doc.movement?.state === "paused" && doc.movement?.user?.isSelf) {
-    try { feature?.exposed?.stopSafely?.(doc); } catch (err) { log?.debug?.(`guard: cancel (${via})`, err); }
-  }
   return true;
-}
-
-/**
- * Is the first square of a fight's move `token` is about to send clear (S3R3-03)? Core sends a fight's first square
- * with the move itself, so the guard can withhold only the squares after it (deviation 6): whoever sends such a move
- * (a door cut's walk on, a later wave, a re-route) asks this first. The walk from where it is drawn to its first
- * waypoint, plus GUARD.cellSlackMs, must come inside touching (less GUARD.tol) of nothing: no token standing (a paused
- * one where its square ends), no square under way, no way a token walking now takes in that time. A move about to be
- * sent comes after every move already under way in the server's order, so it gives way to all of them; to a reserved
- * walk still to set off it gives way by the order (reserve-core), so two waves held for each other never wait on
- * each other. Live S3R2-02 / S3R3-03: after a door cut at 1.5 s Hero 4's walk on to the square before the door was
- * sent while Hero 3 still stood on it, and Hero 3 stepped off it as Hero 4 walked in (-65 to -67 px for 264-282 ms,
- * 3 of 3 runs); the guard fired "late", inside a square it could not withhold. `waypoints`: top-left pixels. Reads only.
- */
-function firstClear(token, waypoints) {
-  try {
-    const doc = token?.document;
-    if (!doc?._source || !Array.isArray(waypoints) || !globalThis.canvas?.tokens?.placeables) return true;
-    // Read only on a canvas that shows its scene (what is drawn is all it can go by).
-    const viewed = globalThis.canvas?.scene?.id;
-    if (viewed && doc.parent?.id && viewed !== doc.parent.id) return true;
-    const first = waypoints.find(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
-    if (!first) return true;
-    const s = gridSize(token);
-    const snap = snapshot(s);
-    const me = { ...(snap.byId.get(doc.id) ?? entryOf(token, s)) };
-    me.speed = me.speed > 0 ? me.speed : speedOf(token);
-    const to = toSquares(first, first.width ?? me.w, first.height ?? me.h, s);
-    if (dist(me.c, to) < 1e-6) return true;
-    me.points = [me.c, to];
-    me.moving = true;
-    me.prio = reserve.priority(doc.id) ?? { ord: Infinity, id: doc.id };
-    const horizonMs = (dist(me.c, to) / me.speed) * 1000 + GUARD.cellSlackMs;
-    const others = othersFor(me, snap, horizonMs, { resuming: true })
-      .map(o => (Number.isFinite(o.delay) && o.delay > 0 ? o : { ...o, yieldTo: true }));
-    perf.checks += 1;
-    const hit = conflictAhead(me, others, { horizonMs }) ?? standingOnRoute(me.points, me.r, standingOf(snap, me));
-    if (hit) { counts.gated += 1; return false; }
-    return true;
-  } catch (err) {
-    counts.errors += 1;
-    log?.debug?.("guard: a first square", err);
-    return true;
-  }
 }
 
 function guardStatus() {
@@ -852,7 +748,7 @@ export function install(reg, ctx) {
   reg.on("canvasTearDown", () => { clearAll(); fresh.clear(); }, { label: "canvasTearDown: the yield guard forgets this scene's moves" });
   reg.on("updateWall", (wall, changes) => noteWall(wall, changes), { label: "updateWall: the guard's wall watch notes a door shut" });
   reg.on("createWall", wall => noteWall(wall, null), { label: "createWall: the guard's wall watch notes a wall raised" });
-  ctx.expose({ guardStatus, guardCancel, guardFirstClear: firstClear, guardInstalled: () => true });
+  ctx.expose({ guardStatus, guardCancel, guardInstalled: () => true });
 }
 
 export function uninstall() {

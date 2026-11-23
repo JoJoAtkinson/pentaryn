@@ -48,15 +48,15 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
-test("init registers the ten settings (golden/settings-register.json)", () => {
+test("init registers the nine settings (golden/settings-register.json; 0.8.0 folded three in and added the tier gates)", () => {
   F.fire("init");
   const rows = [...game.settings.settings.values()].filter(s => s.namespace === MOD).map(s => ({
     key: s.key, scope: s.scope, config: s.config, type: s.type?.name ?? null, default: s.default,
     choices: s.choices ?? null, name: s.name ?? null, hint: s.hint ?? null, onChange: typeof s.onChange === "function",
   }));
   pinJSON("settings-register", rows, import.meta.url);
-  assert.deepEqual(rows.map(r => r.key), ["ghostPolicy", "ghostPolicyLast", "ghost", "ownedOnTop", "pathfinding", "pathfindMine", "smoothCorners",
-    "groupMovement", "assist", "clickToStop"]);
+  assert.deepEqual(rows.map(r => r.key), ["ghostPolicy", "ghostPolicyLast", "ghost", "ownedOnTop", "pathfinding", "pathfindMine", "groupDrags",
+    "fightGroupDrags", "assist"]);
 });
 
 test("setup wraps both prototypes and marks them __pentarynMovement", () => {

@@ -52,84 +52,48 @@ were designed → `context/plans/pathfinding-2026-11.md` · its origin → `cont
   whose feat already grants it is shown pressed with the feat named, and the click changes nothing.
   Same from the console: `game.pentaryn.movement.setGhost(creature, { combat: true })`.
 
-**Drag movement (everyone; 0.3.0 pathfinding, 0.4.0 groups and click to stop).** Nothing new to
-learn: you drag, it works out the rest. The table-side detail is `context/foundry/movement.md`.
+**Drag movement (everyone; 0.3.0 pathfinding, 0.4.0 groups and click to stop, 0.8.0 tiers).** Nothing new to
+learn: you drag, it works out the rest. The table-side detail is `context/foundry/movement.md`. It ships in three
+tiers, each with its own switch, and a tier that has not passed its acceptance rounds ships switched off:
 
-- **Past a wall the ruler goes around it** — the shortest way, through open doors only, round hostile
-  creatures and costlier terrain, a big token only where it fits; corners rounded where an arc costs
-  nothing extra. Players route only round walls they have seen, and only over ground they have explored
-  or can see. A route never uses a secret door (open or shut) or crosses a teleport / change-level region
-  (a scene link) unless it ends there. A straight drag is core's own, but it too bends round such a region
-  rather than walk into it (0.4.5).
-- **Drag several tokens together** and each walks its own way to its own spot by the drop point,
-  all setting off together on open ground and in turn only at a door, so they file through it one behind
-  the other, never resting on top of each other (circles: touching is fine), and round tokens that stay
-  where they are (0.4.8). The grabbed token lands exactly where dropped, unless that is on another token:
-  then the nearest clear spot it can reach (0.4.8). A plan whose own work takes over 2.5 s, or that has
-  not finished 5 s after the drop, is core's own drop (1.2 / 2.5 s until 0.4.11). A route search that only ran
-  out of time is finished, never read as "no route" (0.4.11). Members set off only once a token outside the
-  group walking through their way has passed (0.4.11). Dropped where the grabbed token has no way to go,
-  nobody moves and the dragger gets a short "No route there" warning (0.4.9; a single token too). A single
-  drop lands where the pointer comes up, and one released before its route search has finished goes once
-  the search is done (0.4.10). **Tokens standing in the way are walls (0.5.0)**, for a single drag and a
-  group, in a fight too: every route goes round them however long that is, nobody rests on one, and a token
-  whose only way runs through one walks only as far as it is free and stops there ("No route there"); nothing
-  ever walks through another token to get somewhere. A single drag in a fight goes round them square by square
-  too, and the squares it walks are what it spends (0.5.1). While you drag a single token, the ruler already shows
-  the way round them and what it costs, so the feet you see are the feet you spend (0.5.2). A single drag in a fight
-  whose way is blocked by tokens walks square by square up to the first one and stops there (0.5.2). A member cut
-  short never rests in a one-wide corridor or a doorway (0.5.1); a big token cut short rests on whole squares, a
-  single drag too (0.5.2). Members that start side by side never brush each other as one leaves (0.5.2). Members of a group, and one walking in another's wake in a
-  different wave, keep 0.75 square of slack for the network (0.25 before). A re-plan round members already
-  at rest is never more than 4 squares, or half the direct way, longer: past that a member waits its turn
-  (0.4.10). A big
-  token never walks where its body does not fit (core tests walls at the centre only): it takes a wider way
-  round when there is one, else it stops before the gap, clear of the frame, and the GM is told (0.4.9).
-- **Two people dragging at the same moment never walk through each other (0.6.0).** Every drop, a single token's
-  too, reads the moves already reserved (every other client's whole plan, its later members too) and walks round
-  them in time: it waits a moment, or takes another spot, rather than meet one. When the way is shut by a move
-  still walking it (a one-wide corridor someone is coming down), it waits at its start until that one is through,
-  up to 8 s in all (it waits again when that one runs late or another comes), then goes; still in the way, it walks
-  as far as it can and says "Another move is still in the way" (or that it stays where it is).
-  With another player online a drop sets off one network round trip after you let go (it checks nobody reserved
-  the same space first); if two drops cross at the same instant, the second the server saw plans again round the
-  first. Hidden tokens are never announced to players. `status().group.reservations`.
-- **A hidden token the GM drags steps out of the players' way (0.6.2).** The players' drops cannot see it, so they
-  plan through where it stands; when the GM's drop has to wait (a start delay, or a queue) where one of their walks
-  will pass, it first steps to the nearest free spot off every walk, then goes on to where it was dropped. Out of
-  combat only; its way on goes round the tokens standing in it (0.6.3); a hidden token nobody is moving stays where it is. `status().group.reservations.aside`.
-- **Nothing walks into anything while it moves (0.7.0, the runtime yield guard).** A safety net under the plans: each
-  client watches the moves it started, a moment ahead, and when one is about to come inside another token it gives
-  way. Everyone gives way to a token standing still; of two moving, the one whose move the server saw later gives
-  way (within a group, its plan's order), so two clients never both give way for one meeting, and a hidden token
-  gives way to a player's. Out of combat it stops where it is (stepping back off the other's way when it would stand
-  in it) and walks on once its way is clear; in a fight it waits on the whole square it is walking to (its next
-  square is held back, nothing is displaced), before a door rather than in it, and pays only for the squares it walks. 3 s after it
-  first waited it looks for a way round once (not one far longer than the way it had, 0.7.1); at 8 s it stays where
-  it is (the nearest free spot, never on a door's line) and says so quietly. A step aside never goes through a
-  doorway or onto another token, and a token another user moves meanwhile (a player stopping their own member of
-  the GM's group) is theirs: the guard lets go of it (0.7.1). A door shut or a wall raised since a move set off cuts
-  that move before it as it nears it (0.7.5, the wall watch), and a mover about to come to rest in another's way
-  counts as standing there from then on (0.7.5). Each time it fires is logged in the console and in
-  `status().guard`: it means a plan missed something.
-- **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
-  click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never
-  across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so
-  dnd5e's spent movement stays exact; a GM may stop anyone's move. A click on one member of a group stops the
-  whole group (0.4.9); when you do not own every member (a player's token in the GM's group), only your own
-  members stop, out of any one-wide corridor or doorway when there is room within 3 squares (0.4.10), and the
-  GM's client walks the rest round them. In a fight, two that finish their squares on one square are set apart
-  once at rest (0.4.10), and one a stop leaves in a one-wide corridor walks on along its way to the first free
-  square out of it: a walk, counted, never a jump back (0.5.1). A whole group stopped at once keeps out of a one-wide corridor too, and a stopped token is
-  never drawn anywhere but where it stopped while its stop reaches the server (0.4.11). `status().stop.last` says
-  what the last stop was and what asked for it (`via`: click, board, door, api).
+- **Tier A — one token** (`pathfinding`): past a wall the ruler goes around it — the shortest way, through open
+  doors only, round tokens standing in the way and costlier terrain, a big token only where it fits; corners rounded
+  where an arc costs nothing extra (always, 0.8.0). Players route only round walls they have seen, over ground they
+  have explored or can see; never a secret door, never through a teleport / change-level region unless it ends there.
+  What the ruler shows is what the drop walks and charges. No way there: nothing moves, "No route there".
+- **Click a moving token to stop it** (always on, 0.8.0) once it has moved 400 ms: out of combat it stops **exactly
+  where it is drawn** (Joe, 2026-11-23); one whose body is across a door's line is carried just past the line along
+  its own route. In a fight it finishes the square it is in, so the movement spent stays exact; a GM may stop anyone's
+  move. A click on one member of a group stops the whole group, or only the clicker's own members when it does not own
+  them all; the others stop short behind them.
+- **Tier B — several tokens out of combat** (`groupDrags`): each walks its own way to its own spot by the drop point,
+  setting off together on open ground and in turn at a door, filing through, never resting on another, never through
+  a token standing in the way (it stops short: "Stopped short, way blocked"). Two people dragging at once read each
+  other's reserved moves in the server's order and the later one yields; a publish-first round trip runs only when
+  another user is viewing the same scene (0.8.0: never for the canvas-less headless GM). A runtime guard watches each
+  move a moment ahead and has the later mover give way. A tab sent to the background sends its group's later waves
+  at once, each cut where it would meet another (0.8.0: nobody waits for an alt-tabbed player).
+- **Tier C — several tokens in a fight** (`fightGroupDrags`, **off by default** until it passes): by space, not time.
+  Members whose swept corridors never meet set off together; every other member sets off on the **arrival** of the one
+  before it whose corridor meets its own. A door shutting on a fight's group move stops everyone on the square they
+  hold (a square already committed past the door got through). Off, a fight's group drag is core's move with each
+  member's path cut before the first token standing in it, every square a checkpoint, still one group for a click.
+- **Tokens that start stacked stay stacked** (0.8.0): a rider on its mount, a familiar on a shoulder, a grappled pair
+  walk their leader's way at their offset, in its wave; nothing at rest is ever moved off anything afterwards.
+- **One clock per move** (0.8.0): every wait (queue, start delay, a guard's yield, a fight member waiting for an
+  arrival) ends by the move's one 10 s deadline; then it stays where it is, "Stopped short, way blocked". A queued or
+  yielding token wears an amber dashed ring on the screen of whoever moved it, so nobody drags it again.
+- **Two notices only**: "No route there." and "Stopped short, way blocked." The reason behind each is in the
+  telemetry (`telemetry()`), not on screen.
+- **Fail-open and the circuit breaker** (0.8.0): an exception inside a move sends core's own move (cut before standing
+  tokens) and is logged. After 3 errors or 6 failed plans in a session the drag help switches itself off on that
+  screen; on the GM's screen it also turns `assist` off for the table, and the GM is told either way.
+- **"That move was wrong"** (Alt+W, rebindable): files the last ten seconds of this screen's drag telemetry as a Bug
+  through pentaryn-feedback.
 - **The GM's drag-help button** (Token controls, the route icon, next to the ghost button): one click turns
-  pathfinding and group movement off for the whole table, so every drag is plain Foundry dragging; click again
-  to turn them back on (world setting `assist`, 0.4.9). Players: if the GM has it off, a drag goes straight
-  and stops at the first wall, as Foundry's own does.
-- **A door shut or a wall raised across a move** (0.4.6) stops each token walking toward it on its own free
-  whole square before it, the nearest one first; out of combat it stops at once where it is drawn (0.4.7) and walks on to that square from where it is
-  drawn, in a fight it finishes its square and walks on, costed. `status().group.cut`.
+  pathfinding and group drags off for the whole table, so every drag is plain Foundry dragging; click again to turn
+  them back on (world setting `assist`, 0.4.9; turning it back on also clears a tripped breaker). Click to stop keeps
+  working.
 - **Out of combat** movement is free-form and smooth; **in combat** it stays on the grid (no arcs, a
   checkpoint at every square) so the cost is exact. Ghost and the GM's *Unconstrained Movement* tool
   go in straight lines, the group keeping its shape. Not for arrow keys, gridless or hex scenes.
@@ -149,12 +113,15 @@ mover's own client. Verified on core 14.370 / dnd5e 6.1.1.
 | `ghostPolicyLast` | world, hidden | `exploration` | the mode the GM button restores |
 | `ghost` | client, hidden | `false` | this player's button |
 | `ownedOnTop` | client | `true` | owned tokens on top — `game.settings.get("pentaryn-movement", "ownedOnTop")` |
-| `pathfinding` | world | `everyone` | drag pathfinding: Everyone / GM only / Off (read live on every drag) |
-| `pathfindMine` | client | `true` | this client's drags find a path |
-| `smoothCorners` | client | `true` | round a found path's corners into arcs |
-| `groupMovement` | world | `true` | a group drag plans each member's route, spot and start (0.4.0) |
-| `assist` | world | `true` | the table's drag help; off = plain Foundry dragging for everyone (pathfinding reads off, group movement false); the GM's toolbar button flips it (0.4.9) |
-| `clickToStop` | client | `true` | a click on a moving token stops it (0.4.0) |
+| `pathfinding` | world | `everyone` | tier A, drag pathfinding: Everyone / GM only / Off (read live on every drag) |
+| `pathfindMine` | client | `true` | this client's drags find a path (corners always rounded where free, 0.8.0) |
+| `groupDrags` | world | `true` | tier B, group drags out of combat (0.8.0; was `groupMovement`, migrated once) |
+| `fightGroupDrags` | world | `false` | tier C, group drags in a fight by space (0.8.0); off = core's move with hard-obstacle cuts |
+| `assist` | world | `true` | the table's drag help; off = plain Foundry dragging for everyone (pathfinding reads off, both tiers false); the GM's toolbar button flips it (0.4.9); the circuit breaker turns it off (0.8.0) |
+
+Keybinding: `wrongMove` (Alt+W) files "that move was wrong" (0.8.0). Retired in 0.8.0: `smoothCorners` and
+`clickToStop` (folded in, always on; dropped from each browser's storage at ready) and `groupMovement` (its value moved
+to `groupDrags` by the active GM, then deleted); `status().migrated` says what was carried over.
 
 `status().settings` lists the same keys with their scopes. Client settings live in the browser's
 storage, shared by its tabs: flipping ghost or owned-on-top in one tab redraws the others.
@@ -163,7 +130,7 @@ storage, shared by its tabs: flipping ghost or owned-on-top in one tab redraws t
 
 Canonical: `game.modules.get("pentaryn-movement").api`; `game.pentaryn.movement` is the same
 frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offline:
-`test/golden/describe.json`). Every row except `inspect`, `pathfind.status`, `pathfind.route`, `planGroup`, `stop` and `selftest` is `legacy` (today's signatures).
+`test/golden/describe.json`). Every row except `inspect`, `pathfind.status`, `pathfind.route`, `planGroup`, `stop`, `telemetry`, `reportTelemetry`, `fileWrongMove` and `selftest` is `legacy` (today's signatures).
 
 | Method | GM | Writes | Returns |
 |---|---|---|---|
@@ -179,6 +146,9 @@ frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offli
 | `pathfind.route(ref, { to, preview?, smooth? })` | — | — | dry run: the path a drag of that token to `to` (top-left pixels) would get, with its cost in feet; needs a browser tab showing the scene (the headless GM has no canvas) |
 | `planGroup(refs, point)` | — | — | dry run of a group drop (the first ref is the grabbed one, `point` its top-left drop point): each member's slot, start delay, level (0 delay · 1 re-plan or another spot · 2 go last · `short` no route round the tokens in its way, as far as it is free · `cut` stopped short so nothing meets it · `stay` does not move; 0.5.0: there is no `relaxed` or `core` member any more), `short`, and `anchorRoute` (`reached`, `ms`, `waypoints`: the grabbed token's route, searched first with the pathfinder's full budget, as its drag preview is); needs a browser tab |
 | `stop(ref)` | — | token position / its pending move | stop a moving token as a click would (no 400 ms arming); in combat a player's stop of a move the GM started goes to the active GM through the relay query `pentaryn-movement.stop`, a GM's goes to whoever started it (`pentaryn-movement.stopOwn`) |
+| `telemetry(opts?)` | — | — | this client's drag telemetry (0.8.0): `summary` (counts per kind; plan time median / p95 / max; fallbacks and notices by reason code; fires per plan; the breaker's tallies), `tripped`, `cued` (tokens wearing the waiting ring), `events` (the ring buffer, or the last `opts.seconds`), `filed` |
+| `reportTelemetry()` | — | a whisper | whispers this client's summary to the logged-in GMs (after a session); `NO_GM` with none |
+| `fileWrongMove()` | — | a feedback report | what Alt+W does: the last ten seconds, filed as a Bug through pentaryn-feedback; `NO_FEEDBACK` without it |
 | `selftest()` | — | — | `{ ok, checks }` |
 
 Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`, `uninstall()`.
@@ -275,20 +245,21 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
   `{ drag: true, keyboard: true }` and run the three adjustments rows' check.
 - Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag disabled`).
 - The GM never ghosts through this module (core's own tool is the GM's).
-- Group waves run on the dropping client (closing it mid-move strands unsent members); Ctrl+Z undoes one wave. A
-  reloaded page sends what it had left only when it is back within 1.5 s of the first unsent wave; later than that
-  those members stay where they are and the dragger is told (0.7.1: every other client has stopped expecting them).
-- In a fight, a door shut on a member whose square under way (or next square, already sent) lies past it puts that
-  member back on its square before the door: the square is undone as core's own undo does, so it never rests past
-  the shut door and pays only for the squares it walked (0.7.1, `status().group.cut.undone`).
-- A drop that waits for, or queues behind, another reserved move shows nothing until it sets off (up to 8 s): that
-  is the yield, not a hang. `status().group.last.queued` / `.delay` / `.raced` say which.
+- Group waves run on the dropping client; a tab going to the background sends them at once (0.8.0), closing it
+  mid-move strands unsent members; Ctrl+Z undoes one wave. A reloaded page sends what it had left only when it is
+  back within 1.5 s of the first unsent wave; later than that those members stay where they are ("Stopped short").
+- In a fight a door shutting on a group move stops everyone of it on the square they hold (0.8.0): nothing is undone
+  and nothing walks on, so a token whose next square was already committed past the door got through. A fight's
+  group drag with tier C off is core's move (members walk at once, each cut before the first standing token): two
+  members may brush while moving; tier C's arrival order is what keeps them apart.
+- A drop that waits for, or queues behind, another reserved move wears the amber ring until it sets off, at most until
+  its move's 10 s deadline: that is the yield, not a hang. `status().group.last.queued` / `.delay` / `.raced`.
 - The guard firing (`status().guard.fired`, a console line `yield guard: … gives way to …`) is a planner miss, not
-  the design working: note the case. Out of combat its pause is a stop where the token is drawn (an unanimated
-  write, like a click-stop) and its walk on a new move; in a fight it pauses core's movement (`pauseMovement`, which
-  core relays to every client as the `"paused"` state) and resumes the same movement, so nothing is displaced and
-  dnd5e charges the squares walked. A fight's first square is the drop's own, sent with the move: the guard can hold
-  only the squares after it.
+  the design working: note the case. It runs out of combat only (0.8.0): its pause is a stop where the token is
+  drawn (an unanimated write, like a click-stop) and its walk on a new move.
+- Priority is honour-system: any client can set `pentarynMovementKeep` or `pentarynMovementGuard` on its own moves
+  and keep its place in the server's order. Fine at a home table; a hostile client could jump the queue.
+- The circuit breaker trips per session: a reload, or the GM turning `assist` back on, clears it.
 - The incorporeal test is by **feat name** (`INCORPOREAL_FEATS`); a differently named trait needs the GM toggle.
 - Errors in the per-frame hooks (`refreshToken`, `renderSceneControls`) warn once per session.
 
@@ -298,7 +269,7 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 |---|---|
 | `movement.mjs` | entry: wiring only (lifecycle, publish) |
 | `movement-core.mjs` | pure rules, constants, label key maps |
-| `settings.mjs` | the `SETTINGS` table |
+| `settings.mjs` | the `SETTINGS` and `KEYBINDINGS` tables, the assist switch and the breaker's trip, the 0.8.0 migration |
 | `combat-adapter.mjs` | combats and scenes → plain core inputs |
 | `ghost.mjs` | the feature: patches, sort, toolbar, refresh, the incorporeal exception on the player's side |
 | `ghost-combat.mjs` | the GM's ghost-in-combat flag: Token HUD toggle, `setGhost(creature, { combat })`, `inspect` |
@@ -307,7 +278,11 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
 | `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, decision tables; slots, routes, delays |
 | `reserve-core.mjs`, `reserve-adapter.mjs` | pure: the reservation wire, registry, race, delay, queue and cut; the registry each client keeps and its reads (0.6.0) |
-| `guard-core.mjs`, `guard.mjs` | pure: who yields to whom, the look ahead, a resume's whole-way check, backing out, a fight's horizon, the yield's 3 s / 8 s clock, the bucket grid; the feature: the runtime yield guard on the canvas ticker (0.7.0) |
+| `guard-core.mjs`, `guard.mjs` | pure: who yields to whom, the look ahead, a resume's whole-way check, backing out, the yield's clock (3 s re-route, rest at 8 s or the move's deadline), the bucket grid; the feature: the runtime yield guard on the canvas ticker, out of combat (0.7.0; 0.8.0) |
+| `lifecycle-core.mjs` | pure: one state machine per move, one 10 s deadline (0.8.0) |
+| `sequence-core.mjs` | pure: a fight's group move by space (corridors, arrival order, cuts) and tokens that start stacked (0.8.0) |
+| `telemetry-core.mjs`, `telemetry.mjs` | pure: the ring buffer, its summary and report text, the breaker's rule; the feature: telemetry, the circuit breaker, the Alt+W key (0.8.0) |
+| `cue-ui.mjs` | the amber waiting ring on a held token (0.8.0) |
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and gap tests (reads only) |
 | `group.mjs`, `stop.mjs` | the features: the drop wrap and its waves; the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
@@ -327,7 +302,11 @@ meets an earlier one, a single drag waits or is cut, and everything rests in bou
 `guard-props.test` and `guard.test` (the runtime guard: its rules; seeded scenarios out of combat and in a fight where
 movers cross each other and walk through standing tokens, sampled every 5 ms: nobody comes inside touching by more
 than 0.1 square, nobody gives way to a later mover, everything rests in bounded time, a fight rests on whole squares
-and pays the squares walked; and the glue against a synthetic board). Fixtures are
+and pays the squares walked; and the glue against a synthetic board); `lifecycle-core.test` (the state machine and
+the composed clocks bounded by 10 s), `sequence-core.test` (tier C: corridors, arrival order, cuts, stacks, and 500
+seeded fights where sequenced walks with random arrival latency never meet), `telemetry-core.test` and `telemetry.test`
+(the ring, the breaker, Alt+W, racers, the settings migration), `regressions.test` (every round ID a comment cites
+names a test). Fixtures are
 synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.
 
 **Verify live (as a player):**

@@ -12,7 +12,7 @@
 //   - in a fight every mover rests on a whole square, and the squares it pays for are the squares it walked.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GUARD, cellHorizon, comparePriority, conflictAhead, lengthOf, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "../guard-core.mjs";
+import { GUARD, comparePriority, conflictAhead, lengthOf, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "../guard-core.mjs";
 
 function rng(seed) {
   let a = seed >>> 0;
@@ -136,17 +136,9 @@ function scenario(seed, { combat = false, trace = null } = {}) {
   };
   const circlesStanding = me => [...agents.filter(o => o !== me && standingNow(o)).map(o => ({ id: o.id, x: o.pos.x, y: o.pos.y, r: o.r })), ...standing];
   const wayAhead = a => (combat ? (a.seg ? [a.pos, ...a.left.slice(1)] : a.left) : a.left);
-  const horizon = a => {
-    if (!combat) return GUARD.horizonMs;
-    const segLeft = a.seg ? d(a.pos, a.seg.to) : 0;
-    const from = a.seg ? a.seg.to : a.pos;
-    const rest = a.seg ? a.left.slice(2) : a.left.slice(1);
-    const next = [];
-    let prev = from;
-    for (const p of rest.slice(0, 2)) { next.push(d(prev, p)); prev = p; }
-    const door = rest[0] ? doorways.has(`${Math.floor(rest[0].x)},${Math.floor(rest[0].y)}`) : false;
-    return cellHorizon(a.speed, segLeft, next, { doorway: door });
-  };
+  // 0.8.0: a fight is never guarded; out of combat the look ahead is fixed.
+  const horizon = () => GUARD.horizonMs;
+
   const guard = t => {
     let again = true;
     for (let round = 0; again && round < 6; round++) {
@@ -291,10 +283,3 @@ for (const combat of [false, true]) {
   });
 }
 
-test(`in a fight every mover rests on a whole square and pays for exactly the squares it walked (${SEEDS} seeds)`, () => {
-  for (let seed = 1; seed <= SEEDS; seed++) {
-    const r = scenario(seed * 7919, { combat: true });
-    assert.equal(r.offCell, 0, `seed ${seed}`);
-    assert.equal(r.costOff, 0, `seed ${seed}`);
-  }
-});

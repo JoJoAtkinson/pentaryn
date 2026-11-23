@@ -25,6 +25,12 @@ import { MODULE } from "./movement-core.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { fitPath } from "./group-adapter.mjs";
+
+/**
+ * Corners are always rounded where an arc costs nothing (0.8.0 folded the smoothCorners setting in); only
+ * `CONFIG.debug["pentaryn-movement.arcs"] = false` turns the arcs off, for tests and for a straight-line check.
+ */
+const arcsOn = () => globalThis.CONFIG?.debug?.[`${MODULE}.arcs`] !== false;
 import { wrapMethod } from "./lib/patch.mjs";
 
 let log = null;
@@ -303,7 +309,7 @@ function pathfindJob(token, waypoints, options, wrapped, base) {
   const force = reached >= waypoints.length;
   if (force && !squeezed && !crosses && !entersTrap(token, waypoints, base.result, options)) return null;
 
-  const smooth = !!setting("smoothCorners") && !inCombat(token);
+  const smooth = arcsOn() && !inCombat(token);
   const plan = planner(token, waypoints, options, force || crosses ? 0 : reached - 1, wrapped, base, smooth,
     { avoid: crosses ? avoid : null, force: force || crosses, accept: big ? fitsWhole(token) : null });
   if (plan.step(LIMITS.sliceMs) === "done") return doneJob(big ? fitted(token, plan.result(), options) : plan.result());
@@ -372,7 +378,7 @@ function status() {
   return {
     mode: setting("pathfinding"),
     mine: !!setting("pathfindMine"),
-    smoothCorners: !!setting("smoothCorners"),
+    smoothCorners: arcsOn(),
     patched: findPatched,
     gridType: canvas?.grid?.type ?? null,
     memo: memo.size,
@@ -462,7 +468,7 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
   const squeezed = !constrainOptions?.ignoreWalls && fitPath(token, base.result).cut;
   let path = base.result, legs = [], arcs = 0, partial = null, unfinished = false;
   if (reached === 1 || crosses || risky || squeezed) {
-    const smoothing = (smooth ?? !!setting("smoothCorners")) && !inCombat(token);
+    const smoothing = (smooth ?? arcsOn()) && !inCombat(token);
     const big = !constrainOptions?.ignoreWalls && ((w > 1) || (h > 1));
     const plan = planner(token, ends, options, 0, call, base, smoothing, { avoid, force: !!(crosses || risky || squeezed), accept: big ? fitsWhole(token) : null });
     while (plan.step(LIMITS.sliceMs) === "more") {
@@ -531,7 +537,7 @@ function onSetting() {
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  for (const key of ["pathfinding", "pathfindMine", "smoothCorners"]) ctx.onSettingChange(key, onSetting);
+  for (const key of ["pathfinding", "pathfindMine"]) ctx.onSettingChange(key, onSetting);
   if (ctx.late) findPatched = patchFind();
   else reg.once("setup", () => { findPatched = patchFind(); }, { guard: false, label: "setup: wrap findMovementPath" });
   for (const h of DROP_HOOKS) reg.on(h, dropMemo, { label: `${h}: drop path cache` });
@@ -556,6 +562,6 @@ export function uninstall() {
   unwatchFog();
   dropMemo();
   last = null;
-  if (feature) for (const key of ["pathfinding", "pathfindMine", "smoothCorners"]) feature.onSettingChange(key, null);
+  if (feature) for (const key of ["pathfinding", "pathfindMine"]) feature.onSettingChange(key, null);
   feature = null;
 }

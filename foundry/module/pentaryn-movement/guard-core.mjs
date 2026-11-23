@@ -12,7 +12,8 @@
  *   conflictAhead(me, others)    the first sampled time, within the horizon, that a walk meets one it yields to
  *   standingOnRoute(points, …)   does the rest of a walk pass through a token standing in it (not resumed then)
  *   asideSpot(me, threat, …)     the nearest spot off a higher mover's way (the lower one backs out of it)
- *   stepYield(y, …)              the yield's clock: wait, re-route once at 3 s, rest at 8 s (nothing waits forever)
+ *   stepYield(y, …)              the yield's clock: wait, re-route once at 3 s, rest at 8 s or the move's deadline
+ *                                (y.restAt, 0.8.0), whichever first (nothing waits forever)
  *   hashOf / nearby              a bucket grid, so a check costs O(tokens nearby)
  *
  * Units as motion-core.mjs: centres in grid squares, ms, squares per second.
@@ -30,7 +31,6 @@ export const GUARD = Object.freeze({
   minHoldMs: 250,       // a yield holds at least this long (no flicker)
   rerouteMs: 3000,      // from the first yield: re-route once
   restMs: 8000,         // from the first yield: rest on the nearest free spot, with a quiet notice
-  cellSlackMs: 150,     // a fight: past the next square's walk, this much more is looked at
   asideReach: 1.5,      // squares: how far a lower mover backs out of a higher one's way at most
   asideGap: 0.1,        // squares kept between the spot it backs out to and the higher one's way
   bucket: 2,            // squares per bucket of the nearby grid
@@ -221,17 +221,6 @@ export function asideSpot(me, threat, standing, { ok = () => true, gap = GUARD.a
   return null;
 }
 
-/**
- * How far ahead a fight's mover is looked at (ms): the rest of the square it is in, then the next square (two when
- * the next is a doorway: a member must not stop in it, so it waits before the door unless both are clear), plus
- * GUARD.cellSlackMs. `segmentLeft` squares to the end of this square, `next` the lengths of the squares after it.
- */
-export function cellHorizon(speed, segmentLeft, next = [], { doorway = false } = {}) {
-  const v = speed > 0 ? speed : 6;
-  const ahead = next.slice(0, doorway ? 2 : 1).reduce((a, b) => a + b, 0);
-  return ((segmentLeft + ahead) / v) * 1000 + GUARD.cellSlackMs;
-}
-
 /* -------------------------------------------- */
 /*  The yield's clock                           */
 /* -------------------------------------------- */
@@ -249,18 +238,20 @@ export function newYield() {
  */
 export function stepYield(y, { now, conflict = false, clear = false }) {
   if (y.phase === "done") return null;
+  // GUARD.restMs from the first yield, or the move's own deadline (y.restAt, lifecycle-core: 0.8.0), whichever first.
+  const restDue = () => now - y.firstAt >= GUARD.restMs || (Number.isFinite(y.restAt) && now >= y.restAt);
   if (y.phase === "walk") {
     if (!conflict) return null;
     y.firings += 1;
     if (y.firstAt === null) y.firstAt = now;
-    if (now - y.firstAt >= GUARD.restMs) { y.phase = "done"; return "rest"; }
+    if (restDue()) { y.phase = "done"; return "rest"; }
     y.phase = "held";
     y.since = now;
     y.clearSince = null;
     return "pause";
   }
   // held
-  if (now - y.firstAt >= GUARD.restMs) { y.phase = "done"; return "rest"; }
+  if (restDue()) { y.phase = "done"; return "rest"; }
   if (clear) {
     if (y.clearSince === null) y.clearSince = now;
     if (now - y.clearSince >= GUARD.clearMs && now - y.since >= GUARD.minHoldMs) {

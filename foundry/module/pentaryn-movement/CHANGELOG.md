@@ -1,5 +1,62 @@
 # Changelog — pentaryn-movement
 
+## 0.8.0 — 2026-11-23
+
+The tiered redesign after Fable's xhigh review of 0.7.4 (plan `context/plans/pathfinding-2026-11.md` §16; Joe's
+decisions of 2026-11-23). Not yet through its acceptance rounds: tier C ships off.
+
+- **[declared] Tiers, each with its own switch.** A: single-token pathfinding, the ruler, a single click-stop
+  (`pathfinding`). B: out-of-combat group drags (`groupDrags`, was `groupMovement`). C: fight group drags
+  (`fightGroupDrags`, **off by default**). Tier C off: a fight's group drop is core's move with each member's path cut
+  before the first token standing in it, every square a checkpoint, held as one group (a click, a turn change or a door
+  cut stops them all; `status().group.last.reason` `fightTier`).
+- **[declared] A fight's group move by space (tier C).** Members whose swept corridors never meet set off together;
+  every other member sets off on the ARRIVAL of each member before it whose corridor meets its own (core's
+  `movement.finished`, then the movement animation), in the order that never walks one through another standing at
+  its start or into another resting at its end; with no safe order it stops short. A member still waiting at the
+  deadline stays. `sequence-core.mjs`; seeded: 500 fights with random arrival latency, no two members ever meet.
+- **[declared] A fight's door cut stops everyone of that group move on the square they hold** (Joe, 2026-11-23): a
+  square committed past the door got through. **Deleted:** the undo write (`isUndo`, `undoAcross`, `undoIndex`,
+  `undoSquare`), the walk on after a cut (`walkOnAfterStop`), the first-square gate (`guardFirstClear`, S3R3-03/04),
+  the re-cut timers (250 / 600 ms, FR1-05), the fight pause guard (`pauseMovement`, `cellHorizon`).
+- **[declared] Out of combat a click-stop stops exactly where the token is drawn** (Joe, 2026-11-23: no snap); a token
+  across a door's line is carried just past it along its own route (`status().stop.last.pastDoor`). Followers whose
+  way passes through it stop short behind it. **Deleted:** `walkOut` and its searches, `walkOnTest`, `following`,
+  `nearFirst`, `roomyFor`, the whole-square snap; the rest de-stack (`destack`, `forwardExit`, `gapExit`,
+  `settleGroup`, `groupSettle`) and the "too long" remnants (`retryShort`, `restShortOf`, `tooLong` in
+  `roundStopped` / `groupStopOne`; the guard's re-route now takes a way only when it fits the move's deadline).
+- **[declared] Tokens that start stacked stay stacked:** a rider on its mount, a familiar on a shoulder, a grappled
+  pair (circles overlapping by more than a quarter square) walk their leader's way at their offset, in its wave, in a
+  plan, in core's move and in tier C; the guard never parts them (`status().group.last.stacked`).
+- **[declared] One state machine per move, one 10 s deadline** (`lifecycle-core.mjs`): the queue, a single drag's
+  start delay and queue, a wave held for a foreign walker, a fight member waiting for an arrival and the guard's rest
+  all end by it (`status().group.runs`). What clocks remain, and why, is in plan §16.4.
+- **[declared] Hidden-tab commit:** when the page goes to the background every group this client holds sends what it
+  has left at once, each walk cut where it would meet another (`status().group.flushed`).
+- **[declared] `racers()` counts only another active user viewing the drop's scene:** the canvas-less headless GM and
+  users on another map no longer cost every drop a publish round trip (`status().group.reservations.alone` /
+  `racing`; lost races go to telemetry).
+- **[declared] Settings consolidated:** world `pathfinding`, client `pathfindMine`, world `groupDrags`,
+  `fightGroupDrags`, `assist`. `smoothCorners` and `clickToStop` are folded in (always on); at ready the active GM
+  moves a stored `groupMovement` to `groupDrags` and deletes it, and every client drops the folded rows from its
+  storage (`status().migrated`).
+- **[declared] Two notices only:** "No route there." and "Stopped short, way blocked." (was seven: no route for a
+  group, too narrow, yielded, yielded and stays, guard rest, waves dropped). The reason codes go to telemetry; the
+  GM still gets a whisper naming a big token stopped before a gap a player dragged it to.
+- **[declared] A waiting cue:** a token this client holds back (queued, a start delay, waiting for an arrival, a guard
+  yield) wears an amber dashed ring on this client.
+- **[declared] Fail-open and a circuit breaker.** A throw while a plan is delivered sends core's move after all
+  (`safeDeliver` / `failOpen`; `CONFIG.debug["pentaryn-movement.throwDeliver"]`). After 3 errors or 6 failed plans in
+  a session the drag help switches itself off on that client; the active GM's client also turns `assist` off, and the
+  GM is told. `assist` back on clears it (`status().assist.tripped`).
+- **[declared] Telemetry:** a per-client ring buffer (plans and their time, guard fires, yields, fallbacks, frame
+  stalls while moving, lost races, stops, cuts, notices, errors). New API rows `telemetry()`, `reportTelemetry()`
+  (a whisper to the GMs) and `fileWrongMove()`, the **Alt+W** key: "that move was wrong" files the last ten seconds as
+  a Bug through pentaryn-feedback.
+- **Docs:** `context/foundry/movement.md` rewritten for 0.8 (its stale "within a minute" for a reload's waves is 1.5
+  s); plan frontmatter, §13 and §14.2 amended, §16 added. `test/regressions.test.mjs`: every round ID a source comment
+  cites names a test (16 still PENDING). Corner arcs off for a test: `CONFIG.debug["pentaryn-movement.arcs"] = false`.
+
 ## 0.7.5 — 2026-11-23
 
 Final acceptance round 2 (FR2a / FR2b; plan `context/plans/pathfinding-2026-11.md` §15.13). Fixes only.

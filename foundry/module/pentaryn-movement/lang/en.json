@@ -47,12 +47,7 @@
         "exempt": "Your incorporeal creature may move through walls during the fight. Click the ghost button under the Ruler to use it."
       },
       "noRoute": "No route there.",
-      "noRouteGroup": "No route there: the group stays where it is.",
-      "tooNarrow": "{name} does not fit through there: it stops before the gap.",
-      "yielded": "Another move is still in the way: it stops short.",
-      "yieldedStay": "Another move is still in the way: it stays where it is.",
-      "guardRest": "{name} waited too long for the way to clear: it stops here.",
-      "wavesDropped": "The page reloaded before the last of your group set off: {n} of them stay where they are."
+      "stoppedShort": "Stopped short, way blocked."
     },
     "settings": {
       "policy": {
@@ -76,36 +71,46 @@
       },
       "pathfinding": {
         "name": "Drag pathfinding",
-        "hint": "When a dragged token would stop at a wall, find the shortest way around it (through open doors, never closed ones) and show that path in the ruler. Players only route around walls they have seen. Ghost movement and the GM's unconstrained tool still move in a straight line.",
+        "hint": "When a dragged token would stop at a wall or walk into another token, find the shortest way around (through open doors, never closed ones) and show that path in the ruler; clicking a moving token stops it. Players only route around walls they have seen. Ghost movement and the GM's unconstrained tool still move in a straight line.",
         "everyone": "Everyone",
         "gm": "GM only",
         "off": "Off"
       },
       "pathfindMine": {
         "name": "Find a path when I drag",
-        "hint": "Your drags go around walls when the GM allows drag pathfinding. Only on your screen."
-      },
-      "smoothCorners": {
-        "name": "Round path corners",
-        "hint": "A found path bends in an arc instead of a sharp corner, where the arc stays clear of walls and costs no extra movement. Only on your screen."
-      },
-      "groupMovement": {
-        "name": "Group movement",
-        "hint": "When several tokens are dragged together, each walks its own way to its own spot around the drop point, setting off in turn so they file through doors and never overlap. Ghost movement and the GM's unconstrained tool move them in straight lines."
-      },
-      "clickToStop": {
-        "name": "Click a moving token to stop it",
-        "hint": "Clicking one of your tokens while it is moving stops it where it is, then selects it. In a fight it stops at the next square, so the movement spent stays exact. Only on your screen."
+        "hint": "Your drags go around walls and tokens when the GM allows drag pathfinding, with rounded corners where they cost nothing. Only on your screen."
       },
       "assist": {
         "name": "Drag help for the table",
-        "hint": "Off: every drag is plain Foundry dragging (no path round walls, no group plan). The GM's toolbar button (route icon, Token controls) flips it in one click."
+        "hint": "Off: every drag is plain Foundry dragging (no path round walls, no group plan). The GM's toolbar button (route icon, Token controls) flips it in one click. It also switches itself off after repeated failures, and tells the GM."
+      },
+      "groupDrags": {
+        "name": "Group drags out of combat",
+        "hint": "When several tokens are dragged together outside a fight, each walks its own way to its own spot around the drop point, filing through doors without overlapping. Off: they move as Foundry moves them, stopping before any token in the way."
+      },
+      "fightGroupDrags": {
+        "name": "Group drags in a fight (tier C, testing)",
+        "hint": "When several tokens are dragged together during a fight, moves whose ways do not meet go together and the others set off as the one before them arrives. Off (the default while it is tested): they move as Foundry moves them, stopping before any token in the way, each charged the squares it walks."
       }
     },
     "assist": {
       "on": "Drag help on: paths round walls, groups walk together",
       "off": "Drag help off: plain Foundry dragging for everyone",
-      "clip": "One click turns pathfinding and group movement off for the whole table, and back on. Click to stop still works."
+      "clip": "One click turns pathfinding and group drags off for the whole table, and back on. Click to stop still works."
+    },
+    "breaker": {
+      "gm": "Drag help switched itself off after repeated failures ({why}). Plain Foundry dragging until you turn it back on (route icon, Token controls).",
+      "player": "Drag help switched itself off on {user}'s screen after repeated failures ({why}). It is back after their page reloads."
+    },
+    "telemetry": {
+      "report": "Movement report from {user}",
+      "filed": "Thanks: that move was filed for the GM.",
+      "noFeedback": "The bug report module (Pentaryn Feedback) is not on: nothing was filed.",
+      "wrongMove": {
+        "name": "That move was wrong",
+        "hint": "Files the last ten seconds of drag movement as a bug report for the GM (Pentaryn Feedback)."
+      },
+      "text": "That move was wrong (movement hotkey). The last ten seconds of drag movement on this screen:"
     }
   }
 }

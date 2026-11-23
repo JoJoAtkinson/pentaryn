@@ -8,7 +8,7 @@
 import * as core from "./movement-core.mjs";
 import { HOOKS, MODULE, NS } from "./movement-core.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
-import { SETTINGS, policyWrite, settingsSnapshot, unreadableSettings } from "./settings.mjs";
+import { SETTINGS, assistTripped, policyWrite, settingsMigrated, settingsSnapshot, unreadableSettings } from "./settings.mjs";
 import { pinInputs, sceneOf } from "./combat-adapter.mjs";
 import { buildApi, toPlain } from "./lib/api.mjs";
 import { patches } from "./lib/patch.mjs";
@@ -66,7 +66,8 @@ const isCreatureRef = on => typeof on === "string" || (on !== null && typeof on 
 export function buildApiFor(ctx) {
   const x = ctx.exposed;
   return buildApi(MANIFEST, {
-    status: opts => ({ ...x.status(opts), group: x.groupStatus(), stop: { last: x.stopLast?.() ?? null, firstFrames: x.stopFirstFrames?.() ?? 0 }, guard: x.guardStatus?.() ?? null }),
+    status: opts => ({ ...x.status(opts), group: x.groupStatus(), stop: { last: x.stopLast?.() ?? null, firstFrames: x.stopFirstFrames?.() ?? 0 }, guard: x.guardStatus?.() ?? null,
+      assist: { tripped: assistTripped() }, migrated: settingsMigrated() }),
     ghostFor: token => x.ghostFor(token),
     combatActive: sceneId => x.combatActive(sceneId),
     setGhost: (on, opts) => (isCreatureRef(on) ? x.setGhostInCombat(on, opts) : x.setGhost(on)),
@@ -79,6 +80,9 @@ export function buildApiFor(ctx) {
     planGroup: (refs, point) => toPlain(x.groupDryRun(refs, point)),
     // `ref` is resolved by the kit (a TokenDocument); through the relay the kit passes core's query context last.
     stop: (doc, opts, qctx) => x.stop(doc, opts, qctx),
+    telemetry: opts => x.telemetry(opts),
+    reportTelemetry: () => x.reportTelemetry(),
+    fileWrongMove: () => x.fileWrongMove(),
     selftest: () => selftest(ctx),
     core,
   }, {

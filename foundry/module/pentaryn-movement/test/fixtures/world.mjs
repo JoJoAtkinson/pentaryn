@@ -34,6 +34,9 @@ export async function movementWorld({ patchable = true } = {}) {
   // fixture's GM is an active user, so the suites keep the alone-on-the-table path unless a test opts in (0.6.0).
   F.CONFIG.debug ??= {};
   F.CONFIG.debug["pentaryn-movement.publishFirst"] = false;
+  // The suites force throws and budget fallbacks on purpose: the circuit breaker (0.8.0) stays out of them unless a
+  // test turns it on.
+  F.CONFIG.debug["pentaryn-movement.breaker"] = false;
 
   if (patchable) {
     F.CONFIG.Token.objectClass = class Token5e {

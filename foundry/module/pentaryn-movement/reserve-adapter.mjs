@@ -34,7 +34,7 @@ let log = null;
 /** May this user count a token (group-adapter countsForRoutes, given by group.mjs: an adapter imports no adapter). */
 let countsToken = () => !!globalThis.game?.user?.isGM;
 let reg = registry();
-const counts = { received: 0, published: 0, inline: 0, raced: 0, replans: 0, queued: 0, fallback: 0, dropped: 0, republished: 0, aside: 0 };
+const counts = { received: 0, published: 0, inline: 0, raced: 0, replans: 0, queued: 0, fallback: 0, dropped: 0, republished: 0, aside: 0, racing: 0, alone: 0 };
 let lastRace = null;
 
 function configure({ log: l = null, counts: c = null } = {}) {
@@ -129,14 +129,24 @@ function restCircles(scene, id) {
 }
 
 /**
- * Could another client be planning a drop at this moment (then a drop publishes first and decides at the echo)?
- * Another active user. `CONFIG.debug["pentaryn-movement.publishFirst"]` (true / false) forces it, for tests.
+ * Could another client be planning a drop on `scene` at this moment (then a drop publishes first and decides at the
+ * echo)? Another active user that views that scene (0.8.0, Fable's review §1: a user with no canvas, such as the
+ * headless GM bot, or one on another map, never plans here; `User#viewedScene` is what core's activity broadcast says
+ * it views). Each "no" is counted (`alone`), each "yes" (`racing`); the races actually lost are counted where they are
+ * decided (`raced`), so the handshake's worth reads off status().group.reservations. `CONFIG.debug
+ * ["pentaryn-movement.publishFirst"]` (true / false) forces it, for tests.
  */
-function racers() {
+function racers(scene = globalThis.canvas?.scene ?? null) {
   const forced = globalThis.CONFIG?.debug?.[`${MODULE}.publishFirst`];
   if (forced === true || forced === false) return forced;
   const me = globalThis.game?.user?.id;
-  try { return (globalThis.game?.users ?? []).some?.(u => u?.active && u.id !== me) ?? false; } catch { return false; }
+  const sid = scene?.id ?? scene ?? null;
+  let any = false;
+  try {
+    any = (globalThis.game?.users ?? []).some?.(u => u?.active && u.id !== me && !!u.viewedScene && (sid === null || u.viewedScene === sid)) ?? false;
+  } catch { any = false; }
+  note(any ? "racing" : "alone");
+  return any;
 }
 
 /* -------------------------------------------- */

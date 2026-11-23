@@ -91,13 +91,29 @@ function makeToken({ x = 0, y = 0, size = 1 } = {}) {
   return t;
 }
 const wp = (x, y, size = 1) => ({ x, y, elevation: 0, width: size, height: size, level: "L", action: "walk", snapped: true, explicit: true, checkpoint: false });
-const drag = (token, waypoints, constrainOptions = {}) => token.findMovementPath(waypoints, { preview: true, constrainOptions, measureOptions: {}, terrainOptions: {} });
+/**
+ * A drag's path. A search can outlast its synchronous slice on a loaded machine (the gate runs the files in parallel):
+ * then the job finishes in timer slices with the same answer, which the mocked timers run here.
+ */
+const drag = (token, waypoints, constrainOptions = {}) => {
+  const job = token.findMovementPath(waypoints, { preview: true, constrainOptions, measureOptions: {}, terrainOptions: {} });
+  for (let i = 0; i < 2000 && job.result === undefined; i++) mock.timers.tick(1);
+  return job;
+};
 
 await import("../movement.mjs");
 F.fire("init");
 F.fire("setup");
 F.fire("ready");
 const api = game.pentaryn.movement;
+
+/** 0.8.0: corner arcs are always on; the debug switch turns them off for a straight-line check. */
+async function arcs(on) {
+  globalThis.CONFIG.debug ??= {};
+  globalThis.CONFIG.debug["pentaryn-movement.arcs"] = on;
+  // As the old setting's change did: the step cache goes (a re-set of a live setting clears it).
+  await set("pathfindMine", true);
+}
 
 async function set(key, value) {
   await game.settings.set(MOD, key, value);
@@ -122,7 +138,7 @@ test("a straight drag is core's own job, untouched (one core call)", () => {
 });
 
 test("a drag into a wall comes back routed around it: explicit ends kept, corners non-explicit", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   // A wall across x = 300 from y = 0 to y = 400: the way round is under it.
   world.walls = [[{ x: 300, y: 0 }, { x: 300, y: 400 }]];
   const t = makeToken();
@@ -160,7 +176,7 @@ function clearOfEnd(path, c) {
 }
 
 test("smooth corners: arcs are placed where clear, and the cost stays the grid optimum", async () => {
-  await set("smoothCorners", true);
+  await arcs(true);
   world.walls = [[{ x: 300, y: 0 }, { x: 300, y: 400 }]];
   const t = makeToken();
   const path = drag(t, [wp(0, 0), wp(500, 0)]).result;
@@ -205,7 +221,7 @@ test("a sealed destination: no route, core's partial path is returned as it was"
 });
 
 test("a 2×2 token is not routed through a one-square gap; a 1×1 token is", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   // A wall along y = 300 with a one-square gap at x 400..500; both drags start left of it.
   world.walls = [[{ x: 0, y: 300 }, { x: 400, y: 300 }], [{ x: 500, y: 300 }, { x: 1000, y: 300 }]];
   const one = drag(makeToken({ x: 100 }), [wp(100, 0), wp(100, 600)]).result;
@@ -213,7 +229,7 @@ test("a 2×2 token is not routed through a one-square gap; a 1×1 token is", asy
   const big = drag(makeToken({ x: 100, size: 2 }), [wp(100, 0, 2), wp(100, 600, 2)]).result;
   assert.equal(big.length, 1, "2×2: no route, core's stop at the wall");
   assert.equal(api.pathfind.status().last.found, 0);
-  await set("smoothCorners", true);
+  await arcs(true);
 });
 
 test("a straight drag core allows is never made stricter (core checks the centre ray only)", () => {
@@ -266,7 +282,7 @@ function raysOf(fn) {
 }
 
 test("the step cache expires by age, not idle time: a drag that keeps using it still re-reads after 2 s", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   world.walls = [[{ x: 300, y: 0 }, { x: 300, y: 400 }]];
   const realNow = Date.now;
   let t = 1_000_000_000;
@@ -284,7 +300,7 @@ test("the step cache expires by age, not idle time: a drag that keeps using it s
     assert.ok(again() > 0, "rebuilt once the cache is older than 2 s");
   } finally {
     Date.now = realNow;
-    await set("smoothCorners", true);
+    await arcs(true);
   }
 });
 
@@ -330,7 +346,7 @@ const crossesSeg = (path, [a, b]) => path.some((w, k) => k > 0 && segmentsCross(
 const reaches = (path, x, y) => path.at(-1).x === x && path.at(-1).y === y;
 
 test("doors: an auto-route uses an open door, never a closed or locked one", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   try {
     world.walls = splitWith(A(1, 1), B(1, 0));
     F.fire("updateWall");
@@ -346,12 +362,12 @@ test("doors: an auto-route uses an open door, never a closed or locked one", asy
   } finally {
     world.walls = [];
     F.fire("updateWall");
-    await set("smoothCorners", true);
+    await arcs(true);
   }
 });
 
 test("secret doors: an auto-route never passes one, open or shut; an ordinary open door elsewhere is used", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   try {
     world.walls = splitWith(A(2, 1), B(1, 0));                  // the secret door stands open, B is shut
     F.fire("updateWall");
@@ -377,12 +393,12 @@ test("secret doors: an auto-route never passes one, open or shut; an ordinary op
   } finally {
     world.walls = [];
     F.fire("updateWall");
-    await set("smoothCorners", true);
+    await arcs(true);
   }
 });
 
 test("teleport / change-level regions: an auto-route keeps out unless the leg ends or starts inside; hidden ones count only for a GM", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   const zone = { x: 200, y: 400, w: 250, h: 300 };
   const inZone = path => {
     for (let k = 1; k < path.length; k++) {
@@ -424,12 +440,12 @@ test("teleport / change-level regions: an auto-route keeps out unless the leg en
     world.walls = [];
     world.regions = [];
     F.fire("updateRegion");
-    await set("smoothCorners", true);
+    await arcs(true);
   }
 });
 
 test("R5-4: a straight drag core allows whole is routed round a teleport region it would walk into, unless it ends there", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   const zone = { x: 200, y: 0, w: 150, h: 300 };
   const inZone = path => {
     for (let k = 1; k < path.length; k++) {
@@ -455,12 +471,12 @@ test("R5-4: a straight drag core allows whole is routed round a teleport region 
   } finally {
     world.regions = [];
     F.fire("updateRegion");
-    await set("smoothCorners", true);
+    await arcs(true);
   }
 });
 
 test("fog: a player's route never plans through ground that player has not explored and cannot see", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   const vis = F.canvas.visibility;
   let explored = c => c.y < 400;
   F.canvas.visibility = { tokenVision: true, testVisibility: () => false };
@@ -480,12 +496,12 @@ test("fog: a player's route never plans through ground that player has not explo
     delete F.canvas.fog;
     world.walls = [];
     F.fire("updateWall");
-    await set("smoothCorners", true);
+    await arcs(true);
   }
 });
 
 test("H2-11: a 2×2 cut at a one-square door rests with its whole body clear of the frame", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   // A wall along x = 500 with a one-square door gap at y 300..400; the Large walks straight at it.
   world.walls = [[{ x: 500, y: 0 }, { x: 500, y: 300 }], [{ x: 500, y: 400 }, { x: 500, y: 1000 }]];
   F.fire("updateWall");
@@ -493,11 +509,11 @@ test("H2-11: a 2×2 cut at a one-square door rests with its whole body clear of 
   const end = big.at(-1);
   assert.ok(end.x + 2 * S <= 500 + 2 * S * 0.01 + 1, `the box (x ${end.x}..${end.x + 2 * S}) stays west of the frame at x 500`);
   assert.ok(end.x >= 250, `it still walks up to the door: ${end.x}`);
-  await set("smoothCorners", true);
+  await arcs(true);
 });
 
 test("H2-04: on a scene with no terrain, a search measures each step direction once (not every step)", async () => {
-  await set("smoothCorners", false);
+  await arcs(false);
   world.walls = [[{ x: 650, y: 50 }, { x: 650, y: 850 }]];
   F.fire("updateWall");
   const orig = Token5e.prototype.measureMovementPath;
@@ -508,5 +524,5 @@ test("H2-04: on a scene with no terrain, a search measures each step direction o
     assert.deepEqual([job.result.at(-1).x, job.result.at(-1).y], [900, 400]);
   } finally { Token5e.prototype.measureMovementPath = orig; }
   assert.ok(steps <= 8, `two-waypoint measures: ${steps}`);
-  await set("smoothCorners", true);
+  await arcs(true);
 });

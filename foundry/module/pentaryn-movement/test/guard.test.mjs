@@ -198,40 +198,18 @@ test("a player's guard never counts a token hidden from it", async () => {
   game.user = me;
 });
 
-test("in a fight: pauses core's continuation (no displace), resumes it once clear; waits before a door, not in it", async () => {
+test("0.8.0: a fight's move is never guarded: no pause, no displace, never watched (the fight pause guard is gone)", async () => {
   reset();
-  // Walking (1,5) → (2,5), then (3,5), (4,5). A token stands on (3,5).
+  // Walking (1,5) → (2,5), then (3,5), (4,5). A token stands on (3,5): 0.7 paused it; 0.8.0 leaves a fight to its plan
+  // (tier C: by space) or to core's move with hard-obstacle cuts (the fallback).
   const a = tok("A", 1.5, 5, { way: [{ x: 1, y: 5 }, { x: 2, y: 5 }], pending: [{ x: 3, y: 5 }, { x: 4, y: 5 }], combat: true });
   tok("S", 3, 5);
   arrive(a);
-  frame(16);
+  for (let k = 0; k < 4; k++) frame(16);
   await flush();
-  assert.equal(a.document.pauseCalls, 1);
+  assert.equal(a.document.pauseCalls, 0, "never paused");
   assert.equal(calls.filter(c => c.op === "displace").length, 0, "never a displace in a fight");
-  // It finishes its square, then waits: the blocker goes, and core's continuation is resumed.
-  a.animationContexts.clear();
-  a.document.x = 150; a.document.y = 450;
-  tokens.delete("S"); scene.tokens.delete("S");
-  for (let k = 0; k < 8; k++) frame();
-  await flush();
-  assert.deepEqual(resumes, ["A"]);
-
-  reset();
-  // The next square (3,5) is a doorway (a door line through it) and the way after it is taken (a token at (5,5)): it
-  // waits now, before the door. Without the door it goes on into (3,5): what lies past the next square is not looked
-  // at yet.
-  walls.push({ c: [300, 400, 300, 500], door: 1 });
-  const b = tok("B", 1.6, 5, { way: [{ x: 1, y: 5 }, { x: 2, y: 5 }], pending: [{ x: 3, y: 5 }, { x: 4, y: 5 }, { x: 5, y: 6 }], combat: true });
-  tok("S", 5, 5);
-  arrive(b);
-  frame(16);
-  assert.equal(b.document.pauseCalls, 1, "waits before the door");
-  reset();
-  const c = tok("C", 1.6, 5, { way: [{ x: 1, y: 5 }, { x: 2, y: 5 }], pending: [{ x: 3, y: 5 }, { x: 4, y: 5 }, { x: 5, y: 6 }], combat: true });
-  tok("S", 5, 5);
-  arrive(c);
-  frame(16);
-  assert.equal(c.document.pauseCalls, 0, "no door: it walks into the next square");
+  assert.equal(ctx.exposed.guardStatus().watching, 0, "not watched");
 });
 
 test("3 s after the first yield it re-routes once round what stands; 8 s it rests, with a quiet notice", async () => {
@@ -261,29 +239,9 @@ test("3 s after the first yield it re-routes once round what stands; 8 s it rest
   for (let t = 0; t < GUARD.restMs + 200; t += 100) { frame(100); await flush(); }
   assert.equal(calls.filter(c => c.op === "route").length, 1, "re-routes once");
   assert.equal(notices.length, 1);
-  assert.match(notices[0], /guardRest:B/);
+  assert.equal(notices[0], "PENTARYN_MOVEMENT.notify.stoppedShort");
   assert.equal(ctx.exposed.guardStatus().watching, 0, "let go");
   assert.equal(listeners.length, 0, "and the ticker stops");
-});
-
-test("in a fight the 8 s rest stops core's move where it is (the squares walked are what it pays)", async () => {
-  reset();
-  const a = tok("A", 2, 5, { way: [{ x: 1, y: 5 }, { x: 2, y: 5 }], pending: [{ x: 3, y: 5 }], combat: true });
-  a.animationContexts.clear();
-  a.document.movement = { ...a.document.movement, state: "pending" };
-  // Animating its square into (2,5) with (3,5) taken.
-  a.animationContexts.set("anim", {});
-  a.document.x = 140;
-  tok("S", 3, 5);
-  arrive(a);
-  frame(16);
-  assert.equal(a.document.pauseCalls, 1);
-  a.animationContexts.clear();
-  a.document.x = 150;
-  route.next = { reached: false };
-  for (let t = 0; t < GUARD.restMs + 200; t += 100) { frame(100); await flush(); }
-  assert.ok(calls.some(c => c.op === "stop" && c.id === "A"));
-  assert.equal(calls.filter(c => c.op === "displace").length, 0);
 });
 
 test("a click (any stop) lets go of a token the guard holds; a stop the guard did not make does too", async () => {

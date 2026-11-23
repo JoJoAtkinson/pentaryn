@@ -37,7 +37,7 @@ test("every described method is a function on the API; core is published unliste
   for (const m of api.describe().methods) assert.equal(typeof at(m.path), "function", m.path);
   assert.deepEqual(api.describe().methods.map(m => m.path),
     ["status", "ghostFor", "combatActive", "setGhost", "setPolicy", "pinsUnderTokens", "inspect", "pathfind.status", "pathfind.route",
-      "planGroup", "stop", "selftest"]);
+      "planGroup", "stop", "telemetry", "reportTelemetry", "fileWrongMove", "selftest"]);
   assert.ok(Object.isFrozen(api.core));
   assert.equal(api.core.MODULE, MODULE);
 });
@@ -66,7 +66,7 @@ test("described settings are exactly the SETTINGS table; settings() snapshots th
   assert.deepEqual(api.describe().settings.map(s => s.key), SETTINGS.map(r => r.key));
   assert.deepEqual(api.settings(), {
     ghostPolicy: "exploration", ghostPolicyLast: "exploration", ghost: false, ownedOnTop: true,
-    pathfinding: "everyone", pathfindMine: true, smoothCorners: true, groupMovement: true, assist: true, clickToStop: true,
+    pathfinding: "everyone", pathfindMine: true, groupDrags: true, fightGroupDrags: false, assist: true,
   });
 });
 

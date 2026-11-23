@@ -24,7 +24,12 @@
  *   reserve-core.mjs     PURE server-ordered reservations and each move's place in that order (0.6.0)
  *   reserve-adapter.mjs  the reservation registry every client keeps (0.6.0)
  *   guard-core.mjs       PURE runtime yield guard: who yields, the look ahead, the yield's clock (0.7.0)
- *   guard.mjs            the feature: the runtime yield guard (a ticker while this client moves tokens)
+ *   guard.mjs            the feature: the runtime yield guard (a ticker while this client moves tokens; out of combat)
+ *   lifecycle-core.mjs   PURE one state machine per move, one 10 s deadline (0.8.0)
+ *   sequence-core.mjs    PURE a fight's group move by space, and tokens that start stacked (0.8.0)
+ *   telemetry-core.mjs   PURE the telemetry ring buffer and the circuit breaker's rule (0.8.0)
+ *   cue-ui.mjs           UI the waiting cue on a held token (0.8.0)
+ *   telemetry.mjs        the feature: telemetry, the circuit breaker, the "that move was wrong" key (0.8.0)
  *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the feature installs synchronously in this body (where its module-scope Hooks.on
@@ -43,7 +48,7 @@ import { hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
 import { registerQueries } from "./lib/queries.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
-import { onSettingChange, registerSettings, setting } from "./settings.mjs";
+import { migrateSettings, onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import * as ghost from "./ghost.mjs";
 import * as ghostCombat from "./ghost-combat.mjs";
@@ -51,9 +56,10 @@ import * as pathfind from "./pathfind.mjs";
 import * as group from "./group.mjs";
 import * as stop from "./stop.mjs";
 import * as guard from "./guard.mjs";
+import * as telemetry from "./telemetry.mjs";
 
-/** Features in load order (ghost first: its hooks have always registered first; pathfind 0.3.0; group and stop 0.4.0; guard 0.7.0). */
-const FEATURES = [ghost, ghostCombat, pathfind, group, stop, guard];
+/** Features in load order (ghost first: its hooks have always registered first; pathfind 0.3.0; group and stop 0.4.0; guard 0.7.0; telemetry 0.8.0, last: the others call it only at run time). */
+const FEATURES = [ghost, ghostCombat, pathfind, group, stop, guard, telemetry];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -99,6 +105,9 @@ function onReady() {
     return;
   }
   publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  // 0.8.0: the retired rows' stored values carried over once (the active GM writes; every client drops its folded rows).
+  migrateSettings().then(r => { if (Object.keys(r.world).length || Object.keys(r.client).length) log.info("settings migrated (0.8.0)", r); })
+    .catch(err => log.debug("settings migration", err));
 }
 
 // The manifest's relay row (stop: a player's click asks the active GM), on every client: the sender needs the name too.

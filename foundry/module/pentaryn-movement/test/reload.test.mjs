@@ -86,10 +86,10 @@ test("R3-1: after a reload the unsent waves go out, spaced as planned, and only 
   assert.equal(game.pentaryn.movement.status().group.resumed.groups, 1);
 });
 
-test("S3R1-07: a group whose unsent waves are long overdue when the page comes back is not resumed; its members stay, told", () => {
+test("S3R1-07: a group whose unsent waves are long overdue when the page comes back is not resumed; its members stay, told (\"Stopped short\")", () => {
   assert.ok(!sent().some(c => c.ids.includes("memE000000000001")), "the 12 s late wave is never sent");
   assert.equal(game.pentaryn.movement.status().group.resumed.dropped, 1);
-  const told = F.calls.find(c => c.op === "notify" && /reloaded before the last of your group set off: 1 of them/.test(c.message));
+  const told = F.calls.find(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.stoppedShort");
   assert.ok(told, JSON.stringify(F.calls.filter(c => c.op === "notify")));
   // FR1-10: kept until dismissed (a player's reloaded page is looked at seconds later).
   assert.equal(told.opts?.permanent, true);

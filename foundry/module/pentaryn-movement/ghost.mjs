@@ -20,7 +20,7 @@ import {
   ASSIST_KEYS, ASSIST_TOOL, CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
-import { SETTINGS, policyWrite, setting } from "./settings.mjs";
+import { SETTINGS, policyWrite, setting, untripAssist } from "./settings.mjs";
 import { combatSummaries, exemptActor, exemptTokenIds, sceneIdOf, sceneOf } from "./combat-adapter.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
@@ -413,7 +413,8 @@ const ON_SETTING = Object.freeze({
   ghost: () => { invalidate(); queueRefresh(); },
   ownedOnTop: () => { invalidate(); refreshTokens(); },
   // The drag help switch: the GM's button redraws, any drag in progress is planned again.
-  assist: () => { rerenderControls(true); canvas?.tokens?.recalculatePlannedMovementPaths?.(); },
+  // Turned back on, it also clears this client's circuit breaker (0.8.0).
+  assist: value => { if (value !== false) untripAssist(); rerenderControls(true); canvas?.tokens?.recalculatePlannedMovementPaths?.(); },
 });
 
 /**

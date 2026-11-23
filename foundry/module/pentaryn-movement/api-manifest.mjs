@@ -21,22 +21,24 @@ export const MANIFEST = Object.freeze({
         doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope }, combatExempt: string[], "
-        + "group: { enabled, clickToStop, patched: { drop, click }, regime, limits, groups, last, fallbacks, resumed, stopped, destacked, cut, held }, "
-        + "stop: { last }, guard: { enabled, watching, held, ticking, fired, standing, movers, late, resumed, rerouted, noRoute, rested, aside, cancelled, errors, perf, last } }",
+        + "group: { enabled, fight, patched: { drop, click }, regime, limits, groups, runs, last, fallbacks, resumed, fightResumed, flushed, stopped, cut, held, reservations, perf }, "
+        + "stop: { last }, guard: { enabled, watching, held, ticking, fired, standing, movers, resumed, rerouted, noRoute, rested, aside, cancelled, errors, perf, last }, "
+        + "assist: { tripped }, migrated }",
       gm: false, writes: false, legacy: true,
       doc: "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM "
         + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
         + "are wrapped, every setting key with its scope (ghost and ownedOnTop are client settings), and combatExempt: the ids "
         + "of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks). "
-        + "group (0.4.0): group movement and click to stop on this client — the two settings, whether the drop and click "
-        + "wraps are in, the regime of your controlled tokens (combat when one is in a started combat, else free), the "
-        + "limits, groups still sending waves, the last drop (mode, reason, result, ms, async, waves, cut, stayed, short, replans) "
-        + "and the last few reasons a drop went to core; resumed / stopped / destacked / cut (0.4.6): when a reload last "
-        + "picked up unsent waves, a turn change last stopped a group, the rest check last moved a member off another, "
-        + "a door shut or a wall raised last cut moves this client started; held (0.4.12): when a wave last waited for a token outside its group walking through its way. stop.last (0.4.11): this client's last "
+        + "group (0.4.0; 0.8.0 tiers): group drags on this client — enabled (tier B, groupDrags), fight (tier C, fightGroupDrags), "
+        + "whether the drop and click wraps are in, the regime of your controlled tokens (combat when one is in a started combat, else free), the "
+        + "limits (life: the one deadline), groups still walking with their run's state and time left, the last drop (mode, reason, result, ms, async, waves, cut, stayed, short, replans, stacked) "
+        + "and the last few reasons a drop went to core; resumed / stopped / cut (0.4.6): when a reload last "
+        + "picked up unsent waves, a turn change last stopped a group, "
+        + "a door shut or a wall raised last cut moves this client started; flushed (0.8.0): when the tab last went to the background and sent its groups' waves at once; held (0.4.12): when a wave last waited for a token outside its group walking through its way. stop.last (0.4.11): this client's last "
         + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole; late (0.5.1): how many of its group's late waves it stopped after), or null. guard (0.7.0): the runtime yield guard on this client — "
         + "how many of its moves it watches and holds, how often it fired (against standing tokens / movers; late: inside a fight's current square), "
-        + "resumed, re-routed (noRoute: no way round), rested at 8 s, backed out (aside), was cancelled by a stop; perf (ticks, checks, maxMs, over4, over16) and the last firings.",
+        + "resumed, re-routed (noRoute: no way round), rested (8 s or the move's deadline), backed out (aside), was cancelled by a stop; perf (ticks, checks, maxMs, over4, over16) and the last firings; out of combat only since 0.8.0. "
+        + "assist.tripped (0.8.0): the circuit breaker's trip on this client ({ at, why }) or null; migrated: what migrateSettings carried over at ready.",
     },
     {
       path: "ghostFor",
@@ -105,7 +107,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "pathfind.status",
       params: [],
-      returns: "{ mode, mine, smoothCorners, patched, gridType, memo, limits, last: { at, tokenId, legs, found, nodes, ms, reached, of, arcs, improved, async, memo } | null }",
+      returns: "{ mode, mine, smoothCorners: true, patched, gridType, memo, limits, last: { at, tokenId, legs, found, nodes, ms, reached, of, arcs, improved, async, memo } | null }",
       gm: false, writes: false,
       since: "0.3.0",
       doc: "Drag pathfinding on this client: the world mode (everyone / gm / off), this client's two settings, whether "
@@ -160,6 +162,35 @@ export const MANIFEST = Object.freeze({
         + "token (NOT_INITIATOR / NOT_OWNER otherwise). Stopping a member of a group this client sent stops the group "
         + "and cancels its unsent waves. Never held back by the 400 ms arming a click waits for. NOT_MOVING when it "
         + "is not moving or you cannot control it.",
+    },
+    {
+      path: "telemetry",
+      params: [{ name: "opts", type: "{ seconds?: number }", optional: true, doc: "only the events of the last that many seconds (default: all kept)" }],
+      returns: "{ user, summary: { counts, plan: { n, medianMs, p95Ms, maxMs }, fallbacks, notices, firesPerPlan, failures }, tripped, cued, events: [{ n, t, ago, kind, ... }], filed }",
+      gm: false, writes: false,
+      since: "0.8.0",
+      doc: "This client's drag-help telemetry (a ring buffer of the last 400 events): plans with their time, guard fires, yields, "
+        + "fallbacks to core's move, frame stalls while it moved tokens, lost reservation races, stops, cuts, notices (their reason codes) "
+        + "and errors; the circuit breaker's state and the tokens showing the waiting cue.",
+    },
+    {
+      path: "reportTelemetry",
+      params: [],
+      returns: "Promise<{ ok: true, to, summary } | { ok: false, code, reason }>",
+      gm: false, writes: true,
+      since: "0.8.0",
+      sideEffects: ["a whispered ChatMessage to the GMs"],
+      doc: "Whisper this client's telemetry summary to the logged-in GMs (after a session). NO_GM when none is logged in.",
+    },
+    {
+      path: "fileWrongMove",
+      params: [],
+      returns: "Promise<pentaryn-feedback submit's answer: { ok: true, id, status } | { ok: false, code, reason }>",
+      gm: false, writes: true,
+      since: "0.8.0",
+      sideEffects: ["a bug report queued on this user and filed by the GM (pentaryn-feedback)"],
+      doc: "What the \"That move was wrong\" key (Alt+W by default) does: files the last ten seconds of this client's drag "
+        + "telemetry, with the last drop's record, as a Bug through pentaryn-feedback. NO_FEEDBACK when that module is not active.",
     },
     {
       path: "selftest",

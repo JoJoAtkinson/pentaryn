@@ -1,7 +1,7 @@
 ---
-title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 / 0.4.0"
+title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.8.0"
 status: built
-last_modified: 2026-11-21
+last_modified: 2026-11-23
 tags: [foundry, plans, movement, pathfinding]
 ---
 
@@ -9,7 +9,7 @@ tags: [foundry, plans, movement, pathfinding]
 
 **Read this when:** you are changing how a dragged token finds its way around walls, or wondering why it was built this way. **Not this file:** using it → [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md) ("Drag pathfinding").
 
-**Status:** built on branch `feat/movement-pathfinding`, unit-tested; not yet synced or play-tested live (section 9).
+**Status (2026-11-23):** built and live since 0.3.0 (main); 0.4 → 0.7.5 hardened through the hard-case and acceptance rounds of §15; 0.8.0 (§16) is the tiered redesign after Fable's review. Tier A and B are on, tier C (fight group drags) ships off until it passes its rounds. Use-doc: [`../foundry/movement.md`](../foundry/movement.md).
 
 ## 1. What Joe asked for
 
@@ -277,7 +277,7 @@ API additions, all in the describe golden:
 
 ## 13. Builder's notes: what the source verified, and where the build deviates
 
-Built on branch `feat/movement-0.4` (0.4.0), unit-tested (`test/group-core.test.mjs`: the twelve unit acceptance tests above plus the decision tables; `test/group.test.mjs`: the two wraps). Not yet synced or play-tested live (the twelve live tests above). Use-doc: [`../foundry/movement.md`](../foundry/movement.md).
+Built on branch `feat/movement-0.4` (0.4.0), unit-tested (`test/group-core.test.mjs`: the twelve unit acceptance tests above plus the decision tables; `test/group.test.mjs`: the two wraps). Synced and play-tested live from 0.4.1 on (the rounds of §15; no round came back clean twice, which is what led to §16). Use-doc: [`../foundry/movement.md`](../foundry/movement.md).
 
 **The `[V]` items** (core 14.370, dnd5e 6.1.1):
 
@@ -306,7 +306,7 @@ Built on branch `feat/movement-0.4` (0.4.0), unit-tested (`test/group-core.test.
 A senior designer's review of the merged 0.4.0 (conditional go) asked for four changes before shipping and three places an auto-route must never go. All went into 0.4.0 (unreleased):
 
 1. **Click-to-stop arms after 400 ms** (`MOTION.armMs`). The start is this client's drop or the move's first `moveToken`; a move never seen starting is armed; `stop(ref)` is never held back. Habit clicks and double-click-to-sheet no longer stop tokens short.
-2. **Planning wait 300 ms** (`GROUP_LIMITS.totalMs`, was 1 s; `memberMs` 150), then core's drop.
+2. **Planning wait 300 ms** (`GROUP_LIMITS.totalMs`, was 1 s; `memberMs` 150), then core's drop. *Amended 0.4.11 (live H4-02, a slow tab fell back 3 of 5 times): the plan's own work is capped at 2.5 s (`totalMs`), one member's at 400 ms (`memberMs`), and the silent wait at 5 s on the wall clock (`waitMs`). 0.8.0: all of it inside the move's one 10 s deadline (§16.4).*
 3. **No stagger without a conflict.** The planner already gave every member delay 0 on open ground; a seeded test now pins it. Waves only where routes meet.
 4. **A GM may stop any move in combat.** Design-rule exception taken: the hand-registered query `pentaryn-movement.stopOwn`, sent by a GM to the user who started the move (GM sender only, that client must have started it). `exceptions.json` movement C30/C56, retired when the kit can target a user.
 5. **Places an auto-route never goes** (`placesToAvoid`): a secret door in any state; a region with a `teleportToken` or `changeLevel` behaviour unless the leg starts or ends inside it (hidden ones only for a GM, so a player's route does not give a hidden trap away); and in a player's preview, ground neither explored nor visible. Closed and locked doors were already walls (core's collision). It shapes the drag pathfinder, group routes (`routeTo` searches when core's own straight line crosses one) and group rest slots. A straight drag core allows stays core's.
@@ -518,3 +518,57 @@ The Mac round (FR2a: real Chrome tabs plus a BOSS headless page, 105 ms emulated
 - **FR2-09 / FR1-06 — a player's reload mid-move in a fight leaves a member in the corridor (2 of 2).** Reproduced on BOSS (Hero 4 at (11,5)). Core continues a fight move square by square from the client that started it; a reloaded page has none of that state. Each client now records the squares still to walk of the fight moves it started (sessionStorage, per tab; dropped when the move stops, but not by the stops of a page unloading), and after a reload, once its scene is drawn (a player's page comes back on another map first; pentaryn-resume then views its own, and a swiftshader page took 27 s), the walk goes on from the square it rests on, its first square only when clear, costed as squares walked (`status().group.fightResumed`, with a reason per token). On BOSS: Hero 4 and Hero 3 walked on from the corridor to room B. Unsent waves past `RESERVE.overdueMs` still stay, with the notice (S3R1-07).
 - **FR2-10 — the uncaught "Cannot assign to read only property '0'" is back (19 times on one player tab, FR2b).** Not traced: no stack, and a static search found no in-place change of a core-owned array left in this module. `status().guard.errorsSeen` now keeps the last five page errors that name this module or a frozen array, with where they were thrown, so the next round can name the source.
 - **Seen on BOSS, not changed:** a single-frame drawn overlap of up to -40 px between two members when a fight undo or a click-stop displace jumps a token (one sample, under 17 ms; core draws the frame before the jump lands); the flaky `pathfind.test.mjs` region tests when the harness's swiftshader pages load the machine (they pass alone and on a second run).
+
+## 16. pentaryn-movement 0.8.0: tiers, space in a fight, one clock (2026-11-23)
+
+Fable's xhigh review of 0.7.4 (scratchpad `review-fable.md`): right out of combat, wrong in a fight. Every open failure sat in the layers that fought core's combat model (each fight square is a round trip from the initiating tab, plus 150–650 ms fog stalls), and the fix-on-fix chains (the corridor click-stop, four rounds; the fight door cut, five rounds, the last worse) were not converging. Joe's decisions of 2026-11-23 (scratchpad `decisions.md`): space-based separation in a fight; a fight's door cut stops everyone where they are; a click-stop out of combat stops exactly where drawn (a doorway: just past the line); ship by tiers. 0.8.0 builds §1, §4 and §6 days 3–6 of the review. Its acceptance rounds (review §2–§3: C1–C14 on one frozen build across three maps, twice) are still to run; until tier C passes them it ships off.
+
+### 16.1 Tiers
+
+| Tier | What | Switch | Default |
+|---|---|---|---|
+| A | single-token pathfinding, the ruler, a single token's click-stop | `pathfinding` (+ client `pathfindMine`) | everyone |
+| B | out-of-combat group drags | `groupDrags` (was `groupMovement`) | on |
+| C | fight group drags, by space | `fightGroupDrags` | **off** |
+
+`assist` (the GM's toolbar button) and the circuit breaker turn A, B and C off together. Tier C off: a fight's group drop is `groupMode` reason `fightTier`, core's move with `unstack`'s hard-obstacle cuts and a checkpoint at every square, still held as one group (`holdCore`: tagged, so a click, a turn change or a door cut stops them all).
+
+### 16.2 A fight's group move by space (tier C, `sequence-core.mjs`)
+
+The plan is made as before (slots, routes round standing tokens on whole squares). Then, instead of timed waves: two members whose swept corridors (their way, as wide as the token) never meet set off together; for each meeting pair the safe order is preferred (never one walking through the other standing at its start, never one walking into the other resting at its end), a total start order honours the preferences (a cycle broken at its earliest member), and every member sets off on the **arrival** of each member before it whose corridor meets its own: core's `movement.finished`, then the token's `movementAnimationPromise` (`arrivalOf`; an event, never a clock). Where an order is still unsafe, `cutsFor` stops the walk short of the other's start or end, on a whole square. A member still waiting at the move's deadline stays ("Stopped short"). Pinned by a seeded test: 500 random fights, arrival events with 0–400 ms random latency, sampled every 10 ms: no two members ever come inside each other.
+
+**Deleted** with it: the fight pause guard (`pauseMovement` holds, `cellHorizon`), `guardFirstClear` and the first-square gate (S3R3-03/04), the timed wave gate for fights.
+
+### 16.3 Door cuts and click-stops
+
+- **A fight's door cut** (`fightCut`): every member of the cut moves' groups this client moves stops (`stopSafely` → `stopMovement`) on the square it holds. No undo write (`isUndo`, `undoAcross`, `undoIndex` deleted), no walk on (`walkOnAfterStop` deleted; a reload's fight walk now goes on through `walkOnFight`, cut before standing tokens), no second look (the 250 / 600 ms re-cut timers deleted). A square committed past the door got through.
+- **Out of combat, a click-stop** stops exactly where the token is drawn; across a door's line it is carried just past the line along its own route (else back the way it came), within 1.5 squares, never onto another token (`pastDoor`). Followers whose way passes through a stopped member stop short behind it (`shortBehind`; no re-route, no "too long" test). **Deleted:** `walkOut` and its searches, `walkOnTest`, `following`, `nearFirst`, `roomyFor`, the stop's whole-square snap.
+- **The rest de-stack is gone** (`destack`, `forwardExit`, `gapExit`, `settleGroup`, `groupSettle`, `retryShort`): nothing at rest is moved off anything afterwards. **Tokens that start stacked stay stacked:** `stacksOf` finds members whose circles start overlapping by more than a quarter square (a rider, a familiar, a grappled pair); the largest leads, and each rider walks its leader's waypoints at its offset in its leader's wave, in the plan, in `unstack` and in tier C; the guard never parts stack mates.
+- **The "too long" remnants are gone:** `roundStopped`, `groupStopOne` and `retryShort` used `detourTooLong`; they now stop short. The guard's re-route takes a way only when it can walk it before the move's deadline (that is the only length test left).
+
+### 16.4 One state machine, one deadline (`lifecycle-core.mjs`)
+
+Each drop gets a run: `planning → queued ⇄ planning → walking ⇄ yielding → rested | stopped | fallback | cancelled`, with one deadline, `LIFE.deadlineMs` = 10 s after the drop. An end state takes no further step (a late timer is a no-op). Every wait asks the run how long it has left (`capped`): the plan's queue (was `RESERVE.queueMs` 8 s on top), a single drag's start delay and queue (was 3 s + 8 s), a wave held for a foreign walker (was 8 s), a fight member waiting for an arrival, and the guard's rest (`y.restAt`: 8 s after the first yield or the move's deadline, whichever first; it was 8 s after the first yield, whenever that was). `lifecycle-core.test` bounds the composed clocks.
+
+Clocks that remain, none of them a wait between a drop and rest: the click's arming delay (`MOTION.armMs` 400 ms, UX), the plan's own budget (`GROUP_LIMITS` 30 ms sync / 2.5 s work / 5 s wall, inside the deadline), the publish echo (`RESERVE.echoMs` 1.5 s / `commitMs` 150 ms, inside it), the wave spacing (150 ms steps), the reload's overdue cut (`RESERVE.overdueMs` 1.5 s) and the reservation expiry (`restMs`), the guard's 50 ms look and 3 s re-route, `stopSafely`'s wait for an in-flight segment (1.5 s at most), and the stop's drawn-position housekeeping (`RESYNC_MS`, `WATCH_MS`). Not done: replacing the per-group `setTimeout`s with one scheduler (the timers now all read the run; their count is still per group).
+
+### 16.5 The initiating tab and the handshake
+
+- **Hidden-tab commit:** on `visibilitychange` → hidden, every group this client holds sends what it has left at once, each walk cut back (`group-core settle`) where it would meet another member's walk or the walks already sent, as they are timed now (`flush`; `status().group.flushed`). Out of combat only: a fight's member waits on an arrival, which the deadline bounds.
+- **`racers()`** counts only another active user whose `viewedScene` is the drop's scene: the canvas-less headless GM (no `viewedScene`) and users on another map never trigger the publish-first round trip. `status().group.reservations.alone` / `racing` / `raced` count it in play; if lost races stay under one a session the handshake can go (review §1).
+
+### 16.6 Settings, notices, the cue
+
+Five drag rows: world `pathfinding`, client `pathfindMine`, world `groupDrags` and `fightGroupDrags`, world `assist`. `smoothCorners` and `clickToStop` are folded in (always on; `CONFIG.debug["pentaryn-movement.arcs"] = false` turns the arcs off for a test), `groupMovement` renamed. `migrateSettings()` at ready: the active GM moves a stored `groupMovement` to `groupDrags` and deletes the old Setting document; every client removes the folded rows from its localStorage; `status().migrated` records it. Players see two notices: "No route there." and "Stopped short, way blocked." (was seven); the reason codes go to telemetry (`notice` events). A token this client holds back (queued, a start delay, a fight member waiting for an arrival, a guard yield) wears an amber dashed ring on this client (`cue-ui.mjs`).
+
+### 16.7 Robustness and telemetry
+
+- **Fail open:** a throw in the drop wrap returns core's result (cut by `unstack`); a throw while a plan is delivered (`safeDeliver`) sends core's move for the members still where they were (`failOpen`). `CONFIG.debug["pentaryn-movement.throwDeliver"]` forces the second.
+- **Circuit breaker** (`telemetry-core breakerTrips`): 3 errors or 6 failed plans (`budget`, `throw`, `noPlan`, `noAnchor`, `deliver`; never the by-design core paths) in one session trip it: this client's drag help reads off (`settings tripAssist`), the active GM's client also sets `assist` false, the GM is told (a permanent notice, or a whisper from a player's client). `assist` back on clears it.
+- **Telemetry** (`telemetry.mjs`): a per-client ring of 400 events — `plan` (ms, members, waves, cut), `fire`, `yield`, `fallback` (reason), `stall` (a frame over 150 ms while this client moves tokens), `lostRace`, `stop`, `cut`, `notice` (reason), `error`, `queue`, `wave`, `breaker`. API `telemetry()`, `reportTelemetry()` (a whisper to the GMs), `fileWrongMove()` = the **Alt+W** key: the last ten seconds filed as a Bug through `game.pentaryn.feedback.submit`.
+- **Round IDs:** `regressions.test` requires every round ID a source comment cites to name a test, with a PENDING list that may only shrink (16 left at 0.8.0).
+
+### 16.8 Not done in 0.8.0
+
+The Node simulator of the review's §5 (virtual clients, jittered latency, a backgrounded initiator, generated maps) beyond the seeded tier C test; the two extra maps; the acceptance rounds (C1–C14) and the hands-on session; splitting `group.mjs`; elevation; groups of 8–12 in a fight; one scheduler for the per-group timers.
+

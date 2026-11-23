@@ -4,7 +4,7 @@
 // server's order (reserve-core claim / priorityOf), which the guard reads as priority.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GUARD, along, aroundOf, asideSpot, cellHorizon, comparePriority, conflictAhead, hashOf, lengthOf, nearby, newYield,
+import { GUARD, along, aroundOf, asideSpot, comparePriority, conflictAhead, hashOf, lengthOf, nearby, newYield,
   pathDistance, standingOnRoute, stepYield, yieldsTo } from "../guard-core.mjs";
 import { claim, encode, moved, priorityOf, receive, registry, walkersOf } from "../reserve-core.mjs";
 
@@ -102,13 +102,6 @@ test("asideSpot: the nearest spot off the higher mover's way, clear of standing 
   for (let k = 1; k < c.length; k++) assert.ok(Math.hypot(c[k].x, c[k].y) >= Math.hypot(c[k - 1].x, c[k - 1].y) - 1e-9);
 });
 
-test("cellHorizon: the rest of this square and the next; two squares when the next is a doorway", () => {
-  const one = cellHorizon(6, 0.5, [1, 1]);
-  const two = cellHorizon(6, 0.5, [1, 1], { doorway: true });
-  assert.equal(Math.round(one), Math.round((1.5 / 6) * 1000 + GUARD.cellSlackMs));
-  assert.equal(Math.round(two), Math.round((2.5 / 6) * 1000 + GUARD.cellSlackMs));
-});
-
 test("stepYield: pause, resume once clear (held at least minHold), re-route once at 3 s, rest at 8 s", () => {
   const y = newYield();
   assert.equal(stepYield(y, { now: 0, conflict: false }), null);
@@ -129,6 +122,14 @@ test("stepYield: pause, resume once clear (held at least minHold), re-route once
   assert.equal(stepYield(y, { now: 8100, clear: false }), "rest");
   assert.equal(y.phase, "done");
   assert.equal(stepYield(y, { now: 9000, conflict: true }), null);
+});
+
+test("stepYield: a move's own deadline (restAt, 0.8.0) rests it before 8 s from its first yield", () => {
+  const y = { ...newYield(), restAt: 5000 };
+  assert.equal(stepYield(y, { now: 1000, conflict: true }), "pause");
+  assert.equal(stepYield(y, { now: 4000, clear: false }), "reroute");
+  y.phase = "held";
+  assert.equal(stepYield(y, { now: 5000, clear: false }), "rest", "at the move's deadline, not 8 s after its first yield");
 });
 
 test("stepYield: walking again after 8 s, the next conflict rests at once", () => {
