@@ -1,0 +1,3271 @@
+{
+  "run_id": "20261123-020736",
+  "outcome": "recovered",
+  "started": "2026-11-23T02:07:36-0500",
+  "finished": "2026-11-23T02:19:59-0500",
+  "snapshot": "world-2026-11-23-070800-fvtt14.370-boss.tar.gz",
+  "native_snapshot": "per-package: enhancedcombathud",
+  "applied": [
+    {
+      "id": "enhancedcombathud",
+      "type": "module",
+      "from": "5.0.1",
+      "to": "5.0.2"
+    }
+  ],
+  "failed": [],
+  "recoveries": [
+    {
+      "kind": "module",
+      "target": "enhancedcombathud",
+      "steps": [],
+      "ok": false,
+      "error": "could not list backups: /setup listBackups refused (400): The request could not be processed. \u2014 on 14.369+ /setup answers this while a world is active (package actions need the setup screen), and so does the same-origin guard for a POST without a matching Origin header"
+    }
+  ],
+  "smoke": [
+    {
+      "world": "ardenford",
+      "ok": false,
+      "server_ok": true,
+      "client_ok": false,
+      "migrated_system": null,
+      "migrated_core": null,
+      "errors": [
+        "client (new since last run): Permissions policy violation: compute-pressure is not allowed in this document."
+      ],
+      "notes": [
+        "updated module active after reload: enhancedcombathud@5.0.2"
+      ],
+      "client": {
+        "gameReady": true,
+        "canvasReady": true,
+        "scene": "Arena Prison of the Condemned",
+        "systemVersion": "6.1.1",
+        "coreVersion": "14.370",
+        "durationMs": 146272,
+        "loggedInAs": "Gamemaster",
+        "note": null
+      }
+    },
+    {
+      "world": "ardenhaven",
+      "ok": true,
+      "server_ok": true,
+      "client_ok": true,
+      "migrated_system": null,
+      "migrated_core": null,
+      "errors": [],
+      "notes": [],
+      "client": {
+        "gameReady": true,
+        "canvasReady": true,
+        "scene": "Alchemist's Shop",
+        "systemVersion": "6.1.1",
+        "coreVersion": "14.370",
+        "durationMs": 81812,
+        "loggedInAs": "Gamemaster",
+        "note": null
+      }
+    },
+    {
+      "world": "pentaryn",
+      "ok": true,
+      "server_ok": true,
+      "client_ok": true,
+      "migrated_system": null,
+      "migrated_core": null,
+      "errors": [],
+      "notes": [
+        "updated module active after reload: enhancedcombathud@5.0.2"
+      ],
+      "client": {
+        "gameReady": true,
+        "canvasReady": true,
+        "scene": "Pentaryn \u2014 Entry",
+        "systemVersion": "6.1.1",
+        "coreVersion": "14.370",
+        "durationMs": 87455,
+        "loggedInAs": "Gamemaster",
+        "note": null
+      }
+    },
+    {
+      "world": "space-journey",
+      "ok": true,
+      "server_ok": true,
+      "client_ok": true,
+      "migrated_system": null,
+      "migrated_core": null,
+      "errors": [],
+      "notes": [
+        "updated module active after reload: enhancedcombathud@5.0.2"
+      ],
+      "client": {
+        "gameReady": true,
+        "canvasReady": true,
+        "scene": "1. The Library (The Parley)",
+        "systemVersion": "6.1.1",
+        "coreVersion": "14.370",
+        "durationMs": 86016,
+        "loggedInAs": "Gamemaster",
+        "note": null
+      }
+    }
+  ],
+  "warnings": {},
+  "messages": [
+    "escalation held ddb-importer: analysis recommends hold \u2014 Not confirmed. If 7.6.x renames or drops the characterProcessDataComplete hook, nothing errors. The corrections just stop running after a sync. Only the GM-ready sweep would still catch synced actors, and only if importId still changes on each import.",
+    "escalation held enhancedcombathud-dnd5e: analysis recommends hold \u2014 Nothing confirmed. This is a major bump, and our special-action wraps depend on private internals: _onLeftClick, createChatMessage and the i18n keys. If any check that was removed is one we rely on, the wraps could act differently.",
+    "ardenford: client (new since last run): Permissions policy violation: compute-pressure is not allowed in this document.",
+    "validation FAILED: Foundry serving the world \u2014 world=space-journey (want pentaryn), v14.370"
+  ],
+  "traceback": null,
+  "plan": {
+    "generated": "2026-11-23T02:09:32-0500",
+    "mode": "foundry",
+    "core": {
+      "installed": "14.370",
+      "channel": "stable"
+    },
+    "system": {
+      "id": "dnd5e",
+      "installed": "6.1.1"
+    },
+    "active_world_at_scan": null,
+    "worlds": [
+      {
+        "id": "ardenford",
+        "title": "Ardenford",
+        "system": "dnd5e",
+        "system_version": "6.1.1",
+        "core_version": "14.370",
+        "last_played": "Fri Nov 20 2026 12:35:06 GMT-0500 (Eastern Standard Time)"
+      },
+      {
+        "id": "ardenhaven",
+        "title": "ardenhaven",
+        "system": "dnd5e",
+        "system_version": "6.1.1",
+        "core_version": "14.370",
+        "last_played": "Fri Nov 20 2026 12:36:43 GMT-0500 (Eastern Standard Time)"
+      },
+      {
+        "id": "pentaryn",
+        "title": "Pentaryn",
+        "system": "dnd5e",
+        "system_version": "6.1.1",
+        "core_version": "14.370",
+        "last_played": "Mon Nov 23 2026 02:07:31 GMT-0500 (Eastern Standard Time)"
+      },
+      {
+        "id": "space-journey",
+        "title": "Space Journey",
+        "system": "dnd5e",
+        "system_version": "6.1.1",
+        "core_version": "14.370",
+        "last_played": "Fri Nov 20 2026 12:38:30 GMT-0500 (Eastern Standard Time)"
+      }
+    ],
+    "counts": {
+      "tracked": 20,
+      "protected": 7,
+      "local": 24,
+      "forked": 0,
+      "untracked": 0
+    },
+    "local_drift": [
+      {
+        "id": "pentaryn-feedback",
+        "installed": "0.1.2",
+        "repo": "0.1.2",
+        "note": "same version, different files in Data/ \u2014 run make foundry-feedback-sync",
+        "content_drift": true
+      },
+      {
+        "id": "pentaryn-seafoot-maps",
+        "installed": "1.0.0",
+        "repo": null,
+        "note": "installed but not present in foundry/module/"
+      }
+    ],
+    "decisions": [
+      {
+        "id": "core",
+        "type": "core",
+        "bucket": "skip",
+        "installed": "14.370",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "no core update available \u2014 licence server replied: {\"info\": \"SETUP.UpdateNotAvailable\"}"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "bucket": "skip",
+        "installed": "6.1.1",
+        "target": "6.1.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "betterroofs",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "4.0.2",
+        "target": "4.0.2",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "ddb-importer",
+        "type": "module",
+        "bucket": "hold",
+        "installed": "7.5.9",
+        "target": "7.6.3",
+        "bump": "minor",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended",
+          "adjudicated apply: Minor jump 7.5.9->7.6.3; all notes empty. Empty notes only mandate hold on major jumps; no named risk to point at. Backup makes rollback cheap.",
+          "escalation: analysis recommends hold \u2014 Not confirmed. If 7.6.x renames or drops the characterProcessDataComplete hook, nothing errors. The corrections just stop running after a sync. Only the GM-ready sweep would still catch synced actors, and only if importId still changes on each import."
+        ],
+        "notes_url": "https://github.com/mrprimate/ddb-importer/releases",
+        "protected": false,
+        "adjudication": "Minor jump 7.5.9->7.6.3; all notes empty. Empty notes only mandate hold on major jumps; no named risk to point at. Backup makes rollback cheap."
+      },
+      {
+        "id": "dice-so-nice",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "6.4.5",
+        "target": "6.4.5",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "dnd-dungeon-masters-guide",
+        "type": "module",
+        "bucket": "hold",
+        "installed": "2.0.0",
+        "target": "3.0.0",
+        "bump": "major",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended",
+          "adjudicated hold: Major jump 2.0.0->3.0.0 with no release notes (premium content). Policy: missing notes + major version = hold. Review manually before updating."
+        ],
+        "notes_url": "https://github.com/foundryvtt/foundryvtt-premium-content/releases",
+        "protected": true,
+        "adjudication": "Major jump 2.0.0->3.0.0 with no release notes (premium content). Policy: missing notes + major version = hold. Review manually before updating."
+      },
+      {
+        "id": "dnd-monster-manual",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.4.0",
+        "target": "1.4.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "dnd-players-handbook",
+        "type": "module",
+        "bucket": "hold",
+        "installed": "2.2.0",
+        "target": "3.0.0",
+        "bump": "major",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended",
+          "adjudicated hold: Major jump 2.2.0->3.0.0 with no release notes (premium content). Policy: missing notes + major version = hold. Review manually before updating."
+        ],
+        "notes_url": "https://github.com/foundryvtt/foundryvtt-premium-content/releases",
+        "protected": true,
+        "adjudication": "Major jump 2.2.0->3.0.0 with no release notes (premium content). Policy: missing notes + major version = hold. Review manually before updating."
+      },
+      {
+        "id": "eledryll-maps-castle-life-bundle-1",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.14.3",
+        "target": "1.14.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "eledryll-spiders-tear-opera-house",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.1.0",
+        "target": "1.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "bucket": "auto",
+        "installed": "5.0.1",
+        "target": "5.0.2",
+        "bump": "patch",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended",
+          "adjudicated apply: Patch 5.0.1->5.0.2; notes only mention removing redundant refreshes for performance. No breaking change, migration, or incompatibility stated."
+        ],
+        "notes_url": "https://github.com/theripper93/enhancedcombathud/releases",
+        "protected": false,
+        "adjudication": "Patch 5.0.1->5.0.2; notes only mention removing redundant refreshes for performance. No breaking change, migration, or incompatibility stated."
+      },
+      {
+        "id": "enhancedcombathud-dnd5e",
+        "type": "module",
+        "bucket": "hold",
+        "installed": "5.2.3",
+        "target": "6.0.0",
+        "bump": "major",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended",
+          "adjudicated apply: Major 5.2.3->6.0.0 but notes exist and only cite removing unused checks for performance; no breaking change, API removal, migration, or incompatibility named.",
+          "escalation: analysis recommends hold \u2014 Nothing confirmed. This is a major bump, and our special-action wraps depend on private internals: _onLeftClick, createChatMessage and the i18n keys. If any check that was removed is one we rely on, the wraps could act differently."
+        ],
+        "notes_url": "https://github.com/theripper93/enhancedcombathud-dnd5e/releases",
+        "protected": false,
+        "adjudication": "Major 5.2.3->6.0.0 but notes exist and only cite removing unused checks for performance; no breaking change, API removal, migration, or incompatibility named."
+      },
+      {
+        "id": "fa-nexus",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.6.2",
+        "target": "0.6.2",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "foundry-mcp-bridge",
+        "type": "module",
+        "bucket": "hold",
+        "installed": "0.8.3-pentaryn.2",
+        "target": "0.8.6",
+        "bump": "patch",
+        "reasons": [
+          "pinned by update-policy.yml"
+        ],
+        "notes_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases",
+        "protected": false
+      },
+      {
+        "id": "gm-vision",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.0.5",
+        "target": "2.0.5",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "item-piles",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "3.3.4",
+        "target": "3.3.4",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "itempilesdnd5e",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.1.0",
+        "target": "1.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "levels",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "7.0.3",
+        "target": "7.0.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "lib-wrapper",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.13.5.1",
+        "target": "1.13.5.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "mad-endlesswiz",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "14.1.0",
+        "target": "14.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "mad-endlesswiz2",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "14.1.0",
+        "target": "14.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "monks-active-tiles",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "14.01",
+        "target": "14.01",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "multi-token-edit",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "3.3.9",
+        "target": "3.3.9",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-aoe",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.8.9",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-aoe-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-attunement",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.3.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-attunement-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-combat",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.3.4",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-combat-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-creatures",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.5.1",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-creatures-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-cursors",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.2.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-cursors-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-dice",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-dice-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-dropbin",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.3.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-dropbin-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-feedback",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.2",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-feedback-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-importer",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.3.1",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync WORLD=<world> (then make foundry-clean), not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-journal",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-journal-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-lookup",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.3.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-lookup-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-movement",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.7.2",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-movement-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-names",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.1",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-names-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-pings",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.1",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-pings-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-pins",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.5.3",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-pins-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-portals",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.8.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-portals-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-prompts",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.4.6",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-prompts-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-reactions",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.1",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-reactions-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-resume",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.2.1",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-resume-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-riders",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.8.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-riders-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-seafoot-maps",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.0.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-seafoot-maps-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-senses",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.5.2",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-senses-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-ties",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.19.6",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-ties-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-transform",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.4.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-transform-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "scene-packer",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.8.13",
+        "target": "2.8.13",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "socketlib",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "v1.1.4",
+        "target": "v1.1.4",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "theripper-premium-hub",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "6.0.2",
+        "target": "6.0.2",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "tile-scroll",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "5.0.0",
+        "target": "5.0.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "wall-height",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "7.0.8",
+        "target": "7.0.8",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      }
+    ],
+    "upstream": {
+      "dnd5e": {
+        "id": "dnd5e",
+        "type": "system",
+        "installed": "6.1.1",
+        "latest": "6.1.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14.367",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://raw.githubusercontent.com/foundryvtt/dnd5e/master/system.json"
+      },
+      "betterroofs": {
+        "id": "betterroofs",
+        "type": "module",
+        "installed": "4.0.2",
+        "latest": "4.0.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "theripper-premium-hub",
+              "type": "module",
+              "reason": "TheRipper93's Module Hub will alert you of critical updates and give you easy access to documentation in the configure settings screen",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/Better-Roofs/releases/latest/download/module.json"
+      },
+      "ddb-importer": {
+        "id": "ddb-importer",
+        "type": "module",
+        "installed": "7.5.9",
+        "latest": "7.6.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14.367",
+          "verified": "14.367",
+          "maximum": 14
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "6.0.3",
+                "verified": "6.0.3",
+                "maximum": "6.1.99"
+              }
+            }
+          ],
+          "recommends": [
+            {
+              "id": "auraeffects",
+              "type": "module",
+              "reason": "Automates DDB Importer aura features (e.g. Paladin auras) as Aura Effects."
+            },
+            {
+              "id": "tokenizer-2",
+              "type": "module",
+              "reason": "Allows the creation of Pog style tokens from the DDB art."
+            },
+            {
+              "id": "vision-5e",
+              "type": "module",
+              "reason": "Adds advanced Vision/Detection modes to the 5e system."
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": "https://github.com/mrprimate/ddb-importer/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [
+          {
+            "version": "7.6.3",
+            "name": "Release 7.6.3",
+            "url": "https://github.com/MrPrimate/ddb-importer/releases/tag/7.6.3",
+            "published": "2026-11-15T19:02:47Z",
+            "body": ""
+          },
+          {
+            "version": "7.6.2",
+            "name": "Release 7.6.2",
+            "url": "https://github.com/MrPrimate/ddb-importer/releases/tag/7.6.2",
+            "published": "2026-11-13T19:40:03Z",
+            "body": ""
+          },
+          {
+            "version": "7.6.1",
+            "name": "Release 7.6.1",
+            "url": "https://github.com/MrPrimate/ddb-importer/releases/tag/7.6.1",
+            "published": "2026-11-13T08:20:44Z",
+            "body": ""
+          },
+          {
+            "version": "7.6.0",
+            "name": "Release 7.6.0",
+            "url": "https://github.com/MrPrimate/ddb-importer/releases/tag/7.6.0",
+            "published": "2026-11-01T11:17:21Z",
+            "body": ""
+          },
+          {
+            "version": "7.5.11",
+            "name": "Release 7.5.11",
+            "url": "https://github.com/MrPrimate/ddb-importer/releases/tag/7.5.11",
+            "published": "2026-10-28T20:51:11Z",
+            "body": ""
+          },
+          {
+            "version": "7.5.10",
+            "name": "Release 7.5.10",
+            "url": "https://github.com/MrPrimate/ddb-importer/releases/tag/7.5.10",
+            "published": "2026-10-28T09:56:43Z",
+            "body": ""
+          }
+        ],
+        "manifest_url": "https://github.com/mrprimate/ddb-importer/releases/download/latest/module.json"
+      },
+      "dice-so-nice": {
+        "id": "dice-so-nice",
+        "type": "module",
+        "installed": "6.4.5",
+        "latest": "6.4.5",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": 14,
+          "verified": "14.370"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/raw/master/module/module.json"
+      },
+      "dnd-dungeon-masters-guide": {
+        "id": "dnd-dungeon-masters-guide",
+        "type": "module",
+        "installed": "2.0.0",
+        "latest": "3.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "6.1.1"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": "https://github.com/foundryvtt/foundryvtt-premium-content/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "dnd-monster-manual": {
+        "id": "dnd-monster-manual",
+        "type": "module",
+        "installed": "1.4.0",
+        "latest": "1.4.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.3.3"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "dnd-players-handbook": {
+        "id": "dnd-players-handbook",
+        "type": "module",
+        "installed": "2.2.0",
+        "latest": "3.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "6.1.0"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": "https://github.com/foundryvtt/foundryvtt-premium-content/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "eledryll-maps-castle-life-bundle-1": {
+        "id": "eledryll-maps-castle-life-bundle-1",
+        "type": "module",
+        "installed": "1.14.3",
+        "latest": "1.14.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "eledryll-spiders-tear-opera-house": {
+        "id": "eledryll-spiders-tear-opera-house",
+        "type": "module",
+        "installed": "1.1.0",
+        "latest": "1.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "enhancedcombathud": {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "installed": "5.0.1",
+        "latest": "5.0.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [],
+          "recommends": [],
+          "systems": []
+        },
+        "protected": false,
+        "notes_url": "https://github.com/theripper93/enhancedcombathud/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [
+          {
+            "version": "5.0.2",
+            "name": "5.0.2",
+            "url": "https://github.com/theripper93/enhancedcombathud/releases/tag/5.0.2",
+            "published": "2026-11-02T13:37:19Z",
+            "body": "- Removed redundant refreshes, performance should increase"
+          }
+        ],
+        "manifest_url": "https://github.com/theripper93/enhancedcombathud/releases/latest/download/module.json"
+      },
+      "enhancedcombathud-dnd5e": {
+        "id": "enhancedcombathud-dnd5e",
+        "type": "module",
+        "installed": "5.2.3",
+        "latest": "6.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "enhancedcombathud",
+              "type": "module",
+              "compatibility": {
+                "minimum": "3.0.4"
+              }
+            }
+          ],
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.0.0"
+              }
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": "https://github.com/theripper93/enhancedcombathud-dnd5e/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [
+          {
+            "version": "6.0.0",
+            "name": "6.0.0",
+            "url": "https://github.com/theripper93/enhancedcombathud-dnd5e/releases/tag/6.0.0",
+            "published": "2026-11-02T13:37:42Z",
+            "body": "- Removed unused checks, performance should increase"
+          }
+        ],
+        "manifest_url": "https://github.com/theripper93/enhancedcombathud-dnd5e/releases/latest/download/module.json"
+      },
+      "fa-nexus": {
+        "id": "fa-nexus",
+        "type": "module",
+        "installed": "0.6.2",
+        "latest": "0.6.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/Forgotten-Adventures/FA-Nexus/releases/latest/download/module.json"
+      },
+      "foundry-mcp-bridge": {
+        "id": "foundry-mcp-bridge",
+        "type": "module",
+        "installed": "0.8.3-pentaryn.2",
+        "latest": "0.8.6",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [
+          {
+            "version": "0.8.6",
+            "name": "Foundry MCP Server v0.8.6",
+            "url": "https://github.com/adambdooley/foundry-vtt-mcp/releases/tag/v0.8.6",
+            "published": "2026-11-04T13:39:01Z",
+            "body": "## Foundry MCP Server v0.8.6\n\nComplete multi-platform distribution for Foundry MCP Server - AI-powered campaign management for Foundry VTT using Claude Desktop.\n\n**Compatible with Foundry VTT v13 and v14.**\n\n### Installation Options\n\n**Windows Users:**\n- Download `FoundryMCPServer-Setup-v0.8.6.exe`\n- Run installer (no admin rights required)\n- Automatic Claude Desktop configuration\n\n**Mac Users:**\n- Download `FoundryMCPServer-v0.8.6.dmg`\n- Open DMG and double-click the PKG installer\n- Choose components: MCP Server (required), Foundry Module, ComfyUI AI Maps\n- Automatic Claude Desktop configuration\n- To uninstall: Double-click `Uninstall.tool` from the DMG\n\n**Manual Installation (All Platforms):**\n- Download `foundry-mcp-server-v0.8.6.zip`\n- Extract and run with Node.js 18+\n- Manual Claude Desktop configuration required\n\n**Foundry VTT Users:**\n- Install directly from Foundry's module browser\n- Or use manifest: `https://github.com/adambdooley/foundry-vtt-mcp/releases/latest/download/module.json`\n\n### Quick Start\n1. Choose your installation method above\n2. Install MCP Bridge module in Foundry VTT\n3. Restart Claude Desktop\n4. Start creating AI-powered campaigns!\n\n### New in this release\n- `create-chat-message`: NPCs can speak in-character lines as speech bubbles, chat-log messages or whispers\n- DSA5: import characters from Dark Aid, Optolith-style or custom JSON exports\n- PF2e: the condition tools work again, and conditions are applied properly\n- dnd5e: removing a condition no longer deletes a larger effect that includes it, such as Paralyzed\n- The creature index now includes compendiums with non-Latin names, and the dnd5e size filter works\n- The Windows installer now configures Claude Desktop in third-party mode (AWS Bedrock or Google Vertex AI)\n\nSee the changelog for the full list.\n\n### Features\n- 50 MCP tools for comprehensive Foundry VTT integration\n- Multi-system support: D&D 5e, Pathfinder 2e, DSA5, Cosmere RPG, WFRP4e, and Mongoose Traveller 2e\n- Generic actor CRUD (create/update/delete actors and embedded items) across all systems\n- D&D 5e NPC creation suite: stat blocks, attacks, saves, auras, and spellcasting\n- Actor creation with natural language processing\n- Quest management with HTML generation and updates\n- Campaign system with multi-part structure and progress tracking\n- Dice roll coordination between Claude and Foundry players\n- Actor ownership management with bulk operations\n- Enhanced creature index for instant monster searches\n- AI-powered battlemap generation with ComfyUI integration\n\nFor full documentation, visit: https://github.com/adambdooley/foundry-vtt-mcp\n\n\n## What's Changed\n* feat(dsa5): add Dark Aid character JSON importer by @frankyh75 in https://github.com/adambdooley/foundry-vtt-mcp/pull/92\n* docs: bring tool count and list to 49 after the DSA5 importer by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/123\n* feat: add create-chat-message tool for in-character lines/chat messages by @tacostorm in https://github.com/adambdooley/foundry-vtt-mcp/pull/114\n* docs: bring tool count and list to 50 after create-chat-message by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/128\n* Fix: index packs with non-Latin1 labels; fix dnd5e size filter by @GoDsqF in https://github.com/adambdooley/foundry-vtt-mcp/pull/127\n* fix(installer): also configure Claude Desktop's third-party mode folder by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/129\n* fix(conditions): toggle conditions through the system's own API by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/130\n* chore(release): prepare v0.8.6 by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/131\n\n## New Contributors\n* @GoDsqF made their first contribution in https://github.com/adambdooley/foundry-vtt-mcp/pull/127\n\n**Full Changelog**: https://github.com/adambdooley/foundry-vtt-mcp/compare/v0.8.5...v0.8.6"
+          },
+          {
+            "version": "0.8.5",
+            "name": "Foundry MCP Server v0.8.5",
+            "url": "https://github.com/adambdooley/foundry-vtt-mcp/releases/tag/v0.8.5",
+            "published": "2026-10-17T15:34:17Z",
+            "body": "## Foundry MCP Server v0.8.5\n\nComplete multi-platform distribution for Foundry MCP Server - AI-powered campaign management for Foundry VTT using Claude Desktop.\n\n**Compatible with Foundry VTT v13 and v14.**\n\n### Installation Options\n\n**Windows Users:**\n- Download `FoundryMCPServer-Setup-v0.8.5.exe`\n- Run installer (no admin rights required)\n- Automatic Claude Desktop configuration\n\n**Mac Users:**\n- Download `FoundryMCPServer-v0.8.5.dmg`\n- Open DMG and double-click the PKG installer\n- Choose components: MCP Server (required), Foundry Module, ComfyUI AI Maps\n- Automatic Claude Desktop configuration\n- To uninstall: Double-click `Uninstall.tool` from the DMG\n\n**Manual Installation (All Platforms):**\n- Download `foundry-mcp-server-v0.8.5.zip`\n- Extract and run with Node.js 18+\n- Manual Claude Desktop configuration required\n\n**Foundry VTT Users:**\n- Install directly from Foundry's module browser\n- Or use manifest: `https://github.com/adambdooley/foundry-vtt-mcp/releases/latest/download/module.json`\n\n### Quick Start\n1. Choose your installation method above\n2. Install MCP Bridge module in Foundry VTT\n3. Restart Claude Desktop\n4. Start creating AI-powered campaigns!\n\n### New in this release\n- Security fix: bridge queries are now only accepted from GM users. Updating is recommended.\n- `manage-world-items` can read a world item in full: description, system data and rules\n- `get-character` can read an unlinked token's own stats and effects by token ID or UUID\n- PF2e: languages in `get-character`, and rule elements and effect changes now include their `key`\n- dnd5e: Activity save configuration and Advancement data are no longer dropped from detailed item reads\n- Clearer Claude Desktop config instructions for manual installs\n\nSee the changelog for the full list.\n\n### Features\n- 48 MCP tools for comprehensive Foundry VTT integration\n- Multi-system support: D&D 5e, Pathfinder 2e, DSA5, Cosmere RPG, WFRP4e, and Mongoose Traveller 2e\n- Generic actor CRUD (create/update/delete actors and embedded items) across all systems\n- D&D 5e NPC creation suite: stat blocks, attacks, saves, auras, and spellcasting\n- Actor creation with natural language processing\n- Quest management with HTML generation and updates\n- Campaign system with multi-part structure and progress tracking\n- Dice roll coordination between Claude and Foundry players\n- Actor ownership management with bulk operations\n- Enhanced creature index for instant monster searches\n- AI-powered battlemap generation with ComfyUI integration\n\nFor full documentation, visit: https://github.com/adambdooley/foundry-vtt-mcp\n\n\n## What's Changed\n* fix: preserve dnd5e Advancement and Activity save serialization by @LordSkull in https://github.com/adambdooley/foundry-vtt-mcp/pull/110\n* fix: resolve synthetic token actors in get-character by @LordSkull in https://github.com/adambdooley/foundry-vtt-mcp/pull/111\n* docs(get-character): mention token ID and UUID lookup in the tool description by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/113\n* feat(pf2e): include languages in get-character stats by @tacostorm in https://github.com/adambdooley/foundry-vtt-mcp/pull/112\n* feat(world-items): read a world item in full, and stop stripping rule element keys by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/119\n* docs: fix the Claude Desktop config instructions for manual installs by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/120\n* fix(security): check the calling user on bridge query handlers by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/121\n* chore(release): prepare v0.8.5 by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/122\n\n\n**Full Changelog**: https://github.com/adambdooley/foundry-vtt-mcp/compare/v0.8.4...v0.8.5"
+          },
+          {
+            "version": "0.8.4",
+            "name": "Foundry MCP Server v0.8.4",
+            "url": "https://github.com/adambdooley/foundry-vtt-mcp/releases/tag/v0.8.4",
+            "published": "2026-09-12T15:27:37Z",
+            "body": "## Foundry MCP Server v0.8.4\n\nComplete multi-platform distribution for Foundry MCP Server - AI-powered campaign management for Foundry VTT using Claude Desktop.\n\n**Compatible with Foundry VTT v13 and v14.**\n\n### Installation Options\n\n**Windows Users:**\n- Download `FoundryMCPServer-Setup-v0.8.4.exe`\n- Run installer (no admin rights required)\n- Automatic Claude Desktop configuration\n\n**Mac Users:**\n- Download `FoundryMCPServer-v0.8.4.dmg`\n- Open DMG and double-click the PKG installer\n- Choose components: MCP Server (required), Foundry Module, ComfyUI AI Maps\n- Automatic Claude Desktop configuration\n- To uninstall: Double-click `Uninstall.tool` from the DMG\n\n**Manual Installation (All Platforms):**\n- Download `foundry-mcp-server-v0.8.4.zip`\n- Extract and run with Node.js 18+\n- Manual Claude Desktop configuration required\n\n**Foundry VTT Users:**\n- Install directly from Foundry's module browser\n- Or use manifest: `https://github.com/adambdooley/foundry-vtt-mcp/releases/latest/download/module.json`\n\n### Quick Start\n1. Choose your installation method above\n2. Install MCP Bridge module in Foundry VTT\n3. Restart Claude Desktop\n4. Start creating AI-powered campaigns!\n\n### New in this release\n- Scene music and playlist tools: bind playlists and tracks to scenes, plus playlist CRUD and playback control\n- ActiveEffect management: create, update and delete effects on actors or their items\n- DSA5 system support, plus a new `replace-journal-page` tool\n- `manage-actors` can now place existing world actors onto the current scene\n- Fixes: `use-item` targeting on Foundry V13/V14, Windows installer upgrade safety (no longer risks an existing ComfyUI install), large responses timing out over WebRTC, and several D&D 5e feature-creation defects\n\nSee the changelog for the full list.\n\n### Features\n- 48 MCP tools for comprehensive Foundry VTT integration\n- Multi-system support: D&D 5e, Pathfinder 2e, DSA5, Cosmere RPG, WFRP4e, and Mongoose Traveller 2e\n- Generic actor CRUD (create/update/delete actors and embedded items) across all systems\n- D&D 5e NPC creation suite: stat blocks, attacks, saves, auras, and spellcasting\n- Actor creation with natural language processing\n- Quest management with HTML generation and updates\n- Campaign system with multi-part structure and progress tracking\n- Dice roll coordination between Claude and Foundry players\n- Actor ownership management with bulk operations\n- Enhanced creature index for instant monster searches\n- AI-powered battlemap generation with ComfyUI integration\n\nFor full documentation, visit: https://github.com/adambdooley/foundry-vtt-mcp\n\n\n## What's Changed\n* chore: correct release-notes tool count and system list by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/71\n* ci: guard against version drift across manifests by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/72\n* fix: repair scene background image after generate-map scene creation by @Sir-Salty-Bacon in https://github.com/adambdooley/foundry-vtt-mcp/pull/79\n* fix(module): use ws:// for loopback hosts even on HTTPS pages (#74) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/82\n* feat: DSA5 adapter support (normalizePayload, describeActorSchema) + system detection + replace-journal-page tool by @frankyh75 in https://github.com/adambdooley/foundry-vtt-mcp/pull/81\n* fix: include scene_name in map job dedup hash (#80) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/84\n* fix: register getPackIndex query for list-dsa5-archetypes (#77) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/83\n* feat: add 'place' action to manage-actors for existing world actors (#75) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/85\n* fix: scope .form-footer rules to the module's own settings forms by @apoapostolov in https://github.com/adambdooley/foundry-vtt-mcp/pull/97\n* Fix/journal page rename (Issue #95) by @tacostorm in https://github.com/adambd"
+          }
+        ],
+        "manifest_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases/latest/download/module.json"
+      },
+      "gm-vision": {
+        "id": "gm-vision",
+        "type": "module",
+        "installed": "2.0.5",
+        "latest": "2.0.5",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/dev7355608/gm-vision/releases/latest/download/module.json"
+      },
+      "item-piles": {
+        "id": "item-piles",
+        "type": "module",
+        "installed": "3.3.4",
+        "latest": "3.3.4",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "socketlib",
+              "type": "module"
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module"
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json"
+      },
+      "itempilesdnd5e": {
+        "id": "itempilesdnd5e",
+        "type": "module",
+        "installed": "1.1.0",
+        "latest": "1.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "12",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "item-piles",
+              "type": "module",
+              "manifest": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json",
+              "compatibility": {
+                "minimum": "3.2.7",
+                "verified": "3.2.7"
+              }
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/fantasycalendar/FoundryVTT-ItemPilesDnD5e/releases/latest/download/module.json"
+      },
+      "levels": {
+        "id": "levels",
+        "type": "module",
+        "installed": "7.0.3",
+        "latest": "7.0.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": []
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/Levels/releases/latest/download/module.json"
+      },
+      "lib-wrapper": {
+        "id": "lib-wrapper",
+        "type": "module",
+        "installed": "1.13.5.1",
+        "latest": "1.13.5.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "0.6.5",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json"
+      },
+      "mad-endlesswiz": {
+        "id": "mad-endlesswiz",
+        "type": "module",
+        "installed": "14.1.0",
+        "latest": "14.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "scene-packer",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "multi-token-edit",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "monks-active-tiles",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "mad-endlesswiz2": {
+        "id": "mad-endlesswiz2",
+        "type": "module",
+        "installed": "14.1.0",
+        "latest": "14.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "scene-packer",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "tile-scroll",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "monks-active-tiles",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "monks-active-tiles": {
+        "id": "monks-active-tiles",
+        "type": "module",
+        "installed": "14.01",
+        "latest": "14.01",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/ironmonk108/monks-active-tiles/releases/latest/download/module.json"
+      },
+      "multi-token-edit": {
+        "id": "multi-token-edit",
+        "type": "module",
+        "installed": "3.3.9",
+        "latest": "3.3.9",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": 14,
+          "verified": "14.367"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module"
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/Aedif/multi-token-edit/releases/latest/download/module.json"
+      },
+      "pentaryn-aoe": {
+        "id": "pentaryn-aoe",
+        "type": "module",
+        "installed": "0.8.9",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-attunement": {
+        "id": "pentaryn-attunement",
+        "type": "module",
+        "installed": "0.3.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-combat": {
+        "id": "pentaryn-combat",
+        "type": "module",
+        "installed": "0.3.4",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-creatures": {
+        "id": "pentaryn-creatures",
+        "type": "module",
+        "installed": "0.5.1",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-cursors": {
+        "id": "pentaryn-cursors",
+        "type": "module",
+        "installed": "0.2.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-dice": {
+        "id": "pentaryn-dice",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-dropbin": {
+        "id": "pentaryn-dropbin",
+        "type": "module",
+        "installed": "0.3.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-feedback": {
+        "id": "pentaryn-feedback",
+        "type": "module",
+        "installed": "0.1.2",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-importer": {
+        "id": "pentaryn-importer",
+        "type": "module",
+        "installed": "1.3.1",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-journal": {
+        "id": "pentaryn-journal",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-lookup": {
+        "id": "pentaryn-lookup",
+        "type": "module",
+        "installed": "0.3.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-movement": {
+        "id": "pentaryn-movement",
+        "type": "module",
+        "installed": "0.7.2",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-names": {
+        "id": "pentaryn-names",
+        "type": "module",
+        "installed": "0.1.1",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-pings": {
+        "id": "pentaryn-pings",
+        "type": "module",
+        "installed": "0.1.1",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-pins": {
+        "id": "pentaryn-pins",
+        "type": "module",
+        "installed": "0.5.3",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-portals": {
+        "id": "pentaryn-portals",
+        "type": "module",
+        "installed": "0.8.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-prompts": {
+        "id": "pentaryn-prompts",
+        "type": "module",
+        "installed": "0.4.6",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-reactions": {
+        "id": "pentaryn-reactions",
+        "type": "module",
+        "installed": "0.1.1",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-resume": {
+        "id": "pentaryn-resume",
+        "type": "module",
+        "installed": "0.2.1",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-riders": {
+        "id": "pentaryn-riders",
+        "type": "module",
+        "installed": "0.8.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-seafoot-maps": {
+        "id": "pentaryn-seafoot-maps",
+        "type": "module",
+        "installed": "1.0.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-senses": {
+        "id": "pentaryn-senses",
+        "type": "module",
+        "installed": "0.5.2",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-ties": {
+        "id": "pentaryn-ties",
+        "type": "module",
+        "installed": "0.19.6",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-transform": {
+        "id": "pentaryn-transform",
+        "type": "module",
+        "installed": "0.4.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "scene-packer": {
+        "id": "scene-packer",
+        "type": "module",
+        "installed": "2.8.13",
+        "latest": "2.8.13",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "0.8.6",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/League-of-Foundry-Developers/scene-packer/releases/download/2.8.13/module.json"
+      },
+      "socketlib": {
+        "id": "socketlib",
+        "type": "module",
+        "installed": "v1.1.4",
+        "latest": "v1.1.4",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "11",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/farling42/foundryvtt-socketlib/releases/latest/download/module.json"
+      },
+      "theripper-premium-hub": {
+        "id": "theripper-premium-hub",
+        "type": "module",
+        "installed": "6.0.2",
+        "latest": "6.0.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/theripper-premium-hub/releases/latest/download/module.json"
+      },
+      "tile-scroll": {
+        "id": "tile-scroll",
+        "type": "module",
+        "installed": "5.0.0",
+        "latest": "5.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/tile-scroll/releases/latest/download/module.json"
+      },
+      "wall-height": {
+        "id": "wall-height",
+        "type": "module",
+        "installed": "7.0.8",
+        "latest": "7.0.8",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "13"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "theripper-premium-hub",
+              "type": "module",
+              "reason": "TheRipper93's Module Hub will alert you of critical updates and give you easy access to documentation in the configure settings screen",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/wall-height/releases/latest/download/module.json"
+      }
+    },
+    "forks": [
+      {
+        "fork": "JoJoAtkinson/foundry-vtt-mcp",
+        "upstream": "adambdooley/foundry-vtt-mcp",
+        "package_id": "foundry-mcp-bridge",
+        "ahead": 0,
+        "behind": 93,
+        "branch": "master",
+        "error": null,
+        "checkout_path": null,
+        "notes": [
+          "93 commit(s) behind upstream with no local changes \u2014 safe to fast-forward: gh repo sync JoJoAtkinson/foundry-vtt-mcp"
+        ]
+      }
+    ],
+    "buckets": {
+      "auto": [
+        "enhancedcombathud"
+      ],
+      "review": [],
+      "hold": [
+        "ddb-importer",
+        "dnd-dungeon-masters-guide",
+        "dnd-players-handbook",
+        "enhancedcombathud-dnd5e",
+        "foundry-mcp-bridge"
+      ]
+    },
+    "host": [
+      {
+        "id": "node",
+        "label": "Node.js (Foundry's service)",
+        "installed": "24.22.3",
+        "target": null,
+        "bucket": "current",
+        "reason": "newest within >=24.22.1 <25.0.0",
+        "restart": [
+          "foundry"
+        ],
+        "detail": {
+          "engines": ">=24.22.1 <25.0.0"
+        }
+      },
+      {
+        "id": "apt:cloudflared",
+        "label": "cloudflared (apt)",
+        "installed": "2026.11.1",
+        "target": null,
+        "bucket": "current",
+        "reason": "apt's candidate is installed",
+        "restart": [
+          "tunnel"
+        ],
+        "detail": {}
+      },
+      {
+        "id": "apt:infisical",
+        "label": "infisical (apt)",
+        "installed": "0.45.13",
+        "target": "0.45.14",
+        "bucket": "auto",
+        "reason": "apt candidate",
+        "restart": [],
+        "detail": {}
+      },
+      {
+        "id": "apt:gh",
+        "label": "gh (apt)",
+        "installed": "2.105.0",
+        "target": null,
+        "bucket": "current",
+        "reason": "apt's candidate is installed",
+        "restart": [],
+        "detail": {}
+      },
+      {
+        "id": "apt:ubuntu",
+        "label": "Ubuntu packages (apt)",
+        "installed": "0 pending",
+        "target": null,
+        "bucket": "current",
+        "reason": "nothing pending",
+        "restart": [],
+        "detail": {
+          "packages": []
+        }
+      },
+      {
+        "id": "rclone",
+        "label": "rclone (backups)",
+        "installed": "1.76.0",
+        "target": null,
+        "bucket": "current",
+        "reason": "current",
+        "restart": [],
+        "detail": {}
+      },
+      {
+        "id": "chrome",
+        "label": "chrome-headless-shell (headless GM)",
+        "installed": "158.0.8127.36",
+        "target": null,
+        "bucket": "current",
+        "reason": "current",
+        "restart": [
+          "bot"
+        ],
+        "detail": {}
+      },
+      {
+        "id": "claude",
+        "label": "Claude Code CLI (LLM steps)",
+        "installed": "2.1.330",
+        "target": null,
+        "bucket": "current",
+        "reason": "updates itself; verified by a real claude -p call",
+        "restart": [],
+        "detail": {}
+      },
+      {
+        "id": "python",
+        "label": "Python deps (.venv)",
+        "installed": "locked",
+        "target": null,
+        "bucket": "review",
+        "reason": "34 outdated \u2014 bump in pyproject/uv.lock by hand",
+        "restart": [],
+        "detail": {
+          "outdated": [
+            "anyio 4.14.2\u21924.16.0",
+            "cairosvg 2.9.0\u21922.9.1",
+            "cattrs 26.1.0\u219226.2.1",
+            "certifi 2026.7.22\u21922026.11.20",
+            "charset-normalizer 3.4.9\u21923.5.3",
+            "cssselect2 0.9.0\u21920.10.1",
+            "debugpy 1.8.21\u21921.8.22",
+            "executing 2.2.1\u21922.3.0",
+            "idna 3.18\u21923.20",
+            "iniconfig 2.3.0\u21922.3.1",
+            "ipykernel 7.3.0\u21927.4.0",
+            "ipython 9.16.1\u21929.18.1",
+            "jedi 0.20.0\u21920.20.1",
+            "jupyter-client 8.9.1\u21928.10.0",
+            "nest-asyncio2 1.7.2\u21921.7.4",
+            "numpy 2.5.2\u21922.5.5",
+            "pandas 3.0.5\u21923.1.1",
+            "pillow 12.3.0\u219213.0.0",
+            "platformdirs 4.11.1\u21924.14.8",
+            "pluggy 1.6.0\u21921.7.0",
+            "pure-eval 0.2.3\u21920.2.4",
+            "pycparser 3.0\u21923.12",
+            "pygments 2.20.0\u21922.21.0",
+            "pytest 9.1.1\u21929.2.0",
+            "python-dateutil 2.9.0.post0\u21924.0.0",
+            "python-dotenv 1.2.2\u21921.2.4",
+            "pyyaml 6.0.3\u21926.0.4",
+            "pyzmq 27.1.0\u219227.3.0",
+            "tomlkit 0.15.1\u21920.15.2",
+            "tornado 6.5.8\u21926.6.1"
+          ]
+        }
+      },
+      {
+        "id": "npm:headless-gm",
+        "label": "npm deps (headless-gm)",
+        "installed": "locked",
+        "target": null,
+        "bucket": "review",
+        "reason": "2 outdated \u2014 npm update in automation/headless-gm",
+        "restart": [],
+        "detail": {
+          "outdated": [
+            "@puppeteer/browsers 2.13.2\u21923.2.7",
+            "puppeteer-core 24.43.1\u219225.18.1"
+          ]
+        }
+      },
+      {
+        "id": "npm:smoke",
+        "label": "npm deps (smoke)",
+        "installed": "locked",
+        "target": null,
+        "bucket": "review",
+        "reason": "1 outdated \u2014 npm update in automation/smoke",
+        "restart": [],
+        "detail": {
+          "outdated": [
+            "puppeteer-core 24.43.1\u219225.18.1"
+          ]
+        }
+      },
+      {
+        "id": "wsl",
+        "label": "WSL (Windows side)",
+        "installed": "3.0.5.0",
+        "target": null,
+        "bucket": "current",
+        "reason": "kernel 6.18.58.1-1; report only \u2014 update from Windows: wsl --update",
+        "restart": [],
+        "detail": {
+          "kernel": "6.18.58.1-1"
+        }
+      }
+    ],
+    "adjudication": {
+      "ran": true,
+      "error": null,
+      "call": {
+        "tier": "adjudicator",
+        "model": "opus",
+        "effort": "medium",
+        "ok": true,
+        "resolved_model": "claude-opus-5-5",
+        "cost_usd": 0.02862,
+        "seconds": 5.2,
+        "error": null,
+        "detail": "ddb-importer, dnd-dungeon-masters-guide, dnd-players-handbook, enhancedcombathud, enhancedcombathud-dnd5e",
+        "budget_usd": 1.5,
+        "cost_known": true
+      },
+      "verdicts": [
+        {
+          "id": "ddb-importer",
+          "verdict": "apply",
+          "rationale": "Minor jump 7.5.9->7.6.3; all notes empty. Empty notes only mandate hold on major jumps; no named risk to point at. Backup makes rollback cheap."
+        },
+        {
+          "id": "dnd-dungeon-masters-guide",
+          "verdict": "hold",
+          "rationale": "Major jump 2.0.0->3.0.0 with no release notes (premium content). Policy: missing notes + major version = hold. Review manually before updating."
+        },
+        {
+          "id": "dnd-players-handbook",
+          "verdict": "hold",
+          "rationale": "Major jump 2.2.0->3.0.0 with no release notes (premium content). Policy: missing notes + major version = hold. Review manually before updating."
+        },
+        {
+          "id": "enhancedcombathud",
+          "verdict": "apply",
+          "rationale": "Patch 5.0.1->5.0.2; notes only mention removing redundant refreshes for performance. No breaking change, migration, or incompatibility stated."
+        },
+        {
+          "id": "enhancedcombathud-dnd5e",
+          "verdict": "apply",
+          "rationale": "Major 5.2.3->6.0.0 but notes exist and only cite removing unused checks for performance; no breaking change, API removal, migration, or incompatibility named."
+        }
+      ]
+    }
+  },
+  "escalation": {
+    "enabled": true,
+    "tier_floor": "analyze",
+    "tier_ceiling": "analyze",
+    "tier": "analyze",
+    "ceiling_reasons": [],
+    "packages": [
+      {
+        "id": "ddb-importer",
+        "type": "module",
+        "installed": "7.5.9",
+        "target": "7.6.3",
+        "bump": "minor",
+        "bucket": "auto",
+        "protected": false,
+        "notes_count": 6,
+        "notes_chars": 0,
+        "notes_url": "https://github.com/mrprimate/ddb-importer/releases",
+        "adjustments": [
+          "ddb-importer-sync-corrections"
+        ],
+        "modules": [
+          "pentaryn-importer"
+        ],
+        "exposure": [
+          "foundry/module/pentaryn-importer/api-manifest.mjs",
+          "foundry/module/pentaryn-importer/ddb-core.mjs",
+          "foundry/module/pentaryn-importer/ddb-corrections.mjs",
+          "foundry/module/pentaryn-importer/settings.mjs"
+        ],
+        "keyword_hits": {},
+        "history": "held",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended"
+        ],
+        "cached_analysis": true,
+        "analysis_failed_out": false
+      },
+      {
+        "id": "dnd-dungeon-masters-guide",
+        "type": "module",
+        "installed": "2.0.0",
+        "target": "3.0.0",
+        "bump": "major",
+        "bucket": "hold",
+        "protected": true,
+        "notes_count": 0,
+        "notes_chars": 0,
+        "notes_url": "https://github.com/foundryvtt/foundryvtt-premium-content/releases",
+        "adjustments": [],
+        "modules": [],
+        "exposure": [
+          "foundry/module/pentaryn-lookup/api.mjs",
+          "foundry/module/pentaryn-lookup/lookup-core.mjs",
+          "foundry/module/pentaryn-prompts/build-core.mjs"
+        ],
+        "keyword_hits": {},
+        "history": "held",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended"
+        ],
+        "cached_analysis": false,
+        "analysis_failed_out": false
+      },
+      {
+        "id": "dnd-players-handbook",
+        "type": "module",
+        "installed": "2.2.0",
+        "target": "3.0.0",
+        "bump": "major",
+        "bucket": "hold",
+        "protected": true,
+        "notes_count": 0,
+        "notes_chars": 0,
+        "notes_url": "https://github.com/foundryvtt/foundryvtt-premium-content/releases",
+        "adjustments": [],
+        "modules": [],
+        "exposure": [
+          "foundry/module/pentaryn-dropbin/itempiles.mjs",
+          "foundry/module/pentaryn-importer/ddb-core.mjs",
+          "foundry/module/pentaryn-lookup/lookup-core.mjs",
+          "foundry/module/pentaryn-prompts/build-core.mjs",
+          "foundry/module/pentaryn-prompts/packs-adapter.mjs"
+        ],
+        "keyword_hits": {},
+        "history": "held",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended"
+        ],
+        "cached_analysis": false,
+        "analysis_failed_out": false
+      },
+      {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "installed": "5.0.1",
+        "target": "5.0.2",
+        "bump": "patch",
+        "bucket": "auto",
+        "protected": false,
+        "notes_count": 1,
+        "notes_chars": 58,
+        "notes_url": "https://github.com/theripper93/enhancedcombathud/releases",
+        "adjustments": [
+          "argon-panel-injection",
+          "argon-target-picker-cancel",
+          "argon-bonus-used-tracking",
+          "argon-portrait-hp",
+          "argon-tooltip-clear",
+          "argon-combat-panel-injection",
+          "argon-combat-target-picker-reuse",
+          "argon-combat-weapon-set-seed",
+          "argon-combat-rerender-cleanup",
+          "combat-argon-portrait-conditions",
+          "argon-combat-hud-follows",
+          "riders-argon-ritual-adept-list",
+          "argon-shared-uses-badge",
+          "argon-collapse-on-area-placement",
+          "argon-tooltip-click-through",
+          "argon-combat-offhand-slot-dup",
+          "argon-combat-picker-cue-position",
+          "argon-combat-tooltip-refresh",
+          "argon-combat-drawer-near-button",
+          "combat-argon-pip-settle",
+          "aoe-argon-handle-bind",
+          "core-combat-helper-token-control",
+          "argon-light-pick-collapse-panels",
+          "argon-creatures-strip-float",
+          "argon-combat-drawer-restore-place",
+          "argon-combat-stray-tooltip",
+          "argon-combat-movement-redraw",
+          "argon-combat-drawer-turn-close"
+        ],
+        "modules": [
+          "pentaryn-aoe",
+          "pentaryn-combat",
+          "pentaryn-creatures",
+          "pentaryn-riders",
+          "pentaryn-senses",
+          "pentaryn-transform"
+        ],
+        "exposure": [
+          "foundry/module/pentaryn-aoe/argon.mjs",
+          "foundry/module/pentaryn-combat/api-manifest.mjs",
+          "foundry/module/pentaryn-combat/argon.mjs",
+          "foundry/module/pentaryn-combat/combat-core.mjs",
+          "foundry/module/pentaryn-combat/hud/bars.mjs",
+          "foundry/module/pentaryn-combat/hud/buttons-ui.mjs",
+          "foundry/module/pentaryn-combat/hud/picker.mjs",
+          "foundry/module/pentaryn-combat/hud/pips-bar.mjs",
+          "foundry/module/pentaryn-combat/hud/tooltips.mjs",
+          "foundry/module/pentaryn-combat/lib/argon-kit.mjs",
+          "foundry/module/pentaryn-combat/patches.mjs",
+          "foundry/module/pentaryn-combat/turnflow/action-buttons.mjs",
+          "foundry/module/pentaryn-combat/turnflow/boundaries.mjs",
+          "foundry/module/pentaryn-combat/turnflow/drawers.mjs",
+          "foundry/module/pentaryn-combat/turnflow/helper-token.mjs",
+          "foundry/module/pentaryn-combat/turnflow/movement.mjs",
+          "foundry/module/pentaryn-combat/turnflow/portrait.mjs",
+          "foundry/module/pentaryn-creatures/strip.mjs",
+          "foundry/module/pentaryn-riders/argon-tidy.mjs",
+          "foundry/module/pentaryn-riders/argon.mjs",
+          "foundry/module/pentaryn-riders/rest.mjs",
+          "foundry/module/pentaryn-senses/argon.mjs",
+          "foundry/module/pentaryn-transform/argon.mjs",
+          "foundry/module/pentaryn-transform/form-picker.mjs",
+          "foundry/module/pentaryn-transform/hud-panels.mjs",
+          "foundry/module/pentaryn-transform/lib/argon-kit.mjs"
+        ],
+        "keyword_hits": {
+          "remov": 1
+        },
+        "history": "held",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended"
+        ],
+        "cached_analysis": false,
+        "analysis_failed_out": false
+      },
+      {
+        "id": "enhancedcombathud-dnd5e",
+        "type": "module",
+        "installed": "5.2.3",
+        "target": "6.0.0",
+        "bump": "major",
+        "bucket": "auto",
+        "protected": false,
+        "notes_count": 1,
+        "notes_chars": 52,
+        "notes_url": "https://github.com/theripper93/enhancedcombathud-dnd5e/releases",
+        "adjustments": [
+          "argon-panel-injection",
+          "argon-combat-panel-injection",
+          "argon-combat-swing-pips",
+          "argon-combat-rerender-cleanup",
+          "argon-combat-special-actions",
+          "argon-combat-reaction-slot",
+          "riders-argon-ritual-adept-list",
+          "argon-shared-uses-badge",
+          "argon-combat-offhand-slot-dup",
+          "argon-combat-item-button-bonus-pip",
+          "argon-combat-item-button-spell-pips",
+          "riders-argon-metamagic-no-picker",
+          "riders-argon-tooltip-item-rolldata",
+          "argon-riders-long-casts",
+          "argon-combat-movement-redraw",
+          "argon-riders-omen-badge",
+          "dnd5e-riders-omen-die-decides"
+        ],
+        "modules": [
+          "pentaryn-combat",
+          "pentaryn-riders",
+          "pentaryn-transform"
+        ],
+        "exposure": [
+          "foundry/module/pentaryn-combat/hud/bars.mjs",
+          "foundry/module/pentaryn-combat/hud/buttons-ui.mjs",
+          "foundry/module/pentaryn-combat/patches.mjs",
+          "foundry/module/pentaryn-combat/turnflow/action-buttons.mjs",
+          "foundry/module/pentaryn-combat/turnflow/drawers.mjs",
+          "foundry/module/pentaryn-combat/turnflow/portrait.mjs",
+          "foundry/module/pentaryn-riders/argon-tidy.mjs",
+          "foundry/module/pentaryn-riders/argon.mjs",
+          "foundry/module/pentaryn-riders/rest.mjs",
+          "foundry/module/pentaryn-transform/form-picker.mjs",
+          "foundry/module/pentaryn-transform/hud-panels.mjs"
+        ],
+        "keyword_hits": {
+          "remov": 1
+        },
+        "history": "held",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended"
+        ],
+        "cached_analysis": false,
+        "analysis_failed_out": false
+      },
+      {
+        "id": "foundry-mcp-bridge",
+        "type": "module",
+        "installed": "0.8.3-pentaryn.2",
+        "target": "0.8.6",
+        "bump": "patch",
+        "bucket": "hold",
+        "protected": false,
+        "notes_count": 3,
+        "notes_chars": 11745,
+        "notes_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases",
+        "adjustments": [],
+        "modules": [],
+        "exposure": [
+          "automation/smoke/pins-live.mjs",
+          "foundry/module/pentaryn-prompts/api.mjs",
+          "foundry/module/pentaryn-prompts/npc-adapter.mjs"
+        ],
+        "keyword_hits": {
+          "remov": 1,
+          "renam": 1,
+          "API": 1
+        },
+        "history": "held",
+        "reasons": [
+          "pinned by update-policy.yml"
+        ],
+        "cached_analysis": false,
+        "analysis_failed_out": false
+      }
+    ],
+    "triage": {
+      "ok": true,
+      "tier": "analyze",
+      "reason": "Every package has adjustments near our code, and the release notes do not show that those are safe. ddb-importer notes are empty, so its hook and importId dependencies are unverified. The two Argon packages note removals or refresh changes near our re-render and checks code.",
+      "injection_suspected": false,
+      "packages": [
+        {
+          "id": "ddb-importer",
+          "risk": "watch",
+          "areas": [
+            "pentaryn-importer"
+          ],
+          "digest": [
+            {
+              "kind": "other",
+              "api": "",
+              "note": "Release notes for 7.5.10 to 7.6.3 have no body, so the change set is unknown."
+            },
+            {
+              "kind": "other",
+              "api": "ddb-importer.characterProcessDataComplete",
+              "note": "Cannot confirm the corrections hook still fires after import."
+            },
+            {
+              "kind": "other",
+              "api": "flags.ddbimporter.importId",
+              "note": "Cannot confirm the importId flag is still written per import."
+            },
+            {
+              "kind": "other",
+              "api": "ignoreItemImport",
+              "note": "Cannot confirm the freeze flag is still honoured by the import path."
+            }
+          ]
+        },
+        {
+          "id": "enhancedcombathud",
+          "risk": "watch",
+          "areas": [
+            "pentaryn-combat",
+            "pentaryn-riders",
+            "pentaryn-transform",
+            "pentaryn-aoe",
+            "pentaryn-creatures",
+            "pentaryn-senses"
+          ],
+          "digest": [
+            {
+              "kind": "fix",
+              "api": "",
+              "note": "5.0.2 removes redundant refreshes for performance; no API named."
+            },
+            {
+              "kind": "other",
+              "api": "",
+              "note": "Removed refreshes may affect re-render-driven adjustments such as tooltip refresh, bar cleanup and movement redraw."
+            }
+          ]
+        },
+        {
+          "id": "enhancedcombathud-dnd5e",
+          "risk": "watch",
+          "areas": [
+            "pentaryn-combat",
+            "pentaryn-riders",
+            "pentaryn-transform"
+          ],
+          "digest": [
+            {
+              "kind": "removal",
+              "api": "",
+              "note": "6.0.0 is a major bump that removes unused checks; the removed checks are not named."
+            },
+            {
+              "kind": "other",
+              "api": "",
+              "note": "Unclear whether removed checks overlap with what our Argon patches or the riders rely on. Needs analysis."
+            }
+          ]
+        }
+      ]
+    },
+    "analysis": {
+      "ddb-importer": {
+        "key": "39f6865f78707b9852ac938f",
+        "cached": true,
+        "path": "foundry/logs/auto-updates/plans/20261119-221829-ddb-importer.md",
+        "since": "2026-11-19",
+        "impact": "latent",
+        "confidence": "low",
+        "recommendation": "hold",
+        "areas": [
+          {
+            "area": "pentaryn-importer",
+            "impact": "latent",
+            "what_breaks": "Not confirmed. If 7.6.x renames or drops the characterProcessDataComplete hook, nothing errors. The corrections just stop running after a sync. Only the GM-ready sweep would still catch synced actors, and only if importId still changes on each import."
+          },
+          {
+            "area": "pentaryn-importer",
+            "impact": "latent",
+            "what_breaks": "Not confirmed. If importId is no longer regenerated on each import, the sweep stops spotting new syncs. If the import path now also honours ignoreItemUpdate or a new freeze flag, our rules would overwrite items that ddb-importer leaves alone."
+          }
+        ],
+        "still_needed": [
+          {
+            "adjustment": "ddb-importer-sync-corrections",
+            "working": "unknown",
+            "needed": "unknown",
+            "native_now": "Unknown. The release notes are empty, so there is no sign that ddb-importer now fixes custom gear types, innate free casts or PHB spells on Cast activities itself.",
+            "action": "investigate",
+            "why": "This depends on the hook name, the importId flag and the ignoreItemImport flag, and none can be checked from empty notes. The last update was rolled back, so check before applying."
+          }
+        ],
+        "plan_head": [
+          "Find out why the last ddb-importer update was rolled back before trying again.",
+          "In the ddb-importer 7.6.3 source, confirm the hook ddb-importer.characterProcessDataComplete still fires via Hooks.callAll with {actor, ddbCharacter} after the import is written.",
+          "Confirm the character importer still sets a fresh flags.ddbimporter.importId on every import."
+        ]
+      },
+      "enhancedcombathud": {
+        "key": "0734d1c06ccfd1daa740645a",
+        "cached": false,
+        "path": "foundry/logs/auto-updates/plans/20261123-020736-enhancedcombathud.md",
+        "impact": "latent",
+        "confidence": "medium",
+        "recommendation": "apply",
+        "areas": [
+          {
+            "area": "pentaryn-riders",
+            "impact": "latent",
+            "what_breaks": "The Cosmic Omen badge expects Argon to re-render a button when its item changes. If one of the refreshes Argon dropped was that re-render, the badge can show the old omen until the HUD renders again."
+          },
+          {
+            "area": "pentaryn-riders",
+            "impact": "latent",
+            "what_breaks": "The shared-uses badge re-renders the buttons itself on updateItem, so it should still work. Fewer Argon refreshes could make our refresh the only one that keeps Metamagic badges current."
+          },
+          {
+            "area": "pentaryn-combat",
+            "impact": "latent",
+            "what_breaks": "The bars are recomposed in renderActionPanelArgonComponent. If Argon now skips some panel re-renders, signature-driven rerender() and pip restore still run, but a state change that used to arrive through an Argon refresh may show up later."
+          },
+          {
+            "area": "pentaryn-transform",
+            "impact": "latent",
+            "what_breaks": "The bonus-used re-mark expects Argon to rebuild the HUD on a token swap. If that rebuild was cut as redundant, the Bonus bar may not pick up the shift until the next render."
+          }
+        ],
+        "still_needed": [
+          {
+            "adjustment": "argon-panel-injection",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "No add-button API or wild-shape panel was announced."
+          },
+          {
+            "adjustment": "argon-target-picker-cancel",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "No public cancel API is mentioned."
+          },
+          {
+            "adjustment": "argon-bonus-used-tracking",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "Bonus-used state is still on the panel. Check the shift rebuild at the table, since fewer refreshes may change when it happens."
+          },
+          {
+            "adjustment": "argon-portrait-hp",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention temp HP on the portrait."
+          },
+          {
+            "adjustment": "argon-tooltip-clear",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention tooltip cleanup."
+          },
+          {
+            "adjustment": "argon-combat-panel-injection",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "No add-button or multi-attack API was announced."
+          },
+          {
+            "adjustment": "argon-combat-target-picker-reuse",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "No public pickTargets API is mentioned."
+          },
+          {
+            "adjustment": "argon-combat-weapon-set-seed",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't change default weapon sets."
+          },
+          {
+            "adjustment": "argon-combat-rerender-cleanup",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't say Argon now disposes old buttons."
+          },
+          {
+            "adjustment": "argon-combat-hud-follows",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't change follow behaviour."
+          },
+          {
+            "adjustment": "argon-shared-uses-badge",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "We re-render the buttons ourselves. Fewer Argon refreshes make this more needed, not less."
+          },
+          {
+            "adjustment": "argon-collapse-on-area-placement",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention collapsing panels during placement."
+          },
+          {
+            "adjustment": "argon-tooltip-click-through",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "CSS only; the notes don't mention tooltips."
+          },
+          {
+            "adjustment": "argon-combat-offhand-slot-dup",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't change the off-hand slot."
+          },
+          {
+            "adjustment": "argon-combat-picker-cue-position",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't change the picker label."
+          },
+          {
+            "adjustment": "argon-combat-tooltip-refresh",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention tooltip refresh or mouseleave."
+          },
+          {
+            "adjustment": "argon-combat-drawer-near-button",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention drawer positioning."
+          },
+          {
+            "adjustment": "argon-light-pick-collapse-panels",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention collapsing panels on a canvas pick."
+          },
+          {
+            "adjustment": "argon-creatures-strip-float",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't change the HUD layout."
+          },
+          {
+            "adjustment": "argon-combat-drawer-restore-place",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention drawer placement after a restore."
+          },
+          {
+            "adjustment": "argon-combat-stray-tooltip",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention tooltip closing."
+          },
+          {
+            "adjustment": "argon-combat-movement-redraw",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "Argon's movement readout still doesn't redraw on effect changes. Fewer refreshes make this more needed."
+          },
+          {
+            "adjustment": "argon-combat-drawer-turn-close",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't change drawer state at a turn change."
+          },
+          {
+            "adjustment": "combat-argon-portrait-conditions",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention portrait conditions."
+          },
+          {
+            "adjustment": "riders-argon-ritual-adept-list",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention ritual listing."
+          },
+          {
+            "adjustment": "combat-argon-pip-settle",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't say the pip-painting bug was fixed."
+          },
+          {
+            "adjustment": "aoe-argon-handle-bind",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "No bind filter was added."
+          },
+          {
+            "adjustment": "core-combat-helper-token-control",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "The notes don't mention re-binding after a token is deleted."
+          }
+        ],
+        "plan_head": [
+          "Update enhancedcombathud from 5.0.1 to 5.0.2.",
+          "Run make foundry-adjustments-check, make foundry-combat-check and make foundry-transform-check.",
+          "Run make foundry-riders-check, make foundry-aoe-check, make foundry-senses-check and make foundry-creatures-check."
+        ]
+      },
+      "enhancedcombathud-dnd5e": {
+        "key": "ebaad4ec09b4359b9705b63a",
+        "cached": false,
+        "path": "foundry/logs/auto-updates/plans/20261123-020736-enhancedcombathud-dnd5e.md",
+        "impact": "none",
+        "confidence": "low",
+        "recommendation": "hold",
+        "areas": [
+          {
+            "area": "pentaryn-combat",
+            "impact": "none",
+            "what_breaks": "Nothing confirmed. This is a major bump, and our special-action wraps depend on private internals: _onLeftClick, createChatMessage and the i18n keys. If any check that was removed is one we rely on, the wraps could act differently."
+          },
+          {
+            "area": "pentaryn-combat",
+            "impact": "none",
+            "what_breaks": "The swing-pip override reads the prototype maxActions/currentActions getters and returns early if they are gone. If 6.0.0 turns them into plain values, the swing pips stop quietly and nothing throws."
+          },
+          {
+            "area": "pentaryn-riders",
+            "impact": "none",
+            "what_breaks": "Nothing confirmed. The Rituals and Longer casts groups need _spells, _parent and showPreparedOnly. The omen badge reads isActivity and _item. Each is guarded, so a change would hide the group or badge without an error."
+          },
+          {
+            "area": "pentaryn-transform",
+            "impact": "none",
+            "what_breaks": "Nothing confirmed. The seat-pip wrapper reads Argon's maxActions, which returns null out of combat. If that inCombat check is gone, our fallback only runs less often, which is harmless. The Wild Shape and Starry Form subclasses still depend on CONFIG.ARGON."
+          }
+        ],
+        "still_needed": [
+          {
+            "adjustment": "argon-panel-injection",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing stated; no add-button API or transform panel mentioned",
+            "action": "keep",
+            "why": "Major bump. The subclassing of CONFIG.ARGON.MAIN.BUTTONS classes needs checking at the table, and the checkBonus shim note in the registry may be what was removed."
+          },
+          {
+            "adjustment": "argon-combat-panel-injection",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing; no multi-attack button mentioned",
+            "action": "keep",
+            "why": "The render hooks and the _buttons array are not mentioned. Confirm Full Attack and the follow-ups appear."
+          },
+          {
+            "adjustment": "argon-combat-swing-pips",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing; no Extra Attack counting mentioned",
+            "action": "investigate",
+            "why": "Depends on the prototype getters, and a major version could change them. It falls back silently if they are missing."
+          },
+          {
+            "adjustment": "argon-combat-rerender-cleanup",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing stated about disposing buttons",
+            "action": "keep",
+            "why": "Best-effort and wrapped in try. Watch for leaked drawers after a re-render."
+          },
+          {
+            "adjustment": "argon-combat-special-actions",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing; no action spend for special actions mentioned",
+            "action": "investigate",
+            "why": "Finds buttons by createChatMessage and by i18n names. A major rewrite could rename either."
+          },
+          {
+            "adjustment": "argon-combat-reaction-slot",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "Depends on _isWeaponSet and _onLeftClick. Confirm the Opportunity Attack label at the table."
+          },
+          {
+            "adjustment": "argon-shared-uses-badge",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing stated",
+            "action": "keep",
+            "why": "Uses only ui.ARGON.itemButtons and render(), and is guarded."
+          },
+          {
+            "adjustment": "argon-combat-offhand-slot-dup",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "CSS toggle on _isWeaponSet slots only. No change mentioned."
+          },
+          {
+            "adjustment": "argon-combat-item-button-bonus-pip",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "Driven by dnd5e hooks and Argon's isActionUsed/updateActionUse."
+          },
+          {
+            "adjustment": "argon-combat-item-button-spell-pips",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing; no pip restore on bind mentioned",
+            "action": "keep",
+            "why": "Same panel API as before. Confirm the pips repaint after a re-bind."
+          },
+          {
+            "adjustment": "argon-riders-long-casts",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing; minute/hour spells not mentioned",
+            "action": "keep",
+            "why": "Shares the _renderInner wrap with the Rituals list. Verify alongside it."
+          },
+          {
+            "adjustment": "argon-combat-movement-redraw",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing stated",
+            "action": "keep",
+            "why": "Guarded by a typeof check on updateMovement."
+          },
+          {
+            "adjustment": "argon-riders-omen-badge",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "Reads isActivity and _item, with a fallback. Confirm the badge on the Cosmic Omen button."
+          },
+          {
+            "adjustment": "riders-argon-ritual-adept-list",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing; no ritual listing mentioned",
+            "action": "investigate",
+            "why": "Reads the private _spells, _parent and showPreparedOnly. Removing checks could change the spell button."
+          },
+          {
+            "adjustment": "riders-argon-metamagic-no-picker",
+            "working": "unknown",
+            "needed": "yes",
+            "native_now": "nothing",
+            "action": "keep",
+            "why": "Lazy, guarded wrap of the targets getter. If the getter is gone, the wrap is skipped."
+          },
+          {
+            "adjustment": "riders-argon-tooltip-item-rolldata",
+            "working": "yes",
+            "needed": "unknown",
+            "native_now": "unconfirmed whether rollData is passed now",
+            "action": "keep",
+            "why": "Adds rollData only when it is missing, so it is harmless either way. Check the Scorching Ray tooltip."
+          },
+          {
+            "adjustment": "dnd5e-riders-omen-die-decides",
+            "working": "yes",
+            "needed": "yes",
+            "native_now": "nothing; the dnd5e dialog is unchanged by this package",
+            "action": "keep",
+            "why": "The dialog part is dnd5e's. Only the HUD badge touches Argon."
+          }
+        ],
+        "plan_head": [
+          "Keep the package at 5.2.3 for now. The bump is major and the notes are vague.",
+          "In a test copy of the world, update enhancedcombathud-dnd5e to 6.0.0, check its required core Argon and dnd5e versions, and update those too if needed.",
+          "Run make foundry-adjustments-check, then make foundry-combat-check, make foundry-riders-check and make foundry-transform-check."
+        ]
+      }
+    },
+    "held": [
+      {
+        "id": "ddb-importer",
+        "reason": "analysis recommends hold \u2014 Not confirmed. If 7.6.x renames or drops the characterProcessDataComplete hook, nothing errors. The corrections just stop running after a sync. Only the GM-ready sweep would still catch synced actors, and only if importId still changes on each import."
+      },
+      {
+        "id": "enhancedcombathud-dnd5e",
+        "reason": "analysis recommends hold \u2014 Nothing confirmed. This is a major bump, and our special-action wraps depend on private internals: _onLeftClick, createChatMessage and the i18n keys. If any check that was removed is one we rely on, the wraps could act differently."
+      }
+    ],
+    "deferred": [],
+    "calls": [
+      {
+        "tier": "T0",
+        "model": "haiku",
+        "effort": "low",
+        "ok": true,
+        "resolved_model": "claude-haiku-5-5",
+        "cost_usd": 0.0036,
+        "seconds": 8.7,
+        "error": null,
+        "detail": "ddb-importer, enhancedcombathud, enhancedcombathud-dnd5e",
+        "budget_usd": 0.25,
+        "cost_known": true
+      },
+      {
+        "tier": "T1",
+        "model": "opus",
+        "effort": "high",
+        "ok": true,
+        "resolved_model": "claude-opus-5-5",
+        "cost_usd": 1.53481,
+        "seconds": 56.4,
+        "error": null,
+        "detail": "enhancedcombathud",
+        "budget_usd": 2.5,
+        "cost_known": true
+      },
+      {
+        "tier": "T1",
+        "model": "opus",
+        "effort": "high",
+        "ok": true,
+        "resolved_model": "claude-opus-5-5",
+        "cost_usd": 1.36429,
+        "seconds": 57.8,
+        "error": null,
+        "detail": "enhancedcombathud-dnd5e",
+        "budget_usd": 2.5,
+        "cost_known": true
+      }
+    ],
+    "cost_usd": 2.9027,
+    "plans": [
+      "foundry/logs/auto-updates/plans/20261123-020736-enhancedcombathud.md",
+      "foundry/logs/auto-updates/plans/20261123-020736-enhancedcombathud-dnd5e.md"
+    ],
+    "errors": [],
+    "skipped": null,
+    "charged_usd": 2.9027
+  },
+  "host_applied": [
+    {
+      "id": "apt:infisical",
+      "from": "0.45.13",
+      "to": "0.45.14",
+      "restart": [],
+      "seconds": 3.7
+    }
+  ],
+  "verify": [
+    {
+      "id": "node",
+      "label": "Node.js within Foundry's engines",
+      "ok": true,
+      "detail": "24.22.3 vs >=24.22.1 <25.0.0",
+      "component": "node"
+    },
+    {
+      "id": "foundry",
+      "label": "Foundry serving the world",
+      "ok": false,
+      "detail": "world=space-journey (want pentaryn), v14.370",
+      "component": "node"
+    },
+    {
+      "id": "tunnel",
+      "label": "https://vtt.atjoseph.com answers",
+      "ok": true,
+      "detail": "HTTP 302",
+      "component": "apt:cloudflared"
+    },
+    {
+      "id": "backup",
+      "label": "backup remote reachable",
+      "ok": true,
+      "detail": "6 entries in world-backups/",
+      "component": "rclone"
+    },
+    {
+      "id": "secrets",
+      "label": "Infisical resolves the admin password",
+      "ok": true,
+      "detail": "resolved",
+      "component": "apt:infisical"
+    },
+    {
+      "id": "llm",
+      "label": "claude -p answers (the LLM steps)",
+      "ok": true,
+      "detail": "answered",
+      "component": "claude"
+    },
+    {
+      "id": "tool:cloudflared",
+      "label": "cloudflared runs",
+      "ok": true,
+      "detail": "cloudflared version 2026.11.1 (built 2026-11-17-15:04 UTC)",
+      "component": "apt:cloudflared"
+    },
+    {
+      "id": "tool:infisical",
+      "label": "infisical runs",
+      "ok": true,
+      "detail": "infisical version 0.45.14",
+      "component": "apt:infisical"
+    },
+    {
+      "id": "tool:gh",
+      "label": "gh runs",
+      "ok": true,
+      "detail": "gh version 2.105.0 (2026-11-17)",
+      "component": "apt:gh"
+    },
+    {
+      "id": "tool:rclone",
+      "label": "rclone runs",
+      "ok": true,
+      "detail": "rclone v1.76.0",
+      "component": "rclone"
+    },
+    {
+      "id": "tool:git",
+      "label": "git runs",
+      "ok": true,
+      "detail": "git version 2.53.0",
+      "component": null
+    },
+    {
+      "id": "tool:uv",
+      "label": "uv runs",
+      "ok": true,
+      "detail": "uv 0.13.0 (x86_64-unknown-linux-gnu)",
+      "component": null
+    }
+  ],
+  "report_call": {
+    "tier": "report",
+    "model": "sonnet",
+    "effort": "medium",
+    "ok": true,
+    "resolved_model": "claude-sonnet-5-5",
+    "cost_usd": 0.14391,
+    "seconds": 40.1,
+    "error": null,
+    "detail": "20261123-020736",
+    "budget_usd": 0.5,
+    "cost_known": true
+  }
+}
