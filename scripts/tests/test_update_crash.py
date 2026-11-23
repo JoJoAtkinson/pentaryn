@@ -269,5 +269,5 @@ def test_recovered_still_says_rolled_back(monkeypatch):
     sent: list[tuple] = []
     monkeypatch.setattr(apply.notify, "notify", lambda *a: sent.append(a))
     apply.notify_result(apply.RunResult(run_id="t", outcome="recovered",
-                                        recoveries=[{"kind": "module"}]))
+                                        recoveries=[{"kind": "module", "ok": True}]))
     assert sent[0][1].startswith("update rolled back")

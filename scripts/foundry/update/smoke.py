@@ -44,8 +44,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 SMOKE_JS = REPO_ROOT / "automation" / "smoke" / "smoke.mjs"
 CHROME_PROFILE = REPO_ROOT / ".state" / "smoke-chrome-profile"
 BASELINE_PATH = REPO_ROOT / ".state" / "vtt-smoke-baseline.json"
-# Time for a deactivated world's LevelDB to finish closing before the next launch.
-SETTLE_SECONDS = 8.0
+# Time for a deactivated world's LevelDB to finish closing (admin.return_to_setup sleeps it).
+SETTLE_SECONDS = admin_mod.SETTLE_SECONDS
 
 _DIGITS = re.compile(r"\d+")
 
@@ -105,64 +105,63 @@ def selection_miss(worlds: list[dict], policy: dict) -> str | None:
 def run_all(fa: FoundryAdmin, worlds: list[dict], *, policy: dict,
             touched: set[str], error_offset: int,
             log_day: str | None = None) -> list[WorldResult]:
-    """Smoke every world in turn, leaving the last one launched."""
+    """Smoke every world in turn, then put the server back the way it was found.
+
+    The run calls this parked at the setup screen, and what comes next — recovery's
+    ``listBackups``/``restoreBackup``, the host phase, ``restore_service`` — needs it still
+    parked there. Until 2026-11-23 the last world smoked was left serving: the rollback's
+    ``listBackups`` got a 400 (the module stayed at the bad version), and
+    ``restore_service`` saw "a world is active" and never relaunched the table's own
+    world. So the entry state is restored in a ``finally``, whatever happened in between.
+    A failure to restore it is recorded on the last result's notes, never raised.
+    """
+    entry_world = admin_mod.active_world(fa)
     results: list[WorldResult] = []
-    for world in select_worlds(worlds, policy):
-        # Foundry serves ONE world at a time, and `launchWorld` is a /setup action —
-        # which is refused (400 on 14.369, 403 before) while any world is active. So the previous world has to come down
-        # before the next can go up, or every world after the first fails to launch.
-        problem = _return_to_setup(fa)
-        if problem:
-            # The restart fallback failed, so this world cannot be launched. Record it
-            # as broken rather than raising: a raise here skips apply's recover phase
-            # and leaves the untested packages live (ROB-6).
-            results.append(WorldResult(world=world["id"],
-                                       errors=[f"could not return to setup: {problem}"]))
-        else:
-            results.append(_smoke_one(fa, world, policy=policy, touched=touched,
-                                      error_offset=error_offset, log_day=log_day))
-        # Each world's launch appends to the same log; advance the mark so the next
-        # world is not blamed for the previous one's output. The mark moves to today's
-        # file, so a run past midnight does not re-read the new day's file (ROB-9).
-        log_day = time.strftime("%Y-%m-%d")
-        error_offset = admin_mod.error_log_offset(log_day)
+    try:
+        for world in select_worlds(worlds, policy):
+            # Foundry serves ONE world at a time, and `launchWorld` is a /setup action —
+            # which is refused (400 on 14.369, 403 before) while any world is active. So
+            # the previous world has to come down before the next can go up, or every
+            # world after the first fails to launch.
+            problem = _return_to_setup(fa)
+            if problem:
+                # The restart fallback failed, so this world cannot be launched. Record it
+                # as broken rather than raising: a raise here skips apply's recover phase
+                # and leaves the untested packages live (ROB-6).
+                results.append(WorldResult(world=world["id"],
+                                           errors=[f"could not return to setup: {problem}"]))
+            else:
+                results.append(_smoke_one(fa, world, policy=policy, touched=touched,
+                                          error_offset=error_offset, log_day=log_day))
+            # Each world's launch appends to the same log; advance the mark so the next
+            # world is not blamed for the previous one's output. The mark moves to today's
+            # file, so a run past midnight does not re-read the new day's file (ROB-9).
+            log_day = time.strftime("%Y-%m-%d")
+            error_offset = admin_mod.error_log_offset(log_day)
+    finally:
+        problem = _restore_entry(fa, entry_world)
+        if problem and results:
+            results[-1].notes.append(problem)
     return results
 
 
-def _return_to_setup(fa: FoundryAdmin) -> str | None:
-    """Deactivate whatever world is running, so the setup API answers again.
-
-    Prefers the graceful path (`FoundryAdmin.deactivate_world`: `POST /setup
-    {worldShutdown}` on 14.369+, `POST /join {shutdown}` before; both need the admin password)
-    and falls back to restarting the app — `options.json` has `world: null`, so a fresh
-    start lands on the setup screen.
-
-    Returns ``None`` when setup is reachable, or the error text when the restart
-    fallback itself failed (a wedged app makes ``quit_app``/``start_app`` raise).
-    """
+def _restore_entry(fa: FoundryAdmin, world: str | None) -> str | None:
+    """Back to the state ``run_all`` started in: the setup screen, or ``world`` serving.
+    Returns the problem text, or ``None``; never raises (it runs in a ``finally``)."""
+    if world is None:
+        problem = _return_to_setup(fa)
+        return f"could not return to setup after the smoke test: {problem}" if problem else None
     try:
-        if not fa.world_active():
-            return None
-    except Exception:  # noqa: BLE001
-        return None
-    if fa.deactivate_world():
-        # /api/status flips to inactive as soon as the world is torn down, but the
-        # world's LevelDB closes asynchronously after that. Launching the next world
-        # too quickly produces `LEVEL_DATABASE_NOT_OPEN — Failed to connect to database`
-        # in the server log, which the error-log check then reports as breakage caused
-        # by the update. Observed; the settle is not superstition.
-        time.sleep(SETTLE_SECONDS)
-        return None
-    try:
-        admin_mod.quit_app()
-        admin_mod.start_app()
-    except (Timeout, Exception) as exc:  # noqa: BLE001
-        return str(exc) or type(exc).__name__
-    try:
-        fa.reauthenticate()   # the restart invalidated the session
-    except Exception:  # noqa: BLE001
-        pass
+        admin_mod.ensure_world(fa, world, timeout=240)
+    except Exception as exc:  # noqa: BLE001
+        return f"could not relaunch {world} after the smoke test: {exc}"
     return None
+
+
+def _return_to_setup(fa: FoundryAdmin) -> str | None:
+    """Deactivate whatever world is running (``admin.return_to_setup``). ``None`` when
+    setup is reachable, else the error text of the failed restart fallback."""
+    return admin_mod.return_to_setup(fa)
 
 
 def _fingerprint(errors: list[dict]) -> list[str]:

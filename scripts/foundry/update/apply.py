@@ -557,10 +557,12 @@ def restore_service(entry: state.EntryState, messages: list[str]) -> None:
             except Exception as exc:  # noqa: BLE001
                 messages.append(f"could not restart Foundry: {exc}")
         if entry.active_world:
+            # ensure_world, not "launch if nothing is active": a world the run left up
+            # (the smoke test's last, 2026-11-23: space-journey) is shut down and the
+            # table's own world launched. The old check saw "a world is active" and
+            # stopped there, and validation then failed "want pentaryn".
             try:
-                if not fa.world_active():
-                    fa.launch_world(entry.active_world)
-                    fa.wait_for_world(entry.active_world, timeout=240)
+                admin_mod.ensure_world(fa, entry.active_world, timeout=240)
             except Exception as exc:  # noqa: BLE001
                 messages.append(f"could not relaunch {entry.active_world}: {exc}")
     else:
@@ -739,7 +741,11 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
         if broken or result.failed:
             status.set_phase("recover")
             _recover(result, fa, system, broken)
-            result.outcome = "recovered" if result.recoveries else "failed"
+            # "recovered" only when every rollback took. A rollback that failed left the
+            # package live at the version it was meant to undo; on 2026-11-23 a failed
+            # listBackups was reported as outcome "recovered" and "ROLLED BACK".
+            result.outcome = ("recovered" if result.recoveries
+                              and all(r.get("ok") for r in result.recoveries) else "failed")
         else:
             result.outcome = "done"
             risk.save_seen(inventory.scan(), exclude=held)
@@ -796,6 +802,11 @@ def _recover(result: RunResult, fa: FoundryAdmin, system, broken) -> None:
                                      snapshot)
         result.recoveries.append(rec.to_json())
     else:
+        # Module restores are /setup actions: park once here (recover_module parks too,
+        # but would stop and relaunch a world for every module).
+        problem = smoke._return_to_setup(fa)
+        if problem:
+            result.messages.append(f"could not return to setup before the rollback: {problem}")
         for record in result.applied:
             if record["type"] != "module":
                 continue
@@ -883,9 +894,7 @@ def _verify(result: RunResult, *, world: str | None, tunnel_expected: bool) -> N
             _restart_foundry(_admin_client(), result.messages)
             if world:
                 try:
-                    fa = _admin_client()
-                    fa.launch_world(world)
-                    fa.wait_for_world(world, timeout=240)
+                    admin_mod.ensure_world(_admin_client(), world, timeout=240)
                 except Exception as exc:  # noqa: BLE001
                     result.messages.append(f"could not relaunch {world} after the rollback: {exc}")
         if "tunnel" in (rec.get("restart") or []) and tunnel_expected:
@@ -927,8 +936,16 @@ def notify_result(result: RunResult) -> None:
         detail = "; ".join(result.messages[:2]) or "see the run report"
         # Only say "rolled back" when something was. A crash rolls nothing back, and
         # this title used to tell Joe it had while untested modules sat live.
-        title = ("update rolled back" if result.recoveries or result.host_rollbacks
-                 else "update FAILED, nothing rolled back")
+        failed_back = [r for r in result.recoveries if not r.get("ok")]
+        failed_back += [r for r in result.host_rollbacks if r.get("error")]
+        if failed_back:
+            # Never "rolled back" when a rollback failed: that package is still live.
+            title = "update FAILED, rollback FAILED for " + ", ".join(
+                str(r.get("target") or r.get("id")) for r in failed_back)
+        elif result.recoveries or result.host_rollbacks:
+            title = "update rolled back"
+        else:
+            title = "update FAILED, nothing rolled back"
         notify.notify("failed", f"{title} ({result.run_id})",
                       f"{detail}\n\nRestore point: {result.snapshot or 'none'}")
         return

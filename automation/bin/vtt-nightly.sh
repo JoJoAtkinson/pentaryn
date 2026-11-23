@@ -219,16 +219,18 @@ relaunch_world() {
   [ "$WORLD" != "-" ] || return 0
   if [ -n "$DRY" ]; then log "▸ relaunch world $WORLD (dry run — not run)"; return 0; fi
   log "▸ relaunch world $WORLD"
-  if WORLD="$WORLD" timeout 360 "$PY" - >>"$LOG" 2>&1 <<'EOF'
+  # ensure_world: another world serving (the Monday smoke left space-journey up, 2026-11-23)
+  # is shut down first — launchWorld is a /setup action, 400 while any world is active.
+  if WORLD="$WORLD" timeout 660 "$PY" - >>"$LOG" 2>&1 <<'EOF'
 import os
-from scripts.foundry.update.admin import FoundryAdmin
+from scripts.foundry.update.admin import FoundryAdmin, active_world, ensure_world
 from scripts.foundry.admin_password import foundry_admin_password
 world = os.environ["WORLD"]
 a = FoundryAdmin(admin_password=foundry_admin_password())
-if a.status().world != world:
-    a.authenticate()
-    a.launch_world(world)
-print("  world serving:", a.wait_for_world(world, timeout=300))
+other = active_world(a)
+if other and other != world:
+    print(f"  {other} is serving instead — shutting it down first")
+print("  world serving:", ensure_world(a, world, timeout=300))
 EOF
   then log "  ✓ $WORLD is serving"; return 0
   else log "✗ FAILED: world $WORLD did not relaunch — Foundry is up; launch it from /setup"; return 1
