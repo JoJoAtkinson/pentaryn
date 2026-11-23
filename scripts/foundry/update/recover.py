@@ -74,17 +74,35 @@ def recover_module(fa: FoundryAdmin, pkg_type: str, pkg_id: str,
     in ``apply.backup_packages`` before the run, are the actual mechanism.
     """
     rec = Recovery(kind="module", target=pkg_id)
+    # listBackups and restoreBackup are /setup actions, refused (400 on 14.369+) while any
+    # world is active. 2026-11-23: the smoke test had left space-journey serving, the list
+    # 400'd, and enhancedcombathud stayed at the version being rolled back. Park first,
+    # put back whatever was serving afterwards.
+    parked = admin_mod.AtSetup(fa)
+    try:
+        with parked:
+            _restore_module(fa, rec, pkg_type, pkg_id, previous_version)
+    except admin_mod.FoundryError as exc:       # only entering raises it
+        rec.error = f"could not reach the setup screen to restore {pkg_id}: {exc}"
+        return rec
+    # "stopped <world>" first, "relaunched <world>" (or why not) last.
+    rec.steps = parked.notes[:1] + rec.steps + parked.notes[1:]
+    return rec
+
+
+def _restore_module(fa: FoundryAdmin, rec: Recovery, pkg_type: str, pkg_id: str,
+                    previous_version: str) -> None:
     try:
         listing = fa.list_backups()
     except Exception as exc:  # noqa: BLE001
         rec.error = f"could not list backups: {exc}"
-        return rec
+        return
 
     entry = _newest_backup(listing, pkg_type, pkg_id, previous_version)
     if not entry:
         rec.error = (f"no backup of {pkg_id} {previous_version} to restore — "
                      "backup_packages did not record one before the run")
-        return rec
+        return
 
     rec.steps.append(f"restoreBackup {pkg_id} ← {entry.get('id')}")
     try:
@@ -93,11 +111,10 @@ def recover_module(fa: FoundryAdmin, pkg_type: str, pkg_id: str,
                                            timeout=300)
     except Exception as exc:  # noqa: BLE001
         rec.error = f"restore did not take: {exc}"
-        return rec
+        return
 
     rec.steps.append(f"verified on disk: {pkg_id} {previous_version}")
     rec.ok = True
-    return rec
 
 
 def _newest_backup(listing: dict, pkg_type: str, pkg_id: str,

@@ -87,8 +87,13 @@ def _run(args, apply_mod, report_mod) -> int:
     # anyone looks, and "outcome: recovered" on its own does not say WHAT was rolled
     # back or from which snapshot — which is exactly the question it prompts.
     for rec in result.recoveries:
-        verdict = "ok" if rec["ok"] else f"FAILED: {rec.get('error')}"
-        print(f"  ↩ ROLLED BACK {rec['kind']} {rec['target']} — {verdict}")
+        if rec["ok"]:
+            print(f"  ↩ ROLLED BACK {rec['kind']} {rec['target']} — ok")
+        else:
+            # Not "ROLLED BACK … — FAILED": the package is still at the version it was
+            # meant to undo, and the first word is what a skim of this log reads.
+            print(f"  ✗ ROLLBACK FAILED {rec['kind']} {rec['target']} — still at the "
+                  f"updated version: {rec.get('error')}")
         for step in rec.get("steps", []):
             print(f"      · {step}")
     for record in result.host_applied:

@@ -93,7 +93,7 @@ Then, by hand, because nothing can do these for you:
    are meant to wait for you.
 
 Three classes, all ordinary Notification Center posts that respect Focus:
-✅ *done* (silent) · ⚠️ *needs you* (sound) · ❌ *rolled back* (sound). They post through
+✅ *done* (silent) · ⚠️ *needs you* (sound) · ❌ *rolled back* (sound; "rollback FAILED for <pkg>" when a rollback did not take — that package is still at the new version). They post through
 `Ardenhaven VTT.app` so they carry Foundry's icon and get their own settings row.
 
 ### Why there is an admin password now

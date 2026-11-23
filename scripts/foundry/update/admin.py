@@ -691,6 +691,125 @@ class FoundryAdmin:
         raise Timeout(f"server still had a world active after {timeout:.0f}s")
 
 
+# ── World switching: one world at a time, and /setup only answers with none ──
+#
+# Foundry serves ONE world, and every /setup package or world action (launchWorld,
+# listBackups, restoreBackup, installPackage …) is refused — 400 on 14.369+, 403 before —
+# while any world is active. 2026-11-23 shows what happens when a caller forgets either
+# half: the smoke test left space-journey serving, the rollback's listBackups got a 400
+# (module left at the new version), restore_service saw "a world is active" and did not
+# put pentaryn back, and the nightly's relaunch_world 400'd on launchWorld too.
+
+# Time for a deactivated world's LevelDB to finish closing before the next launch.
+SETTLE_SECONDS = 8.0
+
+
+def active_world(fa: "FoundryAdmin") -> str | None:
+    """The world being served, or ``None`` at the setup screen (or when unreadable)."""
+    try:
+        s = fa.status()
+    except Exception:  # noqa: BLE001
+        return None
+    return s.world if getattr(s, "active", False) else None
+
+
+def return_to_setup(fa: "FoundryAdmin") -> str | None:
+    """Deactivate whatever world is running, so the setup API answers again.
+
+    Prefers the graceful path (``FoundryAdmin.deactivate_world``: ``POST /setup
+    {worldShutdown}`` on 14.369+, ``POST /join {shutdown}`` before; both need the admin
+    password) and falls back to restarting the app — ``options.json`` has ``world: null``,
+    so a fresh start lands on the setup screen.
+
+    Returns ``None`` when setup is reachable, or the error text when the restart
+    fallback itself failed (a wedged app makes ``quit_app``/``start_app`` raise).
+    """
+    try:
+        if not fa.world_active():
+            return None
+    except Exception:  # noqa: BLE001
+        return None
+    if fa.deactivate_world():
+        # /api/status flips to inactive as soon as the world is torn down, but the
+        # world's LevelDB closes asynchronously after that. Launching the next world
+        # too quickly produces `LEVEL_DATABASE_NOT_OPEN — Failed to connect to database`
+        # in the server log, which the error-log check then reports as breakage caused
+        # by the update. Observed; the settle is not superstition.
+        time.sleep(SETTLE_SECONDS)
+        return None
+    try:
+        quit_app()
+        start_app()
+    except (Timeout, Exception) as exc:  # noqa: BLE001
+        return str(exc) or type(exc).__name__
+    try:
+        fa.reauthenticate()   # the restart invalidated the session
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def ensure_world(fa: "FoundryAdmin", world: str, timeout: float = 240.0) -> "Status":
+    """Leave the server serving ``world``, whatever it is serving now.
+
+    Already serving it: nothing happens. Serving another world: that one is shut down
+    first (``return_to_setup``), because ``launchWorld`` is a /setup action and is refused
+    while any world is active. At the setup screen: launched. Raises ``FoundryError`` when
+    the other world cannot be brought down, and ``Timeout`` when ``world`` never serves.
+    Unattended only — it drops anyone connected to the other world without asking
+    (``ops.login`` asks first).
+    """
+    s = fa.status()
+    if s.active and s.world == world:
+        return s
+    if s.active:
+        problem = return_to_setup(fa)
+        if problem:
+            raise FoundryError(f"{s.world} is active and could not be shut down to launch "
+                               f"{world}: {problem}")
+    fa.launch_world(world)
+    return fa.wait_for_world(world, timeout=timeout)
+
+
+class AtSetup:
+    """``with AtSetup(fa) as parked:`` — the body runs with no world active, and the world
+    that was active before is relaunched afterwards, also when the body raises.
+
+    For a /setup call that needs the setup screen (``listBackups``, ``restoreBackup`` …)
+    made from a state that may have a world up. ``parked.world`` is the world that was
+    shut down (``None`` when the server was already at setup); ``parked.notes`` says what
+    was stopped and relaunched, or why the relaunch failed — the relaunch never raises,
+    so it cannot mask the body's own exception or result. Entering raises
+    ``FoundryError`` when the active world cannot be brought down.
+    """
+
+    def __init__(self, fa: "FoundryAdmin", timeout: float = 240.0) -> None:
+        self.fa = fa
+        self.timeout = timeout
+        self.world: str | None = None
+        self.notes: list[str] = []
+
+    def __enter__(self) -> "AtSetup":
+        self.world = active_world(self.fa)
+        if self.world:
+            problem = return_to_setup(self.fa)
+            if problem:
+                raise FoundryError(f"{self.world} is active and could not be shut down "
+                                   f"for the setup screen: {problem}")
+            self.notes.append(f"stopped {self.world} (/setup refuses this while a world "
+                              "is active)")
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        if self.world:
+            try:
+                ensure_world(self.fa, self.world, timeout=self.timeout)
+                self.notes.append(f"relaunched {self.world}")
+            except Exception as err:  # noqa: BLE001
+                self.notes.append(f"could not relaunch {self.world}: {err}")
+        return False
+
+
 # ── Disk verification — the counterweight to a fire-and-forget API ───────────
 
 def installed_version(pkg_type: str, pkg_id: str) -> str | None:
