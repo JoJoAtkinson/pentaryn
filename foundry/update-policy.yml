@@ -82,6 +82,7 @@ smoke:
     - "Failed to load resource: net::ERR_"
     - "DevTools failed to load source map"
     - "[Deprecation]"
+    - "Permissions policy violation: compute-pressure"   # Chrome 158 browser noise; failed ardenford smoke 2026-11-23
 
 window:
   # launchd coalesces a run missed while the Mac was asleep onto the next wake. Without
