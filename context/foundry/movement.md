@@ -63,8 +63,27 @@ There is nothing to learn: drag, and it works out the rest. Since 0.8.0 it ships
 - **"The route went the long way round":** the short way crossed a secret door, a scene-link region, or (for a player) unexplored ground. On purpose.
 - **A token stopped and nobody knows why:** `status().stop.last` is this client's last click-stop (`how`, `via`: `click`, `board`, `door`, `api`; `pastDoor` when it was carried past a door's line).
 - **Next Turn while a group walks (in a fight):** the whole group stops at its next squares and the members still waiting stay put; what they walked belonged to the turn that ended. `status().group.stopped.why` is `turnChange`.
-- **A player alt-tabbed right after dropping a group:** the moment the tab goes to the background its later waves go at once, each cut back where it would meet another member's walk (`status().group.flushed`). A fight's member waiting for an arrival waits at most until the deadline.
+- **A player alt-tabbed right after dropping a group:** the moment the tab goes to the background (or, 0.8.1, when the group is made on a tab already in the background) its later waves go at once, each cut back where it would meet another member's walk or the first wave's (`status().group.flushed`). In a file through a door the members right behind the first wave then stay where they stand ("Stopped short") rather than walk on its heels. A fight's member waiting for an arrival waits at most until the deadline.
 - **Reloading the page while a group walks:** the members still waiting set off once the page is back **only when it is back within 1.5 s of the first unsent wave** (S3R1-07: every other client stops expecting them then); later than that they stay where they are, "Stopped short" (kept until dismissed). In a fight, a member part way along its walk goes on from the square it rests on once the reloaded page shows its scene again, within a minute, as far as it is free of every standing token (`status().group.fightResumed`).
 - **Undo (Ctrl+Z) after a group move** undoes one wave at a time (each wave is its own update).
 - **Turn things off:** GM, the drag-help button (all of it, for everyone), or the tier settings. Each player, *Find a path when I drag* (client). `game.pentaryn.movement.stop(token)` stops one from the console.
 - **Force the fallbacks** (live checks): `CONFIG.debug["pentaryn-movement.throw"] = true` (a planner throw) or `CONFIG.debug["pentaryn-movement.throwDeliver"] = true` (a delivery throw): drag a group, core's move with one warning; delete the keys after.
+
+## The simulator
+
+`make foundry-movement-sim SEEDS=10000` (default 2000 seeds from 1; `FROM=`, `MAP=hard`, `JSON=1`) runs the module's distributed logic in Node: the GM, one to three players and the headless bot as virtual clients on one fake clock; jittered latency (11–105 ms, wandering over seconds, packets sent together arriving together), TCP loss as a 200–600 ms retransmit holding the link, fog stalls of 150–1,400 ms on player tabs, a backgrounded initiator, a dropped socket that reloads; five generated maps (T-junction, two-wide corridor, diagonal door, dead end, the hard dungeon). Each seed drops a group (sometimes a second client drops at nearly the same moment), maybe clicks a member to a stop and shuts a door, and judges every invariant on the server's record and on every client's drawn view, frame by frame:
+
+| Invariant | Holds when |
+|---|---|
+| `passThrough` | a mover never comes inside a token standing still (0.05 square of numeric slack) |
+| `moverBound` | two movers never come more than 0.1 square inside touching for more than 150 ms |
+| `restOverlap` | nothing overlaps at rest |
+| `liveness` | every drop's run ends by its 10 s deadline (or when its last walk does, a long way round being a walk, not a wait); nothing is left walking; drawn = server at the end |
+| `combatCost` | in a fight each committed update is one square on the token's own way, never a position write |
+| `orphans` | no reservation, group or held yield is left once everything has ended |
+| `doorCut` | nothing sent after its sender knew a door was shut crosses its line; in a fight no member of a cut group move sends another square |
+
+A failing seed prints one line (`seed N  map/mode  [disturbances]  invariants  first failure`); `make foundry-movement-sim SEED=N` prints that seed's whole record (the scenario, every failure with the client, ids, time, depth, duration and whether that client had just stalled or lost a packet, the runs' state histories, the events). The runner is `scripts/foundry/movement_sim.mjs` (`--opts` takes the same JSON); the simulator is the module's `test/sim/`: the engine `engine.mjs`, the maps `maps.mjs`, the scenario and invariants `scenario.mjs`, and the module's logic as it runs there, `model.mjs`: the real pure cores, and a port of the glue's protocol that names the `group.mjs` / `stop.mjs` / `guard.mjs` function each part stands for. A failure is read back against the module's source before it is called a defect: a port that drifted from the glue is a simulator bug. `test/sim/sim.test.mjs` (in `node test/run.mjs`) keeps a smoke run and one regression seed per defect found, each checked with the fix and without it.
+
+What a run shows today, and why (plan §16.9 has the seeds): out of combat most failures are on a client that had just stalled or lost a packet (a fresh move is drawn from when that client handled it, not from when the server applied it); in a fight the default, tier C off, walks members through members resting in about half the fights; tier C fails far less. A new failure class is a finding for the plan, not a reason to loosen an invariant.
+

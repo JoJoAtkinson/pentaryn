@@ -27,7 +27,7 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
-import { GROUP_LIMITS, flood, freePrefix, hexCandidates, onCell, planGroup, prefixOf, restOnPaths, runPlan, settle, walkersMeet } from "./group-core.mjs";
+import { GROUP_LIMITS, flood, freePrefix, hexCandidates, onCell, planGroup, prefixOf, restOnPaths, runPlan, settle, stayPastDeadline, walkersMeet } from "./group-core.mjs";
 import { LIFE, capped, expired, left as lifeLeft, newRun, over, step as lifeStep } from "./lifecycle-core.mjs";
 import { cutsFor, sequence, stacksOf } from "./sequence-core.mjs";
 import { hideCue, showCue } from "./cue-ui.mjs";
@@ -1226,6 +1226,19 @@ function schedule(later, base, members, { scene, seq, starts, endMs = 0, gid = f
   group.fire = fire;
   for (const wave of later) group.timers.push(setTimeout(() => fire(wave), wave.at));
   return group;
+}
+
+/**
+ * A group just scheduled on a page that is already in the background (SIM-04, 0.8.1: dropped, then alt-tabbed while
+ * it planned or published, so no visibilitychange came after the group existed) sends its later waves at once, as a
+ * tab going to the background does (flush). `first`: the first wave ({ ids, movement }), which walks from now too.
+ */
+function flushIfHidden(group, first = null) {
+  if (!group) return;
+  if (first?.ids?.length) group.sent.push({ at: Date.now(), movement: first.movement, ids: first.ids });
+  if (globalThis.document?.visibilityState !== "hidden") return;
+  try { if (flush(group)) flushedLast = { at: new Date().toISOString(), members: group.ids.size }; }
+  catch (err) { log?.warnOnce?.("group-flush", "a group's waves could not be sent when the tab went to the background (further errors suppressed)", err); feature?.exposed?.tele?.("error", { reason: "flush" }); }
 }
 
 /** Send one wave of `group` now (`updates`: its members still in the group). */
@@ -2524,14 +2537,18 @@ function commit(d, b) {
   const hold = { scene: d.scene, seq: d.seq, starts: d.starts, endMs: b.endMs ?? 0, gid: d.gid, run: d.run };
   // The riders are members of the group too (a click on one stops them all), though the plan never saw them.
   const members = [...d.prep.members, ...[...(d.riders ?? new Map()).keys()].map(id => ({ id }))];
+  // The first wave walks from now: a flush on a background tab (flushIfHidden, flushGroups) keeps clear of it (SIM-05).
+  const firstWave = { ids: b.first[0].map(u => u._id), movement: b.first[1]?.movement ?? {} };
   if (d.sync) {
-    schedule(b.later, b.base, members, hold);
+    const g0 = schedule(b.later, b.base, members, hold);
+    flushIfHidden(g0, firstWave);
     if (!b.later.length) lifeStep(d.run, "walking", { now: Date.now() });
     return b.first[0].length ? b.first : null;
   }
   const [updates, options] = b.first;
   const sent = updates.length ? send(d.scene, d.seq, d.starts, updates, options, "move") : null;
   const g = schedule(b.later, b.base, members, hold);
+  flushIfHidden(g, firstWave);
   if (!g) lifeStep(d.run, "walking", { now: Date.now() });
   // A click while the first wave was on its way stopped the group: that wave stops too (H3-05).
   sent?.then?.(() => { if (g?.stopped) lateStop(d.scene, updates.map(u => u._id)); });
@@ -2613,10 +2630,52 @@ function commitFight(d, b) {
       for (const id of ids) watchArrival(id);
     });
   };
+  // A member's start is vetted when it sets off, not at the plan (0.8.1, the simulator SIM-02 / SIM-03): it sets off
+  // seconds after the drop, on another's arrival, and the plan's start delays (which kept its members off the walks
+  // outside the group) are not used here. A walk outside the group in its way now (another drop at the same moment)
+  // holds it until that walk has passed, within the run's deadline ("wait"); a token that has come to rest in its way
+  // since the plan, or a member resting short of its spot, cuts its walk before that token, on a whole square, or
+  // keeps it where it stands ("stay"). Reads only, but `movement`.
+  const vet = id => {
+    const doc = d.scene.tokens?.get?.(id);
+    const token = doc?.object;
+    const m = byId.get(id);
+    if (!token || !m || !movement[id]?.waypoints?.length) return "go";
+    const mates = new Set([id, ...ridersOf(id)]);
+    try {
+      const walkers = walkersNow([...g.ids].map(x => ({ id: x, token: d.scene.tokens?.get?.(x)?.object })).filter(x => x.token), s);
+      if (walkers.length) {
+        const pts = onSquares([{ ...doc._source }, ...movement[id].waypoints], s).map(p => toSquares(p, m.w, m.h, s));
+        if (walkersMeet([{ points: pts, r: m.r, speed: m.speed, delay: 0 }], walkers, { combat: true })) return "wait";
+      }
+    } catch (err) { log?.debug?.("fight: the walks in a member's way", err); }
+    let others = [];
+    try { others = othersOf([...mates].map(x => ({ id: x, token: d.scene.tokens?.get?.(x)?.object })).filter(x => x.token), s); }
+    catch (err) { log?.debug?.("fight: the tokens standing in a member's way", err); }
+    const wps = freeOfOthers(token, { ...doc._source }, movement[id].waypoints, others);
+    if (!wps.short) return "go";
+    feature.exposed.tele?.("cut", { reason: "fightStanding", id });
+    if (!wps.length) { delete movement[id]; return "stay"; }
+    movement[id] = { ...movement[id], waypoints: wps };
+    return "go";
+  };
   const pump = () => {
     if (g.stopped || groups.get(d.gid) !== g) return;
     const ready = seqr.order.filter(id => !sentIds.has(id) && movement[id] && (seqr.after[id] ?? []).every(x => arrived.has(x)));
-    if (ready.length) go(ready);
+    const going = [];
+    let held = false;
+    for (const id of ready) {
+      let v = "go";
+      try { v = vet(id); } catch (err) { log?.debug?.("fight: vet a member's start", err); }
+      if (v === "wait") { held = true; showCue(id, "foreign"); continue; }
+      if (v === "stay") { sentIds.add(id); arrived.add(id); hideCue(id); continue; }
+      going.push(id);
+    }
+    if (going.length) go(going);
+    if (held && !g.retry && !expired(d.run, Date.now())) {
+      g.retry = setTimeout(() => { g.retry = null; pump(); }, Math.max(capped(d.run, Date.now(), FOREIGN_WAIT_MS), 1));
+      g.timers.push(g.retry);
+    }
     finish();
   };
   // The one deadline: whoever still waits stays where it is.
@@ -2631,7 +2690,7 @@ function commitFight(d, b) {
   for (const id of seqr.order) if (!seqr.together.includes(id) && movement[id]) showCue(id, "after");
   // Sent here, never returned to core: an arrival is watched on the move this client's own update started.
   d.sync = false;
-  go(seqr.together.filter(id => movement[id]));
+  pump();
   return null;
 }
 
@@ -2699,6 +2758,15 @@ function deliver(d, plan) {
       setTimeout(() => { for (const m of d.prep.members) hideCue(m.id); replan(d); }, until);
       return null;
     }
+  }
+  // A member the plan would set off after the run's deadline stays where it stands (SIM-01, 0.8.1): its wave would
+  // never be sent, while its reservation and the run stayed open for it.
+  const late = stayPastDeadline(plan, lifeLeft(d.run, Date.now()));
+  if (late.late.length) {
+    plan = late.plan;
+    d.plan = plan;
+    feature.exposed.tele?.("wave", { reason: "pastDeadline", members: late.late.length });
+    tell("short", "pastDeadline");
   }
   const b = tagFor(d, finishFor(d, plan));
   const walks = walksOf(d.prep, plan);

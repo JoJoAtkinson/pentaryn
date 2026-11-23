@@ -1,5 +1,5 @@
 ---
-title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.8.0"
+title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.8.1"
 status: built
 last_modified: 2026-11-23
 tags: [foundry, plans, movement, pathfinding]
@@ -9,7 +9,7 @@ tags: [foundry, plans, movement, pathfinding]
 
 **Read this when:** you are changing how a dragged token finds its way around walls, or wondering why it was built this way. **Not this file:** using it → [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md) ("Drag pathfinding").
 
-**Status (2026-11-23):** built and live since 0.3.0 (main); 0.4 → 0.7.5 hardened through the hard-case and acceptance rounds of §15; 0.8.0 (§16) is the tiered redesign after Fable's review. Tier A and B are on, tier C (fight group drags) ships off until it passes its rounds. Use-doc: [`../foundry/movement.md`](../foundry/movement.md).
+**Status (2026-11-23):** built and live since 0.3.0 (main); 0.4 → 0.7.5 hardened through the hard-case and acceptance rounds of §15; 0.8.0 (§16) is the tiered redesign after Fable's review; 0.8.1 (§16.9) adds the simulator and its first fixes. Tier A and B are on, tier C (fight group drags) ships off until it passes its rounds. Use-doc: [`../foundry/movement.md`](../foundry/movement.md).
 
 ## 1. What Joe asked for
 
@@ -570,5 +570,30 @@ Five drag rows: world `pathfinding`, client `pathfindMine`, world `groupDrags` a
 
 ### 16.8 Not done in 0.8.0
 
-The Node simulator of the review's §5 (virtual clients, jittered latency, a backgrounded initiator, generated maps) beyond the seeded tier C test; the two extra maps; the acceptance rounds (C1–C14) and the hands-on session; splitting `group.mjs`; elevation; groups of 8–12 in a fight; one scheduler for the per-group timers.
+~~The Node simulator of the review's §5~~ (built in 0.8.1, §16.9); the two extra maps in the live world (the simulator has five generated ones); the acceptance rounds (C1–C14) and the hands-on session; splitting `group.mjs`; elevation; groups of 8–12 in a fight; one scheduler for the per-group timers.
+
+### 16.9 pentaryn-movement 0.8.1: the simulator (review §5) and what its first 2,000 seeds found
+
+**Built** (`foundry/module/pentaryn-movement/test/sim/`, its runner `scripts/foundry/movement_sim.mjs` outside the module's `test/` (blueprint C43: only suites there), `make foundry-movement-sim SEEDS=10000`; use-doc `context/foundry/movement.md`, "The simulator"). `engine.mjs`: one fake clock; a server applying token updates one at a time and broadcasting them in its order; virtual clients (the GM, one to three players, the canvas-less bot) on FIFO links whose latency is a random function of time over 11–105 ms (knots every 250 ms, ±3 ms per packet) with TCP loss as a 200–600 ms retransmit that holds everything behind it; main-thread stalls of 150–1,400 ms on player tabs (and sometimes 150–650 ms on the GM's); a background tab (timers at whole seconds, no frames, core's continuation at once); a dropped socket that reloads on reconnect. Core 14.370's movement as read from its source: the movement chain of tweens (a fresh one starts when its update is handled; elapsed time uncapped, so a stall jumps a running tween to where it should be), a fight's square-by-square continuation from the initiating client at `duration − 2 × latency − 50 ms`, or the animation's end, or the tab going to the background, constrained by the walls that client knows. `maps.mjs`: T-junction (one or two wide), two-wide corridor, diagonal door, dead end, the hard dungeon. `model.mjs`: the module's own cores and a port of the glue's protocol (deliver, commit, schedule/fire, flush, commitFight, fightCut, freeCut with cutAtWalls, stopToken/stopSpot/displace, lateStop, groupStopOne, the out-of-combat guard). Not modelled: fog and vision, hidden tokens, riders, levels, ghost, the reload resume (`resumePending`, `resumeFights`), the guard's re-route, the publish window's exact echo seq. `scenario.mjs`: the seeded scenario and the invariants (the use-doc's table).
+
+**Fixed** (each with a regression that fails without the fix; CHANGELOG 0.8.1):
+
+| ID | Seeds | What | Fix |
+|---|---|---|---|
+| SIM-01 | 23, 299 | the timing pass's "go last" put a member's start past the run's deadline (24.5 s): its wave expired unsent, its reservation advertised a walk at 25 s, the run stayed open 37 s | `group-core stayPastDeadline` in `deliver`: such a member stays where it stands |
+| SIM-02 | 14 | tier C ignores the plan's start delays, so a member set off head-on into another drop's walk in a one-wide corridor | tier C vets each member when it sets off: a walk outside the group in its way holds it (250 ms looks, within the deadline) |
+| SIM-03 | 156 | tier C members starting on an arrival walked their drop-time way through a token that had come to rest in it | the same vet cuts the walk before any token standing in it, on a whole square, or keeps it where it is |
+| SIM-04 | 6, 7, 15 (`OPTS` background only, `sim.test`) | a group made on a tab already in the background never flushed; its waves waited on throttled timers and walked into members at rest | `flushIfHidden` when the group is scheduled |
+| SIM-05 | (the 0.8.0 hidden-tab test) | the flush ignored the first wave, which walks from the drop: a flushed member 0.36 square (centres) from a first-wave member | the first wave is in `group.sent`; a member on its heels stays where it stands |
+
+Seeds 1–2,000 (each the same scenario before and after): **533 failing before the fixes, 424 after** — out of combat 259 → 202 of 1,196, tier C 67 → 15 of 397, tier C off 207 → 207 of 407.
+
+**Found, not fixed** (design questions, for the next review; seeds from 1–2,000 of 0.8.1, default options unless an `OPTS` is given: `make foundry-movement-sim SEED=N OPTS='…'`):
+
+1. **A fresh move is drawn from when a client handles it, not from when the server applied it** (out of combat 165 seeds, e.g. 7, 46, 56; in fights 163): on a client that just stalled (a fog extraction) or lost a packet, a member whose update arrived during the stall starts after it while the members already walking jump to where they should be, so a later wave is drawn on top of an earlier one, for up to a stall's length. The 0.75-square lag buffer covers latency spread, not a 1.4 s stall or a 600 ms retransmit. A fix needs the server's time on the update (a module option stamped at send, `game.time.serverTime`) and the tween's first frame credited with the lateness, bounded; the first-frame cap of S2R3-02 is the other half of the same idea.
+2. **Tier C off — the fallback the review prescribed — walks members through members resting** (114 seeds with no stall or loss behind the overlap, e.g. 5, 34, 37; 207 of 407 fights fail): every member sets off at once on its own path and `restOnPaths` keeps only the rest spots apart, so a member cut short in a corridor is walked through by the ones behind it. Making each member's path stop before the others' rest spots halves it (234 → 171 of 1,000 undisturbed) and leaves 45 % of members unmoved; tier C, vetted, fails 0 of 1,000 undisturbed fights and 59 of 1,000 with every disturbance. Whether tier C should become the default is Joe's call after its live rounds.
+3. **A player's click-stop of their own member in the GM's group** (decision 3's refinement; 25 seeds, e.g. 32, 174, 345) is chosen where the player draws it; on the GM's view the follower is already further along, so the GM's `groupStopOne` and guard act a round trip late, and in seed 480 with `OPTS='{"combat":false,"loss":false,"fog":false,"background":false,"door":false,"click":true,"two":false}'` the guard's pause lands inside the stopped member and stays there (an overlap at rest). A relay to the initiator, which draws the whole group, would choose the spot on one consistent view.
+4. **A wave's spacing collapses when the initiator's uplink stalls** (seed 245 with `OPTS='{"combat":false}'`): waves are timed on the sender's clock; a retransmit holds the first, and the second, sent 300 ms later, reaches the server with it. Timing each wave from the previous wave's acknowledgement would keep the spacing.
+5. Smaller: a door cut's displace-then-walk stands a cut member for a round trip in front of members the cut did not touch (8 seeds); `holdCore`'s end timer can end a long fight walk's run up to 1 s past its deadline (4); a tier C member still waiting at the deadline keeps its reservation until it expires (1945); the group's end timer follows the plan's predicted end, which a flush or a cut can put past the deadline (189, 1361).
+
 

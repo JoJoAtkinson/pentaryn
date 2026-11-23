@@ -1,6 +1,6 @@
 ---
 name: movement
-description: "Dragging tokens at the table: a drag that won't go round a wall or takes a strange route, several tokens dragged together overlapping or jamming in a door, clicking a moving token to stop it (or it won't stop), spent movement wrong after a stop in a fight (pentaryn-movement). Not ghost movement or owned-on-top (→ the module README)."
+description: "Dragging tokens at the table: a drag that won't go round a wall or takes a strange route, several tokens dragged together overlapping or jamming in a door, clicking a moving token to stop it (or it won't stop), spent movement wrong after a stop in a fight, or running the movement simulator (make foundry-movement-sim, a failing seed) (pentaryn-movement). Not ghost movement or owned-on-top (→ the module README)."
 ---
 
 Read [`context/foundry/movement.md`](../../../context/foundry/movement.md) in full before acting. It is the source of truth; this skill only routes to it.

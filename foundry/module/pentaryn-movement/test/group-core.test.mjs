@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld, member, finish } from "./fixtures/grid.mjs";
-import { planGroup, assignSlots, runPlan, hexCandidates, cellCandidates, flood, alongRoute, GROUP_LIMITS, detourTooLong } from "../group-core.mjs";
+import { planGroup, assignSlots, runPlan, hexCandidates, cellCandidates, flood, alongRoute, GROUP_LIMITS, detourTooLong, stayPastDeadline } from "../group-core.mjs";
 import {
   MOTION, trajectory, delayed, positionAt, firstConflict, minSeparation, waves, cellChain, groupMode, clickStop, dist,
 } from "../motion-core.mjs";
@@ -776,4 +776,29 @@ test("H4-03 / H4-04: a token outside the group walking through the corridor now:
     assert.ok(best >= 2 * R - 1e-6, `${id} comes within ${best.toFixed(3)} of the walking token (delay ${e.delay}, level ${e.level})`);
   }
   assert.ok(res.members.a.delay > 0, "the grabbed one waits for the corridor");
+});
+
+// SIM-01 (the simulator, seeds 23 / 299, 0.8.1): the timing pass's "go last" waits for every walk it meets to be at
+// rest, and a reserved walk round the whole map put a member's start 24.5 s after the drop. Its wave expired unsent,
+// its reservation advertised a walk at 25 s to every planner and guard, and the run stayed "walking" until its end
+// timer, 37 s on. A member that would set off after the run's deadline stays where it stands instead.
+test("SIM-01: a member the plan would set off after the run's deadline stays where it stands", () => {
+  const walk = (id, delay) => ({ id, core: false, points: [{ x: 1.5, y: 1.5 }, { x: 4.5, y: 1.5 }], slot: { x: 4.5, y: 1.5 }, delay, level: 0, length: 3, short: false });
+  const plan = { result: "plan", members: { a: walk("a", 0), b: walk("b", 9160), c: walk("c", 24450), d: { id: "d", core: true, points: [], delay: 30000 } }, cut: [], stayed: [] };
+  const { plan: out, late } = stayPastDeadline(plan, 9200);
+  assert.deepEqual(late, ["b", "c"], "the waves at 9.16 s (its bucket 9.3 s) and 24.45 s are past a deadline 9.2 s away");
+  for (const id of late) {
+    assert.equal(out.members[id].points.length, 1, `${id} does not move`);
+    assert.deepEqual(out.members[id].points[0], plan.members[id].points[0], `${id} stays at its start`);
+    assert.equal(out.members[id].delay, 0);
+    assert.equal(out.members[id].level, "stay");
+    assert.ok(out.stayed.includes(id));
+  }
+  assert.equal(out.members.a, plan.members.a, "a member in time is untouched");
+  assert.equal(out.members.d, plan.members.d, "a member left to core is untouched");
+  assert.equal(plan.members.c.points.length, 2, "the plan given is not changed");
+  const same = stayPastDeadline(plan, 30000);
+  assert.equal(same.plan, plan, "nothing late: the same plan");
+  assert.deepEqual(same.late, []);
+  assert.deepEqual(stayPastDeadline({ result: "core", reason: "budget" }, 100).late, [], "not a plan: nothing to do");
 });

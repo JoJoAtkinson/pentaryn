@@ -72,7 +72,8 @@ tiers, each with its own switch, and a tier that has not passed its acceptance r
   other's reserved moves in the server's order and the later one yields; a publish-first round trip runs only when
   another user is viewing the same scene (0.8.0: never for the canvas-less headless GM). A runtime guard watches each
   move a moment ahead and has the later mover give way. A tab sent to the background sends its group's later waves
-  at once, each cut where it would meet another (0.8.0: nobody waits for an alt-tabbed player).
+  at once, each cut where it would meet another or the first wave (0.8.0; 0.8.1: also a group made while the tab was
+  already in the background), so nobody waits for an alt-tabbed player.
 - **Tier C — several tokens in a fight** (`fightGroupDrags`, **off by default** until it passes): by space, not time.
   Members whose swept corridors never meet set off together; every other member sets off on the **arrival** of the one
   before it whose corridor meets its own. A door shutting on a fight's group move stops everyone on the square they
@@ -245,7 +246,7 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
   `{ drag: true, keyboard: true }` and run the three adjustments rows' check.
 - Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag disabled`).
 - The GM never ghosts through this module (core's own tool is the GM's).
-- Group waves run on the dropping client; a tab going to the background sends them at once (0.8.0), closing it
+- Group waves run on the dropping client; a tab in the background sends them at once (0.8.0; 0.8.1 SIM-04/05), closing it
   mid-move strands unsent members; Ctrl+Z undoes one wave. A reloaded page sends what it had left only when it is
   back within 1.5 s of the first unsent wave; later than that those members stay where they are ("Stopped short").
 - In a fight a door shutting on a group move stops everyone of it on the square they hold (0.8.0): nothing is undone
@@ -306,7 +307,12 @@ and pays the squares walked; and the glue against a synthetic board); `lifecycle
 the composed clocks bounded by 10 s), `sequence-core.test` (tier C: corridors, arrival order, cuts, stacks, and 500
 seeded fights where sequenced walks with random arrival latency never meet), `telemetry-core.test` and `telemetry.test`
 (the ring, the breaker, Alt+W, racers, the settings migration), `regressions.test` (every round ID a comment cites
-names a test). Fixtures are
+names a test), `sim/sim.test` (0.8.1: the simulator's smoke seeds and one regression per defect it found). The
+simulator itself (`test/sim/`: virtual clients, a fake clock, jittered latency, loss, fog stalls, a backgrounded
+initiator, generated maps, every invariant on every client's drawn view; its runner is the repo's
+`scripts/foundry/movement_sim.mjs`) runs from the repo root:
+`make foundry-movement-sim SEEDS=10000` (`SEED=N` for one seed's record); use-doc `context/foundry/movement.md`,
+"The simulator". Fixtures are
 synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.
 
 **Verify live (as a player):**

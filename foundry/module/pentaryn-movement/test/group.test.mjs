@@ -3476,7 +3476,31 @@ test("0.8.0 tier C: a member still waiting at the move's deadline stays where it
   }
 });
 
-test("0.8.0 hidden tab: when the page goes to the background a group's later waves go at once, cut where they would meet (nobody waits for the tab)", () => {
+/** No walk of `call` (a flush's update) comes inside touching less 0.1 square of a walk of the first wave `out` (both from now, 6 squares/s). */
+function assertClearOfFirst(ts, out, call) {
+  const centre = p => ({ x: p.x / S + 0.5, y: p.y / S + 0.5 });
+  const walk = (id, wps) => [centre(ts.find(t => t.document.id === id).document._source), ...wps.map(centre)];
+  const at = (pts, t) => {
+    let left = t * 6;
+    for (let k = 1; k < pts.length; k++) {
+      const L = Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+      if (left <= L) return { x: pts[k - 1].x + ((pts[k].x - pts[k - 1].x) * left) / L, y: pts[k - 1].y + ((pts[k].y - pts[k - 1].y) * left) / L };
+      left -= L;
+    }
+    return pts.at(-1);
+  };
+  const firstWalks = (out?.[0] ?? []).map(u => walk(u._id, out[1].movement[u._id].waypoints));
+  for (const id of call.ids) {
+    const a = walk(id, call.options.movement[id].waypoints);
+    for (const b of firstWalks) {
+      let best = Infinity;
+      for (let t = 0; t <= 4; t += 0.01) { const p = at(a, t), q = at(b, t); best = Math.min(best, Math.hypot(p.x - q.x, p.y - q.y)); }
+      assert.ok(best >= 1 - 0.1 - 1e-6, `${id}'s flushed walk comes within ${best.toFixed(2)} squares of a first-wave walk`);
+    }
+  }
+}
+
+test("0.8.0 hidden tab: when the page goes to the background a group's later waves go at once, cut where they would meet (nobody waits for the tab; SIM-05: the first wave counts)", () => {
   combatFlag = false;
   clock.step = 0;
   const ts = [makeToken("hidA000000000001", 400, 200), makeToken("hidB000000000001", 300, 200), makeToken("hidC000000000001", 500, 200)];
@@ -3487,13 +3511,37 @@ test("0.8.0 hidden tab: when the page goes to the background a group's later wav
     const first = new Set(out[0].map(u => u._id));
     assert.ok(ts.some(t => !first.has(t.document.id)), "some wait for a later wave");
     goHidden();
-    const now = sent(from);
-    assert.equal(now.length, 1, "the rest go in one update, now");
-    assert.deepEqual([...first, ...now[0].ids].sort(), ts.map(t => t.document.id).sort(), "everyone has set off");
-    assert.ok(api.status().group.flushed?.members >= 1);
+    // In a file through the one-wide door every later member would walk on the heels of the first wave (SIM-05): each
+    // stays where it stands, nothing is left on the background tab's timers, and nothing is sent later.
+    assert.ok(sent(from).length <= 1, "what goes, goes in one update, now");
+    for (const c of sent(from)) { for (const id of c.ids) assert.ok(!first.has(id)); assertClearOfFirst(ts, out, c); }
     tickBy(10000);
-    assert.equal(sent(from).length, 1, "nothing is sent twice");
+    assert.ok(sent(from).length <= 1, "nothing is sent later");
   } finally {
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("SIM-04 / SIM-05 (0.8.1): a group dropped on a page already in the background sends its later waves at once, each cut where it would meet a member of the first wave walking", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("hbgA000000000001", 400, 200), makeToken("hbgB000000000001", 300, 200), makeToken("hbgC000000000001", 500, 200)];
+  const others = keepOnly(ts);
+  globalThis.document.visibilityState = "hidden";
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    const first = new Set((out?.[0] ?? []).map(u => u._id));
+    const now = sent(from);
+    // SIM-04: the waves after the first are not left on a background tab's throttled timers: they go now, in one update,
+    // or stay where they stand (cut where they would meet the first wave).
+    assert.ok(now.length <= 1, `the later waves go in one update, now (sent ${now.length})`);
+    tickBy(10000);
+    assert.equal(sent(from).length, now.length, "nothing is left on the timers");
+    for (const c of now) assertClearOfFirst(ts, out, c);
+  } finally {
+    globalThis.document.visibilityState = "visible";
     for (const [k, v] of others) sceneTokens.set(k, v);
     tickBy(60000);
   }

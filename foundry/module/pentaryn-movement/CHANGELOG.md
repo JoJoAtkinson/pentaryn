@@ -1,5 +1,36 @@
 # Changelog — pentaryn-movement
 
+## 0.8.1 — 2026-11-23
+
+The simulator of Fable's review §5 (`test/sim/`, run by the repo's `scripts/foundry/movement_sim.mjs`: `make foundry-movement-sim SEEDS=10000`; plan §16.9; use-doc
+`context/foundry/movement.md`, "The simulator") and the defects its first 2,000 seeds found that are the module's to fix.
+Each has a regression in the module's suite (`test/sim/sim.test.mjs`, plus the unit and glue tests named).
+
+- **[declared] SIM-01: a member the plan would set off after the run's deadline stays where it stands.** The timing
+  pass's "go last" waits for every walk it meets to be at rest, however long: a reserved walk round the whole map put a
+  member's start 24.5 s after the drop. Its wave expired unsent, its reservation told every planner and guard it walked
+  then, and the run stayed open until its end timer, 37 s on (seeds 23, 299). `group-core stayPastDeadline`, applied in
+  `deliver` (telemetry `wave` reason `pastDeadline`; "Stopped short, way blocked"). Test: `group-core.test` "SIM-01".
+- **[declared] SIM-02 / SIM-03: a fight's tier C member is vetted when it sets off, not at the plan.** Tier C starts
+  members on another's arrival, seconds after the drop, and does not use the plan's start delays, which were what kept
+  them off the walks outside the group: a member set off head-on into another drop's walk in a one-wide corridor
+  (seed 14), and later members walked their drop-time way through a token that had come to rest in it since (seed
+  156). Now a walk outside the group in its way holds it (the amber cue, re-looked every 250 ms within the deadline),
+  and a token standing in its way cuts it before that token on a whole square, or keeps it where it is (telemetry
+  `cut` reason `fightStanding`). Tier C still ships off.
+- **[declared] SIM-04 / SIM-05: the background tab.** A group whose page was already in the background when the group
+  was made (dropped, then alt-tabbed while it planned or published) never had its later waves flushed: they waited on
+  the throttled timers and walked into members already at rest (seeds 6, 7, 15). And the flush did not count the first
+  wave, which walks from the drop: a flushed member was sent on the heels of a first-wave member (0.36 square apart,
+  centres). `flushIfHidden` in `commit`; the first wave is in `group.sent`. In a file through a door the members right
+  behind the first wave now stay where they stand rather than walk into it (stopping short beats overlapping). Tests:
+  `group.test` "SIM-04 / SIM-05" and the 0.8.0 hidden-tab test, which now also checks the flush is clear of the first
+  wave (it was not).
+- **Found, not fixed here** (plan §16.9, each with seeds): a stalled or lossy observer draws a fresh move from when it
+  handled the update, not when the server applied it; tier C off (the default) walks members through members resting
+  in ~half the simulated fights; a player's click-stop of their own member in the GM's group is chosen on the player's
+  view; a wave's spacing collapses when the initiator's uplink stalls.
+
 ## 0.8.0 — 2026-11-23
 
 The tiered redesign after Fable's xhigh review of 0.7.4 (plan `context/plans/pathfinding-2026-11.md` §16; Joe's

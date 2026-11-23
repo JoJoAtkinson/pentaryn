@@ -1030,6 +1030,32 @@ function budget(now = () => 0) {
 }
 
 /**
+ * A finished plan's members that would set off after the run's deadline (`leftMs` from now; their wave, the delay
+ * rounded up to MOTION.waveMs, at or past it) stay where they stand instead (the simulator, SIM-01, 0.8.1): the timing
+ * pass's "go last" waits for every walk a member meets to be at rest, however long, and a wave past the deadline is
+ * never sent, while its reservation tells every planner and guard it walks then and its run stays open until it would
+ * have ended. Standing at its start is what the other members were planned round until then anyway. Returns { plan,
+ * late }: the same plan when none is late, else a new one (the given plan is not changed).
+ * @param {object} plan     planGroup's result
+ * @param {number} leftMs   the run's time left (lifecycle-core left)
+ */
+export function stayPastDeadline(plan, leftMs, waveMs = MOTION.waveMs) {
+  if (plan?.result !== "plan" || !plan.members) return { plan, late: [] };
+  const late = [];
+  const members = {};
+  for (const [id, e] of Object.entries(plan.members)) {
+    const at = Math.ceil(Math.max(e?.delay ?? 0, 0) / waveMs - EPS) * waveMs;
+    if (e && !e.core && (e.points?.length ?? 0) >= 2 && at > 0 && at >= leftMs) {
+      late.push(id);
+      const start = e.points[0];
+      members[id] = { ...e, points: [start], slot: start, cut: null, delay: 0, level: "stay", length: 0, short: true };
+    } else members[id] = e;
+  }
+  if (!late.length) return { plan, late };
+  return { plan: { ...plan, members, stayed: [...(plan.stayed ?? []), ...late] }, late };
+}
+
+/**
  * Drive a planGroup generator for up to `budgetMs` of `now()`. Returns { done: true, value } or
  * { done: false } (call again to continue). A throw propagates (the glue falls back to core).
  */
