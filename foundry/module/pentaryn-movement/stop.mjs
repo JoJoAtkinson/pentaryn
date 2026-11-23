@@ -148,10 +148,10 @@ function resync(token) {
  * Where a click-stop out of combat puts a token (Joe's decision 2, 2026-11-22): the nearest free whole square
  * to where it is drawn, its body across no wall and no door's line, on no other token (`taken`).
  */
-function stopSpot(token, taken = null, { roomy = false } = {}) {
+function stopSpot(token, taken = null, { roomy = false, prefer = null } = {}) {
   const drawn = drawnPosition(token);
   let p = drawn;
-  try { p = clearOfWalls(token, p, { taken, snap: true, prefer: roomy ? roomyFor(token) : null }); } catch (err) { log?.debug?.("clearOfWalls", err); }
+  try { p = clearOfWalls(token, p, { taken, snap: true, prefer: prefer ?? (roomy ? roomyFor(token) : null) }); } catch (err) { log?.debug?.("clearOfWalls", err); }
   return { drawn, p, near: nearFirst(token, drawn, p, taken) };
 }
 
@@ -414,9 +414,11 @@ function takenAround(token, skip, claims) {
  * Would a stop's walk on (from the near square to the stop square, HX1-07) meet a token walking now or a reserved walk
  * still to set off (S3R1-03: Player8A stopped its Hero 2 in the corridor during the GM's six-drag; its roomy square was
  * back in room A, and the walk there went head-on through the GM's members filing up the corridor, -45 to -77 px)?
+ * `skip`: the tokens this same stop stops (S3R2-04: the GM's whole-group stop read its own members, still drawn walking
+ * until their turn in the loop, as walkers, and left the clicked Hero 4 in the corridor at (11,5)); they walk no further.
+ * Returns a test of one walk on (near, p: top-lefts), the walkers read once, so a stop can ask it of many squares.
  */
-function walkOnMeets(token, at) {
-  if (!at?.near) return false;
+function walkOnTest(token, skip = null) {
   const doc = token.document;
   const s = gridSize(token);
   const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
@@ -424,12 +426,21 @@ function walkOnMeets(token, at) {
   let walkers = [];
   try { walkers = movingOthers([member], s); } catch (err) { log?.debug?.("stop: walkers", err); }
   try {
-    const ids = new Set(walkers.map(x => x.id));
+    const ids = new Set([...walkers.map(x => x.id), ...(skip ?? [])]);
     walkers.push(...reserve.liveFor([member], { skip: ids }).walkers.filter(x => x.delay > 0));
   } catch (err) { log?.debug?.("stop: reserved walks", err); }
-  if (!walkers.length) return false;
-  const mine = [{ points: [toSquares(at.near, w, h, s), toSquares(at.p, w, h, s)], r: radiusOf(w, h), speed: speedOf(token), delay: 0 }];
-  try { return walkersMeet(mine, walkers); } catch (err) { log?.debug?.("stop: walk on", err); return true; }
+  if (skip?.size) walkers = walkers.filter(x => !skip.has(x.id));
+  if (!walkers.length) return () => false;
+  const r = radiusOf(w, h), speed = speedOf(token);
+  return (near, p) => {
+    if (!near || !p) return false;
+    const mine = [{ points: [toSquares(near, w, h, s), toSquares(p, w, h, s)], r, speed, delay: 0 }];
+    try { return walkersMeet(mine, walkers); } catch (err) { log?.debug?.("stop: walk on", err); return true; }
+  };
+}
+
+function walkOnMeets(token, at, skip = null, meets = walkOnTest(token, skip)) {
+  return !!at?.near && meets(at.near, at.p);
 }
 
 /** Does this user own the token (a GM owns all)? */
@@ -476,12 +487,27 @@ function stopToken(token, how, via = "api") {
     if (next === "displace") {
       const taken = takenAround(t, skip, claims);
       let at = stopSpot(t, taken, { roomy });
-      // Its walk on to a roomy square would meet a walker: it stops on the nearest free square instead (stopping short
+      const meets = walkOnTest(t, skip);
+      // Its walk on to a roomy square would meet a walker: another roomy square in reach whose walk on meets nobody
+      // (S3R2-01: the nearest roomy square was back in room A through the GM's members; the fallback below then left
+      // Player8A's Hero 2 on the corridor square (11,5) in 7 of 7 runs, and every member behind it stopped short in
+      // room A; room B ahead, the way they all walk, was free). Only with none, the nearest free square (stopping short
       // of the roomy square beats walking through anyone; a walker behind it gives way to it standing).
-      if (at.near && walkOnMeets(t, at)) {
-        const plain = stopSpot(t, taken);
-        at = plain.near && walkOnMeets(t, plain) ? { drawn: at.drawn, p: at.near, near: null } : plain;
-        rec.walkOnBlocked = (rec.walkOnBlocked ?? 0) + 1;
+      if (at.near && walkOnMeets(t, at, skip, meets)) {
+        let alt = null;
+        if (roomy) {
+          const liked = roomyFor(t), from = at.near;
+          alt = stopSpot(t, taken, { prefer: q => liked(q) && !meets(from, q) });
+          // Never a jump (HX1-07): a far square it could not walk to from the near one is no way out.
+          const far = Math.hypot(alt.p.x - alt.drawn.x, alt.p.y - alt.drawn.y) > JUMP_SQUARES * gridSize(t);
+          if (!liked(alt.p) || (far && !alt.near) || walkOnMeets(t, alt, skip, meets)) alt = null;
+        }
+        if (alt) { at = alt; rec.walkOnAround = (rec.walkOnAround ?? 0) + 1; }
+        else {
+          const plain = stopSpot(t, taken);
+          at = plain.near && walkOnMeets(t, plain, skip, meets) ? { drawn: at.drawn, p: at.near, near: null } : plain;
+          rec.walkOnBlocked = (rec.walkOnBlocked ?? 0) + 1;
+        }
       }
       const s = gridSize(t), w = tdoc._source.width ?? 1, h = tdoc._source.height ?? 1;
       claims.push({ id: tdoc.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s });

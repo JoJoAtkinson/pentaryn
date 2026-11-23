@@ -1,5 +1,19 @@
 # Changelog — pentaryn-movement
 
+## 0.7.2 — 2026-11-23
+
+Stage 3, round S3R2 (plan `context/plans/pathfinding-2026-11.md` §15.10). Fixes only.
+
+- **[declared] A click-stop in a one-wide corridor walks out the other way when the way back is walked (S3R2-01).**
+  0.7.1's fallback for a walk on that would meet a walker was the nearest free square, and in a corridor that is the
+  corridor: Player8A's stopped Hero 2 rested on (11,5) in 7 of 7 runs and every member behind it stopped short in
+  room A. The stop now first takes another roomy square in reach whose walk on meets nobody (out ahead, the way the
+  file walks), and only with none the nearest free square (`status().stop.last.walkOnAround`, `walkOnBlocked`).
+  Never a jump: a far square it cannot walk to is not taken.
+- **[declared] A whole-group stop never reads its own members as walkers (S3R2-04, regression in 0.7.1).** The
+  members the same click stops were still drawn walking until their turn, so the clicked one's walk out of the
+  corridor "met" them and it rested at (11,5). The test now leaves every token of the stop out.
+
 ## 0.7.1 — 2026-11-23
 
 Stage 3, round S3R1 (plan `context/plans/pathfinding-2026-11.md` §15.9). Fixes only.

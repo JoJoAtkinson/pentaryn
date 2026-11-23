@@ -2514,34 +2514,35 @@ test("S3R1-08: in a fight, a member whose square under way (or whose next square
   }
 });
 
-test("S3R1-03: a player's stop of its own member whose walk out of the corridor would meet a walker stops on the nearest free square instead", async () => {
+/** A corridor stop (S3R1-03 / S3R2-01 / S3R2-04): `a` ours in the corridor at (ax, 400), `b` walking east up it behind. */
+async function corridorStop(tag, { partial = true, deadEnd = false, ax = 500 } = {}) {
   combatFlag = false;
   clock.step = 0;
   const saved = world.walls;
   world.walls = [[{ x: 300, y: 400 }, { x: 800, y: 400 }], [{ x: 300, y: 500 }, { x: 800, y: 500 }]];
+  if (deadEnd) world.walls.push([{ x: 800, y: 400 }, { x: 800, y: 500 }]);
   F.fire("updateWall");
-  const a = makeToken("s33A000000000001", 500, 400), b = makeToken("s33B000000000001", 100, 400);
+  const a = makeToken(`${tag}A000000000001`, ax, 400), b = makeToken(`${tag}B000000000001`, 100, 400);
   const others = keepOnly([a, b]);
+  const from = F.calls.length;
   try {
-    for (const t of [a, b]) F.fire("updateToken", t.document, { x: 900 }, { pentarynMovementGroup: "grpCorr00000002" }, "u2");
-    b.document.testUserPermission = () => false;
+    for (const t of [a, b]) F.fire("updateToken", t.document, { x: 900 }, { pentarynMovementGroup: `grp${tag}0000000001`.slice(0, 16) }, "u2");
+    if (partial) b.document.testUserPermission = () => false;
     for (const t of [a, b]) { t.animationContexts.set(t.movementAnimationName, {}); t.document.movement = { state: "pending", user: { isSelf: false } }; }
     a.document._source.x = 900; a.document._source.y = 400;
-    // b (the GM's) walks east up the corridor behind it, to (900, 400).
+    // b walks east up the corridor behind it, to (900, 400).
     b.document._source.x = 900;
     b.document.movement = { state: "pending", user: { isSelf: false }, origin: wp(100, 400), passed: { waypoints: [wp(900, 400)] }, pending: { waypoints: [] } };
     clock.t += MOTION.armMs;
     const placed = F.canvas.tokens.placeables;
     F.canvas.tokens.placeables = [a, b];
-    const from = F.calls.length;
     a._onClickLeft({});
     F.canvas.tokens.placeables = placed;
     for (let i = 0; i < 20; i++) await Promise.resolve();
-    const mv = F.calls.slice(from).filter(c => c.op === "move" && c.id === a.document.id);
-    assert.equal(mv.length, 1, `stops, and does not walk on through b's way: ${JSON.stringify(mv.map(m => m.waypoints))}`);
-    assert.equal(mv[0].waypoints[0].action, "displace");
-    assert.ok(Math.hypot(mv[0].waypoints[0].x - 500, mv[0].waypoints[0].y - 400) <= 75, `on the nearest free square: ${JSON.stringify(mv[0].waypoints[0])}`);
-    assert.equal(game.pentaryn.movement.status().stop.last?.walkOnBlocked, 1, JSON.stringify(game.pentaryn.movement.status().stop));
+    return {
+      mv: F.calls.slice(from).filter(c => c.op === "move" && c.id === a.document.id),
+      last: game.pentaryn.movement.status().stop.last,
+    };
   } finally {
     for (const t of [a, b]) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; }
     world.walls = saved;
@@ -2549,6 +2550,37 @@ test("S3R1-03: a player's stop of its own member whose walk out of the corridor 
     for (const [k, v] of others) sceneTokens.set(k, v);
     tickBy(60000);
   }
+}
+
+test("S3R1-03: a player's stop of its own member whose every walk out of the corridor would meet a walker stops on the nearest free square instead", async () => {
+  // The corridor's east end is shut: the only roomy squares in reach are back west, through b's way.
+  const { mv, last } = await corridorStop("s33", { deadEnd: true });
+  assert.equal(mv.length, 1, `stops, and does not walk on through b's way: ${JSON.stringify(mv.map(m => m.waypoints))}`);
+  assert.equal(mv[0].waypoints[0].action, "displace");
+  assert.ok(Math.hypot(mv[0].waypoints[0].x - 500, mv[0].waypoints[0].y - 400) <= 75, `on the nearest free square: ${JSON.stringify(mv[0].waypoints[0])}`);
+  assert.equal(last?.walkOnBlocked, 1, JSON.stringify(last));
+});
+
+test("S3R2-01: a player's stop of its own member in the corridor, the roomy square behind it on a walker's way, walks on out ahead to a roomy square off every walk", async () => {
+  // Two squares short of the corridor's east end: the roomy squares out ahead are in reach.
+  const { mv, last } = await corridorStop("s21", { ax: 600 });
+  assert.equal(mv.length, 2, `stops near, then walks out of the corridor: ${JSON.stringify(mv.map(m => m.waypoints))}`);
+  assert.equal(mv[0].waypoints[0].action, "displace");
+  const p = mv[1].waypoints.at(-1);
+  assert.notEqual(p.action, "displace", "walked, not jumped");
+  assert.ok(p.x >= 800, `out ahead, never back through b: ${JSON.stringify(p)}`);
+  assert.notEqual(p.y, 400, `off b's way to (900, 400): ${JSON.stringify(p)}`);
+  assert.equal(last?.walkOnAround, 1, JSON.stringify(last));
+  assert.equal(last?.walkOnBlocked, undefined, JSON.stringify(last));
+});
+
+test("S3R2-04: a whole-group stop never reads its own members, stopped by the same click, as walkers: the clicked one still walks out of the corridor", async () => {
+  const { mv, last } = await corridorStop("s24", { partial: false, deadEnd: true });
+  assert.equal(last?.members, 2, JSON.stringify(last));
+  assert.equal(mv.length, 2, `stops near, then walks out of the corridor: ${JSON.stringify(mv.map(m => m.waypoints))}`);
+  const p = mv[1].waypoints.at(-1);
+  assert.ok(p.x <= 200, `out of the corridor: ${JSON.stringify(p)}`);
+  assert.equal(last?.walkOnBlocked, undefined, JSON.stringify(last));
 });
 
 test("HX1-08: out of combat, a member cut back on the square it is drawn in rests on that whole square, not where it is drawn", async () => {
