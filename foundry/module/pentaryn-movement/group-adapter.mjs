@@ -182,8 +182,15 @@ export function fitPath(token, path) {
       const t = i / n, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
       if (!fits(x, y, w, h)) {
         // Back along what it walked to the last point its whole body fits (the start when none does).
+        // A whole square first (S1R1-07: a Large cut at a one-square door rested off the grid, 12 px across the
+        // door's line); else the last point its body fits, as before.
+        const onGrid = p => Math.abs(p.x / s - Math.round(p.x / s)) < 1e-6 && Math.abs(p.y / s - Math.round(p.y / s)) < 1e-6;
         let q = seen.length - 1;
-        while (q > 0 && !whole(seen[q].x, seen[q].y, seen[q].w, seen[q].h)) q -= 1;
+        while (q > 0 && !(onGrid(seen[q]) && whole(seen[q].x, seen[q].y, seen[q].w, seen[q].h))) q -= 1;
+        if (q === 0) {
+          q = seen.length - 1;
+          while (q > 0 && !whole(seen[q].x, seen[q].y, seen[q].w, seen[q].h)) q -= 1;
+        }
         const at = seen[q];
         const kk = Math.max(at.k, 1);
         const out = path.slice(0, kk).map(p => ({ ...p }));

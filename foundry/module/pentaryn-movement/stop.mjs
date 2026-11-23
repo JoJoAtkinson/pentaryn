@@ -416,7 +416,10 @@ function owns(token) {
 function stopToken(token, how, via = "api") {
   const doc = token.document;
   // `via`: what asked (click, board, door, api), for status().stop (live H4-03: a token stopped with no record of why).
-  lastStop = { at: new Date().toISOString(), tokenId: doc.id, name: doc.name ?? null, how, via };
+  // A follow-up of a stop already recorded (`late`: a member whose wave was on its way when its group was stopped)
+  // is counted on that record, never written over it (S1R1-09: the click record read {via: "api"} afterwards).
+  const rec = via === "late" && lastStop ? {} : (lastStop = { at: new Date().toISOString(), tokenId: doc.id, name: doc.name ?? null, how, via });
+  if (via === "late" && lastStop) lastStop.late = (lastStop.late ?? 0) + 1;
   if (how === "query") return [act(token, how)];
   let held = false, ids = [];
   try { ({ held, ids } = feature.exposed.groupMembers?.(doc.id) ?? { held: false, ids: [] }); } catch (err) { log?.debug?.("group members", err); }
@@ -434,6 +437,7 @@ function stopToken(token, how, via = "api") {
   const claims = [];
   const out = [];
   const combatStopped = [];
+  const ahead = new Map();
   let rerouted = 0;
   for (const t of list) {
     const tdoc = t.document;
@@ -449,26 +453,28 @@ function stopToken(token, how, via = "api") {
       }
     } else {
       if (!(held && whole)) { try { feature.exposed.groupStopOne?.(tdoc.id, null); } catch (err) { log?.debug?.("stop one", err); } }
+      // Its way on, before the stop clears it: one left in a corridor walks on out of it (S1R1-05).
+      try { ahead.set(tdoc.id, (tdoc.movement?.pending?.waypoints ?? []).map(p => ({ x: p.x, y: p.y }))); } catch (err) { log?.debug?.("stop: its way on", err); }
       out.push(act(t, next));
       combatStopped.push(tdoc.id);
     }
   }
-  lastStop.members = out.length;
-  lastStop.whole = held && whole;
-  lastStop.rerouted = rerouted;
+  rec.members = out.length;
+  rec.whole = held && whole;
+  rec.rerouted = rerouted;
   if (list.length > 1 || held) {
     try { feature.exposed.groupNoteStop?.({ why: "click", members: out.length, whole: held && whole }); } catch (err) { log?.debug?.("note the stop", err); }
   }
   // In a fight each finishes the square it is in; two can finish on one (live H3-01): once at rest, apart, and
   // none left in a one-wide corridor or doorway when there is room near (HX1-03: two rested in the A-B corridor).
-  if (combatStopped.length > 1 || (held && combatStopped.length)) settleAfter(out, combatStopped, scene);
+  if (combatStopped.length > 1 || (held && combatStopped.length)) settleAfter(out, combatStopped, scene, ahead);
   return out;
 }
 
 /** Once the stops are made, the stopped members (ids, in order) are set apart at rest, out of the gaps (group.mjs groupSettle). */
-function settleAfter(promises, ids, scene) {
+function settleAfter(promises, ids, scene, ahead = null) {
   Promise.allSettled(promises)
-    .then(() => { if (feature) feature.exposed.groupSettle?.(ids, scene, { roomy: true }); })
+    .then(() => { if (feature) feature.exposed.groupSettle?.(ids, scene, { roomy: true, ahead }); })
     .catch(err => log?.debug?.("settle after a stop", err));
 }
 
@@ -694,7 +700,7 @@ async function stop(doc, opts = {}, qctx = null) {
   if (!token) return { ok: false, code: "NOT_DRAWN", reason: "the token is not drawn on this canvas" };
   const how = decide(token, { tool: "select", armed: true });
   if (!how) return { ok: false, code: "NOT_MOVING", reason: "the token is not moving, or you cannot control it" };
-  const results = await Promise.all(stopToken(token, how));
+  const results = await Promise.all(stopToken(token, how, opts?.via === "late" ? "late" : "api"));
   const r = results[0];
   if (how === "query") return r?.ok ? { ...r } : { ok: false, code: r?.code ?? "NO_ANSWER", reason: r?.reason ?? "the client that started the move did not stop it" };
   return { ok: true, how, tokenId: doc.id };
@@ -716,10 +722,12 @@ async function stopOwn(data = {}, qctx = {}) {
   try { ids = feature?.exposed?.groupCancel?.(doc.id) ?? []; } catch (err) { log?.debug?.("stop the group", err); }
   let ok = false;
   const stopped = [];
+  const ahead = new Map();
   for (const id of new Set([doc.id, ...ids])) {
     const d = id === doc.id ? doc : doc.parent?.tokens?.get(id);
     if (!d) continue;
     if (id !== doc.id && (!d.movement?.user?.isSelf || d.movement.state === "completed" || d.movement.state === "stopped")) continue;
+    try { ahead.set(id, (d.movement?.pending?.waypoints ?? []).map(p => ({ x: p.x, y: p.y }))); } catch (err) { log?.debug?.("stop: its way on", err); }
     const r = await stopSafely(d);
     if (r && id === doc.id) ok = true;
     stopped.push(id);
@@ -727,7 +735,7 @@ async function stopOwn(data = {}, qctx = {}) {
   lastStop = { at: new Date().toISOString(), tokenId: doc.id, how: "stopOwn", by: sender.id ?? null };
   if (ids.length) { try { feature?.exposed?.groupNoteStop?.({ why: "gm", members: stopped.length, whole: true }); } catch (err) { log?.debug?.("note the stop", err); } }
   // Two that finish their squares on one square are set apart at rest (H3-01).
-  if (stopped.length > 1) { try { feature?.exposed?.groupSettle?.(stopped, doc.parent, { roomy: true }); } catch (err) { log?.debug?.("settle after a stop", err); } }
+  if (stopped.length > 1) { try { feature?.exposed?.groupSettle?.(stopped, doc.parent, { roomy: true, ahead }); } catch (err) { log?.debug?.("settle after a stop", err); } }
   return { ok, how: "stop", tokenId: doc.id };
 }
 

@@ -8,7 +8,7 @@
 import { search, stringPull, directPath } from "../../pathfind-core.mjs";
 import { flood } from "../../group-core.mjs";
 
-export function gridWorld(ascii, { clock = null } = {}) {
+export function gridWorld(ascii, { clock = null, gridLattice = false, pull = true } = {}) {
   const rows = ascii.trim().split("\n").map(r => r.trim());
   const H = rows.length, W = rows[0].length;
   const free = (i, j) => i >= 0 && j >= 0 && i < H && j < W && rows[i][j] !== "#";
@@ -68,8 +68,12 @@ export function gridWorld(ascii, { clock = null } = {}) {
     if (avoid.length) calls.avoid += 1;
     if (clock) clock.t += clock.perRoute ?? 0;
     const w = m.w ?? 1, h = m.h ?? w;
-    const centre = n => ({ x: to.x + n.j, y: to.y + n.i });
-    const start = { i: Math.round(from.y - to.y), j: Math.round(from.x - to.x) }, goal = { i: 0, j: 0 };
+    // gridLattice: as pathfind-adapter's fieldFor, the lattice on whole squares nearest the goal, the goal one hop
+    // from its node; else anchored on the goal itself.
+    const snapC = (v, n) => (n % 2 === 0 ? Math.round(v) : Math.floor(v) + 0.5);
+    const L = gridLattice ? { x: snapC(to.x, w), y: snapC(to.y, h) } : to;
+    const centre = n => ({ x: L.x + n.j, y: L.y + n.i });
+    const start = { i: Math.round(from.y - L.y), j: Math.round(from.x - L.x) }, goal = { i: Math.round(to.y - L.y), j: Math.round(to.x - L.x) };
     const grazes = (p, q) => avoid.some(a => segDist(p, q, a) < a.r - EPS);
     const blocked = n => !lineFits(centre(n), centre(n), w, h) || avoid.some(a => Math.hypot(centre(n).x - a.x, centre(n).y - a.y) < a.r - EPS);
     const open = (p, q) => lineFits(p, q, w, h) && !grazes(p, q);
@@ -81,8 +85,9 @@ export function gridWorld(ascii, { clock = null } = {}) {
     const job = search({ start, goal, edge, wall, unit: 1, bounds: { minI: -H - 2, maxI: H + 2, minJ: -W - 2, maxJ: W + 2 } });
     if (job.run() !== "found") return null;
     const lineOk = (a, b) => open(centre(a), centre(b)) && directPath(a, b).every(n => !blocked(n));
-    const pulled = stringPull(job.path, job.costs, { edge, wall, lineOk });
+    const pulled = pull ? stringPull(job.path, job.costs, { edge, wall, lineOk }) : job.path;
     let pts = [from, ...pulled.map(centre)];
+    if (Math.hypot(pts.at(-1).x - to.x, pts.at(-1).y - to.y) > EPS) { if (!open(pts.at(-1), to)) return null; pts.push(to); }
     pts = pts.filter((p, k) => k === 0 || Math.hypot(p.x - pts[k - 1].x, p.y - pts[k - 1].y) > EPS);
     // The exact start replaces its lattice node where the straight hop past the node is open.
     if (pts.length > 2 && open(pts[0], pts[2])) pts.splice(1, 1);
@@ -113,7 +118,14 @@ export function gridWorld(ascii, { clock = null } = {}) {
     return out;
   };
 
-  return { rows, free, walkable, walkDistanceFrom, route, narrow, calls, lineFits };
+  /** A token of radius r at c in a one-wide corridor: from its centre or 0.9 r out, rock within 0.6 on both sides. */
+  const cramped = (c, r = 0.5) => [[0, 0], [0.9 * r, 0], [-0.9 * r, 0], [0, 0.9 * r], [0, -0.9 * r]].some(([ox, oy]) => {
+    const x = c.x + ox, y = c.y + oy;
+    const rock = (dx, dy) => !free(Math.floor(y + dy * 0.6), Math.floor(x + dx * 0.6));
+    return (rock(1, 0) && rock(-1, 0)) || (rock(0, 1) && rock(0, -1));
+  });
+
+  return { rows, free, walkable, walkDistanceFrom, route, narrow, calls, lineFits, cramped };
 }
 
 /** Distance from point c to segment p–q. */

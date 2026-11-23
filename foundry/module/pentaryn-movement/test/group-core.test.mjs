@@ -272,19 +272,19 @@ test("10. combat route: every checkpoint is a cell, each step one square; the co
   assert.equal(two[2].checkpoint, true);
 });
 
-test("10b. in combat there are no lateral re-plans: delays and slots only", () => {
+test("10b. in combat a re-plan round the others is on whole squares too (S1R1-03: a fight re-plans as out of one)", () => {
   const d = { x: 0, y: 4 };
   const ms = [];
   let n = 0;
   for (const y of [1.5, 2.5]) for (const x of [6.5, 7.5, 8.5]) ms.push(member(`m${n++}`, { x, y }, d));
-  const { g, res } = plan(DOOR, ms, "m4", { combat: true });
-  assert.equal(res.replans, 0);
-  assert.equal(g.calls.avoid, 0);
+  const { res } = plan(DOOR, ms, "m4", { combat: true });
+  assert.equal(res.result, "plan");
   for (const e of Object.values(res.members)) {
-    assert.notEqual(e.level, 1);
-    // Combat slots are whole cells.
+    // Combat slots are whole cells, and every route (re-planned or not) ends on one.
     assert.ok(Number.isInteger(e.slot.x - 0.5) && Number.isInteger(e.slot.y - 0.5), JSON.stringify(e.slot));
+    assert.ok(Number.isInteger(e.points.at(-1).x - 0.5) && Number.isInteger(e.points.at(-1).y - 0.5), JSON.stringify(e.points.at(-1)));
   }
+  assert.deepEqual(res.stayed, [], "nobody left where it stands");
 });
 
 test("11. skip reasons: direct, ghost, ignoreWalls (unconstrained) and a non-square grid", () => {

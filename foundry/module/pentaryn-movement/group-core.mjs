@@ -11,6 +11,7 @@
  *                              is hard: the standing tokens (crowdFor, 0.5.0) and, in a re-plan, rest spots
  *   toward(member, from, to)   the way that ignores the tokens ({ points, length, data? }; a big one's as far as its
  *                              body fits) or null: a member with no route walks it as far as it is free (0.5.0)
+ *   cramped(c, r)              (optional) is a token of radius r at c in a one-wide corridor or a doorway (no rest there when cut short)?
  *   narrow(points, rmax)       the points where the anchor's route passes a gap narrower than 2 group
  *                              diameters, in route order ([] when it never does)
  *   now()                      clock (ms), for the budget
@@ -434,21 +435,23 @@ export function firstIntrusion(points, r, circles) {
  * with `allowed` (a fight: whole cells) the last point it accepts, a route point always counting. A cut;
  * { k: 0, t: 0 } is the start (it does not move).
  */
-function backOff(points, { k, t }, allowed, step = 0.25) {
+function backOff(points, { k, t }, allowed, step = 0.25, restOk = null) {
+  const at = (a, b, tt) => ({ x: a.x + (b.x - a.x) * tt, y: a.y + (b.y - a.y) * tt });
+  const ok = c => !restOk || restOk(c);
   for (let j = Math.min(k, points.length - 2); j >= 0; j--) {
     const a = points[j], b = points[j + 1];
     const L = dist(a, b);
     if (L < EPS) continue;
     const top = j === k ? t : 1;
     if (!allowed) {
-      const tt = Math.max(top - 0.01 / L, 0);
-      if (tt > EPS) return { k: j, t: tt };
+      // A hair before the hit, else (S1R1-02: not at rest in a one-wide corridor) a step at a time further back.
+      for (let tt = Math.max(top - 0.01 / L, 0); tt > EPS; tt -= step / L) if (ok(at(a, b, tt))) return { k: j, t: tt };
       continue;
     }
     const n = Math.max(1, Math.round(Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y))));
     for (let q = Math.floor(top * n + EPS); q >= 1; q--) {
       const tt = q / n;
-      if ((q === n && top >= 1 - EPS) || allowed({ x: a.x + (b.x - a.x) * tt, y: a.y + (b.y - a.y) * tt })) return { k: j, t: tt };
+      if (((q === n && top >= 1 - EPS) || allowed(at(a, b, tt))) && ok(at(a, b, tt))) return { k: j, t: tt };
     }
   }
   return { k: 0, t: 0 };
@@ -458,10 +461,17 @@ function backOff(points, { k, t }, allowed, step = 0.25) {
  * "No route" (0.5.0): the way that ignores the tokens standing in it, walked only as far as it is free of them,
  * where the token may rest (`allowed`: in a fight a whole cell). { cut, points, full }: full when it never meets one.
  */
-export function freePrefix(points, r, circles, { allowed = null } = {}) {
+export function freePrefix(points, r, circles, { allowed = null, restOk = null } = {}) {
   const hit = firstIntrusion(points, r, circles);
-  if (!hit) return { cut: null, points, full: true };
-  const cut = backOff(points, hit, allowed);
+  const ok = restOk ? c => restOk(c, r) : null;
+  if (!hit) {
+    // A way that ends where it may not rest (S1R1-07: a big one's way as far as its body fits ends off the grid):
+    // back to the last point it may.
+    if (!allowed || points.length < 2 || allowed(points.at(-1))) return { cut: null, points, full: true };
+    const cut = backOff(points, { k: points.length - 2, t: 1 - 1e-5 }, allowed, 0.25, ok);
+    return { cut, points: prefixOf(points, cut), full: false };
+  }
+  const cut = backOff(points, hit, allowed, 0.25, ok);
   return { cut, points: prefixOf(points, cut), full: false };
 }
 
@@ -481,9 +491,10 @@ export function freePrefix(points, r, circles, { allowed = null } = {}) {
  * @param {boolean} [o.combat]
  * @param {(m) => ((c) => boolean)|null} [o.allowedFor]   where a member may rest (a fight: whole cells)
  * @param {string} [o.keep]                the grabbed one: cut last
+ * @param {(c, r) => boolean} [o.restOk]  may a member (radius r) cut short rest at c (not in a one-wide corridor or a doorway)?
  * @returns {Generator<string, Map<string, { cut, delay, points, still, changed }>>}
  */
-export function* settle(list, { statics = [], walkers = [], combat = false, allowedFor = () => null, keep = null } = {}) {
+export function* settle(list, { statics = [], walkers = [], combat = false, allowedFor = () => null, keep = null, restOk = null } = {}) {
   const cur = list.map(m => ({ ...m, cut: m.cut ?? null, changed: false }));
   const build = e => {
     e.pts = prefixOf(e.points, e.cut);
@@ -548,7 +559,8 @@ export function* settle(list, { statics = [], walkers = [], combat = false, allo
     for (let c = cands.length - 1; c >= 0; c--) {
       e.cut = composeCut(base, cands[c]);
       build(e);
-      if (!anyClash(e)) { e.changed = true; return; }
+      // Never left at rest in a one-wide corridor or a doorway (S1R1-02): further back, or where it stands.
+      if (!anyClash(e) && (!restOk || restOk(e.pts.at(-1), e.r))) { e.changed = true; return; }
     }
     e.cut = { k: 0, t: 0 };
     build(e);
@@ -602,7 +614,10 @@ export function* planGroup(spec, o) {
   let anchor = members.find(m => m.id === anchorId);
   if (!anchor) return { result: "core", reason: "noAnchor" };
   if (mode === "straight") return straightPlan(spec, o);
-  const allowedFor = m => (combat ? c => onCell(c, m.w ?? 1, m.h ?? 1) : null);
+  // In a fight every member, out of one a big one (S1R1-07), stops only on whole squares.
+  const allowedFor = m => (combat || isBig(m) ? c => onCell(c, m.w ?? 1, m.h ?? 1) : null);
+  // A member cut short never rests in a one-wide corridor or a doorway (S1R1-02; `o.cramped`, when the glue has it).
+  const restOk = typeof o.cramped === "function" ? (c, r) => !o.cramped(c, r) : null;
   // Dropped on top of a token that is not in the group (live H1-08: on the Large in a full closet the
   // grabbed one walked as far as it could and parked in the one-wide connector): it takes the nearest
   // spot clear of every other token that it has a route to, on open floor rather than in a gap. In a fight
@@ -663,7 +678,7 @@ export function* planGroup(spec, o) {
     const t = o.toward?.(anchor, anchor.start, anchor.formation) ?? null;
     yield "route";
     if (!(t?.points?.length >= 2)) return { result: "core", reason: "anchorNoRoute" };
-    const p = freePrefix(t.points, anchor.r, others, { allowed: allowedFor(anchor) });
+    const p = freePrefix(t.points, anchor.r, others, { allowed: allowedFor(anchor), restOk });
     anchorShort = !p.full || dist(t.points.at(-1), anchor.formation) > EPS;
     anchorRoute = { ...t, cut: p.cut, short: anchorShort };
   }
@@ -695,7 +710,7 @@ export function* planGroup(spec, o) {
     const t = o.toward?.(m, m.start, to) ?? null;
     yield "route";
     if (!(t?.points?.length >= 2)) return { points: [{ x: m.start.x, y: m.start.y }], length: 0, data: null, cut: null, short: true };
-    const p = freePrefix(t.points, m.r, others, { allowed: allowedFor(m) });
+    const p = freePrefix(t.points, m.r, others, { allowed: allowedFor(m), restOk });
     // Short of its spot: cut before a token, or a way that ends before it (a big one as far as its body fits).
     return { ...t, cut: p.cut, short: !p.full || dist(t.points.at(-1), to) > EPS };
   }
@@ -756,7 +771,13 @@ export function* planGroup(spec, o) {
   ...moves.filter(m => excluded.includes(m))];
   if (anchorLast) order = [...order.filter(m => m.id !== anchorId), ...order.filter(m => m.id === anchorId)];
   let replans = 0;
-  const lateral = new Map();               // member id + avoid set → route (a re-pass reuses it)
+  /** A member standing at its start (one trajectory per member, so the pair memo keeps its answers). */
+  const startTr = new Map();
+  const startOf = q => {
+    if (!startTr.has(q.id)) startTr.set(q.id, trajectory([{ x: q.start.x, y: q.start.y }]));
+    return startTr.get(q.id);
+  };
+  const lateral = new Map();              // member id + avoid set → route (a re-pass reuses it)
   const reslots = new Map();               // member id + rests → { route } | null (a re-pass reuses it)
   const cellTl = (() => {
     const tl0 = anchor.tl ?? { x: anchor.formation.x - (anchor.w ?? 1) / 2, y: anchor.formation.y - (anchor.h ?? 1) / 2 };
@@ -790,6 +811,7 @@ export function* planGroup(spec, o) {
       return d2 === null ? null : { route: hit, tr: tr2, delay: d2 };
     }
     const want = pathOf(routes.get(m.id)).at(-1);
+    const mine = pathLength(pathOf(routes.get(m.id)));
     const lattice = combat || isBig(m) ? cellCandidates(cellTl, m.w ?? 1, m.h ?? 1, GROUP_LIMITS.rings) : hexAll;
     const cands = lattice
       .filter(c => [...rests, ...ends].every(q => dist(c, q) >= m.r + q.r + MOTION.restGap - EPS)
@@ -806,7 +828,9 @@ export function* planGroup(spec, o) {
       replans += 1;
       yield "route";
       if (timer.over()) return undefined;
-      if (!r) continue;
+      // Never the long way round to another spot either (S1R1-01: a 30 s walk round the whole dungeon for a spot
+      // the others reached in 6 s through the door): it stops short instead (settle).
+      if (!r || detourTooLong(mine, r.length)) continue;
       const tr2 = trajectoryOf(r.points, m.speed);
       const d2 = firstFreeDelay(tr2, m.r, fixed, combat) ?? freeDelayFrom(tr2, m.r, fixed, combat, 0);
       if (d2 !== null) { reslots.set(key, r); return { route: r, tr: tr2, delay: d2 }; }
@@ -829,13 +853,19 @@ export function* planGroup(spec, o) {
       let tr = trajectoryOf(pathOf(route), m.speed);
       let level = 0;
       let delay = firstFreeDelay(tr, m.r, fixed, combat);
-      if (delay === null && !combat) {
+      // The members timed after it stand at their starts at least until it sets off.
+      const later = seq.slice(seq.indexOf(m) + 1);
+      // Does it walk through the start of a member timed after it (S1R1-01: Hero 3 cut past Hero 4 still waiting at
+      // its start; Hero 4 then could not go after it, nor before it without plugging Hero 3's way, and Hero 3 took
+      // another spot round the whole dungeon)? Then it tries the way round them first, as below.
+      const crossesLater = (t, d) => later.some(q => conflicts(delayed(t, d), m.r, { r: q.r, tr: startOf(q) }, combat, false));
+      if (delay === null || (later.length && crossesLater(tr, delay))) {
         // Lateral re-plan: earlier members' rest circles and the standing tokens as static obstacles (not those
         // already on our start or end).
         const end = pathOf(route).at(-1);
-        // ... and the starts of the members timed after it (they stand there at least until it sets off).
-        const later = seq.slice(seq.indexOf(m) + 1).map(q => ({ x: q.start.x, y: q.start.y, r: q.r + m.r }));
-        const avoid = [...fixed.map(f => ({ ...f.tr.pts.at(-1), r: f.r + m.r })), ...later]
+        // ... and the starts of the members timed after it.
+        const starts = later.map(q => ({ x: q.start.x, y: q.start.y, r: q.r + m.r }));
+        const avoid = [...fixed.map(f => ({ ...f.tr.pts.at(-1), r: f.r + m.r })), ...starts]
           .filter(c => dist(c, m.start) >= c.r - EPS && dist(c, end) >= c.r - EPS);
         const key = `${m.id}|${avoid.map(c => `${c.x.toFixed(3)},${c.y.toFixed(3)}`).sort().join(";")}`;
         let again = lateral.get(key);
@@ -852,7 +882,8 @@ export function* planGroup(spec, o) {
         if (again && !detourTooLong(pathLength(pathOf(route)), again.length)) {
           const tr2 = trajectoryOf(again.points, m.speed);
           const d2 = firstFreeDelay(tr2, m.r, fixed, combat);
-          if (d2 !== null) { route = { ...again, short: route.short }; tr = tr2; delay = d2; level = 1; }
+          // Taken when it had no delay at all, or when it no longer walks through a later member's start.
+          if (d2 !== null && (delay === null || !crossesLater(tr2, d2))) { route = { ...again, short: route.short }; tr = tr2; delay = d2; level = 1; }
         }
       }
       if (delay === null) {
@@ -914,7 +945,7 @@ export function* planGroup(spec, o) {
     const e = best.entries[m.id];
     return { id: m.id, r: m.r, w: m.w, h: m.h, speed: m.speed, points: e.route.points, cut: e.route.cut ?? null, delay: e.delay };
   }), ...stays.map(m => ({ id: m.id, r: m.r, w: m.w, h: m.h, speed: m.speed, points: pathOf(routes.get(m.id)), cut: null, delay: 0 }))];
-  const settled = yield* settle(list, { statics: others, walkers, combat, allowedFor, keep: anchorId });
+  const settled = yield* settle(list, { statics: others, walkers, combat, allowedFor, keep: anchorId, restOk });
   const cutIds = [], stayed = [];
   for (const m of [...best.seq, ...stays]) {
     const s = settled.get(m.id);

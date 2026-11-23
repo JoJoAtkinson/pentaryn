@@ -392,7 +392,26 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     }
     return restMemo.get(k);
   };
-  const measured = path => {
+  // In a fight a route is walked square by square (a checkpoint at every square, withCheckpoints): the plan times
+  // those squares, not the straight lines between its corners (a knight's-move corner ran half a square off the
+  // squares walked, past a member waiting beside them).
+  const squares = path => {
+    if (!combat || !Array.isArray(path) || path.length < 2) return path;
+    const out = [path[0]];
+    for (let k = 1; k < path.length; k++) {
+      const a = path[k - 1], b = path[k];
+      const di = (b.y - a.y) / s, dj = (b.x - a.x) / s;
+      if (Number.isInteger(di) && Number.isInteger(dj) && Math.max(Math.abs(di), Math.abs(dj)) > 1) {
+        for (const c of cellChain([{ i: 0, j: 0 }, { i: di, j: dj }]).slice(1, -1)) {
+          out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: false });
+        }
+      }
+      out.push(b);
+    }
+    return out;
+  };
+  const measured = raw => {
+    const path = squares(raw);
     const pts = path.map(p => toSquares(p, anchor.w, anchor.h, s));
     let length = 0;
     for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
@@ -416,7 +435,8 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     } };
   };
   /** A found path (top-left pixels) as a route: centres in squares, its length, the path itself. */
-  const asRoute = (rec, path, cost) => {
+  const asRoute = (rec, raw, cost) => {
+    const path = squares(raw);
     const pts = path.map(p => toSquares(p, rec.w, rec.h, s));
     let length = 0;
     for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
@@ -502,9 +522,33 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     if (!v?.reached || !v.path?.length) { unfinished = !!v?.unfinished; return null; }
     return asRoute(rec, v.path, v.cost);
   };
+  /**
+   * Is a token of radius r (squares) at c in a one-wide corridor or a doorway (S1R1-02: the grabbed one cut short
+   * rested with half its body in the A-B corridor's mouth)? Its centre and four points 0.9 r out: from any of them,
+   * move-blocking walls within 0.6 square on both sides, across or along.
+   */
+  const crampMemo = new Map();
+  const z = anchor.token.document?._source?.elevation ?? 0;
+  const wallWithin = (o, dx, dy) => {
+    try { return !!anchor.token.checkCollision({ x: o.x + dx * 0.6 * s, y: o.y + dy * 0.6 * s, elevation: z }, { origin: o, type: "move", mode: "any" }); }
+    catch { return false; }
+  };
+  const cramped = (c, r = 0.5) => {
+    const k = `${c.x.toFixed(2)},${c.y.toFixed(2)},${r}`;
+    if (!crampMemo.has(k)) {
+      const d = 0.9 * r;
+      const v = [[0, 0], [d, 0], [-d, 0], [0, d], [0, -d]].some(([ox, oy]) => {
+        const o = { x: (c.x + ox) * s, y: (c.y + oy) * s, elevation: z };
+        return (wallWithin(o, 1, 0) && wallWithin(o, -1, 0)) || (wallWithin(o, 0, 1) && wallWithin(o, 0, -1));
+      });
+      crampMemo.set(k, v);
+    }
+    return crampMemo.get(k);
+  };
   return {
     walkable,
     walkDistance,
+    cramped,
     route,
     routeLong,
     toward,
@@ -514,12 +558,16 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
   };
 }
 
-/** Does a path (centres, squares) come inside any of `circles` ({ x, y, r } squares) by more than a hair? */
+/**
+ * Does a path (centres, squares) come inside any of `circles` ({ x, y, r } squares)? As strict as the plan's own
+ * check (settle): S1R1-02, a drag line slanting into a corridor's mouth grazed a token standing beside it by 0.01
+ * square, passed a 0.02 slack, and settle then cut the grabbed one back into the corridor.
+ */
 function throughAny(pts, circles) {
   if (!circles?.length || pts.length < 2) return false;
   for (let k = 1; k < pts.length; k++) {
     const a = pts[k - 1], b = pts[k];
-    if (circles.some(c => segDist(c, a, b) < c.r - 0.02)) return true;
+    if (circles.some(c => segDist(c, a, b) < c.r - 1e-4)) return true;
   }
   return false;
 }
@@ -903,7 +951,7 @@ function lateStop(scene, ids, tries = LATE_STOP_TRIES) {
     const st = doc.movement?.state;
     const moving = st === "pending" || st === "paused" || (() => { try { return !!doc.object.animationContexts?.has?.(doc.object.movementAnimationName); } catch { return false; } })();
     if (!moving) { left.push(id); continue; }
-    Promise.resolve().then(() => feature?.exposed?.stop?.(doc)).catch(err => log?.debug?.("stop a late wave", err));
+    Promise.resolve().then(() => feature?.exposed?.stop?.(doc, { via: "late" })).catch(err => log?.debug?.("stop a late wave", err));
   }
   if (left.length && tries > 0) setTimeout(() => lateStop(scene, left, tries - 1), LATE_STOP_EVERY_MS);
 }
@@ -919,10 +967,10 @@ const DESTACK_TRIES = 6;
  * touching is fine). Whatever brought two together (a door shut mid-walk and core's own cut of a member
  * already on its way, live R5-1; a member moved by hand meanwhile), the later member steps to the nearest
  * whole cell around it that is clear of walls and of every other token and that it reaches in a straight
- * line: a walk out of combat, a displace in one (free: dnd5e records no movement for it). Only members this
+ * line: a walk, in a fight too (S1R1-05: counted, never a free displace). Only members this
  * client may move; nothing when none overlaps. Returns the moves made.
  */
-function destack(ids, sceneOf, { roomy = false } = {}) {
+function destack(ids, sceneOf, { roomy = false, ahead = null } = {}) {
   const moved = [];
   const claims = [];
   for (const id of ids) {
@@ -938,6 +986,15 @@ function destack(ids, sceneOf, { roomy = false } = {}) {
     // out to the nearest free square in the open within DESTACK_REACH, as a stop out of combat does (H4-09).
     const inGap = roomy && !roomyAt(token, self0, radiusOf(w, h), s);
     if (inGap) {
+      // In a fight it walks on along its own way to the first such square (S1R1-05: a displace back out of the
+      // corridor was a 200 px jump, free, so the movement spent was more than the squares it ended from its start).
+      const fwd = inCombat(doc) ? forwardExit(token, doc, here, ahead?.get?.(id), taken, s, w, h) : null;
+      if (fwd) {
+        const end = fwd.at(-1);
+        claims.push({ id, x: end.x + (w * s) / 2, y: end.y + (h * s) / 2, r: radiusOf(w, h) * s });
+        moveAside(doc, fwd, moved, id);
+        continue;
+      }
       const pick = gapExit(token, doc, here, taken, s, w, h);
       if (pick) {
         claims.push({ id, x: pick.x + (w * s) / 2, y: pick.y + (h * s) / 2, r: radiusOf(w, h) * s });
@@ -981,15 +1038,48 @@ function destack(ids, sceneOf, { roomy = false } = {}) {
   return moved;
 }
 
-/** A rest check's step aside: a walk out of combat, a displace in one (free: dnd5e records no movement for it). */
+/**
+ * A rest check's step aside (`pick`: one top-left, or the squares of a walk): a walk, in a fight too (S1R1-05: never
+ * a free displace there; dnd5e counts the squares walked).
+ */
 function moveAside(doc, pick, moved, id) {
   const z = doc._source.elevation ?? 0;
-  const action = inCombat(doc) ? "displace" : (doc.movementAction ?? "walk");
+  const action = doc.movementAction ?? "walk";
+  const steps = Array.isArray(pick) ? pick : [pick];
   try {
-    Promise.resolve(doc.move([{ x: pick.x, y: pick.y, elevation: z, action, snapped: true, explicit: true, checkpoint: true }], { method: "api" }))
-      .catch(err => log?.debug?.("destack move", err));
-    moved.push({ id, x: pick.x, y: pick.y });
+    const wps = steps.map((p, k) => ({ x: p.x, y: p.y, elevation: z, action, snapped: true, explicit: k === steps.length - 1, checkpoint: true }));
+    Promise.resolve(doc.move(wps, { method: "api" })).catch(err => log?.debug?.("destack move", err));
+    moved.push({ id, x: steps.at(-1).x, y: steps.at(-1).y });
   } catch (err) { log?.debug?.("destack move", err); }
+}
+
+/**
+ * In a fight, a member stopped in a one-wide corridor or a doorway (S1R1-05): the squares of its own way on from
+ * `here` (its remaining waypoints at the stop, `ahead`) up to the first one out of the gap, free of every other token,
+ * every square on the way free too, within 2 x DESTACK_REACH squares. null when there is none.
+ */
+function forwardExit(token, doc, here, ahead, taken, s, w, h) {
+  if (!ahead?.length) return null;
+  const pts = ahead.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+  const at = pts.findIndex(p => p.x === here.x && p.y === here.y);
+  const cells = [];
+  let prev = here;
+  for (const p of at >= 0 ? pts.slice(at + 1) : pts) {
+    const di = (p.y - prev.y) / s, dj = (p.x - prev.x) / s;
+    if (!Number.isInteger(di) || !Number.isInteger(dj)) return null;
+    for (const c of cellChain([{ i: 0, j: 0 }, { i: di, j: dj }]).slice(1)) cells.push({ x: prev.x + c.j * s, y: prev.y + c.i * s });
+    prev = p;
+    if (cells.length >= 2 * DESTACK_REACH) break;
+  }
+  const r = radiusOf(w, h);
+  for (let k = 0; k < Math.min(cells.length, 2 * DESTACK_REACH); k++) {
+    const c = cells[k];
+    if (taken(c)) return null;                                   // never through another token
+    let spot = null;
+    try { spot = clearOfWalls(token, c, { taken, snap: true }); } catch { spot = null; }
+    if (spot && spot.x === c.x && spot.y === c.y && roomyAt(token, { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2 }, r, s)) return cells.slice(0, k + 1);
+  }
+  return null;
 }
 
 /**
@@ -1089,12 +1179,13 @@ function groupNoteStop({ why = "click", members = 0, whole = false } = {}) {
 /**
  * A group stopped in a fight (stop.mjs): each member finishes the square it is in, and two that walked
  * close together can finish on the same square (live H3-01: 3 of 4 corridor clicks left two on one square).
- * Once they are all at rest, the later of a stacked pair steps to the nearest free whole square (a displace:
- * free, dnd5e records nothing for it), as the rest check does.
+ * Once they are all at rest, the later of a stacked pair steps to the nearest free whole square, and one left in a
+ * one-wide corridor walks on along its own way out of it (`ahead`: id → its remaining waypoints at the stop), as the
+ * rest check does: walks, counted (S1R1-05).
  */
-function groupSettle(ids, scene, { roomy = false } = {}) {
+function groupSettle(ids, scene, { roomy = false, ahead = null } = {}) {
   if (!ids?.length || !scene) return;
-  settleGroup(ids, scene, DESTACK_TRIES, { roomy });
+  settleGroup(ids, scene, DESTACK_TRIES, { roomy, ahead });
 }
 
 function groupMembers(tokenId) {
@@ -1882,7 +1973,7 @@ function aroundOthers(grabbed, c, result) {
   let moved = false;
   if (taken(end)) {
     let spot = end;
-    try { spot = clearOfWalls(grabbed, end, { taken }); } catch (err) { log.debug?.("single: a clear spot", err); }
+    try { spot = clearOfWalls(grabbed, end, { taken, snap: inCombat(doc) }); } catch (err) { log.debug?.("single: a clear spot", err); }
     if (taken(spot)) return false;
     end = { ...end, x: spot.x, y: spot.y, snapped: false };
     moved = true;
@@ -1949,7 +2040,9 @@ function aroundLater(grabbed, result, { origin, dest, avoid, wps }) {
   const go = waypoints => {
     const m = result[1].movement?.[doc.id] ?? { planned: false };
     const updates = result[0].length ? result[0] : [{ _id: doc.id }];
-    return send(scene, seq, starts, updates, { ...result[1], movement: { [doc.id]: { ...m, waypoints } } }, "move");
+    // In a fight a checkpoint at every cell, as every other combat move (S1R1-04).
+    const wps = inCombat(doc) && setting("clickToStop") ? withCheckpoints(grabbed, [origin, ...waypoints]) : waypoints;
+    return send(scene, seq, starts, updates, { ...result[1], movement: { [doc.id]: { ...m, waypoints: wps } } }, "move");
   };
   Promise.resolve(feature.exposed.pathfindRouteToAsync(grabbed, origin, dest, { preview: true, avoid }))
     .then(r => {
@@ -2011,7 +2104,10 @@ function onDrop(grabbed, event, result) {
     return result;
   }
   if (info.mode === "core") {
-    if (info.reason === "single" && !info.combat) {
+    // In a fight too (S1R1-04: a single drag walked straight through three tokens standing in its way, -98 to
+    // -100 px; dnd5e lets a creature pass an ally, Joe's rule is that nothing is walked through): round them on the
+    // grid, at the cost of the squares walked.
+    if (info.reason === "single") {
       let around = false;
       try { around = aroundOthers(grabbed, contexts[0], result); } catch (err) { log.debug?.("single: round the tokens that stay", err); }
       if (around?.later) return aroundLater(grabbed, result, around.later);
@@ -2020,6 +2116,7 @@ function onDrop(grabbed, event, result) {
         tellNoRoute(NO_ROUTE);
         Object.assign(last, { reason: "noRoute", result: around.stay ? "none" : "short", ms: 0 });
         if (around.stay) return null;
+        if (info.combat) checkpointAll(contexts, result[1]);
         return result;
       }
     }

@@ -34,7 +34,7 @@ export const MANIFEST = Object.freeze({
         + "and the last few reasons a drop went to core; resumed / stopped / destacked / cut (0.4.6): when a reload last "
         + "picked up unsent waves, a turn change last stopped a group, the rest check last moved a member off another, "
         + "a door shut or a wall raised last cut moves this client started; held (0.4.12): when a wave last waited for a token outside its group walking through its way. stop.last (0.4.11): this client's last "
-        + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole), or null.",
+        + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole; late (0.5.1): how many of its group's late waves it stopped after), or null.",
     },
     {
       path: "ghostFor",

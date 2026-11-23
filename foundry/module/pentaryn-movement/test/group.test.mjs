@@ -2048,6 +2048,37 @@ test("H2-07 / H2-09: a single drag out of combat goes round a standing token, an
   }
 });
 
+test("S1R1-04: a single drag in a fight goes round a token standing in its way too, square by square, and ends where it was dropped", () => {
+  combatFlag = true;
+  clock.step = 0;
+  const a = makeToken("s4cA000000000001", 100, 100);
+  const rest = makeToken("s4cR000000000001", 300, 100);
+  rest.visible = true;
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [a, rest];
+  try {
+    // Straight east through the one standing at (300, 100): dnd5e lets an ally pass, Joe's rule does not.
+    const ctx = contextsFor([a], 400, 0);
+    drop.result = coreDrop(ctx);
+    const out = a._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+    const wps = out[1].movement[a.document.id].waypoints;
+    assert.deepEqual([wps.at(-1).x, wps.at(-1).y], [500, 100], "it still ends where it was dropped");
+    let prev = { x: 150, y: 150 };
+    for (const p of wps) {
+      const q = { x: p.x + 50, y: p.y + 50 };
+      assert.ok(p.x % 100 === 0 && p.y % 100 === 0, `whole squares: ${JSON.stringify(p)}`);
+      assert.ok(Math.max(Math.abs(q.x - prev.x), Math.abs(q.y - prev.y)) <= 100, `a square at a time: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+      assert.ok(Math.hypot(q.x - 350, q.y - 150) >= 99, `never on it: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+      prev = q;
+    }
+  } finally {
+    combatFlag = false;
+    F.canvas.tokens.placeables = saved;
+    sceneTokens.delete(rest.document.id); sceneTokens.delete(a.document.id);
+    tickBy(60000);
+  }
+});
+
 test("H2-12: a single drop whose drag path fell short only because its search was still running goes the confirmed route, with no warning", () => {
   combatFlag = false;
   clock.step = 0;
@@ -2170,7 +2201,7 @@ test("the GM's drag-help switch (assist) off: every drag is core's (pathfinding 
   }
 });
 
-test("H3-01: a group clicked to a stop in a fight, two of it finishing on one square: once at rest the later one steps to a free square (a displace); H3-16: status().group.stopped says so", async () => {
+test("H3-01: a group clicked to a stop in a fight, two of it finishing on one square: once at rest the later one steps to a free square (a walk, counted: S1R1-05); H3-16: status().group.stopped says so", async () => {
   combatFlag = true;
   clock.step = 0;
   const ts = [makeToken("cstA000000000001", 400, 200), makeToken("cstB000000000001", 300, 200), makeToken("cstC000000000001", 500, 200)];
@@ -2203,7 +2234,7 @@ test("H3-01: a group clicked to a stop in a fight, two of it finishing on one sq
     assert.equal(apart.length, 1, `one step apart: ${JSON.stringify(apart.map(m => [m.id, m.waypoints]))}`);
     const step = apart[0];
     assert.equal(step.id, ts[1].document.id, "the later of the pair moves");
-    assert.equal(step.waypoints[0].action, "displace", "free: a displace in a fight");
+    assert.notEqual(step.waypoints[0].action, "displace", "never a free displace in a fight (S1R1-05)");
     const p = step.waypoints[0];
     assert.ok(!(p.x === 400 && p.y === 500) && !(p.x === 500 && p.y === 500), `onto a free square: ${JSON.stringify(p)}`);
     assert.equal(p.x % S, 0); assert.equal(p.y % S, 0);
@@ -2444,7 +2475,39 @@ test("HX1-08: out of combat, a member cut back on the square it is drawn in rest
   }
 });
 
-test("HX1-03: a group clicked to a stop in a fight: a member left at rest in a one-wide corridor steps out to open floor near it (a displace)", async () => {
+test("S1R1-09: a stop of a member whose wave landed after its group was clicked to a stop is counted on the click's record, never written over it", async () => {
+  combatFlag = true;
+  clock.step = 0;
+  const ts = [makeToken("s9A0000000000001", 400, 200), makeToken("s9B0000000000001", 300, 200)];
+  const others = keepOnly(ts);
+  try {
+    dropWith(ts[0], contextsFor(ts, 0, 400));
+    for (const t of ts) {
+      t.document.movement = { state: "pending", user: { isSelf: true } };
+      t.animationContexts.set(t.movementAnimationName, {});
+      t.document.stopMovement = function () { this.movement = { state: "stopped", user: { isSelf: true } }; this.object.animationContexts.clear(); return true; };
+    }
+    clock.t += MOTION.armMs;
+    ts[0]._onClickLeft({});
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    assert.equal(api.status().stop.last?.via, "click");
+    // B's wave lands now: the group's follow-up stop (lateStop).
+    ts[1].document.movement = { state: "pending", user: { isSelf: true } };
+    ts[1].animationContexts.set(ts[1].movementAnimationName, {});
+    await api.stop(ts[1].document, { via: "late" });
+    const last = api.status().stop.last;
+    assert.equal(last.via, "click", JSON.stringify(last));
+    assert.equal(last.tokenId, ts[0].document.id);
+    assert.equal(last.late, 1);
+  } finally {
+    for (const t of ts) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; delete t.document.stopMovement; }
+    combatFlag = false;
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("HX1-03 / S1R1-05: a group clicked to a stop in a fight: a member left at rest in a one-wide corridor walks on along its own way out of it (counted, never a displace back); one with no free way on walks out to open floor near it", async () => {
   combatFlag = true;
   clock.step = 0;
   const savedWalls = world.walls;
@@ -2465,6 +2528,8 @@ test("HX1-03: a group clicked to a stop in a fight: a member left at rest in a o
         return true;
       };
     }
+    // A's way on east, a square at a time, as its checkpoints hold it (the stop clears them).
+    ts[0].document.movement.pending = { waypoints: [500, 600, 700, 800, 900, 1000].map(x => ({ x, y: 400 })) };
     // Where they finish their squares: A and B in the corridor, C in the room before it.
     ts[0].document._source.x = 500; ts[0].document._source.y = 400;
     ts[1].document._source.x = 400; ts[1].document._source.y = 400;
@@ -2480,9 +2545,13 @@ test("HX1-03: a group clicked to a stop in a fight: a member left at rest in a o
       const m = moves.find(x => x.id === t.document.id);
       assert.ok(m, `${t.document.id} steps out of the corridor: ${JSON.stringify(moves.map(x => [x.id, x.waypoints]))}`);
       const p = m.waypoints.at(-1);
-      assert.equal(p.action, "displace", "free in a fight");
+      assert.ok(m.waypoints.every(w => w.action !== "displace"), "never a free displace in a fight");
       assert.ok(p.x <= 200 || p.x >= 800, `out of the corridor: ${JSON.stringify(p)}`);
     }
+    // A walks on, east, square by square (no jump back past where it came from).
+    const a = moves.find(x => x.id === ts[0].document.id);
+    assert.deepEqual(a.waypoints.map(w => w.x), a.waypoints.map((w, k) => 600 + 100 * k), `A walks on along its way: ${JSON.stringify(a.waypoints)}`);
+    assert.ok(a.waypoints.at(-1).x >= 800);
     const ends = moves.map(m => m.waypoints.at(-1)).map(p => `${p.x},${p.y}`);
     assert.equal(new Set([...ends, "200,300"]).size, ends.length + 1, "each on its own square");
   } finally {

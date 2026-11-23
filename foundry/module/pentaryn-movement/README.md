@@ -74,7 +74,9 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   the search is done (0.4.10). **Tokens standing in the way are walls (0.5.0)**, for a single drag and a
   group, in a fight too: every route goes round them however long that is, nobody rests on one, and a token
   whose only way runs through one walks only as far as it is free and stops there ("No route there"); nothing
-  ever walks through another token to get somewhere. Members of a group, and one walking in another's wake in a
+  ever walks through another token to get somewhere. A single drag in a fight goes round them square by square
+  too, and the squares it walks are what it spends (0.5.1). A member cut short never rests in a one-wide corridor
+  or a doorway (0.5.1). Members of a group, and one walking in another's wake in a
   different wave, keep 0.75 square of slack for the network (0.25 before). A re-plan round members already
   at rest is never more than 4 squares, or half the direct way, longer: past that a member waits its turn
   (0.4.10). A big
@@ -87,7 +89,8 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   whole group (0.4.9); when you do not own every member (a player's token in the GM's group), only your own
   members stop, out of any one-wide corridor or doorway when there is room within 3 squares (0.4.10), and the
   GM's client walks the rest round them. In a fight, two that finish their squares on one square are set apart
-  once at rest (0.4.10). A whole group stopped at once keeps out of a one-wide corridor too, and a stopped token is
+  once at rest (0.4.10), and one a stop leaves in a one-wide corridor walks on along its way to the first free
+  square out of it: a walk, counted, never a jump back (0.5.1). A whole group stopped at once keeps out of a one-wide corridor too, and a stopped token is
   never drawn anywhere but where it stopped while its stop reaches the server (0.4.11). `status().stop.last` says
   what the last stop was and what asked for it (`via`: click, board, door, api).
 - **The GM's drag-help button** (Token controls, the route icon, next to the ghost button): one click turns

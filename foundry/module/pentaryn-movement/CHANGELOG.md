@@ -1,5 +1,31 @@
 # Changelog — pentaryn-movement
 
+## 0.5.1 — 2026-11-22
+
+Overlap redesign stage 1, round S1R1 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.2).
+
+- **[declared] S1R1-04: a single drag in a fight goes round the tokens standing in its way** too, on whole squares, at
+  the cost of the squares walked (before, a fight kept dnd5e's own path, which walks through an ally: -98 to -100 px
+  through three standing heroes). No way round them: it stops before the first, and the dragger is told.
+- **[declared] S1R1-01: nobody walks round the whole dungeon for a spot.** A member whose way passes the start of a
+  member timed after it (still standing there) is re-planned round it first; before, the two blocked each other, and
+  the one left over took another spot by a 30 s walk through the maze and room C. Another spot is never taken by a way
+  round that is a detour nobody wants (the H2-02 rule); with none, it stops short.
+- **[declared] S1R1-03: a fight re-plans round the others too.** In a fight there was no re-plan round members
+  already at rest, so two members that each needed the other gone first both stayed home and the grabbed one read "No
+  route there"; the re-plan is on whole squares, at the squares' cost. A fight's routes are now timed square by square,
+  as they are walked (a corner's straight line ran up to half a square off the squares walked).
+- **[declared] S1R1-02: a member cut short never rests in a one-wide corridor or a doorway** (back to open floor, or
+  where it stands); and the grabbed one's drag route is no longer reused when it grazes a token standing beside a
+  corridor's mouth by a hair (the cause: it was then cut back into the corridor).
+- **[declared] S1R1-05: in a fight a member a stop leaves in a one-wide corridor walks on along its own way** to the
+  first free square out of it, counted; the rest check never displaces in a fight any more (a 200 px jump back, free).
+- **[declared] S1R1-07: a Large cut short rests on whole squares** (it rested off the grid, 12 px across a door line).
+- **S1R1-09:** `status().stop.last` keeps the click's record; the group's follow-up stops of late waves count on it
+  (`late`).
+- Not in this round (stage 2, by design): another client's simultaneous drag (S1R1-08) and the door-cut re-settling in
+  a fight (S1R1-06).
+
 ## 0.5.0 — 2026-11-22
 
 Overlap redesign, stage 1 of 3: hard obstacles (plan `context/plans/pathfinding-2026-11.md` §15).
