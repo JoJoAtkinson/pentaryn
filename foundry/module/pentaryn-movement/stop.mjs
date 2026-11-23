@@ -195,7 +195,7 @@ function roomyFor(token) {
   };
 }
 
-function displace(token, at = stopSpot(token)) {
+function displace(token, at = stopSpot(token), extra = {}) {
   const doc = token.document;
   // Never at rest inside a solid wall: stopped in a doorway, it steps onto the nearest clear cell (live R4-5).
   const { drawn, p } = at;
@@ -233,7 +233,7 @@ function displace(token, at = stopSpot(token)) {
   };
   let pending;
   // The square it walks on to, for the client that sent its group (it walks the others round that square).
-  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
+  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", ...extra, ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
   catch (err) { pending = Promise.reject(err); }
   return pending
     .then(moved => {
@@ -445,6 +445,8 @@ function stopToken(token, how, via = "api") {
   let rerouted = 0;
   for (const t of list) {
     const tdoc = t.document;
+    // A token the runtime guard holds (0.7.0) stops where it waits: the guard lets go of it.
+    try { feature.exposed.guardCancel?.(tdoc.id, via); } catch (err) { log?.debug?.("stop: the guard's hold", err); }
     const next = t === token ? how : decide(t, { tool: "select", armed: true });
     if (next !== "displace" && next !== "stop") continue;
     if (next === "displace") {
@@ -484,6 +486,8 @@ function settleAfter(promises, ids, scene, ahead = null) {
 
 function onClick(token, event) {
   lastNative = event?.nativeEvent ?? null;
+  // Waiting for the runtime guard out of combat it is at rest, and a click stops it there: the guard lets go (0.7.0).
+  if (setting("clickToStop")) { try { feature.exposed.guardCancel?.(token.document.id, "click"); } catch (err) { log?.debug?.("click: the guard's hold", err); } }
   const how = decide(token, {
     modifiers: !!(event?.shiftKey || event?.ctrlKey || event?.metaKey || event?.altKey),
   });
@@ -802,7 +806,7 @@ export function install(reg, ctx) {
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).
   if (globalThis.CONFIG?.queries) globalThis.CONFIG.queries[STOP_OWN] = stopOwn;
-  ctx.expose({ stop, stopSafely, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), stopFirstFrames: () => firstFrameCuts, noteDrop });
+  ctx.expose({ stop, stopSafely, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), stopFirstFrames: () => firstFrameCuts, noteDrop, stopDisplace: displace });
 }
 
 export function uninstall() {

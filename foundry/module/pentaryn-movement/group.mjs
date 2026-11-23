@@ -2379,7 +2379,11 @@ function republish(doc, from, waypoints) {
 /** A plan's walks as reserved: { id, r, speed, delay, points } (centres, squares; the walk as cut). */
 function walksOf(prep, plan) {
   const out = [];
-  for (const m of prep.members) {
+  // In the plan's own order (its timing pass: the members fixed first come first), so a member's place in the wire
+  // is its place in the plan, which the runtime guard reads as who goes first within it (0.7.0).
+  const byId = new Map(prep.members.map(m => [m.id, m]));
+  const ids = [...Object.keys(plan.members ?? {}).filter(id => byId.has(id)), ...prep.members.map(m => m.id).filter(id => !(id in (plan.members ?? {})))];
+  for (const m of ids.map(id => byId.get(id))) {
     const e = plan.members?.[m.id];
     if (!e || e.core || !(e.points?.length >= 2)) continue;
     out.push({ id: m.id, r: m.r, w: m.w, h: m.h, speed: m.speed, delay: e.delay ?? 0, points: e.points });
@@ -2883,7 +2887,7 @@ export function install(reg, ctx) {
   // A door shut or a wall raised across a move this client started cuts it before the wall (live R6-3, R6-1).
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: cut moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: cut moves across a shut door" });
-  ctx.expose({ groupFollower, singleAvoid, groupCancel, groupMembers, groupStopOne, groupSettle, groupNoteStop, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched, groupRepublish: republish });
+  ctx.expose({ groupFollower, singleAvoid, groupCancel, groupMembers, groupStopOne, groupSettle, groupNoteStop, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched, groupRepublish: republish, groupCheckpoints: withCheckpoints });
 }
 
 export function uninstall() {

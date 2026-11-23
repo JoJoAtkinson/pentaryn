@@ -21,6 +21,10 @@
  *   group-adapter.mjs    tokens and drag contexts → member records and oracles (reads only)
  *   group.mjs            the feature: wraps Token#_prepareDragLeftDropUpdates (group movement)
  *   stop.mjs             the feature: wraps Token#_onClickLeft (click to stop)
+ *   reserve-core.mjs     PURE server-ordered reservations and each move's place in that order (0.6.0)
+ *   reserve-adapter.mjs  the reservation registry every client keeps (0.6.0)
+ *   guard-core.mjs       PURE runtime yield guard: who yields, the look ahead, the yield's clock (0.7.0)
+ *   guard.mjs            the feature: the runtime yield guard (a ticker while this client moves tokens)
  *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the feature installs synchronously in this body (where its module-scope Hooks.on
@@ -46,9 +50,10 @@ import * as ghostCombat from "./ghost-combat.mjs";
 import * as pathfind from "./pathfind.mjs";
 import * as group from "./group.mjs";
 import * as stop from "./stop.mjs";
+import * as guard from "./guard.mjs";
 
-/** Features in load order (ghost first: its hooks have always registered first; pathfind 0.3.0; group and stop 0.4.0). */
-const FEATURES = [ghost, ghostCombat, pathfind, group, stop];
+/** Features in load order (ghost first: its hooks have always registered first; pathfind 0.3.0; group and stop 0.4.0; guard 0.7.0). */
+const FEATURES = [ghost, ghostCombat, pathfind, group, stop, guard];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

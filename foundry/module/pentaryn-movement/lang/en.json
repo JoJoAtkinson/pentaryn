@@ -50,7 +50,8 @@
       "noRouteGroup": "No route there: the group stays where it is.",
       "tooNarrow": "{name} does not fit through there: it stops before the gap.",
       "yielded": "Another move is still in the way: it stops short.",
-      "yieldedStay": "Another move is still in the way: it stays where it is."
+      "yieldedStay": "Another move is still in the way: it stays where it is.",
+      "guardRest": "{name} waited too long for the way to clear: it stops here."
     },
     "settings": {
       "policy": {

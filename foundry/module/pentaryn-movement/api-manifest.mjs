@@ -22,7 +22,7 @@ export const MANIFEST = Object.freeze({
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope }, combatExempt: string[], "
         + "group: { enabled, clickToStop, patched: { drop, click }, regime, limits, groups, last, fallbacks, resumed, stopped, destacked, cut, held }, "
-        + "stop: { last } }",
+        + "stop: { last }, guard: { enabled, watching, held, ticking, fired, standing, movers, late, resumed, rerouted, noRoute, rested, aside, cancelled, errors, perf, last } }",
       gm: false, writes: false, legacy: true,
       doc: "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM "
         + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
@@ -34,7 +34,9 @@ export const MANIFEST = Object.freeze({
         + "and the last few reasons a drop went to core; resumed / stopped / destacked / cut (0.4.6): when a reload last "
         + "picked up unsent waves, a turn change last stopped a group, the rest check last moved a member off another, "
         + "a door shut or a wall raised last cut moves this client started; held (0.4.12): when a wave last waited for a token outside its group walking through its way. stop.last (0.4.11): this client's last "
-        + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole; late (0.5.1): how many of its group's late waves it stopped after), or null.",
+        + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole; late (0.5.1): how many of its group's late waves it stopped after), or null. guard (0.7.0): the runtime yield guard on this client — "
+        + "how many of its moves it watches and holds, how often it fired (against standing tokens / movers; late: inside a fight's current square), "
+        + "resumed, re-routed (noRoute: no way round), rested at 8 s, backed out (aside), was cancelled by a stop; perf (ticks, checks, maxMs, over4, over16) and the last firings.",
     },
     {
       path: "ghostFor",

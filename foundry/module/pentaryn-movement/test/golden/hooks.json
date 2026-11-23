@@ -192,6 +192,18 @@
     "name": "refreshToken"
   },
   {
+    "kind": "on",
+    "name": "moveToken"
+  },
+  {
+    "kind": "on",
+    "name": "stopToken"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
     "kind": "once",
     "name": "ready"
   }

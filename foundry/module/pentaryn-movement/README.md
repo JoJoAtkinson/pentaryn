@@ -98,6 +98,15 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   plan through where it stands; when the GM's drop has to wait (a start delay, or a queue) where one of their walks
   will pass, it first steps to the nearest free spot off every walk, then goes on to where it was dropped. Out of
   combat only; its way on goes round the tokens standing in it (0.6.3); a hidden token nobody is moving stays where it is. `status().group.reservations.aside`.
+- **Nothing walks into anything while it moves (0.7.0, the runtime yield guard).** A safety net under the plans: each
+  client watches the moves it started, a moment ahead, and when one is about to come inside another token it gives
+  way. Everyone gives way to a token standing still; of two moving, the one whose move the server saw later gives
+  way (within a group, its plan's order), so two clients never both give way for one meeting, and a hidden token
+  gives way to a player's. Out of combat it stops where it is (stepping back off the other's way when it would stand
+  in it) and walks on once its way is clear; in a fight it waits on the whole square it is walking to (its next
+  square is held back, nothing is displaced), before a door rather than in it, and pays only for the squares it walks. 3 s after it
+  first waited it looks for a way round once; at 8 s it stays where it is (the nearest free spot) and says so
+  quietly. Each time it fires is logged in the console and in `status().guard`: it means a plan missed something.
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
   click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never
   across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so
@@ -203,7 +212,11 @@ client puts the token where the server has it), stop's `canvasReady` (the board 
 `ready` (once). Group's `updateToken` rows (0.4.4 a turn change stops the group; 0.4.9 the group tag every
 client keeps, and a member another user stopped) come between group's `ready` and its `createWall`, then (0.6.0)
 the reservation rows: `updateToken` (a reservation arrives), `moveToken` (a reserved token sets off, walks on or its
-reservation goes) and `stopToken` (a stopped token's reservation goes).
+reservation goes; since 0.7.0 also each move's place in the server's order, which the guard reads as priority) and
+`stopToken` (a stopped token's reservation goes). Last, before `ready`, the guard's (0.7.0): `moveToken` (it watches
+the moves this client started; its own pause, walk-on and re-route keep their yield), `stopToken` (a stop it did
+not make lets go) and `canvasTearDown` (it forgets the scene's moves). The guard runs on the canvas ticker (after
+the frame's tweens) only while this client has a move to watch, and has no timers.
 
 ## Patches and adjustments
 
@@ -232,7 +245,9 @@ Client-only: nothing is elected and nothing runs on one client for everyone. Eac
 ghost and the sort for its own user; a group's later waves are timers on the client that dropped it
 (never the headless GM, which has no canvas). Every client keeps the reservations it receives (update options
 `pentarynMovementPlan` / `pentarynMovementRid`), in the server's order; the client that dropped publishes and
-decides at its echo, nobody else acts on it (0.6.0). The `stop` relay is answered by the active GM only for a
+decides at its echo, nobody else acts on it (0.6.0). The runtime guard (0.7.0) acts only on the moves its own client
+started (`doc.movement.user.isSelf`): it reads what every client sees (positions, the reservations, core's relayed
+"paused" state) and never writes another client's token or relays anything. The `stop` relay is answered by the active GM only for a
 move that client started; `stopOwn` by the client that started it, for a GM. A player's client clears its
 own `ghost` setting when ghost stops being allowed; only a GM writes the world settings and the
 `ghostInCombat` flag (from the GM client that clicked or called; the headless GM bot is a GM client too).
@@ -258,6 +273,12 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 - Group waves run on the dropping client (closing it mid-move strands unsent members); Ctrl+Z undoes one wave.
 - A drop that waits for, or queues behind, another reserved move shows nothing until it sets off (up to 8 s): that
   is the yield, not a hang. `status().group.last.queued` / `.delay` / `.raced` say which.
+- The guard firing (`status().guard.fired`, a console line `yield guard: … gives way to …`) is a planner miss, not
+  the design working: note the case. Out of combat its pause is a stop where the token is drawn (an unanimated
+  write, like a click-stop) and its walk on a new move; in a fight it pauses core's movement (`pauseMovement`, which
+  core relays to every client as the `"paused"` state) and resumes the same movement, so nothing is displaced and
+  dnd5e charges the squares walked. A fight's first square is the drop's own, sent with the move: the guard can hold
+  only the squares after it.
 - The incorporeal test is by **feat name** (`INCORPOREAL_FEATS`); a differently named trait needs the GM toggle.
 - Errors in the per-frame hooks (`refreshToken`, `renderSceneControls`) warn once per session.
 
@@ -276,6 +297,7 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
 | `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, decision tables; slots, routes, delays |
 | `reserve-core.mjs`, `reserve-adapter.mjs` | pure: the reservation wire, registry, race, delay, queue and cut; the registry each client keeps and its reads (0.6.0) |
+| `guard-core.mjs`, `guard.mjs` | pure: who yields to whom, the look ahead, a resume's whole-way check, backing out, a fight's horizon, the yield's 3 s / 8 s clock, the bucket grid; the feature: the runtime yield guard on the canvas ticker (0.7.0) |
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and gap tests (reads only) |
 | `group.mjs`, `stop.mjs` | the features: the drop wrap and its waves; the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
@@ -291,7 +313,11 @@ one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equ
 `pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-core.test`
 (the plan's unit acceptance tests on ASCII floors) and `group.test` (the drop and click wraps); `reserve-core.test`
 and `reserve-props.test` (the reservations: the registry, and seeded scenarios where a later or racing plan never
-meets an earlier one, a single drag waits or is cut, and everything rests in bounded time). Fixtures are
+meets an earlier one, a single drag waits or is cut, and everything rests in bounded time); `guard-core.test`,
+`guard-props.test` and `guard.test` (the runtime guard: its rules; seeded scenarios out of combat and in a fight where
+movers cross each other and walk through standing tokens, sampled every 5 ms: nobody comes inside touching by more
+than 0.1 square, nobody gives way to a later mover, everything rests in bounded time, a fight rests on whole squares
+and pays the squares walked; and the glue against a synthetic board). Fixtures are
 synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.
 
 **Verify live (as a player):**

@@ -93,7 +93,7 @@ export function decode(w) {
 /* -------------------------------------------- */
 
 export function registry() {
-  return { seq: 0, recs: new Map(), byToken: new Map() };
+  return { seq: 0, ord: 0, recs: new Map(), byToken: new Map(), claims: new Map() };
 }
 
 /** Take token `id` out of reservation `rid` (the whole reservation when none is left). */
@@ -125,10 +125,12 @@ export function receive(reg, wire, { now = 0 } = {}) {
   if (had) return had;
   if (rec.replaces) removeReservation(reg, rec.replaces);
   rec.seq = ++reg.seq;
+  rec.ord = ++reg.ord;
   rec.at = now;
   rec.base = now + RESERVE.estimateMs;
   rec.based = false;
-  for (const m of rec.members) {
+  for (const [k, m] of rec.members.entries()) {
+    m.k = k;
     m.startAt = null;
     m.mid = null;
     const prior = reg.byToken.get(m.id);
@@ -170,6 +172,41 @@ export function moved(reg, id, { rid = null, movementId = null, chain = [], now 
   return "dropped";
 }
 
+/**
+ * The guard's priority (0.7.0, stage 3): every move this client sees gets a place in the server's order. A reserved
+ * move takes its reservation's (`ord`, counted with the reservations' arrivals) and its place in the plan (`k`); any
+ * other move the next `ord` when it arrives; a continuation of a move (a fight's next square, by movement chain) keeps
+ * its own, and so does a guard move (`keep`). `result`: what moved() said. Returns the claim { ord, k, mid }.
+ */
+export function claim(reg, id, result, { movementId = null, chain = [], keep = false } = {}) {
+  const prev = reg.claims.get(id);
+  // The guard's own moves (a pause, a resume, a re-route) keep the move's place: a yield never changes who goes first.
+  if (keep && prev) { prev.mid = movementId ?? prev.mid; return prev; }
+  if (result === "started") {
+    const hit = memberOf(reg, id);
+    if (hit) {
+      const c = { ord: hit.rec.ord, k: hit.m.k ?? 0, mid: movementId };
+      reg.claims.set(id, c);
+      return c;
+    }
+  }
+  if (prev && prev.mid && (movementId === prev.mid || (Array.isArray(chain) && chain.includes(prev.mid)))) {
+    prev.mid = movementId ?? prev.mid;
+    return prev;
+  }
+  const c = { ord: ++reg.ord, k: 0, mid: movementId };
+  reg.claims.delete(id);
+  reg.claims.set(id, c);
+  if (reg.claims.size > 500) reg.claims.delete(reg.claims.keys().next().value);
+  return c;
+}
+
+/** Token `id`'s place in the server's order ({ ord, k }), or null when this client never saw it move. */
+export function priorityOf(reg, id) {
+  const c = reg.claims.get(id);
+  return c ? { ord: c.ord, k: c.k, id } : null;
+}
+
 /** Token `id` was stopped: it stands where it is now (its reservation is gone). */
 export function stopped(reg, id) {
   const cur = reg.byToken.get(id);
@@ -206,7 +243,7 @@ export function walkersOf(reg, { now = 0, scene = null, exclude = null, skip = n
       const t0 = startOf(rec, m);
       // Not set off yet and overdue: it sets off now at the soonest.
       const delay = m.startAt === null ? Math.max(t0 - now, 0) : t0 - now;
-      out.push({ id: m.id, rid: rec.rid, seq: rec.seq, r: m.r, points: m.points, speed: m.speed, delay, combat: rec.combat });
+      out.push({ id: m.id, rid: rec.rid, seq: rec.seq, ord: rec.ord, k: m.k ?? 0, user: rec.user ?? null, r: m.r, points: m.points, speed: m.speed, delay, combat: rec.combat });
     }
   }
   return out;

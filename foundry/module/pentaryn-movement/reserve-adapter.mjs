@@ -14,13 +14,15 @@
  * move itself follows at the echo. Hidden tokens are never in a reservation (players receive every option).
  */
 
-import { encode, expire, moved, receive, registry, restsOf, stopped, walkersOf } from "./reserve-core.mjs";
+import { claim, encode, expire, moved, priorityOf, receive, registry, restsOf, stopped, walkersOf } from "./reserve-core.mjs";
 import { MODULE } from "./movement-core.mjs";
 
 /** The update option that carries a reservation (the wire, reserve-core encode). */
 export const PLAN_OPT = "pentarynMovementPlan";
 /** The update option that names, per token, the reservation a move walks ({ [tokenId]: rid }). */
 export const RID_OPT = "pentarynMovementRid";
+/** The update option that marks a move the runtime guard made (a pause, a resume, a re-route; 0.7.0). */
+export const GUARD_OPT = "pentarynMovementGuard";
 
 const now = () => globalThis.performance?.now?.() ?? Date.now();
 let log = null;
@@ -65,6 +67,8 @@ function onMove(doc, movement, operation) {
   const r = moved(reg, doc.id, { rid: operation?.[RID_OPT]?.[doc.id] ?? null, movementId: movement?.id ?? null,
     chain: movement?.chain ?? [], now: now() });
   if (r === "dropped") note("dropped");
+  // Its place in the server's order, for the runtime guard (0.7.0).
+  claim(reg, doc.id, r, { movementId: movement?.id ?? null, chain: movement?.chain ?? [], keep: !!operation?.[GUARD_OPT] });
 }
 
 /** stopToken, every client: a stopped token stands where it is. */
@@ -99,6 +103,9 @@ function liveFor(members, { skip = null, after, before } = {}) {
   const opts = { now: now(), scene: scene.id ?? null, exclude: new Set(members.map(m => m.id)), skip, keep: keeper(scene, doc0?._source?.level), after, before };
   return { walkers: walkersOf(reg, opts), rests: restsOf(reg, opts) };
 }
+
+/** Token `id`'s place in the server's order ({ ord, k, id }; null when never seen to move here), for the guard. */
+const priority = id => priorityOf(reg, id);
 
 /** The registry's arrival counter: a plan reads everything up to it. */
 const seqNow = () => reg.seq;
@@ -161,6 +168,6 @@ function status() {
 
 /** The registry's surface, one object (group.mjs imports it by name). */
 export const reservations = Object.freeze({
-  PLAN_OPT, RID_OPT, configure, reset, note, noteRace, onUpdate, onMove, onStop, liveFor, seqNow, seqOf, restCircles, racers,
+  PLAN_OPT, RID_OPT, GUARD_OPT, configure, reset, note, noteRace, onUpdate, onMove, onStop, liveFor, seqNow, seqOf, priority, restCircles, racers,
   newRid, wireFor, optionsFor, raceWindow, status,
 });

@@ -1,5 +1,35 @@
 # Changelog — pentaryn-movement
 
+## 0.7.0 — 2026-11-23
+
+Overlap redesign, stage 3 of 3: the runtime yield guard (plan `context/plans/pathfinding-2026-11.md` §15.8). A
+safety net under the plans, never the plan: every firing is logged, because a firing is a planner miss.
+
+- **[declared] Each client guards the moves it started, a moment ahead.** On the canvas ticker (after the frame's
+  tweens; out of combat every 50 ms, in a fight every frame while a square is walked; nothing while the client moves
+  nothing), each of its movers' ways is looked at 450 ms ahead (a fight: the rest of its square and the next, two
+  when the next is a doorway) against the tokens nearby (a bucket grid: O(tokens nearby) a check). It fires when
+  the way would come inside touching by more than 0.1 square of one it gives way to.
+- **[declared] Who gives way.** Everyone gives way to a token standing still. Of two movers, the one later in the
+  server's order (a reservation's arrival, or an unreserved move's; within a plan, the plan's own order) gives way,
+  never the earlier, so two clients never both yield for one meeting. A hidden mover gives way to a player's (that
+  player cannot see it); a player's guard never counts a token hidden from it. In a fight a square already under way
+  (core cannot stop inside a square) is kept clear by everyone, and a paused move stands where its square ends.
+- **[declared] How it gives way.** Out of combat: stopped where it is drawn (an unanimated write, as a click-stop,
+  marked `pentarynMovementGuard`), stepping back to the nearest spot off a higher mover's way when it would stand in
+  it, then the rest of its way again (re-published) once that way has been clear for 150 ms. In a fight: core's
+  `pauseMovement` holds back the next square's continuation (free; never a displace), so it waits on a whole square,
+  before a door rather than in it, and the same movement resumes, dnd5e charging the squares walked. A wait that
+  goes on again waits for every mover's way (and in a fight for an earlier paused one's: of two held, one goes first).
+- **[declared] Nothing waits forever.** 3 s after its first yield it re-routes once round what stands (and the mover
+  it gave way to), however long; at 8 s it rests on the nearest free spot (in a fight, the square it is on) with a
+  quiet notice ("… waited too long for the way to clear: it stops here"). A click on a token it holds, or any stop it
+  did not make, lets go. The guard's own moves keep the move's place in the order.
+- **[declared] `status().guard`:** watching, held, ticking, fired (standing / movers / late), resumed, rerouted
+  (noRoute), rested, aside, cancelled, errors, perf (ticks, checks, maxMs, over4, over16) and the last firings.
+- Each move's place in the server's order is kept by the reservation registry (`reserve-core` `claim` /
+  `priorityOf`); a reservation's members are on the wire in the plan's own timing order.
+
 ## 0.6.3 — 2026-11-22
 
 Overlap redesign stage 2, round S2R3 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.7).

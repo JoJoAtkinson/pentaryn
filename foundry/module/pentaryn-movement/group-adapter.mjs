@@ -544,6 +544,17 @@ function doorSegments(token) {
   return out;
 }
 
+/**
+ * Is a token's body, its centre at `c` (pixels), across a door's line (open or shut)? A fight's mover must not stop in
+ * a doorway (the runtime guard, 0.7.0): it waits before the door. Touching the line is fine. Reads only.
+ */
+export function doorwayAt(token, c) {
+  const s = gridSize(token);
+  const src = token.document?._source ?? {};
+  const rr = radiusOf(src.width ?? 1, src.height ?? 1) * s - 0.5;
+  return doorSegments(token).some(([a, b]) => pointSegment(c, a, b) < rr);
+}
+
 /** Distance from point p to segment a–b (pixels). */
 function pointSegment(p, a, b) {
   const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
