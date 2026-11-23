@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **0.8.10 (2026-11-23). Final acceptance round 2, FR2-02.**
+  - **[declared] The Wall of Stone concentration line names the caster's token** ("ZZ Stonecaster's concentration on
+    Wall of Stone ends …"), not its base actor ("Mage's …"); the chat speaker is the token too.
 - **0.8.9 (2026-11-22). Joe's decision 5.**
   - **[declared] Deleting a Wall of Stone's area by hand ends its caster's concentration**, with a chat line
     saying so (the handle, the card's Remove, the Regions layer). When concentration ended first (dnd5e's own

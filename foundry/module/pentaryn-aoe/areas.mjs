@@ -157,14 +157,18 @@ function spellName(region) {
  * is its own token). Null when no token is found.
  */
 function casterTokenName(region) {
+  return casterTokenDoc(region)?.name ?? null;
+}
+
+/** The caster's TokenDocument (as casterTokenName finds it), or null. */
+function casterTokenDoc(region) {
   const f = region.flags?.dnd5e ?? {};
   const origin = f.origin ? fromUuidSync(f.origin, { strict: false }) : null;
-  if (origin?.documentName === "Token") return origin.name ?? null;
+  if (origin?.documentName === "Token") return origin;
   const item = origin?.item ?? (f.item ? fromUuidSync(f.item, { strict: false }) : null);
   const actor = item?.actor ?? item?.parent ?? null;
   if (!actor) return null;
-  const token = actor.token ?? region.parent?.tokens?.find(t => t.actorId === actor.id && !isHandle(t));
-  return token?.name ?? null;
+  return actor.token ?? region.parent?.tokens?.find(t => t.actorId === actor.id && !isHandle(t)) ?? null;
 }
 
 /** A template region that has no handle yet and may get one (not an emanation, not in flight here). */
@@ -552,9 +556,13 @@ async function endWallConcentration(region) {
   if (!effect) return false;
   try { await effect.delete(); }
   catch (err) { if (doesNotExist(err)) return false; throw err; }
+  const casterToken = casterTokenDoc(region);
+  const name = casterToken?.name ?? actor.token?.name ?? actor.name ?? "";
   await ChatMessage.implementation.create({
-    content: `<p>${foundry.utils.escapeHTML(_loc("PENTARYN_AOE.Walls.ConcentrationEnds", { actor: actor.name ?? "", spell: item.name ?? "" }))}</p>`,
-    speaker: ChatMessage.getSpeaker({ actor }),
+    // The caster's token name, as the table knows it (FR2-02: an unlinked "ZZ Stonecaster" was named by its base actor,
+    // "Mage's concentration on Wall of Stone ends").
+    content: `<p>${foundry.utils.escapeHTML(_loc("PENTARYN_AOE.Walls.ConcentrationEnds", { actor: name, spell: item.name ?? "" }))}</p>`,
+    speaker: ChatMessage.getSpeaker({ actor, token: casterToken, alias: name }),
   });
   return true;
 }

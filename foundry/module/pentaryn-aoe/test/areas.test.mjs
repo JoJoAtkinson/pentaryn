@@ -436,13 +436,17 @@ test("decision 5: deleting a Wall of Stone area by hand ends its caster's concen
   const conc = W.effect(mage, { statuses: ["concentrating"], origin: STONE });
   const other = W.effect(mage, { statuses: ["concentrating"], origin: ITEM });
   const r = W.region(s, { flags: { dnd5e: { item: STONE, activity: `${STONE}.Activity.act0000000stone1` } }, ownership: { default: 3 } });
+  // FR2-02: the caster's token is named apart from its base actor; the line names the token.
+  W.token(s, { id: "stonecasterTok01", name: "ZZ Stonecaster", actorId: "mage", actor: mage });
   reset();
   F.fire("deleteRegion", r, {}, PLAYER_ID);
   await flush();
   assert.deepEqual(ops("delete").map(c => c.uuid), [conc.uuid], "only the Wall of Stone's concentration ends");
   const chat = ops("create").filter(c => c.documentName === "ChatMessage");
   assert.equal(chat.length, 1, "one chat line");
-  assert.match(chat[0].data.content, /ConcentrationEnds|Mage/);
+  assert.match(chat[0].data.content, /ConcentrationEnds|ZZ Stonecaster/);
+  assert.doesNotMatch(chat[0].data.content, /\bMage\b/, "never the base actor's name (FR2-02)");
+  assert.equal(chat[0].data.speaker?.alias, "ZZ Stonecaster");
   // Concentration already gone (it ended first, and its cleanup deleted the region): nothing more.
   mage.effects.delete(conc.id);
   reset();
