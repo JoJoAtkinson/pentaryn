@@ -12,7 +12,7 @@
 
 import * as core from "../combat-core.mjs";
 import { setting } from "../settings.mjs";
-import { weaponsOf, countFor, combatContext, turnOf, attackActivityOf, setPrimaryId, chosenWeapon, damageLabel, fullAttackPlanOf, multiattackFor, rememberedWeapon, rememberWeapon, enhancedDualWieldingOf } from "../shapes.mjs";
+import { weaponsOf, countFor, combatContext, turnOf, attackActivityOf, setPrimaryId, chosenWeapon, damageLabel, fullAttackPlanOf, multiattackFor, rememberedWeapon, rememberWeapon, enhancedDualWieldingOf, withSwingPicks } from "../shapes.mjs";
 import { bindTooltipLeave, dropTooltip, paintBadge, refreshOwnTooltip } from "../argon.mjs";
 import { runSwings, runFollowUp, running } from "../sequence.mjs";
 import { pickWeapon } from "../strip.mjs";
@@ -69,7 +69,8 @@ function computeState(actor) {
   const weaponId = ma ? null : chosenWeapon(actor);
   const on = { multiattackOn: setting("multiattack") };
   const count = ma ? ma.total : countFor(actor, weaponId, on);
-  const plan = fullAttackPlanOf(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick });
+  // A Multiattack's per-swing picks earlier in this combat (decision 4, FR2-01), and where its first swing sits.
+  const { plan, offset: slotOffset } = withSwingPicks(actor, ma, fullAttackPlanOf(actor, { weaponId, turn, inCombat: ctx.inCombat, multiattack: ma, count, pick }));
   // perf-3: only a weapon-chosen (non-Multiattack) actor scans its weapons for a Nick swing.
   let nick = 0;
   if (!ma && weaponId) {
@@ -82,7 +83,7 @@ function computeState(actor) {
   const pipCount = ma ? ma.total : Math.max(count, countFor(actor, null, on));
   // Shown whenever the Attack action has 2+ swings with some weapon, so right-click can still switch
   // away from a remembered Loading crossbow (1 swing).
-  return { ctx, turn, ma, weaponId, count, pipCount, plan, worth: pipCount >= 2 || nick > 0 };
+  return { ctx, turn, ma, weaponId, count, pipCount, plan, slotOffset, worth: pipCount >= 2 || nick > 0 };
 }
 
 function weaponTile(actor, w, swings) {
@@ -204,7 +205,7 @@ export function argonClasses() {
         ui.notifications.warn(_loc("PENTARYN_COMBAT.Hud.NoSwingsLeft"));
         return;
       }
-      await runSwings(actor, st.plan.swings, { event });
+      await runSwings(actor, st.plan.swings, { event, slotOffset: st.slotOffset ?? null });
       this.refresh();
     }
 

@@ -62,8 +62,9 @@ test("object exports are frozen tables, rows and arrays included", () => {
 // 0.3.2 (2026-11-21): Multiattack "in any combination" — each swing's weapon is chosen on the strip.
 // A patch again: 0.4.0 stays the declared legacy event sunset.
 // 0.3.4 (2026-11-22): decision 4 — a Multiattack's per-swing picks are remembered for the rest of the combat.
-test("module.json version is 0.3.4 (per-swing Multiattack picks remembered for the combat)", () => {
-  assert.equal(manifest.version, "0.3.4");
+// 0.3.5 (2026-11-23): FR2-01 — the HUD's Full Attack button applies and remembers them too.
+test("module.json version is 0.3.5 (per-swing Multiattack picks remembered for the combat, from the HUD too)", () => {
+  assert.equal(manifest.version, "0.3.5");
   assert.equal(core.VERSION, manifest.version);
   assert.equal(manifest.id, core.MOD);
 });

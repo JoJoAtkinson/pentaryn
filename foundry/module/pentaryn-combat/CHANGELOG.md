@@ -1,5 +1,12 @@
 # Changelog — Pentaryn Combat (`pentaryn-combat`)
 
+## 0.3.5 — 2026-11-23 (final acceptance round 2, FR2-01)
+
+- **[declared] The HUD's Full Attack button remembers a Multiattack's per-swing picks too.** 0.3.4 applied and
+  wrote them only on `api.fullAttack` / `api.plan`; the Argon button ran its own plan without them and without the
+  swing's place in the Multiattack, so a Pistol picked for swing 2 was never written (`last.swingPicks` missing) and
+  the next round opened on the Scimitar again. Both now go through `withSwingPicks` (shapes.mjs).
+
 ## 0.3.4 — 2026-11-22 (Joe's decision 4)
 
 - **[declared] A Multiattack "in any combination" remembers the weapon picked for each swing for the rest of

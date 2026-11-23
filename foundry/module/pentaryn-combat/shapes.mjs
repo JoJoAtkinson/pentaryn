@@ -407,11 +407,20 @@ export function planFor(actor, weaponId = null, { multiattackOn = true } = {}) {
   if (!ma) weaponId ??= chosenWeapon(actor);
   const pick = ma ? { "*": rememberedWeapon(actor) } : null;
   const plan = fullAttackPlanOf(actor, { weaponId, turn: turnOf(actor), inCombat: ctx.inCombat, multiattack: ma, count: ma ? ma.total : countFor(actor, weaponId, { multiattackOn }), pick });
-  // Each swing's pick earlier in this combat (decision 4).
+  return withSwingPicks(actor, ma, plan).plan;
+}
+
+/**
+ * A Multiattack plan with each swing's pick earlier in this combat (decision 4), and where its first swing sits in
+ * the Multiattack (`offset`, what runSwings remembers the picks by; null out of combat or without a Multiattack).
+ * The HUD's Full Attack button and api.plan / api.fullAttack read it alike (FR2-01: the button ran the plan without
+ * the picks and without an offset, so nothing was remembered).
+ */
+export function withSwingPicks(actor, ma, plan) {
   const offset = ma ? swingOffset(actor, ma) : null;
-  if (offset === null) return plan;
+  if (offset === null || !plan) return { plan, offset };
   const swings = core.applySwingPicks(plan.swings, swingPicksOf(actor), offset);
-  return swings === plan.swings ? plan : { ...plan, swings };
+  return { plan: swings === plan.swings ? plan : { ...plan, swings }, offset };
 }
 
 /** An area handle pentaryn-aoe placed (its token flag); combat reselects your token when one goes. */

@@ -980,3 +980,44 @@ test("legacy oracle: followUpsNow as the bars read it, panel or not (golden/foll
   combat.started = true;
   pinJSON("follow-ups-now", rows, import.meta.url);
 });
+
+test("FR2-01: the HUD's Full Attack applies and remembers a Multiattack's per-swing picks for the combat (decision 4)", async () => {
+  const { makeActor, weapon } = await import("./fixtures/world.mjs");
+  const cap = makeActor({ id: "banditCaptain001", name: "Bandit Captain", type: "npc", items: [
+    { id: "multiattack00009", name: "Multiattack", type: "feat", system: { description: { value: "<p>The captain makes two attacks, using [[/item .scim]] and [[/item .pistol]] in any combination.</p>" } } },
+    weapon("scim", "Scimitar", { props: "fin lgt" }),
+    weapon("pistol", "Pistol", { attackType: "ranged", damageTypes: ["piercing"] }),
+  ] });
+  const tok = makeToken(cap, { x: 40 });
+  const c9 = makeCombat({ id: "c9", entries: [{ id: "cb9", actor: cap, token: tok }], viewed: false });
+  const { fullAttackState } = await import("../hud/buttons-ui.mjs");
+  try {
+    const fresh = fullAttackState(cap);
+    assert.equal(fresh.slotOffset, 0, "in a fight, a fresh turn's first swing is the Multiattack's first");
+    assert.deepEqual(fresh.plan.swings.map(s => s.weaponId), ["scim", "scim"]);
+    // A pick remembered for swing 2 earlier in this combat: the button's plan takes it.
+    cap.flags[MODULE] = { last: { swingPicks: { combatId: "c9", picks: { 1: "pistol" } } } };
+    assert.deepEqual(fullAttackState(cap).plan.swings.map(s => s.weaponId), ["scim", "pistol"]);
+    // Another combat's memory is nothing.
+    cap.flags[MODULE] = { last: { swingPicks: { combatId: "other", picks: { 1: "pistol" } } } };
+    assert.deepEqual(fullAttackState(cap).plan.swings.map(s => s.weaponId), ["scim", "scim"]);
+    // A click runs the plan with its offset, so the run's picks are written for this combat.
+    delete cap.flags[MODULE];
+    const h = buildHud(cap);
+    fire(h.action, cap);
+    const fa = h.action._buttons.find(b => b.constructor.name === "FullAttackButton");
+    assert.ok(fa, "the Full Attack button");
+    F.calls.length = 0;
+    const click = fa._onLeftClick({ type: "mouseup" });
+    await drain();
+    await click;
+    mock.timers.tick(400);
+    await drain();
+    assert.equal(F.calls.filter(c => c.op === "activity.rollAttack").length, 2);
+    assert.deepEqual(cap.flags[MODULE]?.last?.swingPicks, { combatId: "c9", picks: { 0: "scim", 1: "scim" } });
+  } finally {
+    F.game.combats.delete(c9.id);
+    reset(cap);
+    F.calls.length = 0;
+  }
+});
