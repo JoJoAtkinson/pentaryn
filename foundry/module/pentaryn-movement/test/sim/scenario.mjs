@@ -109,7 +109,7 @@ export function scenario(seed, opts = {}) {
   const dropped = sim.rand() < 0.08 ? sim.pick(clients.filter(c => c !== initiator && c.canvas)) : null;
   if (dropped) { const a = T0 + sim.uniform(200, 2000); dropped.offline.push({ a, b: a + 5000 }); }
 
-  const env = { world, server, clients, tierC, noVet: !!opts.noVet, noStay: !!opts.noStay, noFlushFix: !!opts.noFlushFix, runs: [], events: [], planned: new Map(), record: (kind, data) => env.events.push({ t: sim.now, kind, ...data }) };
+  const env = { world, server, clients, tierC, noVet: !!opts.noVet, noStay: !!opts.noStay, noFlushFix: !!opts.noFlushFix, noSequenced: !!opts.noSequenced, noFollow: !!opts.noFollow, followGap: opts.followGap, noStep: !!opts.noStep, runs: [], events: [], planned: new Map(), record: (kind, data) => env.events.push({ t: sim.now, kind, ...data }) };
   for (const c of clients) { c.world = world; c.init(server.snapshot()); }
   const mods = new Map(clients.map(c => [c.id, new Movement(c, env)]));
   for (const c of clients) for (const w of c.offline) sim.at(w.b + net.delay(), () => c.reload());

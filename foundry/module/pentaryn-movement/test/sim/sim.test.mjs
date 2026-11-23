@@ -52,3 +52,26 @@ for (const seed of [6, 7, 15]) {
     assert.ok(invs(runSeed(seed, { ...BACKGROUND, noFlushFix: true })).includes("passThrough"), "without the fix the seed still shows it");
   });
 }
+
+// AR1-02 (0.8.3): tier C walked a file one member at a time, each on the arrival of the one before, and the timing
+// pass's settle left members standing for conflicts the sequence answers by order; the run's deadline then kept most
+// of them where they stood (live C-1: 6 of 8 never moved). A member now follows one before it once that one is far
+// enough ahead, and tier C's plan keeps every member's route.
+const CALM = { combat: true, tierC: true, loss: false, fog: false, background: false, two: false };
+function movedShare(opts, seeds = 60) {
+  let members = 0, moved = 0, failed = 0;
+  for (let s = 1; s <= seeds; s++) {
+    const r = runSeed(s, { ...CALM, keep: true, ...opts });
+    if (r.failures.length) failed += 1;
+    const first = r.runs.find(x => x.ids?.length > 1);
+    for (const id of first?.ids ?? []) { members += 1; if (r.sc.server.log.some(e => e.id === id && e.kind === "move")) moved += 1; }
+  }
+  return { share: moved / Math.max(members, 1), failed };
+}
+test("AR1-02: tier C moves the members of a file, not one at a time until the deadline (60 undisturbed fights)", () => {
+  const now = movedShare({});
+  assert.equal(now.failed, 0, "every invariant holds");
+  assert.ok(now.share >= 0.85, `share of members that moved: ${now.share.toFixed(3)}`);
+  const before = movedShare({ noFollow: true, noSequenced: true });
+  assert.ok(before.share < now.share - 0.1, `0.8.2's way moved fewer: ${before.share.toFixed(3)}`);
+});

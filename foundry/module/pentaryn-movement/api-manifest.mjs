@@ -21,7 +21,7 @@ export const MANIFEST = Object.freeze({
         doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope }, combatExempt: string[], "
-        + "group: { enabled, fight, patched: { drop, click }, regime, limits, groups, runs, last, fallbacks, resumed, fightResumed, flushed, stopped, cut, held, reservations, perf }, "
+        + "group: { enabled, fight, patched: { drop, click }, regime, limits, groups, runs, last, fallbacks, resumed, fightResumed, flushed, stopped, cut, held, step, undo, reservations, perf }, "
         + "stop: { last }, guard: { enabled, watching, held, ticking, fired, standing, movers, resumed, rerouted, noRoute, rested, aside, cancelled, errors, perf, last }, "
         + "assist: { tripped }, migrated }",
       gm: false, writes: false, legacy: true,
@@ -34,7 +34,7 @@ export const MANIFEST = Object.freeze({
         + "limits (life: the one deadline), groups still walking with their run's state and time left, the last drop (mode, reason, result, ms, async, waves, cut, stayed, short, replans, stacked) "
         + "and the last few reasons a drop went to core; resumed / stopped / cut (0.4.6): when a reload last "
         + "picked up unsent waves, a turn change last stopped a group, "
-        + "a door shut or a wall raised last cut moves this client started; flushed (0.8.0): when the tab last went to the background and sent its groups' waves at once; held (0.4.12): when a wave last waited for a token outside its group walking through its way. stop.last (0.4.11): this client's last "
+        + "a door shut or a wall raised last cut moves this client started; flushed (0.8.0): when the tab last went to the background and sent its groups' waves at once; held (0.4.12): when a wave last waited for a token outside its group walking through its way; step (0.8.3): the last next square of a move this client drove that it did not send (why: standing, unrendered, wallUnrendered); undo (0.8.3): the last move whose undo entries were merged into one. stop.last (0.4.11): this client's last "
         + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole; late (0.5.1): how many of its group's late waves it stopped after), or null. guard (0.7.0): the runtime yield guard on this client — "
         + "how many of its moves it watches and holds, how often it fired (against standing tokens / movers; late: inside a fight's current square), "
         + "resumed, re-routed (noRoute: no way round), rested (8 s or the move's deadline), backed out (aside), was cancelled by a stop; perf (ticks, checks, maxMs, over4, over16) and the last firings; out of combat only since 0.8.0. "

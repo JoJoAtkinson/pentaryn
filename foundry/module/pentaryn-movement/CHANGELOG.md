@@ -1,5 +1,52 @@
 # Changelog — pentaryn-movement
 
+## 0.8.3 — 2026-11-23
+
+Acceptance round 1 (AR1, frozen 0.8.2) defects for the tiers not yet passed (plan §16.11). Each fix has a test that
+fails without it (`test/group.test.mjs` "AR1-…", `test/guard.test.mjs` "AR1-03", `test/ar1.test.mjs`,
+`test/sim/sim.test.mjs` "AR1-02").
+
+- **[declared] Tier C moved 0-2 of 5-8 members (AR1-02, blocker).** Two causes. The fight plan still ran the timing
+  pass and its settle(), which left members standing for conflicts in time that tier C answers by order (live C-1:
+  6 of 8 `stayed`); tier C's plan (`planGroup` `sequenced`) now keeps every member's route. And a member set off only
+  on the arrival of each member before it whose corridor meets its own, so a file through one corridor walked one at
+  a time until the 10 s deadline kept the rest where they stood. A member now also sets off once each such member is
+  drawn far enough ahead (`commitFight` `ahead`: its walk from now and the rest of the other's from where it is
+  drawn never come inside each other, the latency buffer included; looked at every 100 ms, read again after its own
+  start vet). Simulator, 400 undisturbed tier C fights: members moved 69 % → 89 %; 1 fails (seed 208, a reservation
+  of a member that set off at 6.5 s on a 70-square way outlives the run, the known §16.9 5 class).
+- **[declared] A fight move went through a door shut mid-move, charged 0 ft, once the GM viewed another scene
+  (AR1-01, blocker).** Core sends each next square from the initiating client and constrains and measures it only
+  while that client draws the token. A `preMoveToken` handler (`onPreMove`) on the moves this client drives (a drag,
+  or a move carrying the module's options; their continuations by core's movement chain) does not send the next
+  square when the page no longer draws the token in a fight (out of combat: when the step crosses a wall that blocks
+  movement now, read from the scene's walls). The token stops on the square it holds, charged for what it walked.
+- **[declared] A fight move walked through a token standing in its way (AR1-07).** The same handler does not send a
+  fight's next square into a token standing still on this client's view (one that came to rest there since the
+  plan, a member stopped by a click, another group's member). Simulator: tier C off (the default) 207 → 140 failing
+  fights of 407; tier C's head-on two-group runs clean.
+- **[declared] The guard cut moves the module did not plan (AR1-03, C10).** A plain `update({x, y})` (a macro, MCP
+  `move-token`) was held mid-path and left off-grid inside a standing token. The guard watches only a drag or a move
+  carrying the module's options.
+- **[declared] A Large that fits no door parked in its mouth (AR1-04).** A member with no way to its spot stops
+  short only where it is in nobody's way; when the end of its short way is on another member's way it stays where it
+  stands (the GM is told it does not fit).
+- **[declared] Ctrl+Z undid one wave or one square (AR1-05, AR1-06).** The undo entries of one move (a group's
+  waves by its id, a fight's squares by core's movement chain, the module's own writes for it) are merged into one
+  (`group-core coalesceHistory`); each token goes back where the move found it, its movement history (and charge)
+  as it was. `status().group.undo`.
+- **[declared] A follower came to rest inside a member another user stopped (AR1-08).** A member of this client's
+  group drawn already inside the stopped one goes back along the way it came to the last point clear of it.
+- **[declared] A mount dragged alone left its rider (AR1-09).** The tokens that start stacked on the grabbed one (it
+  the largest) join its drop as riders; a rider dragged alone leaves its mount, and the guard never holds either
+  against the other.
+- **[declared] A flying token routed round the crowd below it (AR1-12).** Tokens on different layers (core's
+  movement action `fly`, or not) are no obstacle to each other: routes, the group planner and the guard.
+- Not changed: AR1-10 (movers 0.11-0.13 square apart on a loaded Mac: the drawn-late class of §16.9 1); AR1-11 (the
+  harness measured square footprints; tokens are circles, and the circle clearance holds, as the Mac's frames
+  showed); AR1-13 (a player's route never crosses unexplored ground: decision 7 and C8, the scripts' A1/A4/A7
+  expectations are to change).
+
 ## 0.8.2 — 2026-11-23
 
 Correctness review of 0.8.0 / 0.8.1 (fail-open coverage, the circuit breaker, a reload across a turn change, tier C on a

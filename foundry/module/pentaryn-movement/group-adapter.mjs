@@ -74,14 +74,26 @@ export function countsForRoutes(t) {
   try { return !!(doc.isOwner || doc.disposition === friendly); } catch { return false; }
 }
 
-/** Circles (squares) of the tokens on the scene that are not in the group (countsForRoutes), on the same level. */
+/**
+ * Flying or not (0.8.3, AR1-12; Fable's review §3 "a flying token over a crowd: not obstacles, never yielded to"): a
+ * token moving by flight passes over the tokens on the ground and they pass under it. Two tokens are in each other's
+ * way only on the same layer (core's movement action of each, `fly` or anything else).
+ */
+export function layerOf(doc) {
+  try { return doc?.movementAction === "fly" ? "air" : "ground"; } catch { return "ground"; }
+}
+export const sameLayer = (a, b) => layerOf(a) === layerOf(b);
+
+/** Circles (squares) of the tokens on the scene that are not in the group (countsForRoutes), on the same level and layer. */
 export function othersOf(members, s) {
   const ids = new Set(members.map(m => m.id));
   const level = members[0]?.token?.document?._source?.level;
+  const lead = members[0]?.token?.document;
   const out = [];
   for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
     const doc = t.document;
     if (!doc || ids.has(doc.id) || t.isPreview || !countsForRoutes(t)) continue;
+    if (lead && !sameLayer(lead, doc)) continue;
     if (level !== undefined && doc._source?.level !== undefined && doc._source.level !== level) continue;
     const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
     out.push({ ...toSquares(doc._source, w, h, s), r: radiusOf(w, h) });
@@ -98,10 +110,12 @@ export function othersOf(members, s) {
 export function movingOthers(members, s) {
   const ids = new Set(members.map(m => m.id));
   const level = members[0]?.token?.document?._source?.level;
+  const lead = members[0]?.token?.document;
   const out = [];
   for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
     const doc = t?.document;
     if (!doc?._source || ids.has(doc.id) || t.isPreview || t.destroyed || !countsForRoutes(t)) continue;
+    if (lead && !sameLayer(lead, doc)) continue;
     if (level !== undefined && doc._source.level !== undefined && doc._source.level !== level) continue;
     if (!movementFacts(t).animating) continue;
     const m = doc.movement;

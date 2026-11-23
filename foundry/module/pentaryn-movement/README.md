@@ -247,12 +247,17 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 - Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag disabled`).
 - The GM never ghosts through this module (core's own tool is the GM's).
 - Group waves run on the dropping client; a tab in the background sends them at once (0.8.0; 0.8.1 SIM-04/05), closing it
-  mid-move strands unsent members; Ctrl+Z undoes one wave. A reloaded page sends what it had left only when it is
+  mid-move strands unsent members; Ctrl+Z undoes the whole move, every wave and a fight's every square (0.8.3). A reloaded page sends what it had left only when it is
   back within 1.5 s of the first unsent wave; later than that those members stay where they are ("Stopped short").
 - In a fight a door shutting on a group move stops everyone of it on the square they hold (0.8.0): nothing is undone
   and nothing walks on, so a token whose next square was already committed past the door got through. A fight's
   group drag with tier C off is core's move (members walk at once, each cut before the first standing token): two
-  members may brush while moving; tier C's arrival order is what keeps them apart.
+  members may brush while moving; tier C's order is what keeps them apart (a member follows one before it once that one
+  is far enough ahead, 0.8.3). Each next square of a fight move this client drives is not sent into a token standing
+  still on its screen, nor at all once its page no longer draws the token (the dragger viewing another scene: core
+  would send it unmeasured, at 0 ft, and through shut doors); the token stops on the square it holds (0.8.3).
+- The runtime guard and the next-square check touch only moves the module drove (a drag, or a move carrying its
+  options): a macro's or MCP's `update({x, y})`, Argon's Dash and forced movement go as core moves them (C10).
 - A drop that waits for, or queues behind, another reserved move wears the amber ring until it sets off, at most until
   its move's 10 s deadline: that is the yield, not a hang. `status().group.last.queued` / `.delay` / `.raced`.
 - The guard firing (`status().guard.fired`, a console line `yield guard: … gives way to …`) is a planner miss, not

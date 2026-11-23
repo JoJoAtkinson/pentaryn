@@ -770,6 +770,21 @@ export function* planGroup(spec, o) {
     if (!changed) break;
   }
 
+  // A member with no way to its spot (a Large that fits no door, decision 8) stops short only where it is in nobody's
+  // way (0.8.3, AR1-04: the Large stopped in the mouth of House A's one-wide door, and the timing then left the grabbed
+  // Hero 1 and Heroes 2-4 standing behind it, unmoved). When the end of its short way is on another member's way, it
+  // stays where it stands (the GM is told it does not fit).
+  for (const m of excluded) {
+    const route = routes.get(m.id);
+    if (!route?.short) continue;
+    const pts = pathOf(route);
+    if (pts.length < 2) continue;
+    const end = pts.at(-1);
+    const blocks = members.some(q => q !== m && !excluded.includes(q) && routes.has(q.id)
+      && firstIntrusion(pathOf(routes.get(q.id)), q.r, [{ x: end.x, y: end.y, r: m.r }]) !== null);
+    if (blocks) routes.set(m.id, { points: [{ x: m.start.x, y: m.start.y }], length: 0, data: null, cut: null, short: true });
+  }
+
   // Step C: timing. Tokens outside the group walking now (the rest of their walk from the drop) and standing ones
   // first and fixed: nobody sets off into one walking (live H4-03 / H4-04) or walks through one standing (0.5.0).
   const walkers = moving.filter(f => f.points?.length >= 2);
@@ -958,6 +973,29 @@ export function* planGroup(spec, o) {
     const p = yield* pass(best.seq, { other: true });
     if (!p) return { result: "core", reason: "budget" };
     if (p.blocked.length < best.blocked.length) best = p;
+  }
+
+  // A fight's tier C (0.8.3, AR1-02): the members are sent by space (sequence-core, the glue's commitFight), never by
+  // this timing. Its start delays are dropped there, and its settle() left members standing for conflicts in time
+  // that the sequence answers by order (live C-1: 6 of 8 stayed where they stood, "Stopped short, way blocked"). The
+  // pass's routes are kept (its lateral re-plans round the others' starts and ends make fewer corridors meet).
+  if (spec.sequenced) {
+    const cutIds = [], stayed = [];
+    for (const m of [...best.seq, ...stays]) {
+      const route = best.entries[m.id]?.route ?? routes.get(m.id);
+      if (!route) continue;
+      const pts = pathOf(route);
+      if (pts.length < 2) stayed.push(m.id);
+      else if (route.cut) cutIds.push(m.id);
+      out[m.id] = { id: m.id, core: false, slot: pts.at(-1), points: pts, data: route.data ?? null, cut: route.cut ?? null,
+        delay: 0, level: pts.length < 2 ? "stay" : route.short ? "short" : (best.entries[m.id]?.level ?? 0), length: pathLength(pts),
+        short: !!route.short, walks: [] };
+    }
+    return {
+      result: "plan", members: out, anchorId, constricted, formation: slots?.formation ?? true, sequenced: true,
+      reslotted: slots?.reslotted ?? [], excluded: excluded.map(m => m.id), replans, cut: cutIds, stayed,
+      blocked: 0, anchorShort: anchorShort || !!out[anchorId]?.short, ms: timer.elapsed(),
+    };
   }
 
   // Settle: whatever still meets anything is cut back (stopping short beats overlapping).
@@ -1185,4 +1223,35 @@ export function flood(origin, step, radius = 12) {
     }
   }
   return out;
+}
+
+/**
+ * One Ctrl+Z for one move (0.8.3, AR1-05 / AR1-06): merge a token layer's undo entries (core's `history`: { type,
+ * data, options }) tagged `pmKey === key` among the last `scan` into one, at the place of the newest. Each token's
+ * data and undo movement come from its first entry (where the move found it, its movement history as it was then).
+ * Returns how many entries were merged (0: fewer than two).
+ */
+export function coalesceHistory(hist, key, scan = 60) {
+  if (!Array.isArray(hist)) return 0;
+  const idx = [];
+  for (let i = Math.max(0, hist.length - scan); i < hist.length; i++) if (hist[i]?.pmKey === key) idx.push(i);
+  if (idx.length < 2) return 0;
+  const data = new Map();
+  const movement = {};
+  const extra = {};
+  for (const i of idx) {
+    const e = hist[i];
+    for (const d of e.data ?? []) {
+      if (data.has(d._id)) continue;
+      data.set(d._id, d);
+      if (e.options?.movement?.[d._id]) movement[d._id] = e.options.movement[d._id];
+    }
+    for (const [k, v] of Object.entries(e.options ?? {})) if (k !== "movement" && !(k in extra)) extra[k] = v;
+  }
+  const merged = { type: "update", data: [...data.values()], options: { ...extra, movement, diff: false, animate: false } };
+  Object.defineProperty(merged, "pmKey", { value: key, writable: true, enumerable: false });
+  const at = idx.at(-1) - (idx.length - 1);
+  for (const i of [...idx].reverse()) hist.splice(i, 1);
+  hist.splice(at, 0, merged);
+  return idx.length;
 }

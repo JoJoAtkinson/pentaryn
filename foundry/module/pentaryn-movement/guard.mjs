@@ -28,7 +28,7 @@
 import { GUARD, aroundOf, asideSpot, conflictAhead, hashOf, nearby, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "./guard-core.mjs";
 import { dist, radiusOf, routeAhead, segmentsCross } from "./motion-core.mjs";
 import { LIFE } from "./lifecycle-core.mjs";
-import { clearOfWalls, countsForRoutes, crossesDoor, cutAtWalls, doorwayAt, drawnPosition, gridSize, inCombat, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { clearOfWalls, countsForRoutes, crossesDoor, cutAtWalls, doorwayAt, drawnPosition, gridSize, inCombat, layerOf, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { hideCue, showCue } from "./cue-ui.mjs";
@@ -96,7 +96,7 @@ function entryOf(t, s) {
   const facts = movementFacts(t);
   const c = toSquares(drawnPosition(t), w, h, s);
   const e = {
-    id: doc.id, token: t, c, r: radiusOf(w, h), w, h, level: src.level, moving: facts.animating, points: null, speed: 0,
+    id: doc.id, token: t, c, r: radiusOf(w, h), w, h, level: src.level, layer: layerOf(doc), moving: facts.animating, points: null, speed: 0,
     prio: reserve.priority(doc.id) ?? { id: doc.id }, hidden: !!doc.hidden, byPlayer: !!facts.user && facts.user.isGM === false,
   };
   if (e.moving) {
@@ -266,6 +266,8 @@ function othersFor(me, snap, horizonMs, { resuming = false } = {}) {
   for (const e of nearby(snap.hash, me.c, reach)) {
     if (e.id === me.id || mates?.has?.(e.id)) continue;
     if (me.level !== undefined && e.level !== undefined && e.level !== me.level) continue;
+    // A flying token passes over the ones on the ground (0.8.3, AR1-12).
+    if (me.layer && e.layer && me.layer !== e.layer) continue;
     const paused = !!e.paused;
     const moving = e.moving && !paused;
     const points = paused ? (e.moving && dist(e.c, e.target) > 1e-6 ? [e.c, e.target] : null) : moving ? e.points : null;
@@ -640,6 +642,13 @@ function stopTicker() {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
+/** Did this move come from a drag, or from the module (its update options name it)? */
+function fromModule(doc, operation) {
+  if (doc?.movement?.method === "dragging") return true;
+  for (const k of Object.keys(operation ?? {})) if (k.startsWith("pentarynMovement")) return true;
+  return false;
+}
+
 /** moveToken, every client: a move this client started is guarded; the guard's own moves keep their yield. */
 function onMove(doc, movement, operation) {
   // Any move (a pause elsewhere, a new walk): the next frame looks again at every move this client guards.
@@ -664,6 +673,10 @@ function onMove(doc, movement, operation) {
   if (y) drop(doc.id);
   // A fight's move is never guarded (0.8.0): its group is kept apart by space (tier C) or is core's move (the fallback).
   if (!enabled() || operation?.animate === false || inCombat(doc)) return;
+  // Only a move the module had a hand in (0.8.3, AR1-03; acceptance C10, moves it did not plan are never delayed,
+  // rerouted or vetoed): a drag (pathfound, or a group's member) or a move that carries the module's options. A plain
+  // update {x, y} (a macro, MCP move-token, a teleport), Argon's Dash or forced movement goes as core moves it.
+  if (!fromModule(doc, operation)) return;
   // Its yields end by its move's one deadline (lifecycle-core): from the drop this client saw, else from now.
   let startedAt = null;
   try { startedAt = feature.exposed.moveStartedAt?.(doc.id) ?? null; } catch { startedAt = null; }

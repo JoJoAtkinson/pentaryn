@@ -54,7 +54,7 @@ function tok(id, cx, cy, { way = null, user = me, combat = false, pending = null
     _source: { ...src, width: 1, height: 1, elevation: 0 }, disposition: 1, isOwner: true,
     _shouldRecordMovementHistory: () => combat,
     movement: {
-      id: `M${++mids}`, chain: [], user, state: state ?? (way ? (pending?.length ? "pending" : "completed") : "completed"),
+      id: `M${++mids}`, chain: [], user, method: "dragging", state: state ?? (way ? (pending?.length ? "pending" : "completed") : "completed"),
       origin: way ? tl(way[0]) : tl({ x: cx, y: cy }), constrainOptions: {},
       passed: { waypoints: way ? (combat && pending ? [tl(way[1])] : way.slice(1).map(tl)) : [] },
       pending: { waypoints: (pending ?? []).map(tl) },
@@ -446,4 +446,25 @@ test("FR2-04: the wall watch cuts a guarded move that nears a wall shut since it
     delete ctx.exposed.groupCutAcross;
     delete walls.get;
   }
+});
+
+test("AR1-03 (C10): a move the module did not plan (a plain update {x, y}: a macro, MCP move-token) is never held or cut; a drag, or a move with the module's options, is", async () => {
+  reset();
+  const a = tok("A", 2, 5, { way: [{ x: 1, y: 5 }, { x: 9, y: 5 }] });
+  a.document.movement.method = "api";
+  tok("S", 4.2, 5);
+  arrive(a);
+  frame(); frame();
+  await flush();
+  assert.equal(calls.filter(c => c.op === "displace" || c.op === "stop").length, 0, "untouched");
+  assert.equal(ctx.exposed.guardStatus().held.length, 0);
+  // The same move with the module's options on it (a group's wave, a stop's walk on): guarded.
+  reset();
+  const b = tok("B", 2, 5, { way: [{ x: 1, y: 5 }, { x: 9, y: 5 }] });
+  b.document.movement.method = "api";
+  tok("S", 4.2, 5);
+  arrive(b, { pentarynMovementGroup: "g1" });
+  frame();
+  await flush();
+  assert.ok(calls.find(c => c.op === "displace"), "held");
 });

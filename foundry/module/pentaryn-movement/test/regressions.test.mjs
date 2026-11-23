@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
 const root = new URL("../", import.meta.url);
-const ID = /\b(S[1-3]R[1-3]-\d{2}|FR[12]-\d{2}|HX[12]-\d{2}|H[1-5]-\d{2}|R[1-7]-\d{1,2}|D-\d{1,2})\b/g;
+const ID = /\b(AR[1-9]-\d{2}|S[1-3]R[1-3]-\d{2}|FR[12]-\d{2}|HX[12]-\d{2}|H[1-5]-\d{2}|R[1-7]-\d{1,2}|D-\d{1,2})\b/g;
 
 /** Cited in a comment, not yet the title of a test (2026-11-23, 0.8.0). */
 const PENDING = new Set(["D-9", "D-10", "FR1-06", "FR1-10", "FR1-11", "FR1-12", "FR2-03", "FR2-06", "FR2-08", "FR2-10", "H2-06", "H2-14", "H4-14",

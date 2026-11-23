@@ -1,5 +1,5 @@
 ---
-title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.8.1"
+title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.8.3"
 status: built
 last_modified: 2026-11-23
 tags: [foundry, plans, movement, pathfinding]
@@ -610,3 +610,23 @@ Read against core 14.370's source (`client/documents/token.mjs` `#continueMoveme
 Verified, no change: Joe's combat door rule (each next square tested against the current movement walls before it is sent) is core's own: every continuation runs `_preUpdateMovement` on the initiating client, which calls `constrainMovementPath` (`preview: false`, so walls only, never vision); a snapped step through a shut door has no snapped collision square and is constrained to nothing, and core stops the move on the square it holds. Only when the token is `rendered` on that client: an initiator that switched to another scene mid-walk sends continuations unconstrained (open, §16.10 note for the live script). Racers use `User#viewedScene` (exists in 14.370). Settings migration writes only on the active GM. No deleted function is referenced. Player telemetry never holds a hidden token (guard and cut ids come through `countsForRoutes`); the GM's buffer can, and a GM's Alt+W files it into pentaryn-feedback's report on the server's Data folder (GM-only by convention, not by permission).
 
 Open, decided by the live rounds: the breaker counts `budget` fallbacks as failures, so a GM who drags 10–12 NPCs through fog six times in a session (Fable's §3 "within budget or the clean fallback") turns `assist` off for the table; `assist` flipped off mid-move lets the move's unsent waves go as planned (the runtime guard stops at once).
+
+### 16.11 pentaryn-movement 0.8.3: acceptance round 1 (AR1, frozen 0.8.2) (2026-11-23)
+
+AR1 ran on frozen 0.8.2 (BOSS three headless clients plus the Mac relay; LOADED, so every timing is void). No tier passed. Fixed in 0.8.3, each with a test that fails on 0.8.2 (CHANGELOG 0.8.3):
+
+| ID | Tier | What | Fix |
+|---|---|---|---|
+| AR1-01 | A | a fight move went on through a door shut mid-move, charged 0 ft, once the GM viewed another scene | core constrains and measures a next square only while the initiating page draws the token: a `preMoveToken` handler on the moves this client drives does not send it then (in a fight; out of one, only across a wall that blocks movement now, read from the scene's walls) |
+| AR1-02 | C | tier C moved 0-2 of 5-8 members | tier C's plan skips the timing pass's settle (`sequenced`); a member follows one before it once that one is drawn far enough ahead, not only on its arrival |
+| AR1-03 | A/B | the guard cut a plain `update({x, y})` (C10) | the guard watches only a drag or a move carrying the module's options |
+| AR1-04 | B | a Large that fits no door parked in its mouth, the grabbed one and others behind it unmoved | a member with no way stops short only where it is in nobody's way, else stays where it stands |
+| AR1-05 / 06 | B / A | Ctrl+Z undid one wave, one square | one move's undo entries merged into one (`coalesceHistory`) |
+| AR1-07 | C | fight moves walked through standing tokens | the same `preMoveToken` handler: a fight's next square is never sent into a token standing still on this client's view |
+| AR1-08 | B | a follower rested inside a member another user stopped | it goes back along its own way to the last point clear of it |
+| AR1-09 | B | a mount dragged alone left its rider | the tokens stacked on the grabbed one join its drop as riders |
+| AR1-12 | A | a flying token routed round the crowd below | tokens on different layers (`fly` or not) are no obstacle to each other |
+
+Not changed: AR1-10 (movers 0.11-0.13 square apart on the loaded Mac: §16.9 class 1, drawn late after a stall or loss); AR1-11 (the harness measures square footprints; tokens are circles, whose clearance the routes keep; the Mac saw no frame inside); AR1-13 (a player's route never crosses unexplored ground, by decision 7 and C8: the test script's A1, A4 and A7 expectations change, not the module). AR1-04's notices did fire (`tooNarrow`, `anchorShort` in the telemetry) but Foundry dismisses a notice after a few seconds, before the harness read the DOM: the next round's harness hooks `ui.notifications.warn` instead.
+
+The next-square handler is Joe's combat door rule (each next square tested against the current walls before it is sent) carried to the case core skips (an undrawn token) and to tokens standing still. It touches only the moves the module drove: a drag (`method: "dragging"`) or a move carrying `pentarynMovement*` options, and their continuations by core's movement chain; a macro, MCP `move-token`, Argon's Dash and forced movement are core's (C10). Simulator, seeds 1-2,000 (same scenarios as 0.8.2): 424 → 383 failing; out of combat 202 → 201 of 1,196; tier C off 207 → 140 of 407; tier C 15 → 42 of 397, but 0.8.2's tier C left about a third of its members unmoved, which no invariant counted (`sim.test` "AR1-02" counts it now); the new tier C failures are on a client that had just stalled or lost a packet (members now walk closer behind one another: the drawn-late class 1), and one undisturbed seed (208) keeps a long walk's reservation past its run (class 5).

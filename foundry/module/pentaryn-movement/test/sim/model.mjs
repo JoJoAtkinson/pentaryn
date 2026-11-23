@@ -11,10 +11,10 @@
  */
 
 import { planGroup, settle, freePrefix, onCell, crowdFor, restOnPaths, walkersMeet, stayPastDeadline, GROUP_LIMITS } from "../../group-core.mjs";
-import { MOTION, waves, radiusOf, cellChain } from "../../motion-core.mjs";
+import { MOTION, waves, radiusOf, cellChain, remainingFrom } from "../../motion-core.mjs";
 import { registry, receive, moved, claim, stopped, walkersOf, restsOf, encode, lostRace, queueUntil, queueNext, singleTiming, singleCut,
   RESERVE, priorityOf } from "../../reserve-core.mjs";
-import { sequence, cutsFor } from "../../sequence-core.mjs";
+import { sequence, cutsFor, onWay, FOLLOW_GAP } from "../../sequence-core.mjs";
 import { GUARD, conflictAhead, yieldsTo, newYield, stepYield, standingOnRoute } from "../../guard-core.mjs";
 import { newRun, step as lifeStep, left as lifeLeft, capped, expired, over } from "../../lifecycle-core.mjs";
 import { dist, SPEED } from "./engine.mjs";
@@ -112,9 +112,29 @@ export class Movement {
     this.tags = new Map();
     this.notices = [];
     c.listeners.push(msg => this.onBroadcast(msg));
+    if (!env.noStep) c.preStep = (id, a, b) => this.preStep(id, a, b);
     c.reloadListeners = [() => this.onReload()];
     if (c.canvas) this.startGuard();
     for (const h of c.hidden) c.exec(h.a, () => this.onHidden());
+  }
+
+  /** group.mjs onPreMove (0.8.3): a fight's next square never comes inside a token standing still on this client's view. */
+  preStep(id, a, b) {
+    const me = this.doc(id);
+    if (!me) return true;
+    for (const [oid, o] of this.c.view) {
+      if (oid === id || this.moving(oid)) continue;
+      const rr = me.r + o.r - 0.02;
+      if (dist(a, o) < rr) continue;
+      const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+      const t = L2 > 1e-12 ? Math.min(Math.max(((o.x - a.x) * (b.x - a.x) + (o.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+      if (Math.hypot(o.x - (a.x + (b.x - a.x) * t), o.y - (a.y + (b.y - a.y) * t)) < rr) {
+        this.env.record?.("cut", { why: "step", id, against: oid });
+        this.tell("short", "step:standing");
+        return false;
+      }
+    }
+    return true;
   }
 
   get now() { return this.c.sim.now; }
@@ -339,7 +359,7 @@ export class Movement {
     d.snap = this.reg.seq;
     d.members = members;
     const anchor = members.find(m => m.id === d.anchorId);
-    const spec = { members, anchorId: d.anchorId, combat: d.combat, mode: "plan", others: this.standingOutside(idset), moving: [...walking, ...live.walkers], reserved: live.rests };
+    const spec = { members, anchorId: d.anchorId, combat: d.combat, mode: "plan", others: this.standingOutside(idset), moving: [...walking, ...live.walkers], reserved: live.rests, sequenced: !!d.combat && !this.env.noSequenced };
     const oracles = { walkable: g.walkable, walkDistance: g.walkDistanceFrom(anchor.formation), route: g.route, toward: (m, f, t) => g.route(m, f, t),
       narrow: g.narrow, cramped: g.cramped, now: () => 0 };
     let plan;
@@ -659,6 +679,7 @@ export class Movement {
       walks.push({ id, r: m.r, points: [d.starts.get(id), ...movement[id]] });
     }
     const seqr = sequence(walks);
+    this.env.record?.("sequence", { client: this.c.id, gid: d.gid, order: seqr.order, after: seqr.after });
     cutsFor(walks, seqr, (points, r, circles, id) => {
       const m = byId.get(id);
       const p = freePrefix(points, r, circles, { allowed: c => onCell(c, m?.w ?? 1, m?.h ?? 1) });
@@ -707,21 +728,44 @@ export class Movement {
       movement[id] = p.points.slice(1);
       return "go";
     };
+    // group.mjs commitFight ahead() (0.8.3, AR1-02): a member follows one before it once that one is far enough ahead.
+    const startOf = new Map(walks.map(w => [w.id, w.points[0]]));
+    const ahead = (id, p) => {
+      if (arrived.has(p)) return true;
+      if (this.env.noFollow || !sentIds.has(p) || !movement[p]?.length) return false;
+      const pd = this.c.view.get(p), t = this.doc(id);
+      const pts = startOf.has(p) ? [startOf.get(p), ...movement[p]] : null;
+      if (!pd || !pts || !t || !movement[id]?.length) return false;
+      if (pd.mv?.state !== "pending" && !this.moving(p)) return false;
+      const at = this.c.drawn(p);
+      const left = remainingFrom(pts, at);
+      if (!left) return false;
+      const mine = [{ x: t.x, y: t.y }, ...movement[id]];
+      if (left.length < 2 || left.every(q => dist(q, at) < 1e-6)) return !onWay(mine, t.r, at, pd.r);
+      return !walkersMeet([{ points: mine, r: t.r, speed: SPEED, delay: 0 }], [{ points: left, r: pd.r, speed: SPEED, delay: 0 }], { combat: true, gap: this.env.followGap ?? FOLLOW_GAP });
+    };
     const pump = () => {
       if (g.stopped || this.groups.get(d.gid) !== g) return;
-      const ready = seqr.order.filter(id => !sentIds.has(id) && movement[id] && (seqr.after[id] ?? []).every(x => arrived.has(x)));
+      const waiting = seqr.order.filter(id => !sentIds.has(id) && movement[id]);
+      const ready = waiting.filter(id => (seqr.after[id] ?? []).every(x => ahead(id, x)));
       const going = [];
       let held = false;
       for (const id of ready) {
         const v = this.env.noVet ? "go" : vet(id);
         if (v === "wait") { held = true; continue; }
         if (v === "stay") { sentIds.add(id); arrived.add(id); continue; }
+        if (!(seqr.after[id] ?? []).every(x => ahead(id, x))) continue;
         going.push(id);
       }
-      if (going.length) go(going);
+      if (going.length) { this.env.record?.("go", { client: this.c.id, gid: d.gid, ids: going, ways: Object.fromEntries(going.map(id => [id, (movement[id] ?? []).map(q => [+q.x.toFixed(2), +q.y.toFixed(2)])])) }); go(going); }
       if (held && !g.retry && !expired(d.run, this.now)) {
         g.retry = this.c.setTimeout(() => { g.retry = null; pump(); }, Math.max(capped(d.run, this.now, FOREIGN_WAIT_MS), 1));
         g.timers.push(g.retry);
+      }
+      const following = !this.env.noFollow && waiting.some(id => !going.includes(id) && (seqr.after[id] ?? []).some(x => sentIds.has(x) && !arrived.has(x)));
+      if (following && !g.follow && !expired(d.run, this.now)) {
+        g.follow = this.c.setTimeout(() => { g.follow = null; pump(); }, Math.max(capped(d.run, this.now, 100), 1));
+        g.timers.push(g.follow);
       }
       finishUp();
     };

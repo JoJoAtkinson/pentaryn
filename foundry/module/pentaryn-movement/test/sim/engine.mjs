@@ -485,6 +485,13 @@ export class Client {
       this.emit({ type: "stop", id, mid: mv.mid, why: "coreDoor" });
       return;
     }
+    // The module's preMoveToken (group.mjs onPreMove, 0.8.3): a fight's next square into a token standing here is not sent.
+    if (mv.combat && this.preStep && this.preStep(id, prev, mv.segs[mv.k].at(-1)) === false) {
+      mv.stopped = true;
+      this.moves.delete(id);
+      this.emit({ type: "stop", id, mid: mv.mid, why: "step" });
+      return;
+    }
     this.sendSeg(id, mv);
   }
   /** TokenDocument#stopMovement: no further square is sent (the one on its way is committed). */
