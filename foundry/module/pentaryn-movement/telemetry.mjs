@@ -23,6 +23,12 @@ let log = null;
 let buf = ring();
 let stallHandle = null;
 let lastFiled = null;
+/**
+ * The failures already counted when the breaker last tripped (0.8.2): the GM turning `assist` back on clears the
+ * trip, and the breaker counts afresh from there. Without it the session's tallies were still past the limits, so the
+ * very next fallback or error tripped it again.
+ */
+let tripBase = { errors: 0, fallbacks: 0 };
 
 const clock = () => globalThis.performance?.now?.() ?? Date.now();
 const esc = s => (globalThis.foundry?.utils?.escapeHTML?.(String(s)) ?? String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`));
@@ -41,8 +47,10 @@ function tele(kind, data = {}) {
 
 function checkBreaker() {
   if (assistTripped() || globalThis.CONFIG?.debug?.[`${MODULE}.breaker`] === false) return;
-  const { trip, why } = breakerTrips(buf);
+  const failures = { errors: buf.failures.errors - tripBase.errors, fallbacks: buf.failures.fallbacks - tripBase.fallbacks };
+  const { trip, why } = breakerTrips({ failures });
   if (!trip) return;
+  tripBase = { ...buf.failures };
   tripAssist(why);
   push(buf, "breaker", { reason: why }, clock());
   log?.warn?.(`drag help switched itself off after repeated failures (${why}); plain Foundry dragging until a reload or the GM turns it back on`);
@@ -171,6 +179,7 @@ export function uninstall() {
   clearCues();
   onKey("wrongMove", null);
   buf = ring();
+  tripBase = { errors: 0, fallbacks: 0 };
   lastFiled = null;
   feature = null;
 }

@@ -1,5 +1,29 @@
 # Changelog — pentaryn-movement
 
+## 0.8.2 — 2026-11-23
+
+Correctness review of 0.8.0 / 0.8.1 (fail-open coverage, the circuit breaker, a reload across a turn change, tier C on a
+background tab). Each fix has a test that fails without it.
+
+- **[declared] A single drop whose async way threw moved nowhere, silently.** `singleFlow` (a single drop that
+  publishes first, waits or queues), `confirmLater` and `aroundLater` only logged a throw: the token stayed, nobody was
+  told, the breaker never heard of it and a waiting cue could stay on. Now `singleFailOpen`: core's move after all, cut
+  before the first token standing in it (on a whole square in a fight), when the token is still where the drop found
+  it; counted as an error. Test: `group.test` "0.8.2 fail-open: a single drop".
+- **[declared] A group drop whose commit threw after its published echo moved nowhere.** The publish chain marked the
+  drop committed before `commit`, so its `.catch` returned without failing open. The commit is now guarded and fails
+  open, and `failOpen` never re-sends a member this drop already sent (it would walk twice and, in a fight, be charged
+  twice: `d.sentIds`). Test: `group.test` "0.8.2 fail-open: a group drop whose commit throws".
+- **[declared] The circuit breaker tripped again on the first failure after the GM turned `assist` back on.** The
+  session's tallies stayed past the limits; it now counts afresh from each trip. Test: the 0.8.0 breaker test, extended.
+- **[declared] A fight walk resumed after a reload in another turn (FR2-09).** The record now carries its turn
+  (combat id, round, turn); a walk recorded in one turn stays where it rests in another (`status().group.fightResumed.why`
+  "turn changed"), never charging the new turn for the old one's move. Test: `fight-resume.test` "FR2-09".
+- **[declared] Tier C on a page in the background waited for arrivals that never came.** A hidden tab draws no frames,
+  so a member's movement animation never ends there and the next member stayed where it stood until the deadline.
+  An arrival now counts at the server's end of the move when the page is (or goes) hidden, as core's own continuation
+  does. Test: `group.test` "0.8.2 tier C on a page in the background".
+
 ## 0.8.1 — 2026-11-23
 
 The simulator of Fable's review §5 (`test/sim/`, run by the repo's `scripts/foundry/movement_sim.mjs`: `make foundry-movement-sim SEEDS=10000`; plan §16.9; use-doc

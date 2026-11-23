@@ -3604,10 +3604,115 @@ test("0.8.0 circuit breaker: repeated failures in a session switch the drag help
     await game.settings.set(MOD, "assist", false);
     await game.settings.set(MOD, "assist", true);
     assert.equal(api.status().assist.tripped, null, "the GM turning it back on clears it");
+    // 0.8.2: it counts afresh from there. The session's tallies stayed past the limit, so the very next failure
+    // tripped it again at once.
+    F.CONFIG.debug["pentaryn-movement.throw"] = true;
+    dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.equal(api.status().assist.tripped, null, "one failure after the GM turned it back on does not trip it");
+    dropWith(ts[0], contextsFor(ts, 0, 400));
+    dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.ok(api.status().assist.tripped, "three more do");
+    F.CONFIG.debug["pentaryn-movement.throw"] = false;
+    await game.settings.set(MOD, "assist", false);
+    await game.settings.set(MOD, "assist", true);
   } finally {
     F.CONFIG.debug["pentaryn-movement.throw"] = false;
     F.CONFIG.debug["pentaryn-movement.breaker"] = false;
     globalThis.ChatMessage = savedChat;
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.8.2 fail-open: a single drop whose async way throws goes as core's move (it moved nowhere, silently)", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const t = makeToken("sfoA000000000001", 100, 100);
+  const others = keepOnly([t]);
+  // With another client planning a single drop goes by singleFlow (published first): that is the async way forced to throw.
+  F.CONFIG.debug["pentaryn-movement.publishFirst"] = true;
+  F.CONFIG.debug["pentaryn-movement.throwSingle"] = true;
+  try {
+    const errors0 = api.telemetry().summary.counts.error;
+    const from = F.calls.length;
+    assert.equal(dropWith(t, contextsFor([t], 300, 0)), null, "the drop went async");
+    await flush();
+    const go = sent(from);
+    assert.equal(go.length, 1, `core's move is sent: ${JSON.stringify(api.status().group.last)}`);
+    assert.deepEqual(go[0].ids, [t.document.id]);
+    assert.deepEqual(go[0].options.movement[t.document.id].waypoints.map(w => [w.x, w.y]), [[400, 100]]);
+    assert.ok(Object.keys(go[0].options).every(k => !k.startsWith("pentarynMovement")), "no reservation of this module rides it");
+    assert.equal(api.telemetry().summary.counts.error, errors0 + 1, "counted as an error (the breaker hears of it)");
+  } finally {
+    F.CONFIG.debug["pentaryn-movement.throwSingle"] = false;
+    F.CONFIG.debug["pentaryn-movement.publishFirst"] = false;
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    reserveMod.reset();
+    tickBy(60000);
+  }
+});
+
+test("0.8.2 fail-open: a group drop whose commit throws after its published echo goes as core's move (it moved nowhere, silently)", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const ts = [makeToken("cfoA000000000001", 400, 200), makeToken("cfoB000000000001", 300, 200)];
+  const others = keepOnly(ts);
+  F.CONFIG.debug["pentaryn-movement.publishFirst"] = true;
+  ts[0].document.update = async (changes, options) => { F.fire("updateToken", ts[0].document, changes, options, game.user.id); return ts[0].document; };
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.equal(out, null, "published first");
+    F.CONFIG.debug["pentaryn-movement.throwCommit"] = true;
+    await flush();
+    F.CONFIG.debug["pentaryn-movement.throwCommit"] = false;
+    const ids = [...new Set(sent(from).flatMap(c => c.ids))].sort();
+    assert.deepEqual(ids, ts.map(t => t.document.id).sort(), `everyone moves: ${JSON.stringify(api.status().group.last)}`);
+    assert.equal(api.status().group.last.reason, "deliver");
+    assert.equal(sent(from).length, 1, "once");
+  } finally {
+    F.CONFIG.debug["pentaryn-movement.throwCommit"] = false;
+    F.CONFIG.debug["pentaryn-movement.publishFirst"] = false;
+    delete ts[0].document.update;
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    reserveMod.reset();
+    tickBy(60000);
+  }
+});
+
+test("0.8.2 tier C on a page in the background: the next member sets off on the one before's arrival at the server (a hidden tab draws no frames, so its animation never ends there)", async () => {
+  combatFlag = true;
+  clock.step = 0;
+  await game.settings.set(MOD, "fightGroupDrags", true);
+  const ts = [makeToken("tchA000000000001", 300, 100), makeToken("tchB000000000001", 200, 100)];
+  const others = keepOnly(ts);
+  const saved = viewedScene.updateEmbeddedDocuments;
+  // Each move ends at the server at once; its animation here never does (no frames on a hidden page).
+  viewedScene.updateEmbeddedDocuments = async (type, updates, options) => {
+    F.calls.push({ op: "scene.update", type, ids: updates.map(u => u._id), options });
+    for (const u of updates) {
+      const d = sceneTokens.get(u._id);
+      d.movement = { state: "completed", user: { isSelf: true }, finished: Promise.resolve(true) };
+      d.object.movementAnimationPromise = new Promise(() => {});
+    }
+    return updates;
+  };
+  globalThis.document.visibilityState = "hidden";
+  try {
+    const from = F.calls.length;
+    dropWith(ts[0], contextsFor(ts, 400, 0));
+    await flush();
+    tickBy(200);
+    await flush();
+    assert.deepEqual(sent(from).flatMap(c => c.ids), [ts[0].document.id, ts[1].document.id], "the one behind set off well before the deadline");
+  } finally {
+    globalThis.document.visibilityState = "visible";
+    viewedScene.updateEmbeddedDocuments = saved;
+    await game.settings.set(MOD, "fightGroupDrags", false);
+    for (const t of ts) { t.document.movement = { state: "completed", user: { isSelf: true } }; delete t.movementAnimationPromise; }
+    combatFlag = false;
     for (const [k, v] of others) sceneTokens.set(k, v);
     tickBy(60000);
   }

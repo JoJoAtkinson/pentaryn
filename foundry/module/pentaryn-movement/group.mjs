@@ -261,6 +261,19 @@ function writeFights(o) {
 
 const FIGHT_FIELDS = ["x", "y", "elevation", "width", "height", "level", "action", "snapped", "explicit", "checkpoint"];
 
+/**
+ * The turn a fight walk belongs to: "combat id:round:turn" of the token's combat, or null (0.8.2). A walk
+ * recorded in one turn never goes on in another after a reload: a turn change stops a walk (core clears the history)
+ * and charges what follows to the new turn, so a walk resumed after it charged the new turn for the old one's move
+ * (Fable's §3: "the move finishes under the rules it started with").
+ */
+function turnKeyOf(doc) {
+  try {
+    const c = doc?.combatant?.combat ?? doc?.combatant?.parent ?? null;
+    return c ? `${c.id}:${c.round ?? 0}:${c.turn ?? 0}` : null;
+  } catch { return null; }
+}
+
 /** moveToken, every client: a fight move this client started records the squares it has still to walk. */
 function onFightMove(doc, movement) {
   if (!feature || !doc?.id) return;
@@ -275,7 +288,7 @@ function onFightMove(doc, movement) {
     return;
   }
   fights[doc.id] = { t: Date.now(), scene: doc.parent?.id ?? null, world: game.world?.id ?? null, user: game.user?.id ?? null,
-    route: pending.map(w => Object.fromEntries(FIGHT_FIELDS.filter(k => w[k] !== undefined).map(k => [k, w[k]]))) };
+    turn: turnKeyOf(doc), route: pending.map(w => Object.fromEntries(FIGHT_FIELDS.filter(k => w[k] !== undefined).map(k => [k, w[k]]))) };
   writeFights(fights);
   listenUnload();
 }
@@ -313,6 +326,8 @@ function resumeFights(tries = 120) {
       if (!doc?.object || !doc.isOwner || !inCombat(doc)) { why[id] = `not here (${!!doc?.object}/${!!doc?.isOwner}/${doc ? inCombat(doc) : null})`; continue; }
       const st = doc.movement?.state;
       if (st === "pending" || st === "paused") { why[id] = st; continue; }
+      const turn = turnKeyOf(doc);
+      if ((r.turn ?? null) !== turn) { why[id] = `turn changed (${r.turn ?? "-"} → ${turn ?? "-"})`; continue; }
       const route = Array.isArray(r.route) ? r.route.filter(w => Number.isFinite(w?.x) && Number.isFinite(w?.y)) : [];
       const src = doc._source;
       const k = route.findIndex(w => w.x === src.x && w.y === src.y);
@@ -2001,7 +2016,7 @@ function confirmLater(grabbed, c, result) {
   const coreGoes = !droppedInPlace([c], result);
   // Through the reservations (0.6.0): it waits for, or queues behind, the walks in its way.
   const go = waypoints => singleFlow({ grabbed, result, waypoints, seq, starts, scene, combat: false, rec })
-    .catch(err => log.warnOnce?.("single-reserve", "a single drop's reservation failed (further errors suppressed)", err));
+    .catch(err => singleFailOpen({ grabbed, result, waypoints, seq, starts, scene, why: "single" }, err));
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
   const search = feature.exposed.pathfindRouteToAsync;
   Promise.resolve(typeof search === "function" ? search(grabbed, origin, { ...origin, ...c.destination, explicit: true, checkpoint: true }, { preview: true }) : null)
@@ -2031,7 +2046,7 @@ function confirmLater(grabbed, c, result) {
       rec.result = "core";
       go(result[1].movement[doc.id].waypoints);
     })
-    .catch(err => log.warnOnce?.("single-confirm", "a single drop's route search failed (further errors suppressed)", err));
+    .catch(err => { if (coreGoes) singleFailOpen({ grabbed, result, seq, starts, scene, why: "confirm" }, err); else log.warnOnce?.("single-confirm", "a single drop's route search failed (further errors suppressed)", err); });
   return null;
 }
 
@@ -2162,7 +2177,7 @@ function aroundLater(grabbed, result, { origin, dest, avoid, wps }) {
     const wps = inCombat(doc) ? withCheckpoints(grabbed, [origin, ...waypoints]) : waypoints;
     // Through the reservations (0.6.0): it waits for, or queues behind, the walks in its way.
     return singleFlow({ grabbed, result, waypoints: wps, seq, starts, scene, combat: inCombat(doc), rec })
-      .catch(err => log.warnOnce?.("single-reserve", "a single drop's reservation failed (further errors suppressed)", err));
+      .catch(err => singleFailOpen({ grabbed, result, waypoints: wps, seq, starts, scene, why: "single" }, err));
   };
   Promise.resolve(feature.exposed.pathfindRouteToAsync(grabbed, origin, dest, { preview: true, avoid }))
     .then(r => {
@@ -2181,7 +2196,7 @@ function aroundLater(grabbed, result, { origin, dest, avoid, wps }) {
       if (kept.short) tell(kept.length ? "short" : "noRoute", "standingInTheWay");
       if (kept.length) go(kept);
     })
-    .catch(err => log.warnOnce?.("single-around", "a single drop's way round the others failed (further errors suppressed)", err));
+    .catch(err => singleFailOpen({ grabbed, result, waypoints: wps, seq, starts, scene, why: "around" }, err));
   return null;
 }
 
@@ -2533,6 +2548,7 @@ const stillMine = d => stillOurs(d.prep.members.map(m => m.id), d.scene, d.start
 
 /** Send a drop's batches: the first wave (returned to core when the drop is still synchronous) and the later waves. */
 function commit(d, b) {
+  if (globalThis.CONFIG?.debug?.[`${MODULE}.throwCommit`]) throw new Error("debug: forced commit throw");
   if (d.info.combat && d.info.mode === "plan" && b.base) return commitFight(d, b);
   const hold = { scene: d.scene, seq: d.seq, starts: d.starts, endMs: b.endMs ?? 0, gid: d.gid, run: d.run };
   // The riders are members of the group too (a click on one stops them all), though the plan never saw them.
@@ -2546,6 +2562,7 @@ function commit(d, b) {
     return b.first[0].length ? b.first : null;
   }
   const [updates, options] = b.first;
+  for (const u of updates) (d.sentIds ??= new Set()).add(u._id);
   const sent = updates.length ? send(d.scene, d.seq, d.starts, updates, options, "move") : null;
   const g = schedule(b.later, b.base, members, hold);
   flushIfHidden(g, firstWave);
@@ -2621,7 +2638,7 @@ function commitFight(d, b) {
       .finally(() => { arrived.add(id); hideCue(id); pump(); });
   };
   const go = ids => {
-    for (const id of ids) sentIds.add(id);
+    for (const id of ids) { sentIds.add(id); (d.sentIds ??= new Set()).add(id); for (const rid of ridersOf(id)) d.sentIds.add(rid); }
     const [ups, opts] = batchOf(ids);
     if (!ups.length) { for (const id of ids) arrived.add(id); pump(); return null; }
     feature.exposed.tele?.("wave", { reason: "fight", members: ups.length });
@@ -2705,10 +2722,30 @@ const arrivals = new Map();
 function arrivalOf(doc) {
   const m = doc?.movement;
   const live = m?.user?.isSelf && m.state !== "completed" && m.state !== "stopped";
-  if (!live) return Promise.resolve(doc?.object?.movementAnimationPromise ?? null);
+  if (!live) return drawnOrHidden(doc?.object?.movementAnimationPromise);
   const ended = typeof m.finished?.then === "function" ? m.finished
     : new Promise(resolve => { if (!arrivals.has(doc.id)) arrivals.set(doc.id, new Set()); arrivals.get(doc.id).add(resolve); });
-  return Promise.resolve(ended).then(() => doc.object?.movementAnimationPromise ?? null);
+  return Promise.resolve(ended).then(() => drawnOrHidden(doc.object?.movementAnimationPromise));
+}
+
+/**
+ * The animation's promise, or at once when the page is (or goes) in the background (0.8.2): a hidden tab draws
+ * no frames, so its animations never end there, and a fight's next member waited on an arrival that never came until the
+ * deadline kept it where it stood. Core's own continuation does the same (Token#_onAnimationMovement resolves its wait
+ * at once on a hidden page, game.raceWithWindowHidden).
+ */
+function drawnOrHidden(p) {
+  const d = globalThis.document;
+  if (!p || typeof p.then !== "function") return Promise.resolve(p ?? null);
+  if (d?.visibilityState === "hidden" || d?.hidden === true) return Promise.resolve(null);
+  if (typeof d?.addEventListener !== "function") return Promise.resolve(p);
+  return new Promise(resolve => {
+    let done = false;
+    const fn = () => { if (d.visibilityState === "hidden" || d.hidden === true) finish(null); };
+    const finish = v => { if (done) return; done = true; try { d.removeEventListener("visibilitychange", fn); } catch (err) { log?.debug?.("arrival: visibility listener", err); } resolve(v); };
+    d.addEventListener("visibilitychange", fn);
+    Promise.resolve(p).then(finish, () => finish(null));
+  });
 }
 
 /** moveToken / stopToken, every client: a move of a token someone waits on that has now ended resolves them. */
@@ -2805,7 +2842,13 @@ function deliver(d, plan) {
       }
       // Its echo read: the plan is already where every client has it. Without an echo it rides the move as well.
       d.committed = true;
-      commit(d, withOptions(b, reserve.optionsFor(wire, { inline: !echo })));
+      // A throw here failed open nowhere (0.8.2: the catch below returns once committed, and nothing moved).
+      try { commit(d, withOptions(b, reserve.optionsFor(wire, { inline: !echo }))); }
+      catch (err) {
+        log.warnOnce("group-deliver", "a group drop could not be sent as planned; it goes as core's (further errors suppressed)", err);
+        feature.exposed.tele?.("error", { reason: "deliver", message: String(err?.message ?? err).slice(0, 120) });
+        failOpen(d, "deliver");
+      }
     })
     .catch(err => {
       log.warnOnce("group-reserve", "a group's reservation could not be published (further errors suppressed)", err);
@@ -2841,7 +2884,11 @@ function failOpen(d, why = "error") {
     fellBack(why);
     lifeStep(d.run, "fallback", { now: Date.now(), why });
     Object.assign(d.rec ?? {}, { result: "core", reason: why });
-    const result = [[...(d.result?.[0] ?? [])], { ...(d.result?.[1] ?? {}), movement: { ...(d.result?.[1]?.movement ?? {}) } }];
+    // Never a member this drop already sent (a throw after its first wave went: it would walk twice, and be charged twice
+    // in a fight).
+    const gone = d.sentIds ?? new Set();
+    const result = [(d.result?.[0] ?? []).filter(u => !gone.has(u._id)),
+      { ...(d.result?.[1] ?? {}), movement: Object.fromEntries(Object.entries(d.result?.[1]?.movement ?? {}).filter(([id]) => !gone.has(id))) }];
     if (d.info?.combat) checkpointAll(d.contexts, result[1]);
     unstack(d.contexts, result, d.grabbed.document.id, !!d.info?.combat, d.riders);
     for (const m of d.prep?.members ?? []) hideCue(m.id);
@@ -2904,8 +2951,43 @@ function singleOut(grabbed, contexts, result, info, seq) {
   }
   const starts = new Map([[doc.id, { x: doc._source.x, y: doc._source.y }]]);
   singleFlow({ grabbed, result, waypoints: m.waypoints, seq, starts, scene, combat: info.combat, rec: last, first: read })
-    .catch(err => log.warnOnce("single-reserve", "a single drop's reservation failed (further errors suppressed)", err));
+    .catch(err => singleFailOpen({ grabbed, result, waypoints: m.waypoints, seq, starts, scene, why: "single" }, err));
   return null;
+}
+
+/**
+ * A single drop's async way (singleFlow, confirmLater, aroundLater) threw (0.8.2): it fails open as a group's
+ * does (failOpen). Until then the catch only logged, so the token never moved, the breaker never heard of it, and a
+ * waiting cue could stay on. Core's move after all (`waypoints`: the way the flow was given, else core's), cut before
+ * the first token standing in it (freeOfOthers, on a whole square in a fight), when the token is still where the drop
+ * found it and was not dropped again (a move of this drop already sent changed its source: nothing is sent twice).
+ * Counted as an error (the breaker). Never throws.
+ */
+function singleFailOpen({ grabbed, result, waypoints = null, seq, starts, scene, why = "single" }, err = null) {
+  try {
+    log?.warnOnce?.(`single-${why}`, "a single drop could not go as planned; it goes as core's (further errors suppressed)", err);
+    feature?.exposed?.tele?.("error", { reason: why, message: String(err?.message ?? err).slice(0, 120) });
+    const doc = grabbed?.document;
+    if (!doc) return false;
+    hideCue(doc.id);
+    if (!feature || !stillOurs([doc.id], scene, starts, seq).length) return false;
+    const base = result?.[1]?.movement?.[doc.id] ?? { planned: false };
+    let wps = waypoints?.length ? waypoints : base.waypoints;
+    if (!wps?.length) return false;
+    try {
+      const others = othersOf([{ id: doc.id, token: grabbed }], gridSize(grabbed));
+      const kept = freeOfOthers(grabbed, { ...doc._source }, wps, others);
+      if (kept.short) wps = kept;
+    } catch (e) { log?.debug?.("single fail open: the tokens standing", e); }
+    if (!wps.length) return false;
+    if (last && last.reason === "single") Object.assign(last, { result: "core", failedOpen: why });
+    const updates = result?.[0]?.length ? result[0] : [{ _id: doc.id }];
+    const options = {};
+    for (const [k, v] of Object.entries(result?.[1] ?? {})) if (!k.startsWith("pentarynMovement")) options[k] = v;
+    send(scene, seq, starts, updates, { ...options, movement: { [doc.id]: { ...base, waypoints: wps } } }, "move")
+      .catch(e => log?.debug?.("single fail open: send", e));
+    return true;
+  } catch (e) { log?.debug?.("single fail open", e); return false; }
 }
 
 
@@ -2998,6 +3080,7 @@ async function stepAside(ctx, read, waypoints) {
  */
 async function singleFlow(ctx) {
   const { grabbed, result, seq, starts, scene, combat, rec } = ctx;
+  if (globalThis.CONFIG?.debug?.[`${MODULE}.throwSingle`]) throw new Error("debug: forced single-drop throw");
   const doc = grabbed.document;
   const base = result[1].movement?.[doc.id] ?? { planned: false };
   const updates = result[0].length ? result[0] : [{ _id: doc.id }];

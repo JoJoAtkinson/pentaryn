@@ -597,3 +597,16 @@ Seeds 1–2,000 (each the same scenario before and after): **533 failing before 
 5. Smaller: a door cut's displace-then-walk stands a cut member for a round trip in front of members the cut did not touch (8 seeds); `holdCore`'s end timer can end a long fight walk's run up to 1 s past its deadline (4); a tier C member still waiting at the deadline keeps its reservation until it expires (1945); the group's end timer follows the plan's predicted end, which a flush or a cut can put past the deadline (189, 1361).
 
 
+
+### 16.10 pentaryn-movement 0.8.2: correctness review of 0.8.0 / 0.8.1 (2026-11-23)
+
+Read against core 14.370's source (`client/documents/token.mjs` `#continueMovement` and `_preUpdateMovement`, `client/canvas/placeables/token.mjs` `constrainMovementPath`). Fixed, each with a test that fails without it (CHANGELOG 0.8.2):
+1. A single drop's async ways (`singleFlow`, `confirmLater`, `aroundLater`) only logged a throw: nothing moved, nobody was told, the breaker never counted it. Now `singleFailOpen`: core's move cut before the first standing token.
+2. The group publish chain set `d.committed` before `commit`, so a throw in `commit` failed open nowhere. Guarded; `failOpen` skips members the drop already sent (`d.sentIds`; a double send is a double charge in a fight).
+3. The breaker kept the session's tallies across a re-enable and tripped on the next failure; it counts afresh from each trip.
+4. A fight walk resumed after a reload in a later turn charged the new turn (FR2-09 record now carries combat id, round and turn).
+5. Tier C on a hidden page waited for movement animations that never end there (no frames); an arrival counts at the server's end of the move while hidden, as core's continuation does.
+
+Verified, no change: Joe's combat door rule (each next square tested against the current movement walls before it is sent) is core's own: every continuation runs `_preUpdateMovement` on the initiating client, which calls `constrainMovementPath` (`preview: false`, so walls only, never vision); a snapped step through a shut door has no snapped collision square and is constrained to nothing, and core stops the move on the square it holds. Only when the token is `rendered` on that client: an initiator that switched to another scene mid-walk sends continuations unconstrained (open, §16.10 note for the live script). Racers use `User#viewedScene` (exists in 14.370). Settings migration writes only on the active GM. No deleted function is referenced. Player telemetry never holds a hidden token (guard and cut ids come through `countsForRoutes`); the GM's buffer can, and a GM's Alt+W files it into pentaryn-feedback's report on the server's Data folder (GM-only by convention, not by permission).
+
+Open, decided by the live rounds: the breaker counts `budget` fallbacks as failures, so a GM who drags 10–12 NPCs through fog six times in a session (Fable's §3 "within budget or the clean fallback") turns `assist` off for the table; `assist` flipped off mid-move lets the move's unsent waves go as planned (the runtime guard stops at once).
