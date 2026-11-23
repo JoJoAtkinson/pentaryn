@@ -10,6 +10,7 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { movementWorld, drop, clicks, doors, SCENE } from "./fixtures/world.mjs";
 import { MOTION } from "../motion-core.mjs";
+import { fitPath } from "../group-adapter.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: Date.now() });
 /** Advance the mocked clock in 50 ms steps, as a page's timers run (a wave is timed from the one before it, HX1-06). */
@@ -2110,7 +2111,11 @@ test("decision 8: a 2x2 with no way its body fits stops before the gap and the d
   // H4-01 (live H7c, the first drag after a reset: "5 ft", one square): the drag's search had not finished, its
   // path one square long; the drop walks as far as the body fits along the found way, as the finished drag shows.
   const wps = out[1].movement[big.document.id].waypoints;
-  assert.deepEqual([wps.at(-1).x, wps.at(-1).y], [350, 200], `as far as it fits, not the drag's one square: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+  // S1R2-03: and at rest on whole squares (it started half a square off the grid), its body before the door's line.
+  const end = wps.at(-1);
+  assert.ok(end.y >= 200, `as far as it fits, not the drag's one square: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+  assert.ok(end.x % 100 === 0 && end.y % 100 === 0, `whole squares: ${JSON.stringify(end)}`);
+  assert.ok(end.y + 200 <= 400, `its body before the door's line (y 400): ${JSON.stringify(end)}`);
   sceneTokens.delete(big.document.id);
 });
 
@@ -2812,5 +2817,117 @@ test("0.5.0: in a fight a member's route goes round a token that stays too, ever
     F.canvas.tokens.placeables = saved;
     sceneTokens.delete(rest.document.id);
     tickBy(60000);
+  }
+});
+
+/* -------------------------------------------- */
+/*  Stage 1, round S1R2 (0.5.2)                  */
+/* -------------------------------------------- */
+
+/** The cost core measures for `wps` walked from `origin` (the synthetic measure: squares x 5). */
+const costOf = (t, origin, wps) => t.measureMovementPath([origin, ...wps]).cost;
+
+for (const fight of [true, false]) {
+  test(`S1R2-01: a single drag ${fight ? "in a fight" : "out of combat"}: the ruler while dragging shows the way round the tokens standing in it, and the drop walks that way at that cost`, () => {
+    combatFlag = fight;
+    clock.step = 0;
+    const a = makeToken(`s21${fight ? "c" : "o"}A00000000001`, 100, 100);
+    const rest = makeToken(`s21${fight ? "c" : "o"}R00000000001`, 300, 100);
+    rest.visible = true;
+    const saved = F.canvas.tokens.placeables;
+    F.canvas.tokens.placeables = [a, rest];
+    const origin = wp(100, 100, { snapped: false, explicit: false, checkpoint: false });
+    const dest = wp(500, 100);
+    const contexts = { [a.document.id]: { token: a, destination: dest, foundPath: null, waypoints: [] } };
+    layer._draggedToken = a;
+    a.mouseInteractionManager = { interactionData: { contexts } };
+    try {
+      // The drag's preview (what core's ruler draws and measures).
+      const job = a.findMovementPath([origin, dest], { preview: true, constrainOptions: {}, measureOptions: {}, terrainOptions: {} });
+      const shown = job.result;
+      assert.ok(Array.isArray(shown), "found while dragging");
+      assert.deepEqual([shown.at(-1).x, shown.at(-1).y], [500, 100], "it ends where it is dropped");
+      assert.ok(clearOf(origin, shown.slice(1), center(rest.document._source), S - 1), `the ruler's way goes round the token: ${JSON.stringify(shown.map(w => [w.x, w.y]))}`);
+      const shownCost = costOf(a, origin, shown.slice(1));
+      // The drop walks that way, at that cost.
+      contexts[a.document.id].foundPath = shown;
+      drop.result = coreDrop(contexts);
+      const out = a._prepareDragLeftDropUpdates({ interactionData: { contexts } });
+      const wps = out[1].movement[a.document.id].waypoints;
+      assert.ok(clearOf(origin, wps, center(rest.document._source), S - 1), `the walk goes round it: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+      assert.equal(costOf(a, origin, wps), shownCost, "charged what the ruler showed");
+      // Not with Ctrl waypoints (the drop keeps them as core's): core's own line.
+      contexts[a.document.id].waypoints = [wp(300, 300)];
+      const ctl = a.findMovementPath([origin, dest], { preview: true, constrainOptions: {}, measureOptions: {}, terrainOptions: {} });
+      assert.equal(ctl.result.length, 2, "Ctrl waypoints: core's own path");
+      contexts[a.document.id].waypoints = [];
+    } finally {
+      combatFlag = false;
+      layer._draggedToken = null;
+      delete a.mouseInteractionManager;
+      F.canvas.tokens.placeables = saved;
+      sceneTokens.delete(rest.document.id); sceneTokens.delete(a.document.id);
+      tickBy(60000);
+    }
+  });
+}
+
+test("S1R2-04: a single drag in a fight to a square walled in by standing tokens walks, square by square, up to the first one in its way and stops there (told), never staying where it stood", () => {
+  combatFlag = true;
+  clock.step = 0;
+  const a = makeToken("s24A000000000001", 100, 100);
+  // The square (800, 300) has the wall at y 400 below it and tokens on its five other sides.
+  const ring = [[700, 200], [800, 200], [900, 200], [700, 300], [900, 300]].map(([x, y], k) => {
+    const t = makeToken(`s24R00000000000${k}`, x, y);
+    t.visible = true;
+    return t;
+  });
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [a, ...ring];
+  try {
+    // A knight's-move line: no whole square on it until its end.
+    const ctx = contextsFor([a], 700, 200);
+    drop.result = coreDrop(ctx);
+    const from = F.calls.length;
+    const out = a._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx } });
+    tickBy(2000);
+    const moves = sent(from);
+    const wps = out?.[1]?.movement?.[a.document.id]?.waypoints ?? moves.at(-1)?.options?.movement?.[a.document.id]?.waypoints;
+    assert.ok(wps?.length, `it moves: ${JSON.stringify(out?.[1]?.movement)} / ${moves.length} sent`);
+    const end = wps.at(-1);
+    assert.ok(end.x % 100 === 0 && end.y % 100 === 0, `rests on a whole square: ${JSON.stringify(end)}`);
+    assert.ok(end.x >= 400, `it walks up to the ring, not a square or two: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+    let prev = center(a.document._source);
+    for (const p of wps) {
+      const q = center(p);
+      assert.ok(Math.max(Math.abs(q.x - prev.x), Math.abs(q.y - prev.y)) <= 100 + 1e-6, `a square at a time: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+      prev = q;
+    }
+    for (const t of ring) assert.ok(clearOf(a.document._source, wps, center(t.document._source), S - 1), `never through ${t.document.id}: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+    assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.noRoute"), "told");
+  } finally {
+    combatFlag = false;
+    F.canvas.tokens.placeables = saved;
+    for (const t of ring) sceneTokens.delete(t.document.id);
+    sceneTokens.delete(a.document.id);
+    tickBy(60000);
+  }
+});
+
+test("S1R2-03: a big token whose way stops fitting on a slanted line (no whole square on it) rests on whole squares before the door, not off the grid", () => {
+  const big = makeToken("s23L000000000001", 100, 0, { size: 2 });
+  try {
+    // Its centre (200, 100) → (550, 600) crosses the wall's line y 400 in the one-square door (x 400-500), which its
+    // body does not fit; no quarter-square sample on the line is a whole square.
+    const path = [wp(100, 0, { width: 2, height: 2, snapped: false, explicit: false, checkpoint: false }), wp(450, 500, { width: 2, height: 2, snapped: false })];
+    const r = fitPath(big, path);
+    assert.equal(r.cut, true);
+    const end = r.path.at(-1);
+    assert.ok(end.x % 100 === 0 && end.y % 100 === 0, `whole squares: ${JSON.stringify(r.path.map(w => [w.x, w.y]))}`);
+    assert.ok(end.y + 200 <= 400, `its body before the wall's line (y 400): ${JSON.stringify(end)}`);
+    assert.ok(end.y >= 100, `it still walks toward the door: ${JSON.stringify(end)}`);
+    assert.equal(end.explicit, true);
+  } finally {
+    sceneTokens.delete(big.document.id);
   }
 });

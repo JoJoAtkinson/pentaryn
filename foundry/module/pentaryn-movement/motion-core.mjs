@@ -11,6 +11,9 @@
 
 import { directPath } from "./pathfind-core.mjs";
 
+/** Squares a pair that starts just touching may close in while one leaves (a hair: numeric slack, no visible overlap). */
+const TOUCH_SLACK = 0.02;
+
 export const MOTION = Object.freeze({
   restGap: 0.2,          // squares between two circles at rest (slots; 0.1 until 0.5.0: hex rows 0.95 apart walled a
                          // packed room off, with nothing allowed to brush past a resting member)
@@ -144,7 +147,7 @@ const moving = (tr, t0, t1) => t0 >= tr.start - EPS && t1 <= tr.end + EPS && tr.
  * wake is (0.4.x added a flat 0.25 square instead, in every direction). One batch out of combat starts on every
  * client from the same update and gets no shift.
  * A pair that starts overlapped or in contact (closer than rA + rB + 0.05) is held only to "no closer than it
- * started, less `contact`" (shifted too while both walk) until it first reaches rA + rB + 0.05 (plan §4 step C:
+ * started, less `contact`" (less 0.02 for a pair that starts just touching, S1R2-05; shifted too while both walk) until it first reaches rA + rB + 0.05 (plan §4 step C:
  * ignored until it first separates; grid neighbours brush as one leaves).
  *
  * @returns {{ t: number, d: number } | null}
@@ -169,7 +172,10 @@ export function firstConflict(A, B, rA, rB, { sameWave = false, combat = false, 
   }
   const d0 = dist(positionAt(A, 0), positionAt(B, 0));
   let held = d0 < rr + 0.05;
-  const floor = Math.min(d0, rr) - contact;
+  // Only a pair that starts overlapped may close in by `contact` as one leaves; one that starts just touching (grid
+  // neighbours) keeps to TOUCH_SLACK (S1R2-05: a member walking past the grabbed one waiting beside it grazed it by
+  // 11 px, within the 0.15).
+  const floor = Math.min(d0, rr) - (d0 < rr - TOUCH_SLACK ? contact : Math.min(contact, TOUCH_SLACK));
   const stretches = [];
   for (let k = 1; k < bt.length; k++) stretches.push([bt[k - 1], bt[k]]);
   stretches.push([bt.at(-1), bt.at(-1)]);           // both at rest at the end

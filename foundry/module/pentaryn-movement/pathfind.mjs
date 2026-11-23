@@ -254,6 +254,24 @@ function fitted(token, path, options) {
   try { return fitPath(token, path).path; } catch (err) { log?.debug?.("fitPath", err); return path; }
 }
 
+/**
+ * Does a path (top-left pixels) bring the token's centre inside any of `avoid` (circles { x, y, r }, pixel centres)?
+ * Its size from `w` / `h` (default its source's), the grid size `s` (default its scene's).
+ */
+function crossesCircles(path, avoid, token, { w = null, h = null, s = null } = {}) {
+  if (!avoid?.length || !Array.isArray(path) || path.length < 2) return false;
+  const src = token.document?._source ?? {};
+  const W = w ?? src.width ?? 1, H = h ?? src.height ?? 1;
+  const S = s ?? token.document?.parent?.grid?.size ?? canvas.grid?.size ?? 100;
+  return path.some((p, k) => k > 0 && avoid.some(c => {
+    const a = { x: path[k - 1].x + (W * S) / 2, y: path[k - 1].y + (H * S) / 2 };
+    const b = { x: p.x + (W * S) / 2, y: p.y + (H * S) / 2 };
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+    return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < c.r;
+  }));
+}
+
 /** A big token's path is taken only where its body fits all the way (fitPath). */
 const fitsWhole = token => path => { try { return !fitPath(token, path).cut; } catch { return true; } };
 
@@ -272,16 +290,22 @@ function pathfindJob(token, waypoints, options, wrapped, base) {
   if (reason) return plain();
   const reached = pf.reachedCount(base.result, waypoints, same);
   if (reached === 0) return plain();
+  // A token dragged alone (S1R2-01): the drop goes round the tokens standing in its way (group.mjs aroundOthers), so
+  // the drag's ruler shows that way and what it costs, not core's line through them (40 ft shown, 90 ft walked).
+  let avoid = null;
+  try { avoid = feature?.exposed?.singleAvoid?.(token, waypoints, options) ?? null; } catch (err) { log?.debug?.("single drag: the tokens that stay", err); }
+  const crosses = !!avoid?.length && crossesCircles(base.result, avoid, token);
   // A drag core lets through whole is core's own, unless its line walks into a teleport / change-level
   // region the drag neither starts nor ends in (live R5-4: a straight drag walked into a scene link and
   // the player's view jumped to its destination; only group slots and route() kept out), or a big token's
   // body does not fit along it (H1-04). Then every leg is searched round it; with no way round, core's
   // line stays (a big token's cut where it stops fitting).
   const force = reached >= waypoints.length;
-  if (force && !squeezed && !entersTrap(token, waypoints, base.result, options)) return null;
+  if (force && !squeezed && !crosses && !entersTrap(token, waypoints, base.result, options)) return null;
 
   const smooth = !!setting("smoothCorners") && !inCombat(token);
-  const plan = planner(token, waypoints, options, force ? 0 : reached - 1, wrapped, base, smooth, { force, accept: big ? fitsWhole(token) : null });
+  const plan = planner(token, waypoints, options, force || crosses ? 0 : reached - 1, wrapped, base, smooth,
+    { avoid: crosses ? avoid : null, force: force || crosses, accept: big ? fitsWhole(token) : null });
   if (plan.step(LIMITS.sliceMs) === "done") return doneJob(big ? fitted(token, plan.result(), options) : plan.result());
 
   let cancelled = false;
@@ -427,13 +451,7 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
   const reached = pf.reachedCount(base.result, ends, same);
   const s = token.document?.parent?.grid?.size ?? canvas.grid?.size ?? 100;
   const w = origin.width ?? 1, h = origin.height ?? 1;
-  const crosses = avoid?.length && base.result.some((p, k) => k > 0 && avoid.some(c => {
-    const a = { x: base.result[k - 1].x + (w * s) / 2, y: base.result[k - 1].y + (h * s) / 2 };
-    const b = { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 };
-    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
-    const t = L2 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
-    return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t)) < c.r;
-  }));
+  const crosses = !!avoid?.length && crossesCircles(base.result, avoid, token, { w, h, s });
   // A route this module invents (a group member's) never goes through a secret door, a teleport /
   // change-level region or a player's unexplored ground, even where core's straight line would.
   const hz = placesToAvoid(token, origin, dest, { preview });

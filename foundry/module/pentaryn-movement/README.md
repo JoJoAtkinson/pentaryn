@@ -75,8 +75,11 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   group, in a fight too: every route goes round them however long that is, nobody rests on one, and a token
   whose only way runs through one walks only as far as it is free and stops there ("No route there"); nothing
   ever walks through another token to get somewhere. A single drag in a fight goes round them square by square
-  too, and the squares it walks are what it spends (0.5.1). A member cut short never rests in a one-wide corridor
-  or a doorway (0.5.1). Members of a group, and one walking in another's wake in a
+  too, and the squares it walks are what it spends (0.5.1). While you drag a single token, the ruler already shows
+  the way round them and what it costs, so the feet you see are the feet you spend (0.5.2). A single drag in a fight
+  whose way is blocked by tokens walks square by square up to the first one and stops there (0.5.2). A member cut
+  short never rests in a one-wide corridor or a doorway (0.5.1); a big token cut short rests on whole squares, a
+  single drag too (0.5.2). Members that start side by side never brush each other as one leaves (0.5.2). Members of a group, and one walking in another's wake in a
   different wave, keep 0.75 square of slack for the network (0.25 before). A re-plan round members already
   at rest is never more than 4 squares, or half the direct way, longer: past that a member waits its turn
   (0.4.10). A big

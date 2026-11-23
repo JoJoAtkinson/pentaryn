@@ -197,6 +197,9 @@ test("a sealed destination: no route, core's partial path is returned as it was"
     [{ x: 400, y: 0 }, { x: 400, y: 1000 }],
   ];
   const job = drag(makeToken(), [wp(0, 0), wp(500, 0)]);
+  // The exhaustive search can outlast one slice on a loaded machine (the gate runs the files in parallel): then the
+  // job finishes in timer slices, with the same answer.
+  for (let i = 0; i < 1000 && job.result === undefined; i++) mock.timers.tick(1);
   assert.equal(job.result.length, 1);
   assert.equal(api.pathfind.status().last.found, 0);
 });

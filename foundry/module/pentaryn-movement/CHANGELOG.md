@@ -1,5 +1,25 @@
 # Changelog — pentaryn-movement
 
+## 0.5.2 — 2026-11-22
+
+Overlap redesign stage 1, round S1R2 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.3).
+
+- **[declared] S1R2-01: the ruler of a single drag shows the way it will walk.** While one token is dragged alone, its
+  route already goes round the tokens standing in its way (the way its drop walks), in a fight and out of one, so the
+  ruler shows that way and its cost. Before, the ruler drew core's line through them (40 ft) and the drop then walked
+  the way round (90 ft charged in a fight).
+- **[declared] S1R2-04: a single drag in a fight whose way is blocked by tokens walks up to the first one** and stops
+  there, on whole squares, with "No route there". Before, a slanted line had no whole square on it before the first
+  token, so it was cut back to its start and did not move.
+- **[declared] S1R2-03: a big token cut where its body stops fitting rests on whole squares** when no whole square lies
+  on the line it walked (a Large dragged alone on a slant toward a one-wide door rested at (8.91, 4.36)): the nearest
+  whole square its body fits, one short step on from there.
+- **[declared] S1R2-05: members that start just touching never brush each other** as one leaves (held to 0.02 square,
+  was 0.15: a member walking past the grabbed one waiting beside it grazed it by 11 px). Members that start
+  overlapped keep the 0.15.
+- Not changed (stage 2 / by design): two players dragging at the same moment (S1R1-08); a player's own click-stop
+  snapping to the nearest free square centre, up to about 0.7 square in one frame (S1R2-02, Joe's decision 2).
+
 ## 0.5.1 — 2026-11-22
 
 Overlap redesign stage 1, round S1R1 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.2).

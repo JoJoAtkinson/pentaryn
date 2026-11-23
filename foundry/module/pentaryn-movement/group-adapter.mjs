@@ -171,6 +171,15 @@ export function fitPath(token, path) {
     // Rays alone miss a door frame's corner poking into the circle between two of them.
     return restWalkable(member, c, s, WHOLE_RATIO, 16) && blocking.every(([a, b]) => pointSegment(p, a, b) >= rr);
   };
+  /** The straight step p → g (top-lefts) with its body fitting all the way and its centre crossing no wall. */
+  const stepFits = (p, g, w, h) => {
+    const L = Math.hypot(g.x - p.x, g.y - p.y) / s;
+    const n = Math.max(1, Math.ceil(L / 0.1));
+    for (let i = 1; i <= n; i++) if (!fits(p.x + (g.x - p.x) * (i / n), p.y + (g.y - p.y) * (i / n), w, h)) return false;
+    const a = centreAt(p.x, p.y, w, h), b = centreAt(g.x, g.y, w, h);
+    try { return !token.checkCollision({ x: b.x * s, y: b.y * s, elevation: src.elevation ?? 0 }, { origin: { x: a.x * s, y: a.y * s }, type: "move", mode: "any" }); }
+    catch { return false; }
+  };
   const first = path[0], f0 = sz(first);
   if (!fits(first.x, first.y, f0.w, f0.h)) return { path, cut: false };
   const seen = [{ x: first.x, y: first.y, k: 0, w: f0.w, h: f0.h }];
@@ -187,13 +196,32 @@ export function fitPath(token, path) {
         const onGrid = p => Math.abs(p.x / s - Math.round(p.x / s)) < 1e-6 && Math.abs(p.y / s - Math.round(p.y / s)) < 1e-6;
         let q = seen.length - 1;
         while (q > 0 && !(onGrid(seen[q]) && whole(seen[q].x, seen[q].y, seen[q].w, seen[q].h))) q -= 1;
+        // No whole square on the way walked (S1R2-03: a Large dragged alone along a slanted line toward a one-wide
+        // door rested at (8.91, 4.36)): the whole square nearest a point its body fits near the end, one short straight
+        // step on from there, its body clear all the way; else the last point its body fits, as before.
+        let snap = null;
         if (q === 0) {
+          for (let j = seen.length - 1; j > 0 && !snap; j--) {
+            const p = seen[j];
+            if (!whole(p.x, p.y, p.w, p.h)) continue;
+            const g = { x: Math.round(p.x / s) * s, y: Math.round(p.y / s) * s };
+            if (Math.hypot(g.x - p.x, g.y - p.y) > 0.75 * s || !whole(g.x, g.y, p.w, p.h) || !stepFits(p, g, p.w, p.h)) continue;
+            snap = g; q = j;
+          }
+        }
+        if (q === 0 && !snap) {
           q = seen.length - 1;
           while (q > 0 && !whole(seen[q].x, seen[q].y, seen[q].w, seen[q].h)) q -= 1;
         }
         const at = seen[q];
         const kk = Math.max(at.k, 1);
         const out = path.slice(0, kk).map(p => ({ ...p }));
+        if (snap) {
+          const via = { ...path[kk], x: Math.round(at.x), y: Math.round(at.y), snapped: false, explicit: false, checkpoint: false };
+          if (!(out.length && Math.round(out.at(-1).x) === via.x && Math.round(out.at(-1).y) === via.y) && !(via.x === snap.x && via.y === snap.y)) out.push(via);
+          out.push({ ...path[kk], x: snap.x, y: snap.y, snapped: true, explicit: true, checkpoint: true });
+          return { path: out, cut: true };
+        }
         const end = { ...path[kk], x: Math.round(at.x), y: Math.round(at.y), snapped: false, explicit: true, checkpoint: true };
         if (out.length && Math.round(out.at(-1).x) === end.x && Math.round(out.at(-1).y) === end.y) out[out.length - 1] = { ...out.at(-1), explicit: true, checkpoint: true };
         else out.push(end);

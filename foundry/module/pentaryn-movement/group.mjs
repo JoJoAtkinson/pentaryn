@@ -275,6 +275,28 @@ function withCheckpoints(token, path) {
   return out;
 }
 
+/**
+ * A path (top-left pixels) with every square between two whole-square corners put in, as a fight walks it
+ * (withCheckpoints): a cut or a timing of the path then sees the squares walked, not the straight line between its
+ * corners (S1R2-04: a single drag's knight's-move line had no whole square on it before the first token in its way,
+ * so it was cut back to where it stood and did not move at all).
+ */
+function onSquares(path, s) {
+  if (!Array.isArray(path) || path.length < 2) return path;
+  const out = [path[0]];
+  for (let k = 1; k < path.length; k++) {
+    const a = path[k - 1], b = path[k];
+    const di = (b.y - a.y) / s, dj = (b.x - a.x) / s;
+    if (Number.isInteger(di) && Number.isInteger(dj) && Math.max(Math.abs(di), Math.abs(dj)) > 1) {
+      for (const c of cellChain([{ i: 0, j: 0 }, { i: di, j: dj }]).slice(1, -1)) {
+        out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: false });
+      }
+    }
+    out.push(b);
+  }
+  return out;
+}
+
 /** In combat, give every member's committed waypoints their cell checkpoints. */
 function checkpointAll(contexts, options) {
   if (!setting("clickToStop")) return;
@@ -395,21 +417,7 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
   // In a fight a route is walked square by square (a checkpoint at every square, withCheckpoints): the plan times
   // those squares, not the straight lines between its corners (a knight's-move corner ran half a square off the
   // squares walked, past a member waiting beside them).
-  const squares = path => {
-    if (!combat || !Array.isArray(path) || path.length < 2) return path;
-    const out = [path[0]];
-    for (let k = 1; k < path.length; k++) {
-      const a = path[k - 1], b = path[k];
-      const di = (b.y - a.y) / s, dj = (b.x - a.x) / s;
-      if (Number.isInteger(di) && Number.isInteger(dj) && Math.max(Math.abs(di), Math.abs(dj)) > 1) {
-        for (const c of cellChain([{ i: 0, j: 0 }, { i: di, j: dj }]).slice(1, -1)) {
-          out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: false });
-        }
-      }
-      out.push(b);
-    }
-    return out;
-  };
+  const squares = path => (combat ? onSquares(path, s) : path);
   const measured = raw => {
     const path = squares(raw);
     const pts = path.map(p => toSquares(p, anchor.w, anchor.h, s));
@@ -2004,6 +2012,34 @@ function aroundOthers(grabbed, c, result) {
 }
 
 /**
+ * While one token is dragged alone (S1R2-01), the circles (pixel centres, { x, y, r }) of the tokens standing
+ * outside it that its way keeps out of: the ones its drop goes round (aroundOthers), so that the drag's ruler shows
+ * the way it will walk and what it costs (in a fight a player saw 40 ft and was charged 90 ft). Not the ones it
+ * starts in, nor the one it is dropped on (the drop takes a clear spot beside that one). null when its drop would not
+ * go round them: a group drag, Ctrl waypoints, a planned move, ghost or the unconstrained tool, no others.
+ */
+function singleAvoid(token, waypoints, options = {}) {
+  const doc = token?.document;
+  const layer = token?.layer;
+  if (!doc?._source || !layer || layer._draggedToken !== token || layer._movementPlanningContext) return null;
+  if (!Array.isArray(waypoints) || waypoints.length !== 2) return null;
+  const contexts = token.mouseInteractionManager?.interactionData?.contexts ?? {};
+  const ids = Object.keys(contexts);
+  if (ids.length !== 1 || ids[0] !== doc.id || contexts[ids[0]]?.waypoints?.length) return null;
+  if (options?.constrainOptions?.ignoreWalls || feature?.exposed?.ghostFor?.(token)) return null;
+  if (waypoints.some(w => (CONFIG.Token?.movement?.actions?.[w?.action]?.walls ?? "move") === null)) return null;
+  const s = gridSize(token);
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1, r = radiusOf(w, h);
+  const others = othersOf([{ id: doc.id, token }], s);
+  if (!others.length) return null;
+  const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
+  const a = centre(waypoints[0]), b = centre(waypoints[1]);
+  const out = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1 }))
+    .filter(o => Math.hypot(a.x - o.x, a.y - o.y) >= o.r && Math.hypot(b.x - o.x, b.y - o.y) >= o.r);
+  return out.length ? out : null;
+}
+
+/**
  * Core's waypoints for a single token (after `origin`), walked only as far as they are free of the tokens standing
  * outside the move (`others`: circles, squares; 0.5.0). The waypoints, the last one explicit; [] when it cannot move
  * at all; `.short` when they were cut.
@@ -2012,7 +2048,8 @@ function freeOfOthers(token, origin, wps, others) {
   const doc = token.document;
   const s = gridSize(token);
   const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
-  const path = [origin, ...wps];
+  // In a fight the squares it walks (S1R2-04), so that it stops on the last whole one before the first token.
+  const path = inCombat(doc) ? onSquares([origin, ...wps], s) : [origin, ...wps];
   const pts = path.map(p => toSquares(p, w, h, s));
   const p = freePrefix(pts, radiusOf(w, h), others, { allowed: inCombat(doc) ? c => onCell(c, w, h) : null });
   const out = (p.full ? path : cutPath(path, p.cut, inCombat(doc))).slice(1);
@@ -2337,7 +2374,7 @@ export function install(reg, ctx) {
   // A door shut or a wall raised across a move this client started cuts it before the wall (live R6-3, R6-1).
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: cut moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: cut moves across a shut door" });
-  ctx.expose({ groupFollower, groupCancel, groupMembers, groupStopOne, groupSettle, groupNoteStop, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
+  ctx.expose({ groupFollower, singleAvoid, groupCancel, groupMembers, groupStopOne, groupSettle, groupNoteStop, groupStatus, groupCutAcross: cutAcross, groupDryRun: dryRun, groupPatched: () => dropPatched });
 }
 
 export function uninstall() {
