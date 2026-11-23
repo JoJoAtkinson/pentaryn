@@ -1,6 +1,6 @@
 ---
 title: "Foundry automated updates — context"
-last_modified: 2026-10-10
+last_modified: 2026-11-23
 status: active
 tags: [context, foundry, automation, launchd, updates]
 ---
@@ -98,6 +98,22 @@ How to run it: [`../../automation/README.md`](../../automation/README.md).
   world "failed" smoke, and the run rolled back modules and Node that were fine (2026-10-26,
   2026-11-19). A failing smoke on all worlds at once is the harness, not the update: check its
   `errors[]` text before trusting a rollback.
+- **The smoke test must hand back the setup screen (2026-11-23).** It launches every world in
+  turn, and until 2026-11-23 it left the last one (space-journey) serving. Three failures
+  followed from that one state: the rollback's `listBackups` 400'd (a /setup action) so
+  enhancedcombathud stayed at 5.0.2; the run still said `recovered` / "ROLLED BACK";
+  `restore_service` relaunched pentaryn only `if not world_active()`, so it did nothing, and
+  validation failed "world=space-journey (want pentaryn)"; the nightly's `relaunch_world` then
+  400'd on `launchWorld` for the same reason. Now: `smoke.run_all` restores the state it was
+  called in (setup, or the world that was serving) in a `finally`; `recover_module` parks at
+  setup through `admin.AtSetup` and relaunches what it stopped; `restore_service`, `_verify` and
+  the nightly's `relaunch_world` go through **`admin.ensure_world`**, which shuts another world
+  down before it launches the wanted one; the outcome is `recovered` only when every rollback
+  has `ok`, else `failed`, the notification says "rollback FAILED for <pkg>", and the run log
+  prints `✗ ROLLBACK FAILED` instead of `↩ ROLLED BACK … — FAILED`. **Rule for new code: any
+  /setup call goes through `AtSetup` unless the caller already parked, and any "make the table
+  serve X" goes through `ensure_world` — never `if not world_active(): launch_world(X)`.**
+  Tests: `scripts/tests/test_update_world_restore.py`.
 - **Host dependencies.** `hostdeps.py` plans them into `plan["host"]`, a separate list so
   adjudication and escalation see only Foundry packages. They are applied in `_host_phase`
   after the packages, in the order apt, rclone, chrome, then node. Node restarts Foundry and the
@@ -217,7 +233,9 @@ every package action 400 while `authenticate()` reported success.
 1. **Every `/setup` and `/update` package action is gated on `!game.world`** — refused while a
    world is active (`/setup`: 400 on 14.369, 403 before; `/update`: 403). A non-admin session
    gets 401 from `/setup` on 14.369 (403 before). The run has to park the server at the setup
-   screen first.
+   screen first — and anything that launches a world (the smoke test) has to park it again
+   afterwards. Helpers in `admin.py`: `return_to_setup`, `ensure_world` (switches worlds),
+   `AtSetup` (park, run, relaunch). The 2026-11-23 failure is in the BOSS section above.
 
    But the **admin handshake is not** — `setup.mjs` runs `sessions.authenticateAdmin`
    *before* it computes `c`, and gates only the action on the result. So `/setup` is the
