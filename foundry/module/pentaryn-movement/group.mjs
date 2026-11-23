@@ -20,7 +20,7 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves } from "./motion-core.mjs";
+import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, segmentsCross, waves } from "./motion-core.mjs";
 import { GROUP_LIMITS, detourTooLong, flood, freePrefix, hexCandidates, onCell, planGroup, prefixOf, restOnPaths, runPlan, walkersMeet } from "./group-core.mjs";
 import { LIMITS, skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, continuationInFlight, countsForRoutes, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, movingOthers, narrowPoints, othersOf, pinDrawn, restWalkable, speedOf, stopWhereDrawn, toSquares, toTopLeft, unpin } from "./group-adapter.mjs";
@@ -78,7 +78,10 @@ const GROUP_HOLD_MS = 1000;
  * reads it) and taken off as they go out; on the next `ready` this client sends what is left, the
  * waves keeping their spacing (the first unsent one at once when it is overdue). The usual checks
  * still apply when each goes out: the member has not moved since the drop and no newer drop of it.
- * Records are this user's and this world's only, and older than PENDING_TTL_MS are dropped unsent.
+ * Records are this user's and this world's only, and older than PENDING_TTL_MS are dropped unsent;
+ * since 0.7.1 so is a group whose first unsent wave is more than RESERVE.overdueMs overdue (S3R1-07:
+ * the other clients have dropped those reservations by then, and a page that took 10+ s to come back
+ * walked an old plan into members long at rest). Those members stay where they are, with a notice.
  */
 const PENDING_KEY = `${MODULE}.pendingWaves`;
 /** How long after its drop a group's unsent waves are still sent after a reload (ms). */
@@ -166,7 +169,7 @@ function resumePending() {
   const list = readPending();
   if (!list.length) return 0;
   writePending([]);
-  let resumed = 0;
+  let resumed = 0, dropped = 0;
   const t = Date.now();
   for (const r of list) {
     try {
@@ -176,6 +179,14 @@ function resumePending() {
       const scene = globalThis.game?.scenes?.get?.(r.sceneId);
       const waves = (r.waves ?? []).filter(w => Array.isArray(w?.updates) && w.updates.length).sort((a, b) => a.at - b.at);
       if (!scene || !waves.length || !r.base) continue;
+      // Too late (S3R1-07): past RESERVE.overdueMs every other client has dropped these members' reservations and
+      // counts them standing where they are; the board has moved on since the plan, and the page took longer than
+      // that to come back (the GM's reload: 10+ s), so a late wave would walk an old plan into members long at rest.
+      // They stay where they are, and this user is told.
+      if (age - waves[0].at > RESERVE.overdueMs) {
+        dropped += waves.reduce((n, w) => n + w.updates.length, 0);
+        continue;
+      }
       // Each wave as late as the first unsent one (or on time): they keep their spacing to each other.
       const off = Math.min(age, waves[0].at);
       const later = waves.map(w => ({ ...w, at: Math.max(w.at - off, 0) }));
@@ -189,7 +200,11 @@ function resumePending() {
       log?.warnOnce?.("group-resume", "a group's waves could not be resumed after a reload (further errors suppressed)", err);
     }
   }
-  if (resumed) resumedLast = { at: new Date().toISOString(), groups: resumed };
+  if (resumed || dropped) resumedLast = { at: new Date().toISOString(), groups: resumed, dropped };
+  if (dropped) {
+    try { ui.notifications?.info?.(game.i18n.format("PENTARYN_MOVEMENT.notify.wavesDropped", { n: dropped })); }
+    catch (err) { log?.debug?.("pending waves (notice)", err); }
+  }
   return resumed;
 }
 
@@ -1586,7 +1601,7 @@ function routeLeft(token, combat) {
   }
   const all = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])].filter(w => Number.isFinite(w?.x) && Number.isFinite(w?.y));
   const at = drawnPosition(token);
-  const k = routeAhead(all, at);
+  const k = routeAhead(all, at, { near: 0.05 * gridSize(token), end: 0.5 });
   if (k === null) return null;
   const waypoints = all.slice(k).map(clean);
   if (waypoints.length) waypoints[waypoints.length - 1].checkpoint = true;
@@ -1650,6 +1665,40 @@ function walkOnAfterStop(doc, waypoints, left = Math.ceil(CUT_WAIT_MS / CUT_POLL
     Promise.resolve(doc.move(waypoints, { method: "api", ...republish(doc, doc._source, waypoints) })).catch(err => log?.debug?.("cut: walk on", err));
   } catch (err) { log?.debug?.("cut: walk on", err); }
 }
+
+/**
+ * In a fight, after a stop for a wall that shut across its way (S3R1-08): when the square it ends on is across that
+ * wall from where it was drawn when the wall shut (the square was under way, or its continuation already on the way
+ * to the server, and core had passed it while the door was open), that square is undone as core's own undo does
+ * (`revertRecordedMovement`'s write: back on the last recorded square on its side, the history cut there, unanimated).
+ * It rests before the door, never past it, and pays only for the squares it walked: dnd5e counts the recorded
+ * history. Its tween is stopped where it is drawn first, so no client draws it across the shut door. `after` runs
+ * once the undo is in. Returns true when it undid the square.
+ */
+function undoAcross(doc, a, b, nearSide, after = null) {
+  const token = doc?.object;
+  const src = doc?._source;
+  if (!token || token.destroyed || !src) return false;
+  const s = gridSize(token);
+  const w = src.width ?? 1, h = src.height ?? 1;
+  const c = p => ({ x: p.x + ((p.width ?? w) * s) / 2, y: p.y + ((p.height ?? h) * s) / 2 });
+  if (!segmentsCross(nearSide, c(src), a, b)) return false;
+  const hist = Array.isArray(src._movementHistory) ? src._movementHistory : [];
+  let i = hist.length - 1;
+  while (i >= 0 && (!Number.isFinite(hist[i]?.x) || !Number.isFinite(hist[i]?.y) || segmentsCross(nearSide, c(hist[i]), a, b))) i--;
+  if (i < 0 || i === hist.length - 1) return false;
+  const back = hist[i];
+  try { stopWhereDrawn(token); } catch (err) { log?.debug?.("cut: stop the tween", err); }
+  const update = { x: back.x, y: back.y, elevation: back.elevation ?? src.elevation ?? 0, action: "displace", _movementHistory: hist.slice(0, i + 1) };
+  for (const k of ["width", "height", "depth", "shape", "level"]) if (back[k] !== undefined) update[k] = back[k];
+  undone += 1;
+  Promise.resolve(doc.update(update, { isUndo: true, diff: false, animate: false }))
+    .then(() => { try { after?.(); } catch (err) { log?.debug?.("cut: after the undo", err); } })
+    .catch(err => log?.debug?.("cut: undo the square past the wall", err));
+  return true;
+}
+/** Squares undone past a wall shut in a fight (status().group.cut.undone). */
+let undone = 0;
 
 /**
  * createWall / updateWall, every client: a wall that now blocks movement across the route of a move this
@@ -1750,7 +1799,15 @@ function cutAcross(wall) {
       if (combat) {
         // Never while its next square is on the way to the server (live R7-2); walk on once stopped.
         // No square on its way: once stopped, off any square another token holds (H1-07).
-        stopSafely(doc, () => walkOnAfterStop(doc, kept, undefined, kept.length ? null : p => takenForCut(scene, doc.id, ids, claims)(p)));
+        // A square past the wall it finished, or whose continuation was already sent: undone, back before the door.
+        let nearSide;
+        try { const d = drawnPosition(token); nearSide = { x: d.x + (w * s) / 2, y: d.y + (h * s) / 2 }; }
+        catch { nearSide = { x: route.from.x + (w * s) / 2, y: route.from.y + (h * s) / 2 }; }
+        const freeAfter = p => takenForCut(scene, doc.id, ids, claims)(p);
+        stopSafely(doc, () => {
+          if (undoAcross(doc, a, b, nearSide, () => walkOnAfterStop(doc, [], undefined, freeAfter))) return;
+          walkOnAfterStop(doc, kept, undefined, kept.length ? null : freeAfter);
+        });
       } else {
         // Two writes (live R7-1): core chains an animated movement after the one being drawn, so a single
         // "displace here, then walk" update was drawn only after the old walk had reached its end, through
@@ -2802,7 +2859,7 @@ function groupStatus() {
     resumed: resumedLast ? { ...resumedLast } : null,
     stopped: stoppedAt ? { ...stoppedAt } : null,
     destacked: destacked ? { ...destacked } : null,
-    cut: cutLast ? { ...cutLast } : null,
+    cut: cutLast ? { ...cutLast, undone } : null,
     held: heldLast ? { ...heldLast } : null,
     reservations: reserve.status(),
     perf: { ...perf },
@@ -2905,6 +2962,7 @@ export function uninstall() {
   stoppedAt = null;
   destacked = null;
   cutLast = null;
+  undone = 0;
   heldLast = null;
   fallbacks.length = 0;
   latestDrop.clear();

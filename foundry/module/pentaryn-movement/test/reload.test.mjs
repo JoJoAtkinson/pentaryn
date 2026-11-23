@@ -34,6 +34,7 @@ const doc = (id, x, y) => {
 doc("memB000000000001", 700, 700);
 doc("memC000000000001", 800, 700);
 doc("memD000000000001", 900, 700);
+doc("memE000000000001", 600, 700);
 const realGet = game.scenes.get.bind(game.scenes);
 game.scenes.get = id => (id === SCENE ? scene : realGet(id));
 
@@ -53,6 +54,11 @@ store.set(KEY, JSON.stringify([
   },
   { gid: "g2", world: game.world.id, user: "someoneElse00001", sceneId: SCENE, t0: now - 1000, base, ids: [], starts: { memB000000000001: { x: 700, y: 700 } },
     waves: [{ at: 600, ids: ["memB000000000001"], updates: [{ _id: "memB000000000001" }], movement: { memB000000000001: route(1, 1) } }] },
+  // S3R1-07: ours, but the page took 12 s to come back (the GM's reload): the other clients dropped these members'
+  // reservations 1.5 s after they were due, and the plan is stale. They stay where they are, with a notice.
+  { gid: "g4", world: game.world.id, user: PLAYER, sceneId: SCENE, t0: now - 12000, endMs: 4000, base, ids: ["memE000000000001"],
+    starts: { memE000000000001: { x: 600, y: 700 } },
+    waves: [{ at: 600, ids: ["memE000000000001"], updates: [{ _id: "memE000000000001" }], movement: { memE000000000001: route(2500, 1200) } }] },
   { gid: "g3", world: game.world.id, user: PLAYER, sceneId: SCENE, t0: now - 120000, base, ids: [], starts: { memB000000000001: { x: 700, y: 700 } },
     waves: [{ at: 600, ids: ["memB000000000001"], updates: [{ _id: "memB000000000001" }], movement: { memB000000000001: route(2, 2) } }] },
 ]));
@@ -78,4 +84,10 @@ test("R3-1: after a reload the unsent waves go out, spaced as planned, and only 
   await new Promise(r => setImmediate(r));          // a wave leaves the record once the server answered (R5-2)
   assert.equal(store.has(KEY), false, "nothing left to resume");
   assert.equal(game.pentaryn.movement.status().group.resumed.groups, 1);
+});
+
+test("S3R1-07: a group whose unsent waves are long overdue when the page comes back is not resumed; its members stay, told", () => {
+  assert.ok(!sent().some(c => c.ids.includes("memE000000000001")), "the 12 s late wave is never sent");
+  assert.equal(game.pentaryn.movement.status().group.resumed.dropped, 1);
+  assert.ok(F.calls.some(c => c.op === "notify" && /reloaded before the last of your group set off: 1 of them/.test(c.message)), JSON.stringify(F.calls.filter(c => c.op === "notify")));
 });

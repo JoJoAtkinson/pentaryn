@@ -323,3 +323,113 @@ test("a check stays cheap: 6 movers among 60 tokens, every tick well under a fra
   assert.ok(ms < 16, `${ms.toFixed(2)} ms a tick`);
   assert.equal(globalThis.performance, real);
 });
+
+// ---- Stage 3 round 1 (0.7.1) -------------------------------------------------------------------------------------
+
+test("S3R1-01: a mover drawn just past a corner is read on the leg it walks, not put back on the corner (no false firing in a file)", async () => {
+  reset();
+  // L (first) is 0.4 square past the corner at (5,5), walking down; F (later) follows 1.4 squares behind along the same
+  // way. Read right, they stay 1.08 or more apart; read the old way, L was put back on the corner and F "caught it".
+  const way = [{ x: 1, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 9 }];
+  const fired0 = ctx.exposed.guardStatus().fired;
+  const l = tok("L", 5, 5.4, { way });
+  arrive(l);
+  const f = tok("F", 4, 5, { way });
+  arrive(f);
+  frame();
+  await flush();
+  assert.equal(ctx.exposed.guardStatus().fired - fired0, 0, JSON.stringify(ctx.exposed.guardStatus().last));
+  assert.equal(calls.filter(c => c.op === "displace").length, 0);
+});
+
+test("S3R1-05: a mover stopped across a door's line steps off it, on its own side, never resting in the doorway", async () => {
+  reset();
+  // A door line at x = 4 (y 4-6). A walks east, drawn with its centre at x 3.9 (its body across the line); S stands ahead.
+  walls.push({ c: [400, 400, 400, 600], door: 1 });
+  const a = tok("A", 3.9, 5, { way: [{ x: 1, y: 5 }, { x: 9, y: 5 }] });
+  tok("S", 5, 5);
+  const off0 = ctx.exposed.guardStatus().offDoor;
+  arrive(a);
+  frame();
+  await flush(); await flush();
+  assert.ok(calls.some(c => c.op === "displace" && c.id === "A"), "stopped");
+  const step = a.document.moves.find(m => m.opts?.pentarynMovementGuard);
+  assert.ok(step, "then a step off the door's line");
+  const cx = step.wps[0].x + S / 2;
+  assert.ok(cx <= 400 - 49.5, `its centre at ${cx}: off the line, on the side it was on`);
+  assert.equal(ctx.exposed.guardStatus().offDoor - off0, 1);
+});
+
+test("S3R1-02: a step aside never crosses a door's line, and never lands on a token walking there now", async () => {
+  // B (first) walks north through where A (later) is drawn; A backs out of B's way. West of A is taken, east of it is a
+  // door's line (x = 4.2).
+  const setup = ({ wMoving }) => {
+    reset();
+    walls.push({ c: [420, 300, 420, 700], door: 1 });
+    const b = tok("B", 3.6, 6, { way: [{ x: 3.6, y: 8 }, { x: 3.6, y: 1 }], user: player });
+    arrive(b);
+    const w = wMoving ? tok("W", 2.2, 5, { way: [{ x: 2.3, y: 5 }, { x: 0.5, y: 5 }], user: gm2 }) : tok("W", 2.2, 5);
+    if (wMoving) arrive(w);
+    const a = tok("A", 3.6, 5, { way: [{ x: 3.6, y: 5 }, { x: 9, y: 5 }] });
+    arrive(a);
+    return a;
+  };
+  // W standing west of A: the nearest spot off B's way is east, across the door. Not taken.
+  let a = setup({ wMoving: false });
+  frame();
+  await flush(); await flush();
+  assert.ok(calls.some(c => c.op === "displace" && c.id === "A"), "A gives way");
+  for (const m of a.document.moves) assert.ok(m.wps[0].x + S / 2 < 420, `never across the door: ${JSON.stringify(m.wps)}`);
+  // W walking (away) west of A: no step onto where W is now.
+  a = setup({ wMoving: true });
+  frame();
+  await flush(); await flush();
+  assert.ok(calls.some(c => c.op === "displace" && c.id === "A"), "A gives way");
+  for (const m of a.document.moves) {
+    const c = { x: (m.wps[0].x + S / 2) / S, y: (m.wps[0].y + S / 2) / S };
+    assert.ok(Math.hypot(c.x - 2.2, c.y - 5) >= 1 - 1e-6, `not onto W: ${JSON.stringify(c)}`);
+    assert.ok(c.x < 4.2, `never across the door: ${JSON.stringify(c)}`);
+  }
+});
+
+test("S3R1-06: another user's move of a token the guard holds lets go of it; a re-route searching meanwhile never moves it", async () => {
+  reset();
+  const a = tok("A", 2, 5, { way: [{ x: 1, y: 5 }, { x: 9, y: 5 }] });
+  tok("S", 4.2, 5);
+  arrive(a);
+  frame();
+  await flush();
+  let found;
+  route.next = new Promise(res => { found = res; });
+  for (let t = 0; t < GUARD.rerouteMs; t += 100) frame(100);
+  await flush();
+  assert.equal(calls.filter(c => c.op === "route").length, 1, "the re-route is searching");
+  const over0 = ctx.exposed.guardStatus().overridden;
+  // The player stops its own token (its click-stop's displace): a move this client did not make.
+  a.document.movement = { ...a.document.movement, id: "Mplayer", user: player, state: "completed" };
+  fire("moveToken", a.document, a.document.movement, { animate: false });
+  assert.equal(ctx.exposed.guardStatus().watching, 0, "let go");
+  assert.equal(ctx.exposed.guardStatus().overridden - over0, 1);
+  const before = a.document.moves.length;
+  found({ reached: true, path: [{ x: 150, y: 450 }, { x: 350, y: 250 }, { x: 850, y: 450 }] });
+  await flush(); await flush();
+  assert.equal(a.document.moves.length, before, "the player's stop stands");
+});
+
+test("S3R1-04: a re-route far longer than the way it replaces is not taken; it waits on and rests at 8 s", async () => {
+  reset();
+  const a = tok("A", 2, 5, { way: [{ x: 1, y: 5 }, { x: 9, y: 5 }] });
+  tok("S", 4.2, 5);
+  arrive(a);
+  frame();
+  await flush();
+  const det0 = ctx.exposed.guardStatus().detour;
+  // Round the whole map: about 57 squares for a way of 7.
+  route.next = { reached: true, path: [{ x: 150, y: 450 }, { x: 150, y: 1900 }, { x: 1900, y: 1900 }, { x: 1900, y: 450 }, { x: 850, y: 450 }] };
+  for (let t = 0; t < GUARD.rerouteMs + 200; t += 100) { frame(100); await flush(); }
+  assert.equal(calls.filter(c => c.op === "route").length, 1);
+  assert.equal(a.document.moves.length, 0, "no walk round the map");
+  assert.equal(ctx.exposed.guardStatus().detour - det0, 1);
+  for (let t = 0; t < GUARD.restMs; t += 100) { frame(100); await flush(); }
+  assert.equal(ctx.exposed.guardStatus().watching, 0, "rested");
+});

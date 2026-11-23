@@ -51,7 +51,8 @@
       "tooNarrow": "{name} does not fit through there: it stops before the gap.",
       "yielded": "Another move is still in the way: it stops short.",
       "yieldedStay": "Another move is still in the way: it stays where it is.",
-      "guardRest": "{name} waited too long for the way to clear: it stops here."
+      "guardRest": "{name} waited too long for the way to clear: it stops here.",
+      "wavesDropped": "The page reloaded before the last of your group set off: {n} of them stay where they are."
     },
     "settings": {
       "policy": {

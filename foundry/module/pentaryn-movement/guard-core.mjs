@@ -34,6 +34,8 @@ export const GUARD = Object.freeze({
   asideGap: 0.1,        // squares kept between the spot it backs out to and the higher one's way
   bucket: 2,            // squares per bucket of the nearby grid
   keep: 30,             // firings kept for status()
+  apartMs: 150,         // two movers already inside each other: the gap must open within this (S3R1-03)
+  apartGain: 0.02,      // squares the gap must open by in that time
 });
 
 const EPS = 1e-9;
@@ -142,8 +144,17 @@ export function conflictAhead(me, others, { horizonMs = GUARD.horizonMs, sampleM
     // Already inside touching by more than `tol` (a stack, a miss before): never closer than now (less a hair; a
     // member of the same plan less what its planner lets a pair that starts overlapped brush, MOTION.contact).
     const lim = Math.min(me.r + o.r - tol, d0 - (o.samePlan ? MOTION.contact : HAIR));
-    if (lim <= 0) continue;
     const until = best ? best.t : horizonMs;
+    // Two movers of different moves already inside each other by more than `tol` must come apart: walking on side by
+    // side or one behind the other at that depth is the overlap itself (S3R1-03: a player's stopped member walking
+    // on and a GM member -77 px apart for 1.6 s, never closer, so never a firing). The one that gives way stops
+    // unless its walk opens the gap within GUARD.apartMs; the other then walks off it.
+    if (mine && theirs && !o.samePlan && d0 < me.r + o.r - tol) {
+      const t = Math.min(GUARD.apartMs, horizonMs);
+      const d = dist(along(mine, me.speed, t), along(theirs, o.speed, t, o.delay ?? 0));
+      if (d < d0 + GUARD.apartGain && (!best || sampleMs < best.t)) { best = { id: o.id, t: sampleMs, d, lim: d0 + GUARD.apartGain, standing: !!o.standing, inside: true }; continue; }
+    }
+    if (lim <= 0) continue;
     for (let t = sampleMs; t <= until + EPS; t += sampleMs) {
       const p = mine ? along(mine, me.speed, t) : me.c;
       const q = theirs ? along(theirs, o.speed, t, o.delay ?? 0) : o.c;

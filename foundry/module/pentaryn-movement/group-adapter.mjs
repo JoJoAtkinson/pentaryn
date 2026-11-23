@@ -7,7 +7,7 @@
  * Foundry waypoints are top-left pixels. `toSquares` / `toTopLeft` convert, given the grid size.
  */
 
-import { MOTION, radiusOf, remainingFrom } from "./motion-core.mjs";
+import { MOTION, radiusOf, remainingFrom, segmentsCross } from "./motion-core.mjs";
 
 /** A token's centre in squares, for a top-left pixel position and its size in squares. */
 export const toSquares = (p, w, h, s) => ({ x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s });
@@ -553,6 +553,11 @@ export function doorwayAt(token, c) {
   const src = token.document?._source ?? {};
   const rr = radiusOf(src.width ?? 1, src.height ?? 1) * s - 0.5;
   return doorSegments(token).some(([a, b]) => pointSegment(c, a, b) < rr);
+}
+
+/** Does the straight step a → b (centres, pixels) cross a door's line, open or shut? Reads only. */
+export function crossesDoor(token, a, b) {
+  return doorSegments(token).some(([p, q]) => segmentsCross(a, b, p, q));
 }
 
 /** Distance from point p to segment a–b (pixels). */

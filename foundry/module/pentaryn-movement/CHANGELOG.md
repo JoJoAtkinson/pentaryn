@@ -1,5 +1,39 @@
 # Changelog — pentaryn-movement
 
+## 0.7.1 — 2026-11-23
+
+Stage 3, round S3R1 (plan `context/plans/pathfinding-2026-11.md` §15.9). Fixes only.
+
+- **[declared] A mover is read on the leg it walks (S3R1-01).** `routeAhead` put a token drawn up to half a square
+  past a corner, or on an arc's later chord, back on a point it had already passed (the 0.5 "as near" was compared
+  with the best so far), so its way ahead began with a leg back across the corner: the guard saw members filing
+  round a corner at touching come 0.10-0.13 inside each other and stopped them on 10 of 10 clean funnels, and the
+  planner read walkers the same way. The nearest leg now wins, the earlier only when as near within 0.05 square.
+- **[declared] Two movers already inside each other must come apart (S3R1-03).** The guard held such a pair only to
+  "never closer", so a stopped member walking on beside a GM member stayed 77 px inside it for 1.6 s. The one that
+  gives way now stops unless its walk opens the gap within 150 ms (`status().guard.inside`).
+- **[declared] A click-stop's walk on never goes through a walker (S3R1-03).** A player's stop of its own member in the
+  GM's group walked on to a roomy square out of the corridor, head-on through the GM's members filing up it. When
+  that walk meets a token walking now or a reserved walk, it stops on the nearest free square instead
+  (`status().stop.last.walkOnBlocked`).
+- **[declared] A token another user moves is theirs (S3R1-06).** A move of a guarded token made by another user (a
+  player stopping their own member) lets the guard go of it, and a re-route, a resume or a step still in hand is
+  not written (`status().guard.overridden`).
+- **[declared] Never at rest on a door's line, never through a doorway (S3R1-05, S3R1-02).** A guard stop drawn across
+  a door's line steps off it on its own side (`offDoor`), the 8 s rest moves off one too, and a step aside never
+  crosses a door's line nor lands on, or passes through, any token where it is now (a mover too; one the guard
+  stopped earlier in the same tick counts as standing).
+- **[declared] No re-route round the dungeon (S3R1-04).** A 3 s re-route much longer than the way it replaces (the
+  planner's `detourTooLong`: more than 4 squares or half the way longer) is not taken; it waits on and rests at 8 s
+  (`status().guard.detour`).
+- **[declared] A reload late by more than 1.5 s sends no old waves (S3R1-07).** After the GM's 10+ s reload the later
+  waves walked a stale plan; past `RESERVE.overdueMs` (when every other client has dropped those reservations) the
+  members stay where they are and the dragger is told (`notify.wavesDropped`, `status().group.resumed.dropped`).
+- **[declared] A fight's door cut never leaves a member past the shut door (S3R1-08).** A square under way past the
+  door, or a next square already sent when it shut, is undone as core's `revertRecordedMovement` writes it (back on
+  the last recorded square on the near side, the history cut there, unanimated, its tween stopped where drawn
+  first), so dnd5e charges only the squares walked (`status().group.cut.undone`).
+
 ## 0.7.0 — 2026-11-23
 
 Overlap redesign, stage 3 of 3: the runtime yield guard (plan `context/plans/pathfinding-2026-11.md` §15.8). A

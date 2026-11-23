@@ -346,23 +346,35 @@ export function segmentsCross(p, q, a, b) {
 
 /**
  * Where a token drawn at `at` is along its route `points` (origin first): the index of the next point it
- * walks to. The nearest segment wins; of two as near (a route that doubles back), the earlier. null when
- * the route has no segment, or `at` is its end.
+ * walks to. The nearest segment wins; of two as near (within `near`: a route that doubles back), the earlier.
+ * null when the route has no segment, or `at` is within `end` of its end. Both in the route's units (the defaults
+ * suit squares; a pixel route passes its own).
+ *
+ * S3R1-01: until 0.7.1 "as near" was 0.5 of whatever unit, and the comparison ran against the best so far, so a
+ * token drawn on an arc's last chord was put back on a chord it had already walked (every chord of a corner's
+ * fillet lies within 0.5 square of the next). Its way ahead then began with a straight leg back across the
+ * inside of the arc: the guard saw a member that walks round another at touching come 0.10-0.13 inside it
+ * (d 0.87-0.90 against a 0.9 limit) and stopped it on 10 of 10 clean funnels; the planner read walkers the same way.
  * @param {{x: number, y: number}[]} points
  * @param {{x: number, y: number}} at
+ * @param {{ near?: number }} [o]
  * @returns {number|null}
  */
-export function routeAhead(points, at) {
+export function routeAhead(points, at, { near = 0.05, end = 0.5 } = {}) {
   if (!Array.isArray(points) || points.length < 2 || !at) return null;
-  let best = null, bestD = Infinity;
+  const ds = [];
+  let min = Infinity;
   for (let k = 0; k + 1 < points.length; k++) {
     const a = points[k], b = points[k + 1];
     const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
     const t = L2 ? Math.min(Math.max(((at.x - a.x) * (b.x - a.x) + (at.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 1;
     const d = Math.hypot(at.x - (a.x + (b.x - a.x) * t), at.y - (a.y + (b.y - a.y) * t));
-    if (d < bestD - 0.5) { best = k + 1; bestD = d; }
+    ds.push(d);
+    if (d < min) min = d;
   }
-  if (best === points.length - 1 && dist(points.at(-1), at) < 0.5) return null;
+  let best = null;
+  for (let k = 0; k < ds.length; k++) if (ds[k] <= min + near) { best = k + 1; break; }
+  if (best === points.length - 1 && dist(points.at(-1), at) < end) return null;
   return best;
 }
 

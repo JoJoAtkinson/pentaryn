@@ -105,8 +105,11 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   gives way to a player's. Out of combat it stops where it is (stepping back off the other's way when it would stand
   in it) and walks on once its way is clear; in a fight it waits on the whole square it is walking to (its next
   square is held back, nothing is displaced), before a door rather than in it, and pays only for the squares it walks. 3 s after it
-  first waited it looks for a way round once; at 8 s it stays where it is (the nearest free spot) and says so
-  quietly. Each time it fires is logged in the console and in `status().guard`: it means a plan missed something.
+  first waited it looks for a way round once (not one far longer than the way it had, 0.7.1); at 8 s it stays where
+  it is (the nearest free spot, never on a door's line) and says so quietly. A step aside never goes through a
+  doorway or onto another token, and a token another user moves meanwhile (a player stopping their own member of
+  the GM's group) is theirs: the guard lets go of it (0.7.1). Each time it fires is logged in the console and in
+  `status().guard`: it means a plan missed something.
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
   click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never
   across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so
@@ -270,7 +273,12 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
   `{ drag: true, keyboard: true }` and run the three adjustments rows' check.
 - Missing methods are warned once at `setup` (`no Token#_getDragConstrainOptions; ghost drag disabled`).
 - The GM never ghosts through this module (core's own tool is the GM's).
-- Group waves run on the dropping client (closing it mid-move strands unsent members); Ctrl+Z undoes one wave.
+- Group waves run on the dropping client (closing it mid-move strands unsent members); Ctrl+Z undoes one wave. A
+  reloaded page sends what it had left only when it is back within 1.5 s of the first unsent wave; later than that
+  those members stay where they are and the dragger is told (0.7.1: every other client has stopped expecting them).
+- In a fight, a door shut on a member whose square under way (or next square, already sent) lies past it puts that
+  member back on its square before the door: the square is undone as core's own undo does, so it never rests past
+  the shut door and pays only for the squares it walked (0.7.1, `status().group.cut.undone`).
 - A drop that waits for, or queues behind, another reserved move shows nothing until it sets off (up to 8 s): that
   is the yield, not a hang. `status().group.last.queued` / `.delay` / `.raced` say which.
 - The guard firing (`status().guard.fired`, a console line `yield guard: … gives way to …`) is a planner miss, not

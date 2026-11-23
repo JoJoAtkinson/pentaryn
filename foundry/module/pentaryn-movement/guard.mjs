@@ -24,9 +24,10 @@
  *              fight every frame while a square is being walked; nothing runs while this client moves nothing.
  */
 
-import { GUARD, asideSpot, cellHorizon, conflictAhead, hashOf, nearby, newYield, standingOnRoute, stepYield, yieldsTo } from "./guard-core.mjs";
+import { GUARD, aroundOf, asideSpot, cellHorizon, conflictAhead, hashOf, nearby, newYield, segmentDistance, standingOnRoute, stepYield, yieldsTo } from "./guard-core.mjs";
 import { dist, radiusOf, routeAhead } from "./motion-core.mjs";
-import { clearOfWalls, continuationInFlight, countsForRoutes, doorwayAt, drawnPosition, gridSize, inCombat, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { detourTooLong } from "./group-core.mjs";
+import { clearOfWalls, continuationInFlight, countsForRoutes, crossesDoor, doorwayAt, drawnPosition, gridSize, inCombat, movementFacts, restWalkable, speedOf, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
 import { setting } from "./settings.mjs";
 
@@ -41,7 +42,8 @@ let log = null;
 const yields = new Map();
 let ticking = null;
 let lastRun = 0;
-const counts = { fired: 0, standing: 0, movers: 0, late: 0, resumed: 0, rerouted: 0, noRoute: 0, rested: 0, aside: 0, cancelled: 0, errors: 0 };
+const counts = { fired: 0, standing: 0, movers: 0, late: 0, resumed: 0, rerouted: 0, noRoute: 0, rested: 0, aside: 0, cancelled: 0, errors: 0,
+  inside: 0, offDoor: 0, overridden: 0, detour: 0 };
 const firings = [];
 const perf = { ticks: 0, checks: 0, maxMs: 0, over4: 0, over16: 0 };
 /** token id → { mid, wps, pts } (the movement's waypoints, top-left, and their centres in squares). */
@@ -188,6 +190,21 @@ function standingOf(snap, me) {
     .map(e => { const at = e.paused && e.target ? e.target : e.c; return { id: e.id, x: at.x, y: at.y, r: e.r }; });
 }
 
+/**
+ * Every token this user counts but `me`, where it is now (a paused one where its square ends): what a step aside, or
+ * off a door's line, may neither land on nor pass through (S3R1-02: an aside step chosen against the standing tokens
+ * only walked into a member this guard had just stopped, -28 px).
+ */
+function circlesOf(snap, me) {
+  return snap.counted.filter(e => e.id !== me.id && (me.level === undefined || e.level === undefined || e.level === me.level))
+    .map(e => { const at = e.paused && e.target ? e.target : e.c; return { id: e.id, x: at.x, y: at.y, r: e.r }; });
+}
+
+/** Is this guard's async write still its to make: the same yield, and the token's move still this client's own? */
+function ours(y, doc) {
+  return !!feature && yields.get(doc.id) === y && !!doc.movement?.user?.isSelf;
+}
+
 /* -------------------------------------------- */
 /*  The check                                   */
 /* -------------------------------------------- */
@@ -213,6 +230,7 @@ function fire(y, doc, hit, { combat = false, late = false } = {}) {
   counts.fired += 1;
   counts[hit.standing ? "standing" : "movers"] += 1;
   if (late) counts.late += 1;
+  if (hit.inside) counts.inside += 1;
   const other = globalThis.canvas?.tokens?.get?.(hit.id)?.document ?? null;
   const rec = {
     at: new Date().toISOString(), tokenId: doc.id, name: doc.name ?? null, against: hit.id, againstName: other?.name ?? null,
@@ -295,13 +313,47 @@ function spotOk(token, from, c, s) {
   try {
     if (token.checkCollision({ x: c.x * s, y: c.y * s, elevation: z }, { origin: { x: from.x * s, y: from.y * s, elevation: z }, type: "move", mode: "any" })) return false;
     if (doorwayAt(token, { x: c.x * s, y: c.y * s })) return false;
+    // Never through a doorway (S3R1-02: an aside step took a member back through the open A-B door and its resume
+    // out again, the door's line crossed three times): a step aside stays on its side of every door.
+    if (crossesDoor(token, { x: from.x * s, y: from.y * s }, { x: c.x * s, y: c.y * s })) return false;
   } catch { return false; }
   return true;
 }
 
+/**
+ * Where it may stand instead of where it is drawn, out of combat, or null to stand there: off a higher mover's way
+ * (`threat`, the design's corridor rule), and never on a door's line (S3R1-05: a member the guard stopped where it
+ * was drawn rested across the A-B door). The nearest spot round it (on its own side of the door: the step never
+ * crosses a door's line), clear of the tokens about and reached without a wall or a token between.
+ */
+function standSpot(token, me, threat, snap, s) {
+  const ok = c => spotOk(token, me.c, c, s);
+  const circles = circlesOf(snap, me);
+  let inDoor = false;
+  try { inDoor = doorwayAt(token, { x: me.c.x * s, y: me.c.y * s }); } catch { inDoor = false; }
+  if (threat) return asideSpot(me, threat, circles, { ok });
+  if (!inDoor) return null;
+  for (const c of aroundOf(me.c)) {
+    if (circles.some(o => dist(c, o) < me.r + o.r - 1e-9)) continue;
+    if (circles.some(o => dist(me.c, o) >= me.r + o.r - 1e-9 && segmentDistance(o, me.c, c) < me.r + o.r - 1e-9)) continue;
+    if (ok(c)) return { x: c.x, y: c.y };
+  }
+  return null;
+}
+
+
 const republish = (doc, from, wps) => {
   try { return feature?.exposed?.groupRepublish?.(doc, from, wps) ?? {}; } catch (err) { log?.debug?.("guard: re-publish", err); return {}; }
 };
+
+/** Mark mover `me` standing in this tick's snapshot (at `spot` when it steps there). */
+function standNow(snap, me, spot = null) {
+  const e = snap.byId.get(me.id);
+  if (!e) return;
+  e.moving = false;
+  e.points = null;
+  if (spot) e.c = { x: spot.x, y: spot.y };
+}
 
 /** Pause: out of combat stop where it is drawn (backing out of a higher mover's way); in a fight withhold the next square. */
 function pause(y, token, hit, snap, me, combat, way) {
@@ -321,21 +373,24 @@ function pause(y, token, hit, snap, me, combat, way) {
   y.route = k === null ? [] : wps.slice(k).map((p, i, all) => plain(p, i === all.length - 1));
   y.dest = wps.length ? plain(wps.at(-1), true) : null;
   y.pauseAt = { x: drawn.x, y: drawn.y };
-  // A higher mover whose way passes where it would stand: the nearest spot off that way (the design's corridor rule).
+  // A higher mover whose way passes where it would stand: the nearest spot off that way (the design's corridor rule);
+  // drawn across a door's line: off it (decision 2: never at rest on a door's line).
   let spot = null;
   const threat = hit.standing ? null : (snap.byId.get(hit.id)?.points ? snap.byId.get(hit.id) : null);
-  if (threat) {
-    try { spot = asideSpot(me, threat, standingOf(snap, me), { ok: c => spotOk(token, me.c, c, s) }); } catch (err) { log?.debug?.("guard: aside", err); }
-  }
+  try { spot = standSpot(token, me, threat, snap, s); } catch (err) { log?.debug?.("guard: aside", err); }
+  // It stands from now on, for every other look this tick (S3R1-02: the next mover's step aside, chosen in the same
+  // tick, read it as still walking and stepped into it).
+  standNow(snap, me, spot);
   y.busy = true;
   Promise.resolve(feature?.exposed?.stopDisplace?.(token, { drawn, p: { ...drawn }, near: null }, { [GUARD_OPT]: true }))
     .then(async () => {
-      if (!spot || !feature || yields.get(doc.id) !== y) return;
+      if (!spot || !ours(y, doc)) return;
       const tl = toTopLeft(spot, me.w, me.h, s);
       const from = { x: doc._source.x, y: doc._source.y };
       const step = [{ x: tl.x, y: tl.y, elevation: doc._source.elevation ?? 0, action: doc.movementAction ?? "walk", snapped: false, explicit: true, checkpoint: true }];
       await doc.move(step, { method: "api", [GUARD_OPT]: true, ...republish(doc, from, step) });
-      counts.aside += 1;
+      if (threat) counts.aside += 1;
+      else counts.offDoor += 1;
       y.aside = true;
     })
     .catch(err => { counts.errors += 1; log?.warnOnce?.("guard-pause", "the yield guard could not stop a token (further errors suppressed)", err); })
@@ -352,7 +407,7 @@ function resume(y, token, combat) {
     if (typeof cb === "function") Promise.resolve().then(cb).catch(err => log?.debug?.("guard: resume", err));
     return;
   }
-  if (!y.route?.length) { drop(doc.id); return; }
+  if (!y.route?.length || !ours(y, doc)) { drop(doc.id); return; }
   const s = gridSize(token);
   const from = { x: doc._source.x, y: doc._source.y };
   let wps = y.route.map((p, i, all) => plain(p, i === all.length - 1));
@@ -396,17 +451,25 @@ function reroute(y, token, snap, me, combat) {
   const blocker = y.blocker ? snap.byId.get(y.blocker) : null;
   if (blocker) circles.push({ x: blocker.c.x * s, y: blocker.c.y * s, r: (blocker.r + r) * s - 1 });
   const avoid = circles.filter(o => Math.hypot(a0.x - o.x, a0.y - o.y) >= o.r && Math.hypot(b0.x - o.x, b0.y - o.y) >= o.r);
+  const mid0 = doc.movement?.id ?? null;
   y.busy = true;
   Promise.resolve(feature.exposed.pathfindRouteToAsync(token, origin, { ...origin, ...dest, explicit: true, checkpoint: true },
     { preview: true, avoid: avoid.length ? avoid : null, maxMs: REROUTE_MS }))
     .then(async rt => {
-      if (!feature || yields.get(doc.id) !== y) return;
+      if (!ours(y, doc) || (doc.movement?.id ?? null) !== mid0) return;
       if (!rt?.reached || !(rt.path?.length >= 2)) { counts.noRoute += 1; y.phase = "held"; return; }
+      // A way round no longer than a detour anyone wants (S3R1-04: one re-route went round the whole dungeon, 42
+      // squares, and came to rest about 60 s after the drop): longer, it waits on and rests at 8 s, short of its spot.
+      const sq = q => ({ x: (q.x + (me.w * s) / 2) / s, y: (q.y + (me.h * s) / 2) / s });
+      const lenOf = list => { let L = 0; for (let k = 1; k < list.length; k++) L += dist(sq(list[k - 1]), sq(list[k])); return L; };
+      const direct = lenOf([origin, ...(y.route?.length ? y.route : [dest])]);
+      if (detourTooLong(direct, lenOf(rt.path))) { counts.detour += 1; counts.noRoute += 1; y.phase = "held"; return; }
       let wps = rt.path.slice(1).map((p, k, all) => plain(p, k === all.length - 1));
       if (combat) {
         await stopOwn(y, doc);
         try { wps = feature.exposed.groupCheckpoints?.(token, [origin, ...wps]) ?? wps; } catch (err) { log?.debug?.("guard: checkpoints", err); }
       }
+      if (!ours(y, doc)) return;
       y.route = wps;
       await doc.move(wps, { method: "api", [GUARD_OPT]: true, ...republish(doc, { x: origin.x, y: origin.y }, wps) });
     })
@@ -436,7 +499,11 @@ function rest(y, token, snap, me, combat) {
     const circles = standingOf(snap, me).map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + me.r) * s - 1 }));
     const taken = p => circles.some(o => Math.hypot(p.x + (w * s) / 2 - o.x, p.y + (h * s) / 2 - o.y) < o.r);
     const here = { x: doc._source.x, y: doc._source.y, elevation: doc._source.elevation ?? 0 };
-    if (!taken(here)) return;
+    // Not on a door's line either (decision 2): clearOfWalls never leaves it straddling one.
+    let inDoor = false;
+    try { inDoor = doorwayAt(token, { x: here.x + (w * s) / 2, y: here.y + (h * s) / 2 }); } catch { inDoor = false; }
+    if (!taken(here) && !inDoor) return;
+    if (yields.get(doc.id) !== y) return;
     let spot = here;
     try { spot = clearOfWalls(token, here, { taken }); } catch (err) { log?.debug?.("guard: a free spot", err); }
     if (taken(spot) || (spot.x === here.x && spot.y === here.y)) return;
@@ -516,7 +583,15 @@ function stopTicker() {
 function onMove(doc, movement, operation) {
   // Any move (a pause elsewhere, a new walk): the next frame looks again at every move this client guards.
   if (yields.size) lastRun = 0;
-  if (!feature || !doc?.id || !doc.movement?.user?.isSelf) return;
+  if (!feature || !doc?.id) return;
+  // A move of a guarded token that another user made (a player's click-stop of its own member in this client's
+  // group, the GM's hand): it is theirs now, and nothing this guard had in hand for it (a re-route searching, a
+  // resume due) may undo it (S3R1-06: the GM's guard re-routed Hero 3 after Player8A had stopped it, and it walked
+  // on to its old slot).
+  if (!doc.movement?.user?.isSelf) {
+    if (yields.has(doc.id)) { counts.overridden += 1; drop(doc.id); }
+    return;
+  }
   const y = yields.get(doc.id);
   const mid = movement?.id ?? doc.movement?.id ?? null;
   const chain = movement?.chain ?? doc.movement?.chain ?? [];

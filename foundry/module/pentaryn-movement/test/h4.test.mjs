@@ -69,3 +69,15 @@ test("H4-06: a pin never outlives its 1.5 s", () => {
     assert.equal(t.document.x, 1500);
   } finally { globalThis.performance.now = real; }
 });
+
+test("S3R1-01: remainingFrom puts a token drawn 0.4 square past a corner on the leg it walks, not back on the corner", () => {
+  const pts = [{ x: 1, y: 5 }, { x: 5, y: 5 }, { x: 5, y: 9 }];
+  assert.deepEqual(remainingFrom(pts, { x: 5, y: 5.4 }), [{ x: 5, y: 5.4 }, { x: 5, y: 9 }]);
+  // An arc's chords: drawn on the fourth, it is on the fourth (every earlier chord is within half a square).
+  const arc = [{ x: 0, y: 1 }];
+  for (let k = 0; k <= 6; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 12; arc.push({ x: Math.cos(a), y: 1 + Math.sin(a) + 1 }); }
+  const at = { x: (arc[4].x + arc[5].x) / 2, y: (arc[4].y + arc[5].y) / 2 };
+  assert.deepEqual(remainingFrom(arc, at)[1], arc[5]);
+  // A route that doubles back on itself: the earlier leg, as before.
+  assert.deepEqual(remainingFrom([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 0, y: 0.02 }], { x: 2, y: 0.01 })[1], { x: 4, y: 0 });
+});

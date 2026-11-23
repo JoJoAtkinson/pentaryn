@@ -39,7 +39,9 @@
 
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop, radiusOf } from "./motion-core.mjs";
-import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, narrowPoints, pinDrawn, stopWhereDrawn, unpin } from "./group-adapter.mjs";
+import { walkersMeet } from "./group-core.mjs";
+import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, movingOthers, narrowPoints, pinDrawn, speedOf, stopWhereDrawn, toSquares, unpin } from "./group-adapter.mjs";
+import { reservations as reserve } from "./reserve-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
@@ -408,6 +410,28 @@ function takenAround(token, skip, claims) {
   };
 }
 
+/**
+ * Would a stop's walk on (from the near square to the stop square, HX1-07) meet a token walking now or a reserved walk
+ * still to set off (S3R1-03: Player8A stopped its Hero 2 in the corridor during the GM's six-drag; its roomy square was
+ * back in room A, and the walk there went head-on through the GM's members filing up the corridor, -45 to -77 px)?
+ */
+function walkOnMeets(token, at) {
+  if (!at?.near) return false;
+  const doc = token.document;
+  const s = gridSize(token);
+  const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
+  const member = { id: doc.id, token };
+  let walkers = [];
+  try { walkers = movingOthers([member], s); } catch (err) { log?.debug?.("stop: walkers", err); }
+  try {
+    const ids = new Set(walkers.map(x => x.id));
+    walkers.push(...reserve.liveFor([member], { skip: ids }).walkers.filter(x => x.delay > 0));
+  } catch (err) { log?.debug?.("stop: reserved walks", err); }
+  if (!walkers.length) return false;
+  const mine = [{ points: [toSquares(at.near, w, h, s), toSquares(at.p, w, h, s)], r: radiusOf(w, h), speed: speedOf(token), delay: 0 }];
+  try { return walkersMeet(mine, walkers); } catch (err) { log?.debug?.("stop: walk on", err); return true; }
+}
+
 /** Does this user own the token (a GM owns all)? */
 function owns(token) {
   try { return !!(token.document.testUserPermission?.(game.user, "OWNER") ?? token.document.isOwner); } catch { return false; }
@@ -450,7 +474,15 @@ function stopToken(token, how, via = "api") {
     const next = t === token ? how : decide(t, { tool: "select", armed: true });
     if (next !== "displace" && next !== "stop") continue;
     if (next === "displace") {
-      const at = stopSpot(t, takenAround(t, skip, claims), { roomy });
+      const taken = takenAround(t, skip, claims);
+      let at = stopSpot(t, taken, { roomy });
+      // Its walk on to a roomy square would meet a walker: it stops on the nearest free square instead (stopping short
+      // of the roomy square beats walking through anyone; a walker behind it gives way to it standing).
+      if (at.near && walkOnMeets(t, at)) {
+        const plain = stopSpot(t, taken);
+        at = plain.near && walkOnMeets(t, plain) ? { drawn: at.drawn, p: at.near, near: null } : plain;
+        rec.walkOnBlocked = (rec.walkOnBlocked ?? 0) + 1;
+      }
       const s = gridSize(t), w = tdoc._source.width ?? 1, h = tdoc._source.height ?? 1;
       claims.push({ id: tdoc.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s });
       out.push(displace(t, at));

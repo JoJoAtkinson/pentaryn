@@ -179,3 +179,17 @@ test("claim / priorityOf: a reserved move takes its reservation's place and its 
   assert.equal(w.user, "U");
   assert.ok(w.ord > pc.ord);
 });
+
+test("S3R1-03: two movers of different moves already inside each other must come apart: walking on side by side fires", () => {
+  const me = { c: { x: 0, y: 0 }, r: 0.5, points: [{ x: 0, y: 0 }, { x: 10, y: 0 }], speed: 6 };
+  const side = { id: "o", c: { x: 0.3, y: 0.3 }, r: 0.5, points: [{ x: 0.3, y: 0.3 }, { x: 10.3, y: 0.3 }], speed: 6, delay: 0, yieldTo: true, standing: false };
+  const hit = conflictAhead(me, [side]);
+  assert.ok(hit && hit.inside, `fires: ${JSON.stringify(hit)}`);
+  // Coming apart (it walks off at right angles): no firing.
+  const away = { ...side, points: [{ x: 0.3, y: 0.3 }, { x: 0.3, y: 9 }] };
+  assert.equal(conflictAhead({ ...me, points: [{ x: 0, y: 0 }, { x: 0, y: -9 }] }, [away]), null);
+  // Two members of one plan that start stacked are their planner's (they may brush as one leaves): not this rule.
+  assert.equal(conflictAhead(me, [{ ...side, samePlan: true }]), null);
+  // A standing token it is already inside: only never closer (it walks off it).
+  assert.equal(conflictAhead(me, [{ ...side, c: { x: -0.3, y: 0.3 }, points: null, standing: true }]), null);
+});

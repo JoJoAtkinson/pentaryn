@@ -2457,6 +2457,100 @@ test("HX1-04: in a fight, a member crossing the door's line when it shuts (its s
   }
 });
 
+test("S3R1-08: in a fight, a member whose square under way (or whose next square was already sent) lies past a door that shuts is put back on the square before it: that square undone, never drawn across", async () => {
+  combatFlag = true;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const hist = ys => ys.map(y => wp(400, y, { movementId: "mv1" }));
+  const undoOf = t => {
+    t.document.update = async (changes, options) => { F.calls.push({ op: "update", id: t.document.id, changes, options }); return true; };
+  };
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  try {
+    // 1. Drawn 30 px short of the door line (y = 400), entering the square below it (its source): it walked (400,200) and (400,300).
+    const a = walking("s38A000000000001", { x: 400, y: 330 }, { x: 400, y: 400 }, [{ x: 400, y: 300 }, { x: 400, y: 400 }],
+      { combat: true, pending: [{ x: 400, y: 500 }, { x: 400, y: 600 }] });
+    a.document._source._movementHistory = hist([200, 300, 400]);
+    undoOf(a);
+    let from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    let undo = F.calls.slice(from).find(c => c.op === "update" && c.id === a.document.id);
+    assert.ok(undo, "the square past the door is undone");
+    assert.deepEqual([undo.changes.x, undo.changes.y], [400, 300], "back on the last square before the door");
+    assert.equal(undo.changes._movementHistory.length, 2, "and the history cut there: it pays for the squares it walked");
+    assert.equal(undo.options.isUndo, true);
+    assert.equal(undo.options.animate, false);
+    const sa = F.calls.slice(from).findIndex(c => c.op === "stopAnimation" && c.id === a.document.id && c.opts?.reset === false);
+    assert.ok(sa >= 0 && sa < F.calls.slice(from).indexOf(undo), "its tween stopped where it is drawn first (never drawn across)");
+    a.animationContexts.clear(); a.document.movement.state = "stopped";
+    a.document._source.y = 300;
+    mock.timers.tick(200);
+    assert.ok(F.calls.slice(from).filter(c => c.op === "move" && c.id === a.document.id).every(m => m.waypoints.every(w => w.y <= 300)), "no walk past it");
+    sceneTokens.clear();
+
+    // 2. On (400,300), its next square (400,400) already on its way to the server when the door shuts: once it lands
+    // (core passed it while the door was open), it is undone too.
+    const b = walking("s38B000000000001", { x: 400, y: 300 }, { x: 400, y: 300 }, [{ x: 400, y: 200 }, { x: 400, y: 300 }],
+      { combat: true, pending: [{ x: 400, y: 400 }, { x: 400, y: 500 }] });
+    b.document._source._movementHistory = hist([200, 300]);
+    b.document._movementContinuation = { continued: true };
+    undoOf(b);
+    from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    assert.ok(!F.calls.slice(from).some(c => c.op === "update"), "nothing while its square is on the way");
+    b.document._movementContinuation.continued = false;
+    b.document._source.y = 400;
+    b.document._source._movementHistory = hist([200, 300, 400]);
+    mock.timers.tick(50);
+    undo = F.calls.slice(from).find(c => c.op === "update" && c.id === b.document.id);
+    assert.ok(undo, `undone once it landed: ${JSON.stringify(F.calls.slice(from).map(c => c.op))}`);
+    assert.deepEqual([undo.changes.x, undo.changes.y], [400, 300]);
+    assert.ok(game.pentaryn.movement.status().group.cut.undone >= 2);
+  } finally {
+    world.walls.pop();
+    combatFlag = false;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("S3R1-03: a player's stop of its own member whose walk out of the corridor would meet a walker stops on the nearest free square instead", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = world.walls;
+  world.walls = [[{ x: 300, y: 400 }, { x: 800, y: 400 }], [{ x: 300, y: 500 }, { x: 800, y: 500 }]];
+  F.fire("updateWall");
+  const a = makeToken("s33A000000000001", 500, 400), b = makeToken("s33B000000000001", 100, 400);
+  const others = keepOnly([a, b]);
+  try {
+    for (const t of [a, b]) F.fire("updateToken", t.document, { x: 900 }, { pentarynMovementGroup: "grpCorr00000002" }, "u2");
+    b.document.testUserPermission = () => false;
+    for (const t of [a, b]) { t.animationContexts.set(t.movementAnimationName, {}); t.document.movement = { state: "pending", user: { isSelf: false } }; }
+    a.document._source.x = 900; a.document._source.y = 400;
+    // b (the GM's) walks east up the corridor behind it, to (900, 400).
+    b.document._source.x = 900;
+    b.document.movement = { state: "pending", user: { isSelf: false }, origin: wp(100, 400), passed: { waypoints: [wp(900, 400)] }, pending: { waypoints: [] } };
+    clock.t += MOTION.armMs;
+    const placed = F.canvas.tokens.placeables;
+    F.canvas.tokens.placeables = [a, b];
+    const from = F.calls.length;
+    a._onClickLeft({});
+    F.canvas.tokens.placeables = placed;
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    const mv = F.calls.slice(from).filter(c => c.op === "move" && c.id === a.document.id);
+    assert.equal(mv.length, 1, `stops, and does not walk on through b's way: ${JSON.stringify(mv.map(m => m.waypoints))}`);
+    assert.equal(mv[0].waypoints[0].action, "displace");
+    assert.ok(Math.hypot(mv[0].waypoints[0].x - 500, mv[0].waypoints[0].y - 400) <= 75, `on the nearest free square: ${JSON.stringify(mv[0].waypoints[0])}`);
+    assert.equal(game.pentaryn.movement.status().stop.last?.walkOnBlocked, 1, JSON.stringify(game.pentaryn.movement.status().stop));
+  } finally {
+    for (const t of [a, b]) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; }
+    world.walls = saved;
+    F.fire("updateWall");
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
 test("HX1-08: out of combat, a member cut back on the square it is drawn in rests on that whole square, not where it is drawn", async () => {
   combatFlag = false;
   const saved = new Map(sceneTokens);
