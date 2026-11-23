@@ -1,5 +1,22 @@
 # Changelog — pentaryn-movement
 
+## 0.6.3 — 2026-11-22
+
+Overlap redesign stage 2, round S2R3 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.7).
+
+- **[declared] S2R3-01: a hidden token that stepped aside goes on round the tokens standing in its way.** Its way
+  on from the aside spot was core's (the drag's search with no tokens to keep clear of), so the GM's hidden Hero 7
+  walked back through standing Hero 5 (-58 to -60 px, 3 runs of 3). The way on now keeps clear of every token
+  standing outside it, however long, searched in slices; with no way round, core's way as far as it meets none of
+  them. The step aside itself is never a straight line through a standing token either.
+- **[declared] S2R3-02: a movement that starts on a stalling page is never drawn ahead of its walk.** Core adds a
+  tween's ticker listener between frames, so its first frame is credited the whole interval since the frame
+  before, time from before the tween existed. On the loaded Mac (415-684 ms frames) a member whose move arrived
+  just after a stalled frame was drawn up to that much ahead, onto the member before it (-51 px for 2.3 s), while
+  the members already walking were credited only their own time. The `CanvasAnimation.animate` wrap now credits a
+  fresh movement tween's first frame at most the wall time since it began (chained links and other animations as
+  core runs them). `status().stop.firstFrames` counts the cuts.
+
 ## 0.6.2 — 2026-11-22
 
 Overlap redesign stage 2, round S2R2 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.6).

@@ -2599,12 +2599,17 @@ async function stepAside(ctx, read, waypoints) {
   const z = doc._source.elevation ?? 0;
   const px = c => ({ x: c.x * s, y: c.y * s, elevation: z });
   const blocked = (a, b) => { try { return !!grabbed.checkCollision(px(b), { origin: px(a), type: "move", mode: "any" }); } catch { return true; } };
+  // The tokens standing outside it (S2R3-01: hard obstacles, for its step and for its way on), not one it starts in.
+  let others = [];
+  try { others = othersOf([{ id: doc.id, token: grabbed }], s); } catch (err) { log.debug?.("aside: the tokens that stay", err); }
+  const standing = others.filter(o => Math.hypot(here.x - o.x, here.y - o.y) >= o.r + r - 1e-3);
+  const through = (a, b) => standing.some(o => segDist(o, a, b) < o.r + r - 1e-3);
   const cands = hexCandidates(here, 0.5, 8).filter(c => Math.hypot(c.x - here.x, c.y - here.y) > 1e-6)
     .sort((a, b) => Math.hypot(a.x - here.x, a.y - here.y) - Math.hypot(b.x - here.x, b.y - here.y));
   let spot = null;
   for (const c of cands) {
     const tl = toTopLeft(c, w, h, s);
-    if (taken(tl) || !restWalkable(member, c, s) || !roomyAt(grabbed, px(c), r, s) || blocked(here, c)) continue;
+    if (taken(tl) || !restWalkable(member, c, s) || !roomyAt(grabbed, px(c), r, s) || blocked(here, c) || through(here, c)) continue;
     if (throughStanding(c, r, read.walkers) !== null) continue;
     spot = tl;
     break;
@@ -2619,12 +2624,31 @@ async function stepAside(ctx, read, waypoints) {
   const dest = waypoints?.at(-1);
   if (!dest) return { stop: true, at };
   const origin = { ...(feature.exposed.pathfindOrigin?.(doc) ?? doc._source), x: at.x, y: at.y };
+  const target = { ...origin, ...dest, explicit: true, checkpoint: true };
+  // S2R3-01: its way on goes round the tokens standing outside it (live: drawn through standing Hero 5, -60 px),
+  // however long, searched in slices; with no way round, core's way as far as it meets none of them.
+  const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
+  const a0 = centre(origin), b0 = centre(target);
+  const avoid = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1 }))
+    .filter(o => Math.hypot(a0.x - o.x, a0.y - o.y) >= o.r && Math.hypot(b0.x - o.x, b0.y - o.y) >= o.r);
+  const opts = { preview: true, avoid: avoid.length ? avoid : null, maxMs: 4 * SINGLE_MS };
   let r1 = null;
-  try { r1 = feature.exposed.pathfindRouteTo?.(grabbed, origin, { ...origin, ...dest, explicit: true, checkpoint: true }, { preview: true, maxMs: 4 * SINGLE_MS }); }
-  catch (err) { log.debug?.("aside: the way on", err); }
-  if (!r1?.reached || !(r1.path?.length >= 2)) return { stop: true, at };
-  const wps = r1.path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
-  return { waypoints: wps, at };
+  try {
+    r1 = typeof feature.exposed.pathfindRouteToAsync === "function"
+      ? await feature.exposed.pathfindRouteToAsync(grabbed, origin, target, opts)
+      : feature.exposed.pathfindRouteTo?.(grabbed, origin, target, opts);
+  } catch (err) { log.debug?.("aside: the way on", err); }
+  if (!feature) return { stop: true, at };
+  if (r1?.reached && r1.path?.length >= 2) {
+    const wps = r1.path.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
+    return { waypoints: wps, at };
+  }
+  let plain = null;
+  try { plain = feature.exposed.pathfindRouteTo?.(grabbed, origin, target, { preview: true, maxMs: SINGLE_MS }); } catch (err) { log.debug?.("aside: the plain way on", err); }
+  if (!(plain?.path?.length >= 2)) return { stop: true, at };
+  const kept = freeOfOthers(grabbed, origin, plain.path.slice(1), others);
+  if (!kept.length) return { stop: true, at };
+  return { waypoints: kept, at };
 }
 
 /**

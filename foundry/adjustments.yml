@@ -1206,9 +1206,9 @@ adjustments:
     modules: [pentaryn-movement]
     files: [foundry/module/pentaryn-movement/stop.mjs]
     markers: ["CanvasAnimation", "__pentarynMovementAnimReg", "animFrames"]
-    what: wraps the static CanvasAnimation.animate on every client; after a named animation call, when an animation of the same name started inside its first frame is still running and the one core left registered is not, the name points back at the running one
+    what: wraps the static CanvasAnimation.animate on every client; after a named animation call, when an animation of the same name started inside its first frame is still running and the one core left registered is not, the name points back at the running one; and a fresh (not chained) token movement tween's ticker listener (animation.fn, wrapped before core adds it) is credited at most the wall time since the call in its first frame (0.6.3, S2R3-02)
     why: core runs an animation's first frame synchronously before it registers it under its name, so a chained token tween that completes in that frame (a slow page) starts the next link and then overwrites that link's registration with its own completed animation; terminateAnimation(name) then misses the running link, which walks on after a stop (a door cut drew the token through the shut door, live H1-02) and, ending with links queued, resumes one whose context is gone (TypeError reading 'chain', token frozen off its source, live H1-01)
-    native_when: CanvasAnimation.animate registers the animation before its first frame, or Token#animate stops chaining from inside the first frame
+    native_when: CanvasAnimation.animate registers the animation before its first frame, or Token#animate stops chaining from inside the first frame; and its first ticker frame counts only the time since the animation began
     retire_class: guarded
     check: make foundry-movement-check
 

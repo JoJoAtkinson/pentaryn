@@ -653,10 +653,12 @@ function patchCanvasAnimate() {
     const name = options?.name;
     if (name === undefined || name === null) return wrapped(attributes, options);
     const frame = { name, nested: null };
+    const began = clock();
     animFrames.push(frame);
     let out;
     try { out = wrapped(attributes, options); }
     finally { animFrames.pop(); }
+    try { firstFrameFrom(this, this.animations?.[name], options, began); } catch (err) { log?.debug?.("animation first frame", err); }
     try {
       const reg = this.animations;
       const live = a => !!a && ANIM_LIVE.has(a.state);
@@ -667,6 +669,40 @@ function patchCanvasAnimate() {
     return out;
   });
 }
+
+/**
+ * S2R3-02: core adds a tween's ticker listener between frames (after its first frame ran synchronously), and the
+ * first frame it then gets is the whole interval since the frame before: time from before the tween existed. On a
+ * page stalling 415-684 ms a frame, a member whose move arrived just after a stalled frame was drawn up to that much
+ * further on than its walk, onto the member before it in the file (-51 px for 2.3 s) while the others, already
+ * walking, were credited only their own time. A fresh movement tween (`animation`, just registered by core; not a
+ * chained link, whose carried time core already counts, nor any other animation) is credited at most the wall time
+ * since it began in its first ticker frame (frames under 50 ms over are left alone); later frames are core's.
+ */
+const FIRST_FRAME_SLACK_MS = 50;
+function firstFrameFrom(CA, animation, options, began) {
+  const token = options?.context;
+  if (!animation || typeof animation.fn !== "function" || animation.__pentarynFirstFrame) return;
+  if (!token || options.name !== token.movementAnimationName || (options.time ?? 0) !== 0) return;
+  if (!ANIM_LIVE.has(animation.state)) return;
+  const fn = animation.fn;
+  const fpms = globalThis.PIXI?.Ticker?.targetFPMS ?? 0.06;
+  let first = true;
+  animation.__pentarynFirstFrame = true;
+  animation.fn = delta => {
+    if (first) {
+      first = false;
+      const speed = CA.ticker?.speed ?? 1;
+      const most = Math.max(0, clock() - began) * speed;
+      if (delta / fpms > most + FIRST_FRAME_SLACK_MS) {
+        firstFrameCuts += 1;
+        delta = most * fpms;
+      }
+    }
+    return fn(delta);
+  };
+}
+let firstFrameCuts = 0;
 
 function patchClick() {
   const proto = CONFIG.Token?.objectClass?.prototype;
@@ -766,7 +802,7 @@ export function install(reg, ctx) {
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).
   if (globalThis.CONFIG?.queries) globalThis.CONFIG.queries[STOP_OWN] = stopOwn;
-  ctx.expose({ stop, stopSafely, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), noteDrop });
+  ctx.expose({ stop, stopSafely, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), stopFirstFrames: () => firstFrameCuts, noteDrop });
 }
 
 export function uninstall() {

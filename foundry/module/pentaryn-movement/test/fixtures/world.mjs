@@ -68,7 +68,9 @@ export async function movementWorld({ patchable = true } = {}) {
       static STATES = Object.freeze({ FAILED: -2, TERMINATED: -1, WAITING: 0, RUNNING: 1, COMPLETED: 2 });
       static animate(attributes, { name, first } = {}) {
         if (name) this.terminateAnimation(name);
-        const animation = { name, state: 1, resolve(completed) { if (this.state === 0 || this.state === 1) this.state = completed ? 2 : -1; } };
+        const animation = { name, state: 1, time: 0, resolve(completed) { if (this.state === 0 || this.state === 1) this.state = completed ? 2 : -1; } };
+        // The ticker's listener: core's takes the frame's delta (frames, at PIXI.Ticker.targetFPMS) and adds it as ms.
+        animation.fn = delta => { animation.time += delta / 0.06; };
         first?.(animation);
         const promise = Promise.resolve();
         animation.promise = promise;

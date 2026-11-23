@@ -3376,3 +3376,61 @@ test("S2R2-03: a hidden token the GM drags that must wait where a player's reser
     performance.now = perfNow;
   }
 });
+
+/* -------------------------------------------- */
+/*  Stage 2 round 3 (S2R3)                      */
+/* -------------------------------------------- */
+
+test("S2R3-01: after stepping aside, a hidden token's way on goes round the tokens standing between it and its drop", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const perfNow = performance.now;
+  performance.now = () => Date.now();
+  const user = game.user;
+  const wasGM = user.isGM;
+  Object.defineProperty(user, "isGM", { value: true, configurable: true, writable: true });
+  const h = makeToken("s3rH000000000001", 500, 100), f = makeToken("s3rF000000000001", 100, 100);
+  // A visible token standing between where H steps aside and where it was dropped (live: Hero 5 at (14,4)).
+  const st = makeToken("s3rS000000000001", 300, 100);
+  h.document.hidden = true;
+  const steps = [];
+  h.document.move = async (waypoints, options) => {
+    steps.push({ waypoints, options });
+    Object.assign(h.document._source, { x: waypoints.at(-1).x, y: waypoints.at(-1).y });
+    Object.assign(h.document, { x: waypoints.at(-1).x, y: waypoints.at(-1).y });
+    return true;
+  };
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [h, f, st];
+  const way = [{ x: 1.5, y: 1.5 }, { x: 9.5, y: 1.5 }];
+  try {
+    reserveWalk(f.document, "ridS3rF000000001", way, 1);
+    const from = F.calls.length;
+    assert.equal(dropWith(h, contextsFor([h], -300, 0)), null, "it waits");
+    for (let k = 0; k < 40; k++) { tickBy(500); await flush(); }
+    assert.equal(steps.length, 1, `it stepped aside once: ${JSON.stringify(api.status().group.last)}`);
+    const at = steps[0].waypoints.at(-1);
+    const go = sent(from);
+    assert.equal(go.length, 1, `then it goes: ${JSON.stringify(api.status().group.last)}`);
+    const wps = go[0].options.movement[h.document.id].waypoints;
+    // Every leg of its way on keeps its centre a whole token (both radii) from the standing one's centre.
+    const sc = { x: 3.5, y: 1.5 };
+    const pts = [at, ...wps].map(p => ({ x: (p.x + 50) / 100, y: (p.y + 50) / 100 }));
+    const segD = (c, a, b) => {
+      const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / L)) : 0;
+      return Math.hypot(a.x + t * dx - c.x, a.y + t * dy - c.y);
+    };
+    for (let k = 1; k < pts.length; k++) {
+      assert.ok(segD(sc, pts[k - 1], pts[k]) >= 1 - 0.02, `leg ${k} clear of the standing token: ${JSON.stringify(pts)}`);
+    }
+  } finally {
+    Object.defineProperty(user, "isGM", { value: wasGM, configurable: true, writable: true });
+    F.canvas.tokens.placeables = saved;
+    for (const t of [h, f, st]) sceneTokens.delete(t.document.id);
+    reserveMod.reset();
+    tickBy(60000);
+    performance.now = perfNow;
+  }
+});

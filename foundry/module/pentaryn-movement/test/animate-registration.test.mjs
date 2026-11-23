@@ -48,3 +48,33 @@ test("the patch is recorded with its adjustments row", () => {
   const rows = game.pentaryn.movement.describe?.().patches ?? [];
   assert.ok(rows.some(p => p.adjustments === "movement-canvas-animation-registration"), JSON.stringify(rows.map(p => p.adjustments)));
 });
+
+// S2R3-02: core adds a movement tween's ticker listener between frames, and the first frame it gets is the whole
+// interval since the frame before, time from before the tween existed. On a stalling page (415-684 ms frames) a
+// member whose move arrived just after a stalled frame jumped ahead by up to that much, onto the one before it in
+// the file (-51 px for 2.3 s). The first frame of a fresh movement tween is credited no more than the time since it began.
+test("S2R3-02: a fresh movement tween's first frame never counts time from before it began", () => {
+  const perfNow = performance.now;
+  let t = 1000;
+  performance.now = () => t;
+  try {
+    const token = { movementAnimationName: "Token.c.animateMovement" };
+    CA.animate([], { name: token.movementAnimationName, context: token });
+    const a = CA.animations[token.movementAnimationName];
+    t += 20;                                              // its first frame comes 20 ms after it began ...
+    a.fn(700 * 0.06);                                     // ... and the frame interval was a 700 ms stall
+    assert.ok(Math.abs(a.time - 20) < 1, `credited ${a.time} ms`);
+    t += 700;
+    a.fn(700 * 0.06);                                     // later frames: all of their time
+    assert.ok(Math.abs(a.time - 720) < 1, `credited ${a.time} ms`);
+    // A chained link (time carried from the one before) and any other animation are left as core runs them.
+    CA.animate([], { name: token.movementAnimationName, context: token, time: 30 });
+    const b = CA.animations[token.movementAnimationName];
+    b.fn(700 * 0.06);
+    assert.ok(Math.abs(b.time - 700) < 1, `chained: ${b.time}`);
+    CA.animate([], { name: "Token.c.other", context: token });
+    const c = CA.animations["Token.c.other"];
+    c.fn(700 * 0.06);
+    assert.ok(Math.abs(c.time - 700) < 1, `other: ${c.time}`);
+  } finally { performance.now = perfNow; }
+});

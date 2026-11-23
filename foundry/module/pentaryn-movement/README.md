@@ -97,7 +97,7 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
 - **A hidden token the GM drags steps out of the players' way (0.6.2).** The players' drops cannot see it, so they
   plan through where it stands; when the GM's drop has to wait (a start delay, or a queue) where one of their walks
   will pass, it first steps to the nearest free spot off every walk, then goes on to where it was dropped. Out of
-  combat only; a hidden token nobody is moving stays where it is. `status().group.reservations.aside`.
+  combat only; its way on goes round the tokens standing in it (0.6.3); a hidden token nobody is moving stays where it is. `status().group.reservations.aside`.
 - **Click a moving token to stop it** once it has moved 400 ms (a click right after the drop, or a double
   click for the sheet, is a plain click): out of combat it steps onto the nearest free whole square (never
   across a door's line or a wall, never on another token; 0.4.9). In a fight it stops at the next square, so
@@ -216,7 +216,7 @@ reservation goes) and `stopToken` (a stopped token's reservation goes).
 | `Token#_prepareDragLeftDropUpdates` | `movement-group-drop` | group movement: core's updates, then the plan's routes and waves; combat cell checkpoints (marker `__pentarynMovementGroup`) |
 | `Token#_onClickLeft` | `movement-click-stop` | click to stop, before core's click (marker `__pentarynMovementStop`) |
 | `Token#stopAnimation` | `movement-stop-animation-defuse` | every client: empties the tweens' queued links before core terminates them, so no stop throws core's "reading 'chain'" (marker `__pentarynMovementDefuse`) |
-| `CanvasAnimation.animate` | `movement-canvas-animation-registration` | every client: a chained tween that completes inside its own first frame (a slow page) leaves its running next link registered under the name, so a stop terminates it (marker `__pentarynMovementAnimReg`, 0.4.8) |
+| `CanvasAnimation.animate` | `movement-canvas-animation-registration` | every client: a fresh movement tween's first frame counts only the time since it began, so a move that starts on a stalling page is not drawn ahead of its walk (0.6.3, `status().stop.firstFrames`); a chained tween that completes inside its own first frame (a slow page) leaves its running next link registered under the name, so a stop terminates it (marker `__pentarynMovementAnimReg`, 0.4.8) |
 
 Not patches: `dnd5e-movement-pathfind-blocking` (the search asks dnd5e's
 `TokenLayer5e#isOccupiedGridSpaceBlocking` which squares a creature blocks) and
