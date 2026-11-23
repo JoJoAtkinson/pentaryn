@@ -30,7 +30,7 @@ import { wrapMethod } from "./lib/patch.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
 import { errorCode } from "./lib/errors.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
-import { RESERVE, lostRace, queueUntil, singleCut, singleTiming } from "./reserve-core.mjs";
+import { RESERVE, lostRace, queueNext, queueUntil, singleCut, singleTiming } from "./reserve-core.mjs";
 
 let log = null;
 let feature = null;
@@ -506,6 +506,42 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     return null;
   };
   /**
+   * A route search run in slices with a yield between them (`yield*` it from the plan), its own time capped at `cap`
+   * ms. Round `avoid` as route(). The route, or null (no way, or not found within the cap: `unfinished` says which).
+   */
+  const sliced = function* (rec, to, avoid, cap) {
+    const steps = feature.exposed.pathfindRouteSteps;
+    const { origin, dest } = destOf(rec, to);
+    const gen = steps(rec.token, origin, dest, {
+      preview: true, avoid: avoid.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
+    });
+    let busy = 0, v;
+    for (;;) {
+      const t = now();
+      v = gen.next(busy >= cap);
+      busy += now() - t;
+      if (v.done) break;
+      yield "route";
+    }
+    v = v.value;
+    if (!v?.reached || !v.path?.length) { unfinished = !!v?.unfinished; return null; }
+    return asRoute(rec, v.path, v.cost);
+  };
+  /**
+   * route(), searched in slices (S2R1-02): the same answer and the same ROUTE_MS cap, but a search that has no way
+   * (a corridor plugged by the tokens it keeps round explores the whole map) no longer holds the page for its whole
+   * cap in one go. A route search was the one step of a plan that did not yield: up to 250 ms each, two or three in
+   * one slice, and every token on the tab froze for 300-870 ms.
+   */
+  const routeSliced = function* (m, from, to, { avoid = [] } = {}) {
+    unfinished = false;
+    const rec = byId.get(m.id);
+    const shown = shownFor(m, to);
+    if (shown && !throughAny(shown.map(p => toSquares(p, rec.w, rec.h, s)), avoid)) return measured(shown.map(p => ({ ...p })));
+    if (!rec || typeof feature.exposed.pathfindRouteSteps !== "function") return route(m, from, to, { avoid });
+    return yield* sliced(rec, to, avoid, ROUTE_MS);
+  };
+  /**
    * The route a short search could not finish, searched to the end in slices (a yield between them, so a slow
    * tab draws its frames): `yield*` it from the plan. Its own cap is a drag search's (LIMITS.totalMs of its
    * own slices). Round `avoid` as route() (HX1-01 (d): never redone through the tokens). The route, or null
@@ -514,23 +550,8 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
   const routeLong = function* (m, from, to, { avoid = [] } = {}) {
     unfinished = false;
     const rec = byId.get(m.id);
-    const steps = feature.exposed.pathfindRouteSteps;
-    if (!rec || typeof steps !== "function") return null;
-    const { origin, dest } = destOf(rec, to);
-    const gen = steps(rec.token, origin, dest, {
-      preview: true, avoid: avoid.map(c => ({ x: c.x * s, y: c.y * s, r: c.r * s })), constrainOptions: constrain ?? {},
-    });
-    let busy = 0, v;
-    for (;;) {
-      const t = now();
-      v = gen.next(busy >= LIMITS.totalMs);
-      busy += now() - t;
-      if (v.done) break;
-      yield "route";
-    }
-    v = v.value;
-    if (!v?.reached || !v.path?.length) { unfinished = !!v?.unfinished; return null; }
-    return asRoute(rec, v.path, v.cost);
+    if (!rec || typeof feature.exposed.pathfindRouteSteps !== "function") return null;
+    return yield* sliced(rec, to, avoid, LIMITS.totalMs);
   };
   /**
    * Is a token of radius r (squares) at c in a one-wide corridor or a doorway (S1R1-02: the grabbed one cut short
@@ -560,6 +581,7 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     walkDistance,
     cramped,
     route,
+    routeSliced,
     routeLong,
     toward,
     unfinished: () => unfinished,
@@ -1860,7 +1882,7 @@ function tellNarrow(token) {
  * not fit" notice, as a single drag does (decision 8; live H3-09: no notice in the group case). The grabbed one
  * stopped short of where it was dropped (a token standing in the only way, 0.5.0) tells the dragger "No route there".
  */
-function tellShort(members, plan) {
+function tellShort(members, plan, { yielded = false } = {}) {
   for (const id of plan?.excluded ?? []) {
     const m = members.find(x => x.id === id);
     if (!m?.token || ((m.w ?? 1) <= 1 && (m.h ?? 1) <= 1)) continue;
@@ -1870,7 +1892,8 @@ function tellShort(members, plan) {
   if (!plan?.anchorShort) return;
   const a = members.find(m => m.id === plan.anchorId);
   if (a?.token && ((a.w ?? 1) > 1 || (a.h ?? 1) > 1)) tellNarrow(a.token);
-  else tellNoRoute(NO_ROUTE);
+  // After its queue: another move is still in the way, not "no route" (S2R1-01).
+  else tellNoRoute(yielded ? (plan.members?.[plan.anchorId]?.points?.length ?? 0) >= 2 ? YIELDED : YIELDED_STAY : NO_ROUTE);
 }
 
 /** One route call that checks a drop the drag's own path fell short of (ms). */
@@ -2197,8 +2220,8 @@ function onDrop(grabbed, event, result) {
   const starts = new Map(prep.members.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
   // Every client learns the group's members from its moves' update options (a click on one stops them all, decision 3).
   const d = { grabbed, contexts, info, result, seq, t0, scene, starts, gid: foundry.utils.randomID(), prep, sync: true,
-    attempt: 0, queued: false, rid: null, rec: last, level: grabbed.document._source?.level };
-  const step = clock.run(() => runPlan(prep.gen, GROUP_LIMITS.syncMs, clock.now));
+    attempt: 0, waited: 0, rid: null, rec: last, level: grabbed.document._source?.level };
+  const step = timedSlice(() => clock.run(() => runPlan(prep.gen, GROUP_LIMITS.syncMs, clock.now)));
   if (step.done) return deliver(d, step.value);
 
   // Async: finish in timer slices, then commit the same shape core would have, for the members
@@ -2210,6 +2233,22 @@ function onDrop(grabbed, event, result) {
     deliver(d, plan);
   });
   return null;
+}
+
+/**
+ * How long the plan's slices held the page (S2R1-02: tokens froze together for 300-870 ms while two groups moved):
+ * every slice a drop ran (the synchronous step too), the longest, and those over PERF_LONG_MS. Read in status().group.
+ */
+const PERF_LONG_MS = 50;
+const perf = { slices: 0, maxMs: 0, long: 0, lastLong: null };
+function timedSlice(fn) {
+  const t = now();
+  try { return fn(); } finally {
+    const ms = now() - t;
+    perf.slices += 1;
+    if (ms > perf.maxMs) perf.maxMs = Math.round(ms * 10) / 10;
+    if (ms > PERF_LONG_MS) { perf.long += 1; perf.lastLong = { at: new Date().toISOString(), ms: Math.round(ms) }; }
+  }
 }
 
 /** A finished plan (or a fallback) as update batches, recorded on the drop's status record (`d.rec`). */
@@ -2241,7 +2280,7 @@ function finishFor(d, plan) {
     formation: plan.formation, excluded: plan.excluded, short: Object.values(plan.members).filter(e => e.short).map(e => e.id), planMs: plan.ms });
   // A big member with no route its body fits stops short before the gap: told as a single drag is (H3-09); the
   // grabbed one stopped short of its drop by a token in the way: the dragger hears "No route there" (0.5.0).
-  try { tellShort(prep.members, plan); } catch (err) { log.debug?.("narrow: a group member", err); }
+  try { tellShort(prep.members, plan, { yielded: d.waited > 0 }); } catch (err) { log.debug?.("narrow: a group member", err); }
   const b = batches(plan, prep.members, result, info.combat);
   rec.waves = b.later.length + 1;
   return b;
@@ -2269,7 +2308,7 @@ function runAsync(prep, clock, t0, done) {
     try {
       if (clock.now() > GROUP_LIMITS.totalMs || now() - t0 > GROUP_LIMITS.waitMs) plan = { result: "core", reason: "budget" };
       else {
-        const r = clock.run(() => runPlan(prep.gen, SLICE_MS, clock.now));
+        const r = timedSlice(() => clock.run(() => runPlan(prep.gen, SLICE_MS, clock.now)));
         if (!r.done) { setTimeout(tick, 0); return; }
         plan = r.value;
       }
@@ -2416,14 +2455,18 @@ function commit(d, b) {
  */
 function deliver(d, plan) {
   if (plan?.result !== "plan" || plan.straight) return commit(d, tagFor(d, finishFor(d, plan)));
-  // Before its batches (and its notices): a drop that queues is planned again, and tells then.
-  if (!d.queued) {
+  // Before its batches (and its notices): a drop that queues is planned again, and tells then. It queues again while
+  // a walk is still in its way when the queue is over, RESERVE.queueMs in all (S2R1-01: a reserved walk runs late, a
+  // wave held for another, a member set off late; the one queue was over, the plan found the corridor still busy,
+  // and the second group stood at its start with "No route there").
+  if (d.waited < RESERVE.queueMs) {
     let until = null;
     try { until = queueFor(d, plan); } catch (err) { log.debug?.("queue: the walks in the way", err); }
+    until = queueNext(d.waited, until);
     if (until !== null) {
-      d.queued = true;
+      d.waited += until;
       reserve.note("queued");
-      Object.assign(d.rec, { result: "queued", queued: Math.round(until) });
+      Object.assign(d.rec, { result: "queued", queued: Math.round(d.waited) });
       if (d.sync) d.sync = false;
       setTimeout(() => replan(d), until);
       return null;
@@ -2526,12 +2569,15 @@ function singleOut(grabbed, contexts, result, info, seq) {
 }
 
 const YIELDED = "PENTARYN_MOVEMENT.notify.yielded";
+const YIELDED_STAY = "PENTARYN_MOVEMENT.notify.yieldedStay";
 
 /**
  * A single drop that waits, queues or publishes first (0.6.0). Each round reads the walks anew; a race lost at the
  * echo (a reservation earlier in the server's order that it had not read and that it meets) goes round again, at most
- * RESERVE.replans times. A queue happens once: after it, the walk goes as far as it meets nothing (on a whole square in
- * a fight), or not at all, with a quiet notice. Nothing is sent when the token was moved or dropped again meanwhile.
+ * RESERVE.replans times. It queues while a walk is in its way, RESERVE.queueMs in all (S2R1-03: one queue, then it
+ * gave up while the group was still filing past); after that, the walk goes as far as it meets nothing (on a whole
+ * square in a fight), or not at all, with a quiet notice that says which. Nothing is sent when the token was moved or
+ * dropped again meanwhile.
  */
 async function singleFlow(ctx) {
   const { grabbed, result, seq, starts, scene, combat, rec } = ctx;
@@ -2540,17 +2586,19 @@ async function singleFlow(ctx) {
   const updates = result[0].length ? result[0] : [{ _id: doc.id }];
   let waypoints = ctx.waypoints;
   let read = ctx.first ?? null;
-  let queued = false, replaces = null;
-  for (let attempt = 0; attempt <= RESERVE.replans + 2; attempt++) {
+  let waited = 0, races = 0, replaces = null;
+  const rounds = RESERVE.replans + 2 + Math.ceil(RESERVE.queueMs / MOTION.delayStep);
+  for (let round = 0; round <= rounds; round++) {
     if (!feature || !stillOurs([doc.id], scene, starts, seq).length) { if (rec) rec.result = "superseded"; return; }
     read ??= singleRead(grabbed, waypoints, combat);
     let delay = read.timing.delay;
     if (delay === null) {
-      if (!queued) {
-        queued = true;
+      const until = queueNext(waited, read.timing.until);
+      if (until !== null) {
+        waited += until;
         reserve.note("queued");
-        if (rec) rec.queued = Math.round(read.timing.until);
-        await wait(read.timing.until);
+        if (rec) rec.queued = Math.round(waited);
+        await wait(until);
         read = null;
         continue;
       }
@@ -2558,7 +2606,7 @@ async function singleFlow(ctx) {
       const cut = singleCut(read.member, read.walkers, { combat });
       if (cut.still) {
         if (rec) Object.assign(rec, { result: "stay", reason: "yielded" });
-        tellNoRoute(YIELDED);
+        tellNoRoute(YIELDED_STAY);
         return;
       }
       let path = cutPath(read.path, cut.cut, combat);
@@ -2580,11 +2628,12 @@ async function singleFlow(ctx) {
       if (!echo) await wait(RESERVE.commitMs);
       if (!feature) return;
       const theirs = reserve.raceWindow([{ id: doc.id, token: grabbed }], read.snap, echo?.seq ?? Infinity).filter(w => w.rid !== wire.rid);
-      if (theirs.length && attempt < RESERVE.replans && lostRace([{ ...read.member, delay }], theirs, { combat })) {
+      if (theirs.length && races < RESERVE.replans && lostRace([{ ...read.member, delay }], theirs, { combat })) {
+        races += 1;
         replaces = wire.rid;
         reserve.note("raced");
-        reserve.noteRace({ members: 1, against: theirs.length, attempt: attempt + 1, single: true });
-        if (rec) rec.raced = attempt + 1;
+        reserve.noteRace({ members: 1, against: theirs.length, attempt: races, single: true });
+        if (rec) rec.raced = races;
         read = null;
         continue;
       }
@@ -2655,6 +2704,7 @@ function groupStatus() {
     cut: cutLast ? { ...cutLast } : null,
     held: heldLast ? { ...heldLast } : null,
     reservations: reserve.status(),
+    perf: { ...perf },
   };
 }
 

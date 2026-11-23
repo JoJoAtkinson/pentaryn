@@ -1,5 +1,23 @@
 # Changelog — pentaryn-movement
 
+## 0.6.1 — 2026-11-22
+
+Overlap redesign stage 2, round S2R1 (fixes only; plan `context/plans/pathfinding-2026-11.md` §15.5).
+
+- **[declared] S2R1-01 / S2R1-03: a drop queues again while its way is still taken, 8 s in all.** A drop that queued
+  behind a reserved walk planned once more when that queue was over and went with whatever that plan gave. A walk
+  runs late (a wave held for another, a member that set off late) or another move is reserved meanwhile, so the
+  second group in the corridor stood at its start with "No route there", and the GM's single drag behind a group
+  stayed with no reason given. Now it queues again while a walk is in its way, RESERVE.queueMs (8 s) in all
+  (`queueNext`), then goes as far as it meets nothing. The notice after a queue says what happened: "Another move
+  is still in the way: it stops short" or "…: it stays where it is" (new), never "No route there".
+- **[declared] S2R1-02: a plan's route searches run in slices.** A route search was the one step of a group plan
+  that never yielded: up to 250 ms each (a search with no way round the tokens it keeps clear of explores the whole
+  map), two or three in one slice, so every token on the tab froze for 300-870 ms while two groups moved. Every
+  search of a plan now yields between its 8 ms slices (`routeSliced`, the same cap and the same answer).
+  `status().group.perf` counts the plan's slices, the longest, and those over 50 ms, so a stall can be told from
+  this module's work or not.
+
 ## 0.6.0 — 2026-11-22
 
 Overlap redesign, stage 2 of 3: server-ordered reservations (plan `context/plans/pathfinding-2026-11.md` §15.4).

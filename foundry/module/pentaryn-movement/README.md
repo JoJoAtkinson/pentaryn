@@ -89,7 +89,8 @@ learn: you drag, it works out the rest. The table-side detail is `context/foundr
   too, reads the moves already reserved (every other client's whole plan, its later members too) and walks round
   them in time: it waits a moment, or takes another spot, rather than meet one. When the way is shut by a move
   still walking it (a one-wide corridor someone is coming down), it waits at its start until that one is through,
-  up to 8 s, then goes; still in the way, it walks as far as it can and says "Another move is still in the way".
+  up to 8 s in all (it waits again when that one runs late or another comes), then goes; still in the way, it walks
+  as far as it can and says "Another move is still in the way" (or that it stays where it is).
   With another player online a drop sets off one network round trip after you let go (it checks nobody reserved
   the same space first); if two drops cross at the same instant, the second the server saw plans again round the
   first. Hidden tokens are never announced to players. `status().group.reservations`.

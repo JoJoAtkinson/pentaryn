@@ -3124,10 +3124,14 @@ test("0.6.0: a hidden member is never in a reservation (players receive every op
   }
 });
 
-test("0.6.0: a group dropped where another move's reserved walk ends rests clear of that spot", () => {
+test("0.6.0: a group dropped where another move's reserved walk ends rests clear of that spot", async () => {
   combatFlag = false;
   clock.step = 0;
   reserveMod.reset();
+  // The reservations' clock runs with the mocked timers (0.6.1: a drop queues again while F is still on its way; on a
+  // clock that never moves F never got there, and the drop queued for its whole budget).
+  const perfNow = performance.now;
+  performance.now = () => Date.now();
   const f = makeToken("rsvM000000000001", 800, 800);
   const ts = [makeToken("rsvN000000000001", 100, 100), makeToken("rsvO000000000001", 200, 100)];
   const saved = F.canvas.tokens.placeables;
@@ -3136,9 +3140,13 @@ test("0.6.0: a group dropped where another move's reserved walk ends rests clear
     // F is reserved to come to rest at (6.5, 1.5): the grabbed one's drop point.
     const w = foreignWire("ridM000000000001", f.document.id, [{ x: 8.5, y: 8.5 }, { x: 8.5, y: 4.5 }, { x: 6.5, y: 1.5 }]);
     F.fire("updateToken", f.document, {}, { [PLAN_OPT]: w }, "other00000000001");
+    // It sets off: the server has it where it stops.
+    Object.assign(f.document._source, { x: 600, y: 100 });
+    Object.assign(f.document, { x: 600, y: 100 });
+    F.fire("moveToken", f.document, { id: "mvM", chain: [] }, { [RID_OPT]: { [f.document.id]: w.rid } }, null);
     const from = F.calls.length;
     const out = dropWith(ts[0], contextsFor(ts, 500, 0));
-    tickBy(9000);
+    for (let k = 0; k < 20; k++) { tickBy(500); await flush(); }
     const ends = [];
     // It may queue first (the reserved walk passes by the spot it takes instead), then go: every batch it sends.
     const all = [...(out ? [{ options: out[1] }] : []), ...sent(from)];
@@ -3153,5 +3161,164 @@ test("0.6.0: a group dropped where another move's reserved walk ends rests clear
     sceneTokens.delete(f.document.id);
     reserveMod.reset();
     tickBy(60000);
+    performance.now = perfNow;
+  }
+});
+
+/* -------------------------------------------- */
+/*  Stage 2 round 1 (S2R1)                      */
+/* -------------------------------------------- */
+
+/** A reservation another client published and set off: token `id` walking `points` (centres, squares) at `speed`. */
+function reserveWalk(doc, rid, points, speed) {
+  const w = encodeWire({ rid, scene: SCENE, user: "other00000000001", members: [{ id: doc.id, r: 0.5, speed, delay: 0, points }] });
+  F.fire("updateToken", doc, {}, { [PLAN_OPT]: w }, "other00000000001");
+  F.fire("moveToken", doc, { id: `mv${rid}`, chain: [] }, { [RID_OPT]: { [doc.id]: w.rid } }, null);
+  return w;
+}
+/** A later wave of another client's plan: `doc` is reserved to walk `points` `delay` ms from now; it stands until then. */
+function reserveLater(doc, rid, points, delay) {
+  const w = encodeWire({ rid, scene: SCENE, user: "other00000000001", members: [{ id: doc.id, r: 0.5, speed: 6, delay, points }] });
+  F.fire("updateToken", doc, {}, { [PLAN_OPT]: w }, "other00000000001");
+  return w;
+}
+/** Its move arrives: it sets off, and the server has it where it will stop (top-left px `to`). */
+function setOff(doc, w, to) {
+  Object.assign(doc._source, to);
+  Object.assign(doc, to);
+  F.fire("moveToken", doc, { id: `mv${w.rid}`, chain: [] }, { [RID_OPT]: { [doc.id]: w.rid } }, null);
+}
+/** Every notice a test drop gives (the localization keys), for the length of `fn`. */
+async function noticesOf(fn) {
+  const n = globalThis.ui.notifications;
+  const saved = n.warn;
+  const out = [];
+  n.warn = (msg, o) => { out.push(String(msg)); return saved?.call(n, msg, o); };
+  try { await fn(out); } finally { n.warn = saved; }
+  return out;
+}
+
+test("S2R1-01: a group drop queued behind a walk goes once it is past", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const perfNow = performance.now;
+  performance.now = () => Date.now();          // the reservations' clock runs with the mocked timers
+  const f = makeToken("s2bF000000000001", 1000, 100);
+  const ts = [makeToken("s2bA000000000001", 200, 100), makeToken("s2bB000000000001", 100, 100)];
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts, f];
+  try {
+    reserveWalk(f.document, "ridS2bF000000001", [{ x: 10.5, y: 1.5 }, { x: 4.5, y: 1.5 }, { x: 4.5, y: 2.6 }], 0.9);
+    const from = F.calls.length;
+    const warns = await noticesOf(async () => {
+      dropWith(ts[0], contextsFor(ts, 500, 0));
+      tickBy(RESERVE.queueMs + 12000);
+      await flush();
+      tickBy(5000);
+      await flush();
+    });
+    const ends = {};
+    for (const b of sent(from)) for (const [id, m] of Object.entries(b.options.movement ?? {})) ends[id] = m.waypoints.at(-1);
+    assert.deepEqual(ends[ts[0].document.id] && [ends[ts[0].document.id].x, ends[ts[0].document.id].y], [700, 100], `the grabbed one gets there: ${JSON.stringify(ends)} ${JSON.stringify(api.status().group.last)}`);
+    assert.deepEqual(warns, []);
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const t of [f, ...ts]) sceneTokens.delete(t.document.id);
+    reserveMod.reset();
+    tickBy(60000);
+    performance.now = perfNow;
+  }
+});
+
+test("S2R1-03: a single drag still blocked when its queue is over queues again (RESERVE.queueMs in all), then goes the whole way", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const perfNow = performance.now;
+  performance.now = () => Date.now();          // the reservations' clock runs with the mocked timers
+  const s = makeToken("s2cS000000000001", 100, 600), f = makeToken("s2cF000000000001", 900, 600), g = makeToken("s2cG000000000001", 900, 600);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [s, f, g];
+  try {
+    // F comes head-on along S's row for about 4 s, then steps off it: past any start delay a single drag tries.
+    const way = [{ x: 9.5, y: 6.5 }, { x: 5.5, y: 6.5 }, { x: 5.5, y: 8.0 }];
+    let from = null;
+    const warns = await noticesOf(async () => {
+      reserveWalk(f.document, "ridS2cF000000001", way, 1);
+      from = F.calls.length;
+      assert.equal(dropWith(s, contextsFor([s], 600, 0)), null, "it queues");
+      const q1 = api.status().group.last.queued;
+      assert.ok(q1 > 0 && q1 < RESERVE.queueMs, `a queue with room left: ${q1}`);
+      // Just before it is over, G comes the same way (a move reserved during the queue, or one that ran late).
+      tickBy(q1 - 100);
+      reserveWalk(g.document, "ridS2cG000000001", way, 1);
+      tickBy(200);
+      await flush();
+      assert.equal(sent(from).length, 0, `queued again, not cut short: ${JSON.stringify(api.status().group.last)}`);
+      for (let k = 0; k < 40; k++) { tickBy(500); await flush(); }
+    });
+    const go = sent(from);
+    assert.equal(go.length, 1, JSON.stringify(api.status().group.last));
+    const end = go[0].options.movement[s.document.id].waypoints.at(-1);
+    assert.deepEqual([end.x, end.y], [700, 600], `the whole way: ${JSON.stringify(api.status().group.last)}`);
+    const rec = api.status().group.last;
+    assert.ok(rec.queued > 0 && rec.queued <= RESERVE.queueMs, JSON.stringify(rec));
+    assert.deepEqual(warns, []);
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const t of [s, f, g]) sceneTokens.delete(t.document.id);
+    reserveMod.reset();
+    tickBy(60000);
+    performance.now = perfNow;
+  }
+});
+
+test("S2R1-01: a group drop whose way is still taken when its queue is over queues again, then goes; never \"No route there\"", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  reserveMod.reset();
+  const perfNow = performance.now;
+  performance.now = () => Date.now();
+  // F stands just past the one-square door and G just before it: two later waves of other moves, both about to walk off.
+  const f = makeToken("s2eF000000000001", 400, 400), g = makeToken("s2eG000000000001", 400, 300);
+  const ts = [makeToken("s2eA000000000001", 400, 100), makeToken("s2eB000000000001", 300, 100)];
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts, f, g];
+  try {
+    let from = null;
+    const warns = await noticesOf(async () => {
+      const wf = reserveLater(f.document, "ridS2eF000000001", [{ x: 4.5, y: 4.5 }, { x: 8.5, y: 4.5 }], 1200);
+      from = F.calls.length;
+      assert.equal(dropWith(ts[0], contextsFor(ts, 0, 500)), null, "it queues for F");
+      const q1 = api.status().group.last.queued;
+      assert.equal(api.status().group.last.result, "queued", JSON.stringify(api.status().group.last));
+      tickBy(1200);
+      setOff(f.document, wf, { x: 800, y: 400 });
+      // G's own move is reserved while the group queues: it walks off a little later.
+      tickBy(q1 - 1300);
+      const wg = reserveLater(g.document, "ridS2eG000000001", [{ x: 4.5, y: 3.5 }, { x: 8.5, y: 3.5 }], 1000);
+      tickBy(200);
+      await flush();
+      const again = api.status().group.last;
+      assert.equal(sent(from).length, 0, `G is still in the way: nothing sent (${JSON.stringify(again)})`);
+      assert.equal(again.result, "queued", `queued again: ${JSON.stringify(again)}`);
+      assert.ok(again.queued > q1 && again.queued <= RESERVE.queueMs, JSON.stringify(again));
+      tickBy(800);
+      setOff(g.document, wg, { x: 800, y: 300 });
+      for (let k = 0; k < 30; k++) { tickBy(500); await flush(); }
+    });
+    const ends = {};
+    for (const b of sent(from)) for (const [id, m] of Object.entries(b.options.movement ?? {})) ends[id] = m.waypoints.at(-1);
+    const a = ends[ts[0].document.id];
+    assert.deepEqual(a && [a.x, a.y], [400, 600], `the grabbed one gets through the door: ${JSON.stringify(ends)} ${JSON.stringify(api.status().group.last)}`);
+    assert.ok(!warns.some(m => /noRoute/.test(m)), `no "No route there": ${JSON.stringify(warns)}`);
+    assert.ok(api.status().group.reservations.queued >= 2);
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const t of [f, g, ...ts]) sceneTokens.delete(t.document.id);
+    reserveMod.reset();
+    tickBy(60000);
+    performance.now = perfNow;
   }
 });

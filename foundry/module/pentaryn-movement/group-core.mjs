@@ -654,6 +654,12 @@ export function* planGroup(spec, o) {
   const out = {};
   const timer = budget(o.now);
   const avoidOf = (m, to) => crowdFor(m, m.start, to, others);
+  // Every route search of the plan runs in slices when the glue can (S2R1-02: one search with no way held the tab for
+  // its whole cap, and every token on it froze); the same answer as o.route.
+  const routeIn = function* (m, from, to, opts) {
+    if (typeof o.routeSliced === "function") return yield* o.routeSliced(m, from, to, opts);
+    return o.route(m, from, to, opts);
+  };
 
   // The anchor's own route first: it decides "constricted".
   let anchorRoute = null;
@@ -661,7 +667,7 @@ export function* planGroup(spec, o) {
     timer.member();
     const a = goal === anchor.formation ? anchor : { ...anchor, formation: { x: goal.x, y: goal.y } };
     const avoid = avoidOf(a, a.formation);
-    anchorRoute = o.route(a, a.start, a.formation, { avoid });
+    anchorRoute = yield* routeIn(a, a.start, a.formation, { avoid });
     yield "route";
     // Its search ran out before it found the way (a cold or slow tab): finish it, on the whole plan's budget,
     // never "no route there" for a way that is there (live H4-01: the identical next drag planned and moved).
@@ -741,7 +747,7 @@ export function* planGroup(spec, o) {
       if (prev && dist(prev.points.at(-1), slot) < EPS) continue;
       timer.member();
       const avoid = avoidOf(m, slot);
-      let r = o.route(m, m.start, slot, { avoid });
+      let r = yield* routeIn(m, m.start, slot, { avoid });
       yield "route";
       // A member whose search only ran out is not left to core (live H4-02: core parked it in the corridor).
       if (!r && o.unfinished?.() && o.routeLong) {
@@ -828,7 +834,7 @@ export function* planGroup(spec, o) {
       if (tries >= RESLOT_TRIES) break;
       tries += 1;
       timer.member();
-      const r = o.route(m, m.start, c, { avoid: avoid.filter(q => dist(q, c) >= q.r - EPS) });
+      const r = yield* routeIn(m, m.start, c, { avoid: avoid.filter(q => dist(q, c) >= q.r - EPS) });
       replans += 1;
       yield "route";
       if (timer.over()) return undefined;
@@ -875,7 +881,7 @@ export function* planGroup(spec, o) {
         let again = lateral.get(key);
         if (again === undefined && avoid.length) {
           timer.member();
-          again = o.route(m, m.start, end, { avoid }) ?? null;
+          again = (yield* routeIn(m, m.start, end, { avoid })) ?? null;
           lateral.set(key, again);
           replans += 1;
           yield "route";

@@ -282,3 +282,15 @@ export function queueUntil(short, walkers, { combat = false } = {}) {
   const until = clearAfter(short, ws, { combat });
   return until === null ? null : Math.min(Math.max(until, MOTION.delayStep), RESERVE.queueMs);
 }
+
+/**
+ * The next queue of a drop that has queued `waited` ms already and would wait `until` more (queueUntil /
+ * singleTiming): the wait, within RESERVE.queueMs in all, or null when that is spent (less than a delay step left).
+ * A drop queues again while a walk is still in its way when its queue is over (S2R1-01 / S2R1-03: a reserved walk
+ * that ran late or a move reserved during the queue, and the one queue the drop had was over).
+ */
+export function queueNext(waited, until) {
+  if (until === null || until === undefined || !(until > 0)) return null;
+  const w = Math.min(until, RESERVE.queueMs - (waited > 0 ? waited : 0));
+  return w >= MOTION.delayStep - EPS ? w : null;
+}
