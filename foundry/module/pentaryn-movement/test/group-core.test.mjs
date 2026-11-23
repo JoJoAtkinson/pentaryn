@@ -709,7 +709,7 @@ test("H4-01: the grabbed one's search only ran out: the plan finishes it, never 
   const o = slowOracles(g, ms[0], new Set(["a"]));
   delete o.routeLong;
   const res2 = finish(planGroup({ members: ms, anchorId: "a" }, o));
-  assert.equal(res2.reason, "anchorNoRoute", "no routeLong: the old behaviour is kept for oracles that cannot resume");
+  assert.equal(res2.reason, "budget", "no routeLong: an unfinished search is a budget fallback, never anchorNoRoute (FR1-07)");
 });
 
 test("H4-01: a grabbed one with truly no way there (search finished) is still anchorNoRoute", () => {
@@ -719,6 +719,32 @@ test("H4-01: a grabbed one with truly no way there (search finished) is still an
   const o = oracles(g, ms[0], { route: () => null, routeLong: function* () { assert.fail("not asked when the search finished"); }, unfinished: () => false });
   const res = finish(planGroup({ members: ms, anchorId: "a" }, o));
   assert.deepEqual(res, { result: "core", reason: "anchorNoRoute" });
+});
+
+test("FR1-07: the way that ignores the tokens, when its search only ran out, is finished in slices: never 'no route there' for a way that is there", () => {
+  const d = { x: 15, y: 0 };
+  const ms = [member("a", { x: 4.5, y: 3.5 }, d), member("b", { x: 4.5, y: 2.5 }, d)];
+  const g = gridWorld(CORRIDOR);
+  let unfinished = false;
+  const log = [];
+  const o = oracles(g, ms[0], {
+    // No way round the tokens (a search that finished), and the way that ignores them not found within its cap.
+    route: (m, from, to, opts) => { unfinished = false; return m.id === "a" ? null : g.route(m, from, to, opts); },
+    toward: () => { unfinished = true; log.push("toward"); return null; },
+    routeLong: function* (m, from, to, opts) { unfinished = false; log.push(["long", m.id, opts?.avoid?.length ?? 0]); yield "route"; return g.route(m, from, to, { avoid: [] }); },
+    unfinished: () => unfinished,
+  });
+  const res = finish(planGroup({ members: ms, anchorId: "a" }, o));
+  assert.equal(res.result, "plan", JSON.stringify(res));
+  assert.deepEqual(log, ["toward", ["long", "a", 0]]);
+  // Still not found at the end of the long search: a budget fallback, never anchorNoRoute.
+  const o2 = oracles(g, ms[0], {
+    route: (m, from, to, opts) => { unfinished = false; return m.id === "a" ? null : g.route(m, from, to, opts); },
+    toward: () => { unfinished = true; return null; },
+    routeLong: function* () { unfinished = true; yield "route"; return null; },
+    unfinished: () => unfinished,
+  });
+  assert.equal(finish(planGroup({ members: ms, anchorId: "a" }, o2)).reason, "budget");
 });
 
 test("H4-02: a member whose search only ran out is planned, not left to core", () => {

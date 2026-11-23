@@ -23,6 +23,11 @@ export const PLAN_OPT = "pentarynMovementPlan";
 export const RID_OPT = "pentarynMovementRid";
 /** The update option that marks a move the runtime guard made (a pause, a resume, a re-route; 0.7.0). */
 export const GUARD_OPT = "pentarynMovementGuard";
+/**
+ * A click-stop's own moves (its displace and its walk on, FR1-03) keep the stopped token's place in the server's order:
+ * it was ahead in its file, and the members walking up behind it give way to it walking out rather than it to them.
+ */
+export const KEEP_OPT = "pentarynMovementKeep";
 
 const now = () => globalThis.performance?.now?.() ?? Date.now();
 let log = null;
@@ -68,7 +73,7 @@ function onMove(doc, movement, operation) {
     chain: movement?.chain ?? [], now: now() });
   if (r === "dropped") note("dropped");
   // Its place in the server's order, for the runtime guard (0.7.0).
-  claim(reg, doc.id, r, { movementId: movement?.id ?? null, chain: movement?.chain ?? [], keep: !!operation?.[GUARD_OPT] });
+  claim(reg, doc.id, r, { movementId: movement?.id ?? null, chain: movement?.chain ?? [], keep: !!(operation?.[GUARD_OPT] || operation?.[KEEP_OPT]) });
 }
 
 /** stopToken, every client: a stopped token stands where it is. */
@@ -168,6 +173,6 @@ function status() {
 
 /** The registry's surface, one object (group.mjs imports it by name). */
 export const reservations = Object.freeze({
-  PLAN_OPT, RID_OPT, GUARD_OPT, configure, reset, note, noteRace, onUpdate, onMove, onStop, liveFor, seqNow, seqOf, priority, restCircles, racers,
+  PLAN_OPT, RID_OPT, GUARD_OPT, KEEP_OPT, configure, reset, note, noteRace, onUpdate, onMove, onStop, liveFor, seqNow, seqOf, priority, restCircles, racers,
   newRid, wireFor, optionsFor, raceWindow, status,
 });

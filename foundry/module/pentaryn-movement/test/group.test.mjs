@@ -2514,6 +2514,107 @@ test("S3R1-08: in a fight, a member whose square under way (or whose next square
   }
 });
 
+test("FR1-02: in a fight, a door cut's undo never puts a member back on a square another token holds; its walk off a held square is checkpointed and goes round tokens", async () => {
+  combatFlag = true;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const hist = ys => ys.map(y => wp(400, y, { movementId: "mv1" }));
+  const undoOf = t => {
+    t.document.update = async (changes, options) => { F.calls.push({ op: "update", id: t.document.id, changes, options }); return true; };
+  };
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  try {
+    // 1. As S3R1-08 case 1, but another token (live: Hero 3) now stands on (400,300), the last square before the door:
+    // the undo goes back to the latest recorded square on its side that nobody holds, (400,200). 0.7.3 put it on Hero 3.
+    const a = walking("fr2A000000000001", { x: 400, y: 330 }, { x: 400, y: 400 }, [{ x: 400, y: 300 }, { x: 400, y: 400 }],
+      { combat: true, pending: [{ x: 400, y: 500 }] });
+    a.document._source._movementHistory = hist([200, 300, 400]);
+    undoOf(a);
+    makeToken("fr2C000000000001", 400, 300);
+    let from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    let undo = F.calls.slice(from).find(c => c.op === "update" && c.id === a.document.id);
+    assert.ok(undo, "undone");
+    assert.deepEqual([undo.changes.x, undo.changes.y], [400, 200], "back on the latest free square before the door, never on the token at (400,300)");
+    assert.equal(undo.changes._movementHistory.length, 1);
+    sceneTokens.clear();
+
+    // 2. Every recorded square on its side is held: no undo at all (it stays where it stopped, never on a token).
+    const b = walking("fr2B000000000001", { x: 400, y: 330 }, { x: 400, y: 400 }, [{ x: 400, y: 300 }, { x: 400, y: 400 }],
+      { combat: true, pending: [{ x: 400, y: 500 }] });
+    b.document._source._movementHistory = hist([200, 300, 400]);
+    undoOf(b);
+    makeToken("fr2D000000000001", 400, 300);
+    makeToken("fr2E000000000001", 400, 200);
+    const blocked0 = game.pentaryn.movement.status().group.cut?.undoBlocked ?? 0;
+    from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    assert.ok(!F.calls.slice(from).some(c => c.op === "update" && c.id === b.document.id), "not undone onto a token");
+    assert.equal(game.pentaryn.movement.status().group.cut.undoBlocked, blocked0 + 1);
+    sceneTokens.clear();
+
+    // 3. Stopped on a square another token holds (no cut square left): its walk off goes to a free square whose straight
+    // walk passes no token, one checkpoint a square (0.7.3: one waypoint, straight through the token beside it).
+    const c = walking("fr2F000000000001", { x: 400, y: 280 }, { x: 400, y: 300 }, [{ x: 400, y: 200 }, { x: 400, y: 300 }],
+      { combat: true, pending: [{ x: 400, y: 400 }, { x: 400, y: 500 }] });
+    makeToken("fr2G000000000001", 400, 300);   // on its square
+    makeToken("fr2H000000000001", 300, 300);   // west of it
+    makeToken("fr2I000000000001", 500, 300);   // east of it
+    makeToken("fr2J000000000001", 400, 200);   // north of it: every diagonal step passes between two of them
+    from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    c.animationContexts.clear(); c.document.movement.state = "stopped";
+    tickBy(400);
+    const walk = F.calls.slice(from).find(x => x.op === "move" && x.id === c.document.id);
+    if (walk) {
+      const pts = [{ x: 400, y: 300 }, ...walk.waypoints];
+      for (let k = 1; k < pts.length; k++) assert.ok(Math.max(Math.abs(pts[k].x - pts[k - 1].x), Math.abs(pts[k].y - pts[k - 1].y)) <= 100, `one square a step: ${JSON.stringify(pts)}`);
+      assert.ok(walk.waypoints.every(q => q.checkpoint), "a checkpoint every square");
+      const end = walk.waypoints.at(-1);
+      for (const o of [[300, 300], [500, 300], [400, 200], [400, 300]]) assert.ok(!(end.x === o[0] && end.y === o[1]), `never onto a token: ${JSON.stringify(walk.waypoints)}`);
+      // The straight walk passes no token's circle (centres 100 apart: touching is fine).
+      const seg = (p, a, b) => { const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2; const t = L2 ? Math.max(0, Math.min(1, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / L2)) : 0; return Math.hypot(p.x - a.x - t * (b.x - a.x), p.y - a.y - t * (b.y - a.y)); };
+      const cc = p => ({ x: p.x + 50, y: p.y + 50 });
+      for (const o of [[300, 300], [500, 300], [400, 200]]) assert.ok(seg(cc({ x: o[0], y: o[1] }), cc(pts[0]), cc(end)) >= 98, `round ${o}: ${JSON.stringify(walk.waypoints)}`);
+    }
+  } finally {
+    world.walls.pop();
+    combatFlag = false;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+    tickBy(5000);
+  }
+});
+
+test("FR1-05: a move this client sent before a door shut, landing after it, is cut once it lands (looked at again 250 and 600 ms after the shut)", async () => {
+  combatFlag = true;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  try {
+    // At the shut it stands on (400,300), its move not landed yet: nothing to cut.
+    const a = makeToken("fr5A000000000001", 400, 300);
+    a.document.update = async (changes, options) => { F.calls.push({ op: "update", id: a.document.id, changes, options }); return true; };
+    const from = F.calls.length;
+    F.fire("updateWall", doorWall, { ds: 0 }, {}, "gm");
+    assert.ok(!F.calls.slice(from).some(c => c.op === "stopMovement" || c.op === "update"), "nothing under way at the shut");
+    // 100 ms later its move lands: its first square (400,400) is past the door, drawn entering it.
+    mock.timers.tick(100);
+    const b = walking("fr5A000000000001", { x: 400, y: 330 }, { x: 400, y: 400 }, [{ x: 400, y: 300 }, { x: 400, y: 400 }],
+      { combat: true, pending: [{ x: 400, y: 500 }] });
+    b.document.update = a.document.update;
+    b.document._source._movementHistory = [wp(400, 300), wp(400, 400)];
+    tickBy(200);
+    assert.ok(F.calls.slice(from).some(c => c.op === "stopMovement" && c.id === b.document.id), `stopped once it landed: ${JSON.stringify(F.calls.slice(from).map(c => c.op))}`);
+  } finally {
+    world.walls.pop();
+    combatFlag = false;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+    tickBy(5000);
+  }
+});
+
 test("S3R3-03: in a fight, a cut member's walk on is never sent while its first square is where another token is drawn (core commits the first square with the move; the guard cannot withhold it)", async () => {
   combatFlag = true;
   const saved = new Map(sceneTokens);
@@ -2719,6 +2820,10 @@ test("S3R3-02: a player's stop of its own member in a short corridor between two
     for (let k = 1; k < legs.length; k++) assert.ok(!crossing(center(legs[k - 1]), center(legs[k])).length, `leg ${k} crosses a wall: ${JSON.stringify(legs)}`);
     assert.notEqual(mv[1].waypoints.at(-1).action, "displace", "walked, not jumped");
     assert.equal(last?.walkOnBlocked, undefined, JSON.stringify(last));
+    // FR1-03: the stop's displace and its walk out keep the token's place in the server's order, so the members coming
+    // up behind it give way to it walking out.
+    assert.equal(mv[0].options?.pentarynMovementKeep, true, JSON.stringify(mv[0].options));
+    assert.equal(mv[1].options?.pentarynMovementKeep, true, JSON.stringify(mv[1].options));
   } finally {
     for (const t of [a, b, c, e]) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; }
     world.walls = saved;
@@ -3384,11 +3489,22 @@ test("0.6.0: a hidden member is never in a reservation (players receive every op
   const ts = [makeToken("rsvK000000000001", 400, 200), makeToken("rsvL000000000001", 300, 200)];
   ts[1].document.hidden = true;
   try {
+    // FR1-11: a drop with a hidden member is sent by the module itself (never core's one batch), the hidden member's
+    // update on its own with none of this module's keys.
+    const before = F.calls.length;
     const out = dropWith(ts[0], contextsFor(ts, 0, 400));
-    const plan = out?.[1]?.[PLAN_OPT];
+    assert.equal(out, null, "sent by the module, not returned to core");
+    tickBy(5000);
+    const calls = sent(before);
+    const shown = calls.filter(c => c.ids.includes(ts[0].document.id));
+    const hid = calls.filter(c => c.ids.includes(ts[1].document.id));
+    assert.ok(shown.length && hid.length, JSON.stringify(calls.map(c => c.ids)));
+    assert.ok(hid.every(c => c.ids.length === 1), "a hidden member's update goes alone");
+    for (const c of hid) assert.deepEqual(Object.keys(c.options).filter(k => k.startsWith("pentarynMovement")), [], JSON.stringify(Object.keys(c.options)));
+    const plan = shown.map(c => c.options[PLAN_OPT]).find(Boolean);
     assert.ok(plan);
     assert.deepEqual(plan.members.map(m => m.id), [ts[0].document.id]);
-    assert.equal(out[1][RID_OPT][ts[1].document.id], undefined);
+    for (const c of shown) assert.equal(c.options[RID_OPT]?.[ts[1].document.id], undefined);
   } finally {
     ts[1].document.hidden = false;
     tickBy(60000);
@@ -3704,4 +3820,19 @@ test("S2R3-01: after stepping aside, a hidden token's way on goes round the toke
     tickBy(60000);
     performance.now = perfNow;
   }
+});
+
+test("FR1-03: a move marked to keep its place (a click-stop's displace and walk out) keeps the token's place in the server's order; any other move takes a new one", () => {
+  reserveMod.reset();
+  const doc = { id: "fr3K000000000001", parent: sceneDoc };
+  const other = { id: "fr3L000000000001", parent: sceneDoc };
+  F.fire("moveToken", doc, { id: "mvA", chain: [] }, {});
+  F.fire("moveToken", other, { id: "mvB", chain: [] }, {});
+  const p0 = reserveMod.priority(doc.id);
+  assert.ok(p0 && p0.ord < reserveMod.priority(other.id).ord, "the first move is earlier");
+  F.fire("moveToken", doc, { id: "mvC", chain: [] }, { [reserveMod.KEEP_OPT]: true });
+  assert.equal(reserveMod.priority(doc.id).ord, p0.ord, "kept: still ahead of the other");
+  F.fire("moveToken", doc, { id: "mvD", chain: [] }, {});
+  assert.ok(reserveMod.priority(doc.id).ord > reserveMod.priority(other.id).ord, "a plain move takes a new, later place");
+  reserveMod.reset();
 });

@@ -692,9 +692,12 @@ export function* planGroup(spec, o) {
   if (!anchorRoute) {
     // No way round the tokens standing in the way: the way that ignores them, as far as it is free (0.5.0). No way
     // at all (walls, a shut door): nothing to plan around, and nobody moves (decision 7).
-    const t = o.toward?.(anchor, anchor.start, anchor.formation) ?? null;
+    let t = o.toward?.(anchor, anchor.start, anchor.formation) ?? null;
+    // Its search ran out before it found the way (FR1-07: a loaded tab refused a group drag with "No route there" for
+    // a way the single drag of the same token walked): finished in slices, never "no route" for a way that is there.
+    if (!(t?.points?.length >= 2) && o.unfinished?.() && o.routeLong) t = yield* o.routeLong(anchor, anchor.start, anchor.formation, { avoid: [] });
     yield "route";
-    if (!(t?.points?.length >= 2)) return { result: "core", reason: "anchorNoRoute" };
+    if (!(t?.points?.length >= 2)) return { result: "core", reason: o.unfinished?.() ? "budget" : "anchorNoRoute" };
     const p = freePrefix(t.points, anchor.r, others, { allowed: allowedFor(anchor), restOk });
     anchorShort = !p.full || dist(t.points.at(-1), anchor.formation) > EPS;
     anchorRoute = { ...t, cut: p.cut, short: anchorShort };

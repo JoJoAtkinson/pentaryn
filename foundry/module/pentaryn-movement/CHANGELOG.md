@@ -1,5 +1,33 @@
 # Changelog — pentaryn-movement
 
+## 0.7.4 — 2026-11-23
+
+Final acceptance round 1 (FR1a; plan `context/plans/pathfinding-2026-11.md` §15.12). Fixes only.
+
+- **[declared] A fight's door cut never puts a member back on, or walks it through, a square another token holds
+  (FR1-02).** The undo of a square past the shut door (S3R1-08) went back to the last recorded square on its side
+  whether or not a member had stopped there since, an unanimated jump onto it (-100 px), and the walk off a held
+  square was one straight waypoint, committed whole, through whoever stood beside it. The undo now takes the latest
+  recorded square on its side nobody holds (claimed at the cut, so no member cut after it takes it), or none
+  (`status().group.cut.undoBlocked`); the walk off goes to a square whose straight walk passes no token, a checkpoint
+  every square.
+- **[declared] A move sent before a door shut but landing after it is cut once it lands (FR1-05).** The cut looked only
+  at moves under way at the shut; a later wave sent 30 ms before it was drawn across the shut door. The shut wall is
+  looked at again 250 and 600 ms later.
+- **[declared] A click-stopped member keeps its place in the server's order (FR1-03, FR1-04).** Its displace and its
+  walk out carry `pentarynMovementKeep`, so every client keeps the place its move had: the members of the GM's file
+  coming up behind give way to it walking out (they were held to touching and, at 105 ms, caught it, -74 to -77 px).
+  A follower later in the order no longer counts against its walk out; the walk out tries squares ahead of it first
+  (on a slow tab its 24 ms search ran out on squares back toward the file and it rested in the corridor; now 40 ms).
+  `status().stop.last.walkOut` tallies why squares were passed over.
+- **[declared] A group drag whose grabbed token's search only ran out is never refused with "No route there" (FR1-07).**
+  The way that ignores the tokens is finished in slices too; still not found, the drop is a budget fallback.
+- **[declared] A hidden member's move is sent on its own, with none of this module's keys (FR1-11),** and a drop with a
+  hidden member publishes its reservation on a member every client may see.
+- **[declared] The "page reloaded before the last of your group set off" notice is shown a moment after ready and kept
+  until dismissed (FR1-10).** At ready on a player's reload it was never drawn.
+- **[declared] Stopping a tween never splices a frozen animation chain (FR1-12, defensive).**
+
 ## 0.7.3 — 2026-11-23
 
 Stage 3, round S3R3 (plan `context/plans/pathfinding-2026-11.md` §15.11). Fixes only.

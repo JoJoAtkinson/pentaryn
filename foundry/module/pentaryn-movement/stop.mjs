@@ -40,6 +40,7 @@
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, clickStop, radiusOf } from "./motion-core.mjs";
 import { walkersMeet } from "./group-core.mjs";
+import { comparePriority } from "./guard-core.mjs";
 import { clearOfWalls, continuationInFlight, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, movingOthers, narrowPoints, pinDrawn, speedOf, stopWhereDrawn, toSquares, unpin } from "./group-adapter.mjs";
 import { reservations as reserve } from "./reserve-adapter.mjs";
 import { setting } from "./settings.mjs";
@@ -111,7 +112,9 @@ function defuse(token) {
   let contexts = [];
   try { contexts = [...(token.animationContexts?.values?.() ?? [])]; } catch { contexts = []; }
   for (const ctx of contexts) {
-    const links = Array.isArray(ctx?.chain) ? ctx.chain.splice(0) : [];
+    let links = [];
+    // A chain core froze is left as it is (FR1-12: an uncaught "Cannot assign to read only property" on a player tab).
+    try { links = Array.isArray(ctx?.chain) && !Object.isFrozen(ctx.chain) ? ctx.chain.splice(0) : []; } catch (err) { log?.debug?.("defuse", err); links = []; }
     for (const link of links) {
       try { link?.resolve?.(); } catch (err) { log?.debug?.("defuse", err); }
     }
@@ -226,7 +229,7 @@ function displace(token, at = stopSpot(token), extra = {}) {
       // The walk on re-publishes its reservation (0.6.0, group.mjs): every planner sees where the stop puts it.
       let extra = {};
       try { extra = feature.exposed.groupRepublish?.(doc, { x: first.x, y: first.y }, wps) ?? {}; } catch (err) { log.debug?.("stop: re-publish", err); }
-      Promise.resolve(doc.move(wps, { method: "api", ...extra }))
+      Promise.resolve(doc.move(wps, { method: "api", ...extra, [reserve.KEEP_OPT]: true }))
         .catch(err => log.debug?.("stop: walk to the square", err));
     } catch (err) { log.debug?.("stop: walk to the square", err); }
   };
@@ -236,7 +239,7 @@ function displace(token, at = stopSpot(token), extra = {}) {
   };
   let pending;
   // The square it walks on to, for the client that sent its group (it walks the others round that square).
-  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", ...extra, ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
+  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", [reserve.KEEP_OPT]: true, ...extra, ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
   catch (err) { pending = Promise.reject(err); }
   return pending
     .then(moved => {
@@ -436,6 +439,7 @@ function walkOnTest(token, skip = null) {
   if (skip?.size) walkers = walkers.filter(x => !skip.has(x.id));
   if (!walkers.length) return () => false;
   const r = radiusOf(w, h), speed = speedOf(token);
+  const prio = reserve.priority(doc.id);
   // `via`: the squares of a walk round a corner between them (S3R3-02), top-lefts. `file` (a walk out, S3R3-02): a walker
   // coming up behind along the way it walks out by is a file, not a meeting. It keeps its distance or gives way to it
   // standing (the runtime guard), so it is held to touching without the latency buffer; a way that meets it head-on or
@@ -446,7 +450,15 @@ function walkOnTest(token, skip = null) {
     const mine = [{ points: pts, r, speed, delay: 0 }];
     try {
       if (!file) return walkersMeet(mine, walkers);
-      return walkers.some(x => walkersMeet(mine, [x], following(x, pts) ? { gap: 0 } : {}));
+      // A follower later in the server's order than this token never meets it: the stop keeps the token's place
+      // (KEEP_OPT), so that follower gives way to it walking out (FR1-03: 0.7.3 held it to touching, and at 105 ms
+      // the GM's Hero 6 caught Player8A's Hero 2 in the corridor, -74 to -77 px).
+      return walkers.some(x => {
+        if (!following(x, pts)) return walkersMeet(mine, [x]);
+        const theirs = reserve.priority(x.id);
+        if (prio && theirs && comparePriority(prio, theirs) < 0) return false;
+        return walkersMeet(mine, [x], { gap: 0 });
+      });
     } catch (err) { log?.debug?.("stop: walk on", err); return true; }
   };
 }
@@ -467,8 +479,11 @@ function walkOnMeets(token, at, skip = null, meets = walkOnTest(token, skip)) {
   return !!at?.near && meets(at.near, at.p, at.via);
 }
 
+/** The last walkOut's tally of squares passed over, by reason (status().stop.last.walkOut). */
+let walkOutWhy = null;
+
 /** A stop's walk out of a gap (S3R3-02): squares around its near square, squares of walk at most, ms of search in all. */
-const OUT = Object.freeze({ reach: 3, walk: 6, ms: 24, legMs: 8 });
+const OUT = Object.freeze({ reach: 3, walk: 6, ms: 40, legMs: 8 });
 
 /**
  * A stopped member left in a gap the others of its group must pass (a one-wide corridor, a door) walks out of it to a
@@ -507,20 +522,33 @@ function walkOut(token, taken, at, meets) {
   const bx = Math.round(from.x / s), by = Math.round(from.y / s);
   const cands = [];
   for (let dy = -OUT.reach; dy <= OUT.reach; dy++) for (let dx = -OUT.reach; dx <= OUT.reach; dx++) if (dx || dy) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
-  cands.sort((a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y));
+  // The way it was walking first (FR1-03: on a slow page the search ran out of time on squares back toward the file
+  // behind it, every one of them a meeting, and it rested in the corridor): ahead of it, then the rest, nearest first.
+  const dir = { x: (src.x ?? from.x) - (at.drawn?.x ?? from.x), y: (src.y ?? from.y) - (at.drawn?.y ?? from.y) };
+  const ahead = c => (c.x - from.x) * dir.x + (c.y - from.y) * dir.y > 0 ? 0 : 1;
+  cands.sort((a, b) => ahead(a) - ahead(b) || Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y));
   const t0 = performance.now();
+  // Why each square was passed over (status().stop.last.walkOut): the live rounds read it.
+  const why = { taken: 0, cramped: 0, walls: 0, route: 0, long: 0, through: 0, meets: 0, time: 0, ms: 0, routeMs: 0, likeMs: 0 };
+  walkOutWhy = why;
   for (const c of cands) {
-    if (performance.now() - t0 > OUT.ms) break;
-    if (taken?.(c) || !liked(c)) continue;
+    if (performance.now() - t0 > OUT.ms) { why.time += 1; break; }
+    why.ms = Math.round(performance.now() - t0);
+    if (taken?.(c)) { why.taken += 1; continue; }
+    const tl = performance.now();
+    const ok = liked(c);
+    why.likeMs += Math.round((performance.now() - tl) * 10) / 10;
+    if (!ok) { why.cramped += 1; continue; }
     let spot = null;
     try { spot = clearOfWalls(token, c, { taken, snap: true }); } catch { spot = null; }
-    if (!spot || spot.x !== c.x || spot.y !== c.y) continue;
+    if (!spot || spot.x !== c.x || spot.y !== c.y) { why.walls += 1; continue; }
     let pts = null;
     try {
       if (!token.checkCollision(centre(c), { origin: centre(from), type: "move", mode: "any" })) pts = [from, c];
     } catch { pts = null; }
     if (!pts) {
       let rt = null;
+      const tr = performance.now();
       try {
         const origin = { ...(feature?.exposed?.pathfindOrigin?.(doc) ?? src), x: from.x, y: from.y };
         const a = centre(from), b = centre(c);
@@ -529,13 +557,15 @@ function walkOut(token, taken, at, meets) {
         rt = feature?.exposed?.pathfindRouteTo?.(token, origin, { ...origin, x: c.x, y: c.y, snapped: true, explicit: true, checkpoint: true },
           { smooth: false, avoid, maxMs: Math.max(1, Math.min(OUT.legMs, OUT.ms - (performance.now() - t0))) });
       } catch (err) { log?.debug?.("stop: a walk out", err); rt = null; }
+      why.routeMs += Math.round((performance.now() - tr) * 10) / 10;
       const end = rt?.path?.at(-1);
-      if (!rt?.reached || !(rt.path?.length >= 2) || Math.round(end.x) !== c.x || Math.round(end.y) !== c.y) continue;
+      if (!rt?.reached || !(rt.path?.length >= 2) || Math.round(end.x) !== c.x || Math.round(end.y) !== c.y) { why.route += 1; continue; }
       pts = [from, ...rt.path.slice(1).map(q => ({ x: Math.round(q.x), y: Math.round(q.y) }))];
     }
-    if (length(pts) > OUT.walk + 1e-6 || !clearAlong(pts)) continue;
+    if (length(pts) > OUT.walk + 1e-6) { why.long += 1; continue; }
+    if (!clearAlong(pts)) { why.through += 1; continue; }
     const via = pts.slice(1, -1);
-    if (meets(from, c, via, { file: true })) continue;
+    if (meets(from, c, via, { file: true })) { why.meets += 1; continue; }
     return { drawn: at.drawn, p: { ...at.p, x: c.x, y: c.y }, near: from, via };
   }
   return null;
@@ -605,7 +635,10 @@ function stopToken(token, how, via = "api") {
             if (!liked(alt.p) || (far && !alt.near) || walkOnMeets(t, alt, skip, meets)) alt = null;
           }
           // None a straight walk reaches: round the corner of the wall the gap ends in.
-          if (!alt) alt = walkOut(t, taken, at, meets);
+          if (!alt) {
+            alt = walkOut(t, taken, at, meets);
+            if (walkOutWhy) (rec.walkOut ??= []).push({ id: tdoc.id, found: !!alt, ...walkOutWhy });
+          }
         }
         if (alt) { at = alt; rec.walkOnAround = (rec.walkOnAround ?? 0) + 1; }
         else if (stuck) { /* nothing better: it stops where it is (stopping short beats overlapping) */ }
