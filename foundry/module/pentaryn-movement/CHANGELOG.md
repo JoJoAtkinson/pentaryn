@@ -1,6 +1,9 @@
 # Changelog — pentaryn-movement
 
-## 0.9.0-dev — branch movement-0.9 (Fable's review 2)
+## 0.9.0 — branch movement-0.9 (Fable's review 2), deployed for Joe's hands-on 2026-11-24
+
+Version set from 0.9.0-dev for Joe's 30 minutes (§4 step 7); `main` still 0.8.5. Rollback: check out main's
+`foundry/module/pentaryn-movement`, `make foundry-movement-sync`, restart the world (0.8.5).
 
 The smaller design (Fable's review 2, §2 and §4; Joe's decisions of 2026-11-24): within 4 s of the drop every token is
 on its way or named in a notice, and nothing ever waits for another mover. Two tokens that are both moving may brush
