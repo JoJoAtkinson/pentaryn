@@ -993,3 +993,122 @@ Open after L1: the motion (R5, R6: pass-through drawn on top, the pack one wave 
 a narrow point) is L2; the fight's leader-only rules (R7: checkpoints on free squares, speed running out) and the cap
 24 with its page gate (R11) are later steps; a fight's checkpoint expansion can still put a diagonal step through a
 wall's end on real Foundry (found while fixing the stub; pre-existing, not judged here).
+
+### 18.2 Step L2: the motion (the leader first, the pack a wave later, single file at a narrow point; the leader on top)
+
+Tests first throughout (`file-core.test` R5 gates, `glue.test` R6, `drop.test` the four fixes and the board's R5 / R6,
+`group-props.test` the cap, `telemetry.test` the stored row); each failed on L1's code before it passed.
+
+**The motion** (R5; `file-core` `staggerFile`, rewritten). The leader goes in the drop's own update (delay 0). The pack
+starts one wave (150 ms) later; when the leader starts behind (by walk to the drop: planLead now returns each member's
+`left`), once it is a wave past the frontmost member, `150 + (left(leader) − min left(others)) / speed`, rounded up to
+a wave, capped at 4 s less the plan's time. Every other member then takes the first wave at or after the pack at which
+it meets none of the members timed before it (plan order: the leader, then least walk left):
+- *a narrow point*: `narrowZones(step)` (from planLead's own step oracle) marks a one-wide square (walled on both sides
+  along one axis: a corridor, the gap in a thick wall) and the door in a thin wall (an open step whose two steps
+  alongside are walled), each a 1×1 box; two members (the leader included) inside one box at once is a conflict, with
+  the latency buffer (0.75 square of walk) when they are in different waves. One through a door at a time; a line in a
+  one-wide way moves up as one (each enters a square as the one ahead leaves it);
+- *a deep, long overlap*: two movers more than half a square inside each other for over 400 ms (two ways merging into
+  one lane; a crossing on open ground is brief) (`motion-core` `closeTime`);
+- *one walking through the other at rest*: still at its start, or already at its slot (`nearestWhile`); in the same
+  update a brush of 0.15 square, or a pass within a wave of the other's arrival (a crossing), is soft; across waves
+  the simulator's 0.05 and the latency buffer. Never against the leader (R6).
+A member with no clear wave under the cap goes at the least crowded one (soft, `crowded`), never cut. The ordering
+search (`sequence-core` `sequence`) is gone with the file; `stacksOf` moved to group-core. The board (`drop.test`):
+three dragged through the thin door down a one-wide way: only the leader in the drop's own update, its move naming it
+the leader, `plan.pack` 150, the two followers in two different later waves.
+
+**The leader on top** (R6). Its move carries `pentarynMovementLead` (its id, then its riders', so a rider stays above
+its mount: a batch's options are shared, so the ids say who leads); every client's ghost.mjs (the existing
+`updateToken` handler) marks it and ranks it `LEAD_RANK` 2, above owned-on-top, in
+the mesh sort and the layer's click order, until its move ends (a 100 ms poll: no movement animation and no pending
+move, kept at least 300 ms, at most 60 s). No document write. `status().group.leading`. A stop of the leader inside its
+own members carries it on along its way to the first free spot however far, walking through its members only
+(`takenAround` knows the leader and its group). The leader is left out of the rest checks of the stagger; the
+simulator reports the leader through its own members ("leader", allowed) and never fails it.
+
+**The cap** (R11): `GROUP_MAX` 24 (motion-core; file.mjs's `FILE_MAX` gone), out of combat and in a fight; more is
+core's drop out of combat and "In a fight, drag one token at a time." in a fight. The page gate (under 100 / 250 ms on
+the GPU page) is not run here (no deploy in this step); Node, warm: 8 members 12.9 ms, 20 members 49.4 ms (L1).
+
+**The four fixes**, each from a failing test:
+- (a) the stop's straight-line last resort (`stopSpot` → `clearOfWalls`) is deleted. A token a stop finds inside a token
+  at rest is carried along its own way (1.5 squares ahead, else back the whole way it came, never through a wall or a
+  token at rest); with nowhere along its way, a click leaves it **walking on to its own square** (named: "Could not stop
+  clear of another token, so walked on to its own square: …"), and a wall or door cut, or an own square that is not
+  clear, leaves it where it is drawn (named: "Stopped on another token, with no free spot along its own way: … Drag it
+  clear."). See the deviations.
+- (b) `stopGroupHere` rested a mate on the carried one: the stop's first write names where the stop will rest
+  (`pentarynMovementStopAt`, top-left), and the dragger's screen claims that spot before it stops the rest. L1's open
+  rest overlap seed 1412 holds with it and fails without (`SIM-L2-01`).
+- (c) a wave whose members this screen no longer draws (the dragger changed scene) left them silently: they are named
+  ("Did not move, the group's walk was ended: …", reason `wave:scene`; `status().group.wave.undrawn`).
+- (d) `stepThroughWall` ignored a one-way wall's direction: `motion-core` `wallOpenFrom` reads it as Foundry does
+  (`Edge#orientPoint`; a wall drawn top to bottom with dir 1 opens from the west, auto-decision 12 of the playground)
+  in a fight's per-square check and a wave's wall test.
+
+**Deleted** (R12): `sequence-core.mjs` and its test (176 + 150 lines), the world setting `groupStagger` and B0 (its row,
+lang keys, README row, `status().group.stagger`, `last.plan.tier`, the blocker-1 test; the stored row removed once by
+the active GM, `RETIRED.world.groupStagger`), the simulator's B0 mode, a new drop emptying a fight queue (it left the
+queue's members unnamed: a new drop of other tokens leaves it running, a member dropped again leaves it).
+
+**Gates.**
+- Seeded, on the cores (`file-core.test`): open ground, the leader in front (200 drops): the leader at 0, the pack at
+  150 in every drop; 194 of 200 are the leader plus one wave, 6 hold one member longer, each one whose slot an earlier
+  member's route crosses (see the deviations). A file of 20 in a one-wide way (three spacings): one wave after the
+  leader, nobody walking into a member at rest, never two in one square. Through a door (150 seeded drops, 2-8
+  members): never two centres in the door's square together, the last within 4 s, nobody crowded; 102 drops of four
+  or more spread over two rows and two columns past it. The leader behind (200): the pack at the first wave at which
+  the leader is a wave past the frontmost member, not a wave later. 800 seeded drops (600 floors, 200 dungeon): 753
+  planned, every delay a wave step, the leader at 0, nobody before the pack, the last at most 3,900 ms; 29 crowded
+  (3.9 %: a leader more than 4 s behind, or a member whose start and slot both lie on earlier routes); the other 724:
+  nobody walks into a member at rest, no two share a narrow point (an independent 10 ms sampling).
+- A leader anywhere in a one-wide tunnel of 2 to 20 (400 seeds): **0 blocked** (the leader on the drop square, nobody
+  named); no follower ever ahead of it once it moves; 1 drop waited the whole 4 s for the leader.
+- The z-order (`glue.test`): an `updateToken` with the option from another user lifts the token above an owned one on
+  this client (`meshSort(sort, 2)`), another token's move naming someone else is not lifted, it stays lifted while it
+  walks and drops back when its move ends; no document write.
+- The four fixes' tests (`drop.test` "0.10 L2 fix (a) … (d)", the leader's stop carried through its members).
+- `make foundry-movement-sim SEEDS=2000` (one mode):
+
+  | | L1 B1 | L2 |
+  |---|---|---|
+  | passThrough | 9 | 4 (315, 954, 1451, 1522) |
+  | restOverlap | 3 | 3 (230, 1097, 1399) |
+  | wallCross / wrongCharge / unsent / errors | 0 | 0 |
+  | mover overlap episodes (p95 depth, duration) | 3,016 (0.985, 1,983 ms) | 3,636 (0.98, 2,183 ms) |
+  | the leader through its own members (allowed) | — | 456 |
+  | members dropped / never moved / named | 8,480 / 2,809 / 2,138 | 8,480 / 2,784 / 2,270 |
+
+  The passThrough seeds are all a member walking through one at rest in a different wave, three with a door shut on
+  the way (1451, 1522, 315) and one with a second group (954); the restOverlap seeds are all a door shut across two
+  walkers, the later one left inside the first with no clear spot along its way (fix (a)'s "stays, named"). Mover
+  overlap rises (the pack goes together; soft, measured). The regression seeds were found again (seeds 1-8000):
+  SIM5-01 19, 138, 492, 721; SIM5-02 2, 41, 60, 69; SIM-L2-01 1412.
+- Mechanical: `make foundry-movement-check` 406 pass, 0 fail, 0 todo (conformance 95.9 %, C30 / C56);
+  `make foundry-module-index && make check-context` OK (32 warnings already there).
+
+**Deviations from BINDING and why.**
+- *Open ground is the leader plus one wave* holds except where a later member's slot lies on an earlier member's route
+  (6 of 200 open-ground drops): R5's own rule ("hold apart … when one would pass through the other at rest") then holds
+  that member until the other has passed. planLead (R3) gives slots in order and only later routes avoid earlier slots;
+  the deleted route-clearance test (R12) was the other remedy. Recorded, not fixed.
+- *Fix (a)'s "else stay, named"*: staying where drawn inside a token at rest is an overlap at rest (R8, zero
+  tolerance), and in the simulator it raised restOverlap from 2 to 9 (the click cases). So a click leaves such a token
+  walking on to its own square (clear when given out), named; only a wall cut (it cannot walk on), or an own square no
+  longer clear, leaves it where drawn, named. No search (decision 2).
+- The leader's pass-through and z-order are built out of combat and for the fight's leader's walk (the option); in a
+  fight the leader still routes round its members and the per-square check still refuses a member standing still in
+  its next square: R7's leader-only rules (checkpoints on free squares, a click inside a member) are the fight step's.
+- Net lines: file-core 489 → 614 (+125: `narrowZones`, `zoneSpans`, the three hold rules; 0.9's `sequence` it replaces
+  was in the deleted sequence-core), file.mjs 583 → 592 (+9: the stop's spot claim), drop.mjs 1,490 → 1,502 (+12: the
+  lead option, the undrawn wave, the one-way wall); with sequence-core (−176) the module is 8,190 → 8,373 lines (ghost
+  +71 for the leader on top, motion-core +64 for `closeTime`, `nearestWhile`, `wallOpenFrom`).
+- One commit for the step's code (the pieces share drop.mjs, file.mjs, motion-core and the simulator's model), one for
+  this record.
+- A drop dropped just past a door's mouth can plug the door (R3's tie to the least walk takes the square in the
+  passage first, then the door square itself): seen while writing the door gate, which drops clear of the mouth. Open.
+
+Open after L2: zero passThrough / restOverlap (L3's gate); the fight's leader rules (R7: through its members, checkpoints
+on free squares, speed running out); the page gate (R11); the narrow passages (R9); the door plug above.
