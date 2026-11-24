@@ -1,5 +1,14 @@
 # Changelog — pentaryn-movement
 
+## 0.10.0-dev — branch movement-0.9 (Fable's review 3: the leader rule), not deployed
+
+The leader rule (Joe, 2026-11-24, after his hands-on of 0.9.0; Fable's review 3): the token you grab and drag leads a
+group drag, and where you drop it picks the shape. Dropped on the floor it is a MARCH: the leader ends on the drop
+square by its own route and everyone else rests behind it, never beside or ahead of it ("behind" follows the
+leader's last step). Dropped on a token outside the group that you can see it is a SWARM: the leader gets a square
+touching that token first, and the rest close in round it from their own sides, ring by ring. Formation offsets
+(everyone keeping its place relative to the others) are gone. The world keeps 0.9.0 until the build is done. Plan §18.
+
 ## 0.9.0 — branch movement-0.9 (Fable's review 2), deployed for Joe's hands-on 2026-11-24
 
 Version set from 0.9.0-dev for Joe's 30 minutes (§4 step 7); `main` still 0.8.5. Rollback: check out main's

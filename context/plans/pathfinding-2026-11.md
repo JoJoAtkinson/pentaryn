@@ -886,3 +886,19 @@ scene; a new drop empties a fight queue unnamed); `stepThroughWall` ignores wall
 live); planning budget 1.5 s against a 100 ms gate, unmeasured on a page; Fable's cuts (`waveWays`' lane swap, the new
 drop's queue cancel).
 
+
+## 18. pentaryn-movement 0.10: the leader rule, march and swarm, any passage shape
+
+Joe's hands-on of 0.9.0 (2026-11-24): "very happy with the overall", but the formation offsets were wrong (dragons
+sliding in parallel lines) and a party dragged into a one-wide tunnel was told there was no room though the tunnel had
+room lengthwise. His rule, refined the same day (scratch `decisions.md`, its last lines binding; Fable's review 3 where
+it agrees): the token grabbed and dragged leads; dropped on the floor is a march (the leader on the drop square, the
+rest behind it), dropped on a visible token outside the group is a swarm (the leader touching it first, the rest round
+it ring by ring); the leader goes first and walks through its own group, drawn on top; one pack on open ground, single
+file only at a narrow point; in a fight the leader first, then one at a time; pathfinding handles any passage shape
+(the spiral C stair is a test case, not a feature, and has no switch). Built on the branch `movement-0.9` in steps
+(L1, L2, …), each recorded below; the world keeps 0.9.0 until the build is done.
+
+### 18.1 Step L1: the leader plan (version, the tunnel repro, planLead, the shape from the drop)
+
+Version 0.10.0-dev (module.json, CHANGELOG). The rest of the step is recorded below as it lands.
