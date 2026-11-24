@@ -15,12 +15,12 @@ def per(o, names):
 @check("S16.a", S, "fight, group drag: every member is charged exactly 5 ft a square (nothing extra for the leader passing its member)", path="state", kind="HARD", scenario="fight", share="s16grp")
 def a(t):
     o = t.shared("s16grp", lambda: t.drag(HS, L, pt(S, "dropFight"))); cs = per(o, HS); bad = {n: (c["sum"], round(c["squares"] * 5, 2)) for n, c in cs.items() if abs(c["sum"] - c["squares"] * 5) > 0.51}
-    return t.verdict(o, [("every mover has a charge on record", len(cs) >= 2, f"{list(cs)}"), ("charge == 5 ft x squares walked", not bad, f"(charged, walked*5): {bad}")], expected="charge == 5 ft * squares walked for each member", guards=dict(account=False))
+    return t.verdict(o, [("every mover has a charge on record", len(cs) >= 2, f"{list(cs)}"), ("charge == 5 ft x squares walked", not bad, f"(charged, walked*5): {bad}")], expected="charge == 5 ft * squares walked for each member", guards=dict(account=False, notices_ok=(r"out of movement|stopped short",)))
 
 @check("S16.b", S, "fight, group drag: the speed-15 member rests on the last square its speed pays for (15 ft charged)", path="state", kind="HARD", scenario="fight", expect010=True, share="s16grp")
 def b(t):
     o = t.shared("s16grp", lambda: t.drag(HS, L, pt(S, "dropFight"))); c = charge_of(o, SLOW)
-    return t.verdict(o, [("the slow member moved", c is not None and c["squares"] > 0, "never moved"), ("charged exactly 15 ft (3 squares)", bool(c) and abs(c["sum"] - 15) <= 0.51 and abs(c["squares"] - 3) <= 0.05, f"{c}")], num=(c or {}).get("sum"), unit="ft", guards=dict(account=False))
+    return t.verdict(o, [("the slow member moved", c is not None and c["squares"] > 0, "never moved"), ("charged exactly 15 ft (3 squares)", bool(c) and abs(c["sum"] - 15) <= 0.51 and abs(c["squares"] - 3) <= 0.05, f"{c}")], num=(c or {}).get("sum"), unit="ft", guards=dict(account=False, notices_ok=(r"out of movement|stopped short",)))
 
 @check("S16.c", S, "fight, group drag: the leader first, then one member at a time (walks do not overlap in time)", path="gpu", kind="HARD", scenario="fight", expect010=True)
 def c(t):
@@ -28,7 +28,7 @@ def c(t):
     inorder = bool(mv) and mv[0][2] == L; over = []
     for (a1, b1, n1), (a2, b2, n2) in zip(mv, mv[1:]):
         if a2 < b1 - 250: over.append(f"{n2} starts {round(b1 - a2)} ms before {n1} ends")
-    return t.verdict(o, [("the leader is the first to move", inorder, f"first mover {mv[0][2] if mv else None}"), ("each starts after the previous finishes (250 ms slack)", not over, "; ".join(over[:3]))], guards=dict(account=False))
+    return t.verdict(o, [("the leader is the first to move", inorder, f"first mover {mv[0][2] if mv else None}"), ("each starts after the previous finishes (250 ms slack)", not over, "; ".join(over[:3]))], guards=dict(account=False, notices_ok=(r"out of movement|stopped short",)))
 
 @check("S16.d", S, "fight, single drag: Hero 1 alone is charged 5 ft a square (as in 0.9.0; the speed limit is not applied to a single drag)", path="state", kind="HARD", scenario="fight")
 def d(t):
@@ -45,7 +45,7 @@ def e(t):
     downs = [p["t"] for p in o.raw["gm"]["ptr"] if p["ty"] == "down"]; ct = downs[-1] if downs else None
     who = cl.get("who"); late = [n for n in HS if n != who and (o.first_move(n) or 0) > (ct or 1e18) + 100]
     return t.verdict(o, [("the click landed on a walking member", not cl.get("missed"), f"{cl}"), ("at least one member had not yet started (the check is not vacuous)", (cl.get("notStarted") or 0) >= 1, f"{cl.get('notStarted')} not started"),
-                         ("nobody started to walk after the click", not late, f"started later: {late}")], guards=dict(account=False))
+                         ("nobody started to walk after the click", not late, f"started later: {late}")], guards=dict(account=False, notices_ok=(r"out of movement|stopped short",)))
 
 @check("S16.f", S, "fight: a mount and its rider dragged together stay together", path="state", kind="HARD", scenario="fight")
 def f(t):

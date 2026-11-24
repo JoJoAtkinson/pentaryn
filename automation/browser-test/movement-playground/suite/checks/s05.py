@@ -16,7 +16,7 @@ def in_b(o, n):
 @check("S05.a", S, "stair: ONE drag of one hero crosses room A to room B (arrives, no wall crossed)", path="state", kind="HARD", expect010=True, share="s05one")
 def a(t):
     o = t.shared("s05one", lambda: t.drag([L], L, pt(S, "dropB"))); e = leader_err(o, L, pt(S, "dropB"))
-    return t.verdict(o, [("hero ended in room B on the drop square (within 0.6 sq)", e <= 0.6, f"{e:.2f} sq off; notices {o.notice_texts()[:2]}")], num=e, unit="sq")
+    return t.verdict(o, [("hero ended in room B on the drop square (within 0.75 sq: dropB is a grid corner, its snapped square centre is 0.71 sq off)", e <= 0.75, f"{e:.2f} sq off; notices {o.notice_texts()[:2]}")], num=e, unit="sq")
 
 @check("S05.b", S, "stair: one move (a single route write), no pause over 150 ms, clearance >= 0.15 sq, within 0.05 sq of the centre line in the narrow stretch", path="gpu", kind="GATED", expect010=True, timing=True)
 def b(t):
@@ -29,7 +29,7 @@ def b(t):
 def c(t):
     o = t.shared("s05grp", lambda: t.drag(HS, L, pt(S, "dropB"))); e = leader_err(o, L, pt(S, "dropB")); miss = [n for n in HS if not in_b(o, n)]
     f = {n: o.first_move(n) for n in HS}; lead_first = f[L] is not None and all(v is None or v >= f[L] for v in f.values()) if o.drawn_dense() else True
-    return t.verdict(o, [("leader within 0.6 sq of the drop", e <= 0.6, f"{e:.2f} sq off"), ("all four in room B", not miss, f"not in B: {miss}"), ("the leader sets off first", lead_first, "someone moved before the leader")], num=e, unit="sq")
+    return t.verdict(o, [("leader within 0.75 sq of the drop (dropB is a grid corner: its snapped square centre is 0.71 sq off)", e <= 0.75, f"{e:.2f} sq off"), ("all four in room B", not miss, f"not in B: {miss}"), ("the leader sets off first", lead_first, "someone moved before the leader")], num=e, unit="sq")
 
 @check("S05.d", S, "stair: a click on the walker mid-stair rests it off-grid ON the centre line", path="gpu", kind="HARD", expect010=True)
 def d(t):
@@ -71,14 +71,14 @@ def g(t):
 def h(t):
     t.walk(HS, 30); fight(t, HS, L); o = t.drag([L], L, pt(S, "dropB")); c = charge_of(o, L)
     if not c or not in_b(o, L): return t.verdict(o, [("the hero crossed the stair into B", False, f"stopped at {o.c1(L)}; notices {o.notice_texts()[:2]}")], guards=dict(account=False, notices_ok=(r".",)))
-    pts = [(e[0], e[1]) for e in o.docs[L]["hist"]]; shp = ST[S]["regions"][0]["shape"]
+    pts = [(e[0] + 50, e[1] + 50) for e in o.docs[L]["hist"]]; shp = ST[S]["regions"][0]["shape"]   # history entries are top-left: the region is tested at the centres
     inside = region_len_sq(pts, shp); total = polyline_len(pts) / G; exp = 5 * (total + inside); ch = c["sum"]
     return t.verdict(o, [("region really crossed", inside > 1, f"{inside:.2f} sq inside"), ("charge = 5 ft x (walked + inside the region)", abs(ch - exp) <= 0.04 * exp + 1.5, f"charged {ch}, expected {exp:.1f} ({total:.1f} sq walked, {inside:.1f} inside)")], num=ch - exp, unit="ft")
 
 
 @check("S05.i", S, "stair: a warm narrow route takes under 50 ms and reports narrow + minClearance >= 0.15", path="state", kind="GATED", expect010=True, timing=True)
 def i(t):
-    to = pt(S, "dropB"); t.say("pathfind.route Hero 1 to room B, three times (cold, warm, warm)")
+    to = (650, 4450); t.say("pathfind.route Hero 1 to the centre of the square the drop at dropB snaps to, four times (cold, warm, warm, warm)")
     r = t.rig.ev("gm", """const m=game.pentaryn.movement; const a=canvas.tokens.placeables.find(t=>t.name==='S05 Hero 1').document; const out=[]; for(let i=0;i<4;i++){const t0=performance.now(); const r=await m.pathfind.route(a,{to:{x:%d,y:%d}}); out.push({ms:performance.now()-t0, ok:r.ok, reached:r.reached, narrow:r.narrow, minClearance:r.minClearance});} return JSON.stringify(out)""" % (to[0] - 50, to[1] - 50))
     warm = sorted(x["ms"] for x in r[1:])[1]; last = r[-1]
     c = [("route found", last["ok"] and last.get("reached") is not False, json.dumps(last)), ("warm route under 50 ms", warm < 50, f"{warm:.1f} ms"), ("route reports narrow=true", last.get("narrow") is True, last.get("narrow")), ("minClearance >= 0.15 sq", isinstance(last.get("minClearance"), (int, float)) and last["minClearance"] >= 0.15, last.get("minClearance"))]

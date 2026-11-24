@@ -1,6 +1,6 @@
 # ZZ Playground suite - the checks
 
-92 checks over 16 stations. Id = station + letter. Path: `state` = WSL harness (software GL: positions at rest, notices, charges, shapes, errors), `gpu` = BOSS GPU Chrome (timing, one motion, z-order, two screens, plan time, long frames), `both` = runs on each. `runs` = 3 for timing checks (void when the host load is over 3), else 1. `010` = new in 0.10: expected to fail on 0.9.0 (`expect010`, reported as xfail).
+119 checks over 16 stations (92 from the first build + 26 added in live round 1, see "Live round 1 extras" at the end). Id = station + letter. Path: `state` = WSL harness (software GL: positions at rest, notices, charges, shapes, errors), `gpu` = BOSS GPU Chrome (timing, one motion, z-order, two screens, plan time, long frames), `both` = runs on each. `runs` = 3 for timing checks (void when the host load is over 3), else 1. `010` = new in 0.10: expected to fail on 0.9.0 (`expect010`, reported as xfail).
 
 Every check starts from the station's reset (its scenario and mode), does one thing with real mouse input where a person would, and ends with no combat. Every HARD check also runs the guards: no module error in the console, the breaker did not trip, no token through a wall or shut door (drawn path and route, one-way walls by side), no token through or onto a standing token outside the group, no two tokens overlapping at rest (circle metric), every member moving or named within 4 s of the drop, and no notice that the check does not expect.
 
@@ -54,7 +54,8 @@ Every check starts from the station's reset (its scenario and mode), does one th
 | S04.c | state | HARD | 1 | yes | back/paths | 20 in a tunnel, leader at the back: it walks through to the front, all follow |
 | S04.d | gpu | HARD | 1 | yes | back/paths | 20 in a tunnel, leader at the back: drawn above every member it passes |
 | S04.e | state | HARD | 1 | yes | cap/paths | cap: 24 selected are accepted (all moving or named within 4 s) |
-| S04.f | state | HARD | 1 | yes | cap/paths | cap: 25 selected are refused with the notice and nobody moves |
+| S04.f | state | HARD | 1 |  | cap/paths | cap: 25 selected out of combat: the module hands them to core (mode core, no plan of its own, no module error; as plan R11 says) |
+| S04.g | state | HARD | 1 |  | cap/paths | cap: 25 selected in a fight: the notice "In a fight, drag one token at a time." and nobody moves |
 
 ## S05 Spiral C stair
 
@@ -176,3 +177,24 @@ Every check starts from the station's reset (its scenario and mode), does one th
 | S16.e | gpu | HARD | 1 |  | fight/paths | fight, group drag: a click on the walker ends the queue (members that had not started never start) |
 | S16.f | state | HARD | 1 |  | fight/paths | fight: a mount and its rider dragged together stay together |
 
+
+## Live round 1 extras (checks/s17_l1.py; the Fable check's list)
+
+Extra tokens (ZZ Monster / ZZ Hero 5 made at the start of a check, flagged `extra`) are removed by the next reset as strays. All of them are 0.10 rules, so none is marked xfail.
+
+| id | path | kind | what it checks |
+|---|---|---|---|
+| S06.h | state | HARD | ten tokens marched through the off-grid S-curve: status().group.last.plan.failed = 0, nobody named, a march, leader on the drop, no wall crossed |
+| S06.i | state | HARD | ten tokens marched beside the off-grid pillar field: the same |
+| S05.j1-j5 | state | HARD | four heroes dropped at 0.6 sq into the stair, dropStair45, dropMid, 150 degrees (1300,4370), the square just inside room B (950,4450): nobody named, no two at rest within 0.98 sq, no wall crossed, the server's waypoints (every move event's route) at least 0.14 sq clear of every S05 wall |
+| S05.k1-k5 | state | HARD | the same with eight heroes (Hero 5-8 added in room A) |
+| S05.m | both | HARD | two clients: Hero 1-2 (page pa) A to B and Hero 5-6 (page pb, made in room B) B to A at the same moment: each leader arrives or is named, zero rest overlap, zero wall crossing, every screen draws each token at its document |
+| S05.n | gpu | HARD | a click on a group of four mid-stair: every member rests at least 0.14 sq clear of every wall, drawn = document, nobody overlapping |
+| S05.o | state | HARD | stair in a fight: a 2-member group, speed 30 ft: the leader stops by speed mid-stair (charge 30 ft or less, off the square grid, 0.14 sq clear, the charge within 3 % + 1 ft of the distance walked as in S05.g, core's own measureMovementPath of the history reported beside it), next turn it walks on from there (3 sq further or into room B; again 30 ft or less, the charge by the distance walked, clear of the walls, no wall crossed) |
+| S07.m-o | state | REPORTED | one-wide open door: eight heroes dropped 2, 3 and 5 squares past it: how many rest inside, queue outside, are named (gated only on nobody named, nobody in the door frame; reported kind) |
+| S07.p-r | state | HARD | the same in a fight on a diagonal approach (Hero 1-2 moved to the hall's south-west, speed 120 ft): nobody rests in the door frame unless the queue says it stopped by speed |
+| S16.g | state | HARD | the rider grabbed in a group of four: last.leader is the mount, shape march, plan.members 3 (the stack is one entry), the rider rests on its mount |
+| S16.h | state | HARD | the Large mount with its rider moved one square on each diagonal: never a swarm, no target, the rider on its mount, the mount moved |
+| S01.k | gpu | GATED | R11 on the page: group.perf.lastMs (beside plan.timingMs) under 100 ms for 8 and 250 ms for 20 members on open ground, cold (right after a door toggle, which flushes the pathfinder's memo) and warm |
+| S01.l | gpu | REPORTED | the same at 4x CPU throttle (CDP Emulation.setCPUThrottlingRate on the GM page) |
+| S05.p | gpu | REPORTED | 8 heroes over the stair A to B (cold), B to A and A to B (warm): perf.lastMs reported; gated on nobody named and no route-timeout notice |

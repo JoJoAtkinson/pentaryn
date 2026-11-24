@@ -88,7 +88,8 @@ class T:
             except Exception as e: self.say(f"shot failed {e}")
         return obs
 
-    def drag(self, group, grab, to, key="gm", via=None, hold=250, meta=None, settle=25):
+    def drag(self, group, grab, to, key="gm", via=None, hold=None, meta=None, settle=25):
+        hold = hold if hold is not None else int(os.environ.get("ZZ_HOLD", "250"))   # ms the pointer rests on the drop point before release (ZZ_HOLD=1500: a slower human)
         self.say(f"select {len(group)} ({', '.join(g.split(' ', 1)[1] for g in group) if len(group) < 9 else str(len(group)) + ' tokens'}), grab {grab}, real mouse drag to ({to[0]:.0f},{to[1]:.0f}) on page {key}")
         return self.act(lambda: {"drag": self.rig.drag(key, group, grab, to, hold=hold, via=via)}, key=key, group=group, meta=dict(meta or {}, grab=grab, dest=to), settle=settle)
 

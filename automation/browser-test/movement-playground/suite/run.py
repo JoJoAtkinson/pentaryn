@@ -39,7 +39,7 @@ try:
             if real: raise SystemExit(f"ABORT: real users are online: {real}")
             others = [u for u in act if u.startswith("ZZ ") and u not in MYUSERS]
             if others: print("WARN other ZZ users active (another agent?):", others, flush=True)
-            need = {"assist": True, "groupDrags": True, "groupStagger": True, "pathfinding": "everyone"}
+            need = {"assist": True, "groupDrags": True, "pathfinding": "everyone"}
             for k, v in need.items():
                 if snap0.get(k) != v: print(f"setting {k}: {snap0.get(k)} -> {v} (restored at the end)"); rig.set_setting(k, v)
             res = Results(rd, ctx["version"])

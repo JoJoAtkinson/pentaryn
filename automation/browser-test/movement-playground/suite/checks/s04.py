@@ -31,7 +31,15 @@ def e(t):
     o = t.drag(M24, L, pt(S, "dropE"), settle=45); e_ = leader_err(o, L, pt(S, "dropE"))
     return t.verdict(o, [("no refusal for the group size", not any(re.search(r"too many|limit|at most|up to \d+", x, re.I) for x in o.notice_texts()), f"{o.notice_texts()[:2]}"), ("leader within 0.6 sq of the drop", e_ <= 0.6, f"{e_:.2f} sq off")], num=e_, unit="sq")
 
-@check("S04.f", S, "cap: 25 selected are refused with the notice and nobody moves", path="state", kind="HARD", scenario="cap", expect010=True)
+@check("S04.f", S, "cap: 25 selected out of combat: the module hands them to core (no plan, no module error); core's own drop moves them", path="state", kind="HARD", scenario="cap")
 def f(t):
+    o = t.drag(M25, L, pt(S, "dropE"), settle=30); l = o.last(); pl = l.get("plan")
+    return t.verdict(o, [("the module made no plan of its own (mode core, no plan)", l.get("mode") == "core" and not pl, f"mode {l.get('mode')} reason {l.get('reason')} plan {pl}")],
+                     guards=dict(account=False, rest=False, standing=False, notices_ok=(r".",)))
+
+@check("S04.g", S, "cap: 25 selected in a fight: 'In a fight, drag one token at a time.' and nobody moves", path="state", kind="HARD", scenario="cap")
+def g(t):
+    from s05 import fight
+    t.walk(M25, 30); fight(t, M25, L)
     o = t.drag(M25, L, pt(S, "dropE"), settle=20); ns = o.notice_texts(); moved = [n for n in M25 if o.moved_doc(n)]
-    return t.verdict(o, [("a notice names the limit", any(re.search(r"too many|limit|at most|up to|\d+ (tokens|members)", x, re.I) for x in ns), f"{ns[:3]}"), ("nobody moved", not moved, f"{len(moved)} moved")], guards=dict(account=False, notices_ok=(r".",)))
+    return t.verdict(o, [("the notice says one token at a time", any(re.search(r"one token at a time", x, re.I) for x in ns), f"{ns[:3]}"), ("nobody moved", not moved, f"{len(moved)} moved")], guards=dict(account=False, notices_ok=(r".",)))
