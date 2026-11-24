@@ -73,14 +73,19 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   door shut mid-walk stops the token on the square it holds, charged for the squares it walked); never from a screen
   that no longer shows the token's map; never into a token standing still.
 - **A door shut or a wall raised across a walk out of combat** stops it where it is drawn.
-- **Tier B — several tokens out of combat** (`groupDrags`): 0.9.0 step 1 sends a group drag as core's own move, each
-  member on its own path; B0 (its own spot, one pass, one update) is the next step on the branch.
+- **Tier B — several tokens out of combat** (`groupDrags`; 0.9.0 B0, the floor): at the drop every member gets its own
+  spot, the free one nearest its place in the formation that it can reach without going round the far side of a wall,
+  and a route round the tokens standing outside the drag and round the spots already given out; they all set off at
+  once in the drop's one update. Nobody rests on anybody, nobody walks through a token standing still or onto a
+  mate's spot; two members both moving may brush on the way. One with no spot it can reach stays where it stands and
+  is named: "Stayed where they stand, with no free spot they can reach: Talo." Nobody able to go is "No route there".
+  `planGroup(tokens, point)` dry-runs it. The file (start delays, filing through a door) is §4 step 3.
 - **Several tokens in a fight**: refused with "In a fight, drag one token at a time." until the fight file lands
   (one member at a time, each an exact single move).
 - **Tokens that start stacked stay stacked**: a rider on its mount walks its mount's way at its offset; a mount
   dragged alone carries its rider.
-- **Notices**: "No route there.", "Stopped short, way blocked." and "In a fight, drag one token at a time." The reason
-  behind each is in the telemetry (`telemetry()`) and in `status().group.told`.
+- **Notices**: "No route there.", "Stopped short, way blocked.", "In a fight, drag one token at a time." and the
+  members of a group drag that stayed, by name. The reason behind each is in the telemetry (`telemetry()`) and in `status().group.told`.
 - **Fail-open and the circuit breaker**: an exception inside a drop sends core's own move and is logged. After 3
   errors or 6 failed plans in a session the drag help switches itself off on that screen; on the GM's screen it also
   turns `assist` off for the table, and the GM is told either way.
@@ -194,7 +199,7 @@ tier C's arrivals and the waiting cue, with their rows.
 | `TokenLayer#_prepareKeyboardMovementUpdates` | `movement-keyboard-constrain-ghost` | the same for arrow keys (reads the private result shape `result[1].movement[id].constrainOptions`) |
 | `TokenLayer.objects#sortChildren` | `movement-layer-sort-owned` | core's interaction sort plus the owned rank (reads `_lastSortedIndex`) |
 | `Token#findMovementPath` | `movement-pathfind-find-path` | drag pathfinding: splices the found corners in and runs the original again (marker `__pentarynMovementPath`) |
-| `Token#_prepareDragLeftDropUpdates` | `movement-group-drop` | the drop (0.9.0 `drop.mjs`): core's updates, then a single drag's route round standing tokens, a group's one-pass slots and routes; combat cell checkpoints (marker `__pentarynMovementGroup`) |
+| `Token#_prepareDragLeftDropUpdates` | `movement-group-drop` | the drop (0.9.0 `drop.mjs`): core's updates, then a single drag's route round standing tokens, a group's one-pass slots and routes (B0, one update); combat cell checkpoints (marker `__pentarynMovementGroup`) |
 | `Token#_onClickLeft` | `movement-click-stop` | click to stop, before core's click (marker `__pentarynMovementStop`) |
 | `Token#stopAnimation` | `movement-stop-animation-defuse` | every client: empties the tweens' queued links before core terminates them, so no stop throws core's "reading 'chain'" (marker `__pentarynMovementDefuse`) |
 | `CanvasAnimation.animate` | `movement-canvas-animation-registration` | every client: a fresh movement tween's first frame counts only the time since it began, so a move that starts on a stalling page is not drawn ahead of its walk (0.6.3, `status().stop.firstFrames`); a chained tween that completes inside its own first frame (a slow page) leaves its running next link registered under the name, so a stop terminates it (marker `__pentarynMovementAnimReg`, 0.4.8) |
@@ -270,7 +275,8 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `telemetry-core.mjs`, `telemetry.mjs` | pure: the ring buffer, its summary and report text, the breaker's rule; the feature: telemetry, the circuit breaker, the Alt+W key (0.8.0) |
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and gap tests (reads only) |
 | `drop.mjs` | the feature (0.9.0, was `group.mjs`): the drop wrap — single drops, group drops, a fight's every square, a wall across a walk, riders, undo |
-| `file.mjs` | the feature (0.9.0): which tokens move together (a click on one stops them all) |
+| `file-core.mjs` | pure (0.9.0): B0 — every member's slot and route in one pass, the members that stay, the orders tried |
+| `file.mjs` | the feature (0.9.0): B0's oracles on the canvas (rest test, walk flood, routes round circles), the dry run, which tokens move together (a click on one stops them all) |
 | `stop.mjs` | the feature: the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `styles/movement.css` | the dimmed combat badge (`.pm-blocked`) |
@@ -283,8 +289,10 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 goldens, i18n keys and logging; `pathfind-core.test` (A* on synthetic wall maps: corners, doors,
 one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equality) and
 `pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-core.test`
-(the 0.8 planner's unit acceptance tests on ASCII floors, until §4 step 6) and `drop.test` (the drop and click wraps,
-and the 0.9.0 step 1 gate: 60 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
+(the 0.8 planner's unit acceptance tests on ASCII floors, until §4 step 6), `file-core.test` (B0's gate: 800 seeded
+drops on random floors and the hard-case dungeon, every member sent or named, no route through a standing token or an
+earlier slot, no two at rest overlapping) and `drop.test` (the drop and click wraps, B0 on the synthetic board, and the
+0.9.0 step 1 gate: 60 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
 `sequence-core.test` (stacks, and tier C's sequence), `telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). The 0.8
 simulator modelled the glue 0.9.0 deleted and went with it; §4 step 5 rebuilds it on the real cores (`test/sim/`

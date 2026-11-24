@@ -8,6 +8,28 @@ on its way or named in a notice, and nothing ever waits for another mover. Two t
 the branch `movement-0.9`; `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until the GPU round of §4 step 8.
 Plan §17.
 
+### Step 2 — B0, the floor
+
+- **[declared] A group drag out of combat is planned in one pass** (`file-core.mjs`, pure; glue in `file.mjs`): per
+  member in order (the grabbed one first, then least walk left first), the free spot nearest its formation spot by
+  walking that it can reach (never round the far side of a wall: a walk at most 1.5 × the straight way + 1 square),
+  clear of the tokens standing outside the drag, of the spots and of the routes already given out; and an A* route
+  round the standing tokens and the spots given out (space, not time). A member that stays, or whose spot is where it
+  stands, becomes a standing token for the others and the pass runs again until nothing changes; the members that
+  stayed are tried again planned first, then most walk left first, and the order that sends the most wins (on a tie,
+  the one that rests the grabbed one nearest its drop point). Zero stagger, one batched update (the drop's own), no
+  timers. A member with no reachable spot stays where it stands and is named ("Stayed where they stand, with no free
+  spot they can reach: …"); nobody able to go is "No route there". Planning time is bounded (300 ms a member, 1.5 s a
+  drop; past it a member stays, named). A group is planned from its drop points, not core's paths (a member whose core
+  path stopped at a wall still has a way).
+- **[declared] `planGroup(refs, point)`** is B0's dry run: `{ ok, result, ms, passes, order, members: [{ id, name,
+  slot, waypoints, stay }] }`.
+- Gate (property tests, `test/file-core.test.mjs`): 600 seeded drops on random floors and 200 on the hard-case
+  dungeon, every member sent or named, no route through a standing token, a member standing still or a slot given
+  out before it, no spot on an earlier member's route, no two at rest overlapping; of the members that could reach
+  their spot alone, 98.6 % sent on random floors, 352 of 357 in the dungeon. Eight members through a door on the
+  synthetic board plan in 7 ms (p50, 13 ms p95, Node).
+
 ### Step 1 — singles
 
 - **[declared] `drop.mjs` replaces `group.mjs`** (4,124 → about 1,100 lines with the B0 glue of step 2). A single drop

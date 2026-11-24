@@ -697,7 +697,7 @@ token in the next square refuses it (a moving one does not: soft); a wall or doo
 where drawn (the click-stop's displace, decision 2); riders; one undo entry per move. Deleted: the guard, the
 reservations, the lifecycle, the cue, the reload resumes, tier C, the fight door-cut machinery, every hook and status
 row of theirs, their tests, and the 0.8 simulator model (a port of the deleted glue). Interim until the later steps:
-a group drag out of combat is core's own drop (step 2 replaces it the same day), a group drag in a fight is refused
+a group drag out of combat is core's own drop (step 2 replaced it the same day), a group drag in a fight is refused
 with a notice (step 4), a click stops the members the clicker owns (step 3 adds the dragger stopping the rest).
 
 Gate results: tier A's tests pass (`test/drop.test.mjs`: 58 tests ported from `group.test.mjs`, the tier B / C and
@@ -706,4 +706,32 @@ square, none through a wall or a standing token, and a door shut before a random
 the squares sent (60 moved, 35 cut by the door); C12 (single-drag latency) has no live run on the branch, its Node
 proxy (the drop handler's own time, 400 drags) is unchanged or better: p50 0.037 → 0.018 ms on open ground, 0.27 → 0.25
 ms round a standing token, 0.21 → 0.19 ms in a fight.
+
+### 17.2 Step 2: B0, the floor
+
+`file-core.mjs` (pure) plans a group drag out of combat in one pass, `file.mjs` (a feature) gives it its oracles on
+the canvas (`restWalkable` and the places to avoid for a spot, a walk flood from each formation spot, routes through
+the pathfinder's `routeTo` round circles with a square's box clearance) and `drop.mjs` sends the result as the drop's
+own batched update. Per member, the grabbed one first and then least walk left first: the free spot nearest its
+formation spot **by walking** (a spot whose walk is more than 1.5 × the straight way + 1 square is round the far side
+of a wall and never tried), free meaning clear of the tokens standing outside the drag, of the spots already given out
+and of the routes already given out (a mate that arrives first never rests in an earlier one's way: the hard "mate at
+its slot" with zero stagger); then an A* route round the standing tokens and the spots given out, checked against
+them by the core itself. A member with no spot it can reach stays and is named; one whose spot is where it stands
+(only within a square of its formation spot) stands still; either becomes a standing token and the pass runs again
+until nothing changes (each pass fixes one more, so it ends). Because a spot at a door's mouth closes the door to the
+members planned after it, the members that stayed in the first pass are tried again planned first, then most walk
+left first, and the order that sends the most members wins (on a tie, the one that rests the grabbed one nearest its
+drop point). Planning time: 300 ms a member, 1.5 s a drop, reorders only in the first half; past it a member stays,
+named ("budget"). No stagger, no timers, no second plan.
+
+Gate: `test/file-core.test.mjs`, 600 seeded drops on random floors (2-8 members, some 2×2, 0-4 tokens standing) and
+200 on the hard-case dungeon, real pathfind-core A*: every member sent, at its spot, or named; no route enters a token
+standing outside the drop, a member standing still or a slot given out before it (leaving one it starts inside is
+allowed: that one is moving); no spot on an earlier route; no two at rest overlapping. Liveness: of the members that
+could reach their own spot alone, 1,303 of 1,322 sent on random floors (98.6 %), 352 of 357 in the dungeon; the rest
+named. On the module's synthetic board (`test/drop.test.mjs`) a group through a door goes in the drop's one update
+with nothing sent later, a sealed-off member is named, a fight's group drag is refused; eight members through a door
+plan in 7 ms p50 / 13 ms p95 (Node). Not yet measured: the plan's time on a GPU page for 8 members (step 8's
+"under 100 ms"); a maze can reach the 1.5 s budget, synchronously, which is the next thing to watch.
 

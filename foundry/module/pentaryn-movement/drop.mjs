@@ -143,7 +143,6 @@ function groupFollower(token) {
   let combat = false;
   try { combat = inCombat(token?.document); } catch { combat = false; }
   if (combat || !setting("groupDrags")) return false;
-  return false;                            // §4 step 1: a group drop is core's, every member pathfound as it is dragged
   const dragged = token?.layer?._draggedToken;
   if (!dragged || dragged === token) return false;
   const contexts = dragged.mouseInteractionManager?.interactionData?.contexts ?? {};
@@ -421,7 +420,8 @@ function catchUpDestination(grabbed, event, contexts) {
 
 /** Does no member of this drop go anywhere (every waypoint is where it stands)? */
 function droppedInPlace(contexts, [updates, options], caughtUp = false) {
-  if (caughtUp) return contexts.every(c => c.destination?.x === c.token.document._source.x && c.destination?.y === c.token.document._source.y);
+  // A group is planned from its drop points, not core's paths (a member whose core path stops at a wall still has a way).
+  if (caughtUp || contexts.length > 1) return contexts.every(c => c.destination?.x === c.token.document._source.x && c.destination?.y === c.token.document._source.y);
   return contexts.every(c => {
     const doc = c.token.document;
     const wps = options.movement?.[doc.id]?.waypoints ?? [];
@@ -1002,12 +1002,45 @@ function refuseFight(contexts) {
 }
 
 /**
- * A group drag out of combat.
+ * A group drag out of combat, B0 (file.mjs): every member's slot and route in one pass, one batched update (the drop's
+ * own), no stagger, no timers. A member with no reachable slot stays and is named; nobody moving at all is "No route
+ * there". A throw is core's own drop (the wrap's catch).
  */
 function groupDrop(grabbed, contexts, result, riders) {
-  // §4 step 1: core's own drop (fail open), the riders at their leaders' offsets; B0 replaces it in step 2.
-  last.result = "core";
-  return carryRiders(riders, result);
+  const lead = riders?.get(grabbed.document.id)?.leader;
+  const anchor = lead ? (contexts.find(c => c.token.document.id === lead)?.token ?? grabbed) : grabbed;
+  const leaders = riders?.size ? contexts.filter(c => !riders.has(c.token.document.id)) : contexts;
+  const out = feature.exposed.groupPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} });
+  if (!out) { fellBack("noPlan"); last.result = "core"; return carryRiders(riders, result); }
+  const { plan, members } = out;
+  Object.assign(last, { result: "plan", plan: { ms: plan.ms, passes: plan.passes, stayed: plan.stayed.length, members: plan.order.length } });
+  feature.exposed.tele?.("plan", { mode: "b0", members: members.length, ms: plan.ms, stayed: plan.stayed.length });
+  const movement = {};
+  const updates = [];
+  const base = result[1].movement ?? {};
+  for (const m of members) {
+    const wps = feature.exposed.groupWaypoints(m, plan.members[m.id]);
+    if (!wps.length) continue;
+    movement[m.id] = { ...(base[m.id] ?? { planned: false }), waypoints: wps };
+    updates.push({ _id: m.id });
+  }
+  const stayedDocs = plan.stayed.map(id => members.find(m => m.id === id)?.token?.document).filter(Boolean);
+  if (!updates.length) {
+    last.result = "none";
+    if (!stayedDocs.length || plan.stayed.includes(anchor.document.id)) tell("noRoute", "groupNoRoute");
+    else tellStayed(stayedDocs);
+    return null;
+  }
+  if (stayedDocs.length) tellStayed(stayedDocs);
+  const options = { ...result[1], movement };
+  const res = carryRiders(riders, [updates, options]);
+  // Every client learns the group from its update option (a click on one stops them all); never with a hidden member
+  // among them (update options reach every client).
+  const ids = res[0].map(u => u._id);
+  const scene = grabbed.document.parent;
+  const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
+  if (gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden)) options[GROUP_OPT] = gid;
+  return res;
 }
 
 function patchDrop() {
@@ -1071,7 +1104,7 @@ export function install(reg, ctx) {
   reg.on("updateToken", (doc, _changes, options, userId) => onUndoEntry(doc, options, userId), { label: "updateToken: one undo entry for one move (a fight's squares)" });
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: stop moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: stop moves across a shut door" });
-  ctx.expose({ groupFollower, singleAvoid, groupStatus, groupCutAcross: cutAcross, groupDryRun: () => ({ ok: true, result: "core", reason: "step1", members: [] }),
+  ctx.expose({ groupFollower, singleAvoid, groupStatus, groupCutAcross: cutAcross,
     groupPatched: () => dropPatched, groupCheckpoints: withCheckpoints, groupStackmates: stackmates });
 }
 

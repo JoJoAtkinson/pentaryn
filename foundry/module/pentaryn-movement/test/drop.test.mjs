@@ -567,7 +567,7 @@ test("a click within 400 ms of a drop is core's click (habit click, double click
   from = F.calls.length;
   ts[0]._onClickLeft({});
   const moved = F.calls.slice(from).filter(c => c.op === "move").map(c => c.id).sort();
-  assert.deepEqual(moved, [ts[0].document.id], "armed: it stops (0.9.0 step 1: a group drop is core's, held by nobody)");
+  assert.deepEqual(moved, ts.map(t => t.document.id).sort(), "armed: the whole group stops (decision 3)");
   for (const t of ts) t.animationContexts.clear();
   tickBy(60000);
 });
@@ -1832,4 +1832,186 @@ test("0.9.0 step 1 gate: 60 single fight drags, each charged exactly 5 ft per sq
   }
   if (process.env.PM_STATS) console.log({ moved, told, cut });
   assert.ok(moved >= 40, `most of the 60 drags move (${moved} moved, ${told} told, ${cut} cut by the door)`);
+});
+
+test("while a group is dragged only the grabbed token is pathfound", () => {
+  const ts = [makeToken("folA000000000001", 400, 200), makeToken("folB000000000001", 300, 200)];
+  const contexts = contextsFor(ts, 0, 400);
+  layer._draggedToken = ts[0];
+  ts[0].mouseInteractionManager = { interactionData: { contexts } };
+  try {
+    const follower = ts[1].findMovementPath([wp(300, 200), wp(300, 600)], { preview: true, constrainOptions: {}, measureOptions: {}, terrainOptions: {} });
+    assert.deepEqual(follower.result.map(w => [w.x, w.y]), [[300, 200]], "core's own path: stops at the wall");
+    const grabbed = ts[0].findMovementPath([wp(400, 200), wp(400, 600)], { preview: true, constrainOptions: {}, measureOptions: {}, terrainOptions: {} });
+    assert.deepEqual([grabbed.result.at(-1).x, grabbed.result.at(-1).y], [400, 600]);
+  } finally {
+    layer._draggedToken = null;
+  }
+});
+
+
+test("H2-08: a fast flick whose last pointer move core skipped plans to the pointer-up point, not the stale destination", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("flkA000000000001", 100, 100), makeToken("flkB000000000001", 200, 100)];
+  // Core took the drag only as far as +100 px (its one-move-per-frame throttle); the pointer came up 400 px lower, past the door.
+  const ctx = contextsFor(ts, 100, 0);
+  const proto = Token5e.prototype;
+  const saved = [proto._getDragOrigin, proto._getDragWaypointPosition];
+  proto._getDragOrigin = function () { return center(this.document._source); };
+  proto._getDragWaypointPosition = function (cur, p, { snap }) { return { ...cur, x: snap ? Math.round(p.x / S) * S : p.x, y: snap ? Math.round(p.y / S) * S : p.y }; };
+  try {
+    const grabbedCentre = center(ts[0].document._source);
+    const staleDest = { x: grabbedCentre.x + 100, y: grabbedCentre.y };
+    const up = { x: grabbedCentre.x + 300, y: grabbedCentre.y + 400 };
+    drop.result = coreDrop(ctx);
+    const from = F.calls.length;
+    // Core's pointer-up writes the up point to interactionData.destination; the contexts keep the stale one.
+    assert.equal(ctx[ts[0].document.id].destination.x, staleDest.x - 50);
+    const out = ts[0]._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx, destination: { ...up } }, shiftKey: false });
+    tickBy(5000);
+    const moves = { ...(out?.[1]?.movement ?? {}), ...Object.assign({}, ...sent(from).map(c => c.options.movement)) };
+    const end = moves[ts[0].document.id]?.waypoints?.at(-1);
+    assert.deepEqual([end?.x, end?.y], [400, 500], `the grabbed one goes where the pointer came up: ${JSON.stringify(end)}`);
+    assert.ok(moves[ts[1].document.id]?.waypoints?.at(-1)?.y >= 400, "the other follows past the door");
+  } finally { [proto._getDragOrigin, proto._getDragWaypointPosition] = saved; }
+});
+
+
+test("0.9.0 B0: a group through a door: each member its own route and spot past it, all in the drop's one update (no waves, no timers), never resting on another", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("b0dA000000000001", 400, 200), makeToken("b0dB000000000001", 300, 200), makeToken("b0dC000000000001", 500, 200)];
+  const others = keepOnly(ts);
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.ok(Array.isArray(out), "planned at the drop");
+    const [updates, options] = out;
+    assert.equal(options.method, "dragging");
+    assert.deepEqual(updates.map(u => u._id).sort(), ts.map(t => t.document.id).sort(), "every member in the drop's own update");
+    assert.equal(typeof options.pentarynMovementGroup, "string", "tagged as one group");
+    assert.ok(api.status().group.groups >= 1, "held as one group (a click on one stops them all)");
+    tickBy(10000);
+    assert.equal(sent(from).length, 0, "nothing sent later: no waves");
+    const ends = [];
+    for (const t of ts) {
+      const wps = options.movement[t.document.id].waypoints;
+      const path = [t.document._source, ...wps];
+      for (let k = 1; k < path.length; k++) assert.equal(crossing(center(path[k - 1]), center(path[k])).length, 0, `${t.document.id} leg ${k} crosses a wall`);
+      assert.equal(wps.at(-1).explicit, true);
+      const end = center(wps.at(-1));
+      assert.ok(end.y > 400, `${t.document.id} ends past the door: ${JSON.stringify(end)}`);
+      ends.push(end);
+    }
+    assert.deepEqual([options.movement.b0dA000000000001.waypoints.at(-1).x, options.movement.b0dA000000000001.waypoints.at(-1).y], [400, 600], "the grabbed one lands where dropped");
+    for (let i = 0; i < ends.length; i++) for (let j = i + 1; j < ends.length; j++) {
+      assert.ok(Math.hypot(ends[i].x - ends[j].x, ends[i].y - ends[j].y) >= S - 1e-6, `no rest overlap: ${JSON.stringify(ends)}`);
+    }
+    const last = api.status().group.last;
+    assert.deepEqual([last.mode, last.result, last.async], ["plan", "plan", false]);
+    assert.equal(last.plan.stayed, 0);
+    assert.ok(!api.status().group.told.some(t => Date.parse(t.at) >= Date.now() - 5), "no notice");
+  } finally {
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.9.0 B0: no route crosses a token standing outside the drop, and no member rests on it", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("b0sA000000000001", 100, 100), makeToken("b0sB000000000001", 100, 200)];
+  const rest = makeToken("b0sR000000000001", 400, 100);
+  rest.visible = true;
+  const others = keepOnly([...ts, rest]);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts, rest];
+  try {
+    const out = dropWith(ts[0], contextsFor(ts, 600, 0));
+    const c = center(rest.document._source);
+    for (const t of ts) {
+      const wps = out[1].movement[t.document.id].waypoints;
+      let prev = center(t.document._source);
+      for (const p of wps) { const q = center(p); assert.ok(avoidDist({ x: c.x, y: c.y, r: 99 }, prev, q) >= 99 - 1e-6, `${t.document.id} through the standing token: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`); prev = q; }
+      assert.ok(Math.hypot(prev.x - c.x, prev.y - c.y) >= S - 1e-6, "not resting on it");
+    }
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const t of [...ts, rest]) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.9.0 B0: a member with no spot it can reach stays where it stands and is named; the others go; nobody moving at all is \"No route there\"", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("b0nA000000000001", 400, 200), makeToken("b0nB000000000001", 100, 200)];
+  const others = keepOnly(ts);
+  // B's room below is sealed off from the door side: a wall down x = 300 from y 400.
+  const extra = [[{ x: 300, y: 400 }, { x: 300, y: 1000 }]];
+  world.walls.push(...extra);
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.ok(Array.isArray(out));
+    const ids = out[0].map(u => u._id);
+    assert.deepEqual(ids, [ts[0].document.id], "the grabbed one goes, the sealed-off one stays");
+    const told = F.calls.slice(from).filter(c => c.op === "notify" && c.level === "warn").map(c => c.message);
+    assert.ok(told.some(m => /named\.stayed|Stayed where they stand/.test(m)), `named: ${JSON.stringify(told)}`);
+    assert.equal(api.status().group.last.plan.stayed, 1);
+    // Nobody can go: the door shut too.
+    world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+    try {
+      const f2 = F.calls.length;
+      assert.equal(dropWith(ts[0], contextsFor(ts, 0, 400)), null, "nothing moves");
+      assert.ok(F.calls.slice(f2).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.noRoute"), "No route there");
+    } finally { world.walls.pop(); }
+  } finally {
+    world.walls.splice(world.walls.length - extra.length, extra.length);
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.9.0: a group drag in a fight is refused with a notice (until the fight file); nothing moves", () => {
+  combatFlag = true;
+  clock.step = 0;
+  const ts = [makeToken("b0fA000000000001", 400, 200), makeToken("b0fB000000000001", 300, 200)];
+  const others = keepOnly(ts);
+  try {
+    const from = F.calls.length;
+    assert.equal(dropWith(ts[0], contextsFor(ts, 0, 100)), null);
+    assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.fightGroup"));
+    assert.deepEqual([api.status().group.last.mode, api.status().group.last.reason], ["refused", "fightGroup"]);
+  } finally {
+    combatFlag = false;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.9.0 planGroup(refs, point): B0's plan as a dry run (each member's slot, waypoints, why it stays); nothing moves", () => {
+  F.canvas.ready = true;
+  const ts = [makeToken("b0rA000000000001", 400, 200), makeToken("b0rB000000000001", 300, 200)];
+  const others = keepOnly(ts);
+  try {
+    const from = F.calls.length;
+    const r = api.planGroup(ts.map(t => t.document), { x: 400, y: 600 });
+    assert.equal(r.ok, true);
+    assert.equal(r.result, "plan");
+    assert.equal(r.members.length, 2);
+    assert.deepEqual(r.members[0].slot, { x: 400, y: 600 });
+    assert.ok(r.members.every(m => m.waypoints >= 1 && m.stay === null), JSON.stringify(r.members));
+    assert.equal(sent(from).length, 0);
+    assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0);
+    assert.deepEqual(api.planGroup(ts.map(t => t.document), { x: "x" }).code, "BAD_ARGS");
+  } finally {
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  }
 });
