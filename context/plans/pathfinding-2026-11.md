@@ -1256,7 +1256,63 @@ S11's mud left out (no terrain cost in the simulator), a rider on its mount left
   and are mirrored line for line in the model; no board test of their own.
 - Defaults taken without a human: scratch `b10/auto-decisions.md` "L3".
 
-Open after L3: the six rest-overlap seeds above (a stop of a jam: a stop's writes as one update for 9191; for the jams either a
-cascade along the tokens' own ways or Joe's word on a short settle off them); the page gate (R11, needs a deploy); the
-narrow passages and the stair (R9, review 3 §4 step 9); L2's door plug (a drop just past a door's mouth), not looked
-at again.
+**Fix round** (the L3 gate was red on six rest-overlap seeds; tests first: `drop.test` "0.10 L3 fix round" x4,
+`fight.test` settleAlong, `sim.test` SIM-L3-11..16, each failing before its fix and, in the simulator, again with that
+fix alone switched off):
+- *One stop, one update* (`stop.mjs` `stopBatched`, `flushBatch`; `file.mjs` stopGroupHere and the late stops,
+  `drop.mjs` cutAcross): every token a click, a cut, another user's stop on the dragger's screen or a group's late
+  stops stops goes in one `Scene#moveTokens` (a lone one by `TokenDocument#move`), the write naming by id where each
+  carried one will rest (`pentarynMovementStopAt: { [id]: { x, y } | null }`; the old `{ x, y }` still read); the
+  dragger's screen claims them all and leaves that update's tokens to its sender. Seed 9191 (SIM-L3-11): the file of
+  eight was stopped front first in eight updates and one was late on the wire.
+- *Settled together* (`stop.mjs` `settleTogether`; `motion-core` `spotsAlong`, `settleAlong`): before the update goes,
+  when the one-by-one stop left two inside each other, one inside a token at rest, or a walk on through where another
+  rests, every token of the stop takes one of its own spots along its own way (where drawn, ahead at most 1.5 squares,
+  back the whole way it came; no two at rest inside each other, no walk on through one at rest, the front ones keep
+  their best spot first; conflict-directed backjumping, 40,000 tries). One of this screen's walkers in a token's way
+  back stops with them and they are settled again. Batching exposed the walk-on-through class the simulator had
+  counted soft ("unforeseen": the sender's documents did not yet show the stop it had itself just decided): seeds 345,
+  6572, 6982, 9631 (SIM-L3-13), and with the walker 2357 (SIM-L3-14). "Stopped on another token" is named after it.
+- *Room along the way* (`roomAlong`, makeRoom's check at each spot along the token's own way): seed 5418 (SIM-L3-15).
+- *A walk on's second look settles again* (`settleAgain`): a door this screen did not yet know was shut, across a walk
+  on back; inside members of its own stop resting where drawn, it is settled with them and they walk on clear along
+  their own ways. Seed 9124 (SIM-L3-16).
+- *A waiting member's slot is a stop's last choice* (`stopSpot`, `takenAround` `relax`): with no spot clear of every
+  slot, one clear of the tokens themselves; that member's wave then stays, named. Seed 8249 (SIM-L3-12).
+- Tried and dropped (no seed in 20,000 needed them): an own walker as a wall for every carry (the settle covers it),
+  a walk on in flight counted at its end, the first stop's way for a token stopped again on its walk on, and a token
+  the stop lets walk on taking part in the settle (6142's crowd has no solution along the ways even at 4,000,000 tries).
+- The older regression seeds the settle now also covers were found again (SIM5-02 2, 60, 69, 86 → 258, 380, 437, 575;
+  SIM-L3-03 1097 → 9124; SIM-L3-04 230 dropped; SIM-L3-05 933 → 1209); where no seed in 10,000 breaks with only the
+  old fix off (stopOrder, makeRoom, the brush), the test switches the settle off with it (SIM-L3-02, -06, -09).
+
+**Gates after the fix round.**
+- `make foundry-movement-sim SEEDS=10000`, the full mix: passThrough **0**, wallCross 0, wrongCharge 0, unsent 0,
+  errors 0, shape 0; restOverlap **1** (6142, below). 11 seeds flagged as same-instant races. Members dropped 62,381,
+  never moved 25,622, named 22,059. Mover overlap 25,644 episodes, p95 2,033 ms, 6,367 square-seconds; the leader's
+  through its own moving members apart: 2,079.
+- The legacy mix, 10,000 seeds: **all zero** (restOverlap 0, passThrough 0). Mover overlap **14,381 episodes, p95
+  1,767 ms, 2,947 square-seconds** against 0.9.0's B1 on its own simulator (18,015 / 1,900 / 4,539): better on all
+  three; the leader's walk through its own moving members apart (R6): 1,948 episodes, p95 2,733 ms, 1,096.
+  0.9.0's open seeds (5002, 5386, 3599, 3773, 5188, 7391, 8004, 8958) and L2's (315, 954, 1451, 1522, 230, 1097,
+  1399) all hold, and so do L3's six (2357, 9124, 5418, 6142 apart, 8249, 9191).
+- The 60 fight queues and 200 speed stops: green, unchanged (drop.test "0.10 L3 gate").
+- Mechanical: `make foundry-movement-check` 458 pass, 0 fail, 0 todo (conformance 95.9 %, C30 / C56); `make test`
+  2,461 passed, 9 skipped, 4 xfailed; `make foundry-module-index && make check-context` OK (the same 32 warnings).
+- **Still red: seed 6142** (crowd, hall3): the GM's click stops a crowd of 17 jammed shoulder to shoulder in a
+  three-wide door; there is no solution along their ways (settleAlong finds none even at 4,000,000 tries), so two of
+  them walk on to their own squares, named (0.10 L2 fix (a)); 30 ms later the GM shuts the door across them: the one
+  in the doorway can neither cross the shut door nor back off (the room behind is held by the click's walks on, still
+  in flight), and rests 0.36 square inside another, named. Zero needs a spot off its way (review 3 deleted the
+  straight-line last resort; R12) or Joe's word that such a jam may be left named.
+
+**Deviations (fix round).** Net lines (R12): file.mjs 630 → 639 (+9: one stop's update read by id), drop.mjs
+1,604 → 1,608 (+4: the cut as one update), stop.mjs 1,075 → 1,341 (+266: the batch, the settle, room along the way,
+the second look's settle), motion-core 570 → 657 (+87: spotsAlong, settleAlong). Why: zero rest overlap (R8) along
+the tokens' own ways only (decision 2, R12: no search, no spot off the way). The settle's backjumping search is over
+spots along each token's own way, not a route search. Slot-last and room-along-the-way have their failing tests in
+the simulator only (SIM-L3-12, -15), mirrored line for line in the model.
+
+Open after L3 and its fix round: seed 6142 above (a jam with no solution along the ways, then a door shut on it: a
+spot off its way, or Joe's word); the page gate (R11, needs a deploy); the narrow passages and the stair (R9, review 3
+§4 step 9); L2's door plug (a drop just past a door's mouth), not looked at again.
