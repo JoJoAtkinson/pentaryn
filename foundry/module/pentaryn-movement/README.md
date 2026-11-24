@@ -89,7 +89,12 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   that no longer shows the token's map; never into a token standing still, nor (0.10 L3) onto the square of a walker
   that rests there or whose screen has held it up for half a second.
 - **A door shut or a wall raised across a walk out of combat** stops it where it is drawn; a group member not yet
-  sent whose way it crosses stays where it stands, named.
+  sent whose way it crosses stays where it stands, named. **A door is not shut on a jam** (0.10 L3 ruling): on the
+  screen shutting it, a dry run of that stop for every token walking through the door's line (each one's spots along
+  its own way with the door shut, settled together, as a stop settles them); when one of them would be left with no
+  spot clear of every token, the door stays open: "Door blocked: <name> is in the doorway." Known limit: a door cannot
+  be shut on a jammed group token that has nowhere free to rest; shut it once they are through. No setting: with the
+  drag help off, or in a fight, a door always shuts.
 - **Several tokens out of combat — the leader rule** (`groupDrags`; 0.10, Joe 2026-11-24): the token you grab and
   drag **leads** (grab a rider and its mount leads). Where you drop it picks the shape. **March** — dropped on the
   floor: the leader ends on the drop square by its own way (it walks through its own group, never through anyone

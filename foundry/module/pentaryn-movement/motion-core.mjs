@@ -477,6 +477,29 @@ export function settleAlong(items, { budget = 40000, eps = 0.01, leave = 0.05 } 
   return new Map(items.map((it, k) => [it.id, it.cands[pick[k]]]));
 }
 
+/**
+ * Is this wall update a door going to shut (0.10 L3 ruling, seed 6142)? `src`: the wall's source now; `changes`: the
+ * update. A door (door > 0) that blocks movement, open now (Foundry's ds 1), set to any other state.
+ */
+export function doorShutting(src, changes) {
+  if (!src || !changes || !("ds" in changes)) return false;
+  if (!(Number(src.door) > 0) || !(Number(changes.move ?? src.move) > 0)) return false;
+  return Number(src.ds) === 1 && Number(changes.ds) !== 1;
+}
+
+/**
+ * Would a door shut leave one of the walkers crossing it with no rest spot (0.10 L3 ruling, seed 6142)? `items`: the
+ * walkers the door's cut would stop, the nearest the door first, as settleAlong takes them (`cands`: each one's spots
+ * along its own way with the door shut, spotsAlong's). The id of the first with no spot at all, else of the first when
+ * they cannot all be settled clear of each other; null when they can (the shut may go).
+ */
+export function shutBlocked(items, opts = {}) {
+  if (!items?.length) return null;
+  const none = items.find(it => !it.cands?.length);
+  if (none) return none.id;
+  return settleAlong(items, opts) ? null : items[0].id;
+}
+
 /* -------------------------------------------- */
 /*  Decision tables                             */
 /* -------------------------------------------- */

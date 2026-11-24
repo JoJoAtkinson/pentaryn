@@ -499,6 +499,10 @@
       "label": "updateWall: stop moves across a shut door"
     },
     {
+      "name": "preUpdateWall",
+      "label": "preUpdateWall: a door is not shut on a walker with nowhere to rest"
+    },
+    {
       "name": "updateToken",
       "label": "updateToken: which group a move belongs to; another user's stop of a member stops the group this client sent"
     },

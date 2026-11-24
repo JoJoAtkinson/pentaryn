@@ -149,3 +149,34 @@ test("L3 fix round settleAlong: a stop's tokens each along its own way, none res
   // Nowhere: null (the caller keeps its own answer).
   assert.equal(settleAlong([{ id: "p", r: 0.5, drawn: { x: 1, y: 1 }, cands: [{ p: { x: 1, y: 1 }, via: [] }] }, { id: "q", r: 0.5, drawn: { x: 1.2, y: 1 }, cands: [{ p: { x: 1.2, y: 1 }, via: [] }] }]), null);
 });
+
+test("L3 ruling (seed 6142): a door shut is refused when the cut would leave a walker crossing it with no rest spot along its own way (motion-core doorShutting, shutBlocked)", async () => {
+  const { doorShutting, shutBlocked, spotsAlong } = await import("../motion-core.mjs");
+  // Only an open door going to shut (Foundry: ds 0 CLOSED, 1 OPEN, 2 LOCKED); a wall that does not block movement never.
+  assert.equal(doorShutting({ door: 1, ds: 1, move: 20 }, { ds: 0 }), true);
+  assert.equal(doorShutting({ door: 2, ds: 1, move: 20 }, { ds: 2 }), true, "a secret door locked");
+  assert.equal(doorShutting({ door: 1, ds: 0, move: 20 }, { ds: 2 }), false, "already shut");
+  assert.equal(doorShutting({ door: 1, ds: 0, move: 20 }, { ds: 1 }), false, "opened");
+  assert.equal(doorShutting({ door: 0, ds: 0, move: 20 }, { ds: 0 }), false, "not a door");
+  assert.equal(doorShutting({ door: 1, ds: 1, move: 0 }, { ds: 0 }), false, "blocks no movement");
+  assert.equal(doorShutting({ door: 1, ds: 1, move: 20 }, { light: 20 }), false, "no door state change");
+  // A one-wide corridor along y = 1, a door's line at x = 6. "w" walks east and is drawn in the doorway (5.9); behind it
+  // "r" rests at 4.9. With the door shut ahead, w can only back off, into r: nowhere to rest.
+  const door = x => (a, b) => (a.x < x) !== (b.x < x);
+  const across = p => Math.abs(p.x - 6) < 0.5 - 1e-6;
+  const rest = [{ x: 4.9, y: 1, r: 0.5 }];
+  const inside = p => rest.some(c => Math.hypot(p.x - c.x, p.y - c.y) < 1 - 0.01);
+  const item = (id, x, { free = p => !across(p) && !inside(p) } = {}) => ({ id, r: 0.5, drawn: { x, y: 1 },
+    cands: spotsAlong({ drawn: { x, y: 1 }, ahead: [{ x: 9, y: 1 }], behind: [{ x: 0, y: 1 }], free, wallBetween: door(6),
+      enters: (f, p) => inside(p) && !inside(f), step: 0.05, aheadMax: 1.5, behindMax: Infinity }) });
+  assert.equal(shutBlocked([item("w", 5.9)]), "w", "in the doorway with nowhere to back off");
+  // The same with room behind (r gone): it backs off clear of the door's line, the shut goes.
+  rest.length = 0;
+  assert.equal(shutBlocked([item("w", 5.9)]), null);
+  // Nobody crossing: nothing to refuse.
+  assert.equal(shutBlocked([]), null);
+  // Two crossing, each with only one spot and the two inside each other: the first named (the nearest the door).
+  const one = (id, x) => ({ id, r: 0.5, drawn: { x, y: 1 }, cands: [{ p: { x, y: 1 }, via: [] }] });
+  assert.equal(shutBlocked([one("a", 5.2), one("b", 4.6)]), "a");
+  assert.equal(shutBlocked([one("a", 5.2), one("b", 3.6)]), null, "apart: both rest where drawn");
+});

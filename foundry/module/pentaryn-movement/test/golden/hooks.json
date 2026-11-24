@@ -153,6 +153,10 @@
   },
   {
     "kind": "on",
+    "name": "preUpdateWall"
+  },
+  {
+    "kind": "on",
     "name": "updateToken"
   },
   {

@@ -57,7 +57,8 @@
         "walkedOn": "Could not stop clear of another token, so walked on to its own square: {names}.",
         "speed": "Out of movement this turn, stopped short: {names}."
       },
-      "fightGroup": "In a fight, drag one token at a time."
+      "fightGroup": "In a fight, drag one token at a time.",
+      "doorBlocked": "Door blocked: {name} is in the doorway."
     },
     "settings": {
       "policy": {

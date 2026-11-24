@@ -38,6 +38,16 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### Step L3, the ruling — a door is not shut on a jam
+
+- **[declared] "Door blocked: <name> is in the doorway"** (R8, the simulator's seed 6142; Fable's ruling for Joe):
+  `preUpdateWall`, on the client shutting a door out of combat, dry-runs the door cut's stop for every token walking
+  through the door's line (`stop.mjs` `shutBlocked`: each one's spots along its own way with the door shut, settled
+  together; `motion-core` `doorShutting`, `shutBlocked`). When one would be left with no spot clear of every token,
+  the shut is refused and the door stays open. No setting, no flag, no write; the drag help off or a fight: no veto.
+  Seed 6142: a crowd of 17 jammed in a three-wide door, the GM's shut 30 ms after a click left the one walking on in
+  the doorway inside another at rest.
+
 ### Step L3, fix round — one stop, one update; a stop's tokens settled together
 
 - **[declared] One stop's writes go as one update** (R8, the simulator's seed 9191): a click, a door or wall cut,

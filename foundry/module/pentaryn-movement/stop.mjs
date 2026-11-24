@@ -41,7 +41,7 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { clearAlong, clickStop, radiusOf, routeAhead, settleAlong, spotsAlong, stopOrder } from "./motion-core.mjs";
+import { clearAlong, clickStop, firstLegAcross, radiusOf, routeAhead, segmentsCross, settleAlong, shutBlocked as shutBlockedCore, spotsAlong, stopOrder } from "./motion-core.mjs";
 import { firstIntrusion } from "./group-core.mjs";
 import { continuationInFlight, doorwayAt, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, open as wallOpen, pinDrawn, stopWhereDrawn, unpin } from "./group-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -883,6 +883,49 @@ function settleTogether(grp, depth = 0) {
   }
 }
 
+/**
+ * Would shutting the door `wall` leave a walker crossing it with nowhere to rest (the 0.10 L3 ruling, simulator seed
+ * 6142: a crowd jammed in a doorway, the door shut across the one walking on)? A dry run of the door cut's stop on the
+ * client making the change, out of combat, for every token this screen sees walking through the door's line (any
+ * user's; ghost and the unconstrained tool pass): each one's spots along its own way with the door shut (motion-core
+ * spotsAlong, as settleTogether takes them), settled together (motion-core shutBlocked); a waiting member's slot is
+ * its last choice, as for the stop. The token left with no spot clear of every token (the nearest the door first), or
+ * null. Reads only: no write, no stop.
+ */
+function shutBlocked(wall) {
+  const scene = wall?.parent;
+  const c = wall?._source?.c ?? wall?.c;
+  if (!feature || !scene?.tokens || !Array.isArray(c) || c.length < 4) return null;
+  const A = { x: c[0], y: c[1] }, B = { x: c[2], y: c[3] };
+  const cross = [];
+  for (const doc of scene.tokens.values?.() ?? []) {
+    const t = doc?.object;
+    if (!t || t.destroyed || inCombat(doc) || doc.movement?.constrainOptions?.ignoreWalls || !movementFacts(t).animating) continue;
+    const drawn = drawnPosition(t);
+    const way = wayOf(t, drawn);
+    if (firstLegAcross(centreOf(t, drawn), way.ahead.map(p => centreOf(t, p)), A, B) < 0) continue;
+    cross.push({ t, drawn, way });
+  }
+  if (!cross.length) return null;
+  const ids = new Set(cross.map(x => x.t.document.id));
+  const s = gridSize(cross[0].t);
+  const snap = p => ({ x: Math.round(p.x), y: Math.round(p.y) });
+  // A waiting member's slot is a stop's last choice (stopSpot): blocked with them, looked at again without them.
+  const items = pending => cross.map(({ t, drawn, way }) => {
+    const cc = p => centreOf(t, p);
+    const taken = takenAround(t, ids, [], { pending });
+    const cands = spotsAlong({ drawn, ahead: way.ahead, behind: way.behind, free: p => !doorwayAt(t, cc(p)) && !taken(p),
+      enters: taken.enters, wallBetween: (a, b) => !wallOpen(t, cc(a), cc(b)) || segmentsCross(cc(a), cc(b), A, B),
+      step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: Infinity, snap });
+    const r = radiusOf(t.document._source.width ?? 1, t.document._source.height ?? 1) * s;
+    return { id: t.document.id, r, drawn: cc(drawn), mates: taken.mates, cands: cands.map(q => ({ p: cc(q.p), via: q.via.map(cc) })),
+      near: segDist(cc(drawn), A, B) };
+  }).sort((a, b) => a.near - b.near);
+  const blocked = pending => shutBlockedCore(items(pending), { eps: 1, leave: 0.05 * s });
+  const id = blocked(true) && blocked(false);
+  return id ? scene.tokens.get(id) ?? null : null;
+}
+
 /** A walk on's waypoints (top-left pixels): its corners, then where it rests, no snap; only the last a checkpoint. */
 function walkPoints(doc, list, z) {
   return list.map((q, k) => ({ x: q.x, y: q.y, elevation: z, action: doc.movementAction ?? "walk", snapped: false,
@@ -1315,7 +1358,7 @@ export function install(reg, ctx) {
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).
   if (globalThis.CONFIG?.queries) globalThis.CONFIG.queries[STOP_OWN] = stopOwn;
-  ctx.expose({ stop, stopSafely, moveStartedAt: startedAt, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), stopFirstFrames: () => firstFrameCuts, noteDrop, stopDisplace: displaceIn, stopOrderOf: orderForStop, stopAlso, stopBatched,
+  ctx.expose({ stop, stopSafely, moveStartedAt: startedAt, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), stopFirstFrames: () => firstFrameCuts, noteDrop, stopDisplace: displaceIn, stopOrderOf: orderForStop, stopAlso, stopBatched, stopShutBlocked: shutBlocked,
     stopWalkingOn: () => [...walkingOn].filter(([, wo]) => Date.now() - wo.at <= WALK_ON_MS).map(([id, wo]) => ({ id, ...wo })) });
 }
 

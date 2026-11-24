@@ -224,7 +224,7 @@ export function scenario(seed, opts = {}) {
   // as it was at 0802bc85, for a before/after run on that commit's cores.
   const before = !!opts.before;
   const env = { world, server, clients, noWaveRests: before || !!opts.noWaveRests, noStopClear: before || !!opts.noStopClear, noStopAt: !!opts.noStopAt,
-    noFightSpots: before || !!opts.noFightSpots, noOrder: !!opts.noOrder, noFifo: !!opts.noFifo, noWalkOnClaims: !!opts.noWalkOnClaims, noWalkOnCheck: !!opts.noWalkOnCheck, noStopAlso: !!opts.noStopAlso, bgFlush: !!opts.bgFlush, noOwnSquare: !!opts.noOwnSquare, noPendingEnds: !!opts.noPendingEnds, noMakeRoom: !!opts.noMakeRoom, noDeeper: !!opts.noDeeper, noWaveAgain: !!opts.noWaveAgain, noBatch: !!opts.noBatch, noSlotLast: !!opts.noSlotLast, noRoomAlong: !!opts.noRoomAlong, noSettle: !!opts.noSettle, noSettleWalkers: !!opts.noSettleWalkers, noSettleAgain: !!opts.noSettleAgain, debugSteps: !!opts.debugSteps, debugStops: !!opts.debugStops, events: [], drops: [], mods: null,
+    noFightSpots: before || !!opts.noFightSpots, noOrder: !!opts.noOrder, noFifo: !!opts.noFifo, noWalkOnClaims: !!opts.noWalkOnClaims, noWalkOnCheck: !!opts.noWalkOnCheck, noStopAlso: !!opts.noStopAlso, bgFlush: !!opts.bgFlush, noOwnSquare: !!opts.noOwnSquare, noPendingEnds: !!opts.noPendingEnds, noMakeRoom: !!opts.noMakeRoom, noDeeper: !!opts.noDeeper, noWaveAgain: !!opts.noWaveAgain, noBatch: !!opts.noBatch, noSlotLast: !!opts.noSlotLast, noRoomAlong: !!opts.noRoomAlong, noSettle: !!opts.noSettle, noSettleWalkers: !!opts.noSettleWalkers, noSettleAgain: !!opts.noSettleAgain, noShutVeto: !!opts.noShutVeto, debugSteps: !!opts.debugSteps, debugStops: !!opts.debugStops, events: [], drops: [], mods: null,
     record: (kind, data) => env.events.push({ t: sim.now, kind, ...data }) };
   for (const c of clients) { c.world = world; c.init(server.snapshot()); }
   // What the sender knew when it sent each walk: every token where its documents had it (passThrough's hard test).
@@ -285,7 +285,13 @@ export function scenario(seed, opts = {}) {
   // The door a GM shuts: d1, or (a station) one of its open doors.
   const doorId = map.doors.some(d => d.id === "d1") ? "d1" : (map.doors.filter(d => d.open).map(d => d.id)[0] ?? null);
   const doorShut = (opts.door ?? sim.rand() < 0.3) && doorId ? T0 + sim.uniform(300, 2500) : null;
-  if (doorShut !== null) at(doorShut, `door ${doorId} shut by GM`, () => gm.exec(sim.now, () => gm.emit({ type: "door", door: doorId, open: false })));
+  // drop.mjs onPreWall (the L3 ruling): the GM's own screen refuses the shut while a walker crossing the door would have
+  // nowhere to rest; the door then stays open.
+  if (doorShut !== null) at(doorShut, `door ${doorId} shut by GM`, () => gm.exec(sim.now, () => {
+    const who = mods.get(gm.id).shutBlocked(doorId);
+    if (who) { env.record("doorBlocked", { client: gm.id, door: doorId, id: who }); return; }
+    gm.emit({ type: "door", door: doorId, open: false });
+  }));
   const clickAt = (opts.click ?? sim.rand() < 0.35) ? T0 + sim.uniform(500, 3000) : null;
   if (clickAt !== null) {
     const who = sim.rand() < 0.7 ? initiator : players[sim.rand() * nPlayers | 0];

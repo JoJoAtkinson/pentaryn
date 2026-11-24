@@ -28,11 +28,11 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { GROUP_MAX, MOTION, cellChain, dist, fightWalk, firstLegAcross, groupMode, radiusOf, routeAhead, wallOpenFrom, waves as wavesOf } from "./motion-core.mjs";
+import { GROUP_MAX, MOTION, cellChain, dist, doorShutting, fightWalk, firstLegAcross, groupMode, radiusOf, routeAhead, wallOpenFrom, waves as wavesOf } from "./motion-core.mjs";
 import { coalesceHistory, freePrefix, onCell, pathLength, prefixOf, stacksOf } from "./group-core.mjs";
 import { avoidDist, skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, movementFacts, movementLeft, othersOf, restWalkable, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
-import { setting } from "./settings.mjs";
+import { assistTripped, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
 let log = null;
@@ -892,6 +892,27 @@ function cutNow(wall) {
   return out;
 }
 
+/**
+ * preUpdateWall, on the client making the change (the 0.10 L3 ruling, simulator seed 6142): a door going to shut while
+ * a walker crossing it would have no rest spot clear of every token along its own way (stop.mjs shutBlocked, a dry
+ * run of the cut's stop) is refused: "Door blocked: <name> is in the doorway". No setting, no flag, no write; with the
+ * drag help off (the GM's switch, the breaker) or in a fight, no veto. An error: no veto.
+ */
+function onPreWall(wall, changes) {
+  if (!feature || rawAssistOff() || !doorShutting(wall?._source ?? wall, changes)) return undefined;
+  let doc = null;
+  try { doc = feature.exposed.stopShutBlocked?.(wall) ?? null; }
+  catch (err) { log?.warnOnce?.("drop-shut", "a door shut could not be checked against the walkers in its doorway (further errors suppressed)", err); return undefined; }
+  if (!doc) return undefined;
+  const text = game.i18n.format("PENTARYN_MOVEMENT.notify.doorBlocked", { name: nameFor(doc) });
+  feature.exposed.tele?.("notice", { notice: "doorBlocked", reason: "doorBlocked" });
+  noteTold("doorBlocked", "doorBlocked", text);
+  try { globalThis.ui?.notifications?.warn?.(text); } catch (err) { log?.debug?.("notice", err); }
+  return false;
+}
+/** The drag help off for the table (the GM's switch) or on this client (the breaker): no door veto. */
+const rawAssistOff = () => setting("assist") === false || !!assistTripped();
+
 function onWallChange(wall, changes) {
   if (changes && !["ds", "door", "move", "c", "dir"].some(k => k in changes)) return;
   try { cutAcross(wall); }
@@ -1579,6 +1600,7 @@ export function install(reg, ctx) {
   reg.on("updateToken", (doc, _changes, options, userId) => { inFlight.delete(doc?.id); noteWrite(doc); onUndoEntry(doc, options, userId); }, { label: "updateToken: one undo entry for one move (a fight's squares); a wave's write is back; when a token last moved" });
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: stop moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: stop moves across a shut door" });
+  reg.on("preUpdateWall", (wall, changes) => onPreWall(wall, changes), { label: "preUpdateWall: a door is not shut on a walker with nowhere to rest" });
   ctx.expose({ groupFollower, singleAvoid, groupStatus, groupCutAcross: cutAcross, groupInFlight: restsInFlight, groupTellStayed: tellStayed,
     groupPatched: () => dropPatched, groupCheckpoints: withCheckpoints, groupStackmates: stackmates });
 }

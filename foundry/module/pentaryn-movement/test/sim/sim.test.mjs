@@ -14,7 +14,8 @@
 // never onto a walker's own square (SIM-L3-08, 0.9.0's open seed), a brush that is no overlap (SIM-L3-09) and a wave's
 // stayer in the way of the whole wave (SIM-L3-10). The L3 fix round: one stop's writes as one update (SIM-L3-11), a
 // waiting member's slot a stop's last choice (SIM-L3-12), a stop's tokens settled together (SIM-L3-13, -14), room made
-// along a token's way (SIM-L3-15) and a walk on's second look settling again (SIM-L3-16). With all
+// along a token's way (SIM-L3-15), a walk on's second look settling again (SIM-L3-16) and a door shut refused while a
+// walker crossing it has nowhere to rest (SIM-L3-17, the L3 ruling). With all
 // of L3 in, earlier regression seeds that no longer break with only their own fix off were found again. The full run is
 // `make foundry-movement-sim SEEDS=10000` (scripts/foundry/movement_sim.mjs).
 import { test } from "node:test";
@@ -94,14 +95,16 @@ test("SIM-L3-03 (seed 9124; L2's open seed 1097 now holds with the fix round too
 for (const seed of [2680, 5072]) {
   test(`SIM-L3-04 (seed ${seed}): a stop also stops this screen's own walkers whose way comes into a spot it rests a token on (stop.mjs stopAlso, 0.10 L3)`, () => {
     assert.deepEqual(invs(runSeed(seed, legacy)), []);
-    assert.ok(invs(runSeed(seed, { ...legacy, noStopAlso: true })).includes("restOverlap"), "without the fix the seed still shows it");
+    // (The L3 ruling's door veto refuses seed 2680's shut once stopAlso is off: it is switched off with it.)
+    assert.ok(invs(runSeed(seed, { ...legacy, noStopAlso: true, noShutVeto: true })).includes("restOverlap"), "without the fix the seed still shows it");
   });
 }
 
 for (const seed of [607, 756, 1209]) {
   test(`SIM-L3-05 (seed ${seed}, a crowd or a station): a tab going to the background keeps its waves on their own timers, not all at once (file.mjs onVisibility, 0.10 L3)`, () => {
     assert.deepEqual(invs(runSeed(seed)), []);
-    assert.ok(invs(runSeed(seed, { bgFlush: true })).includes("restOverlap"), "without the fix the seed still shows it");
+    // (The L3 ruling's door veto refuses seed 1209's shut once the flush is back: it is switched off with it.)
+    assert.ok(invs(runSeed(seed, { bgFlush: true, noShutVeto: true })).includes("restOverlap"), "without the fix the seed still shows it");
   });
 }
 
@@ -164,6 +167,14 @@ test("SIM-L3-15 (seed 5418, a crowd of 18 at a door): with no spot along its way
 test("SIM-L3-16 (seed 9124, a door shut across a walk on before this screen knew): the walk on's second look settles it again with the members of its stop it lies in (stop.mjs settleAgain, 0.10 L3 fix round)", () => {
   assert.deepEqual(invs(runSeed(9124, legacy)), []);
   assert.ok(invs(runSeed(9124, { ...legacy, noSettleAgain: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+test("SIM-L3-17 (seed 6142, a crowd of 17 jammed in a three-wide door): a door is not shut while a walker crossing it would have no rest spot clear of every token along its own way; the GM's shut is refused and the door stays open (drop.mjs preUpdateWall, stop.mjs shutBlocked; the L3 ruling)", () => {
+  const r = runSeed(6142, { events: true });
+  assert.deepEqual(invs(r), []);
+  assert.ok(r.events.some(e => e.kind === "doorBlocked" && e.client === "GM"), "the GM's shut was refused");
+  assert.ok(!r.events.some(e => e.kind === "cut"), "no cut: the door stayed open");
+  assert.ok(invs(runSeed(6142, { noShutVeto: true })).includes("restOverlap"), "without the veto the seed still shows it");
 });
 
 test("SIM5-03: most members dropped move (0.9: one whose formation spot lay behind a wall came along; 0.10: the leader rule has no formation spots, each takes the best square it can reach)", () => {

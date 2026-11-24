@@ -19,7 +19,7 @@
  */
 
 import { planLead, routeEnters, staggerFile, STAGGER } from "../../file-core.mjs";
-import { clearAlong, fightWalk, settleAlong, spotsAlong, stopOrder, waves as wavesOf, cellChain } from "../../motion-core.mjs";
+import { clearAlong, fightWalk, settleAlong, shutBlocked, spotsAlong, stopOrder, waves as wavesOf, cellChain } from "../../motion-core.mjs";
 import { freePrefix, pathLength } from "../../group-core.mjs";
 import { dist, SPEED } from "./engine.mjs";
 import { crosses } from "./maps.mjs";
@@ -880,6 +880,43 @@ export class Movement {
         this.env.record("lateStop", { client: this.c.id, ids: list });
       }), 0);
     }
+  }
+  /**
+   * drop.mjs onPreWall + stop.mjs shutBlocked (the L3 ruling, seed 6142): on the client shutting a door, out of combat,
+   * the walkers this screen sees crossing it (any user's) dry-run the door cut's stop: each one's spots along its own
+   * way with the door shut (motion-core spotsAlong), settled together (motion-core shutBlocked). The id of one left with
+   * no rest spot clear of every token (the shut is refused: the door stays open), or null.
+   */
+  shutBlocked(doorId) {
+    if (this.env.noShutVeto || this.env.server.inCombat) return null;
+    const door = this.env.world.doorCell(doorId);
+    if (!door) return null;
+    const cross = [];
+    for (const [id] of this.c.view) {
+      if (!this.c.animating(id)) continue;
+      const way = this.c.wayAhead(id);
+      for (let k = 1; k < way.length; k++) if (crosses(way[k - 1], way[k], door.a, door.b)) { cross.push(id); break; }
+    }
+    if (!cross.length) return null;
+    const ids = new Set(cross);
+    const lines = this.env.world.map.doors;
+    // A waiting member's slot is a stop's last choice (stopSpot): blocked with them, looked at again without them.
+    const blocked = pending => shutBlocked(items(pending));
+    const items = pending => cross.map(id => {
+      const d = this.doc(id), drawn = this.c.drawn(id);
+      const legs = this.c.legs.get(id) ?? [];
+      const way = { ahead: this.c.wayAhead(id).slice(1), behind: [...legs.filter(l => l.t0 <= this.now).map(l => l.a)].reverse() };
+      const rw = this.restsFor(id, ids, [], { pending });
+      const mates = this.leading(id);
+      const across = p => lines.some(l => segDist(p, l.a, l.b) < d.r - 1e-6);
+      const inside = list => p => list.some(c => dist(p, c) < d.r + c.r - 0.01);
+      const cands = spotsAlong({ drawn, ahead: way.ahead, behind: way.behind,
+        free: p => !across(p) && !inside(rw.rest)(p) && !inside(rw.walkers)(p),
+        enters: (f, p) => rw.rest.some(c => !mates?.has(c.id) && dist(p, c) < d.r + c.r - 0.01 && !(dist(f, c) < d.r + c.r - 0.05)),
+        wallBetween: (a, b) => this.c.doorCut(a, [b]) >= 0 || crosses(a, b, door.a, door.b), step: 0.05, aheadMax: PAST_DOOR, behindMax: Infinity });
+      return { id, r: d.r, drawn, mates, cands, near: segDist(drawn, door.a, door.b) };
+    }).sort((a, b) => a.near - b.near);
+    return blocked(true) && blocked(false);
   }
   /** drop.mjs cutAcross: out of combat, this client's walkers whose way the shut door crosses stop where drawn. */
   cutAcross(door) { return this.batch(() => this.cutNow(door)); }

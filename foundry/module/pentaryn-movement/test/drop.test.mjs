@@ -923,6 +923,51 @@ test("R6-3 / R7-1 (0.9.0): a door shut across a move out of combat stops it exac
   }
 });
 
+test("L3 ruling (simulator seed 6142): a door is not shut while a walker crossing it would have no rest spot clear of every token along its own way: preUpdateWall refuses it, \"Door blocked: <name> is in the doorway\"; room to back off, the drag help off, or a fight: the door shuts", async () => {
+  combatFlag = false;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const savedWalls = sceneDoc._walls;
+  // The wall across y = 400 with its door at x 400-500, open (ds 1), as the scene's documents have it.
+  sceneDoc.walls = [...world.walls.map(([a, b]) => ({ c: [a.x, a.y, b.x, b.y], door: 0, ds: 0, move: 20 })), { c: [400, 400, 500, 400], door: 1, ds: 1, move: 20 }];
+  const open = { id: "doorWall00000002", parent: sceneDoc, _source: { c: [400, 400, 500, 400], move: 20, sight: 20, door: 1, ds: 1 } };
+  // "Jam" walks north through the door, drawn across its line (centre 450, 410); behind it, at rest, "Back" (centre
+  // 450, 510) touches it: with the door shut ahead it can neither go on nor back off.
+  const w = walking("jamW000000000001", { x: 400, y: 360 }, { x: 400, y: 100 }, [{ x: 400, y: 700 }, { x: 400, y: 100 }]);
+  w.document.name = "Jam";
+  const back = makeToken("jamBack000000001", 400, 460);
+  const from = F.calls.length;
+  try {
+    const told = await noticesOf(async () => {
+      assert.equal(F.fireCall("preUpdateWall", open, { ds: 0 }, {}, "gm"), false, "the shut is refused");
+    });
+    assert.ok(told.some(m => /Door blocked: Jam is in the doorway/.test(m)), JSON.stringify(told));
+    assert.equal(F.calls.slice(from).filter(c => c.op === "move" || c.op === "moveTokens").length, 0, "a dry run: nothing written, nothing stopped");
+    assert.ok(w.animationContexts.size, "still walking");
+    // Locked shut too.
+    assert.equal(F.fireCall("preUpdateWall", open, { ds: 2 }, {}, "gm"), false);
+    // Opening a shut door, a wall that is no door, or no door state in the change: never refused.
+    assert.notEqual(F.fireCall("preUpdateWall", { ...open, _source: { ...open._source, ds: 0 } }, { ds: 1 }, {}, "gm"), false);
+    assert.notEqual(F.fireCall("preUpdateWall", open, { sight: 0 }, {}, "gm"), false);
+    // The drag help off (the GM's switch): no veto.
+    await game.settings.set(MOD, "assist", false);
+    try { assert.notEqual(F.fireCall("preUpdateWall", open, { ds: 0 }, {}, "gm"), false, "assist off"); }
+    finally { await game.settings.set(MOD, "assist", true); }
+    // In a fight: no cut, no veto (every next square is tested against the walls as they are).
+    combatFlag = true;
+    try { assert.notEqual(F.fireCall("preUpdateWall", open, { ds: 0 }, {}, "gm"), false, "a fight"); }
+    finally { combatFlag = false; }
+    // Room behind (Back gone): it would back off clear of the door's line, so the door shuts.
+    sceneTokens.delete(back.document.id);
+    assert.notEqual(F.fireCall("preUpdateWall", open, { ds: 0 }, {}, "gm"), false, "room to back off");
+  } finally {
+    w.animationContexts.clear();
+    sceneDoc._walls = savedWalls;
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
 test("H1-02: a cut while the walking document was just re-prepared (derived = its destination) stops the tween where it is drawn, never at the destination", async () => {
   combatFlag = false;
   const saved = new Map(sceneTokens);
@@ -1906,10 +1951,11 @@ function assertClearOfFirst(ts, out, call) {
   }
 }
 
-test("0.8.0 / 0.9.0 notices: the players see \"No route there\", \"Stopped short, way blocked\" and (0.9.0) the fight's one token at a time; the named ones say who (0.10 L3: out of movement in a fight)", () => {
+test("0.8.0 / 0.9.0 notices: the players see \"No route there\", \"Stopped short, way blocked\" and (0.9.0) the fight's one token at a time; the named ones say who (0.10 L3: out of movement in a fight; the L3 ruling: a door shut refused names who is in the doorway)", () => {
   const lang = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
   const shown = Object.keys(lang.PENTARYN_MOVEMENT.notify).filter(k => typeof lang.PENTARYN_MOVEMENT.notify[k] === "string");
-  assert.deepEqual(shown.sort(), ["fightGroup", "noRoute", "stoppedShort"]);
+  assert.deepEqual(shown.sort(), ["doorBlocked", "fightGroup", "noRoute", "stoppedShort"]);
+  assert.equal(lang.PENTARYN_MOVEMENT.notify.doorBlocked, "Door blocked: {name} is in the doorway.");
   assert.deepEqual(Object.keys(lang.PENTARYN_MOVEMENT.notify.named).sort(), ["aToken", "noRoute", "notSent", "speed", "stayed", "stopInside", "walkedOn"]);
   assert.equal(lang.PENTARYN_MOVEMENT.notify.stoppedShort, "Stopped short, way blocked.");
 });
