@@ -1353,3 +1353,120 @@ straight-line last resort, no search on a stop). Started from failing tests: `fi
 
 Open after the retry: the page gate (R11, needs a deploy); the narrow passages and the stair (R9, review 3 §4 step 9);
 L2's door plug, not looked at again.
+
+### 18.4 Step N: any passage shape (R9; review 3 §3, without its switch)
+
+Not a feature of its own and no switch, setting, marker or region (Joe, 2026-11-24: "pathfinding itself must handle
+any passage shape"; the drag-help button stays the only off switch). Tests first: `narrow.test` (pure), `pathfind.test`
+"R9" (the wrap, on Joe's S05 walls), `drop.test` "0.10 R9" (a fight and a group out of combat on the stair); each
+failed before the code it describes.
+
+**What was built.**
+- **`narrow-core.mjs`** (new, pure). A square is *tight* when a wall that blocks movement runs through its interior (an
+  off-grid wall: a curved stair, a slit, a pillar); a map whose walls lie on the grid lines has none. A tight square and
+  each square beside one is cut into eighth-square cells; a cell is passable when some point in it keeps **0.15 square**
+  (the token's centre, for any token up to 1×1) from every wall: a border cell's point is the best of 25 samples moved
+  onto the centre line inside the cell (a Newton step equalising the distances to the nearest wall and the nearest one
+  facing it), so a throat of exactly 0.3 passes. Cells link when the straight link keeps 0.15 at every 1/16 sample (the
+  walk's own check; the clearance is 1-Lipschitz, so a link whose ends keep enough needs no samples, and one whose ends
+  keep more than its length crosses no wall), cached. A square's nodes are its connected groups of cells: a square
+  crossed by two lanes (a hairpin, a thin wall) is two nodes. Lazily built where a search touches; one field per scene,
+  wall type, size and preview, dropped on any wall or door change (pathfind.mjs `narrowCache`); a player's preview
+  counts a wall only where seen (half a square at a time, at its middle) and is re-read when fog is explored.
+- **The A* stays on squares** (`pathfind-core` `search`, a `more` hook; node key `i,j#c` for a part of a tight square).
+  `narrowMore`: a plain square beside a tight one steps into the parts its cells touch, a part into the parts (or plain
+  squares) beside it, a tight square's plain node and the part its centre lies in join at no cost; every step costs what
+  the square step costs (core's measure, Difficult Terrain included). On ties a plain step wins (`FINE_TIE` in the
+  straightness tie-break only). Without `more`, or with no tight square, the search is the same job, node for node.
+- **The walk** (`walkFor`). Through the parts of tight squares the eighth-cell path of least length × (1 + 3 × the
+  padding missing / the padding radius: the token's own); then a band settled on it every 1/8 square: smoothed, onto the
+  centre line where the way is narrower than the token (within a tube of 0.025 so it can smooth a kink, never under the
+  pass radius), out to the padding radius where there is room; each move checked (no wall, 0.15 kept along both
+  segments, the tokens standing, traps, unseen ground, dnd5e's creature blocking: the adapter's `okSeg`). Then chords
+  (within 0.012 of the band, every sample keeping 0.15), a corner over 15° cut once or twice (at most 0.05 along a leg,
+  re-checked), points under 0.03 apart merged. Out of combat the whole leg is the band (its corners are the band's: no
+  string pull, no arcs) and goes as one move. In a fight only the stretch from the last whole square before the first
+  tight square to the first after it: the rest stays on the grid, and a point where the centre line enters a new square
+  is a checkpoint, the others not (`drop.mjs` `withCheckpoints` keeps an off-lattice waypoint the pathfinder left no
+  checkpoint inside the square the walk is in; `fightSteps` keeps them). Its fallback is the cell path itself.
+- **Constraint 1, read literally**: a leg that passes tight squares on whole squares only keeps today's route when that
+  route keeps 0.15 from every wall; only otherwise is it the band. A leg through a part of a tight square is the narrow
+  walk; if no walk keeps 0.15 there, the leg is no route (never a shorter line through rock).
+- **Rest on the centre line** (Joe). A destination in a tight square is moved to where the token may rest there
+  (`restPoint`: the nearest passable point, settled onto the centre line where the way is narrower than the token):
+  the drag's explicit points before planning (pathfind.mjs `narrowGoals`; the ruler then shows the snapped square as
+  not reached), a route's goal (`pathfind.route` reports it as `goal`), a fight leader's square (drop.mjs routeAtTurn),
+  a march leader's drop (file.mjs planDrop). A click or a shut door out of combat stops where it is drawn, on the walked
+  centre line; in a fight at the next checkpoint, a centre-line point; a speed stop on the last paid one.
+- **Groups** (constraint 6). planLead's step oracle joins two squares where a part of one meets a part of the other.
+  A march whose leader rests on a narrow way: the members after it (least walk left first) take points back along the
+  leader's own way, a token apart (their radii and the 0.2 rest gap), while those lie on the narrow way and clear of the
+  tokens standing, one route each (`lineBehind`); the rest keep planLead's squares. In a fight, at a member's turn: the
+  first point clear of every token standing back along its own way to where the leader rests (slotAtTurn).
+- **R13**: `pathfind.route` → `narrow`, `minClearance` (squares), `goal`; `pathfind.status().last` → `narrow`,
+  `minClearance`; manifest rows, describe golden, README, CHANGELOG, `context/foundry/movement.md` (1b).
+
+**Gates.**
+- **400 seeded room-to-room routes over generated C stairs** (`narrow.test`: two curved off-grid walls in segments of
+  8°–15°, radius 3–8, the narrowest true clear width 0.3–1.0 mid-way and 1.0–1.25 at the mouths, sweep 120°–270°, a room
+  at each end, random start and goal points, both ways): **400/400 found** (384 through a way narrower than the token),
+  **0 through a wall**, least clearance **0.1510**, centre line within **0.0265** over 90,171 samples where narrower than
+  the token (gate 0.05), largest heading change between two 1/16 samples **19.1°**, **no zigzag** (opposite turns over
+  15° within 0.35 square); **warm p50 18 ms, p95 30 ms, max 37 ms** (gate 50; Node, the median of three runs per route);
+  cold (the first route, building the field) p50 33 ms, max 61–66 ms over a median 123 squares; points p50 28, max 46.
+- **Other shapes**: a funnel of 0.3, 0.32 and 0.5 passes (least clearance 0.150), 0.29 and 0.2 are refused; a hairpin
+  whose two lanes share a row of squares goes round the U and never across the dividing wall (its squares are two nodes
+  each); 20 off-grid pillar fields, every route 0.15 clear (5 through the narrow walk, smooth; the rest today's route,
+  which kept 0.15).
+- **Joe's stations** (`test/fixtures/narrow-stations.json`, from `b10/pg/stations.json`): **S05** 40 routes room to room
+  both ways, every check above, centre line within 0.0176, largest turn 16.0°, warm max 33 ms; `dropMid` is a
+  centre-line point. **S06**: the S-curve (clearance 0.487, turn 14.2°), the diagonal slit 0.4 (0.196, 21.4°), the
+  funnel 0.3 (0.150, 13.9°), the hairpin (0.488, 14.1°, round the U) and the pillar field (0.314, 14.4°) found from both
+  heroes, warm under 32 ms, no zigzag; the 0.2 slit refused.
+- **The Large and the long way round** (S05 "long"): the Medium takes the stair, the Large the north door's long way;
+  with that door shut the Large has no way and its drag stops in room A, its body 98 px or more from every wall.
+- **Fight** (`drop.test` "0.10 R9 fight"): a group of four over S05 to room B, the leader first, then one at a time,
+  every walk over the stair, never through a wall, 0.15 clear and within 5 px of the centre line where narrower than the
+  token, a checkpoint exactly where it enters a new square; each charged core's measure (5 ft a square entered, nothing
+  for the narrowness), and with Joe's mud region over the stair exactly 5 ft more for each square entered inside it;
+  nobody on another at rest. A leader with 40 ft stops part-way off the grid on the centre line (`why: "speed"`),
+  never past what it pays for; the others queue behind it, no overlap.
+- **Out of combat** (`drop.test` "0.10 R9"): the same four dropped in room B: the leader in the drop's update, the rest
+  in later waves over the stair; dropped mid-stair: the leader on the centre line at the narrowest, the next members on
+  the stair behind it on its centre line, a token apart.
+- **Regression**: walls on the grid lines, 60 random mazes: no tight square, every route the same waypoint for waypoint
+  with and without the narrow field; every existing pathfind, drop, lead and file test unchanged.
+  `make foundry-movement-sim SEEDS=10000`, full mix: **every class 0**, mover overlap 25,651 episodes, p95 2,033 ms,
+  6,368 square-seconds, 11 same-instant races (L3's numbers, identical); legacy mix: **every class 0**, 14,381 / 1,767 ms
+  / 2,947 (identical).
+- Mechanical: `make foundry-movement-check` 478 pass, 0 fail, 0 todo (conformance 95.9 %, C30 / C56); `make test` 2,461
+  passed, 9 skipped, 4 xfailed; `make foundry-module-index && make check-context` OK (the same 32 warnings).
+
+**Deviations from BINDING / the designer's constraints, and why.**
+- *Size* (constraint 3: about 280 lines): `narrow-core.mjs` is **1,031** lines (about 170 of them comments). What a
+  throat of exactly 0.3 and a smooth walk needed beyond the lattice: the border cells moved onto the centre line, links
+  checked as strictly as the walk (sampled, cached, the Lipschitz bounds that keep it fast), the band with its tube and
+  its checked moves, the chords, the corner cuts, a fight's square entries, the rest point, `pointsBack`, the walk's
+  composition. Elsewhere: pathfind-core +27, pathfind-adapter +89 (the scene's field, `okSeg`), pathfind.mjs +146 (the
+  leg's narrow walk, the plain check, the goals, the cache), file.mjs +69 (the narrow step, the line behind, the fight
+  member's line slot), drop.mjs +8 (checkpoints, the fight leader's rest point).
+- *A fillet at a mouth* (constraint 4): on a leg through the narrow way the band is the whole leg out of combat, so it
+  rounds the mouth itself (keeping the padding where it can); today's fillet stays on every other leg. Why: a plain
+  stretch ending on a square centre at the mouth left one sharp heading change there.
+- *0.15* is held to 0.001 square (0.1 px on a 100 px grid): a throat of exactly 0.3 has its centre at exactly 0.15.
+- *The centre line* is held within a tube of 0.025 (and corner cuts of at most 0.05 along a leg where it kinks at a sharp
+  wall corner: S06's slit jogs), inside the gate's 0.05; measured 0.0265 on the C stairs.
+- *The zigzag gate's bound*: heading change between two 1/16 samples at most 30° on the C stairs and S05 (measured
+  19.1°), 40° on S06 and the pillar fields (sharp wall corners; measured 21.4°), and no zigzag anywhere.
+- *The C generator's narrowest width* is the true clear width (the outer wall's vertices stand out by 1 / cos of half a
+  segment): a polygon of 0.301 at its vertices was 0.292 between them, rightly refused.
+- *One-way walls* are crossed only from their open side and cost no clearance; one through the middle of a tight square
+  splits its parts (no link crosses it within the square, either way): a known limit, not seen on Joe's maps.
+- *A drop snapped to a square* whose centre lies in the rock beside a narrow way, or off its line, rests on the nearest
+  centre-line point and the ruler shows the snapped square as not reached (Shift-drop for an exact spot). S05's
+  `dropMid` square's own centre lies outside the C's outer wall, on open floor: dropped snapped it stays there.
+- *A swarm* on a narrow way keeps planLead's rings (not looked at).
+- Defaults taken without a human: scratch `b10/auto-decisions.md` "Step N".
+
+Open after step N: the page gate (R11) and the browser play-test of the stair, the slit and the line behind (a deploy,
+the next step); L2's door plug, not looked at again.
