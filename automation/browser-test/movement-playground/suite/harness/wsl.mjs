@@ -1,0 +1,126 @@
+// Playtest harness: one headless Chrome (canvas ON), one logged-in page per Foundry user.
+// HTTP on 127.0.0.1:31990: POST /open {user}, POST /eval {user, code}, POST /shot {user, file, selector?}, POST /close {user}
+import { createRequire } from "node:module";
+import http from "node:http";
+const require = createRequire("/home/joe/code/pentaryn/automation/headless-gm/package.json");
+const puppeteer = require("puppeteer-core");
+const BASE = "http://127.0.0.1:30000";
+const env = { ...process.env, DBUS_SESSION_BUS_ADDRESS: "disabled:" };
+if (process.env.PENTARYN_HEADLESS_LIBS) env.LD_LIBRARY_PATH = [process.env.PENTARYN_HEADLESS_LIBS, env.LD_LIBRARY_PATH].filter(Boolean).join(":");
+const browser = await puppeteer.launch({
+  executablePath: process.env.PENTARYN_HEADLESS_CHROME, headless: "shell", env, pipe: true, protocolTimeout: 180_000,
+  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--mute-audio", "--disable-background-timer-throttling",
+    "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "--window-size=1600,1000", "--no-first-run"],
+});
+const pages = {};
+const logs = {};
+async function open(user, id, cookieFile) {
+  if (pages[user]) { try { await pages[user].ctx.close(); } catch {} }
+  const ctx = await browser.createBrowserContext();
+  const p = await ctx.newPage();
+  await p.setViewport({ width: 1600, height: 1000 });
+  logs[user] = [];
+  p.on("console", m => { if (["error", "warn"].includes(m.type())) logs[user].push(`${m.type()}: ${m.text()}`.slice(0, 500)); });
+  p.on("pageerror", e => logs[user].push(`pageerror: ${e.message}`.slice(0, 500)));
+  await p.goto(`${BASE}/join`, { waitUntil: "domcontentloaded", timeout: 15_000 }).catch(e => logs[user].push("join goto: " + e.message));
+  const r = cookieFile ? (await p.setCookie(...JSON.parse((await import("node:fs")).readFileSync(cookieFile,"utf8")).cookies.map(c=>({name:c.name,value:c.value,domain:"127.0.0.1",path:"/"}))), {ok:true}) : await p.evaluate(async (name) => {
+    const res = await fetch("/join", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "join", userId: name, password: "" }) });
+    return { ok: res.ok, status: res.status, body: (await res.text()).slice(0, 200) };
+  }, id);
+  if (!r.ok) throw new Error("join failed " + JSON.stringify(r));
+  await p.evaluate(() => { try { localStorage.setItem("core.noCanvas", "false"); } catch {} });
+  await p.goto(`${BASE}/game`, { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(e => logs[user].push("game goto: " + e.message));
+  pages[user] = { ctx, p };
+  const ok = await p.waitForFunction("globalThis.game?.ready === true && globalThis.canvas?.ready === true", { timeout: 90_000, polling: 1000 }).then(() => true, () => false);
+  if (!ok) return { ok: false, notReady: true, state: await p.evaluate(() => ({ ready: globalThis.game?.ready, canvas: globalThis.canvas?.ready, scene: globalThis.game?.scenes?.viewed?.name, windows: Object.values(globalThis.ui?.windows ?? {}).map(w => w.title).concat([...(globalThis.foundry?.applications?.instances?.values?.() ?? [])].map(a => a.title)).slice(0, 20), sidebarTab: globalThis.ui?.sidebar?.tabGroups?.primary })), logs: logs[user].slice(-15) };
+  return { ok: true, scene: await p.evaluate(() => canvas.scene?.name), user: await p.evaluate(() => game.user.name) };
+}
+const INSTR = "";
+async function openRaw(user, id, j) {
+  if (pages[user]) { try { await pages[user].ctx.close(); } catch {} }
+  const ctx = await browser.createBrowserContext();
+  const p = await ctx.newPage();
+  await p.setViewport({ width: 1600, height: 1000 });
+  logs[user] = [];
+  p.on("console", m => { if (["error", "warn"].includes(m.type())) logs[user].push(`${m.type()}: ${m.text()}`.slice(0, 500)); });
+  p.on("pageerror", e => logs[user].push(`pageerror: ${e.message}`.slice(0, 500)));
+  const cdp = await p.createCDPSession();
+  if (j.cpu) await cdp.send("Emulation.setCPUThrottlingRate", { rate: j.cpu });
+  if (j.latency) { await cdp.send("Network.enable"); await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: j.latency, downloadThroughput: (j.kbps||4000)*128, uploadThroughput: (j.kbps||4000)*128 }); }
+  await p.evaluateOnNewDocument(INSTR);
+  await p.goto(`${BASE}/join`, { waitUntil: "domcontentloaded", timeout: 60_000 }).catch(e => logs[user].push("join goto: " + e.message));
+  const r = await p.evaluate(async (uid) => { const res = await fetch("/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "join", userId: uid, password: "" }) }); return res.status; }, id);
+  await p.evaluate(() => { try { localStorage.setItem("core.noCanvas", "false"); } catch {} });
+  p.goto(`${BASE}/game`, { waitUntil: "domcontentloaded", timeout: 120_000 }).catch(e => logs[user].push("game goto: " + e.message));
+  pages[user] = { ctx, p };
+  return { joined: r };
+}
+async function run(user, code) {
+  const p = pages[user].p;
+  const before = logs[user].length;
+  const v = await p.evaluate(`(async () => { ${code} })()`);
+  return { value: v, newLogs: logs[user].slice(before).filter(l => !/deprecat|Tour|TokenLayer|V1 Application|foundry-mcp-bridge|Roboto/i.test(l)) };
+}
+// HX1-12: swiftshader draws every frame on the CPU (11-14 cores at 60 FPS on one idle dungeon page). Idle for
+// IDLE_MS: every page drops to IDLE_FPS; the next request puts them back to 60 before it runs.
+const IDLE_MS = 20_000, IDLE_FPS = 2;
+let lastReq = Date.now(), throttled = false;
+const setFps = fps => Promise.all(Object.values(pages).map(({ p }) => p.evaluate(f => { try { if (globalThis.canvas?.app?.ticker) { canvas.app.ticker.maxFPS = f; return canvas.app.ticker.maxFPS; } } catch (e) { return String(e); } return null; }, fps).catch(e => String(e)))).then(r => console.log(new Date().toISOString(), 'fps', fps, JSON.stringify(r)));
+setInterval(() => { if (!throttled && Date.now() - lastReq > IDLE_MS) { throttled = true; setFps(IDLE_FPS); } }, 5000);
+const server = http.createServer(async (req, res) => {
+  lastReq = Date.now();
+  if (throttled) { throttled = false; await setFps(60); }
+  let body = ""; req.on("data", c => body += c); await new Promise(r => req.on("end", r));
+  let out;
+  try {
+    const j = body ? JSON.parse(body) : {};
+    if (req.url === "/open") out = await open(j.user, j.id, j.cookieFile);
+    else if (req.url === "/openraw") out = await openRaw(j.user, j.id, j);
+    else if (req.url === "/eval") out = await run(j.user, j.code);
+    else if (req.url === "/mouse") {
+      // j.steps: [{move:[x,y], world:true?, steps?}, {down:"left"|"right"}, {up:..}, {wait:ms}, {key:"Escape"}, {keydown:"Shift"}, {keyup:"Shift"}]
+      const p = pages[j.user].p; const before = logs[j.user].length; const trace = [];
+      for (const st of j.steps) {
+        if (st.tok) { const [x,y]=await p.evaluate((n)=>{const t=canvas.tokens.placeables.find(t=>t.name===n);const c=canvas.clientCoordinatesFromCanvas(t.center);return [c.x,c.y]}, st.tok); await p.mouse.move(x,y,{steps:2}); trace.push(["tok",Math.round(x),Math.round(y)]); }
+        else if (st.move) { let [x, y] = st.move; if (st.world) { [x, y] = await p.evaluate(([a, b]) => { const c = canvas.clientCoordinatesFromCanvas({ x: a, y: b }); return [c.x, c.y]; }, [x, y]); } await p.mouse.move(x, y, { steps: st.steps ?? 1 }); trace.push([Math.round(x), Math.round(y)]); }
+        else if (st.down) await p.mouse.down({ button: st.down });
+        else if (st.up) await p.mouse.up({ button: st.up });
+        else if (st.wait) await new Promise(r => setTimeout(r, st.wait));
+        else if (st.key) await p.keyboard.press(st.key);
+        else if (st.keydown) await p.keyboard.down(st.keydown);
+        else if (st.keyup) await p.keyboard.up(st.keyup);
+      }
+      out = { ok: true, trace, newLogs: logs[j.user].slice(before) };
+    }
+    else if (req.url === "/profile") {
+      const p = pages[j.user].p; const cdp = await p.createCDPSession();
+      await cdp.send("Profiler.enable"); await cdp.send("Profiler.setSamplingInterval", { interval: 500 });
+      await cdp.send("Profiler.start");
+      if (j.code) p.evaluate(`(async () => { ${j.code} })()`).catch(() => {});
+      await new Promise(r => setTimeout(r, j.ms || 3000));
+      const { profile } = await cdp.send("Profiler.stop");
+      const self = new Map(); const byId = new Map(profile.nodes.map(n => [n.id, n]));
+      const dt = profile.timeDeltas; const counts = new Map();
+      profile.samples.forEach((id, i) => counts.set(id, (counts.get(id) || 0) + (dt[i] || 0)));
+      for (const [id, us] of counts) { const n = byId.get(id); const cf = n.callFrame; const key = `${cf.functionName || "(anon)"} ${cf.url.split("/").slice(-3).join("/")}:${cf.lineNumber}`; self.set(key, (self.get(key) || 0) + us); }
+      // inclusive time for pentaryn frames
+      const parent = new Map(); for (const n of profile.nodes) for (const c of (n.children || [])) parent.set(c, n.id);
+      const incl = new Map();
+      for (const [id, us] of counts) { const seen = new Set(); for (let x = id; x != null; x = parent.get(x)) { const cf = byId.get(x).callFrame; const key = `${cf.functionName || "(anon)"} ${cf.url.split("/").slice(-3).join("/")}:${cf.lineNumber}`; if (seen.has(key)) continue; seen.add(key); incl.set(key, (incl.get(key) || 0) + us); } }
+      const top = m => [...m.entries()].sort((a, b) => b[1] - a[1]);
+      out = { total: profile.endTime - profile.startTime, self: top(self).slice(0, 25).map(([k, v]) => [k, Math.round(v / 1000)]),
+        modules: top(incl).filter(([k]) => /modules\/|systems\//.test(k)).slice(0, 40).map(([k, v]) => [k, Math.round(v / 1000)]) };
+    }
+    else if (req.url === "/shot") {
+      const p = pages[j.user].p;
+      if (j.selector) { const el = await p.$(j.selector); await el.screenshot({ path: j.file }); }
+      else await p.screenshot({ path: j.file });
+      out = { ok: true, file: j.file };
+    } else if (req.url === "/close") { await pages[j.user]?.ctx.close(); delete pages[j.user]; out = { ok: true }; }
+    else if (req.url === "/quit") { res.end("{}"); await browser.close(); process.exit(0); }
+    else out = { users: Object.keys(pages) };
+  } catch (e) { out = { error: String(e?.stack || e).slice(0, 1500) }; }
+  res.setHeader("Content-Type", "application/json"); res.end(JSON.stringify(out)); lastReq = Date.now();
+});
+server.listen(31990, "127.0.0.1", () => console.log("zz-suite wsl harness on :31990"));
