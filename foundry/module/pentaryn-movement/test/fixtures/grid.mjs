@@ -89,8 +89,9 @@ export function gridWorld(ascii, { clock = null, gridLattice = false, pull = tru
     let pts = [from, ...pulled.map(centre)];
     if (Math.hypot(pts.at(-1).x - to.x, pts.at(-1).y - to.y) > EPS) { if (!open(pts.at(-1), to)) return null; pts.push(to); }
     pts = pts.filter((p, k) => k === 0 || Math.hypot(p.x - pts[k - 1].x, p.y - pts[k - 1].y) > EPS);
-    // The exact start replaces its lattice node where the straight hop past the node is open.
-    if (pts.length > 2 && open(pts[0], pts[2])) pts.splice(1, 1);
+    // The exact start replaces its lattice node where the straight hop past the node is open (not on a fight's
+    // lattice, pull: false: there every step is one square, as the module's fight routes are).
+    if (pull && pts.length > 2 && open(pts[0], pts[2])) pts.splice(1, 1);
     let length = 0;
     for (let k = 1; k < pts.length; k++) length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
     return { points: pts, length };

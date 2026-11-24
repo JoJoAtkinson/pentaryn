@@ -33,6 +33,7 @@ export const FILE = Object.freeze({
   walkSlack: 1,
   reorders: 3,         // orders tried again with the members that stayed planned first
   slack: 0.02,         // squares a route may graze a circle it keeps out of (the search's own one-pixel clearance)
+  reach: 9,            // squares (rings) the walk oracle floods out from a spot; past it, walk() knows nothing
 });
 
 /** Is `c` (radius r) clear of every circle in `list` ({ x, y, r })? Touching is clear. */
@@ -68,25 +69,56 @@ export function orderOf(members, anchorId = null) {
  * snapped drop), else a touching hex. With `walk` (m, c → squares walked from the formation spot, or null), nearest by
  * walking, and a spot only when that walk is about straight (no spot round the far side of a wall: at most
  * FILE.walkRatio × the straight way + FILE.walkSlack).
+ *
+ * With `anchor` (the grabbed one; 0.9.0 simulator, step 5): a formation spot the drop point does not reach so (it lies
+ * behind the room's wall, past the scene's edge, in rock) has nothing on the far side of that wall to keep away from,
+ * and walking from it reaches nothing. Then the spots round it and round the drop point that the drop point reaches
+ * about straight, nearest the formation spot first: the member comes along into the room instead of staying.
  */
-export function candidatesFor(m, rings = FILE.rings, walk = null) {
+export function candidatesFor(m, rings = FILE.rings, walk = null, anchor = null) {
   const f = m.formation;
-  const w = m.w ?? 1, h = m.h ?? w;
-  const tl = { x: f.x - w / 2, y: f.y - h / 2 };
-  const onGrid = Math.abs(tl.x - Math.round(tl.x)) < EPS && Math.abs(tl.y - Math.round(tl.y)) < EPS;
-  const ring = onGrid || w > 1 || h > 1
-    ? cellCandidates({ x: Math.round(tl.x), y: Math.round(tl.y) }, w, h, rings)
-    : hexCandidates(f, 2 * m.r, 2 * rings);
+  const ring = spotsRound(m, f, rings);
   const all = [{ x: f.x, y: f.y }, ...ring];
   if (!walk) return all.sort((a, b) => dist(a, f) - dist(b, f));
+  const about = (wd, c, from) => wd !== null && wd !== undefined && wd <= FILE.walkRatio * dist(c, from) + FILE.walkSlack + EPS;
+  const fromAnchor = c => { try { return walk(anchor, c); } catch { return null; } };
+  // Only within the flood's reach of the drop point (farther, walk() from it knows nothing either way).
+  const near = anchor && Math.max(Math.abs(f.x - anchor.formation.x), Math.abs(f.y - anchor.formation.y)) <= FILE.reach - 1;
+  if (near && anchor.id !== m.id && !about(fromAnchor(f), f, anchor.formation)) {
+    const seen = new Set();
+    const keyed = [];
+    // Round the drop point on m's own lattice (a 1×1 beside a 2×2 grabbed one still rests on whole squares).
+    const w = m.w ?? 1, h = m.h ?? w;
+    const onGrid = Math.abs(f.x - w / 2 - Math.round(f.x - w / 2)) < EPS && Math.abs(f.y - h / 2 - Math.round(f.y - h / 2)) < EPS;
+    const a = onGrid ? { x: Math.round(anchor.formation.x - w / 2) + w / 2, y: Math.round(anchor.formation.y - h / 2) + h / 2 } : anchor.formation;
+    for (const c of [...all, ...spotsRound(m, a, rings)]) {
+      const k = `${c.x.toFixed(4)},${c.y.toFixed(4)}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const wd = fromAnchor(c);
+      if (!about(wd, c, anchor.formation)) continue;
+      keyed.push({ c, wd, d: dist(c, f) });
+    }
+    if (keyed.length) return keyed.sort((a, b) => a.d - b.d || a.wd - b.wd).map(k => k.c);
+  }
   const keyed = [];
   for (const c of all) {
     let wd = null;
     try { wd = walk(m, c); } catch { wd = null; }
-    if (wd === null || wd === undefined || wd > FILE.walkRatio * dist(c, f) + FILE.walkSlack + EPS) continue;
+    if (!about(wd, c, f)) continue;
     keyed.push({ c, wd, d: dist(c, f) });
   }
   return keyed.sort((a, b) => a.wd - b.wd || a.d - b.d).map(k => k.c);
+}
+
+/** The spots round centre `f` for member m (whole squares for a big one or a snapped spot, else a touching hex). */
+function spotsRound(m, f, rings) {
+  const w = m.w ?? 1, h = m.h ?? w;
+  const tl = { x: f.x - w / 2, y: f.y - h / 2 };
+  const onGrid = Math.abs(tl.x - Math.round(tl.x)) < EPS && Math.abs(tl.y - Math.round(tl.y)) < EPS;
+  return onGrid || w > 1 || h > 1
+    ? cellCandidates({ x: Math.round(tl.x), y: Math.round(tl.y) }, w, h, rings)
+    : hexCandidates(f, 2 * m.r, 2 * rings);
 }
 
 /**
@@ -131,7 +163,7 @@ function pass(order, standingOut, fixedIn, o, clock) {
     // stands); farther, staying there is a stay, and it is named.
     const homeOk = dist(m.start, m.formation) < 1 - EPS;
     let picked = null, why = "noSpot", tried = 0;
-    for (const c of candidatesFor(m, o.rings ?? FILE.rings, walk)) {
+    for (const c of candidatesFor(m, o.rings ?? FILE.rings, walk, o.anchor ?? null)) {
       if (tried >= (o.tries ?? FILE.tries)) break;
       if (clock() - t0 > (o.memberMs ?? FILE.memberMs) || clock() - o.t0 > (o.totalMs ?? FILE.totalMs)) { why = "budget"; break; }
       const home = dist(c, m.start) < EPS;
@@ -203,7 +235,7 @@ export function planFile(spec, o) {
   const t0 = now();
   const members = spec.members ?? [];
   const standing = (spec.standing ?? []).map(s => ({ x: s.x, y: s.y, r: s.r, id: s.id ?? null }));
-  const oo = { ...o, t0 };
+  const oo = { ...o, t0, anchor: members.find(m => m.id === spec.anchorId) ?? null };
   const order = orderOf(members, spec.anchorId ?? null);
   let best = settleOrder(order, standing, oo, now), tries = 1;
   const seen = new Set([best.order.join(",")]);
@@ -298,4 +330,53 @@ export function staggerFile(walks, o = {}) {
   }
   const total = Object.values(delays).reduce((a, b) => Math.max(a, b), 0);
   return { delays, order, total, crowded };
+}
+
+/* -------------------------------------------- */
+/*  A later wave, when it goes (0.9.0 step 5)   */
+/* -------------------------------------------- */
+
+/**
+ * Who of a wave walks how far when it is sent (drop.mjs sendWave; the 0.9.0 simulator, step 5): to a fixed point, a
+ * member whose way is shut now, or that is cut to nothing, stays (and stands in the others' way); one cut short rests
+ * there (in the way of the ones after it); one whose rest would fall inside where an earlier one rests (it starts
+ * inside it: they share a lane) goes before that one instead, or, once swapped, stays. Each round one more stays or
+ * one pair swaps, so it ends; never a second plan. Units are the caller's.
+ * @param {string[]} ids   this wave's members, in plan order
+ * @param {object} o
+ * @param {(id) => boolean} o.shut                 its way crosses a wall that blocks movement now
+ * @param {(id) => {x,y,r}} o.at                    where it stands (a circle)
+ * @param {(id, circles) => { way, end: {x,y,r}, short: boolean } | null} o.cut  its way walked only as far as it is
+ *        free of `circles` (besides the caller's own obstacles): `end` where it then rests; null: not off its spot
+ * @returns {{ ways: Map<string, *>, stays: string[] }}  ways: id → its way (as `cut` gave it), for the ones that go
+ */
+export function waveWays(ids, { shut, at, cut }) {
+  const stays = new Set(), swapped = new Set();
+  let order = [...ids], ways = new Map(), settled = false;
+  for (let round = 0; round <= ids.length * (ids.length + 1) && !settled; round++) {
+    const rests = order.filter(id => stays.has(id)).map(id => ({ ...at(id), by: id }));
+    ways = new Map();
+    settled = true;
+    for (const id of order) {
+      if (stays.has(id)) continue;
+      if (shut(id)) { stays.add(id); settled = false; break; }
+      const c = cut(id, rests);
+      if (!c) { stays.add(id); settled = false; break; }
+      const hit = rests.find(o => dist(o, c.end) < o.r + c.end.r - EPS);
+      if (hit) {
+        const key = `${id}>${hit.by}`;
+        if (!stays.has(hit.by) && !swapped.has(key)) {
+          swapped.add(key);
+          order = order.filter(x => x !== id);
+          order.splice(order.indexOf(hit.by), 0, id);
+        } else stays.add(id);
+        settled = false;
+        break;
+      }
+      ways.set(id, c.way);
+      if (c.short) rests.push({ ...c.end, by: id });
+    }
+  }
+  if (!settled) ways = new Map();
+  return { ways, stays: ids.filter(id => !ways.has(id)) };
 }

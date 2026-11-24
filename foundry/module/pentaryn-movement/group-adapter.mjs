@@ -150,7 +150,7 @@ export function movingOthers(members, s) {
 }
 
 /** Is the move from → to (pixel points) open to move-blocking walls for this token? */
-function open(token, from, to) {
+export function open(token, from, to) {
   try { return !token.checkCollision(to, { origin: from, type: "move", mode: "any" }); } catch { return false; }
 }
 

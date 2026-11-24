@@ -29,9 +29,9 @@ import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, dist, firstLegAcross, groupMode, radiusOf, routeAhead, waves as wavesOf } from "./motion-core.mjs";
 import { coalesceHistory, freePrefix, onCell, pathLength, prefixOf } from "./group-core.mjs";
 import { sequence, stacksOf } from "./sequence-core.mjs";
-import { orderOf } from "./file-core.mjs";
+import { orderOf, waveWays } from "./file-core.mjs";
 import { avoidDist, skipReason } from "./pathfind-core.mjs";
-import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, memberOf, movementFacts, othersOf, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
+import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, memberOf, movementFacts, othersOf, restWalkable, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
@@ -821,7 +821,7 @@ function cutAcross(wall) {
   const c = wall?._source?.c ?? wall?.c;
   if (!feature || !scene?.tokens || !Array.isArray(c) || c.length < 4 || !blocksMove(wall)) return [];
   const a = { x: c[0], y: c[1] }, b = { x: c[2], y: c[3] };
-  const out = [];
+  const cut = [];
   for (const doc of scene.tokens.values?.() ?? []) {
     const token = doc?.object;
     const m = doc?.movement;
@@ -834,7 +834,13 @@ function cutAcross(wall) {
     const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
     const legs = route.waypoints.filter(p => (CONFIG.Token?.movement?.actions?.[p.action]?.walls ?? "move") !== null);
     if (firstLegAcross(centre(route.from), legs.map(centre), a, b) < 0) continue;
-    try { feature.exposed.stopDisplace?.(token); out.push(doc.id); } catch (err) { log?.debug?.("cut: stop where drawn", err); }
+    cut.push(token);
+  }
+  // One stop for all of them: none rests inside another (0.9.0 simulator, step 5: two brushing members cut together).
+  const group = { skip: new Set(cut.map(t => t.document.id)), claims: [] };
+  const out = [];
+  for (const token of cut) {
+    try { feature.exposed.stopDisplace?.(token, group); out.push(token.document.id); } catch (err) { log?.debug?.("cut: stop where drawn", err); }
   }
   if (out.length) {
     cutLast = { at: new Date().toISOString(), why: "wall", wall: wall.id ?? null, members: out.length };
@@ -1073,9 +1079,14 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
     const opts = {};
     for (const [k, v] of Object.entries(result[1])) if (k !== "movement") opts[k] = v;
     if (tag) opts[GROUP_OPT] = tag;
-    const send = list => sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids });
+    // Where each member's plan rests it (top-left): a mate resting anywhere else is in the others' way (sendWave).
+    const ends = new Map([...Object.entries(now0).map(([id, wps]) => [id, wps.at(-1)]), ...[...later].map(([id, v]) => [id, v.wps.at(-1)])]);
+    const stayed = new Set();                  // members a wave left where they stand (named)
+    const sentTo = new Map();                  // id → where a wave sent it (top-left), its echo maybe not back yet
+    const send = list => sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends, stayed, sentTo });
     feature.exposed.groupWaves?.(gid, waveList, send);
   }
+  if (res[0].length) noteInFlight(scene, res[0], res[1].movement);
   return res[0].length ? res : null;
 }
 
@@ -1099,7 +1110,7 @@ function wayShut(doc, from, wps) {
  * the tokens standing outside the group now (a hard obstacle; never a second plan). Its riders go with it. Never
  * throws; a failed update is counted (the breaker).
  */
-function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids }) {
+function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends = new Map(), stayed = new Set(), sentTo = new Map() }) {
   if (!feature) return;
   const wanted = list.filter(id => later.has(id));
   const live = stillOurs(wanted, scene, starts, seq);
@@ -1107,19 +1118,60 @@ function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene
   const mates = ids.map(id => ({ id, token: scene?.tokens?.get?.(id)?.object ?? null })).filter(m => m.token);
   let others = [];
   try { others = mates.length ? othersOf(mates, s) : []; } catch (err) { log?.debug?.("wave: the tokens standing", err); }
+  // 0.9.0 simulator (step 5, seeds 382 / 409 / 1958): a mate at rest anywhere but its plan's spot and its start (a
+  // cut or a stop left it there), or one an earlier wave left where it stands, stands in this wave's way too; so
+  // does each member of this wave cut short or staying, for the ones after it.
+  const same = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y;
+  const circleOf = (doc, p = doc._source) => {
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    return { ...toSquares(p, w, h, s), r: radiusOf(w, h), id: doc.id };
+  };
+  for (const id of ids) {
+    if (live.includes(id) || (riders?.has?.(id))) continue;
+    const doc = scene?.tokens?.get?.(id);
+    const t = doc?.object;
+    if (!doc?._source || !t || t.destroyed) continue;
+    const to = sentTo.get(id);
+    // Sent short of its plan's spot by an earlier wave: it rests there (walking there still, or its echo not back).
+    if (to && !same(to, ends.get(id)) && (same(doc._source, to) || same(doc._source, starts.get(id)))) { others.push(circleOf(doc, to)); continue; }
+    if (moving(t)) continue;
+    const offPlan = !same(doc._source, ends.get(id)) && !same(doc._source, starts.get(id)) && !same(doc._source, to);
+    if (offPlan || stayed.has(id)) others.push(circleOf(doc));
+  }
+  // Mates still waiting for a later wave, at their starts: a way cut short never rests on one (it may stay there,
+  // 0.9.0 simulator seed 5361); a full way passes them (they set off later, two movers may brush).
+  const waiting = [];
+  for (const id of new Set((feature.exposed.groupPending?.() ?? []).flatMap(w => w.ids))) {
+    const doc = scene?.tokens?.get?.(id);
+    if (!ids.includes(id) || live.includes(id) || !doc?._source || !same(doc._source, starts.get(id))) continue;
+    waiting.push(circleOf(doc));
+  }
   const movement = {}, updates = [], shut = [];
   let short = false;
+  // Who walks how far (file-core waveWays): shut or cut to nothing stays, cut short rests there, a shared lane swaps.
+  const { ways } = waveWays(live.filter(id => scene.tokens.get(id)?.object && !scene.tokens.get(id).object.destroyed), {
+    shut: id => { const doc = scene.tokens.get(id); return wayShut(doc, { ...doc._source }, later.get(id).wps); },
+    at: id => circleOf(scene.tokens.get(id)),
+    cut: (id, rests) => {
+      const doc = scene.tokens.get(id);
+      const wps = later.get(id).wps;
+      let kept = freeOfOthers(doc.object, { ...doc._source }, wps, [...others, ...rests]);
+      if (kept.short && kept.length && waiting.length) kept = freeOfOthers(doc.object, { ...doc._source }, wps, [...others, ...rests, ...waiting]);
+      if (kept.short && !kept.length) return null;
+      const way = kept.short ? kept : wps;
+      return { way, end: circleOf(doc, way.at(-1)), short: !!kept.short };
+    },
+  });
   for (const id of live) {
     const doc = scene.tokens.get(id);
     const token = doc?.object;
     if (!token || token.destroyed) continue;
-    const from = { ...doc._source };
-    let wps = later.get(id).wps;
-    if (wayShut(doc, from, wps)) { shut.push(doc); continue; }
-    const kept = freeOfOthers(token, from, wps, others);
-    if (kept.short) { if (!kept.length) { shut.push(doc); continue; } short = true; wps = kept; }
+    const wps = ways.get(id);
+    if (!wps) { shut.push(doc); stayed.add(id); continue; }
+    if (wps !== later.get(id).wps) short = true;
     movement[id] = { ...(base[id] ?? { planned: false }), waypoints: wps };
     updates.push({ _id: id });
+    sentTo.set(id, { x: wps.at(-1).x, y: wps.at(-1).y });
   }
   const skipped = wanted.length - live.length;
   waveLast = { at: new Date().toISOString(), members: wanted.length, sent: updates.length, skipped, shut: shut.length, short };
@@ -1131,9 +1183,37 @@ function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene
   const ok = new Set(stillOurs(res[0].map(u => u._id), scene, starts, seq));
   const sendIds = res[0].filter(u => ok.has(u._id) || live.includes(u._id));
   for (const id of Object.keys(res[1].movement)) if (!sendIds.some(u => u._id === id)) delete res[1].movement[id];
+  noteInFlight(scene, sendIds, res[1].movement);
   Promise.resolve(scene.updateEmbeddedDocuments("Token", sendIds, res[1])).catch(err => failed("wave", err));
 }
 let waveLast = null;                       // the last later wave this client sent, for status()
+
+/**
+ * Where this client has just sent tokens of a group (top-left, with size), until their write comes back (updateToken)
+ * or IN_FLIGHT_MS: a stop on this client never rests one inside such a spot while the documents still show the old
+ * place (0.9.0 simulator, step 5, seed 777: a wave and a door cut 50 ms apart).
+ */
+const inFlight = new Map();                // token id → { x, y, width, height, at }
+const IN_FLIGHT_MS = 3000;
+function noteInFlight(scene, updates, movement) {
+  const t = Date.now();
+  for (const u of updates) {
+    const end = movement?.[u._id]?.waypoints?.at(-1);
+    const doc = scene?.tokens?.get?.(u._id);
+    if (!end || !doc?._source) continue;
+    inFlight.set(u._id, { x: end.x, y: end.y, width: doc._source.width ?? 1, height: doc._source.height ?? 1, at: t });
+  }
+}
+/** The spots in flight now: [{ id, x, y, width, height }] (top-left pixels). */
+function restsInFlight() {
+  const t = Date.now();
+  const out = [];
+  for (const [id, r] of inFlight) {
+    if (t - r.at > IN_FLIGHT_MS) { inFlight.delete(id); continue; }
+    out.push({ id, ...r });
+  }
+  return out;
+}
 
 /* -------------------------------------------- */
 /*  A fight's group drag: one at a time (step 4) */
@@ -1159,8 +1239,15 @@ function fightFile(grabbed, contexts, riders, seq) {
   const ms = leaders.map(c => ({ ...memberOf(c, s), c })).filter(m => dist(m.start, m.formation) > 1e-6);
   const ridersOf = id => [...(riders ?? new Map())].filter(([, r]) => r.leader === id).map(([rid, r]) => ({ id: rid, dx: r.dx, dy: r.dy }));
   const order = sequence(orderOf(ms, null).map(m => ({ id: m.id, r: m.r, points: [m.start, m.formation] }))).order;
+  // Where each may rest when its formation square is no good (off the scene, behind a wall): squares the drop reaches.
+  const lead = riders?.get(grabbed.document.id)?.leader;
+  const anchor = lead ? (leaders.find(c => c.token.document.id === lead)?.token ?? grabbed) : grabbed;
+  let spots = {};
+  try { spots = feature.exposed.groupSpots?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} }) ?? {}; }
+  catch (err) { log?.debug?.("fight: the spots", err); }
   const entries = order.map(id => ms.find(m => m.id === id)).map(m => ({
     id: m.id, start: { x: m.token.document._source.x, y: m.token.document._source.y }, dest: { ...m.c.destination }, riders: ridersOf(m.id),
+    spots: spots[m.id] ?? [],
   }));
   Object.assign(last, { result: "queue", plan: { members: entries.length, order } });
   feature.exposed.tele?.("plan", { mode: "fightFile", members: entries.length, combat: true });
@@ -1239,27 +1326,40 @@ async function routeAtTurn(token, e) {
   const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
   const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box: false, id: o.id }));
   const taken = p => { const c = centre(p); return circles.some(o => Math.hypot(c.x - o.x, c.y - o.y) < o.r); };
-  let end = { ...e.dest };
-  if (taken(end)) {
-    let spot = end;
-    try { spot = clearOfWalls(token, end, { taken, snap: true }); } catch (err) { log?.debug?.("fight: a clear square", err); }
-    if (taken(spot)) return { stay: "noSpot" };
-    end = { ...end, x: spot.x, y: spot.y, snapped: true };
-  }
+  // Its formation square; on a token, the nearest clear square; and where that square is no good (off the scene,
+  // behind a wall, in rock: 0.9.0 simulator, step 5), the squares round it the drop reaches (fightSpots), nearest first.
+  const member = { token, r, w, h };
+  const fits = p => { try { return restWalkable(member, { x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s }, s); } catch { return false; } };
+  const ends = [];
+  const add = p => { if (p && !taken(p) && fits(p) && !ends.some(q => q.x === p.x && q.y === p.y)) ends.push({ ...e.dest, x: p.x, y: p.y, snapped: true }); };
+  const end0 = { ...e.dest };
+  if (taken(end0)) {
+    let spot = null;
+    try { spot = clearOfWalls(token, end0, { taken, snap: true }); } catch (err) { log?.debug?.("fight: a clear square", err); }
+    add(spot);
+  } else if (fits(end0)) ends.push(end0);
+  for (const p of e.spots ?? []) add(p);
+  if (!ends.length) return { stay: "noSpot" };
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
   const start = centre(origin);
-  if (Math.round(start.x) === Math.round(centre(end).x) && Math.round(start.y) === Math.round(centre(end).y)) return { stay: "there" };
   const live = circles.filter(o => avoidDist(o, start, start) >= o.r);
-  const dest = { ...origin, ...end, explicit: true, checkpoint: true };
   const opts = { preview: true, avoid: live.length ? live : null };
-  let rr = null;
-  try {
-    const search = feature.exposed.pathfindRouteToAsync;
-    rr = typeof search === "function" ? await search(token, origin, dest, opts) : feature.exposed.pathfindRouteTo?.(token, origin, dest, { ...opts, maxMs: CONFIRM_MS });
-  } catch (err) { log?.debug?.("fight: a route", err); rr = null; }
-  if (!rr?.reached || !(rr.path?.length >= 2)) return { stay: "noRoute" };
-  return { origin, waypoints: lastWp(rr.path.slice(1)) };
+  let why = "noRoute";
+  for (const end of ends.slice(0, FIGHT_TRIES)) {
+    if (Math.round(start.x) === Math.round(centre(end).x) && Math.round(start.y) === Math.round(centre(end).y)) return { stay: "there" };
+    const dest = { ...origin, ...end, explicit: true, checkpoint: true };
+    let rr = null;
+    try {
+      const search = feature.exposed.pathfindRouteToAsync;
+      rr = typeof search === "function" ? await search(token, origin, dest, opts) : feature.exposed.pathfindRouteTo?.(token, origin, dest, { ...opts, maxMs: CONFIRM_MS });
+    } catch (err) { log?.debug?.("fight: a route", err); rr = null; }
+    if (rr?.reached && rr.path?.length >= 2) return { origin, waypoints: lastWp(rr.path.slice(1)) };
+    why = "noRoute";
+  }
+  return { stay: why };
 }
+/** Squares a fight member's turn tries a route to, at most (its formation square or the nearest clear, then fightSpots). */
+const FIGHT_TRIES = 4;
 
 /**
  * Walk one entry (its leader, its riders at their offsets), a checkpoint at every square; resolves true (walked to
@@ -1362,10 +1462,10 @@ export function install(reg, ctx) {
   if (ctx.late) dropPatched = patchDrop();
   else reg.once("setup", () => { dropPatched = patchDrop(); }, { guard: false, label: "setup: wrap _prepareDragLeftDropUpdates (the drop)" });
   reg.on("preMoveToken", (doc, move, options) => onPreMove(doc, move, options), { label: "preMoveToken: the next square of a move this client drives (walls now, an undrawn token, standing tokens)" });
-  reg.on("updateToken", (doc, _changes, options, userId) => onUndoEntry(doc, options, userId), { label: "updateToken: one undo entry for one move (a fight's squares)" });
+  reg.on("updateToken", (doc, _changes, options, userId) => { inFlight.delete(doc?.id); onUndoEntry(doc, options, userId); }, { label: "updateToken: one undo entry for one move (a fight's squares); a wave's write is back" });
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: stop moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: stop moves across a shut door" });
-  ctx.expose({ groupFollower, singleAvoid, groupStatus, groupCutAcross: cutAcross,
+  ctx.expose({ groupFollower, singleAvoid, groupStatus, groupCutAcross: cutAcross, groupInFlight: restsInFlight,
     groupPatched: () => dropPatched, groupCheckpoints: withCheckpoints, groupStackmates: stackmates });
 }
 
@@ -1386,6 +1486,7 @@ export function uninstall() {
   told.length = 0;
   fallbacks.length = 0;
   latestDrop.clear();
+  inFlight.clear();
   Object.assign(perf, { drops: 0, maxMs: 0, lastMs: null });
   feature = null;
 }

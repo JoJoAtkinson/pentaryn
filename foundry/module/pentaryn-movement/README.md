@@ -66,7 +66,9 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   nothing moves, "No route there" (naming the token standing in the only way when you can read its name).
 - **Click a moving token to stop it** (always on) once it has moved 400 ms (a move you dropped; one another user
   started stops at once): out of combat it stops **exactly where it is drawn** (Joe, 2026-11-23); one whose body is
-  across a door's line is carried just past the line along its own route. In a fight it finishes the square it is in,
+  across a door's line, or that would rest inside a token at rest or a member the same stop stopped, is carried on
+  along its own route just clear of it (0.9.0 step 5; never through a wall; with nowhere along its way, the nearest
+  clear spot). In a fight it finishes the square it is in,
   so the movement spent stays exact; a GM may stop anyone's move. A click on any member of a moving group stops the
   whole group (Joe, 2026-11-24): the dragger's screen stops the rest, and the members not yet sent stay where they
   stand.
@@ -76,7 +78,8 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
 - **A door shut or a wall raised across a walk out of combat** stops it where it is drawn; a group member not yet
   sent whose way it crosses stays where it stands, named.
 - **Several tokens out of combat — the file** (`groupDrags`; 0.9.0): at the drop every member gets its own spot, the
-  free one nearest its place in the formation that it can reach without going round the far side of a wall, and a
+  free one nearest its place in the formation that it can reach without going round the far side of a wall (a place
+  that lies behind the room's wall, off the scene or in rock: the nearest spot to it that the drop point reaches), and a
   route round the tokens standing outside the drag and round the spots already given out. Then each gets a start
   delay: on open ground all set off at once; through a door they file, each waiting only as long as it needs not to
   meet the ones before it, and the last one is on its way within 4 s of the drop. Nobody rests on anybody, nobody
@@ -308,9 +311,11 @@ open ground all 0, two movers meeting in fewer drops than all at once) and `drop
 file on the synthetic board with its three handlers, the fight queue and what ends it, and the 0.9.0 step 1 gate: 60
 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
 `sequence-core.test` (stacks, and tier C's sequence), `telemetry-core.test` and `telemetry.test` (the ring, the
-breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). The 0.8
-simulator modelled the glue 0.9.0 deleted and went with it; §4 step 5 rebuilds it on the real cores (`test/sim/`
-keeps its engine and maps; `make foundry-movement-sim` says so until then). Fixtures are
+breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). `test/sim/` is the
+simulator (0.9.0 step 5): the real cores (`file-core` planFile / staggerFile / waveWays / candidatesFor, `motion-core`
+clearAlong, `sequence-core`, the pathfind-core A*) on virtual clients over a jittered, lossy network;
+`sim.test.mjs` runs 60 seeds as B1 and B0 and one regression seed per defect it found; `make foundry-movement-sim
+SEEDS=10000` is the full run. Fixtures are
 synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.
 
 **Verify live (as a player):**

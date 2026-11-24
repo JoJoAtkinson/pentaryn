@@ -24,7 +24,7 @@
  * A wave skips a member no longer at its start (drop.mjs).
  */
 
-import { STAGGER, planFile, staggerFile } from "./file-core.mjs";
+import { FILE, STAGGER, candidatesFor, planFile, staggerFile } from "./file-core.mjs";
 import { flood } from "./group-core.mjs";
 import { avoidDist } from "./pathfind-core.mjs";
 import { gridSize, inCombat, memberOf, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
@@ -275,15 +275,15 @@ function stopGroupHere(doc, why) {
   const ids = groupCancel(doc.id, { why });
   const scene = doc.parent;
   const out = [];
-  for (const id of ids) {
-    if (id === doc.id) continue;
-    const d = scene?.tokens?.get?.(id);
-    const t = d?.object;
-    if (!d || !t || t.destroyed || !d.movement?.user?.isSelf || !movingNow(d)) continue;
+  const list = ids.filter(id => id !== doc.id).map(id => scene?.tokens?.get?.(id))
+    .filter(d => d?.object && !d.object.destroyed && d.movement?.user?.isSelf && movingNow(d));
+  // One stop for the rest: none rests inside another, nor inside the one stopped already (0.9.0 simulator, step 5).
+  const group = { skip: new Set(list.map(d => d.id)), claims: [] };
+  for (const d of list) {
     try {
       if (inCombat(d)) feature?.exposed?.stopSafely?.(d);
-      else feature?.exposed?.stopDisplace?.(t);
-      out.push(id);
+      else feature?.exposed?.stopDisplace?.(d.object, group);
+      out.push(d.id);
     } catch (err) { log?.debug?.("file: stop a member", err); }
   }
   groupNoteStop({ why, members: out.length + 1, whole: true });
@@ -297,16 +297,15 @@ function stopGroupHere(doc, why) {
 const now = () => globalThis.performance?.now?.() ?? Date.now();
 /** One route search's wall-clock cap (ms): a long or impossible route rules that spot out instead of freezing the drop. */
 const ROUTE_MS = 120;
-/** How far (squares, rings of the flood) a slot may be walked from its formation spot. */
-const REACH_RINGS = 9;
+/** How far (squares, rings of the flood) a slot may be walked from its formation spot (file-core's FILE.reach). */
+const REACH_RINGS = FILE.reach;
 
 /**
- * Plan B0 for the leaders of a group drop (riders walk with their leaders, drop.mjs). `anchor` is the grabbed token
- * (or its leader). Returns { plan, members } (file-core's plan, the member records), or null when there is nothing to
- * plan. Reads only; never throws past the caller's catch (drop.mjs: core's drop).
+ * The oracles file-core asks for a drop (file.mjs's view of the canvas): the member records, the tokens standing
+ * outside it, where a member may rest (restWalkable and the places to avoid) and the walk from each formation spot
+ * (a flood through walls and blocking creatures, built on first use).
  */
-function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
-  if (!feature || !anchor || contexts.length < 1) return null;
+function oraclesFor(anchor, contexts, constrain = {}) {
   const s = gridSize(anchor);
   const ordered = [...contexts].sort((a, b) => (a.token === anchor ? -1 : b.token === anchor ? 1 : 0));
   const members = ordered.map(c => memberOf(c, s));
@@ -339,6 +338,38 @@ function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
     const n = fl.f.nodeOf(toTopLeft(c, m.w, m.h, s));
     return fl.walk.get(`${n.i},${n.j}`) ?? null;
   };
+  return { s, members, standing, origins, walkable, walk };
+}
+
+/**
+ * A fight's spots (§4 step 4, 0.9.0 simulator step 5): for each member of a drop, the squares it may rest on when its
+ * formation square is no good (off the scene, behind a wall, in rock), nearest it first, each one the drop point
+ * reaches (file-core candidatesFor with the grabbed one). id → [top-left pixels]. Reads only; {} on any failure.
+ */
+function fightSpots(anchor, contexts, { constrain = {} } = {}) {
+  if (!feature || !anchor || !contexts.length) return {};
+  try {
+    const { s, members, walkable, walk } = oraclesFor(anchor, contexts, constrain);
+    const lead = members.find(m => m.id === anchor.document.id) ?? members[0];
+    // Never another member's own formation square where that one can rest (it walks there at its turn).
+    const homes = members.filter(m => walkable(m, m.formation)).map(m => ({ id: m.id, x: m.formation.x, y: m.formation.y, r: m.r }));
+    const out = {};
+    for (const m of members) {
+      const free = c => homes.every(o => o.id === m.id || Math.hypot(c.x - o.x, c.y - o.y) >= m.r + o.r - 1e-6);
+      out[m.id] = candidatesFor(m, FILE.rings, walk, lead).filter(c => free(c) && walkable(m, c)).slice(0, 2 * FILE.tries).map(c => toTopLeft(c, m.w, m.h, s));
+    }
+    return out;
+  } catch (err) { log?.debug?.("file: a fight's spots", err); return {}; }
+}
+
+/**
+ * Plan B0 for the leaders of a group drop (riders walk with their leaders, drop.mjs). `anchor` is the grabbed token
+ * (or its leader). Returns { plan, members } (file-core's plan, the member records), or null when there is nothing to
+ * plan. Reads only; never throws past the caller's catch (drop.mjs: core's drop).
+ */
+function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
+  if (!feature || !anchor || contexts.length < 1) return null;
+  const { s, members, standing, origins, walkable, walk } = oraclesFor(anchor, contexts, constrain);
   const route = (m, from, to, avoid) => {
     const origin = origins.get(m.id);
     const tl = toTopLeft(to, m.w, m.h, s);
@@ -420,7 +451,7 @@ export function install(reg, ctx) {
   reg.on("deleteCombat", combat => onCombatChange(combat, null), { label: "deleteCombat: the fight's end empties the fight queues" });
   try { globalThis.document?.addEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   ctx.expose({ groupCancel, groupMembers, groupNoteStop, groupHold: holdGroup, groupHeld: heldCount, groupStopped: stoppedLast,
-    groupMax: () => FILE_MAX, groupPlan: planDrop, groupWaypoints: waypointsFor, groupDryRun: dryRun,
+    groupMax: () => FILE_MAX, groupPlan: planDrop, groupSpots: fightSpots, groupWaypoints: waypointsFor, groupDryRun: dryRun,
     groupWaves: scheduleWaves, groupPending: pendingWaves, groupFlushed: () => (flushLast ? { ...flushLast } : null),
     groupQueue: setQueue, groupQueueDone: queueDone, groupCancelQueues: cancelQueues });
 }

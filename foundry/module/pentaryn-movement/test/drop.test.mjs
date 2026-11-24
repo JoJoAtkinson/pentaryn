@@ -971,6 +971,130 @@ test("R6-3: a new wall raised across a route cuts it too; a wall that crosses no
   }
 });
 
+/** Where each of `ids` rests after the moves since `from` (the last waypoint of its last move). */
+function restsAfter(from, ids) {
+  const out = {};
+  for (const c of F.calls.slice(from)) if (c.op === "move" && ids.includes(c.id)) out[c.id] = c.waypoints.at(-1);
+  return out;
+}
+
+test("0.9.0 simulator (step 5): two walkers a wall cuts while they brush do not stop inside each other; the later one walks on to the first spot clear of the first", async () => {
+  // The simulator's class (seeds 2, 60, 277 …): two members brushing (soft) were stopped where drawn, and rested
+  // inside each other for good (hard).
+  combatFlag = false;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const a = walking("brsA000000000001", { x: 300, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  const b = walking("brsB000000000001", { x: 340, y: 100 }, { x: 900, y: 200 }, [{ x: 100, y: 100 }, { x: 600, y: 100 }, { x: 900, y: 200 }]);
+  const from = F.calls.length;
+  world.walls.push([{ x: 700, y: 0 }, { x: 700, y: 300 }]);
+  try {
+    F.fire("createWall", { id: "brsWall000000001", parent: sceneDoc, _source: { c: [700, 0, 700, 300], move: 20 } }, {}, "gm");
+    await settleWrites();
+    const rest = restsAfter(from, [a.document.id, b.document.id]);
+    const pa = rest[a.document.id], pb = rest[b.document.id];
+    assert.ok(pa && pb, JSON.stringify(rest));
+    assert.ok(Math.hypot(pa.x - pb.x, pa.y - pb.y) >= S - 1, `rest apart: ${JSON.stringify(rest)}`);
+    assert.ok(pb.x > 340 && pb.x <= 340 + 1.5 * S && pb.y === 100, `the later one on along its own route: ${JSON.stringify(pb)}`);
+    assert.deepEqual([pa.x, pa.y], [300, 100], "the first exactly where it is drawn");
+  } finally {
+    world.walls.pop();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("0.9.0 simulator (step 5): a click that would leave a token resting inside one at rest carries it on along its route to the first clear spot", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const t = walking("brsC000000000001", { x: 330, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  makeToken("brsR000000000001", 260, 100);               // came to rest there meanwhile (another user's stop)
+  const from = F.calls.length;
+  try {
+    t._onClickLeft({});
+    await flush();
+    const moves = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id);
+    assert.deepEqual([moves[0].waypoints[0].x, moves[0].waypoints[0].y], [330, 100], "first exactly where it is drawn");
+    const end = moves.at(-1).waypoints.at(-1);
+    assert.ok(end.x >= 360 - 1 && end.x <= 380 && end.y === 100, `then just clear of the one at rest, ahead: ${JSON.stringify(end)}`);
+  } finally {
+    t.animationContexts.clear();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("0.9.0 simulator (step 5): a stop carried clear of a token at rest walks on past a mate still walking where it would rest (never gives up into the overlap)", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const t = walking("brsE000000000001", { x: 330, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  makeToken("brsS000000000001", 260, 100);                                          // at rest
+  walking("brsW000000000001", { x: 370, y: 100 }, { x: 900, y: 300 }, [{ x: 300, y: 100 }, { x: 900, y: 300 }]); // drawn just ahead, walking
+  const from = F.calls.length;
+  try {
+    t._onClickLeft({});
+    await flush();
+    const moves = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id);
+    const end = moves.at(-1).waypoints.at(-1);
+    assert.ok(end.x >= 469 && end.x <= 330 + 1.5 * S && end.y === 100, `past the walker too, ahead: ${JSON.stringify(end)}`);
+  } finally {
+    t.animationContexts.clear();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("0.9.0 simulator (step 5): a token drawn inside one at rest with no clear spot along its way stops on the nearest clear spot instead", async () => {
+  // Seeds 583 / 1740: a stop's own short walk on was cut by a door shut across it, inside the token it was leaving.
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const t = walking("brsF000000000001", { x: 330, y: 100 }, { x: 340, y: 100 }, [{ x: 320, y: 100 }, { x: 340, y: 100 }]);
+  makeToken("brsT000000000001", 300, 100);
+  const from = F.calls.length;
+  try {
+    const r = await api.stop(t.document);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    await flush();
+    const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id).at(-1)?.waypoints?.at(-1);
+    assert.ok(end && Math.hypot(end.x - 300, end.y - 100) >= S - 1, `clear of the one at rest: ${JSON.stringify(end)}`);
+  } finally {
+    t.animationContexts.clear();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("0.9.0 simulator (step 5, seed 6156): a stop carried clear never walks on through another token at rest on its way", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  // Drawn inside A (at rest, ahead: no clear spot within 1.5 squares); back the way it came stands B at rest.
+  const t = walking("brsG000000000001", { x: 330, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  makeToken("brsA000000000001", 400, 100);
+  makeToken("brsB000000000001", 225, 100);
+  const from = F.calls.length;
+  try {
+    const r = await api.stop(t.document);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    await flush();
+    const moves = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id);
+    const end = moves.at(-1).waypoints.at(-1);
+    assert.ok(!(end.y === 100 && end.x < 225), `never on through B: ${JSON.stringify(end)}`);
+    for (const [x, y] of [[400, 100], [225, 100]]) assert.ok(Math.hypot(end.x - x, end.y - y) >= S - 1, `at rest clear of both: ${JSON.stringify(end)}`);
+  } finally {
+    t.animationContexts.clear();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
 test("H2-07 / H2-09: a single drag out of combat goes round a standing token, and dropped on one takes the nearest clear spot", () => {
   combatFlag = false;
   clock.step = 0;
@@ -1408,16 +1532,22 @@ test("HX1-07 / 0.8.0 click-stop: a token whose body is across a door's line is c
 test("0.8.0 click-stop: not across a door's line, nothing but the stop where it is drawn (no walk out, no search)", async () => {
   combatFlag = false;
   const t = makeToken("pdrB000000000001", 100, 100);
+  // Alone on the scene (0.9.0: a token at rest under the spot would carry it clear).
+  const others = keepOnly([t]);
   t.document._source = { ...t.document._source, x: 700, y: 100 };
   t.document.x = 333; t.document.y = 117;
   t.animationContexts.set(t.movementAnimationName, {});
   const from = F.calls.length;
-  t._onClickLeft({});
-  await flush();
-  const moves = F.calls.slice(from).filter(c => c.op === "move");
-  assert.equal(moves.length, 1);
-  assert.deepEqual([moves[0].waypoints[0].x, moves[0].waypoints[0].y], [333, 117]);
-  t.animationContexts.clear();
+  try {
+    t._onClickLeft({});
+    await flush();
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    assert.equal(moves.length, 1);
+    assert.deepEqual([moves[0].waypoints[0].x, moves[0].waypoints[0].y], [333, 117]);
+  } finally {
+    t.animationContexts.clear();
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  }
 });
 
 /** No walk of `call` (a flush's update) comes inside touching less 0.1 square of a walk of the first wave `out` (both from now, 6 squares/s). */
@@ -1960,6 +2090,52 @@ test("0.9.0 B1 handlers: a click on one member stops the whole group, its unsent
   } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
 });
 
+test("0.9.0 simulator (step 5): a click on one member never rests it inside a mate of its group already at rest (the mates it does not stop still count)", async () => {
+  // Seeds 865 / 1274: a door cut stopped the group, then a click on one still walking on left it inside a mate.
+  const f = fileDrop("k");
+  try {
+    const t = f.ts.find(x => f.now.has(x.document.id));
+    const mate = f.ts.find(x => x !== t);
+    mate.document._source = { ...mate.document._source, x: 400, y: 450 };            // at rest there, not walking
+    t.document._source = { ...t.document._source, x: 400, y: 600 };
+    t.document.x = 400; t.document.y = 480; t.position = { x: 400, y: 480 };       // drawn inside it, walking south
+    t.document.movement = { state: "completed", user: { isSelf: true }, constrainOptions: {}, origin: wp(400, 200), passed: { waypoints: [wp(400, 600)] }, pending: { waypoints: [] } };
+    t.animationContexts.set(t.movementAnimationName, {});
+    const from = F.calls.length;
+    const r = await api.stop(t.document);                                        // the click's own stop, never held back
+    assert.equal(r.ok, true, JSON.stringify(r));
+    await flush();
+    const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id).at(-1)?.waypoints?.at(-1);
+    assert.ok(end, "stopped");
+    assert.ok(Math.hypot(end.x - 400, end.y - 450) >= S - 1, `clear of the mate at rest: ${JSON.stringify(end)}`);
+  } finally { f.ts.forEach(x => x.animationContexts.clear()); f.restore(); }
+});
+
+test("0.9.0 simulator (step 5): a stop never rests a member where this client has just sent a mate (its write not back yet)", async () => {
+  // Seed 777: a wave sent a member to a spot; a door shut 50 ms later stopped another where it was drawn, on that spot,
+  // before the wave's write had come back to this client (the document still showed the mate at its start).
+  const f = fileDrop("q");
+  try {
+    const waved = f.waiting[0];
+    // Until its wave goes (the stub never applies it, and no echo comes back).
+    for (let t = 0; t < 4500 && !sent(f.from).some(c => c.ids.includes(waved.document.id)); t += 50) tickBy(50);
+    let sentTo = null;
+    for (const c of sent(f.from)) sentTo = c.options?.movement?.[waved.document.id]?.waypoints?.at(-1) ?? sentTo;
+    assert.ok(sentTo, "a wave was sent");
+    const t = f.ts.find(x => f.now.has(x.document.id));
+    t.document._source = { ...t.document._source, x: 400, y: 800 };
+    t.document.x = sentTo.x; t.document.y = sentTo.y; t.position = { x: sentTo.x, y: sentTo.y };
+    t.document.movement = { state: "completed", user: { isSelf: true }, constrainOptions: {}, origin: wp(sentTo.x, sentTo.y - 300), passed: { waypoints: [wp(400, 800)] }, pending: { waypoints: [] } };
+    t.animationContexts.set(t.movementAnimationName, {});
+    const from = F.calls.length;
+    const r = await api.stop(t.document);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    await flush();
+    const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id).at(-1)?.waypoints?.at(-1);
+    assert.ok(end && Math.hypot(end.x - sentTo.x, end.y - sentTo.y) >= S - 1, `clear of where the mate was just sent ${JSON.stringify(sentTo)}: ${JSON.stringify(end)}`);
+  } finally { f.ts.forEach(x => x.animationContexts.clear()); f.restore(); }
+});
+
 test("0.9.0 B1 handlers: another user's stop of one member (its displace) makes the dragger's screen stop the rest where they are drawn and drop its waves", () => {
   const f = fileDrop("f");
   try {
@@ -2001,7 +2177,7 @@ test("0.9.0 B1: a wave skips a member no longer at its start, and one whose way 
   const f = fileDrop("w");
   try {
     const [moved, ...rest] = f.waiting;
-    moved.document._source.x += S;                       // dragged elsewhere meanwhile
+    moved.document._source.y -= S;                       // dragged elsewhere meanwhile (out of the others' way: it stands there now)
     tickBy(4500);
     assert.ok(!sent(f.from).some(c => c.ids.includes(moved.document.id)), "the moved one is skipped");
     for (const t of rest) assert.ok(sent(f.from).some(c => c.ids.includes(t.document.id)), "the others go");
@@ -2016,6 +2192,36 @@ test("0.9.0 B1: a wave skips a member no longer at its start, and one whose way 
     assert.ok(told.some(m => /named\.stayed|Stayed where they stand/.test(m)), `named: ${JSON.stringify(told)}`);
     assert.ok(api.status().group.wave.shut >= 1, JSON.stringify(api.status().group.wave));
   } finally { world.walls.pop(); g.restore(); }
+});
+
+test("0.9.0 simulator (step 5): members a token come to rest in their way cuts short never rest on each other, in one wave or in two", () => {
+  // The simulator's class: H3 and H4 of one wave both cut short before a token standing at the door's mouth since
+  // the drop rested inside each other (seed 409); a member of a later wave cut short at a mate a cut left before it (382).
+  for (const tag of ["x", "y"]) {
+    const f = fileDrop(tag);
+    const saved = F.canvas.tokens.placeables;
+    const block = makeToken(`b1${tag}Blk000000001`, 400, 500);           // just past the door, since the drop
+    F.canvas.tokens.placeables = [...f.ts, block];
+    try {
+      if (tag === "y") {
+        // A mate cut short earlier rests off its start and off its slot: a later wave keeps clear of it too.
+        const [first] = f.waiting;
+        first.document._source = { ...first.document._source, x: 400, y: 300 };
+      }
+      tickBy(4500);
+      const ends = [{ id: block.document.id, c: center(block.document._source) }];
+      for (const t of f.ts) {
+        let m = null;
+        for (const c of sent(f.from)) m = c.options?.movement?.[t.document.id] ?? m;
+        const p = m ? m.waypoints.at(-1) : t.document._source;
+        if (!f.now.has(t.document.id)) ends.push({ id: t.document.id, c: center(p) });
+      }
+      for (let i = 0; i < ends.length; i++) for (let j = i + 1; j < ends.length; j++) {
+        const d = Math.hypot(ends[i].c.x - ends[j].c.x, ends[i].c.y - ends[j].c.y);
+        assert.ok(d >= S - 2, `${tag}: ${ends[i].id} rests on ${ends[j].id}: ${JSON.stringify(ends)}`);
+      }
+    } finally { F.canvas.tokens.placeables = saved; sceneTokens.delete(block.document.id); f.restore(); }
+  }
 });
 
 test("0.9.0 B0: no route crosses a token standing outside the drop, and no member rests on it", () => {
@@ -2051,8 +2257,9 @@ test("0.9.0 B0: a member with no spot it can reach stays where it stands and is 
   clock.step = 0;
   const ts = [makeToken("b0nA000000000001", 400, 200), makeToken("b0nB000000000001", 100, 200)];
   const others = keepOnly(ts);
-  // B's room below is sealed off from the door side: a wall down x = 300 from y 400.
-  const extra = [[{ x: 300, y: 400 }, { x: 300, y: 1000 }]];
+  // B is boxed in where it stands (walls round x 0-300, y 0-300). (0.9.0 step 5: one whose formation spot alone is
+  // sealed off now comes along to a spot the drop reaches, file-core candidatesFor.)
+  const extra = [[{ x: 0, y: 300 }, { x: 300, y: 300 }], [{ x: 300, y: 0 }, { x: 300, y: 300 }]];
   world.walls.push(...extra);
   try {
     const from = F.calls.length;
@@ -2167,6 +2374,33 @@ test("0.9.0 fight file: the second member is routed round the first where it cam
     await runFor(50);
     const restA = center(a.waypoints.at(-1));
     for (const p of b.waypoints) assert.ok(Math.hypot(center(p).x - restA.x, center(p).y - restA.y) >= S - 1, `onto the first: ${JSON.stringify(b.waypoints.map(w => [w.x, w.y]))}`);
+  } finally { restore(); tickBy(60000); }
+});
+
+test("0.9.0 fight file (simulator, step 5): a member whose formation spot falls off the scene walks to the nearest square the drop reaches, not named", async () => {
+  // The simulator's commonest stay in a fight (209 members in 500 seeds): a fight group dragged to a room's edge, the
+  // members whose same-delta square lay past it were named "did not move".
+  const ts = [makeToken("ffeA000000000001", 700, 100), makeToken("ffeB000000000001", 800, 100)];
+  const restore = fightScene(ts);
+  const held = holdMoves(ts);
+  try {
+    const from = F.calls.length;
+    const notes = await noticesOf(async () => {
+      dropWith(ts[0], contextsFor(ts, 200, 0));            // B's square would be x 1000: off the 1000 px scene
+      for (let k = 0; k < 2; k++) {
+        await runFor(100);
+        const m = F.calls.slice(from).filter(c => c.op === "move").at(-1);
+        if (m && held.get(m.id).length) held.get(m.id).at(-1).settle(true);
+      }
+      await runFor(100);
+    });
+    const moves = F.calls.slice(from).filter(c => c.op === "move");
+    assert.deepEqual(moves.map(m => m.id).sort(), ts.map(t => t.document.id).sort(), `both walk: ${JSON.stringify(notes)}`);
+    const a = moves.find(m => m.id === ts[0].document.id).waypoints.at(-1), b = moves.find(m => m.id === ts[1].document.id).waypoints.at(-1);
+    assert.deepEqual([a.x, a.y], [900, 100], "the grabbed one where it was dropped");
+    assert.ok(b.x + S <= 1000 && b.x % S === 0 && b.y % S === 0, `on a whole square on the scene: ${JSON.stringify(b)}`);
+    assert.ok(Math.hypot(b.x - a.x, b.y - a.y) >= S, `not on the grabbed one: ${JSON.stringify(b)}`);
+    assert.ok(Math.hypot(b.x - 1000, b.y - 100) <= 2 * S + 1, `near its formation square: ${JSON.stringify(b)}`);
   } finally { restore(); tickBy(60000); }
 });
 

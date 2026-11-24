@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld, member } from "./fixtures/grid.mjs";
 import { DUNGEON } from "./fixtures/dungeon.mjs";
-import { FILE, STAGGER, candidatesFor, clearOf, orderOf, planFile, routeEnters, staggerFile, wayToPoint } from "../file-core.mjs";
+import { FILE, STAGGER, candidatesFor, clearOf, orderOf, planFile, routeEnters, staggerFile, waveWays, wayToPoint } from "../file-core.mjs";
 import { delayed, dist, minSeparation, trajectory } from "../motion-core.mjs";
 
 const EPS = 1e-6;
@@ -177,6 +177,38 @@ test("B0: a member with no free spot it can reach stays and is named; the others
   assert.ok(sent.includes("a"), "the grabbed one goes");
   assert.ok(plan.stayed.length >= 1, `someone stays: ${JSON.stringify(plan.members)}`);
   for (const id of plan.stayed) assert.ok(["noSpot", "noRoute", "through", "budget"].includes(plan.members[id].stay), plan.members[id].stay);
+});
+
+test("B0 (simulator, step 5): members whose formation spot falls behind the room's wall come along to the nearest spots the drop reaches, none named", () => {
+  // The simulator's commonest stay (276 members in 500 seeds): a party dragged to a room's far side, the members whose
+  // same-delta spot lies past its wall stayed where they stood and were named, though the room had space.
+  // Past the wall the floor is rock three squares deep (on a scene, the void beyond the room's walls: walls between).
+  const g = gridWorld(`
+###############
+#..........####
+#..........####
+#..........####
+#..........####
+###############`);
+  const delta = { x: 9, y: 0 };
+  const ms = [member("a", { x: 1.5, y: 1.5 }, delta), member("b", { x: 1.5, y: 3.5 }, delta), member("c", { x: 3.5, y: 1.5 }, delta), member("d", { x: 3.5, y: 3.5 }, delta)];
+  const plan = planFile({ members: ms, anchorId: "a", standing: [] }, oraclesOf(g));
+  check({ seed: "wall", g, members: ms, standing: [] }, plan);
+  assert.deepEqual(plan.stayed, [], `nobody stays: ${JSON.stringify(plan.members)}`);
+  for (const id of ["c", "d"]) {
+    const e = plan.members[id], m = ms.find(x => x.id === id);
+    assert.ok(e.points.length >= 2 && e.slot.x <= 10.5 + EPS, `${id} in the room: ${JSON.stringify(e.slot)}`);
+    assert.ok(dist(e.slot, m.formation) <= 2.3, `${id} near its formation spot: ${JSON.stringify(e.slot)}`);
+  }
+  // A formation spot behind a wall the drop's side cannot reach is never chosen round the wall's far side.
+  const g2 = gridWorld(`
+#############
+#.....#.....#
+#.....#.....#
+#.....#.....#
+#############`);
+  const p2 = planFile({ members: [member("a", { x: 1.5, y: 1.5 }, { x: 3, y: 0 }), member("b", { x: 2.5, y: 2.5 }, { x: 3, y: 0 }), member("c", { x: 3.5, y: 2.5 }, { x: 3, y: 0 })], anchorId: "a", standing: [] }, oraclesOf(g2));
+  for (const id of ["b", "c"]) assert.ok(p2.members[id].slot.x < 6, `${id} on the drop's side of the wall: ${JSON.stringify(p2.members[id])}`);
 });
 
 test("B0: dropped on a token standing there, the grabbed one takes the nearest clear spot it can reach", () => {
@@ -390,4 +422,49 @@ test("B1 gate (600 seeded drops on random floors, 200 in the dungeon): total sta
   // Soft, measured: the deepest two-mover overlap of a drop is no deeper staggered than all at once, in nearly every drop.
   assert.ok(worse <= drops * 0.05, `${worse} of ${drops} drops overlap deeper staggered than all at once`);
   assert.ok(met1 <= met0, `drops where two movers meet: B1 ${met1}, B0 ${met0}`);
+});
+
+test("candidatesFor (simulator, step 5): the spots round the drop point for a formation spot it cannot reach stay on the member's own lattice", () => {
+  // Seeds 1682 / 1930: a 1×1 beside a 2×2 grabbed one was sent half a square in a fight (charged 0 ft for it).
+  const g = gridWorld(`
+###########
+#.......###
+#.......###
+#.......###
+#.......###
+###########`);
+  const anchor = member("a", { x: 2, y: 2 }, { x: 5, y: 1 }, { w: 2 });       // formation (7, 3): whole squares
+  const m = member("b", { x: 3.5, y: 1.5 }, { x: 5, y: 1 });                  // formation (8.5, 2.5): rock
+  const walk = (x, c) => g.walkDistanceFrom(x.formation)(c);
+  const list = candidatesFor(m, FILE.rings, walk, anchor);
+  assert.ok(list.length > 0);
+  for (const c of list) assert.ok(Math.abs(c.x - 0.5 - Math.round(c.x - 0.5)) < EPS && Math.abs(c.y - 0.5 - Math.round(c.y - 0.5)) < EPS, `a whole square: ${JSON.stringify(c)}`);
+});
+
+test("waveWays (simulator, step 5, seed 764): two of one wave in one lane cut short by a token come to rest: the front one goes first, the rear one rests behind it", () => {
+  // A lane along y = 0.5: the blocker at x 0.5; F (front) at 2.5, R (rear) at 3.5, both walking to x 0.5.
+  const blocker = { x: 0.5, y: 0.5, r: 0.5 };
+  const start = { F: { x: 2.5, y: 0.5 }, R: { x: 3.5, y: 0.5 } };
+  const cut = (id, rests) => {
+    const p = [start[id], { x: 0.5, y: 0.5 }];
+    const circles = [blocker, ...rests].filter(c => dist(c, start[id]) >= c.r + 0.5 - EPS);
+    let end = p[1];
+    for (const c of circles) {
+      const stop = c.x + c.r + 0.5 + 0.01;
+      if (stop <= end.x) continue;
+      if (stop > start[id].x + EPS) return null;               // it cannot get off its spot toward it
+      end = { x: stop, y: 0.5 };
+    }
+    if (dist(end, start[id]) < 0.02) return null;
+    return { way: [end], end: { ...end, r: 0.5 }, short: end !== p[1] };
+  };
+  // Plan order puts the rear one first (as B0 can): its rest would fall where the front one stands and then rests.
+  const { ways, stays } = waveWays(["R", "F"], { shut: () => false, at: id => ({ ...start[id], r: 0.5 }), cut });
+  assert.deepEqual(stays, [], JSON.stringify([...ways]));
+  const f = ways.get("F")[0], r = ways.get("R")[0];
+  assert.ok(Math.abs(f.x - 1.51) < 1e-6, `the front one just clear of the blocker: ${JSON.stringify(f)}`);
+  assert.ok(r.x >= f.x + 1 - EPS, `the rear one behind it, not inside it: ${JSON.stringify(r)}`);
+  // A shut way stays, and the one behind it walks only as far as it is free of it.
+  const w2 = waveWays(["R", "F"], { shut: id => id === "F", at: id => ({ ...start[id], r: 0.5 }), cut });
+  assert.deepEqual([...w2.stays].sort(), ["F", "R"], "R starts against F (touching): it cannot get off its spot toward it, so it stays too");
 });

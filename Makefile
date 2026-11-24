@@ -309,9 +309,10 @@ foundry-%-check: ; @$(OPS) module-check $*
 foundry-%-sync:  ; @$(OPS) module-sync $*
 
 .PHONY: foundry-movement-sim
-# pentaryn-movement's distributed logic in a Node simulator (virtual clients, a fake clock, jittered latency, loss, fog
-# stalls, a backgrounded initiator; generated maps): SEEDS seeds from FROM (2000 from 1), every invariant judged; a
-# line per failing seed, exit 1 when any fails. SEED=N prints one seed's whole record; MAP=hard one map; JSON=1;
+# pentaryn-movement's real cores (file-core, sequence-core, the pathfind-core A*) in a Node simulator (virtual clients, a
+# fake clock, jittered latency, loss, fog stalls, a backgrounded initiator, a reload; generated maps): SEEDS seeds from
+# FROM (2000 from 1), each as B1 and as B0, every hard invariant judged, mover overlap reported (p95 depth, duration);
+# a line per failing run, exit 1 when any fails. SEED=N prints one seed's whole record; MAP=hard one map; JSON=1;
 # OPTS='{"combat":false,"click":true}' fixes scenario choices (a seed names a scenario only with its OPTS).
 # Use: context/foundry/movement.md (The simulator).
 foundry-movement-sim:

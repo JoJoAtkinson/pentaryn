@@ -807,3 +807,54 @@ standing) hold the same per square, never through a token standing at that membe
 every member walked or named, no watchdog needed; a mount and its rider go as one entry; the queue ends on a click (the walker stopped by
 `stopMovement`, nobody else sent, no notice), a turn change and a deleted member (both named), and a new drop; the
 watchdog moves a walk that never resolves on after its time plus 3 s and not before; more than 12 is refused.
+
+### 17.5 Step 5: the simulator on the real cores
+
+`test/sim/` now runs the module's own decisions: `file-core` planFile / staggerFile / candidatesFor and the new pure
+`waveWays` (a later wave's who-walks-how-far, lifted out of `drop.mjs` sendWave), `motion-core` waves and the new
+`clearAlong` (a stop's spot along its own way, lifted out of `stop.mjs` pastDoor), `sequence-core`, the pathfind-core
+A* (`test/fixtures/grid.mjs`; on a fight's lattice it no longer splices the start, so every fight step is one square).
+`model.mjs` (513 lines, from 1,311) keeps only the Foundry wiring: wave timers, the three handlers, the fight queue's
+wait and watchdog, onPreMove (also for a fight's first square). Engine fix: a timer cleared while a stall held it
+still fired. Every seed runs as B1 and as B0. Hard invariants: `passThrough` (a mover inside a token its walk's sender
+knew standing there, a mate at its slot or a named stayer; a token that came to rest after the walk was sent, a mate
+still waiting for its wave, one a stop left short of its slot and a walk leaving a token it starts inside are reported,
+not failed), `wallCross`, `wrongCharge`, `unsent` (sent or named within 4 s of a drop out of combat, a stall's time
+off; a fight's every member walked, named or ended by the dragger; nothing held, pending or drawn off at the end),
+`restOverlap` (over 150 ms or at the end; two screens whose last writes each went before seeing the other's: a flagged
+race), `errors`.
+
+Defects found and fixed (test first; `drop.test` / `file-core.test` "simulator (step 5)", `sim.test` SIM5-01..03):
+
+- **Members whose formation spot lies behind a wall stayed** (the commonest outcome: 276 members in 500 seeds out of
+  combat, 209 in fights): `candidatesFor` with the grabbed one takes spots the drop point reaches; the fight file tries
+  them too (`fightSpots`), and no longer walks a member to a square off the scene.
+- **A wave's cuts rested members inside each other** (seeds 382, 409, 764, 1958, 5361): `waveWays`' fixed point, mates
+  off their plan / left standing / just sent short as obstacles, cut ends clear of mates still waiting.
+- **A stop rested two tokens inside each other** (a click or a door cut of two brushing members, seeds 2, 60, 277 …):
+  carried clear along its way of tokens at rest, of the same stop's claims and of this screen's in-flight sends
+  (`groupInFlight`), past walkers, never through a wall or a token at rest (seed 6156); nearest clear spot otherwise;
+  a click's mates at rest count.
+
+10,000 seeds, failing runs per invariant (before = 0802bc85's cores with the step-5 glue switched off, `before: true`):
+
+| | B1 before | B1 after | B0 before | B0 after |
+|---|---|---|---|---|
+| passThrough | 4 | 2 | 0 | 6 |
+| wallCross | 0 | 0 | 0 | 0 |
+| wrongCharge | 0 | 0 | 0 | 0 |
+| unsent | 0 | 0 | 0 | 0 |
+| restOverlap | 160 | 6 | 504 | 27 |
+| errors | 0 | 0 | 0 | 0 |
+| members never moved | 19,558 of 42,447 | 12,271 | 19,403 | 11,993 |
+
+Mover overlap (both moving; after): B1 18,045 episodes in 2,536 seeds, depth p50 0.74 / p95 0.985 / max 1.49 sq,
+duration p95 1,883 ms, 4,543 square-seconds; B0 31,732 in 3,686, depth p50 0.62 / p95 0.982, duration p95 2,350 ms,
+13,051 square-seconds. Paired per seed, B1's overlap area is worse in 221 seeds and better in 2,524; its deepest
+overlap worse in 480, better in 1,957. B1 is no worse in count, duration and area; its p95 depth is 0.003 deeper (the
+shallow brushes it removes leave the lane overlaps).
+
+Open (after): B1 passThrough 5002, 5386 (a walk through a token standing outside the drop, both with a second group);
+B1 restOverlap 3599 (a fight with an observer's reload), 3773, 5188, 7391, 8004, 8958 (mostly two groups from two
+screens, unflagged); B0 restOverlap mostly a click followed within a few hundred ms by a door cut in a one-wide
+corridor. Unjudged: a wave sent before its screen knew of a door shut since walks through it (no recheck at the echo).

@@ -234,16 +234,21 @@ export class Client {
   stalledAt(t) { return this.stalls.find(s => s.a <= t && t < s.b) ?? null; }
   hiddenAt(t) { return this.hidden.find(s => s.a <= t && t < s.b) ?? null; }
   offlineAt(t) { return this.offline.find(s => s.a <= t && t < s.b) ?? null; }
-  /** Run fn on this client's main thread at t (after any stall holding it then). */
+  /**
+   * Run fn on this client's main thread at t (after any stall holding it then). Returns a handle clearTimeout
+   * cancels, also once a stall has put the run off (0.9.0: a cleared wave timer held by a stall still fired).
+   */
   exec(t, fn, gen = this.gen) {
     const self = this;
+    const h = { dead: false, e: null };
     const run = () => {
-      if (gen !== self.gen) return;
+      if (h.dead || gen !== self.gen) return;
       const st = self.stalledAt(self.sim.now);
-      if (st) { self.sim.at(st.b, run); return; }
+      if (st) { h.e = self.sim.at(st.b, run); return; }
       fn();
     };
-    return this.sim.at(t, run);
+    h.e = this.sim.at(t, run);
+    return h;
   }
   /** setTimeout as the browser runs it (a hidden tab: at the next whole second at the soonest). */
   setTimeout(fn, ms) {
@@ -251,7 +256,7 @@ export class Client {
     if (this.hiddenAt(t)) t = Math.max(t, Math.ceil(t / 1000) * 1000);
     return this.exec(t, fn);
   }
-  clearTimeout(e) { this.sim.cancel(e); }
+  clearTimeout(h) { if (h) { h.dead = true; this.sim.cancel(h.e); } }
   /** The first time at or after t at which this tab draws a frame (Infinity: never again). */
   frameAt(t) {
     if (!this.canvas) return Infinity;
@@ -413,6 +418,9 @@ export class Client {
     const cut = this.doorCut(from, wps);
     if (cut === 0) return null;
     if (cut > 0) wps = wps.slice(0, cut);
+    // The module's preMoveToken runs for a fresh move too (drop.mjs onPreMove): a fight's first square into a token
+    // standing still is not sent either.
+    if (combat && this.preStep && this.preStep(id, from, wps[0]) === false) return null;
     const segs = combat ? wps.map(p => [p]) : [wps];
     const mv = { mid: this.newMid(), segs, k: 0, stopped: false, combat, why, speed, chain: [], from };
     this.moves.set(id, mv);

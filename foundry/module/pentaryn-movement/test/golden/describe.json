@@ -488,7 +488,7 @@
     },
     {
       "name": "updateToken",
-      "label": "updateToken: one undo entry for one move (a fight's squares)"
+      "label": "updateToken: one undo entry for one move (a fight's squares); a wave's write is back"
     },
     {
       "name": "createWall",

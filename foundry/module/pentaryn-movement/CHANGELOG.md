@@ -8,6 +8,32 @@ on its way or named in a notice, and nothing ever waits for another mover. Two t
 the branch `movement-0.9`; `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until the GPU round of §4 step 8.
 Plan §17.
 
+### Step 5 — the simulator on the real cores
+
+- **The simulator runs the module's own code** (`test/sim/`; `make foundry-movement-sim`): `file-core` planFile,
+  staggerFile, waveWays and candidatesFor, `motion-core` clearAlong and waves, `sequence-core`, the pathfind-core A*,
+  on the engine's virtual clients (jittered latency, TCP loss, fog stalls, a backgrounded dragger, an observer's
+  dropped socket and reload, a second group, a door shut, a click, a turn change). `model.mjs` keeps only the wiring
+  drop.mjs / file.mjs / stop.mjs do with Foundry (513 lines, from 1,311). Every seed runs as B1 and as B0.
+  Hard invariants: pass-through of a standing token (one the walk's sender knew standing there), wall crossings,
+  wrong charges, members neither sent nor named within 4 s, rest overlap (unless two screens' writes each went before
+  seeing the other's: a flagged race). Mover overlap is reported (episodes, p95 depth and duration), never gated.
+- **[declared] A member whose formation spot the drop point does not reach** (behind the room's wall, off the scene,
+  in rock) takes the nearest spot to it that the drop point reaches about straight, instead of staying named
+  (`file-core` candidatesFor with the grabbed one, within `FILE.reach`; spots stay on the member's own lattice).
+  In a fight (`file.mjs` fightSpots, `drop.mjs` routeAtTurn) the same squares are tried, at most four, and a formation
+  square a token cannot rest on (off the scene) is no longer walked to. Members never moved: 46 % → 29 % (10,000 seeds).
+- **[declared] A later wave** (`drop.mjs` sendWave, `file-core` waveWays): mates resting off their plan, a mate an
+  earlier wave left standing, one this screen just sent short, and in the wave each member that stays or is cut
+  short stand in the others' way; a cut way never rests on a mate still waiting for its wave; two in one lane cut
+  short go front one first.
+- **[declared] A stop never rests a token inside another** (`stop.mjs`, `motion-core` clearAlong): out of combat a
+  token drawn inside a token at rest, a member the same stop stopped, or a spot this screen just sent a mate to is
+  carried on along its own way just clear of it (ahead at most 1.5 squares, else back the way it came), past a token
+  still walking there, never through a wall or another token at rest; with nowhere on its way, the nearest clear spot
+  (clearOfWalls). A wall cut and the dragger's screen stopping the rest share one set of claims; a click's mates it
+  does not stop count where they stand.
+
 ### Step 4 — the fight file
 
 - **[declared] A group drag in a fight walks one member at a time** (Joe, 2026-11-24; `drop.mjs` `fightFile`):

@@ -402,3 +402,48 @@ export function firstLegAcross(from, points, a, b) {
   }
   return -1;
 }
+
+/* -------------------------------------------- */
+/*  A stop's spot along its own way (0.9.0)     */
+/* -------------------------------------------- */
+
+/**
+ * Where a stop out of combat carries a token whose drawn spot is no place to rest (stop.mjs pastDoor; 0.9.0 simulator,
+ * step 5): the first point along its own way ahead (at most `aheadMax`), else back along the way it came (at most
+ * `behindMax`), sampled every `step`, that is not `bad` (across a door's line, inside a token at rest) and not `taken`
+ * (a token still walking there: on past it), never past a point `wallBetween` refuses. Units are the caller's.
+ * @param {{x,y}} drawn
+ * @param {{x,y}[]} ahead     the way ahead, its corners after `drawn`
+ * @param {{x,y}[]} behind    the way it came, nearest corner first
+ * @param {object} o
+ * @param {(p) => boolean} o.bad
+ * @param {(p) => boolean} [o.taken]
+ * @param {(a, b) => boolean} [o.wallBetween]  true: a wall that blocks movement now lies between a and b
+ * @param {(from, p) => boolean} [o.enters]   true: at p it is inside a token at rest it was not inside at `from`
+ *        (`drawn`): it would walk through that token, so no further that way (0.9.0 simulator, seed 6156)
+ * @param {number} o.step  @param {number} o.aheadMax  @param {number} o.behindMax
+ * @param {(p) => {x,y}} [o.snap]  how a sample is placed (stop.mjs: whole pixels)
+ * @returns {{ p: {x,y}, via: {x,y}[] } | null}  via: the corners passed on the way
+ */
+export function clearAlong(drawn, ahead, behind, { bad, taken = null, wallBetween = null, enters = null, step, aheadMax, behindMax, snap = p => p }) {
+  const along = (list, max) => {
+    const via = [];
+    let prev = drawn, walked = 0, last = drawn;
+    for (const q of list) {
+      const L = Math.hypot(q.x - prev.x, q.y - prev.y);
+      const n = Math.max(1, Math.ceil(L / step));
+      for (let i = 1; i <= n; i++) {
+        walked += L / n;
+        if (walked > max) return null;
+        const p = snap({ x: prev.x + ((q.x - prev.x) * i) / n, y: prev.y + ((q.y - prev.y) * i) / n });
+        if (wallBetween?.(last, p) || enters?.(drawn, p)) return null;
+        last = p;
+        if (!bad(p) && !taken?.(p)) return { p, via };
+      }
+      via.push(snap({ x: q.x, y: q.y }));
+      prev = q;
+    }
+    return null;
+  };
+  return along(ahead, aheadMax) ?? along(behind, behindMax);
+}

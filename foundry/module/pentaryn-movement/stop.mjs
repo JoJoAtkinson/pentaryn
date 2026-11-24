@@ -41,8 +41,8 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { clickStop, radiusOf, routeAhead } from "./motion-core.mjs";
-import { continuationInFlight, doorwayAt, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, pinDrawn, stopWhereDrawn, unpin } from "./group-adapter.mjs";
+import { clearAlong, clickStop, radiusOf, routeAhead } from "./motion-core.mjs";
+import { clearOfWalls, continuationInFlight, doorwayAt, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, open as wallOpen, pinDrawn, stopWhereDrawn, unpin } from "./group-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
 
@@ -146,57 +146,60 @@ function resync(token) {
 
 /**
  * Where a click-stop out of combat puts a token (Joe's decision 2, revised 2026-11-23): exactly where it is drawn, no
- * snap. A token whose body is across a door's line is carried just past the line along its own route (forward, else
- * back the way it came); that spot is inside its own reservation, so it cannot meet anyone, and a spot another token
- * takes (`taken`) is not used: then it stops where it is drawn. Returns { drawn, p, near, via }: `near` (the drawn spot)
- * is set when the stop walks on from there to `p` through `via`.
+ * snap. Carried on along its own route (forward at most PAST_DOOR_SQUARES, else back the way it came) to the first spot
+ * that is clear when it is drawn
+ *   - with its body across a door's line: just past the line;
+ *   - inside a token at rest, or a spot a member of the same stop already took (`taken.resting`; 0.9.0 simulator,
+ *     step 5: two members brushing as they walk, soft, were stopped where drawn and rested inside each other for good,
+ *     hard): just clear of it.
+ * A spot `taken` holds (resting, or drawn walking) is never used; with none, it stops where it is drawn. Returns
+ * { drawn, p, near, via }: `near` (the drawn spot) is set when the stop walks on from there to `p` through `via`.
  */
 function stopSpot(token, taken = null) {
   const drawn = drawnPosition(token);
   let past = null;
   try { past = pastDoor(token, drawn, taken); } catch (err) { log?.debug?.("stop: past the door", err); }
+  // Inside a token at rest with no clear spot along its own way (a stop's own short walk cut by a door): the nearest
+  // clear spot it reaches without crossing a wall, rather than at rest inside it (0.9.0 simulator, step 5).
+  if (!past && taken?.resting?.(drawn)) {
+    let spot = null;
+    try { spot = clearOfWalls(token, drawn, { taken }); } catch (err) { log?.debug?.("stop: a clear spot", err); }
+    if (spot && (spot.x !== drawn.x || spot.y !== drawn.y) && !taken(spot)) past = { p: spot, via: [] };
+  }
   if (!past) return { drawn, p: drawn, near: null, via: [] };
   return { drawn, p: { ...drawn, x: past.p.x, y: past.p.y }, near: { x: drawn.x, y: drawn.y }, via: past.via };
 }
 
-/** How far a token across a door's line is carried along its route to clear it, at most (squares). */
+/** How far a token across a door's line, or on one at rest, is carried along its route ahead to clear it, at most (squares). */
 const PAST_DOOR_SQUARES = 1.5;
 
 /**
- * A token drawn at `drawn` (top-left) with its body across a door's line: the first spot along its own route ahead
- * (else back along the way it came) where its body is clear of every door line, at most PAST_DOOR_SQUARES away, not on
- * a spot `taken` holds: { p, via } (via: the route's corners passed on the way), or null (not in a doorway, or nowhere).
+ * A token drawn at `drawn` (top-left) with its body across a door's line, or inside a token at rest (`taken.resting`):
+ * the first spot along its own route ahead (at most PAST_DOOR_SQUARES; else back along the way it came, as far as it
+ * came) where its body is clear of every door line and of every token at rest, not on a spot `taken` holds: { p, via }
+ * (via: the route's corners passed on the way), or null (nothing to clear, or nowhere).
  */
 function pastDoor(token, drawn, taken) {
   const doc = token.document;
   const s = gridSize(token);
   const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
   const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
-  if (!doorwayAt(token, centre(drawn))) return null;
+  const onRest = p => !!taken?.resting?.(p);
+  if (!doorwayAt(token, centre(drawn)) && !onRest(drawn)) return null;
   const m = doc.movement;
   const all = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])]
     .filter(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
   const k = routeAhead(all, drawn, { near: 0.05 * s, end: 0.5 });
   const ahead = k === null ? [] : all.slice(k);
   const behind = (k === null ? all : all.slice(0, k)).reverse();
-  const along = list => {
-    const via = [];
-    let prev = drawn, walked = 0;
-    for (const q of list) {
-      const L = Math.hypot(q.x - prev.x, q.y - prev.y);
-      const n = Math.max(1, Math.ceil(L / (s / 20)));
-      for (let i = 1; i <= n; i++) {
-        walked += L / n;
-        if (walked > PAST_DOOR_SQUARES * s) return null;
-        const p = { x: Math.round(prev.x + ((q.x - prev.x) * i) / n), y: Math.round(prev.y + ((q.y - prev.y) * i) / n) };
-        if (!doorwayAt(token, centre(p))) return taken?.(p) ? null : { p, via };
-      }
-      via.push({ x: Math.round(q.x), y: Math.round(q.y) });
-      prev = q;
-    }
-    return null;
-  };
-  return along(ahead) ?? along(behind);
+  // Clear of the door's line and of every token at rest; past a token still walking there, on (never the overlap);
+  // never on through a wall that blocks movement now (a door shut since, the wall that cut it).
+  return clearAlong(drawn, ahead, behind, {
+    bad: p => doorwayAt(token, centre(p)) || onRest(p), taken, wallBetween: (a, b) => !wallOpen(token, centre(a), centre(b)),
+    enters: taken?.enters ?? null,
+    step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: onRest(drawn) ? Infinity : PAST_DOOR_SQUARES * s,
+    snap: p => ({ x: Math.round(p.x), y: Math.round(p.y) }),
+  });
 }
 
 function displace(token, at = stopSpot(token), extra = {}) {
@@ -377,7 +380,7 @@ function decide(token, { tool = game.activeTool, modifiers = false, armed = fals
 /**
  * Top-left `p` → would token `token` there come inside another token (at rest where the server has it, walking where
  * it is drawn) or a spot another member of this stop took (`claims`)? `skip`: the tokens this same stop stops (they
- * count by their claims). Only asked for a doorway stop's spot just past the line.
+ * count by their claims). `.resting(p)`: the same without the walkers (a spot a stop must not rest inside, 0.9.0).
  */
 function takenAround(token, skip, claims) {
   const doc = token.document;
@@ -387,6 +390,7 @@ function takenAround(token, skip, claims) {
   const w = src.width ?? 1, h = src.height ?? 1;
   const r = radiusOf(w, h) * s;
   const circles = claims.filter(c => c.id !== doc?.id);
+  const walkers = [];                        // where tokens still walking are drawn now (not at rest: soft)
   const all = typeof scene?.tokens?.values === "function" ? [...scene.tokens.values()] : [];
   for (const o of all) {
     if (!o?._source || o.id === doc.id || skip.has(o.id)) continue;
@@ -399,15 +403,47 @@ function takenAround(token, skip, claims) {
     try {
       if (t && !t.destroyed && movementFacts(t).animating) {
         const d = drawnPosition(t);
-        circles.push({ x: d.x + (ow * s) / 2, y: d.y + (oh * s) / 2, r: orr });
+        walkers.push({ x: d.x + (ow * s) / 2, y: d.y + (oh * s) / 2, r: orr });
       }
     } catch (err) { log?.debug?.("taken: a walking token", err); }
   }
-  const taken = p => {
+  // Where this client has just sent a mate, its write not back yet (drop.mjs groupInFlight).
+  let flying = [];
+  try { flying = feature?.exposed?.groupInFlight?.() ?? []; } catch (err) { log?.debug?.("taken: in flight", err); }
+  for (const f of flying) {
+    if (f.id === doc?.id || skip.has(f.id)) continue;
+    circles.push({ x: f.x + (f.width * s) / 2, y: f.y + (f.height * s) / 2, r: radiusOf(f.width, f.height) * s });
+  }
+  const inside = list => p => {
     const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
-    return circles.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1e-6);
+    return list.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1);
   };
+  const taken = p => inside(circles)(p) || inside(walkers)(p);
+  // A token at rest (where the server has it) or a spot this stop already gave out: never rest inside one (0.9.0).
+  taken.resting = inside(circles);
+  // Into a token at rest it was not inside at `from`: walking on would take it through that token.
+  const within = (c, p) => Math.hypot(p.x + (w * s) / 2 - c.x, p.y + (h * s) / 2 - c.y) < r + c.r - 1;
+  taken.enters = (from, p) => circles.some(c => within(c, p) && !within(c, from));
   return taken;
+}
+
+/** The circle (pixels) a stop at `at` claims for token `t`. */
+function claimOf(t, at) {
+  const d = t.document, s = gridSize(t), w = d._source.width ?? 1, h = d._source.height ?? 1;
+  return { id: d.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s };
+}
+
+/**
+ * Stop `token` out of combat where it is drawn (stopSpot: carried on just clear of a door's line, a token at rest or
+ * a spot this same stop gave out). `group` ({ skip: Set of ids, claims: [] }) is shared by every token one stop
+ * stops (a wall cut, the dragger's screen stopping the rest of its group), so none rests inside another.
+ */
+function displaceIn(token, group = null) {
+  const skip = group?.skip ?? new Set([token.document.id]);
+  const claims = group?.claims ?? [];
+  const at = stopSpot(token, takenAround(token, skip, claims));
+  claims.push(claimOf(token, at));
+  return displace(token, at);
 }
 
 /** Does this user own the token (a GM owns all)? */
@@ -441,17 +477,18 @@ function stopToken(token, how, via = "api") {
   const list = draggerHere ? [token] : [token, ...others.filter(owns)];
   // The dragger's client: the whole group, its unsent waves and its fight queue too.
   if (held) { try { feature.exposed.groupCancel?.(doc.id, { why: "click" }); } catch (err) { log?.debug?.("stop the group", err); } }
-  const skip = new Set(list.map(t => t.document.id));
+  // Only the ones this stop stops leave the others' reckoning (they count by their claims); a mate at rest still
+  // counts where it stands (0.9.0 simulator, step 5: one was skipped, and a member stopped inside it).
+  const acts = list.map(t => ({ t, next: t === token ? how : decide(t, { tool: "select", armed: true }) }))
+    .filter(x => x.next === "displace" || x.next === "stop");
+  const skip = new Set(acts.map(x => x.t.document.id));
   const claims = [];
   const out = [];
-  for (const t of list) {
+  for (const { t, next } of acts) {
     const tdoc = t.document;
-    const next = t === token ? how : decide(t, { tool: "select", armed: true });
-    if (next !== "displace" && next !== "stop") continue;
     if (next === "displace") {
       const at = stopSpot(t, takenAround(t, skip, claims));
-      const s = gridSize(t), w = tdoc._source.width ?? 1, h = tdoc._source.height ?? 1;
-      claims.push({ id: tdoc.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s });
+      claims.push(claimOf(t, at));
       if (at.near) rec.pastDoor = (rec.pastDoor ?? 0) + 1;
       out.push(displace(t, at));
     } else {
@@ -784,7 +821,7 @@ export function install(reg, ctx) {
   // The kit's queries reach only the active GM (guarded / relayed both refuse a player receiver); this
   // one is sent to a named user, and checks its GM sender itself (header; exceptions.json C30, C56).
   if (globalThis.CONFIG?.queries) globalThis.CONFIG.queries[STOP_OWN] = stopOwn;
-  ctx.expose({ stop, stopSafely, moveStartedAt: startedAt, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), stopFirstFrames: () => firstFrameCuts, noteDrop, stopDisplace: displace });
+  ctx.expose({ stop, stopSafely, moveStartedAt: startedAt, stopPatched: () => clickPatched, stopLast: () => (lastStop ? { ...lastStop } : null), stopFirstFrames: () => firstFrameCuts, noteDrop, stopDisplace: displaceIn });
 }
 
 export function uninstall() {
