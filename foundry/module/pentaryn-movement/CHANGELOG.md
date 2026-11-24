@@ -8,6 +8,24 @@ on its way or named in a notice, and nothing ever waits for another mover. Two t
 the branch `movement-0.9`; `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until the GPU round of §4 step 8.
 Plan §17.
 
+### Step 6 — the old files out; docs
+
+- **[declared] `group-core.mjs` 1,381 → 198 lines:** the 0.4 to 0.8 group planner is gone (`planGroup`, `assignSlots`,
+  `settle`, `restOnPaths`, `runPlan`, `stayPastDeadline`, `walkersMeet`, the delay search, `alongRoute` / `offRoute` /
+  `remainingVia`, `composeCut`, `detourTooLong`). What the file, the drop, the stop and the simulator still use stays:
+  `hexCandidates`, `cellCandidates`, `onCell`, `prefixOf`, `pathLength`, `firstIntrusion`, `freePrefix`, `flood`,
+  `coalesceHistory`. `group-adapter.mjs` 551 → 471: `movingOthers`, `narrowPoints` (the width probe) and `crossesDoor`
+  went (nothing called them).
+- **Tests:** `ar1`, `ar3`, `hx1`, `s1r1`, `s1r2`, `s2r1`, `s2r2` and `group-core.test` deleted (the old planner's
+  acceptance tests); `group-props.test` keeps what tests the surviving cores and gains a `freePrefix` test naming
+  S1R1-02 and S1R1-07; the narrow-width probe test left `drop.test`. `regressions.test` PENDING takes five round IDs
+  (H2-01, H4-01, H4-03, HX1-01, S1R2-05) whose tests went with the guard and the planner. Guard, reservation,
+  lifecycle and cue files, and tier C's setting (its stored row deleted once, `fightGroupDrags: null` in the settings
+  migration), were already out in steps 1 and 4; nothing imports any of them (grep clean).
+- **Docs:** README, `context/foundry/movement.md` rewritten for the 0.9 behaviour, plan §17.6. No API, setting or hook
+  change; the describe golden is unchanged. `telemetry` still counts rows from the guard days (`guard fires`, lost
+  races) that now stay at zero; folded out at the handoff.
+
 ### Step 5 — the simulator on the real cores
 
 - **The simulator runs the module's own code** (`test/sim/`; `make foundry-movement-sim`): `file-core` planFile,

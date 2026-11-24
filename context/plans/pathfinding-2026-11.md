@@ -858,3 +858,16 @@ Open (after): B1 passThrough 5002, 5386 (a walk through a token standing outside
 B1 restOverlap 3599 (a fight with an observer's reload), 3773, 5188, 7391, 8004, 8958 (mostly two groups from two
 screens, unflagged); B0 restOverlap mostly a click followed within a few hundred ms by a door cut in a one-wide
 corridor. Unjudged: a wave sent before its screen knew of a door shut since walks through it (no recheck at the echo).
+
+### 17.6 Step 6: the old files out
+
+Deleted: the 0.4 to 0.8 group planner (`group-core.mjs` 1,381 → 198 lines: only the candidate lattices, `prefixOf`,
+`firstIntrusion`, `freePrefix`, the flood and `coalesceHistory` stay, all still called), three unused adapter reads
+(`group-adapter.mjs` 551 → 471), and the planner's acceptance tests (eight files; `group-props.test` pruned to what the
+surviving cores need, plus a `freePrefix` test). The guard, reservations, lifecycle, cue and tier C files and rows
+were deleted in steps 1 and 4; a grep finds no import of any of them. Module code 9,256 → 7,993 lines (test code
+11,601 → 9,755). Five round IDs lost their tests with the mechanism
+and sit in `regressions.test` PENDING. The use-doc `context/foundry/movement.md` is rewritten for the behaviour as
+built. Still open before the handoff (§4 steps 7 and 8): the GPU round, and the two B0/B1 rest-overlap and
+pass-through seeds listed in §17.5.
+

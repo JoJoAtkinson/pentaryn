@@ -285,10 +285,10 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `pathfind-core.mjs` | pure: A*, cost-preserving string pulling, corner arcs, the skip rules |
 | `pathfind-adapter.mjs` | a token and its drag options → wall / creature / cost step tests (reads only) |
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
-| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, decision tables; candidates, cuts (`freePrefix`), the flood, one undo entry per move (the 0.8 planner still in it goes in §4 step 6) |
+| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, clearAlong, decision tables; candidate lattices, cuts (`freePrefix`), the flood, one undo entry per move (0.9.0: the 0.8 planner, settle and the rest passes are gone) |
 | `sequence-core.mjs` | pure: tokens that start stacked, and `sequence` (the file's start order, a fight queue's order) |
 | `telemetry-core.mjs`, `telemetry.mjs` | pure: the ring buffer, its summary and report text, the breaker's rule; the feature: telemetry, the circuit breaker, the Alt+W key (0.8.0) |
-| `group-adapter.mjs` | tokens and drag contexts → member records, rest and gap tests (reads only) |
+| `group-adapter.mjs` | tokens and drag contexts → member records, rest and wall tests (reads only) |
 | `drop.mjs` | the feature (0.9.0, was `group.mjs`): the drop wrap — single drops, the file's first update and its later waves, the fight queue, a fight's every square, a wall across a walk, riders, undo |
 | `file-core.mjs` | pure (0.9.0): B0 — every member's slot and route in one pass, the members that stay, the orders tried; B1 — the capped start delays (`staggerFile`) |
 | `file.mjs` | the feature (0.9.0): B0's oracles on the canvas (rest test, walk flood, routes round circles), the dry run, which tokens move together, the waves' timers and the hidden-tab flush, the fight queues and what empties them, the group-wide stop |
@@ -303,14 +303,13 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 (frozen characterisation from the migration checkpoint), the hook manifest, patch records, the API
 goldens, i18n keys and logging; `pathfind-core.test` (A* on synthetic wall maps: corners, doors,
 one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equality) and
-`pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-core.test`
-(the 0.8 planner's unit acceptance tests on ASCII floors, until §4 step 6), `file-core.test` (B0's gate: 800 seeded
+`pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-props.test` (the candidate lattices, the flood, `freePrefix`, trajectories, waves, click rows), `file-core.test` (B0's gate: 800 seeded
 drops on random floors and the hard-case dungeon, every member sent or named, no route through a standing token or an
 earlier slot, no two at rest overlapping; B1's gate on the same 800: every delay a wave step, the last within 4 s,
 open ground all 0, two movers meeting in fewer drops than all at once) and `drop.test` (the drop and click wraps, the
 file on the synthetic board with its three handlers, the fight queue and what ends it, and the 0.9.0 step 1 gate: 60
 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
-`sequence-core.test` (stacks, and tier C's sequence), `telemetry-core.test` and `telemetry.test` (the ring, the
+`sequence-core.test` (stacks, and the start order), `telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). `test/sim/` is the
 simulator (0.9.0 step 5): the real cores (`file-core` planFile / staggerFile / waveWays / candidatesFor, `motion-core`
 clearAlong, `sequence-core`, the pathfind-core A*) on virtual clients over a jittered, lossy network;

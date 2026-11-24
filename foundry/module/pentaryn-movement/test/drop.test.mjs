@@ -847,27 +847,6 @@ test("R3-4: a click while a moving token's document was just re-prepared (derive
   u.animationContexts.clear();
 });
 
-test("R3-6: the width probe casts no ray from a point off the canvas (core warns once per ray there); such a point has no room", async () => {
-  const { narrowPoints } = await import("../group-adapter.mjs");
-  const saved = F.canvas.dimensions;
-  F.canvas.dimensions = { ...saved, width: 1000, height: 1000 };
-  const t = makeToken("nrwA000000000001", 100, 100);
-  const origins = [];
-  t.checkCollision = (dest, { origin }) => { origins.push(origin); return null; };
-  try {
-    // A probe beside a slot candidate just off the left edge (x -0.5 squares), and one on open ground.
-    const off = narrowPoints(t, [{ x: -0.5, y: 4 }, { x: -0.49, y: 4 }], 0.5, S);
-    assert.equal(origins.filter(o => o.x < 0 || o.y < 0 || o.x > 1000 || o.y > 1000).length, 0, "no ray from off the canvas");
-    assert.ok(off.length > 0, "off the canvas is narrow (no room)");
-    origins.length = 0;
-    const open = narrowPoints(t, [{ x: 5, y: 5 }, { x: 5.01, y: 5 }], 0.5, S);
-    assert.deepEqual(open, [], "open ground is not narrow");
-    assert.ok(origins.length > 0, "rays are cast inside");
-  } finally {
-    F.canvas.dimensions = saved;
-  }
-});
-
 /** A token this client is moving: drawn at `drawn` (top-left), its document already at `src`, the route `path` (origin first). */
 function walking(id, drawn, src, path, { combat = false, pending = [] } = {}) {
   const t = makeToken(id, src.x, src.y);

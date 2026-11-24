@@ -7,7 +7,7 @@
  * Foundry waypoints are top-left pixels. `toSquares` / `toTopLeft` convert, given the grid size.
  */
 
-import { MOTION, radiusOf, remainingFrom, segmentsCross } from "./motion-core.mjs";
+import { MOTION, radiusOf } from "./motion-core.mjs";
 
 /** A token's centre in squares, for a top-left pixel position and its size in squares. */
 export const toSquares = (p, w, h, s) => ({ x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s });
@@ -115,36 +115,6 @@ export function othersOf(members, s) {
     if (level !== undefined && doc._source?.level !== undefined && doc._source.level !== level) continue;
     const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
     out.push({ ...toSquares(doc._source, w, h, s), r: radiusOf(w, h), id: doc.id });
-  }
-  return out;
-}
-
-/**
- * Tokens outside the group that are walking right now (live H4-03 / H4-04: a group dropped while another token or
- * group walked the other way through the corridor went straight through it): each one's circle and the rest of
- * its walk from where it is drawn (centres, squares) and its speed, for the plan's timing. Same level only;
- * the tokens countsForRoutes keeps. Reads only.
- */
-export function movingOthers(members, s) {
-  const ids = new Set(members.map(m => m.id));
-  const level = members[0]?.token?.document?._source?.level;
-  const lead = members[0]?.token?.document;
-  const out = [];
-  for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
-    const doc = t?.document;
-    if (!doc?._source || ids.has(doc.id) || t.isPreview || t.destroyed || !countsForRoutes(t)) continue;
-    if (lead && !sameLayer(lead, doc)) continue;
-    if (level !== undefined && doc._source.level !== undefined && doc._source.level !== level) continue;
-    if (!movementFacts(t).animating) continue;
-    const m = doc.movement;
-    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
-    const wps = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])]
-      .filter(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
-    if (wps.length < 2) continue;
-    const pts = wps.map(p => toSquares(p, w, h, s));
-    const left = remainingFrom(pts, toSquares(drawnPosition(t), w, h, s));
-    if (!left || left.length < 2) continue;
-    out.push({ id: doc.id, r: radiusOf(w, h), points: left, speed: speedOf(t) });
   }
   return out;
 }
@@ -263,51 +233,6 @@ export function fitPath(token, path) {
     }
   }
   return { path, cut: false };
-}
-
-/** Ray angles (radians from the direction of travel) the width probe casts on each side. */
-const PROBE = [45, 67.5, 90, 112.5, 135].map(d => (d * Math.PI) / 180);
-
-/**
- * The points (squares) where a route is narrower than two group diameters: every quarter square,
- * the free width across it. Each side casts rays fanned from 45° to 135° off the direction of travel
- * and keeps the nearest wall's distance across the route (hit distance × sin angle), up to 4 · rmax:
- * a door in a thin wall is only crossed by the slanted rays (the square one runs along the wall).
- */
-export function narrowPoints(token, points, rmax, s) {
-  const out = [];
-  const reach = 4 * rmax * s;
-  const z = token.document?._source?.elevation ?? 0;
-  // Core computes no polygon from an origin off the canvas: it warns once per ray (live R3-6, 330 warnings
-  // in one planGroup near the scene edge). Such a point has no room at all; it is narrow, no ray cast.
-  const dims = globalThis.canvas?.dimensions;
-  const inside = o => !dims || !(dims.width > 0) || !(dims.height > 0)
-    || (o.x >= 0 && o.x <= dims.width && o.y >= 0 && o.y <= dims.height);
-  const across = (o, dir, side) => {
-    let best = reach;
-    for (const a of PROBE) {
-      // dir rotated by ±a.
-      const c = Math.cos(a), sn = Math.sin(a) * side;
-      const d = { x: dir.x * c - dir.y * sn, y: dir.x * sn + dir.y * c };
-      const len = reach / Math.sin(a);
-      let hit = null;
-      try { hit = token.checkCollision({ x: o.x + d.x * len, y: o.y + d.y * len, elevation: z }, { origin: o, type: "move", mode: "closest" }); }
-      catch { hit = null; }
-      if (hit) best = Math.min(best, Math.hypot(hit.x - o.x, hit.y - o.y) * Math.sin(a));
-    }
-    return best;
-  };
-  for (let k = 1; k < points.length; k++) {
-    const p = points[k - 1], q = points[k];
-    const L = Math.hypot(q.x - p.x, q.y - p.y);
-    if (L < 1e-6) continue;
-    const dir = { x: (q.x - p.x) / L, y: (q.y - p.y) / L };
-    for (let t = 0; t <= L + 1e-9; t += 0.25) {
-      const o = { x: (p.x + dir.x * t) * s, y: (p.y + dir.y * t) * s, elevation: z };
-      if (!inside(o) || across(o, dir, 1) + across(o, dir, -1) < reach - 1e-6) out.push({ x: o.x / s, y: o.y / s });
-    }
-  }
-  return out;
 }
 
 /**
@@ -536,11 +461,6 @@ export function doorwayAt(token, c) {
   const src = token.document?._source ?? {};
   const rr = radiusOf(src.width ?? 1, src.height ?? 1) * s - 0.5;
   return doorSegments(token).some(([a, b]) => pointSegment(c, a, b) < rr);
-}
-
-/** Does the straight step a → b (centres, pixels) cross a door's line, open or shut? Reads only. */
-export function crossesDoor(token, a, b) {
-  return doorSegments(token).some(([p, q]) => segmentsCross(a, b, p, q));
 }
 
 /** Distance from point p to segment a–b (pixels). */

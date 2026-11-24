@@ -10,7 +10,8 @@ const root = new URL("../", import.meta.url);
 const ID = /\b(AR[1-9]-\d{2}|S[1-3]R[1-3]-\d{2}|FR[12]-\d{2}|HX[12]-\d{2}|H[1-5]-\d{2}|R[1-7]-\d{1,2}|D-\d{1,2})\b/g;
 
 /** Cited in a comment, not yet the title of a test (2026-11-23, 0.8.0). */
-const PENDING = new Set(["D-9", "D-10", "FR1-12", "H2-06", "H2-14", "H4-14",
+/** 2026-11-24 (0.9.0 cleanup): the five below were the names of tests of the planner, the guard and the tier C stop that step 6 deleted. */
+const PENDING = new Set(["H2-01", "H4-01", "H4-03", "HX1-01", "S1R2-05", "D-9", "D-10", "FR1-12", "H2-06", "H2-14", "H4-14",
   "R3-3", "R4-5", "R7-2", "R7-4"]);
 
 function sources() {
