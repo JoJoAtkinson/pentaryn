@@ -1,9 +1,10 @@
 /**
  * Pentaryn Movement — settings. The only file outside lib/ that calls game.settings.register/get.
  *
- * Eight rows: the four ghost / owned-on-top rows in their historic order, then the drag help's four (0.8.0, plan
+ * Nine rows: the four ghost / owned-on-top rows in their historic order, then the drag help's five (0.8.0, plan
  * §16.6): world `pathfinding` and client `pathfindMine` (tier A), the group gate `groupDrags` (out of combat the
- * file, in a fight one member at a time; 0.9.0 removed tier C's `fightGroupDrags`), and the GM toolbar's `assist`.
+ * file, in a fight one member at a time; 0.9.0 removed tier C's `fightGroupDrags`), the GM toolbar's `assist`, and
+ * (0.9.0) `groupStagger`, B1 against B0: the file's start delays, or every member at once.
  * 0.8.0 folded smoothCorners and clickToStop in (always on) and renamed groupMovement to groupDrags;
  * migrateSettings() carries old values over once. Every row carries full
  * literal label keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
@@ -92,6 +93,13 @@ export const SETTINGS = Object.freeze([
     hint: "PENTARYN_MOVEMENT.settings.assist.hint",
     onChange: forward("assist"),
     doc: "The table's drag help (0.4.9): off, every drag is plain Foundry dragging (no pathfinding, no group plan, no single-drop routing); the GM's toolbar button flips it. Pathfinding and the tier gates keep their own values. The circuit breaker (0.8.0) switches it off after repeated failures.",
+  },
+  {
+    key: "groupStagger", scope: "world", config: true, type: Boolean, default: true,
+    name: "PENTARYN_MOVEMENT.settings.groupStagger.name",
+    hint: "PENTARYN_MOVEMENT.settings.groupStagger.hint",
+    onChange: forward("groupStagger"),
+    doc: "0.9.0, B1 against B0 (Fable's review 2 §4 step 7): on (B1, the file), a group drag out of combat starts its members in waves within 4 s so they file through doors; off (B0), every member sets off in the drop's own update on its own route. Read live on every group drop; fights are one at a time either way.",
   },
 ]);
 

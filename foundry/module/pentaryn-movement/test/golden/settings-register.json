@@ -94,5 +94,16 @@
     "name": "PENTARYN_MOVEMENT.settings.assist.name",
     "hint": "PENTARYN_MOVEMENT.settings.assist.hint",
     "onChange": true
+  },
+  {
+    "key": "groupStagger",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "choices": null,
+    "name": "PENTARYN_MOVEMENT.settings.groupStagger.name",
+    "hint": "PENTARYN_MOVEMENT.settings.groupStagger.hint",
+    "onChange": true
   }
 ]

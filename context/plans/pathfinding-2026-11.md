@@ -871,3 +871,18 @@ and sit in `regressions.test` PENDING. The use-doc `context/foundry/movement.md`
 built. Still open before the handoff (§4 steps 7 and 8): the GPU round, and the two B0/B1 rest-overlap and
 pass-through seeds listed in §17.5.
 
+### 17.7 Fable's check of 0.9.0-dev (2026-11-24) and the handoff
+
+Fable's verdict: the smaller design holds; three blockers before Joe's 30 minutes. (1) No B0/B1 switch: `planDrop`
+took `stagger` but the drop never passed it. Now the world setting `groupStagger` (on = B1). (2) Never loaded in a
+browser: the branch build was deployed to the live world for Joe's hands-on (0.9.0) and smoked on the WSL harness.
+(3) A click missed a member whose wave was in flight (sent, its write not back): the stop skipped it as not moving, and
+it then walked its whole route through its stopped mates. Now the group's stop marks such members (file.mjs
+`lateStops`) and stops each where it is drawn when its move comes back; the simulator models the same. The dead
+`"late"` stop branch and the unread `pentarynMovementStopAt` option are deleted. Still open, for the GPU round (step 8
+needs zero): the stop's last resort walks a straight line (stop.mjs `stopSpot` → `clearOfWalls`), the B1 passThrough
+seeds 5002 / 5386 and rest overlaps 3599, 3773, 5188, 7391, 8004, 8958; silent leaves (a wave after the dragger changed
+scene; a new drop empties a fight queue unnamed); `stepThroughWall` ignores wall direction (171 one-way movement walls
+live); planning budget 1.5 s against a 100 ms gate, unmeasured on a page; Fable's cuts (`waveWays`' lane swap, the new
+drop's queue cancel).
+

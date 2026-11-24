@@ -2069,6 +2069,77 @@ test("0.9.0 B1 handlers: a click on one member stops the whole group, its unsent
   } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
 });
 
+test("0.9.0 Fable check, blocker 1: groupStagger off is B0 (every member in the drop's own update, no waves); on is B1", async () => {
+  await game.settings.set(MOD, "groupStagger", false);
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("b0sA000000000001", 400, 200), makeToken("b0sB000000000001", 300, 200), makeToken("b0sC000000000001", 500, 200)];
+  const others = keepOnly(ts);
+  try {
+    assert.equal(api.status().group.stagger, false);
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    assert.ok(Array.isArray(out), "planned at the drop");
+    assert.deepEqual(out[0].map(u => u._id).sort(), ts.map(t => t.document.id).sort(), "every member in the drop's own update");
+    assert.deepEqual(api.status().group.pending, [], "no wave");
+    const plan = api.status().group.last.plan;
+    assert.deepEqual([plan.tier, plan.total, plan.waves], ["B0", 0, 1]);
+    tickBy(5000);
+    assert.equal(sent(from).length, 0, "nothing later");
+  } finally {
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    await game.settings.set(MOD, "groupStagger", true);
+    tickBy(60000);
+  }
+  const f = fileDrop("t");
+  try {
+    assert.equal(api.status().group.stagger, true);
+    assert.equal(api.status().group.last.plan.tier, "B1");
+    assert.ok(f.waiting.length >= 1, "B1 files them");
+  } finally { f.restore(); }
+});
+
+test("0.9.0 Fable check, blocker 3 (seeds 58, 373, 535, 588): a click while a member's wave is on its way stops that member where it is drawn as soon as its move comes back", async () => {
+  for (const how of ["click", "foreign"]) {
+    const f = fileDrop(how === "click" ? "L" : "M");
+    try {
+      const waved = f.waiting[0];
+      // Until its wave goes (the stub never applies it, and no echo comes back): its write is in flight.
+      for (let t = 0; t < 4500 && !sent(f.from).some(c => c.ids.includes(waved.document.id)); t += 50) tickBy(50);
+      const wave = sent(f.from).find(c => c.ids.includes(waved.document.id));
+      assert.ok(wave, "a wave was sent");
+      const walker = f.ts.find(t => f.now.has(t.document.id));
+      walker.animationContexts.set(walker.movementAnimationName, {});
+      if (how === "click") {
+        const r = await api.stop(walker.document);
+        assert.equal(r.ok, true, JSON.stringify(r));
+      } else {
+        // Another user's click: its displace of the walker reaches the dragger's screen.
+        F.Hooks.callAll("updateToken", walker.document, { x: 400, y: 300 }, { animate: false, pentarynMovementStop: true }, "otherUser000001");
+      }
+      await flush();
+      const from = F.calls.length;
+      assert.ok(!F.calls.slice(from).some(c => c.op === "move" && c.id === waved.document.id), "not stopped before it moves");
+      // The wave's write comes back: the member starts to walk its route.
+      waved.animationContexts.set(waved.movementAnimationName, {});
+      F.Hooks.callAll("updateToken", waved.document, { x: 400, y: 300 }, { ...wave.options }, game.user.id);
+      tickBy(50);
+      await flush();
+      const stop = F.calls.slice(from).find(c => c.op === "move" && c.id === waved.document.id && c.options?.pentarynMovementStop);
+      assert.ok(stop, `${how}: the member in flight is stopped when its move is back`);
+      assert.equal(stop.options.animate, false, "where it is drawn");
+      assert.ok(api.status().group.stopped.late >= 1, JSON.stringify(api.status().group.stopped));
+      // Its next write (the stop's own) is no second stop.
+      const n = F.calls.length;
+      F.Hooks.callAll("updateToken", waved.document, { x: 400, y: 300 }, { ...wave.options }, game.user.id);
+      tickBy(50);
+      await flush();
+      assert.ok(!F.calls.slice(n).some(c => c.op === "move" && c.id === waved.document.id), "once only");
+    } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
+  }
+});
+
 test("0.9.0 simulator (step 5): a click on one member never rests it inside a mate of its group already at rest (the mates it does not stop still count)", async () => {
   // Seeds 865 / 1274: a door cut stopped the group, then a click on one still walking on left it inside a mate.
   const f = fileDrop("k");

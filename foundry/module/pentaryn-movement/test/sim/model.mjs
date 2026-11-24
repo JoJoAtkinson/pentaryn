@@ -53,6 +53,7 @@ export class Movement {
     this.seq = 0;
     this.walkOn = new Map();
     this.inFlight = new Map();        // drop.mjs inFlight: id → where this client just sent it (echo not back)
+    this.lateStops = new Map();       // file.mjs lateStops: id → until (a stopped group's member whose wave was in flight)
     c.listeners.push(msg => this.onBroadcast(msg));
     c.preStep = (id, a, b) => this.preStep(id, a, b);
     c.reloadListeners = [() => this.onReload()];
@@ -379,6 +380,11 @@ export class Movement {
     const g = gid ? this.groups.get(gid) : null;
     if (!g) return [];
     for (const w of g.waves) this.c.clearTimeout(w.timer);
+    // file.mjs markLate: a member this client has just sent and that is not moving yet stops when its write is back.
+    for (const x of g.ids) {
+      const f = this.inFlight.get(x);
+      if (f && this.now - f.at <= 3000 && !this.moving(x)) this.lateStops.set(x, this.now + 3000);
+    }
     const unsent = g.waves.flatMap(w => w.ids);
     if (unsent.length) this.env.record("excused", { client: this.c.id, ids: unsent, why });
     g.waves = [];
@@ -459,13 +465,31 @@ export class Movement {
   onBroadcast(msg) {
     if (msg.type === "door") { if (!msg.open) this.cutAcross(this.env.world.doorCell(msg.door)); return; }
     if (msg.type !== "update") return;
+    const late = [];
     for (const it of msg.items) {
       this.inFlight.delete(it.id);
+      // file.mjs onGroupTag / stopLate: this client's own wave write of a member of a stopped group.
+      if (msg.user === this.c.id && it.kind === "move" && !msg.options?.stop && this.lateStops.has(it.id)) {
+        if (this.now <= this.lateStops.get(it.id)) late.push(it.id);
+        this.lateStops.delete(it.id);
+      }
       const w = msg.user === this.c.id ? this.walkOn.get(it.id) : null;
       if (w && it.mid === w.mid && !w.sent) { const mv = this.c.move(it.id, w.wps, { options: { stop: true, ...w.extra }, why: "pastDoor" }); w.sent = mv?.mid ?? "none"; }
       if (it.gid) this.tags.set(it.id, { gid: it.gid, user: msg.user, at: this.now });
       // Another user's stop of a member of a group this client sent stops the whole group (decision 3, 2026-11-24).
       if (msg.options?.stop && msg.user !== this.c.id && this.groupOf.has(it.id)) this.stopGroupHere(it.id, "foreign");
+    }
+    if (late.length) {
+      // setTimeout 0 in file.mjs: one batch, one stop's claims.
+      this.c.setTimeout(() => {
+        const list = late.filter(id => this.moving(id));
+        const group = { skip: new Set(list.filter(id => this.c.animating(id))), claims: [] };
+        for (const id of list) {
+          if (this.env.server.inCombat) this.c.stopMovement(id);
+          else if (this.c.animating(id)) this.displace(id, {}, group);
+        }
+        this.env.record("lateStop", { client: this.c.id, ids: list });
+      }, 0);
     }
   }
   /** drop.mjs cutAcross: out of combat, this client's walkers whose way the shut door crosses stop where drawn. */

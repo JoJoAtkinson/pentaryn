@@ -238,8 +238,7 @@ function displace(token, at = stopSpot(token), extra = {}) {
     try { if (!token.destroyed) token.stopAnimation?.(); } catch (err) { log.debug?.("stopAnimation reset", err); }
   };
   let pending;
-  // The square it walks on to, for the client that sent its group (it walks the others round that square).
-  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", pentarynMovementStop: true, ...extra, ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
+  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", pentarynMovementStop: true, ...extra })); }
   catch (err) { pending = Promise.reject(err); }
   return pending
     .then(moved => {
@@ -461,10 +460,8 @@ function owns(token) {
 function stopToken(token, how, via = "api") {
   const doc = token.document;
   // `via`: what asked (click, board, door, api), for status().stop (live H4-03: a token stopped with no record of why).
-  // A follow-up of a stop already recorded (`late`: a member whose wave was on its way when its group was stopped)
-  // is counted on that record, never written over it (a click record read {via: "api"} afterwards).
-  const rec = via === "late" && lastStop ? {} : (lastStop = { at: new Date().toISOString(), tokenId: doc.id, name: doc.name ?? null, how, via });
-  if (via === "late" && lastStop) lastStop.late = (lastStop.late ?? 0) + 1;
+  // A member whose wave was on its way when its group was stopped is file.mjs's (lateStops), not a record here.
+  const rec = (lastStop = { at: new Date().toISOString(), tokenId: doc.id, name: doc.name ?? null, how, via });
   try { feature.exposed.tele?.("stop", { reason: via, how, id: doc.id }); } catch (err) { log?.debug?.("stop: telemetry", err); }
   if (how === "query") return [act(token, how)];
   let held = false, ids = [], sender = null;
@@ -763,7 +760,7 @@ async function stop(doc, opts = {}, qctx = null) {
   if (!token) return { ok: false, code: "NOT_DRAWN", reason: "the token is not drawn on this canvas" };
   const how = decide(token, { tool: "select", armed: true });
   if (!how) return { ok: false, code: "NOT_MOVING", reason: "the token is not moving, or you cannot control it" };
-  const results = await Promise.all(stopToken(token, how, opts?.via === "late" ? "late" : "api"));
+  const results = await Promise.all(stopToken(token, how, "api"));
   const r = results[0];
   if (how === "query") return r?.ok ? { ...r } : { ok: false, code: r?.code ?? "NO_ANSWER", reason: r?.reason ?? "the client that started the move did not stop it" };
   return { ok: true, how, tokenId: doc.id };

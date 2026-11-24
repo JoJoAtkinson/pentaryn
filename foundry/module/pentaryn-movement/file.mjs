@@ -18,6 +18,7 @@
  * The three runtime handlers share one primitive, stop where drawn (§2):
  *   - a click on any member stops the whole group (decision 3 as revised 2026-11-24): the clicker stops the one
  *     clicked, and the dragger's screen, seeing that stop, stops the rest and drops its unsent waves (onGroupTag);
+ *     a member whose wave was on its way then stops where it is drawn as soon as its move comes back (lateStops);
  *   - a wall or door change stops this client's walkers whose way it crosses (drop.mjs cutAcross), and a wave sent
  *     after it is tested against the walls as they are then (a member whose way is shut stays where it is drawn);
  *   - a hidden tab sends its remaining waves at once (its timers would be throttled).
@@ -102,8 +103,57 @@ function groupCancel(tokenId, { why = "click" } = {}) {
   const gid = groupOf.get(tokenId);
   const g = gid ? groups.get(gid) : null;
   if (!g) return [];
+  markLate(g);
   dropGroup(gid, why);
   return [...g.ids];
+}
+
+/**
+ * Members a stop of their group could not reach yet (Fable's check of 0.9.0-dev, blocker 3; simulator seeds 58, 373,
+ * 535, 588): a wave sent them, its write is not back, so nothing walks to stop; when the write comes back they would
+ * walk their whole route through the mates stopped meanwhile. Each is stopped where it is drawn as soon as its move
+ * comes back here (onGroupTag). token id → until (Date.now() ms).
+ */
+const lateStops = new Map();
+/** How long a stop waits for such a member's write (ms): drop.mjs's IN_FLIGHT_MS. */
+const LATE_MS = 3000;
+let lateCount = 0;
+
+/** Group `g` is being stopped: every member this client has just sent and that is not moving yet stops on arrival. */
+function markLate(g) {
+  let flying = [];
+  try { flying = feature?.exposed?.groupInFlight?.() ?? []; } catch (err) { log?.debug?.("file: in flight", err); }
+  const until = Date.now() + LATE_MS;
+  for (const f of flying) {
+    if (!g.ids.has(f.id)) continue;
+    const doc = g.scene?.tokens?.get?.(f.id);
+    if (doc && movingNow(doc)) continue;
+    lateStops.set(f.id, until);
+  }
+}
+
+/** One batch of late stops (one wave's write: every member in it, sharing one stop's claims). */
+let lateBatch = null;
+/** A late member's move is back on this client: stop it where it is drawn (its start, near enough), with its batch. */
+function stopLate(doc) {
+  if (!lateBatch) {
+    lateBatch = [];
+    setTimeout(() => {
+      const list = lateBatch ?? [];
+      lateBatch = null;
+      const docs = list.filter(d => d?.object && !d.object.destroyed);
+      const group = { skip: new Set(docs.map(d => d.id)), claims: [] };
+      for (const d of docs) {
+        try {
+          if (inCombat(d)) feature?.exposed?.stopSafely?.(d);
+          else feature?.exposed?.stopDisplace?.(d.object, group);
+          lateCount += 1;
+        } catch (err) { log?.debug?.("file: a late stop", err); }
+      }
+      if (stopped && docs.length) stopped.late = (stopped.late ?? 0) + docs.length;
+    }, 0);
+  }
+  lateBatch.push(doc);
 }
 
 /** Forget group `gid` on this client: its unsent waves are dropped and its fight queue emptied. */
@@ -231,7 +281,7 @@ function onCombatChange(_combat, changes) {
 function groupNoteStop({ why = "click", members = 0, whole = false } = {}) {
   stopped = { at: new Date().toISOString(), why, members, whole };
 }
-const stoppedLast = () => (stopped ? { ...stopped } : null);
+const stoppedLast = () => (stopped ? { ...stopped, lateTotal: lateCount } : null);
 
 /**
  * The members of the group a token moves with: `held` when this client sent the group, else the tokens every client
@@ -260,6 +310,12 @@ function onGroupTag(doc, options, userId) {
   if (doc?.id && typeof gid === "string") {
     tagOf.set(doc.id, { gid, at: Date.now(), user: userId ?? null });
     if (tagOf.size > 500) tagOf.delete(tagOf.keys().next().value);
+  }
+  // This client's own wave write of a member whose group was stopped while it was on its way: stop it now.
+  if (doc?.id && lateStops.has(doc.id) && userId === globalThis.game?.user?.id && !options?.pentarynMovementStop) {
+    const until = lateStops.get(doc.id);
+    lateStops.delete(doc.id);
+    if (Date.now() <= until) stopLate(doc);
   }
   if (!options?.pentarynMovementStop || !doc?.id || userId === globalThis.game?.user?.id) return;
   if (!groupOf.has(doc.id)) return;
@@ -460,6 +516,9 @@ export function uninstall() {
   try { globalThis.document?.removeEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   for (const gid of [...groups.keys()]) dropGroup(gid, "uninstall");
   flushLast = null;
+  lateStops.clear();
+  lateBatch = null;
+  lateCount = 0;
   groups.clear();
   groupOf.clear();
   tagOf.clear();

@@ -1034,7 +1034,9 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
   const lead = riders?.get(grabbed.document.id)?.leader;
   const anchor = lead ? (contexts.find(c => c.token.document.id === lead)?.token ?? grabbed) : grabbed;
   const leaders = riders?.size ? contexts.filter(c => !riders.has(c.token.document.id)) : contexts;
-  const out = feature.exposed.groupPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} });
+  // B1 (the file's start delays) or B0 (every member at once): the GM's groupStagger, read on every drop (§4 step 7).
+  const stagger = setting("groupStagger") !== false;
+  const out = feature.exposed.groupPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {}, stagger });
   if (!out) { fellBack("noPlan"); last.result = "core"; return carryRiders(riders, result); }
   const { plan, members, timing } = out;
   const delays = timing?.delays ?? {};
@@ -1048,7 +1050,7 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
     else now0[m.id] = wps;
   }
   const waveList = wavesOf(Object.fromEntries([...later].map(([id, v]) => [id, v.delay])));
-  Object.assign(last, { result: "plan", plan: { ms: plan.ms, passes: plan.passes, stayed: plan.stayed.length, members: plan.order.length,
+  Object.assign(last, { result: "plan", plan: { tier: stagger ? "B1" : "B0", ms: plan.ms, passes: plan.passes, stayed: plan.stayed.length, members: plan.order.length,
     waves: waveList.length + (Object.keys(now0).length ? 1 : 0), total: timing?.total ?? 0, crowded: timing?.crowded?.length ?? 0, timingMs: timing?.ms ?? null } });
   feature.exposed.tele?.("plan", { mode: "file", members: members.length, ms: plan.ms, stayed: plan.stayed.length, waves: waveList.length + 1, total: timing?.total ?? 0 });
   const movement = {};
@@ -1433,6 +1435,7 @@ function groupStatus() {
   return {
     enabled: !!setting("groupDrags"),
     fight: !!setting("groupDrags"),
+    stagger: setting("groupStagger") !== false,
     patched: { drop: dropPatched, click: !!feature?.exposed?.stopPatched?.() },
     regime: controlled.some(t => inCombat(t.document)) ? "combat" : "free",
     limits: { maxMembers: feature?.exposed?.groupMax?.() ?? null, motion: { ...MOTION } },

@@ -8,6 +8,20 @@ on its way or named in a notice, and nothing ever waits for another mover. Two t
 the branch `movement-0.9`; `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until the GPU round of §4 step 8.
 Plan §17.
 
+### Fable's check — the blockers
+
+- **[declared] B0 against B1 at the table** (blocker 1): a world setting `groupStagger` (*Group drags: staggered
+  starts*, on). On is B1 (the file's start delays); off is B0 (every member in the drop's own update, no waves).
+  Read on every group drop; `status().group.stagger`, `status().group.last.plan.tier` ("B1" / "B0").
+- **[declared] A click no longer misses a member whose wave is on its way** (blocker 3; simulator seeds 58, 373, 535,
+  588): stopping a group on the dragger's screen (its own click, another user's stop of a member, a GM's stopOwn)
+  marks every member it has just sent and that is not moving yet; when that member's move comes back it is stopped
+  where it is drawn (one batch per wave, sharing one stop's claims). `status().group.stopped.late` / `lateTotal`.
+  The dead `"late"` path of `stop()` and the unread `pentarynMovementStopAt` update option are deleted.
+- 10,000 seeds: unchanged hard failures (B1 restOverlap 6, passThrough 2; B0 27 / 6: the open seeds of §17.5);
+  B1 "past a mate stopped short" 1,692 → 1,495 (what is left is the clicker's and the dragger's screens a round trip
+  apart, and the stop's carry walk).
+
 ### Step 6 — the old files out; docs
 
 - **[declared] `group-core.mjs` 1,381 → 198 lines:** the 0.4 to 0.8 group planner is gone (`planGroup`, `assignSlots`,

@@ -130,6 +130,7 @@ mover's own client. Verified on core 14.370 / dnd5e 6.1.1.
 | `pathfinding` | world | `everyone` | tier A, drag pathfinding: Everyone / GM only / Off (read live on every drag) |
 | `pathfindMine` | client | `true` | this client's drags find a path (corners always rounded where free, 0.8.0) |
 | `groupDrags` | world | `true` | group drags: out of combat the file, in a fight one member at a time (0.8.0; was `groupMovement`, migrated once; 0.9.0 folded tier C's `fightGroupDrags` in, its row deleted once) |
+| `groupStagger` | world | `true` | 0.9.0, B1 against B0: on, a group drag out of combat starts its members in waves within 4 s (they file through doors); off, every member sets off at once on its own route. `status().group.stagger`, `status().group.last.plan.tier` |
 | `assist` | world | `true` | the table's drag help; off = plain Foundry dragging for everyone (pathfinding reads off, both tiers false); the GM's toolbar button flips it (0.4.9); the circuit breaker turns it off (0.8.0) |
 
 Keybinding: `wrongMove` (Alt+W) files "that move was wrong" (0.8.0). Retired in 0.8.0: `smoothCorners` and
