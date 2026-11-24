@@ -1316,3 +1316,40 @@ the simulator only (SIM-L3-12, -15), mirrored line for line in the model.
 Open after L3 and its fix round: seed 6142 above (a jam with no solution along the ways, then a door shut on it: a
 spot off its way, or Joe's word); the page gate (R11, needs a deploy); the narrow passages and the stair (R9, review 3
 §4 step 9); L2's door plug (a drop just past a door's mouth), not looked at again.
+
+**The ruling's retry: a door is not shut on a jam** (Fable for Joe, on seed 6142: "refuse that shut"; R12 kept: no
+straight-line last resort, no search on a stop). Started from failing tests: `fight.test` "L3 ruling (seed 6142)"
+(motion-core), `drop.test` "L3 ruling (simulator seed 6142)" (the hook), `sim.test` SIM-L3-17 (the seed).
+- `drop.mjs` `onPreWall` on `preUpdateWall`, on the client making the change: a door going to shut (`motion-core`
+  `doorShutting`: a movement-blocking door, ds open → anything else) is dry-run through the door cut's stop
+  (`stop.mjs` `shutBlocked`): every token this screen sees walking through the door's line out of combat (any user's;
+  ghost and the unconstrained tool pass) takes its spots along its own way with the door shut (`spotsAlong`, as
+  settleTogether builds them), and they are settled together (`motion-core` `shutBlocked` → `settleAlong`); a waiting
+  member's slot is the last choice, as for the stop. One left with no spot clear of every token: `return false`,
+  "Door blocked: <name> is in the doorway" (the nearest the door first). No setting, no flag, no document write; the
+  drag help off (the GM's switch or the breaker), a fight, or an error: no veto. The GM-click stop's walk on (named)
+  is untouched.
+- The simulator's GM asks the same of its own screen before it shuts (`model.mjs` `shutBlocked`); a refused shut stays
+  open (event `doorBlocked`). Two regression seeds whose "without the fix" run no longer breaks because the veto now
+  refuses that run's shut (SIM-L3-04 seed 2680 with stopAlso off, SIM-L3-05 seed 1209 with the flush back) switch the
+  veto off with their own fix (`noShutVeto`), as the fix round did with the settle.
+- How often: 1 shut refused in 10,000 full-mix seeds (2,720 shuts; seed 6142, and without the veto it fails), 0 of
+  3,074 in the legacy mix. Without the slot-last relaxation seed 8249's shut was refused although the stop handles it;
+  with it, no refusal in 20,000 seeds is one the stop would have handled.
+
+**Gates after the retry.**
+- `make foundry-movement-sim SEEDS=10000`, the full mix: **every class 0** (passThrough, wallCross, wrongCharge,
+  unsent, restOverlap, shape, errors); 11 seeds flagged as same-instant races. Mover overlap 25,651 episodes, p95
+  2,033 ms, 6,368 square-seconds; the leader through its own moving members apart: 2,079 (p95 2,950 ms).
+- The legacy mix, 10,000 seeds: **every class 0**; mover overlap 14,381 episodes, p95 1,767 ms, 2,947 square-seconds
+  against 0.9.0's B1 (18,015 / 1,900 / 4,539): better on all three.
+- Mechanical: `make foundry-movement-check` 461 pass, 0 fail, 0 todo (conformance 95.9 %, C30 / C56); `make test`
+  2,461 passed, 9 skipped, 4 xfailed; `make foundry-module-index && make check-context` OK (the same 32 warnings).
+- Known limit (README): a door cannot be shut on a jammed group token that has nowhere free to rest ("Door blocked").
+  Measured only, not a gate: mover-overlap p95 with the leader's own pass-through (R6) counted in is 2,033 ms in the
+  full mix against 0.9.0's 1,900 on its own mix.
+- Net lines: motion-core +23, stop.mjs +43, drop.mjs +22 (the veto, its notice and its dry run; nothing deleted is
+  back).
+
+Open after the retry: the page gate (R11, needs a deploy); the narrow passages and the stair (R9, review 3 §4 step 9);
+L2's door plug, not looked at again.
