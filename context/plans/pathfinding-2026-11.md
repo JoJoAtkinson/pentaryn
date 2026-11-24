@@ -1470,3 +1470,112 @@ failed before the code it describes.
 
 Open after step N: the page gate (R11) and the browser play-test of the stair, the slit and the line behind (a deploy,
 the next step); L2's door plug, not looked at again.
+
+### 18.5 F1: Fable's design check, the three fixes (B1, B2, B3)
+
+Fable's mid-build check of HEAD `e334ae5c` (scratch `b10/review-f1.md`): "fix", three blockers, all in how the group
+plan uses the narrow field and the group's own riders. Each started as a failing test (`drop.test` "0.10 F1 B1 / B2 /
+B3"), the smallest change that made it pass; the pathfinder, the motion and the stop are untouched.
+
+**B3, a rider is in its group for the plan** (R1, R2). `othersOf` and `targetOf` left out only the stacks' leaders, so
+a rider on its mount stood in the plan's way and could be the swarm's target: a Large mount with its rider dragged one
+square up-left swarmed round its own rider and moved the other way; down-right "No route there". Now `groupDrop` and
+`fightFile` pass every dragged id to `groupPlan` / `groupFightPlan`, and `file.mjs` leaves them out of the tokens
+standing and out of the target's candidates; at a fight member's turn its own riders leave the standing too
+(`slotAtTurn` `riders`). Test: a rider grabbed (+4, 0: the mount leads, the stack one entry, a march) and a Large
+mount with its rider top-left or bottom-right moved one square on each diagonal: 8 of 8 a march, the mount on its drop
+square, the rider on it, nobody named; in a fight, up-left: a march, target none.
+
+**B1, the plan's floods never cross an off-grid wall** (R3, R4, R9). planLead's step joined two squares wherever any
+part of one met any part of the other; its floods are per square, so they came into a tight square by one part and
+left by another. Now a tight square stands for **one** part in the plan: the first a flood over the narrow field's own
+nodes from the drop settles (`file.mjs` `narrowParts`: square and part, plain steps by `field.wall`, the others by the
+field's `more`, a Dijkstra at most `LEAD.far` nodes, lazy: it runs only as far as a question needs and never on a map
+with no tight square). A step through a tight square goes only through that part, a plain step into it only when its
+centre lies in that part, and a member rests in it only in that part (`onPart`). The drop's start: the leader's drop
+(march, the rest point on a narrow way), the target's squares (swarm), the leader's rest at a fight member's turn.
+
+| Ten marching beside a wall in a closed room 16 × 10 | failed searches | named | rests across the wall |
+|---|---|---|---|
+| x = 12.4, before (review's probe, drops 11,6 and 11,5) | 5 and 5 | 1 and 1 | 0 |
+| diagonal 12.2 → 13.1, before | 5 and 5 | 1 and 1 | not measured |
+| stub x = 12.4, y 4 to 10 (an open end), before | 0 | 0 | 1 and 1 |
+| all three, three drops each, now | 0 | 0 | 0 |
+| the same wall on the grid (x = 12), before and now | 0 | 0 | 0 |
+
+S05, six and twelve from room A dropped in room B at 7,45, 6,44 and 8,46: no route searched to a square outside the C
+(the enclosed middle or the rock beyond the outer wall), 0 failed searches (before: six at 7,45 2 named after 4 failed
+searches, twelve 8 named after 16).
+
+**B2, the line behind the leader on a narrow way** (R3, R9). Three causes, all fixed.
+(a) `pathfind-adapter` `narrowMore`'s `blocked` shut a part of a tight square when its square's centre lay inside an
+avoid circle: one slot on the centre line shut the neighbouring squares' parts, the goal's too. Now a part is shut by
+the avoid circles only when every passable point of it (its cells' points) lies inside one of them; the walk itself is
+`okSeg`'s, as before. (b, c) `lineBehind` rewritten: the points back along the leader's own way where the way is
+narrower than the token (a tight square, `widthAt` under the token's diameter: the walk's own `narrow`) are the narrow
+way's spots, ranked like squares by their walk from the leader. Each member in turn (least walk left first) looks for
+the first such point clear of every slot given out, every token standing and every member that stays, by the route's
+own measure (its box, less its pixel) plus 0.02 square, judged where the route will rest it (`restOn`: the pathfinder's
+rest point, on whole pixels), stepping back 0.1 square at a time; it takes it, with one route there, when planLead gave
+it no square (R3's fallback, also when the leader rests past the mouth) or one farther from the leader (a square's walk:
+its rank + 1). Its route keeps out of the tokens standing, the members that stay and the slots of those resting nearer
+the leader; the route's real end is checked again. The walk order is then front first (a member resting nearer the
+leader goes before one behind it, so `staggerFile`'s order bounds hold). A kept slot never lies inside a line slot by
+construction. In a fight (`slotAtTurn`, `drop.mjs` `routeAtTurn`): the line point when it is nearer the leader than
+planLead's square, back along the leader's own way (`q.leaderAt.way`; this member's own way to it when the leader did
+not walk), clear by the fight route's circles plus 0.02; and after a failed route to planLead's square, one more route,
+to the line point (R3's fallback). Two more causes found in the fight and fixed: a line slot off the grid was sent
+`snapped: true`, so the route's lattice was anchored off the grid and the narrow field switched off (every fight line
+slot's route failed); and a member's mates at rest were walls for planLead, so one resting in a narrow mouth cut the
+leader's floods and those behind had no square though there was room (planLead `spec.taken`: they are taken squares,
+shutting no flood).
+
+| S05, out of combat (members from room A) | at `e334ae5c` | after B1 only | now |
+|---|---|---|---|
+| 4 at 11 points along the stair (6° to 150° from room A's mouth) | 2 or 3 of 3 named at 6 points (32° to 150°) | 0 named; the rest back in room A but one | 0 named; the line on the stair behind the leader from 45° on (all 4 on the stair) |
+| 8 at the same 11 points | 6 or 7 of 7 named at 6 points | 0 named; at 90° one member on the stair behind the leader, six in room A | 0 named; from 90° on all 8 on the stair |
+| 4 and 8 just inside room B (9,44 and 8,44) | 2 / 1 of 3, 6 / 5 of 7 named | 0 / 1, 0 / 5 named | 0 named, the rest on the stair behind |
+| 6 and 12 in room B (7,45, 6,44, 8,46) | 2, 0, 0 and 8, 3, 5 named | 2, 0, 0 and 1, 0, 0 named (12 at 7,45: 7 back at room A's mouth) | 0 named; 12 at 7,45: 3 in room B, 9 on the stair |
+
+Every case: no wall crossed, no two at rest closer than 99 px (gate 98), every rest 20 px or more from a wall (0.15
+square is 15), the last start within 4 s (largest 3,900 ms, twelve). Planning in Node: 8 to 500 ms for four and eight on
+the stair, up to 800 ms for twelve in room B (narrow ways are measured, not gated: review F1 §5). In a fight (four at
+the 11 points and just inside room B, eight at three points): at `e334ae5c` 1 to 3 of 3 named at 13 of 14 points (all
+but room B's 7,45), now 0 named, none at rest within 0.98 square, no wall crossed.
+
+**Gates.** `drop.test` "0.10 F1": B3 (8 drops and a fight), B1 (12 off-grid drops, 6 on S05), B2 (32 drops out of
+combat, 16 fight queues); every earlier test unchanged and passing (step N's "dropped mid-stair, they rest on the centre
+line behind it" among them). `make foundry-movement-sim SEEDS=10000`: full mix **every class 0**, mover overlap 25,651
+episodes, p95 2,033 ms, 6,368 square-seconds, named 22,059; legacy mix every class 0, mover overlap 14,381 episodes, p95
+1,767 ms, 2,947 square-seconds, named 11,412 (identical: the simulator runs planLead and staggerFile, which B1 to B3 do
+not change for a map with no tight square). L1 gate: 0.895 searches a member, 1.88 % failed (identical). Mechanical:
+`make foundry-movement-check` 484 pass, 0 fail (conformance 95.9 %, C30 / C56); `make test` 2,461 passed, 9 skipped, 4
+xfailed; `make foundry-module-index && make check-context` OK (the same 32 warnings).
+
+**Deviations from the review's fix, and why.**
+- *B1, one part per tight square* (the review: "open only through parts in that set"): with a partition that has an open
+  end both sides' parts are in the flood's set and the per-square floods still crossed it (the stub, one member across
+  the wall); the first part settled holds for every wall shape. Plus `onPart`: a ranked tight square offered its centre
+  as a slot even where that centre lies across the wall (S05's outer wall: square 15,42 was ranked by its stair part,
+  its centre lies outside the C).
+- *B2, the line also when it is nearer the leader* (the review: "the line becomes R3's fallback"): the fallback alone
+  rested twelve dropped in room B with seven back at room A's mouth, twenty squares behind, while the stair between had
+  room, and members dropped just inside room B stayed in room A; it would also have dropped step N's line behind a
+  leader resting mid-stair (its test). Ranking the narrow way's points like squares is R3's own rule on them.
+- *B2 (a), any avoid circle*: a part is shut when every passable point of it lies inside one of the circles (the union),
+  not one circle: a part every point of which is inside some circle cannot be walked.
+- *B2, 0.02 square more than the route's measure*: the route moves a goal in a tight square onto the centre line by a
+  pixel; a point clear by exactly the measure ended inside the last slot by 1 px and the walk was refused.
+- *B2 in a fight, two searches at most* (the review: "one route each"): the fallback needs the failed one first.
+- *B2 in a fight, the mates as taken squares* (planLead `spec.taken`, two lines in file-core): not in the review; without
+  it 1 or 2 of 3 were named at the five stair points nearest room A's mouth (6° to 24°).
+- *Net lines* (against `e334ae5c`): file.mjs 708 → 813 (+105: the part flood 40, the line and its rest point 45, the
+  fight's line 15, dropPoints 5), drop.mjs +14 (the fight's fallback route, the leader's way), pathfind-adapter +15 (the
+  covered part), file-core +1. R12's target is not met by this step; nothing could be deleted for it.
+- Defaults taken without a human: scratch `b10/auto-decisions.md` "F1 fixes".
+
+**Open after F1.** planLead moves B (the square the leader steps out of) to the neighbour nearest `from` when a token
+not in the group stands on it; on a narrow way `from` is the walk's last short chord, so that neighbour can be beside or
+ahead of the leader (not changed: pre-existing, the simulator judges the shape against the plan's own B). The R11 page
+gate and the browser play-test (the stair, the slit, the line behind, a fight on the stair); the door plug; a Large
+leader at a narrow mouth moves nobody (R10, shipped reduced as review F1 §5 rules).
