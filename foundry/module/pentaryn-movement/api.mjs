@@ -66,7 +66,7 @@ const isCreatureRef = on => typeof on === "string" || (on !== null && typeof on 
 export function buildApiFor(ctx) {
   const x = ctx.exposed;
   return buildApi(MANIFEST, {
-    status: opts => ({ ...x.status(opts), group: x.groupStatus(), stop: { last: x.stopLast?.() ?? null, firstFrames: x.stopFirstFrames?.() ?? 0 }, guard: x.guardStatus?.() ?? null,
+    status: opts => ({ ...x.status(opts), group: x.groupStatus(), stop: { last: x.stopLast?.() ?? null, firstFrames: x.stopFirstFrames?.() ?? 0 },
       assist: { tripped: assistTripped() }, migrated: settingsMigrated() }),
     ghostFor: token => x.ghostFor(token),
     combatActive: sceneId => x.combatActive(sceneId),

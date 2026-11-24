@@ -100,21 +100,3 @@ test("HX1-05 / 0.5.0: a Large with no route it fits walks the way that ignores t
     assert.ok(min >= 1.5 - MOTION.contact - 1e-6, `L/${q} never overlap: ${min.toFixed(3)}`);
   }
 });
-
-test("HX1-08: a door cut's last leg keeps off the squares the members cut before it took (clear)", async () => {
-  const { cutAtWalls } = await import("../group-adapter.mjs");
-  // A wall along y = 400; the token walks from (400, 0) straight down to (400, 700).
-  const token = {
-    document: { _source: { x: 400, y: 0, width: 1, height: 1, elevation: 0 }, parent: { grid: { size: 100 } } },
-    checkCollision: (d, { origin }) => (origin.y < 400) !== (d.y < 400),
-  };
-  globalThis.canvas ??= {};
-  globalThis.canvas.grid = { size: 100 };
-  const wps = [{ x: 400, y: 700 }];
-  const plain = cutAtWalls(token, { x: 400, y: 0 }, wps);
-  assert.deepEqual([plain.waypoints.at(-1).x, plain.waypoints.at(-1).y], [400, 300], "the last square before the wall");
-  // (400, 300) and the way into it are another member's: the leg there is refused, the square before it is taken.
-  const clear = (a, b) => !(b.y >= 250);
-  const kept = cutAtWalls(token, { x: 400, y: 0 }, wps, { clear });
-  assert.deepEqual([kept.waypoints.at(-1).x, kept.waypoints.at(-1).y], [400, 200]);
-});

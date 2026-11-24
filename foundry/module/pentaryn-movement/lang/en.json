@@ -50,8 +50,10 @@
       "stoppedShort": "Stopped short, way blocked.",
       "named": {
         "noRoute": "No route there: {name} is in the way. The ghost button under the Ruler lets you pass.",
-        "aToken": "a token"
-      }
+        "aToken": "a token",
+        "stayed": "Stayed where they stand, with no free spot they can reach: {names}."
+      },
+      "fightGroup": "In a fight, drag one token at a time."
     },
     "settings": {
       "policy": {

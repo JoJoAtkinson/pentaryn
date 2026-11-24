@@ -6,7 +6,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld, member } from "./fixtures/grid.mjs";
 import { planGroup } from "../group-core.mjs";
-import { queueNext, RESERVE } from "../reserve-core.mjs";
 import { MOTION } from "../motion-core.mjs";
 import { DUNGEON } from "./fixtures/dungeon.mjs";
 
@@ -50,13 +49,4 @@ test("S2R1-02: every route search of a plan runs in slices when the glue has the
     assert.deepEqual(a.plan.members[id].points, b.plan.members[id].points, `${id}: the same way`);
     assert.equal(a.plan.members[id].delay, b.plan.members[id].delay, `${id}: the same delay`);
   }
-});
-
-test("S2R1-01 / S2R1-03: queueNext — a drop queues again while a walk is in its way, RESERVE.queueMs in all", () => {
-  assert.equal(queueNext(0, 2000), 2000);
-  assert.equal(queueNext(2000, 3000), 3000, "a second queue");
-  assert.equal(queueNext(6000, 3000), RESERVE.queueMs - 6000, "never past the budget");
-  assert.equal(queueNext(RESERVE.queueMs - MOTION.delayStep / 2, 3000), null, "spent");
-  assert.equal(queueNext(0, null), null);
-  assert.equal(queueNext(0, 0), null);
 });

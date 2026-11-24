@@ -4,7 +4,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld, member, finish } from "./fixtures/grid.mjs";
 import { planGroup, settle } from "../group-core.mjs";
-import { RESERVE, queueUntil } from "../reserve-core.mjs";
 import { MOTION, trajectory, firstConflict } from "../motion-core.mjs";
 
 const OPEN = `
@@ -66,19 +65,4 @@ test("S2R2-01: settle says which walk a member gave way to", () => {
   const e = v.value.get("a");
   assert.equal(e.changed, true, "cut back");
   assert.deepEqual(e.walks, ["W"]);
-});
-
-test("S2R2-01: a member cut for a walk queues for it, also when its whole way from now no longer meets it", () => {
-  const full = [{ points: [{ x: 0, y: 0 }, { x: 10, y: 0 }], r: 0.5, speed: 6, delay: 0 }];
-  // A walk far from its way (it met it at a later start delay): until that walk is at rest.
-  const far = { id: "W", r: 0.5, speed: 6, delay: 500, points: [{ x: 5, y: 20 }, { x: 5, y: 26 }] };
-  assert.equal(queueUntil(full, [far]), null, "before: nothing to wait for");
-  assert.equal(queueUntil(full, [far], { blamed: new Set(["W"]) }), 1500);
-  // The walk is gone (expired, stopped, at rest): one delay step, then the plan is made again.
-  assert.equal(queueUntil(full, [], { blamed: new Set(["W"]) }), MOTION.delayStep);
-  // Never past the whole budget.
-  const slow = { ...far, speed: 0.1 };
-  assert.equal(queueUntil(full, [slow], { blamed: new Set(["W"]) }), RESERVE.queueMs);
-  // Nothing blamed and nothing met: no queue.
-  assert.equal(queueUntil(full, [far], { blamed: new Set() }), null);
 });

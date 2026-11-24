@@ -15,7 +15,6 @@
 import { MODULE } from "./movement-core.mjs";
 import { TELEMETRY, breakerTrips, push, reportText, ring, since, summarize } from "./telemetry-core.mjs";
 import { assistTripped, onKey, tripAssist } from "./settings.mjs";
-import { clearCues, cued, refreshCue } from "./cue-ui.mjs";
 import { movementFacts } from "./group-adapter.mjs";
 
 let feature = null;
@@ -109,7 +108,7 @@ function unlistenStalls() {
 function telemetry({ seconds = null } = {}) {
   const now = clock();
   const events = Number.isFinite(seconds) ? since(buf, now, seconds * 1000) : buf.events;
-  return { user: globalThis.game?.user?.id ?? null, summary: summarize(buf), tripped: assistTripped(), cued: cued(),
+  return { user: globalThis.game?.user?.id ?? null, summary: summarize(buf), tripped: assistTripped(),
     events: events.map(e => ({ ...e, ago: Math.round(now - e.t) })), filed: lastFiled ? { ...lastFiled } : null };
 }
 
@@ -168,15 +167,12 @@ export function install(reg, ctx) {
   log = ctx.log;
   onKey("wrongMove", onWrongMoveKey);
   reg.on("canvasReady", () => { listenStalls(); }, { label: "canvasReady: telemetry watches for frame stalls while this client moves tokens" });
-  reg.on("canvasTearDown", () => { clearCues(); }, { label: "canvasTearDown: the waiting cues go with the scene" });
-  reg.on("refreshToken", token => { try { refreshCue(token); } catch (err) { log?.debug?.("cue: refresh", err); } }, { label: "refreshToken: a held token keeps its waiting cue" });
   if (ctx.late) listenStalls();
   ctx.expose({ tele, telemetry, reportTelemetry, fileWrongMove });
 }
 
 export function uninstall() {
   unlistenStalls();
-  clearCues();
   onKey("wrongMove", null);
   buf = ring();
   tripBase = { errors: 0, fallbacks: 0 };

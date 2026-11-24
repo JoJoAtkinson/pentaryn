@@ -9,7 +9,7 @@
  *             no walls, no cost, nothing recorded outside combat). Any owner may; the move's own
  *             continuation sees a newer movement and gives up.
  *   stop      in combat, this client started the move: stopMovement(). The token finishes the cell it
- *             is in (the drop committed a checkpoint at every cell, group.mjs), and dnd5e records
+ *             is in (the drop committed a checkpoint at every cell, drop.mjs), and dnd5e records
  *             exactly the cells walked. Never a displace in combat.
  *   query     in combat, another user started it. A player asks the active GM (the kit's relay
  *             row `stop`), which stops it when it is the one that started the move. A GM asks the
@@ -22,10 +22,10 @@
  * start is when this client saw the drop (noteDrop). A move another user started is armed at once (0.8.4, AR2-08:
  * a player clicking its own token as the GM's group set off was ignored, and the token walked on); so is a move
  * this client never saw start. The API's stop() is never held back.
- * A click on one member of a group stops the whole group when the clicker owns every member; otherwise only
- * the clicker's own members stop, and the client that sent the group stops the others short behind them out of
- * combat (group.mjs groupStopOne). Out of combat each stops exactly where it is drawn; one whose body is across a
- * door's line is carried just past the line along its own route (Joe's decision 2 as revised 2026-11-23, 0.8.0).
+ * A click on one member of a group stops the whole group (decision 3 as revised 2026-11-24): every member this
+ * clicker owns (0.9.0: the dragger's screen stopping the rest is §4 step 3). Out of combat each stops exactly where it
+ * is drawn; one whose body is across a door's line is carried just past the line along its own route (Joe's decision
+ * 2 as revised 2026-11-23, 0.8.0).
  *
  * The click also reaches a moving token core's MouseInteractionManager drops (0.4.1, live R1 D-2): a
  * DOM pointerdown on the board that the wrap did not see (the token's manager was not in its hover
@@ -41,7 +41,6 @@
 import { MODULE } from "./movement-core.mjs";
 import { clickStop, radiusOf, routeAhead } from "./motion-core.mjs";
 import { continuationInFlight, doorwayAt, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, pinDrawn, stopWhereDrawn, unpin } from "./group-adapter.mjs";
-import { reservations as reserve } from "./reserve-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { queryGM } from "./lib/queries.mjs";
 
@@ -74,7 +73,7 @@ const DROP_WAIT_MS = 2000;
 
 const firstIdOf = movement => movement?.chain?.[0] ?? movement?.id ?? null;
 
-/** This client dropped these tokens just now (group.mjs, every drop). */
+/** This client dropped these tokens just now (drop.mjs, every drop). */
 function noteDrop(ids) {
   const t = clock();
   for (const id of ids ?? []) if (id) starts.set(id, { id: null, at: t });
@@ -225,10 +224,7 @@ function displace(token, at = stopSpot(token), extra = {}) {
       // Just past the door's line along its own route (its corners passed on the way first), where it is, no snap.
       const wps = [...(at.via ?? []), p].map((q, k, list) => ({ x: q.x, y: q.y, elevation: z, action: doc.movementAction ?? "walk", snapped: false,
         explicit: k === list.length - 1, checkpoint: k === list.length - 1 }));
-      // The walk on re-publishes its reservation (0.6.0, group.mjs): every planner sees where the stop puts it.
-      let extra = {};
-      try { extra = feature.exposed.groupRepublish?.(doc, { x: first.x, y: first.y }, wps) ?? {}; } catch (err) { log.debug?.("stop: re-publish", err); }
-      Promise.resolve(doc.move(wps, { method: "api", ...extra, [reserve.KEEP_OPT]: true }))
+      Promise.resolve(doc.move(wps, { method: "api", pentarynMovementStop: true }))
         .catch(err => log.debug?.("stop: walk to the square", err));
     } catch (err) { log.debug?.("stop: walk to the square", err); }
   };
@@ -238,7 +234,7 @@ function displace(token, at = stopSpot(token), extra = {}) {
   };
   let pending;
   // The square it walks on to, for the client that sent its group (it walks the others round that square).
-  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", [reserve.KEEP_OPT]: true, ...extra, ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
+  try { pending = Promise.resolve(doc.move([wp], { animate: false, method: "api", pentarynMovementStop: true, ...extra, ...(near ? { pentarynMovementStopAt: { x: p.x, y: p.y } } : {}) })); }
   catch (err) { pending = Promise.reject(err); }
   return pending
     .then(moved => {
@@ -418,16 +414,15 @@ function owns(token) {
 }
 
 /**
- * Stop `token` by the table's decision `how`, and with it the rest of its group (decision 3): all of it when
- * this user owns every member, else only this user's own members (the client that sent the group stops the others
- * short behind them). Out of combat each stops exactly where it is drawn (one in a doorway just past the door's line);
+ * Stop `token` by the table's decision `how`, and with it the rest of its group (decision 3): every member this user
+ * owns. Out of combat each stops exactly where it is drawn (one in a doorway just past the door's line);
  * in a fight each finishes the square it is in. Returns the stops' promises.
  */
 function stopToken(token, how, via = "api") {
   const doc = token.document;
   // `via`: what asked (click, board, door, api), for status().stop (live H4-03: a token stopped with no record of why).
   // A follow-up of a stop already recorded (`late`: a member whose wave was on its way when its group was stopped)
-  // is counted on that record, never written over it (S1R1-09: the click record read {via: "api"} afterwards).
+  // is counted on that record, never written over it (a click record read {via: "api"} afterwards).
   const rec = via === "late" && lastStop ? {} : (lastStop = { at: new Date().toISOString(), tokenId: doc.id, name: doc.name ?? null, how, via });
   if (via === "late" && lastStop) lastStop.late = (lastStop.late ?? 0) + 1;
   try { feature.exposed.tele?.("stop", { reason: via, how, id: doc.id }); } catch (err) { log?.debug?.("stop: telemetry", err); }
@@ -445,8 +440,6 @@ function stopToken(token, how, via = "api") {
   const out = [];
   for (const t of list) {
     const tdoc = t.document;
-    // A token the runtime guard holds (0.7.0) stops where it waits: the guard lets go of it.
-    try { feature.exposed.guardCancel?.(tdoc.id, via); } catch (err) { log?.debug?.("stop: the guard's hold", err); }
     const next = t === token ? how : decide(t, { tool: "select", armed: true });
     if (next !== "displace" && next !== "stop") continue;
     if (next === "displace") {
@@ -455,11 +448,7 @@ function stopToken(token, how, via = "api") {
       claims.push({ id: tdoc.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s });
       if (at.near) rec.pastDoor = (rec.pastDoor ?? 0) + 1;
       out.push(displace(t, at));
-      if (!(held && whole)) {
-        try { feature.exposed.groupStopOne?.(tdoc.id, at.p); } catch (err) { log?.debug?.("stop one", err); }
-      }
     } else {
-      if (!(held && whole)) { try { feature.exposed.groupStopOne?.(tdoc.id, null); } catch (err) { log?.debug?.("stop one", err); } }
       out.push(act(t, next));
     }
   }
@@ -473,8 +462,6 @@ function stopToken(token, how, via = "api") {
 
 function onClick(token, event) {
   lastNative = event?.nativeEvent ?? null;
-  // Waiting for the runtime guard out of combat it is at rest, and a click stops it there: the guard lets go (0.7.0).
-  try { feature.exposed.guardCancel?.(token.document.id, "click"); } catch (err) { log?.debug?.("click: the guard's hold", err); }
   const how = decide(token, {
     modifiers: !!(event?.shiftKey || event?.ctrlKey || event?.metaKey || event?.altKey),
   });

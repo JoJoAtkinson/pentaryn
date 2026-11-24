@@ -11,6 +11,11 @@ tags: [foundry, module, pentaryn-movement, movement, pathfinding]
 
 ## At the table
 
+> **0.9.0 on the branch `movement-0.9`** (main keeps 0.8.5 until the GPU round): no reservations, runtime guard, deadline
+> or waiting ring; a single drop goes at once; a group drag in a fight is refused ("In a fight, drag one token at a
+> time.") until the fight file; in a fight every next square is tested against the walls as they are now. The module
+> README's "Drag movement" has the branch's state; this page is rewritten for 0.9 at the handoff.
+
 There is nothing to learn: drag, and it works out the rest. Since 0.8.0 it ships in three tiers, each with its own GM switch (*Settings → Pentaryn Movement*); a tier that has not passed its acceptance rounds ships switched off.
 
 | Tier | Setting | Default | What it does |
@@ -79,19 +84,8 @@ There is nothing to learn: drag, and it works out the rest. Since 0.8.0 it ships
 
 ## The simulator
 
-`make foundry-movement-sim SEEDS=10000` (default 2000 seeds from 1; `FROM=`, `MAP=hard`, `JSON=1`) runs the module's distributed logic in Node: the GM, one to three players and the headless bot as virtual clients on one fake clock; jittered latency (11–105 ms, wandering over seconds, packets sent together arriving together), TCP loss as a 200–600 ms retransmit holding the link, fog stalls of 150–1,400 ms on player tabs, a backgrounded initiator, a dropped socket that reloads; five generated maps (T-junction, two-wide corridor, diagonal door, dead end, the hard dungeon). Each seed drops a group (sometimes a second client drops at nearly the same moment), maybe clicks a member to a stop and shuts a door, and judges every invariant on the server's record and on every client's drawn view, frame by frame:
-
-| Invariant | Holds when |
-|---|---|
-| `passThrough` | a mover never comes inside a token standing still (0.05 square of numeric slack) |
-| `moverBound` | two movers never come more than 0.1 square inside touching for more than 150 ms |
-| `restOverlap` | nothing overlaps at rest |
-| `liveness` | every drop's run ends by its 10 s deadline (or when its last walk does, a long way round being a walk, not a wait); nothing is left walking; drawn = server at the end |
-| `combatCost` | in a fight each committed update is one square on the token's own way, never a position write |
-| `orphans` | no reservation, group or held yield is left once everything has ended |
-| `doorCut` | nothing sent after its sender knew a door was shut crosses its line; in a fight no member of a cut group move sends another square |
-
-A failing seed prints one line (`seed N  map/mode  [disturbances]  invariants  first failure`); `make foundry-movement-sim SEED=N` prints that seed's whole record (the scenario, every failure with the client, ids, time, depth, duration and whether that client had just stalled or lost a packet, the runs' state histories, the events). The runner is `scripts/foundry/movement_sim.mjs` (`--opts` takes the same JSON); the simulator is the module's `test/sim/`: the engine `engine.mjs`, the maps `maps.mjs`, the scenario and invariants `scenario.mjs`, and the module's logic as it runs there, `model.mjs`: the real pure cores, and a port of the glue's protocol that names the `group.mjs` / `stop.mjs` / `guard.mjs` function each part stands for. A failure is read back against the module's source before it is called a defect: a port that drifted from the glue is a simulator bug. `test/sim/sim.test.mjs` (in `node test/run.mjs`) keeps a smoke run and one regression seed per defect found, each checked with the fix and without it.
-
-What a run shows today, and why (plan §16.9 and §16.11 have the seeds): out of combat most failures are on a client that had just stalled or lost a packet (a fresh move is drawn from when that client handled it, not from when the server applied it); in a fight the default, tier C off, walked members through members resting in about half the fights (a third since 0.8.3's next-square check); tier C fails 1 of 400 undisturbed fights (a long walk's reservation outliving its run), its other failures are on a client that stalled or lost a packet, and it moves about 89 % of its members (0.8.2: 69 %). A new failure class is a finding for the plan, not a reason to loosen an invariant.
-
+0.9.0 (branch `movement-0.9`): the 0.8 simulator modelled the glue 0.9.0 deleted (the reservations, the runtime
+guard, the lifecycle, a port of `group.mjs`), so its model, scenarios and seeds went with it. Fable's review 2 §4 step 5
+rebuilds it on the real cores (`file-core.mjs`): 10,000 seeds, zero pass-through of standing tokens, wall crossings,
+wrong charges and members neither sent nor named. Until then `make foundry-movement-sim` says so and exits 2; the
+engine (`test/sim/engine.mjs`) and the maps (`test/sim/maps.mjs`) are kept for it. On `main` (0.8.5) the old one runs.

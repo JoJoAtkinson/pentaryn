@@ -672,3 +672,38 @@ Also: a token drawn walking into its last square bars a step passing it there, n
 Simulator, seeds 1-2,000: 298 → 299 failing, with the invariant Joe ranks first improved and more motion: pass-through 205 → 179, rest overlaps 9 → 10, orphans 1 → 0, mover-vs-mover 118 → 153 (on a client that had just stalled or lost a packet, §16.9 class 1). Squares walked per member over 300 fights: tier C off 4.1 → 5.6, tier C 6.8 → 9.9 (pass-through 23 → 11); out of combat unchanged (3.4). The model ports the holds, `leaving`, the claims and the tier C fixes (`noHold`, `noLeaving`, `noClaims`, `noArrivingFix`, `noTradeFix` switch each off).
 
 Not changed, for the next review: AR3-07 (two players head-on in a two-wide lane: each plans round the other group standing; both stop short and both are told, per telemetry; passing needs lane discipline across two plans); AR3-11 (the move refused after the GM views another scene is told, `step:unrendered`); AR3-13 (no stack; this module reads `position` only inside a try). The AR3 harness read notices from the DOM after Foundry dismissed them; several "no notice" findings (AR3-01, AR3-07, AR3-11, AR3-12's A5) had the notice in the telemetry. The next round should hook `ui.notifications.warn`.
+
+## 17. pentaryn-movement 0.9: the smaller design (Fable's review 2, 2026-11-24)
+
+Fable's review 2 (2026-11-23) read rounds 1-3 as patching, not converging: defects 13 / 14 / 13 a round, no tier
+passed, the simulator flat out of combat (202 → 198 of 1,196 from 0.8.1 to 0.8.5), `group.mjs` grown 3,224 → 4,124
+lines in three "fixes only" rounds. Its structural cause: an invariant core cannot enforce (no shared animation
+clock: "no overlap, drawn, on every client" made the planner's safe answers "stay" and "wait"), a plan held on one
+client for up to 10 s (each event in that window needed its own reconciler) and reservations so other clients know
+moves not yet on the server. Joe's answers (2026-11-24, scratch `decisions.md`): two moving tokens may brush; in a
+fight a group drag walks one member at a time (tier C deleted; refused if that misses its gate); a click on any member
+stops the whole group. The rule: **within 4 s of the drop a token's move is on the server, or the token is named in a
+notice; nothing ever waits for another mover.** Built on the branch `movement-0.9` (main keeps 0.8.5, tag
+`movement-0.8.5-rollback`), in the review's §4 steps.
+
+### 17.1 Step 1: singles
+
+`drop.mjs` replaces `group.mjs` as the drop feature: a single drop's route is confirmed clear of the standing tokens
+and sent at once (round them, else as far as it is free of them, else not at all with "No route there" naming the one
+in the way); the checkpoints at every square in a fight; Joe's per-square movement-wall check before each next square
+of a move this client drives (rendered or not; movement walls, not vision); the undrawn-token rule (no square of a
+fight move from a page that no longer draws the token; out of combat not across a wall that blocks now); a standing
+token in the next square refuses it (a moving one does not: soft); a wall or door across a walk out of combat stops it
+where drawn (the click-stop's displace, decision 2); riders; one undo entry per move. Deleted: the guard, the
+reservations, the lifecycle, the cue, the reload resumes, tier C, the fight door-cut machinery, every hook and status
+row of theirs, their tests, and the 0.8 simulator model (a port of the deleted glue). Interim until the later steps:
+a group drag out of combat is core's own drop (step 2 replaces it the same day), a group drag in a fight is refused
+with a notice (step 4), a click stops the members the clicker owns (step 3 adds the dragger stopping the rest).
+
+Gate results: tier A's tests pass (`test/drop.test.mjs`: 58 tests ported from `group.test.mjs`, the tier B / C and
+reservation ones deleted with their code); 60 seeded fight drags charged exactly 5 ft per square walked, every step one
+square, none through a wall or a standing token, and a door shut before a random square stopping it there, charged for
+the squares sent (60 moved, 35 cut by the door); C12 (single-drag latency) has no live run on the branch, its Node
+proxy (the drop handler's own time, 400 drags) is unchanged or better: p50 0.037 → 0.018 ms on open ground, 0.27 → 0.25
+ms round a standing token, 0.21 → 0.19 ms in a fight.
+

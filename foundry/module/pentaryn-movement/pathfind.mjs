@@ -294,7 +294,7 @@ function pathfindJob(token, waypoints, options, wrapped, base) {
   if (reason) return plain();
   const reached = pf.reachedCount(base.result, waypoints, same);
   if (reached === 0) return plain();
-  // A token dragged alone (S1R2-01): the drop goes round the tokens standing in its way (group.mjs aroundOthers), so
+  // A token dragged alone (S1R2-01): the drop goes round the tokens standing in its way (drop.mjs aroundOthers), so
   // the drag's ruler shows that way and what it costs, not core's line through them (40 ft shown, 90 ft walked).
   let avoid = null;
   try { avoid = feature?.exposed?.singleAvoid?.(token, waypoints, options) ?? null; } catch (err) { log?.debug?.("single drag: the tokens that stay", err); }

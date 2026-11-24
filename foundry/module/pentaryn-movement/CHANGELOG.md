@@ -1,5 +1,42 @@
 # Changelog — pentaryn-movement
 
+## 0.9.0-dev — branch movement-0.9 (Fable's review 2)
+
+The smaller design (Fable's review 2, §2 and §4; Joe's decisions of 2026-11-24): within 4 s of the drop every token is
+on its way or named in a notice, and nothing ever waits for another mover. Two tokens that are both moving may brush
+(soft); walls, shut doors, standing tokens, a mate at its spot, overlap at rest and fight charges are hard. Built on
+the branch `movement-0.9`; `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until the GPU round of §4 step 8.
+Plan §17.
+
+### Step 1 — singles
+
+- **[declared] `drop.mjs` replaces `group.mjs`** (4,124 → about 1,100 lines with the B0 glue of step 2). A single drop
+  confirms its route clear of the tokens standing outside it and goes: no publish, queue, start delay or step-aside. A
+  route search still running at the drop finishes in slices and the token goes when it is done (as before). In a fight
+  every move has a checkpoint at every square (decision 1), and before each next square of a move this client drives
+  is sent it is tested against the movement walls as they are now (Joe, 2026-11-23: every square, drawn or not; closed
+  doors, new walls, a Wall of Stone; never vision); from a page that no longer draws the token no square is sent at all
+  (AR1-01 / AR2-01); and never into a token standing still (moving tokens may brush). A wall raised or a door shut
+  across a walk out of combat stops it exactly where it is drawn (decision 2; the click-stop's displace). Riders and
+  one Ctrl+Z per move are kept.
+- **[declared] Deleted: the reservations (`reserve-core.mjs`, `reserve-adapter.mjs`), the runtime yield guard
+  (`guard-core.mjs`, `guard.mjs`), the lifecycle and its 10 s deadline (`lifecycle-core.mjs`), the amber waiting cue
+  (`cue-ui.mjs`), the reload resumes of a group's waves and a fight's walk** (a reload mid-walk leaves the token on
+  the square it holds), with their hooks, their status rows (`status().guard`, `group.runs`, `reservations`, `hold`,
+  `flushed`, `resumed`, `fightResumed`, `held`, `silent`) and their tests. `status().group.told` lists the last notices.
+- **[declared] A group drag in a fight is refused**, "In a fight, drag one token at a time.", until the fight file
+  (§4 step 4; Joe 2026-11-24: "if that misses its gate, refuse group drags in a fight"). Ghost, the unconstrained tool,
+  Ctrl waypoints and one stack (a mount and its riders) are core's own moves as before.
+- **[declared] A click on one member of a group stops every member of it the clicker owns** (decision 3 as revised
+  2026-11-24; the dragger's screen stopping the rest is §4 step 3). `file.mjs` (a feature) holds which tokens move
+  together.
+- The 0.8 simulator (`test/sim/model.mjs`, `scenario.mjs`, `sim.test.mjs`) modelled the deleted glue and went with it;
+  §4 step 5 rebuilds it on the real cores. `make foundry-movement-sim` says so and exits 2 until then.
+- Gate: tier A's tests (ported to `test/drop.test.mjs`); a seeded test of 60 single fight drags, each charged exactly
+  5 ft per square walked, never through a wall or a standing token, a door shut mid-walk stopping it on the square it
+  holds charged for the squares sent; the drop handler's own time for a single drag (the C12 proxy, Node, 400 drags)
+  p50 0.037 → 0.018 ms on open ground, 0.27 → 0.25 ms round a standing token, 0.21 → 0.19 ms in a fight.
+
 ## 0.8.5 — 2026-11-23
 
 Acceptance round 3 (AR3, frozen 0.8.4) defects for the tiers not yet passed (plan §16.13). Each fix has a test that

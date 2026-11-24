@@ -1160,9 +1160,9 @@ adjustments:
   - id: movement-group-drop
     packages: [core, dnd5e]
     modules: [pentaryn-movement]
-    files: [foundry/module/pentaryn-movement/group.mjs]
+    files: [foundry/module/pentaryn-movement/drop.mjs]
     markers: ["_prepareDragLeftDropUpdates", "__pentarynMovementGroup"]
-    what: wraps Token#_prepareDragLeftDropUpdates on Token5e; takes core's [updates, { method "dragging", movement }] and, for a multi-token drag, replaces each member's movement[id].waypoints with its planned route to its own rest slot and sends later start-delay waves as further batched updates in the same shape from this client; in a started combat inserts a snapped checkpoint at every cell (kept only at the same measured cost); returns null (no updates) while a slow plan finishes, then commits through Scene#updateEmbeddedDocuments
+    what: wraps Token#_prepareDragLeftDropUpdates on Token5e; takes core's [updates, { method "dragging", movement }] and, for a single drag, replaces its movement[id].waypoints with a route round the tokens standing in its way (0.9.0 drop.mjs); for a multi-token drag out of combat replaces each member's waypoints with its route to its own rest slot, all in the drop's one batched update; refuses a multi-token drag in a started combat (returns null); in a started combat inserts a snapped checkpoint at every cell (kept only at the same measured cost); returns null (no updates) while a single drop's route search finishes, then commits through Scene#updateEmbeddedDocuments
     why: core moves every dragged token by the same offset, each along its own path with no knowledge of the others, so a group overlaps and jams in doors; core commits no per-cell checkpoints, so a stop in combat could not land on a cell
     native_when: core plans multi-token drags as a group (formation slots, staggered starts) or offers a per-cell checkpoint drag option
     retire_class: guarded
@@ -1215,7 +1215,7 @@ adjustments:
   - id: core-movement-group-drag-internals
     packages: [core]
     modules: [pentaryn-movement]
-    files: [foundry/module/pentaryn-movement/group.mjs, foundry/module/pentaryn-movement/group-adapter.mjs]
+    files: [foundry/module/pentaryn-movement/drop.mjs, foundry/module/pentaryn-movement/group-adapter.mjs]
     markers: ["_draggedToken", "_movementPlanningContext", "interactionData", "animationContexts", "movementAnimationName", "_shouldRecordMovementHistory"]
     what: reads core's drag state (TokenLayer#_draggedToken, its mouseInteractionManager.interactionData.contexts with destination / foundPath / waypoints, TokenLayer#_movementPlanningContext and its direct flag), the movement tween (Token#animationContexts by movementAnimationName; TokenDocument x / y carry the drawn position during it) and TokenDocument#_shouldRecordMovementHistory (the combat regime)
     why: the group plan needs every member's drag destination and core path; click to stop needs to know a token is mid-tween and where it is drawn; none of it has a public accessor

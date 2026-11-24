@@ -1097,7 +1097,7 @@ export function* planGroup(spec, o) {
 
   for (const b of best.blocked) note(b.id, `blocked:${b.blocker ?? "-"}`);
 
-  // A fight's tier C (0.8.3, AR1-02): the members are sent by space (sequence-core, the glue's commitFight), never by
+  // A fight's tier C (0.8.3): the members are sent by space (sequence-core, the glue's commitFight), never by
   // this timing. Its start delays are dropped there, and its settle() left members standing for conflicts in time
   // that the sequence answers by order (live C-1: 6 of 8 stayed where they stood, "Stopped short, way blocked"). The
   // pass's routes are kept (its lateral re-plans round the others' starts and ends make fewer corridors meet).
@@ -1236,7 +1236,7 @@ export function runPlan(gen, budgetMs, now = () => 0) {
 
 /**
  * Where each member of a group drop that went to core (budget, no anchor route, a throw, ...) stops,
- * so that no two rest on top of each other (live R1 D-1: core's paths, cut at walls, left members
+ * so that no two rest on top of each other (live round 1: core's paths, cut at walls, left members
  * stacked at distance 0). Each member keeps its own path and stops at its furthest point whose
  * circle is clear of every member placed before it (touching is fine); one that finds none stays
  * where it is, and is then held there while the others are placed again (R2-1). Members that do not

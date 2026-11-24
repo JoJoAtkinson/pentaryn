@@ -136,60 +136,12 @@
     "name": "setup"
   },
   {
-    "kind": "once",
-    "name": "ready"
-  },
-  {
-    "kind": "on",
-    "name": "moveToken"
-  },
-  {
-    "kind": "on",
-    "name": "stopToken"
-  },
-  {
     "kind": "on",
     "name": "preMoveToken"
   },
   {
     "kind": "on",
-    "name": "moveToken"
-  },
-  {
-    "kind": "on",
-    "name": "stopToken"
-  },
-  {
-    "kind": "on",
     "name": "updateToken"
-  },
-  {
-    "kind": "on",
-    "name": "updateToken"
-  },
-  {
-    "kind": "on",
-    "name": "updateToken"
-  },
-  {
-    "kind": "on",
-    "name": "updateToken"
-  },
-  {
-    "kind": "on",
-    "name": "updateToken"
-  },
-  {
-    "kind": "on",
-    "name": "updateToken"
-  },
-  {
-    "kind": "on",
-    "name": "moveToken"
-  },
-  {
-    "kind": "on",
-    "name": "stopToken"
   },
   {
     "kind": "on",
@@ -198,6 +150,10 @@
   {
     "kind": "on",
     "name": "updateWall"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
   },
   {
     "kind": "once",
@@ -221,35 +177,7 @@
   },
   {
     "kind": "on",
-    "name": "moveToken"
-  },
-  {
-    "kind": "on",
-    "name": "stopToken"
-  },
-  {
-    "kind": "on",
-    "name": "canvasTearDown"
-  },
-  {
-    "kind": "on",
-    "name": "updateWall"
-  },
-  {
-    "kind": "on",
-    "name": "createWall"
-  },
-  {
-    "kind": "on",
     "name": "canvasReady"
-  },
-  {
-    "kind": "on",
-    "name": "canvasTearDown"
-  },
-  {
-    "kind": "on",
-    "name": "refreshToken"
   },
   {
     "kind": "once",

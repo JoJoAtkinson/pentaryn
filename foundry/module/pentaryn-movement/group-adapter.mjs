@@ -448,73 +448,12 @@ export function continuationInFlight(doc) {
 }
 
 /**
- * A later wave's waypoints, cut where a wall now blocks them (live R2-5: the GM closed a door after the
- * drop, core then cut the member's path at the door and left it straddling the door line). Each segment
- * from `origin` is tested against move-blocking walls as they are now; at the first blocked one the path
- * ends on the furthest whole cell before the wall that the member's centre reaches without crossing a
- * wall and that `taken` (top-left pixels → true when another token rests there) leaves free: along the
- * blocked segment first, then back along the earlier ones (live R4-1: every waiting member was sent to
- * the same last square before the door and four ended stacked on it). Back at the origin's cell, or
- * with no free cell at all, the list is empty: the member cannot move and stays where it stands.
- * Returns `{ waypoints, cut }`. Reads only.
- */
-export function cutAtWalls(token, origin, waypoints, { taken = null, clear = null } = {}) {
-  const s = gridSize(token);
-  const src = token.document?._source ?? {};
-  const centre = p => {
-    const w = p.width ?? src.width ?? 1, h = p.height ?? src.height ?? 1;
-    return { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2, elevation: p.elevation ?? src.elevation ?? 0 };
-  };
-  // One pixel past the end too: a vertex lying exactly on a door's line (an arc through a door's middle) is not
-  // a proper crossing of either leg it joins.
-  const blocked = (a, b) => {
-    const o = centre(a), d = centre(b);
-    const L = Math.hypot(d.x - o.x, d.y - o.y);
-    const e = L > 0 ? { ...d, x: d.x + (d.x - o.x) / L, y: d.y + (d.y - o.y) / L } : d;
-    try { return !!token.checkCollision(e, { origin: o, type: "move", mode: "any" }); } catch { return false; }
-  };
-  const isTaken = p => { try { return !!taken?.(p); } catch { return false; } };
-  let prev = origin;
-  for (let k = 0; k < waypoints.length; k++) {
-    const w = waypoints[k];
-    if (!blocked(prev, w)) { prev = w; continue; }
-    const home = { x: Math.round(origin.x / s) * s, y: Math.round(origin.y / s) * s };
-    const seen = new Set();
-    // Segment `seg` runs from waypoint seg - 1 (the origin for 0) to waypoint seg; the blocked one is k.
-    for (let seg = k; seg >= 0; seg--) {
-      const from = seg === 0 ? origin : waypoints[seg - 1];
-      const to = waypoints[seg];
-      const kept = waypoints.slice(0, seg);
-      const ww = to.width ?? src.width ?? 1, hh = to.height ?? src.height ?? 1;
-      const a = centre(from), b = centre(to);
-      const L = Math.hypot(b.x - a.x, b.y - a.y);
-      const n = Math.max(Math.ceil(L / (s / 4)), 1);
-      for (let q = n; q >= 0; q--) {
-        const c = { x: a.x + (b.x - a.x) * (q / n), y: a.y + (b.y - a.y) * (q / n) };
-        const cand = { ...to, x: Math.round((c.x - (ww * s) / 2) / s) * s, y: Math.round((c.y - (hh * s) / 2) / s) * s };
-        if (cand.x === home.x && cand.y === home.y) return { waypoints: [], cut: true };   // back where it stands
-        const key = `${cand.x},${cand.y}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        // `clear` (a door cut, HX1-08): the last leg to it keeps off the squares the members cut before it took.
-        if (blocked(from, cand) || isTaken(cand) || (clear && !clear(from, cand))) continue;
-        kept.push({ ...cand, snapped: true, explicit: true, checkpoint: true });
-        return { waypoints: kept, cut: true };
-      }
-    }
-    return { waypoints: [], cut: true };
-  }
-  return { waypoints, cut: false };
-}
-
-/**
  * Where a token stopped at `p` (top-left pixels) may rest: `p` itself when its body crosses no
  * move-blocking wall (restWalkable), else the nearest whole cell around it that is clear and that its
  * centre reaches from `p` without crossing a wall. Live R4-5: a click-stop in a doorway left the token
  * off the grid with its circle 37–41 px into the solid wall beside the door. A body across a door's line
  * (open or shut) does not fit either (live R5-3). `taken` (top-left → true when another token rests or is
- * going there) rules a spot out too (live H1-07 / H1-09: a door cut left a member on the square another
- * had just stopped on); when every clear spot nearby is taken, the nearest clear one. `p` when nothing
+ * going there) rules a spot out too (a door cut left a member on the square another had just stopped on); when every clear spot nearby is taken, the nearest clear one. `p` when nothing
  * nearby fits.
  * Reads only.
  */
@@ -548,7 +487,7 @@ export function clearOfWalls(token, p, { taken = null, snap = false, prefer = nu
   for (let dy = -reach; dy <= reach + 1; dy++) for (let dx = -reach; dx <= reach + 1; dx++) cands.push({ x: (bx + dx) * s, y: (by + dy) * s });
   cands.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
   const ok = c => fits(c) && open(token, from, { x: c.x + (w * s) / 2, y: c.y + (h * s) / 2, elevation: z });
-  // `prefer` (a stop that leaves others walking, H3-05: not in a one-wide corridor they must pass): the nearest
+  // `prefer` (a stop that leaves others walking: not in a one-wide corridor they must pass): the nearest
   // square it also likes, when there is one in reach; else the nearest, as before.
   const liked = prefer ? cands.find(c => free(c) && ok(c) && prefer(c)) : null;
   if (liked) return { ...p, x: liked.x, y: liked.y };

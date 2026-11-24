@@ -170,7 +170,7 @@ export function stacksOf(items, { slack = 0.25, prefer = null } = {}) {
 }
 
 /**
- * The latency buffer a fight member keeps behind one walking ahead of it when it follows (0.8.3, AR1-02; squares,
+ * The latency buffer a fight member keeps behind one walking ahead of it when it follows (0.8.3; squares,
  * either drawn this far ahead of or behind itself along its way, motion-core firstConflict's `gap`).
  */
 export const FOLLOW_GAP = 0.75;

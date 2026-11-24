@@ -5,7 +5,6 @@ import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { GM, PLAYER, SCENE, movementWorld } from "./fixtures/world.mjs";
 import { KEYBINDINGS, migrateSettings } from "../settings.mjs";
-import { reservations as reserve } from "../reserve-adapter.mjs";
 
 mock.timers.enable({ apis: ["setTimeout"] });
 
@@ -49,26 +48,6 @@ test("\"That move was wrong\" (Alt+W): files the last ten seconds as a Bug throu
   }
   const r2 = await api.fileWrongMove();
   assert.equal(r2.code, "NO_FEEDBACK");
-});
-
-test("racers(): only another active user viewing this scene could be planning (the canvas-less bot and other maps never)", () => {
-  const forced = F.CONFIG.debug["pentaryn-movement.publishFirst"];
-  delete F.CONFIG.debug["pentaryn-movement.publishFirst"];
-  const gm = game.users.get(GM);
-  const saved = gm.viewedScene;
-  try {
-    gm.viewedScene = null;                          // the headless bot: no canvas, never views a scene
-    assert.equal(reserve.racers({ id: SCENE }), false);
-    gm.viewedScene = "otherScene";
-    assert.equal(reserve.racers({ id: SCENE }), false, "on another map");
-    gm.viewedScene = SCENE;
-    assert.equal(reserve.racers({ id: SCENE }), true);
-    const st = reserve.status();
-    assert.ok(st.alone >= 2 && st.racing >= 1, JSON.stringify(st));
-  } finally {
-    gm.viewedScene = saved;
-    F.CONFIG.debug["pentaryn-movement.publishFirst"] = forced;
-  }
 });
 
 test("migrateSettings: the active GM carries groupMovement over to groupDrags and deletes the old row; every client drops the folded rows", async () => {

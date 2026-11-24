@@ -16,19 +16,14 @@
  *   pathfind-core.mjs    PURE A*, string pulling and corner arcs (drag pathfinding, 0.3.0)
  *   pathfind-adapter.mjs a Token and its drag options → the step tests the search uses (reads only)
  *   pathfind.mjs         the feature: wraps Token#findMovementPath
- *   motion-core.mjs      PURE trajectories, conflicts, waves, the cell chain, the group / click decision tables (0.4.0)
- *   group-core.mjs       PURE group planning: rest slots, routes, start delays (0.4.0)
+ *   motion-core.mjs      PURE trajectories, the cell chain, the group / click decision tables (0.4.0)
+ *   group-core.mjs       PURE candidates, cuts, the flood, one undo entry per move (0.4.0)
  *   group-adapter.mjs    tokens and drag contexts → member records and oracles (reads only)
- *   group.mjs            the feature: wraps Token#_prepareDragLeftDropUpdates (group movement)
+ *   sequence-core.mjs    PURE tokens that start stacked (0.8.0)
+ *   file.mjs             the feature: a group drag out of combat, which tokens move together (0.9.0)
+ *   drop.mjs             the feature: wraps Token#_prepareDragLeftDropUpdates (single drops, groups, a fight's every square; 0.9.0)
  *   stop.mjs             the feature: wraps Token#_onClickLeft (click to stop)
- *   reserve-core.mjs     PURE server-ordered reservations and each move's place in that order (0.6.0)
- *   reserve-adapter.mjs  the reservation registry every client keeps (0.6.0)
- *   guard-core.mjs       PURE runtime yield guard: who yields, the look ahead, the yield's clock (0.7.0)
- *   guard.mjs            the feature: the runtime yield guard (a ticker while this client moves tokens; out of combat)
- *   lifecycle-core.mjs   PURE one state machine per move, one 10 s deadline (0.8.0)
- *   sequence-core.mjs    PURE a fight's group move by space, and tokens that start stacked (0.8.0)
  *   telemetry-core.mjs   PURE the telemetry ring buffer and the circuit breaker's rule (0.8.0)
- *   cue-ui.mjs           UI the waiting cue on a held token (0.8.0)
  *   telemetry.mjs        the feature: telemetry, the circuit breaker, the "that move was wrong" key (0.8.0)
  *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
@@ -53,13 +48,13 @@ import { buildApiFor } from "./api.mjs";
 import * as ghost from "./ghost.mjs";
 import * as ghostCombat from "./ghost-combat.mjs";
 import * as pathfind from "./pathfind.mjs";
-import * as group from "./group.mjs";
+import * as drop from "./drop.mjs";
+import * as file from "./file.mjs";
 import * as stop from "./stop.mjs";
-import * as guard from "./guard.mjs";
 import * as telemetry from "./telemetry.mjs";
 
-/** Features in load order (ghost first: its hooks have always registered first; pathfind 0.3.0; group and stop 0.4.0; guard 0.7.0; telemetry 0.8.0, last: the others call it only at run time). */
-const FEATURES = [ghost, ghostCombat, pathfind, group, stop, guard, telemetry];
+/** Features in load order (ghost first: its hooks have always registered first; pathfind 0.3.0; the drop (0.9.0, was group) and stop 0.4.0; the file 0.9.0; telemetry 0.8.0, last: the others call it only at run time). */
+const FEATURES = [ghost, ghostCombat, pathfind, drop, file, stop, telemetry];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

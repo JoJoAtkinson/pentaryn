@@ -14,13 +14,13 @@
           "doc": "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene"
         }
       ],
-      "returns": "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, sceneId, version, settings: { <key>: scope }, combatExempt: string[], group: { enabled, fight, patched: { drop, click }, regime, limits, groups, runs, last, fallbacks, resumed, fightResumed, flushed, stopped, cut, held, step, undo, reservations, perf }, stop: { last }, guard: { enabled, watching, held, ticking, fired, standing, movers, resumed, rerouted, noRoute, rested, aside, cancelled, errors, perf, last }, assist: { tripped }, migrated }",
+      "returns": "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, sceneId, version, settings: { <key>: scope }, combatExempt: string[], group: { enabled, fight, patched: { drop, click }, regime, limits, groups, last, fallbacks, stopped, cut, step, undo, told, perf }, stop: { last }, assist: { tripped }, migrated }",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods are wrapped, every setting key with its scope (ghost and ownedOnTop are client settings), and combatExempt: the ids of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks). group (0.4.0; 0.8.0 tiers): group drags on this client — enabled (tier B, groupDrags), fight (tier C, fightGroupDrags), whether the drop and click wraps are in, the regime of your controlled tokens (combat when one is in a started combat, else free), the limits (life: the one deadline), groups still walking with their run's state and time left, the last drop (mode, reason, result, ms, async, waves, cut, stayed, short, replans, stacked) and the last few reasons a drop went to core; resumed / stopped / cut (0.4.6): when a reload last picked up unsent waves, a turn change last stopped a group, a door shut or a wall raised last cut moves this client started; flushed (0.8.0): when the tab last went to the background and sent its groups' waves at once; held (0.4.12): when a wave last waited for a token outside its group walking through its way; step (0.8.3): the last next square of a move this client drove that it did not send (why: standing, unrendered, wallUnrendered); hold (0.8.5): fight steps held for a token still moving (held, resumed, gaveUp, live, last); undo (0.8.3): the last move whose undo entries were merged into one. stop.last (0.4.11): this client's last click-stop (tokenId, name, how, via: click / board / door / api, members, whole; late (0.5.1): how many of its group's late waves it stopped after), or null. guard (0.7.0): the runtime yield guard on this client — how many of its moves it watches and holds, how often it fired (against standing tokens / movers; late: inside a fight's current square), resumed, re-routed (noRoute: no way round), rested (8 s or the move's deadline), backed out (aside), was cancelled by a stop; perf (ticks, checks, maxMs, over4, over16) and the last firings; out of combat only since 0.8.0. assist.tripped (0.8.0): the circuit breaker's trip on this client ({ at, why }) or null; migrated: what migrateSettings carried over at ready."
+      "doc": "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods are wrapped, every setting key with its scope (ghost and ownedOnTop are client settings), and combatExempt: the ids of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks). group (0.4.0; 0.9.0 the drop): drag help on this client — enabled (tier B, groupDrags), fight (false: a group drag in a fight is refused with a notice in 0.9.0), whether the drop and click wraps are in, the regime of your controlled tokens (combat when one is in a started combat, else free), the limits, how many groups this client holds (a click on one member stops them all), the last drop (mode, reason, result, ms, async, stacked, plan) and the last few reasons a drop went to core; stopped: the last stop of a group; cut: the last wall raised or door shut that stopped moves this client drives (out of combat, where drawn); step (0.8.3): the last next square of a move this client drove that it did not send (why: wall, standing, unrendered, wallUnrendered); undo (0.8.3): the last move whose undo entries were merged into one; told (0.9.0): the last notices this client showed (kind, reason, text); perf: drops handled, the last and longest (ms). stop.last (0.4.11): this client's last click-stop (tokenId, name, how, via: click / board / door / api, members, whole), or null. assist.tripped (0.8.0): the circuit breaker's trip on this client ({ at, why }) or null; migrated: what migrateSettings carried over at ready."
     },
     {
       "path": "ghostFor",
@@ -230,7 +230,7 @@
         "the token's pending movement (stopMovement, in combat)"
       ],
       "since": "0.4.0",
-      "doc": "Stop a moving token as a click on it would: out of combat it is put where it is drawn; in a started combat the client that started the move stops it at the next square (stopMovement). A GM asks that client directly (the pentaryn-movement.stopOwn query: GM sender only), so a GM may stop any move; a player asks the active GM through this row's relay, which stops it only when it started the move and the sender owns the token (NOT_INITIATOR / NOT_OWNER otherwise). Stopping a member of a group this client sent stops the group and cancels its unsent waves. Never held back by the 400 ms arming a click waits for. NOT_MOVING when it is not moving or you cannot control it."
+      "doc": "Stop a moving token as a click on it would: out of combat it is put where it is drawn; in a started combat the client that started the move stops it at the next square (stopMovement). A GM asks that client directly (the pentaryn-movement.stopOwn query: GM sender only), so a GM may stop any move; a player asks the active GM through this row's relay, which stops it only when it started the move and the sender owns the token (NOT_INITIATOR / NOT_OWNER otherwise). Stopping a member of a group stops every member of it this client owns. Never held back by the 400 ms arming a click waits for. NOT_MOVING when it is not moving or you cannot control it."
     },
     {
       "path": "telemetry",
@@ -242,13 +242,13 @@
           "doc": "only the events of the last that many seconds (default: all kept)"
         }
       ],
-      "returns": "{ user, summary: { counts, plan: { n, medianMs, p95Ms, maxMs }, fallbacks, notices, firesPerPlan, failures }, tripped, cued, events: [{ n, t, ago, kind, ... }], filed }",
+      "returns": "{ user, summary: { counts, plan: { n, medianMs, p95Ms, maxMs }, fallbacks, notices, firesPerPlan, failures }, tripped, events: [{ n, t, ago, kind, ... }], filed }",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "since": "0.8.0",
-      "doc": "This client's drag-help telemetry (a ring buffer of the last 400 events): plans with their time, guard fires, yields, fallbacks to core's move, frame stalls while it moved tokens, lost reservation races, stops, cuts, notices (their reason codes) and errors; the circuit breaker's state and the tokens showing the waiting cue."
+      "doc": "This client's drag-help telemetry (a ring buffer of the last 400 events): plans with their time, fallbacks to core's move, frame stalls while it moved tokens, stops, cuts, notices (their reason codes) and errors; the circuit breaker's state."
     },
     {
       "path": "reportTelemetry",
@@ -487,71 +487,27 @@
     },
     {
       "name": "setup",
-      "label": "setup: wrap _prepareDragLeftDropUpdates (group movement)"
-    },
-    {
-      "name": "ready",
-      "label": "ready: resume a group's waves and a fight's walks after a reload"
-    },
-    {
-      "name": "moveToken",
-      "label": "moveToken: a fight walk's squares still to go (reload)"
-    },
-    {
-      "name": "stopToken",
-      "label": "stopToken: a fight walk stopped has nothing to resume"
+      "label": "setup: wrap _prepareDragLeftDropUpdates (the drop)"
     },
     {
       "name": "preMoveToken",
-      "label": "preMoveToken: the next square of a move this client drives (standing tokens, walls, an undrawn token)"
-    },
-    {
-      "name": "moveToken",
-      "label": "moveToken: a fight member's arrival sets off the next (tier C)"
-    },
-    {
-      "name": "stopToken",
-      "label": "stopToken: a fight member stopped has arrived (tier C)"
+      "label": "preMoveToken: the next square of a move this client drives (walls now, an undrawn token, standing tokens)"
     },
     {
       "name": "updateToken",
-      "label": "updateToken: a turn change stops the whole group"
+      "label": "updateToken: one undo entry for one move (a fight's squares)"
+    },
+    {
+      "name": "createWall",
+      "label": "createWall: stop moves across a new wall"
+    },
+    {
+      "name": "updateWall",
+      "label": "updateWall: stop moves across a shut door"
     },
     {
       "name": "updateToken",
       "label": "updateToken: which group a move belongs to (click stops the group)"
-    },
-    {
-      "name": "updateToken",
-      "label": "updateToken: a member teleported mid-walk leaves its group (the teleport wins)"
-    },
-    {
-      "name": "updateToken",
-      "label": "updateToken: one undo entry for one move (a group's waves, a fight's squares)"
-    },
-    {
-      "name": "updateToken",
-      "label": "updateToken: a member another user stopped (the rest stop short behind it)"
-    },
-    {
-      "name": "updateToken",
-      "label": "updateToken: a move's reservation (the server's order)"
-    },
-    {
-      "name": "moveToken",
-      "label": "moveToken: a reserved token sets off, walks on, or its reservation goes"
-    },
-    {
-      "name": "stopToken",
-      "label": "stopToken: a stopped token's reservation goes"
-    },
-    {
-      "name": "createWall",
-      "label": "createWall: cut moves across a new wall"
-    },
-    {
-      "name": "updateWall",
-      "label": "updateWall: cut moves across a shut door"
     },
     {
       "name": "setup",
@@ -574,36 +530,8 @@
       "label": "refreshToken: a stopped token stays drawn where it stopped until its displace lands (H4-06)"
     },
     {
-      "name": "moveToken",
-      "label": "moveToken: the runtime yield guard watches the moves this client started"
-    },
-    {
-      "name": "stopToken",
-      "label": "stopToken: a stop the guard did not make lets go of the token"
-    },
-    {
-      "name": "canvasTearDown",
-      "label": "canvasTearDown: the yield guard forgets this scene's moves"
-    },
-    {
-      "name": "updateWall",
-      "label": "updateWall: the guard's wall watch notes a door shut"
-    },
-    {
-      "name": "createWall",
-      "label": "createWall: the guard's wall watch notes a wall raised"
-    },
-    {
       "name": "canvasReady",
       "label": "canvasReady: telemetry watches for frame stalls while this client moves tokens"
-    },
-    {
-      "name": "canvasTearDown",
-      "label": "canvasTearDown: the waiting cues go with the scene"
-    },
-    {
-      "name": "refreshToken",
-      "label": "refreshToken: a held token keeps its waiting cue"
     }
   ],
   "patches": [
