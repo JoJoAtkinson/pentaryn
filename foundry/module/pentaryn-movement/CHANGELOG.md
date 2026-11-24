@@ -8,6 +8,29 @@ on its way or named in a notice, and nothing ever waits for another mover. Two t
 the branch `movement-0.9`; `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until the GPU round of §4 step 8.
 Plan §17.
 
+### Step 3 — B1, the file
+
+- **[declared] Start delays on B0's plan** (`file-core.mjs` `staggerFile`): the members that move, in `sequence`
+  order, each take the first 150 ms step at which they meet none of the members timed before them; the last start is
+  at most 4 s after the drop (less the plan's time); one with no clear step under that goes at the least crowded one
+  (never a cut, never a second pass). On open ground every delay is 0.
+- **[declared] Waves by setTimeout:** the members at 0 go in the drop's own update, the rest in later waves
+  (`file.mjs` holds the timers on the group; `drop.mjs` `sendWave` sends them, with the group's option for undo and the
+  other clients). A wave skips a member no longer at its start, does not send one whose way a wall or a shut door now
+  crosses (it stays, named), and walks one only as far as it is free of a token come to rest in its way.
+- **[declared] The three handlers, one primitive (stop where drawn):** a click on any member stops the whole group
+  (decision 3 as revised 2026-11-24: on the dragger's client every member and its unsent waves; elsewhere the one
+  clicked, and the dragger's client stops the rest when it sees that stop); a wall or door change stops this client's
+  walkers whose way it crosses (step 1) and every wave after it is tested against the walls then; a hidden tab sends
+  its remaining waves at once.
+- `planGroup` reports each member's `delay`, the start order (`starts`) and the last start (`total`);
+  `status().group` adds `pending` (unsent waves), `wave` (the last later wave) and `flushed` (the last hidden-tab
+  flush); `last.plan` adds `waves`, `total`, `crowded`, `timingMs`.
+- Gate (`test/file-core.test.mjs`, B0's 800 seeded drops): every delay a wave step, the last at most 4 s (largest
+  seen 1,050 ms); 200 open-room formation drags all at 0; B0's properties unchanged. Two movers meeting (soft,
+  reported): 103 drops all at once, 10 staggered; none deeper staggered. `test/drop.test.mjs`: the door drop in
+  waves, the click, a foreign stop, the hidden-tab flush, a wave skipping a moved member and a door shut since.
+
 ### Step 2 — B0, the floor
 
 - **[declared] A group drag out of combat is planned in one pass** (`file-core.mjs`, pure; glue in `file.mjs`): per

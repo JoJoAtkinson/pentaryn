@@ -159,6 +159,14 @@ function dropWith(grabbed, contexts) {
   return grabbed._prepareDragLeftDropUpdates({ interactionData: { contexts } });
 }
 const sent = from => F.calls.slice(from).filter(c => c.op === "scene.update");
+/** Every member's waypoints of a file: the drop's own update, then its later waves (after the clock ran 4.5 s). */
+function fileMoves(out, from) {
+  const by = {};
+  for (const [id, m] of Object.entries(out?.[1]?.movement ?? {})) by[id] = { waypoints: m.waypoints, wave: 0 };
+  tickBy(4500);
+  sent(from).forEach((c, k) => { for (const [id, m] of Object.entries(c.options?.movement ?? {})) by[id] = { waypoints: m.waypoints, wave: k + 1, options: c.options }; });
+  return by;
+}
 
 // The page's visibility (0.8.0: a tab going to the background sends its groups' waves at once).
 const visListeners = new Set();
@@ -1878,7 +1886,7 @@ test("H2-08: a fast flick whose last pointer move core skipped plans to the poin
 });
 
 
-test("0.9.0 B0: a group through a door: each member its own route and spot past it, all in the drop's one update (no waves, no timers), never resting on another", () => {
+test("0.9.0 B1: a group through a door: each member its own route and spot past it; the first in the drop's own update, the rest in waves within 4 s, never resting on another", () => {
   combatFlag = false;
   clock.step = 0;
   const ts = [makeToken("b0dA000000000001", 400, 200), makeToken("b0dB000000000001", 300, 200), makeToken("b0dC000000000001", 500, 200)];
@@ -1889,14 +1897,18 @@ test("0.9.0 B0: a group through a door: each member its own route and spot past 
     assert.ok(Array.isArray(out), "planned at the drop");
     const [updates, options] = out;
     assert.equal(options.method, "dragging");
-    assert.deepEqual(updates.map(u => u._id).sort(), ts.map(t => t.document.id).sort(), "every member in the drop's own update");
+    assert.ok(updates.some(u => u._id === ts[0].document.id), "the grabbed one sets off with the drop");
     assert.equal(typeof options.pentarynMovementGroup, "string", "tagged as one group");
     assert.ok(api.status().group.groups >= 1, "held as one group (a click on one stops them all)");
+    const total = api.status().group.last.plan.total;
+    assert.ok(total <= 4000, `the last wave within 4 s: ${total}`);
+    const moves = fileMoves(out, from);
+    assert.deepEqual(Object.keys(moves).sort(), ts.map(t => t.document.id).sort(), "every member sent by 4 s");
+    for (const c of sent(from)) assert.equal(c.options.pentarynMovementGroup, options.pentarynMovementGroup, "a wave carries its group");
     tickBy(10000);
-    assert.equal(sent(from).length, 0, "nothing sent later: no waves");
     const ends = [];
     for (const t of ts) {
-      const wps = options.movement[t.document.id].waypoints;
+      const wps = moves[t.document.id].waypoints;
       const path = [t.document._source, ...wps];
       for (let k = 1; k < path.length; k++) assert.equal(crossing(center(path[k - 1]), center(path[k])).length, 0, `${t.document.id} leg ${k} crosses a wall`);
       assert.equal(wps.at(-1).explicit, true);
@@ -1904,7 +1916,7 @@ test("0.9.0 B0: a group through a door: each member its own route and spot past 
       assert.ok(end.y > 400, `${t.document.id} ends past the door: ${JSON.stringify(end)}`);
       ends.push(end);
     }
-    assert.deepEqual([options.movement.b0dA000000000001.waypoints.at(-1).x, options.movement.b0dA000000000001.waypoints.at(-1).y], [400, 600], "the grabbed one lands where dropped");
+    assert.deepEqual([moves.b0dA000000000001.waypoints.at(-1).x, moves.b0dA000000000001.waypoints.at(-1).y], [400, 600], "the grabbed one lands where dropped");
     for (let i = 0; i < ends.length; i++) for (let j = i + 1; j < ends.length; j++) {
       assert.ok(Math.hypot(ends[i].x - ends[j].x, ends[i].y - ends[j].y) >= S - 1e-6, `no rest overlap: ${JSON.stringify(ends)}`);
     }
@@ -1919,6 +1931,93 @@ test("0.9.0 B0: a group through a door: each member its own route and spot past 
   }
 });
 
+/** The B1 door drop: three members through the one-square door; the ones not in the drop's update wait in waves. */
+function fileDrop(tag) {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken(`b1${tag}A00000000001`, 400, 200), makeToken(`b1${tag}B00000000001`, 300, 200), makeToken(`b1${tag}C00000000001`, 500, 200)];
+  const others = keepOnly(ts);
+  const from = F.calls.length;
+  const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+  const now = new Set(out[0].map(u => u._id));
+  const waiting = ts.filter(t => !now.has(t.document.id));
+  assert.ok(waiting.length >= 1, `the door files them: ${JSON.stringify(api.status().group.last.plan)}`);
+  assert.deepEqual(api.status().group.pending.flatMap(w => w.ids).sort(), waiting.map(t => t.document.id).sort(), "the waiting ones are this client's pending waves");
+  const restore = () => { for (const t of ts) sceneTokens.delete(t.document.id); for (const [k, v] of others) sceneTokens.set(k, v); tickBy(60000); };
+  return { ts, out, from, now, waiting, restore };
+}
+
+test("0.9.0 B1 handlers: a click on one member stops the whole group, its unsent waves too", async () => {
+  const f = fileDrop("c");
+  try {
+    const walker = f.ts.find(t => f.now.has(t.document.id));
+    walker.animationContexts.set(walker.movementAnimationName, {});
+    const r = await api.stop(walker.document);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    assert.deepEqual(api.status().group.pending, [], "no wave left to send");
+    tickBy(5000);
+    assert.equal(sent(f.from).length, 0, "the waiting members never set off");
+  } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
+});
+
+test("0.9.0 B1 handlers: another user's stop of one member (its displace) makes the dragger's screen stop the rest where they are drawn and drop its waves", () => {
+  const f = fileDrop("f");
+  try {
+    const clicked = f.ts.find(t => f.now.has(t.document.id));
+    const mate = f.ts.find(t => t !== clicked && f.now.has(t.document.id)) ?? null;
+    if (mate) mate.animationContexts.set(mate.movementAnimationName, {});
+    const from = F.calls.length;
+    F.Hooks.callAll("updateToken", clicked.document, { x: 400, y: 300 }, { animate: false, pentarynMovementStop: true }, "otherUser000001");
+    assert.deepEqual(api.status().group.pending, [], "its waves dropped");
+    if (mate) assert.ok(F.calls.slice(from).some(c => c.op === "move" && c.id === mate.document.id && c.options?.pentarynMovementStop), "the walking mate stopped where drawn");
+    assert.ok(!F.calls.slice(from).some(c => c.op === "move" && c.id === clicked.document.id), "the clicked one is the clicker's");
+    assert.equal(api.status().group.stopped.why, "foreign");
+    tickBy(5000);
+    assert.equal(sent(f.from).length, 0);
+    // This client's own stop write is not a foreign stop (the click already stopped the group here).
+    const f2 = fileDrop("s");
+    try {
+      F.Hooks.callAll("updateToken", f2.ts[0].document, { x: 400, y: 300 }, { animate: false, pentarynMovementStop: true }, game.user.id);
+      assert.ok(api.status().group.pending.length >= 1, "its own write leaves the waves alone");
+    } finally { f2.restore(); }
+  } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
+});
+
+test("0.9.0 B1 handlers: a tab going to the background sends its remaining waves at once", () => {
+  const f = fileDrop("h");
+  try {
+    goHidden();
+    const ups = sent(f.from);
+    assert.equal(ups.length, 1, "one update");
+    assert.deepEqual(ups[0].ids.sort(), f.waiting.map(t => t.document.id).sort());
+    assert.deepEqual(api.status().group.pending, []);
+    assert.ok(api.status().group.flushed.members >= 1);
+    tickBy(5000);
+    assert.equal(sent(f.from).length, 1, "nothing twice");
+  } finally { f.restore(); }
+});
+
+test("0.9.0 B1: a wave skips a member no longer at its start, and one whose way a door shut since crosses (it stays where it is drawn, named)", () => {
+  const f = fileDrop("w");
+  try {
+    const [moved, ...rest] = f.waiting;
+    moved.document._source.x += S;                       // dragged elsewhere meanwhile
+    tickBy(4500);
+    assert.ok(!sent(f.from).some(c => c.ids.includes(moved.document.id)), "the moved one is skipped");
+    for (const t of rest) assert.ok(sent(f.from).some(c => c.ids.includes(t.document.id)), "the others go");
+  } finally { f.restore(); }
+  const g = fileDrop("d");
+  world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
+  try {
+    const from = F.calls.length;
+    tickBy(4500);
+    assert.equal(sent(g.from).length, 0, "nothing sent through the shut door");
+    const told = F.calls.slice(from).filter(c => c.op === "notify").map(c => c.message);
+    assert.ok(told.some(m => /named\.stayed|Stayed where they stand/.test(m)), `named: ${JSON.stringify(told)}`);
+    assert.ok(api.status().group.wave.shut >= 1, JSON.stringify(api.status().group.wave));
+  } finally { world.walls.pop(); g.restore(); }
+});
+
 test("0.9.0 B0: no route crosses a token standing outside the drop, and no member rests on it", () => {
   combatFlag = false;
   clock.step = 0;
@@ -1929,10 +2028,12 @@ test("0.9.0 B0: no route crosses a token standing outside the drop, and no membe
   const saved = F.canvas.tokens.placeables;
   F.canvas.tokens.placeables = [...ts, rest];
   try {
+    const from = F.calls.length;
     const out = dropWith(ts[0], contextsFor(ts, 600, 0));
+    const moves = fileMoves(out, from);
     const c = center(rest.document._source);
     for (const t of ts) {
-      const wps = out[1].movement[t.document.id].waypoints;
+      const wps = moves[t.document.id].waypoints;
       let prev = center(t.document._source);
       for (const p of wps) { const q = center(p); assert.ok(avoidDist({ x: c.x, y: c.y, r: 99 }, prev, q) >= 99 - 1e-6, `${t.document.id} through the standing token: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`); prev = q; }
       assert.ok(Math.hypot(prev.x - c.x, prev.y - c.y) >= S - 1e-6, "not resting on it");

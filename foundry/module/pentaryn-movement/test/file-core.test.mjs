@@ -1,4 +1,5 @@
-// B0, the floor of a group drag out of combat (file-core.mjs, 0.9.0; Fable's review 2 §4 step 2). Its gate as property
+// B0, the floor of a group drag out of combat, and B1's start delays on top of it (file-core.mjs, 0.9.0; Fable's
+// review 2 §4 steps 2 and 3). Its gate as property
 // tests on random ASCII floors and the hard-case dungeon, routed with the real pathfind-core A* (test/fixtures/grid.mjs):
 // every member is sent or named; no route crosses a token standing outside the drop or a slot given out before it; no
 // two slots overlap (nor a slot and a token at rest). Seeded: a failure names its seed.
@@ -6,8 +7,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld, member } from "./fixtures/grid.mjs";
 import { DUNGEON } from "./fixtures/dungeon.mjs";
-import { FILE, candidatesFor, clearOf, orderOf, planFile, routeEnters, wayToPoint } from "../file-core.mjs";
-import { dist } from "../motion-core.mjs";
+import { FILE, STAGGER, candidatesFor, clearOf, orderOf, planFile, routeEnters, staggerFile, wayToPoint } from "../file-core.mjs";
+import { delayed, dist, minSeparation, trajectory } from "../motion-core.mjs";
 
 const EPS = 1e-6;
 
@@ -261,4 +262,132 @@ test("B0 gate on the hard-case dungeon (200 seeds): the same properties through 
   }
   if (process.env.PM_STATS) console.log({ dungeon: { reachable, sent } });
   assert.ok(sent / reachable >= 0.9, `${sent} of ${reachable} members that could reach their spot alone are sent`);
+});
+
+/* B1, the file (§4 step 3): capped start delays on B0's routes. */
+
+/** B1's walks for a plan: the members that move, in plan order. */
+const walksOf = (sc, plan) => plan.order.map(id => sc.members.find(m => m.id === id))
+  .filter(m => plan.members[m.id].points.length >= 2)
+  .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed }));
+
+/** B1's gate for one plan: every delay a wave step, the last within the cap, every mover timed; B0's plan untouched. */
+function checkStagger(sc, plan, t, capMs = STAGGER.capMs) {
+  const why = `seed ${sc.seed}`;
+  const walks = walksOf(sc, plan);
+  assert.deepEqual(Object.keys(t.delays).sort(), walks.map(w => w.id).sort(), `${why}: every member that moves has a delay`);
+  for (const [id, d] of Object.entries(t.delays)) {
+    assert.ok(d >= 0 && d <= capMs + 1e-6, `${why}: ${id} starts at ${d} ms (cap ${capMs})`);
+    assert.ok(Math.abs(d / STAGGER.stepMs - Math.round(d / STAGGER.stepMs)) < 1e-9, `${why}: ${id}'s delay ${d} is a wave step`);
+  }
+  assert.ok(t.total <= capMs + 1e-6, `${why}: total stagger ${t.total} ms`);
+  assert.deepEqual([...t.order].sort(), walks.map(w => w.id).sort(), `${why}: the start order holds every mover`);
+}
+
+/** How deep two members of a file overlap while both move (soft, reported): the largest depth over every pair. */
+function moverDepth(walks, delays) {
+  let worst = 0;
+  const trs = walks.map(w => ({ w, tr: delayed(trajectory(w.points, { speed: w.speed }), delays[w.id] ?? 0) }));
+  for (let i = 0; i < trs.length; i++) for (let j = i + 1; j < trs.length; j++) {
+    worst = Math.max(worst, trs[i].w.r + trs[j].w.r - minSeparation(trs[i].tr, trs[j].tr));
+  }
+  return worst;
+}
+
+test("B1: on open ground every delay is 0 (a formation dragged across an empty room)", () => {
+  const g = gridWorld(`
+####################
+#..................#
+#..................#
+#..................#
+#..................#
+#..................#
+#..................#
+#..................#
+####################`);
+  for (let seed = 1; seed <= 200; seed++) {
+    const rand = rng(seed);
+    const n = 2 + Math.floor(rand() * 6);
+    const delta = { x: Math.floor(rand() * 9) - 4, y: Math.floor(rand() * 5) - 2 };
+    if (!delta.x && !delta.y) delta.x = 3;
+    // A loose formation: members two squares apart in a 3-wide block, dropped where it fits whole.
+    const ms = [];
+    for (let k = 0; k < n; k++) ms.push(member(`m${k}`, { x: 7.5 + 2 * (k % 3), y: 2.5 + 2 * Math.floor(k / 3) }, delta));
+    const sc = { seed, g, members: ms, standing: [], anchorId: "m0" };
+    const plan = planFile({ members: ms, anchorId: "m0", standing: [] }, oraclesOf(g));
+    check(sc, plan);
+    const t = staggerFile(walksOf(sc, plan));
+    checkStagger(sc, plan, t);
+    assert.deepEqual(Object.values(t.delays).filter(d => d !== 0), [], `seed ${seed}: open ground, all at 0: ${JSON.stringify(t.delays)}`);
+    assert.equal(t.total, 0);
+  }
+});
+
+test("B1: through one door the file staggers (the deeper ones wait their turn), the last within 4 s, and the movers meet less than all at once", () => {
+  const g = gridWorld(`
+############
+#..........#
+#..........#
+#####.######
+#..........#
+#..........#
+############`);
+  const delta = { x: 0, y: 3 };
+  const ms = [member("a", { x: 5.5, y: 1.5 }, delta), member("b", { x: 4.5, y: 1.5 }, delta), member("c", { x: 6.5, y: 1.5 }, delta), member("d", { x: 5.5, y: 2.5 }, delta)];
+  const sc = { seed: "door", g, members: ms, standing: [], anchorId: "a" };
+  const plan = planFile({ members: ms, anchorId: "a", standing: [] }, oraclesOf(g));
+  check(sc, plan);
+  const walks = walksOf(sc, plan);
+  const t = staggerFile(walks);
+  checkStagger(sc, plan, t);
+  assert.ok(t.total > 0, `a door files them: ${JSON.stringify(t.delays)}`);
+  assert.equal(Object.values(t.delays).filter(d => d === 0).length >= 1, true, "someone goes at once");
+  const zero = Object.fromEntries(walks.map(w => [w.id, 0]));
+  assert.ok(moverDepth(walks, t.delays) <= moverDepth(walks, zero) + 1e-6, `B1 no worse than B0: ${moverDepth(walks, t.delays)} vs ${moverDepth(walks, zero)}`);
+});
+
+test("B1: a cap shorter than the file's needs is honoured (never a cut): the crowded ones go at the least crowded step under it", () => {
+  const g = gridWorld(`
+############
+#..........#
+#..........#
+#####.######
+#..........#
+#..........#
+############`);
+  const delta = { x: 0, y: 3 };
+  const ms = [0, 1, 2, 3, 4, 5].map(k => member(`m${k}`, { x: 2.5 + k, y: 1.5 + (k % 2) }, delta));
+  const sc = { seed: "cap", g, members: ms, standing: [], anchorId: "m0" };
+  const plan = planFile({ members: ms, anchorId: "m0", standing: [] }, oraclesOf(g));
+  const t = staggerFile(walksOf(sc, plan), { capMs: 300 });
+  checkStagger(sc, plan, t, 300);
+  for (const w of walksOf(sc, plan)) assert.ok(plan.members[w.id].points.length >= 2, "every planned member still goes");
+});
+
+test("B1 gate (600 seeded drops on random floors, 200 in the dungeon): total stagger at most 4 s; every mover timed; B0's properties unchanged; mover overlap reported, B1 no worse than B0", () => {
+  let worse = 0, b0 = 0, b1 = 0, filed = 0, drops = 0, maxTotal = 0, met0 = 0, met1 = 0;
+  for (const [from, to, map] of [[1, 600, null], [1001, 1200, DUNGEON]]) {
+    for (let seed = from; seed <= to; seed++) {
+      const sc = scenario(seed, map);
+      const plan = planFile({ members: sc.members, anchorId: sc.anchorId, standing: sc.standing }, oraclesOf(sc.g));
+      check(sc, plan);
+      const walks = walksOf(sc, plan);
+      const t = staggerFile(walks);
+      checkStagger(sc, plan, t);
+      drops += 1;
+      maxTotal = Math.max(maxTotal, t.total);
+      if (t.total > 0) filed += 1;
+      const d0 = moverDepth(walks, Object.fromEntries(walks.map(w => [w.id, 0])));
+      const d1 = moverDepth(walks, t.delays);
+      b0 = Math.max(b0, d0); b1 = Math.max(b1, d1);
+      if (d0 > 0.05) met0 += 1;
+      if (d1 > 0.05) met1 += 1;
+      if (d1 > d0 + 1e-6) worse += 1;
+    }
+  }
+  if (process.env.PM_STATS) console.log({ stagger: { drops, filed, maxTotal, movers: { b0: met0, b1: met1 }, worstDepthB0: b0, worstDepthB1: b1, worse } });
+  assert.ok(maxTotal <= STAGGER.capMs, `max total ${maxTotal}`);
+  // Soft, measured: the deepest two-mover overlap of a drop is no deeper staggered than all at once, in nearly every drop.
+  assert.ok(worse <= drops * 0.05, `${worse} of ${drops} drops overlap deeper staggered than all at once`);
+  assert.ok(met1 <= met0, `drops where two movers meet: B1 ${met1}, B0 ${met0}`);
 });

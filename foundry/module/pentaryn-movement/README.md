@@ -67,19 +67,23 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
 - **Click a moving token to stop it** (always on) once it has moved 400 ms (a move you dropped; one another user
   started stops at once): out of combat it stops **exactly where it is drawn** (Joe, 2026-11-23); one whose body is
   across a door's line is carried just past the line along its own route. In a fight it finishes the square it is in,
-  so the movement spent stays exact; a GM may stop anyone's move. A click on one member of a group stops every member
-  of it you own.
+  so the movement spent stays exact; a GM may stop anyone's move. A click on any member of a moving group stops the
+  whole group (Joe, 2026-11-24): the dragger's screen stops the rest, and the members not yet sent stay where they
+  stand.
 - **In a fight, every square is checked before it is sent** (Joe, 2026-11-23): against the walls as they are now (a
   door shut mid-walk stops the token on the square it holds, charged for the squares it walked); never from a screen
   that no longer shows the token's map; never into a token standing still.
-- **A door shut or a wall raised across a walk out of combat** stops it where it is drawn.
-- **Tier B — several tokens out of combat** (`groupDrags`; 0.9.0 B0, the floor): at the drop every member gets its own
+- **A door shut or a wall raised across a walk out of combat** stops it where it is drawn; a group member not yet
+  sent whose way it crosses stays where it stands, named.
+- **Tier B — several tokens out of combat, the file** (`groupDrags`; 0.9.0): at the drop every member gets its own
   spot, the free one nearest its place in the formation that it can reach without going round the far side of a wall,
-  and a route round the tokens standing outside the drag and round the spots already given out; they all set off at
-  once in the drop's one update. Nobody rests on anybody, nobody walks through a token standing still or onto a
-  mate's spot; two members both moving may brush on the way. One with no spot it can reach stays where it stands and
-  is named: "Stayed where they stand, with no free spot they can reach: Talo." Nobody able to go is "No route there".
-  `planGroup(tokens, point)` dry-runs it. The file (start delays, filing through a door) is §4 step 3.
+  and a route round the tokens standing outside the drag and round the spots already given out. Then each gets a start
+  delay: on open ground all set off at once; through a door they file, each waiting only as long as it needs not to
+  meet the ones before it, and the last one is on its way within 4 s of the drop. Nobody rests on anybody, nobody
+  walks through a token standing still or onto a mate's spot; two members both moving may brush on the way. One with
+  no spot it can reach stays where it stands and is named: "Stayed where they stand, with no free spot they can reach:
+  Talo." Nobody able to go is "No route there". A tab sent to the background sends the waiting members at once.
+  `planGroup(tokens, point)` dry-runs it (each member's spot and start delay).
 - **Several tokens in a fight**: refused with "In a fight, drag one token at a time." until the fight file lands
   (one member at a time, each an exact single move).
 - **Tokens that start stacked stay stacked**: a rider on its mount walks its mount's way at its offset; a mount
@@ -185,7 +189,8 @@ Listens to (pinned in `test/golden/hooks.json`, in this order): `init` (once), `
 the scene's fog "explored", which drops it too), then the drop's (0.9.0, was group's) `setup` (once), `preMoveToken` (each
 next square of a move this client drives: the walls now, an undrawn token, standing tokens), `updateToken` (one undo
 entry per move), `createWall` and `updateWall` (a wall across a walk out of combat stops it where drawn); the file's
-`updateToken` (which group a move belongs to); stop's `setup` (once), `moveToken` (when a move started, for the 400 ms
+`updateToken` (which group a move belongs to; another user's stop of a member stops the group this client sent; a
+hidden tab's `visibilitychange` is a DOM listener, not a hook); stop's `setup` (once), `moveToken` (when a move started, for the 400 ms
 arming), `updateToken` (after an unanimated move, every client puts the token where the server has it),
 `canvasReady` (the board pointerdown fallback) and `refreshToken` (a stopped token stays drawn where it stopped);
 telemetry's `canvasReady`; and `ready` (once). 0.9.0 took out the reload resumes, the reservations, the runtime guard,
@@ -216,8 +221,9 @@ The first three carry the `__pentarynMovement` marker and go through the kit (`w
 
 Client-only: nothing is elected and nothing runs on one client for everyone. Each client decides
 ghost and the sort for its own user; a drop is planned and sent by the client that dropped it (never the headless GM,
-which has no canvas), in the drop's own update. Every client learns which tokens move together from that update's
-option `pentarynMovementGroup` (a click on one stops them all). Since 0.9.0 nothing coordinates two users' drags: two
+which has no canvas), in the drop's own update and its later waves. Every client learns which tokens move together,
+and who sent them, from those updates' option `pentarynMovementGroup`: a click on one member on any client stops it
+there, and the sender's client, seeing that stop, stops the rest. Since 0.9.0 nothing coordinates two users' drags: two
 movers may brush, and each client's next-square test acts only on the moves it drives (`doc.movement.user.isSelf`).
 The `stop` relay is answered by the active GM only for a
 move that client started; `stopOwn` by the client that started it, for a GM. A player's client clears its
@@ -270,13 +276,13 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `pathfind-core.mjs` | pure: A*, cost-preserving string pulling, corner arcs, the skip rules |
 | `pathfind-adapter.mjs` | a token and its drag options → wall / creature / cost step tests (reads only) |
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
-| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, cell chains, decision tables; candidates, cuts (`freePrefix`), the flood, one undo entry per move (the 0.8 planner still in it goes in §4 step 6) |
-| `sequence-core.mjs` | pure: tokens that start stacked (and tier C's sequence, unused since 0.9.0) |
+| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, decision tables; candidates, cuts (`freePrefix`), the flood, one undo entry per move (the 0.8 planner still in it goes in §4 step 6) |
+| `sequence-core.mjs` | pure: tokens that start stacked, and `sequence` (the file's start order) |
 | `telemetry-core.mjs`, `telemetry.mjs` | pure: the ring buffer, its summary and report text, the breaker's rule; the feature: telemetry, the circuit breaker, the Alt+W key (0.8.0) |
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and gap tests (reads only) |
-| `drop.mjs` | the feature (0.9.0, was `group.mjs`): the drop wrap — single drops, group drops, a fight's every square, a wall across a walk, riders, undo |
-| `file-core.mjs` | pure (0.9.0): B0 — every member's slot and route in one pass, the members that stay, the orders tried |
-| `file.mjs` | the feature (0.9.0): B0's oracles on the canvas (rest test, walk flood, routes round circles), the dry run, which tokens move together (a click on one stops them all) |
+| `drop.mjs` | the feature (0.9.0, was `group.mjs`): the drop wrap — single drops, the file's first update and its later waves, a fight's every square, a wall across a walk, riders, undo |
+| `file-core.mjs` | pure (0.9.0): B0 — every member's slot and route in one pass, the members that stay, the orders tried; B1 — the capped start delays (`staggerFile`) |
+| `file.mjs` | the feature (0.9.0): B0's oracles on the canvas (rest test, walk flood, routes round circles), the dry run, which tokens move together, the waves' timers and the hidden-tab flush, the group-wide stop |
 | `stop.mjs` | the feature: the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `styles/movement.css` | the dimmed combat badge (`.pm-blocked`) |
@@ -291,8 +297,10 @@ one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equ
 `pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-core.test`
 (the 0.8 planner's unit acceptance tests on ASCII floors, until §4 step 6), `file-core.test` (B0's gate: 800 seeded
 drops on random floors and the hard-case dungeon, every member sent or named, no route through a standing token or an
-earlier slot, no two at rest overlapping) and `drop.test` (the drop and click wraps, B0 on the synthetic board, and the
-0.9.0 step 1 gate: 60 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
+earlier slot, no two at rest overlapping; B1's gate on the same 800: every delay a wave step, the last within 4 s,
+open ground all 0, two movers meeting in fewer drops than all at once) and `drop.test` (the drop and click wraps, the
+file on the synthetic board with its three handlers, and the 0.9.0 step 1 gate: 60 seeded fight drags charged exactly
+5 ft a square, a door shut mid-walk);
 `sequence-core.test` (stacks, and tier C's sequence), `telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). The 0.8
 simulator modelled the glue 0.9.0 deleted and went with it; §4 step 5 rebuilds it on the real cores (`test/sim/`

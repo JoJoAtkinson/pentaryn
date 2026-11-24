@@ -1,7 +1,7 @@
 ---
 title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.8.3"
 status: built
-last_modified: 2026-11-23
+last_modified: 2026-11-24
 tags: [foundry, plans, movement, pathfinding]
 ---
 
@@ -734,4 +734,44 @@ named. On the module's synthetic board (`test/drop.test.mjs`) a group through a 
 with nothing sent later, a sealed-off member is named, a fight's group drag is refused; eight members through a door
 plan in 7 ms p50 / 13 ms p95 (Node). Not yet measured: the plan's time on a GPU page for 8 members (step 8's
 "under 100 ms"); a maze can reach the 1.5 s budget, synchronously, which is the next thing to watch.
+
+
+### 17.3 Step 3: B1, the file
+
+`file-core.mjs` `staggerFile` times B0's plan; nothing in B0 changes. The members that move are put in start order by
+`sequence-core`'s `sequence` over their B0 routes (plan order, the grabbed one first then least walk left first, as the
+tie-break; never one walking through another standing at its start, nor into another resting at its end, when such an
+order exists). Each in turn takes the first start delay, a multiple of 150 ms (one wave), at which it meets none of the
+members timed before it (`motion-core` `firstConflict`: the same wave drawn from one update, no latency buffer; one
+wave apart, 0.75 square either way along its way). The cap is 4 s after the drop less the plan's own time: a member
+that finds no clear delay under it goes at the step where it meets the fewest (soft, never a cut, never a second pass;
+its slot and route are B0's, so nothing hard depends on the timing). On open ground every delay is 0.
+
+`drop.mjs` sends the members at 0 in the drop's own update; `file.mjs` holds the later waves on the group's record and
+fires each by `setTimeout`; `drop.mjs` `sendWave` sends it: a member no longer at its start (moved, or dropped again)
+is skipped; a member whose way a wall raised or a door shut since crosses stays where it stands and is named (stop
+where drawn, for a member not yet sent); one whose way a token has come to rest in is walked only as far as it is free
+(the hard obstacle, `freePrefix`); riders go with their leader's wave; every wave carries the group's option, so undo
+merges it and other clients learn the group. No settle, no reservations, nothing republished.
+
+The three runtime handlers are one primitive, stop where drawn:
+- a click on any member stops the whole group (decision 3 as revised 2026-11-24). On the client that sent it,
+  `stop.mjs` stops every member and `groupCancel` drops the unsent waves. On another client the clicker stops the one
+  clicked (every member it owns too when the sender is no longer active), and the sender's client, seeing another
+  user's stop write (`pentarynMovementStop`) on a member of a group it holds, drops the waves and stops every other
+  member still walking where it is drawn (a displace out of combat; `stopSafely` in a fight). The sender's own stop
+  writes are not foreign: a wall cut stops only the walkers it crosses;
+- a wall or door change stops this client's walkers whose way it crosses (step 1's `cutAcross`), and a wave sent after
+  it is tested against the walls as they are then;
+- a hidden tab (`visibilitychange` to hidden) sends every remaining wave at once, as one update.
+
+Gate: `test/file-core.test.mjs` on B0's 800 seeded drops (600 random floors, 200 dungeon): every mover timed, every
+delay a wave step, the last at most 4 s (largest seen: 1,050 ms; 100 of 800 drops staggered at all); 200 formation
+drags across an open room all at 0; B0's properties checked on the same plans. Mover-vs-mover overlap, soft and
+reported: drops with two movers meeting by more than 0.05 square fall from 103 (all at once) to 10 (B1), and no drop
+overlaps deeper staggered than all at once. Through a door, eight members time in 4 ms (Node). `test/drop.test.mjs`:
+the door drop sends the grabbed one with the drop and the rest in waves within 4 s, each a whole route past the door;
+a click stops the group and its waves; another user's stop makes the sender drop its waves and stop the walking mate
+(its own stop write does not); a hidden tab sends the waves at once, once; a wave skips a member moved since and
+does not send one through a door shut since (named).
 

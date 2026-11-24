@@ -12,14 +12,15 @@
  *     (only when that is within a square of its formation spot), stands still: the pass runs again with it among the
  *     standing tokens until nothing changes (each pass fixes at least one more member in place, so it ends). The
  *     members that stayed are tried again planned first, and the order that sends the most wins.
- * Every member moves in one batched update with no stagger: two members both moving may brush (soft, Joe 2026-11-24);
- * a standing token, a slot and a rest overlap never (hard).
+ * B0 alone moves every member in one batched update with no stagger; B1 (staggerFile, below) times the same routes.
+ * Two members both moving may brush (soft, Joe 2026-11-24); a standing token, a slot and a rest overlap never (hard).
  *
  * Units: centres in grid squares (as motion-core). Touching is fine; coming inside is not.
  */
 
-import { dist } from "./motion-core.mjs";
+import { MOTION, delayed, dist, firstConflict, trajectory } from "./motion-core.mjs";
 import { cellCandidates, firstIntrusion, hexCandidates, pathLength } from "./group-core.mjs";
+import { sequence } from "./sequence-core.mjs";
 
 const EPS = 1e-6;
 
@@ -230,4 +231,71 @@ export function planFile(spec, o) {
     if (better(next)) best = next;
   }
   return { members: best.entries, order: best.order, stayed: best.stayed, passes: best.passes, tries, ms: Math.round((now() - t0) * 10) / 10 };
+}
+
+/* -------------------------------------------- */
+/*  B1, the file: capped start delays (step 3)  */
+/* -------------------------------------------- */
+
+/**
+ * B1's timing (Fable's review 2 §2 "Tier B, the file", §4 step 3). Every start delay is a multiple of `stepMs` (one
+ * wave each), and the last one is at most `capMs` after the drop: within 4 s of the drop every member's move is on the
+ * server (the one rule). Never a cut and never a second pass: a member that finds no clear delay under the cap takes
+ * the one it meets fewest walkers at (soft: two movers may brush, Joe 2026-11-24); its route and slot stay B0's, so
+ * nothing hard depends on the timing.
+ */
+export const STAGGER = Object.freeze({ capMs: 4000, stepMs: MOTION.waveMs });
+
+/** Axis-aligned box of a trajectory's points, grown by `pad`. */
+function boxOf(pts, pad) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+  return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
+}
+const boxesMeet = (a, b) => !(a.x0 > b.x1 || b.x0 > a.x1 || a.y0 > b.y1 || b.y0 > a.y1);
+
+/**
+ * The start delays of a file.
+ * @param {{ id: string, r: number, points: {x,y}[], speed?: number }[]} walks  the members that move, in B0's plan
+ *        order (the grabbed one first, then least walk left first); centres in squares, speed in squares per second
+ * @param {{ capMs?: number, stepMs?: number, gap?: number }} [o]  capMs: the latest start (ms after the drop)
+ * @returns {{ delays: Object<string, number>, order: string[], total: number, crowded: string[] }}
+ *          order: the start order (sequence-core: never one walking through another standing at its start, nor into
+ *          another resting at its end, when an order exists; plan order otherwise); total: the largest delay;
+ *          crowded: the members that found no clear delay under the cap (they go at the least crowded one)
+ *
+ * Each member in that order takes the first delay at which it meets none of the members already timed: as they are
+ * drawn from the same update (one wave, no latency buffer), or one wave apart (MOTION.motionGap either way along its
+ * way). A member whose walk never comes near another's (open ground) goes at 0.
+ */
+export function staggerFile(walks, o = {}) {
+  const cap = Math.max(0, o.capMs ?? STAGGER.capMs);
+  const step = Math.max(1, o.stepMs ?? STAGGER.stepMs);
+  const gap = o.gap ?? MOTION.motionGap;
+  const list = (walks ?? []).filter(w => w?.id && w.points?.length >= 2);
+  const byId = new Map(list.map(w => [w.id, w]));
+  const order = sequence(list).order;
+  const steps = [];
+  for (let d = 0; d <= cap + EPS; d += step) steps.push(d);
+  const fixed = [];               // { tr, r, d, box }
+  const delays = {}, crowded = [];
+  for (const id of order) {
+    const w = byId.get(id);
+    const tr = trajectory(w.points, { speed: w.speed ?? MOTION.speed });
+    const box = boxOf(tr.pts, w.r + gap);
+    const near = fixed.filter(f => boxesMeet(box, f.box));
+    let best = null;
+    for (const d of steps) {
+      const mine = delayed(tr, d);
+      let n = 0;
+      for (const f of near) if (firstConflict(mine, f.tr, w.r, f.r, { sameWave: Math.abs(f.d - d) < EPS, gap }) !== null) n += 1;
+      if (best === null || n < best.n) best = { d, n };
+      if (n === 0) break;
+    }
+    if (best.n > 0) crowded.push(id);
+    delays[id] = best.d;
+    fixed.push({ tr: delayed(tr, best.d), r: w.r, d: best.d, box: boxOf(tr.pts, w.r) });
+  }
+  const total = Object.values(delays).reduce((a, b) => Math.max(a, b), 0);
+  return { delays, order, total, crowded };
 }

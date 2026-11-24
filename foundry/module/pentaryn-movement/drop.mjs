@@ -1,6 +1,6 @@
 /**
  * Pentaryn Movement — the feature: the drop (0.9.0, plan context/plans/pathfinding-2026-11.md §17; Fable's review 2
- * §2, §4 steps 1–2). Replaces group.mjs.
+ * §2, §4 steps 1–3). Replaces group.mjs.
  *
  * GLUE, one feature. Wraps Token#_prepareDragLeftDropUpdates on the configured token class: core's own
  * [updates, options] come back first, then
@@ -8,8 +8,10 @@
  *     there is a way; with none, as far as it is free of them, or not at all, and the dragger is told. No publish,
  *     queue, start delay or step-aside: nothing ever waits for another mover. A search still running at the drop
  *     finishes in slices and the token goes when it is done (confirmLater / aroundLater).
- *   - several tokens out of combat (tier B, B0 the floor, with file.mjs): slots and routes in one pass, one batched update,
- *     no stagger and no timers; a member with no reachable slot stays and is named in a notice.
+ *   - several tokens out of combat (tier B, the file, with file.mjs): slots and routes in one pass (B0), then start
+ *     delays (B1, the last within 4 s; on open ground all 0). The members at 0 go in the drop's own update, later
+ *     waves by setTimeout; a wave skips a member no longer at its start and is tested against the walls as they are
+ *     then. A member with no reachable slot stays and is named in a notice.
  *   - several tokens in a fight: refused with a notice until the fight file lands (§4 step 4; Joe 2026-11-24: "if that
  *     misses its gate, refuse group drags in a fight").
  *   - ghost / the unconstrained tool / Ctrl waypoints / a planned move: core's own drop, untouched.
@@ -22,7 +24,7 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead } from "./motion-core.mjs";
+import { MOTION, cellChain, firstLegAcross, groupMode, radiusOf, routeAhead, waves as wavesOf } from "./motion-core.mjs";
 import { coalesceHistory, freePrefix, onCell, prefixOf } from "./group-core.mjs";
 import { stacksOf } from "./sequence-core.mjs";
 import { avoidDist, skipReason } from "./pathfind-core.mjs";
@@ -987,7 +989,7 @@ function onDrop(grabbed, event, result) {
     return done(result);
   }
   debugThrow();
-  return done(groupDrop(grabbed, contexts, result, riders, seq, caughtUp));
+  return done(groupDrop(grabbed, contexts, result, riders, seq));
 }
 
 /**
@@ -1002,30 +1004,40 @@ function refuseFight(contexts) {
 }
 
 /**
- * A group drag out of combat, B0 (file.mjs): every member's slot and route in one pass, one batched update (the drop's
- * own), no stagger, no timers. A member with no reachable slot stays and is named; nobody moving at all is "No route
- * there". A throw is core's own drop (the wrap's catch).
+ * A group drag out of combat, the file (file.mjs): every member's slot and route in one pass (B0), then its start
+ * delay (B1). The members at 0 go in the drop's own update; each later wave by setTimeout (file.mjs), sent by
+ * sendWave. A member with no reachable slot stays and is named; nobody moving at all is "No route there". A throw is
+ * core's own drop (the wrap's catch).
  */
-function groupDrop(grabbed, contexts, result, riders) {
+function groupDrop(grabbed, contexts, result, riders, seq) {
   const lead = riders?.get(grabbed.document.id)?.leader;
   const anchor = lead ? (contexts.find(c => c.token.document.id === lead)?.token ?? grabbed) : grabbed;
   const leaders = riders?.size ? contexts.filter(c => !riders.has(c.token.document.id)) : contexts;
   const out = feature.exposed.groupPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} });
   if (!out) { fellBack("noPlan"); last.result = "core"; return carryRiders(riders, result); }
-  const { plan, members } = out;
-  Object.assign(last, { result: "plan", plan: { ms: plan.ms, passes: plan.passes, stayed: plan.stayed.length, members: plan.order.length } });
-  feature.exposed.tele?.("plan", { mode: "b0", members: members.length, ms: plan.ms, stayed: plan.stayed.length });
-  const movement = {};
-  const updates = [];
+  const { plan, members, timing } = out;
+  const delays = timing?.delays ?? {};
   const base = result[1].movement ?? {};
+  const now0 = {}, later = new Map();
   for (const m of members) {
     const wps = feature.exposed.groupWaypoints(m, plan.members[m.id]);
     if (!wps.length) continue;
-    movement[m.id] = { ...(base[m.id] ?? { planned: false }), waypoints: wps };
-    updates.push({ _id: m.id });
+    const d = delays[m.id] ?? 0;
+    if (d > 0) later.set(m.id, { wps, delay: d });
+    else now0[m.id] = wps;
+  }
+  const waveList = wavesOf(Object.fromEntries([...later].map(([id, v]) => [id, v.delay])));
+  Object.assign(last, { result: "plan", plan: { ms: plan.ms, passes: plan.passes, stayed: plan.stayed.length, members: plan.order.length,
+    waves: waveList.length + (Object.keys(now0).length ? 1 : 0), total: timing?.total ?? 0, crowded: timing?.crowded?.length ?? 0, timingMs: timing?.ms ?? null } });
+  feature.exposed.tele?.("plan", { mode: "file", members: members.length, ms: plan.ms, stayed: plan.stayed.length, waves: waveList.length + 1, total: timing?.total ?? 0 });
+  const movement = {};
+  const updates = [];
+  for (const [id, wps] of Object.entries(now0)) {
+    movement[id] = { ...(base[id] ?? { planned: false }), waypoints: wps };
+    updates.push({ _id: id });
   }
   const stayedDocs = plan.stayed.map(id => members.find(m => m.id === id)?.token?.document).filter(Boolean);
-  if (!updates.length) {
+  if (!updates.length && !later.size) {
     last.result = "none";
     if (!stayedDocs.length || plan.stayed.includes(anchor.document.id)) tell("noRoute", "groupNoRoute");
     else tellStayed(stayedDocs);
@@ -1036,12 +1048,77 @@ function groupDrop(grabbed, contexts, result, riders) {
   const res = carryRiders(riders, [updates, options]);
   // Every client learns the group from its update option (a click on one stops them all); never with a hidden member
   // among them (update options reach every client).
-  const ids = res[0].map(u => u._id);
   const scene = grabbed.document.parent;
+  const ids = [...new Set([...res[0].map(u => u._id), ...later.keys(), ...[...(riders ?? new Map())].filter(([, r]) => later.has(r.leader)).map(([id]) => id)])];
   const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
-  if (gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden)) options[GROUP_OPT] = gid;
-  return res;
+  const tag = gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null;
+  if (tag) options[GROUP_OPT] = tag;
+  if (gid && later.size) {
+    const starts = new Map(ids.map(id => [id, { ...(scene?.tokens?.get?.(id)?._source ?? {}) }]));
+    const opts = {};
+    for (const [k, v] of Object.entries(result[1])) if (k !== "movement") opts[k] = v;
+    if (tag) opts[GROUP_OPT] = tag;
+    const send = list => sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids });
+    feature.exposed.groupWaves?.(gid, waveList, send);
+  }
+  return res[0].length ? res : null;
 }
+
+/** Does the way `wps` (top-left pixels, from `from`) of `doc` cross a wall that blocks movement as it stands now? */
+function wayShut(doc, from, wps) {
+  const scene = doc.parent;
+  const s = scene?.grid?.size ?? gridSize(doc.object ?? { document: doc });
+  const pts = [from, ...wps];
+  for (let k = 1; k < pts.length; k++) {
+    if ((CONFIG.Token?.movement?.actions?.[pts[k]?.action]?.walls ?? "move") === null) continue;
+    const a = stepCircle(doc, pts[k - 1], s), b = stepCircle(doc, pts[k], s);
+    if (stepThroughWall(scene, { x: a.x * s, y: a.y * s }, { x: b.x * s, y: b.y * s })) return true;
+  }
+  return false;
+}
+
+/**
+ * A later wave of a file (file.mjs's timer, or all at once when the tab goes to the background): each member still at
+ * its start and not dropped again since (latestDrop) goes its planned way, unless a wall raised or a door shut since
+ * crosses it (it stays where it is drawn: stop where drawn, for a member not yet sent) and only as far as it is free of
+ * the tokens standing outside the group now (a hard obstacle; never a second plan). Its riders go with it. Never
+ * throws; a failed update is counted (the breaker).
+ */
+function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids }) {
+  if (!feature) return;
+  const wanted = list.filter(id => later.has(id));
+  const live = stillOurs(wanted, scene, starts, seq);
+  const s = gridSize(grabbed);
+  const mates = ids.map(id => ({ id, token: scene?.tokens?.get?.(id)?.object ?? null })).filter(m => m.token);
+  let others = [];
+  try { others = mates.length ? othersOf(mates, s) : []; } catch (err) { log?.debug?.("wave: the tokens standing", err); }
+  const movement = {}, updates = [], shut = [];
+  let short = false;
+  for (const id of live) {
+    const doc = scene.tokens.get(id);
+    const token = doc?.object;
+    if (!token || token.destroyed) continue;
+    const from = { ...doc._source };
+    let wps = later.get(id).wps;
+    if (wayShut(doc, from, wps)) { shut.push(doc); continue; }
+    const kept = freeOfOthers(token, from, wps, others);
+    if (kept.short) { if (!kept.length) { shut.push(doc); continue; } short = true; wps = kept; }
+    movement[id] = { ...(base[id] ?? { planned: false }), waypoints: wps };
+    updates.push({ _id: id });
+  }
+  const skipped = wanted.length - live.length;
+  waveLast = { at: new Date().toISOString(), members: wanted.length, sent: updates.length, skipped, shut: shut.length, short };
+  if (shut.length) { feature.exposed.tele?.("cut", { reason: "wave", members: shut.length }); tellStayed(shut, "wave"); }
+  else if (short) tell("short", "wave");
+  if (!updates.length) return;
+  const res = carryRiders(riders, [updates, { ...opts, movement }]);
+  // A rider goes only while it is still where the drop found it.
+  const ok = new Set(stillOurs(res[0].map(u => u._id), scene, starts, seq));
+  const sendIds = res[0].filter(u => ok.has(u._id) || live.includes(u._id));
+  for (const id of Object.keys(res[1].movement)) if (!sendIds.some(u => u._id === id)) delete res[1].movement[id];
+  Promise.resolve(scene.updateEmbeddedDocuments("Token", sendIds, res[1])).catch(err => failed("wave", err));
+}
+let waveLast = null;                       // the last later wave this client sent, for status()
 
 function patchDrop() {
   const proto = CONFIG.Token?.objectClass?.prototype;
@@ -1087,6 +1164,9 @@ function groupStatus() {
     step: stepLast ? { ...stepLast } : null,
     undo: undoLast ? { ...undoLast } : null,
     told: told.map(t => ({ ...t })),
+    pending: feature?.exposed?.groupPending?.() ?? [],
+    wave: waveLast ? { ...waveLast } : null,
+    flushed: feature?.exposed?.groupFlushed?.() ?? null,
     perf: { ...perf },
   };
 }
@@ -1119,6 +1199,7 @@ export function uninstall() {
   last = null;
   cutLast = null;
   stepLast = null;
+  waveLast = null;
   undoLast = null;
   told.length = 0;
   fallbacks.length = 0;

@@ -5,18 +5,29 @@
  *
  * B0, the floor (§4 step 2): at the drop, one pass (file-core planFile) gives every member its slot (the free spot
  * nearest its formation spot that it can reach) and an A* route round the tokens standing outside the drop and round
- * the slots already given out; drop.mjs sends them all in the drop's own batched update, with no stagger and no
- * timers. A member with no reachable slot stays where it stands and is named in a notice.
+ * the slots already given out. A member with no reachable slot stays where it stands and is named in a notice.
+ * B1, the file (§4 step 3): each member then gets a start delay (file-core staggerFile: in sequence order, the first
+ * one at which it meets no member timed before it; the last at most 4 s after the drop; on open ground all 0). The
+ * members at 0 go in the drop's own update; every later wave goes by setTimeout (drop.mjs sends it). No settle, no
+ * second pass, no reservations.
  *
- * Which tokens move together: this client holds every group it sent until its members are at rest (read when asked,
- * no timers), and every client learns a group's members from the update option its move carries (GROUP_OPT), so a
- * click on one member stops them all (decision 3 as revised 2026-11-24).
+ * Which tokens move together: this client holds every group it sent until its members are at rest and its waves are
+ * sent (read when asked), and every client learns a group's members and its sender from the update option its moves
+ * carry (GROUP_OPT).
+ *
+ * The three runtime handlers share one primitive, stop where drawn (§2):
+ *   - a click on any member stops the whole group (decision 3 as revised 2026-11-24): the clicker stops the one
+ *     clicked, and the dragger's screen, seeing that stop, stops the rest and drops its unsent waves (onGroupTag);
+ *   - a wall or door change stops this client's walkers whose way it crosses (drop.mjs cutAcross), and a wave sent
+ *     after it is tested against the walls as they are then (a member whose way is shut stays where it is drawn);
+ *   - a hidden tab sends its remaining waves at once (its timers would be throttled).
+ * A wave skips a member no longer at its start (drop.mjs).
  */
 
-import { planFile } from "./file-core.mjs";
+import { STAGGER, planFile, staggerFile } from "./file-core.mjs";
 import { flood } from "./group-core.mjs";
 import { avoidDist } from "./pathfind-core.mjs";
-import { gridSize, memberOf, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
+import { gridSize, inCombat, memberOf, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation } from "./settings.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
@@ -27,10 +38,13 @@ let feature = null;
 /** The update option that names the group a move belongs to, so every client knows its members (decision 3). */
 const GROUP_OPT = "pentarynMovementGroup";
 
-/** Groups this client sent: id → { ids: Set, scene, at }. */
+/**
+ * Groups this client sent: id → { ids: Set, scene, at, waves: [{ at, ids, timer }], send }. `waves`: the waves still
+ * to send and `send(ids)` the sender (drop.mjs).
+ */
 const groups = new Map();
 const groupOf = new Map();                 // token id → group id
-/** Every client: token id → { gid, at } from the update options of a group's moves. */
+/** Every client: token id → { gid, at, user } from the update options of a group's moves. */
 const tagOf = new Map();
 /** How long a group names its members (ms): longer than any walk it sends. */
 const HOLD_MS = 60000;
@@ -56,15 +70,19 @@ function holdGroup(ids, scene) {
     if (old && groups.get(old)) groups.get(old).ids.delete(id);
     groupOf.set(id, gid);
   }
-  groups.set(gid, { ids: new Set(ids), scene, at: Date.now() });
+  groups.set(gid, { ids: new Set(ids), scene, at: Date.now(), waves: [], send: null });
   prune();
   return gid;
 }
+
+/** Is a group still busy on this client: a wave to send? */
+const busy = g => g.waves.length > 0;
 
 /** Drop groups whose members are all at rest, or older than HOLD_MS (no timers: read when asked). */
 function prune() {
   const t = Date.now();
   for (const [gid, g] of groups) {
+    if (busy(g)) continue;
     const alive = t - g.at <= 1500 || [...g.ids].some(id => movingNow(g.scene?.tokens?.get?.(id)));
     if (alive && t - g.at <= HOLD_MS && g.ids.size) continue;
     for (const id of g.ids) if (groupOf.get(id) === gid) groupOf.delete(id);
@@ -77,17 +95,85 @@ function heldCount() { prune(); return groups.size; }
 
 /**
  * Stop a group this client sent (click-to-stop): it is no longer held. Returns the ids of its members (the caller
- * stops those moving), or [] when this client holds no group for the token. `only` takes just that token out.
+ * stops those moving), or [] when this client holds no group for the token. Its unsent waves go too.
  */
-function groupCancel(tokenId, { only = false } = {}) {
+function groupCancel(tokenId, { why = "click" } = {}) {
   const gid = groupOf.get(tokenId);
   const g = gid ? groups.get(gid) : null;
   if (!g) return [];
-  if (only) { g.ids.delete(tokenId); groupOf.delete(tokenId); return [tokenId]; }
-  const ids = [...g.ids];
-  for (const id of ids) if (groupOf.get(id) === gid) groupOf.delete(id);
+  dropGroup(gid);
+  return [...g.ids];
+}
+
+/** Forget group `gid` on this client: its unsent waves are dropped. */
+function dropGroup(gid) {
+  const g = groups.get(gid);
+  if (!g) return;
+  for (const w of g.waves) clearTimeout(w.timer);
+  g.waves = [];
+  for (const id of g.ids) if (groupOf.get(id) === gid) groupOf.delete(id);
   groups.delete(gid);
-  return ids;
+}
+
+/* -------------------------------------------- */
+/*  B1: waves (step 3)                          */
+/* -------------------------------------------- */
+
+/**
+ * Send group `gid`'s later waves by setTimeout: `waves` [{ at (ms after now), ids }], `send(ids)` sends those members
+ * (drop.mjs: skips one no longer at its start, tests its way against the walls as they are then). A wave at 0 is the
+ * drop's own update and never comes here.
+ */
+function scheduleWaves(gid, waves, send) {
+  const g = groups.get(gid);
+  if (!g || typeof send !== "function") return 0;
+  g.send = send;
+  for (const w of waves) {
+    if (!(w.ids?.length) || !(w.at > 0)) continue;
+    const wave = { at: w.at, ids: [...w.ids], timer: null };
+    wave.timer = setTimeout(() => fireWaves(gid, [wave]), w.at);
+    g.waves.push(wave);
+  }
+  return g.waves.length;
+}
+
+/** Send `list` (waves of group gid) now, as one update: they leave the group's pending waves first. */
+function fireWaves(gid, list) {
+  const g = groups.get(gid);
+  if (!g) return;
+  for (const w of list) clearTimeout(w.timer);
+  g.waves = g.waves.filter(w => !list.includes(w));
+  const ids = list.flatMap(w => w.ids);
+  if (!ids.length) return;
+  g.at = Date.now();
+  try { g.send?.(ids); }
+  catch (err) {
+    log?.warnOnce?.("file-wave", "a wave of a group drag could not be sent (further errors suppressed)", err);
+    feature?.exposed?.tele?.("error", { reason: "wave", message: String(err?.message ?? err).slice(0, 120) });
+  }
+}
+
+let flushLast = null;
+/** The page went to the background: its timers would be throttled, so every remaining wave goes now (§2). */
+function onVisibility() {
+  if (globalThis.document?.visibilityState !== "hidden") return;
+  let n = 0;
+  for (const [gid, g] of [...groups]) {
+    if (!g.waves.length) continue;
+    n += g.waves.reduce((a, w) => a + w.ids.length, 0);
+    fireWaves(gid, [...g.waves]);
+  }
+  if (n) {
+    flushLast = { at: new Date().toISOString(), members: n };
+    feature?.exposed?.tele?.("flush", { members: n });
+  }
+}
+
+/** The waves this client still has to send: [{ gid, at, ids }] (status). */
+function pendingWaves() {
+  const out = [];
+  for (const [gid, g] of groups) for (const w of g.waves) out.push({ gid, at: w.at, ids: [...w.ids] });
+  return out;
 }
 
 /** A click (or the API) stopped a group (stop.mjs): recorded for status().group.stopped. */
@@ -104,20 +190,53 @@ function groupMembers(tokenId) {
   prune();
   const gid = groupOf.get(tokenId);
   const g = gid ? groups.get(gid) : null;
-  if (g) return { held: true, ids: [...g.ids] };
+  if (g) return { held: true, ids: [...g.ids], sender: globalThis.game?.user?.id ?? null };
   const tag = tagOf.get(tokenId);
-  if (!tag || Date.now() - tag.at > HOLD_MS) return { held: false, ids: [] };
+  if (!tag || Date.now() - tag.at > HOLD_MS) return { held: false, ids: [], sender: null };
   const ids = [];
   for (const [id, t] of tagOf) if (t.gid === tag.gid && Date.now() - t.at <= HOLD_MS) ids.push(id);
-  return { held: false, ids };
+  return { held: false, ids, sender: tag.user ?? null };
 }
 
-/** updateToken, every client: remember which group a move belongs to (its update option). */
-function onGroupTag(doc, options) {
+/**
+ * updateToken, every client: remember which group a move belongs to (its update option) and who sent it. On the
+ * client that sent a group, another user's stop of one member (a click's displace, decision 3 as revised 2026-11-24)
+ * stops the whole group: its unsent waves are dropped, and every other member still walking is stopped where it is
+ * drawn (out of combat) or on the square it holds (in a fight).
+ */
+function onGroupTag(doc, options, userId) {
   const gid = options?.[GROUP_OPT];
-  if (!doc?.id || typeof gid !== "string") return;
-  tagOf.set(doc.id, { gid, at: Date.now() });
-  if (tagOf.size > 500) tagOf.delete(tagOf.keys().next().value);
+  if (doc?.id && typeof gid === "string") {
+    tagOf.set(doc.id, { gid, at: Date.now(), user: userId ?? null });
+    if (tagOf.size > 500) tagOf.delete(tagOf.keys().next().value);
+  }
+  if (!options?.pentarynMovementStop || !doc?.id || userId === globalThis.game?.user?.id) return;
+  if (!groupOf.has(doc.id)) return;
+  stopGroupHere(doc, "foreign");
+}
+
+/**
+ * Stop the group token `doc` belongs to, on the client that sent it: everything unsent goes, and each other member
+ * still walking stops where it is drawn (stop.mjs's displace out of combat; stopSafely in a fight). Returns the ids
+ * stopped (the members' ids, `doc` itself left to whoever stopped it).
+ */
+function stopGroupHere(doc, why) {
+  const ids = groupCancel(doc.id, { why });
+  const scene = doc.parent;
+  const out = [];
+  for (const id of ids) {
+    if (id === doc.id) continue;
+    const d = scene?.tokens?.get?.(id);
+    const t = d?.object;
+    if (!d || !t || t.destroyed || !d.movement?.user?.isSelf || !movingNow(d)) continue;
+    try {
+      if (inCombat(d)) feature?.exposed?.stopSafely?.(d);
+      else feature?.exposed?.stopDisplace?.(t);
+      out.push(id);
+    } catch (err) { log?.debug?.("file: stop a member", err); }
+  }
+  groupNoteStop({ why, members: out.length + 1, whole: true });
+  return out;
 }
 
 /* -------------------------------------------- */
@@ -135,7 +254,7 @@ const REACH_RINGS = 9;
  * (or its leader). Returns { plan, members } (file-core's plan, the member records), or null when there is nothing to
  * plan. Reads only; never throws past the caller's catch (drop.mjs: core's drop).
  */
-function planDrop(anchor, contexts, { constrain = {} } = {}) {
+function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
   if (!feature || !anchor || contexts.length < 1) return null;
   const s = gridSize(anchor);
   const ordered = [...contexts].sort((a, b) => (a.token === anchor ? -1 : b.token === anchor ? 1 : 0));
@@ -186,7 +305,15 @@ function planDrop(anchor, contexts, { constrain = {} } = {}) {
     return pts;
   };
   const plan = planFile({ members, anchorId: anchor.document.id, standing }, { walkable, walk, route, now });
-  return { plan, members };
+  // B1: the start delays, the last within 4 s of the drop (the plan's own time comes off the cap).
+  const walks = plan.order.map(id => members.find(m => m.id === id))
+    .filter(m => plan.members[m.id]?.points?.length >= 2 && !plan.members[m.id].stay)
+    .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed }));
+  const capMs = Math.max(0, Math.floor((STAGGER.capMs - (plan.ms ?? 0)) / STAGGER.stepMs) * STAGGER.stepMs);
+  const t1 = now();
+  const timing = stagger ? staggerFile(walks, { capMs }) : { delays: Object.fromEntries(walks.map(w => [w.id, 0])), order: walks.map(w => w.id), total: 0, crowded: [] };
+  timing.ms = Math.round((now() - t1) * 10) / 10;
+  return { plan, members, timing };
 }
 
 /** A member's waypoints (top-left pixels, after its origin) from its plan entry, or [] when it does not move. */
@@ -217,14 +344,14 @@ function dryRun(refs, point) {
   });
   const out = planDrop(tokens[0], contexts, { constrain: tokens[0]._getDragConstrainOptions?.() ?? {} });
   if (!out) return { ok: true, result: "core", reason: "noPlan", members: [] };
-  const { plan, members } = out;
+  const { plan, members, timing } = out;
   const s = gridSize(tokens[0]);
   return {
-    ok: true, result: "plan", ms: plan.ms, passes: plan.passes, order: plan.order,
+    ok: true, result: "plan", ms: plan.ms, passes: plan.passes, order: plan.order, starts: timing.order, total: timing.total,
     members: members.map(m => {
       const e = plan.members[m.id];
       return { id: m.id, name: m.token.document.name, slot: e ? toTopLeft(e.slot, m.w, m.h, s) : null,
-        waypoints: waypointsFor(m, e).length, stay: e?.stay && e.stay !== "still" ? e.stay : null };
+        waypoints: waypointsFor(m, e).length, stay: e?.stay && e.stay !== "still" ? e.stay : null, delay: timing.delays[m.id] ?? null };
     }),
   };
 }
@@ -236,12 +363,17 @@ function dryRun(refs, point) {
 export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
-  reg.on("updateToken", (doc, _changes, options) => onGroupTag(doc, options), { label: "updateToken: which group a move belongs to (click stops the group)" });
+  reg.on("updateToken", (doc, _changes, options, userId) => onGroupTag(doc, options, userId), { label: "updateToken: which group a move belongs to; another user's stop of a member stops the group this client sent" });
+  try { globalThis.document?.addEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   ctx.expose({ groupCancel, groupMembers, groupNoteStop, groupHold: holdGroup, groupHeld: heldCount, groupStopped: stoppedLast,
-    groupMax: () => FILE_MAX, groupPlan: planDrop, groupWaypoints: waypointsFor, groupDryRun: dryRun });
+    groupMax: () => FILE_MAX, groupPlan: planDrop, groupWaypoints: waypointsFor, groupDryRun: dryRun,
+    groupWaves: scheduleWaves, groupPending: pendingWaves, groupFlushed: () => (flushLast ? { ...flushLast } : null) });
 }
 
 export function uninstall() {
+  try { globalThis.document?.removeEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
+  for (const gid of [...groups.keys()]) dropGroup(gid);
+  flushLast = null;
   groups.clear();
   groupOf.clear();
   tagOf.clear();
