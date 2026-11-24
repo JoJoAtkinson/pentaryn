@@ -1397,7 +1397,7 @@ async function runFight(q, entries, { scene, gid, tag, seq, rec }) {
       const at = { x: token.document._source.x, y: token.document._source.y };
       let k = wps.length - 1;
       while (k > 0 && (wps[k].x !== at.x || wps[k].y !== at.y)) k -= 1;
-      q.leaderAt = { at, from: k > 0 ? { x: wps[k - 1].x, y: wps[k - 1].y } : { x: way.origin.x, y: way.origin.y } };
+      q.leaderAt = { at, from: k > 0 ? { x: wps[k - 1].x, y: wps[k - 1].y } : { x: way.origin.x, y: way.origin.y }, way: wps.slice(0, k + 1).map(p => ({ x: p.x, y: p.y })) };
     }
     if (r === "timeout") { rec.watchdog += 1; continue; }
     if (r === "cancel" || q.done) break;
@@ -1444,26 +1444,37 @@ async function routeAtTurn(token, e, q = null) {
       try { spot = clearOfWalls(token, end0, { taken, snap: true }); } catch (err) { log?.debug?.("fight: a clear square", err); }
       if (spot && !taken(spot) && fits(spot)) end = { ...e.dest, x: spot.x, y: spot.y, snapped: true };
     } else end = end0;
-  } else {
-    let p = null;
-    try { p = feature.exposed.groupSlotAtTurn?.(token, { shape: q?.shape ?? "march", target: q?.target ?? null, leaderId: q?.leaderId ?? null, leaderAt: q?.leaderAt ?? null, riders: e.riders.map(x => x.id) }) ?? null; }
-    catch (err) { log?.debug?.("fight: a member's square", err); }
-    if (p && !taken(p)) end = { ...e.dest, x: p.x, y: p.y, snapped: true };
   }
-  if (!end) return { stay: "noSpot" };
+  // A member's square (file.mjs slotAtTurn); `line`: only the line behind the leader on a narrow way (0.10 F1 B2). A
+  // point on a narrow way's centre line is off the grid: the route's lattice stays on whole squares.
+  const slot = line => {
+    let p = null;
+    try { p = feature.exposed.groupSlotAtTurn?.(token, { shape: q?.shape ?? "march", target: q?.target ?? null, leaderId: q?.leaderId ?? null, leaderAt: q?.leaderAt ?? null, riders: e.riders.map(x => x.id), line, group: [...(q?.ids ?? [])] }) ?? null; }
+    catch (err) { log?.debug?.("fight: a member's square", err); }
+    return p && !taken(p) ? { ...e.dest, x: p.x, y: p.y, snapped: p.x % s === 0 && p.y % s === 0 } : null;
+  };
+  if (!e.leader) end = slot(false);
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
   const start = centre(origin);
-  if (Math.round(start.x) === Math.round(centre(end).x) && Math.round(start.y) === Math.round(centre(end).y)) return { stay: "there" };
+  const there = p => Math.round(start.x) === Math.round(centre(p).x) && Math.round(start.y) === Math.round(centre(p).y);
+  if (end && there(end)) return { stay: "there" };
   const live = avoid.filter(o => avoidDist(o, start, start) >= o.r);
   const opts = { preview: true, avoid: live.length ? live : null };
-  const dest = { ...origin, ...end, explicit: true, checkpoint: true };
-  let rr = null;
-  try {
-    const search = feature.exposed.pathfindRouteToAsync;
-    rr = typeof search === "function" ? await search(token, origin, dest, opts) : feature.exposed.pathfindRouteTo?.(token, origin, dest, { ...opts, maxMs: CONFIRM_MS });
-  } catch (err) { log?.debug?.("fight: a route", err); rr = null; }
-  if (rr?.reached && rr.path?.length >= 2) return { origin, waypoints: lastWp(rr.path.slice(1)) };
-  return { stay: "noRoute" };
+  const go = async to => {
+    const dest = { ...origin, ...to, explicit: true, checkpoint: true };
+    let rr = null;
+    try {
+      const search = feature.exposed.pathfindRouteToAsync;
+      rr = typeof search === "function" ? await search(token, origin, dest, opts) : feature.exposed.pathfindRouteTo?.(token, origin, dest, { ...opts, maxMs: CONFIRM_MS });
+    } catch (err) { log?.debug?.("fight: a route", err); rr = null; }
+    return rr?.reached && rr.path?.length >= 2 ? { origin, waypoints: lastWp(rr.path.slice(1)) } : null;
+  };
+  const way = end ? await go(end) : null;
+  if (way) return way;
+  // R3's fallback (0.10 F1 B2): a march member with no square, or no route to it, takes the line behind the leader.
+  const back = !e.leader && (q?.shape ?? "march") === "march" ? slot(true) : null;
+  const behind = back && !there(back) && !(end && back.x === end.x && back.y === end.y) ? await go(back) : null;
+  return behind ?? { stay: end ? "noRoute" : "noSpot" };
 }
 
 /**

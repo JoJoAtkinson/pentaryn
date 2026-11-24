@@ -54,6 +54,20 @@ touching that token first, and the rest close in round it from their own sides, 
   nobody named, nobody across the wall (were 5 failed and 1 named; the same wall on the grid unchanged). S05, six and
   twelve dropped in room B: no route searched to a square outside the C, none fails (were 2 and 8 named after trying
   squares in the enclosed middle). A map whose walls lie on the grid lines never floods: its steps are the walls'.
+- **[declared] The line behind the leader on a narrow way** (B2; R3, R9; Joe's tunnel bug, on the stair): a group
+  resting on or just past the stair had its followers named though the way had room. (a) A part of a tight square is
+  shut by the avoid circles only when every passable point of it lies inside one (`pathfind-adapter` `narrowMore`: a
+  slot on the centre line shut its neighbours' parts by their squares' centres, the goal's too). (b, c) The points back
+  along the leader's own way where the way is narrower than the token are spots ranked like squares by their walk from
+  the leader (`file.mjs` `lineBehind`): each member takes the first one clear of every slot, standing token and member
+  that stays by the route's own measure (judged where the route will rest it), with one route, when it has no square
+  (R3's fallback, also when the leader rests past the mouth) or a square farther from the leader; the walk order is
+  then front first. In a fight the same at each member's turn (back along the leader's own way), and after a failed
+  route one more, to that point; an off-grid slot is no longer sent snapped (its route had the narrow field off), and a
+  member's mates at rest are taken squares for the plan, not walls (`planLead` `spec.taken`: one resting in the mouth
+  cut the leader's floods). S05, members from room A: four and eight dropped at 11 points along the stair and just
+  inside room B, six and twelve in room B, and four in a fight at 13 points: nobody named (were up to 3 of 3, 7 of 7 and
+  8 of 11), none at rest within 0.98 square of another, no wall crossed.
 
 ### Step N — any passage shape (R9)
 

@@ -3858,3 +3858,93 @@ test("0.10 F1 B1 (R3, R9) on Joe's S05: six and twelve dropped in room B over th
   } finally { F.canvas.tokens.placeables = saved; done(); }
 });
 
+/** Points on S05's stair centre line (radius 6 round 10, 38.5) at these degrees from room A's mouth, as drop top-lefts. */
+const stairDrops = degs => degs.map(deg => {
+  const th = (deg * Math.PI) / 180;
+  return { name: `${deg}°`, x: Math.round((10 + 6 * Math.sin(th)) * S - S / 2), y: Math.round((38.5 - 6 * Math.cos(th)) * S - S / 2) };
+});
+/** A group's rest spots: no wall crossed on the way, none closer than 0.98 square to another, 0.15 square clear of walls. */
+function checkRest(tag, ts, by) {
+  const ends = [];
+  for (const t of ts) {
+    const m = by[t.document.id];
+    const path = [{ ...t.document._source }, ...(m?.waypoints ?? [])];
+    for (let k = 1; k < path.length; k++) assert.equal(crossingCore(center(path[k - 1]), center(path[k])).length, 0, `${tag}: ${t.document.id} through a wall`);
+    ends.push(center(path.at(-1)));
+  }
+  for (let a = 0; a < ends.length; a++) {
+    assert.ok(minWall(ends[a]) >= 14.8, `${tag}: rests ${minWall(ends[a]).toFixed(1)} px from a wall at ${JSON.stringify(ends[a])}`);
+    for (let b = a + 1; b < ends.length; b++) {
+      const d = Math.hypot(ends[a].x - ends[b].x, ends[a].y - ends[b].y);
+      assert.ok(d >= 98, `${tag}: two at rest ${d.toFixed(1)} px apart at ${JSON.stringify(ends[a])} ${JSON.stringify(ends[b])}`);
+    }
+  }
+  return ends;
+}
+
+test("0.10 F1 B2 (R3, R9) on Joe's S05: four and eight dropped at 11 points along the stair and just inside room B, six and twelve in room B — the line behind the leader on the stair: nobody named while the way has room, none at rest within 0.98 square of another, no wall crossed", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  let uid = 0;
+  const cases = [];
+  for (const n of [4, 8]) for (const p of [...stairDrops([6, 10, 14, 18, 24, 32, 45, 60, 90, 120, 150]), { name: "room B 9,44", x: 900, y: 4400 }, { name: "room B 8,44", x: 800, y: 4400 }]) cases.push({ n, ...p });
+  for (const n of [6, 12]) for (const [x, y] of [[7, 45], [6, 44], [8, 46]]) cases.push({ n, name: `room B ${x},${y}`, x: x * S, y: y * S });
+  try {
+    for (const c of cases) {
+      const ts = s05Spots(c.n).map(([x, y]) => makeToken(`f1b2${String(uid++).padStart(5, "0")}`.padEnd(16, "0"), x * S, y * S));
+      const others = keepOnly(ts);
+      for (const t of ts) t.visible = true;
+      F.canvas.tokens.placeables = [...ts];
+      const tag = `${c.n} dropped at ${c.name}`;
+      try {
+        const src = ts[0].document._source;
+        const from = F.calls.length;
+        const out = dropWith(ts[0], contextsFor(ts, c.x - src.x, c.y - src.y));
+        const last = api.status().group.last;
+        assert.equal(last.result, "plan", `${tag}: ${JSON.stringify(last)}`);
+        assert.deepEqual(last.stayed, [], `${tag}: nobody named`);
+        checkRest(tag, ts, fileMoves(out, from));
+      } finally {
+        for (const t of ts) sceneTokens.delete(t.document.id);
+        for (const [k, v] of others) sceneTokens.set(k, v);
+        tickBy(60000);
+      }
+    }
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});
+
+test("0.10 F1 B2 (R7, R9) fight on Joe's S05: four dropped at 11 points along the stair and just inside room B, eight at three, walk one at a time and form the line behind the leader (its mates at rest no wall for its floods): nobody named, none at rest within 0.98 square of another, no wall crossed", async () => {
+  const done = onStair();
+  let uid = 0;
+  const cases = [...stairDrops([6, 10, 14, 18, 24, 32, 45, 60, 90, 120, 150]), { name: "room B 9,44", x: 900, y: 4400 }, { name: "room B 8,44", x: 800, y: 4400 }].map(p => ({ n: 4, ...p }));
+  for (const p of [...stairDrops([14, 90]), { name: "room B 9,44", x: 900, y: 4400 }]) cases.push({ n: 8, ...p });
+  try {
+    for (const p of cases) {
+      const ts = s05Spots(p.n).map(([x, y]) => noSpeed(makeToken(`f1b2f${String(uid++).padStart(4, "0")}`.padEnd(16, "0"), x * S, y * S)));
+      const starts = new Map(ts.map(t => [t.document.id, { ...t.document._source }]));
+      const restore = fightScene(ts);
+      const log = new Map();
+      for (const t of ts) {
+        t.document.move = (waypoints, options) => {
+          log.set(t.document.id, { waypoints });
+          t.document._source.x = waypoints.at(-1).x; t.document._source.y = waypoints.at(-1).y;
+          return Promise.resolve(true);
+        };
+      }
+      const tag = `fight, ${p.n} dropped at ${p.name}`;
+      try {
+        const src = ts[0].document._source;
+        assert.equal(dropWith(ts[0], contextsFor(ts, p.x - src.x, p.y - src.y)), null);
+        for (let i = 0; i < 80 && api.status().group.queue?.running; i++) await runFor(50);
+        const q = api.status().group.queue;
+        assert.equal(q.ended, "done", `${tag}: ${JSON.stringify(q)}`);
+        assert.equal(q.stayed, 0, `${tag}: nobody named (${JSON.stringify(q)})`);
+        for (const t of ts) { const s0 = starts.get(t.document.id); t.document._source.x = s0.x; t.document._source.y = s0.y; }
+        const by = Object.fromEntries([...log].map(([id, m]) => [id, m]));
+        checkRest(tag, ts, by);
+      } finally { restore(); tickBy(60000); }
+    }
+  } finally { done(); }
+});

@@ -29,7 +29,7 @@
  */
 
 import { LEAD, STAGGER, footprintCells, heap, planLead, staggerFile } from "./file-core.mjs";
-import { GROUP_MAX, MOTION, radiusOf } from "./motion-core.mjs";
+import { GROUP_MAX, radiusOf } from "./motion-core.mjs";
 import { pathLength } from "./group-core.mjs";
 import { pointsBack } from "./narrow-core.mjs";
 import { avoidDist } from "./pathfind-core.mjs";
@@ -538,35 +538,71 @@ function narrowParts(field, nf) {
 }
 
 /**
- * A march whose leader rests on a narrow way (0.10 R9; Fable's constraint 6): the members after it (least walk left
- * first) take points on the leader's own way back from where it rests, one token apart (their radii and the rest gap),
- * while those points lie on the narrow way and are clear of the tokens standing; each gets one route there. The rest
- * keep planLead's squares (off the narrow way). Changes `plan` in place.
+ * The line behind the leader on a narrow way (0.10 R9, review 3 "group slots on the stair are centre-line points a
+ * token apart"; F1 B2): the points back along the leader's own way where the way is narrower than the token are the
+ * narrow way's spots, ranked like squares by their walk from the leader (R3). Each member in turn (least walk left
+ * first) looks for the first such point clear of every slot given out, every token standing and every member that
+ * stays, by the route's own measure (its box, less its pixel), stepping back 0.1 square at a time, and takes it with one
+ * route there when planLead gave it no square (R3's fallback, also when the leader rests past the mouth) or one farther
+ * from the leader. A member whose route fails keeps its square, or stays, named. The walk order is then front first: a
+ * member resting nearer the leader goes before one behind it, whose way it would pass at rest. Changes `plan` in place.
  */
 function lineBehind(plan, members, standing, origins, s, nf) {
   const L = members.find(m => m.id === plan.leader);
-  const lead = plan.members[L?.id];
-  const pts = lead?.points;
-  if (!nf || !L || !(pts?.length >= 2)) return;
+  const pts = plan.members[L?.id]?.points;
+  if (!nf || !L || plan.none || !(pts?.length >= 2)) return;
+  const byId = new Map(members.map(m => [m.id, m]));
   const route = routeOracle(origins, s);
-  const claimed = [{ ...lead.slot, r: L.r, id: L.id }];
-  let back = 0, prevR = L.r;
+  // `slack` (squares): the route's goal moves by a pixel onto the centre line (its own rest point, on whole pixels).
+  const clear = (p, r, list, slack = 0) => list.every(o => Math.max(Math.abs(p.x - o.x), Math.abs(p.y - o.y)) >= o.r + r - 1 / s + slack);
+  // A rest's walk from the leader: a line point's own; a square's rank (its walk from the square behind the leader), +1.
+  const far = id => {
+    const e = plan.members[id];
+    if (id === L.id) return 0;
+    return e.line ?? (e.stay || !Number.isFinite(e.rank) ? Infinity : e.rank + 1);
+  };
+  const total = pathLength(pts);
+  let lined = 0;
   for (const id of plan.byWalk ?? []) {
-    if (id === L.id) continue;
-    const m = members.find(x => x.id === id);
-    if (!m || m.w > 1 || m.h > 1 || plan.members[id]?.atStart) break;
-    back += prevR + m.r + MOTION.restGap;
-    const [p] = pointsBack(pts, [back]);
-    if (!p || !nf.tight(Math.floor(p.y), Math.floor(p.x))) break;
-    if (standing.some(o => Math.hypot(o.x - p.x, o.y - p.y) < o.r + m.r + MOTION.restGap - 1e-6)) break;
+    const m = byId.get(id), e = plan.members[id];
+    if (!m || m === L || m.w > 1 || m.h > 1 || !e || (e.stay && e.stay !== "noSpot" && e.stay !== "noRoute")) continue;
+    const others = [...standing, ...Object.entries(plan.members).filter(([oid]) => oid !== id)
+      .map(([oid, o]) => ({ ...(o.stay ? byId.get(oid).start : o.slot), r: byId.get(oid).r, id: oid }))];
+    let p = null, d = 0;
+    for (let k = 0; !p && k * 0.1 < Math.min(total + 1e-9, far(id)); k++) {
+      const q = restOn(nf, pointsBack(pts, [k * 0.1])[0], m, s);
+      if (q && nf.widthAt(q.x, q.y) < 2 * m.r && clear(q, m.r, others, LINE_SLACK)) { p = q; d = k * 0.1; }
+    }
+    if (!p) continue;
+    // Its route keeps out of the tokens standing, the members that stay and the slots of those resting nearer the
+    // leader (they walk before it).
+    const avoid = others.filter(o => !plan.members[o.id] || plan.members[o.id].stay || far(o.id) < d);
     let way = null;
-    try { way = route(m, m.start, p, [...standing, ...claimed]); } catch { way = null; }
-    if (!way) break;
-    plan.members[id] = { ...plan.members[id], slot: p, points: way, walk: pathLength(way), stay: undefined, line: true };
-    plan.stayed = (plan.stayed ?? []).filter(x => x !== id);
-    claimed.push({ ...p, r: m.r, id });
-    prevR = m.r;
+    try { way = route(m, m.start, p, avoid); } catch { way = null; }
+    const end = way?.at(-1);
+    if (!end || !clear(end, m.r, others)) continue;
+    plan.members[id] = { ...e, slot: end, points: way, walk: pathLength(way), stay: undefined, atStart: undefined, line: d };
+    lined += 1;
   }
+  if (!lined) return;
+  const [first, ...rest] = plan.order;
+  plan.order = [first, ...rest.map((id, k) => ({ id, k, f: far(id) })).sort((a, b) => a.f - b.f || a.k - b.k).map(x => x.id)];
+  plan.stayed = plan.order.filter(id => plan.members[id]?.stay);
+}
+
+/** Squares a line point keeps beyond the route's own measure: the route moves its goal by up to a pixel or two. */
+const LINE_SLACK = 0.02;
+
+/**
+ * Where member m rests at point q of a narrow way (squares): the pathfinder's own rest point there (the centre line, on
+ * whole pixels: pathfind.mjs restPointFor), so a slot is judged where the route will end. null off a tight square.
+ */
+function restOn(nf, q, m, s) {
+  if (!q || !nf.tight(Math.floor(q.y), Math.floor(q.x))) return null;
+  const r = nf.restPoint(q);
+  if (!r) return null;
+  const tl = { x: Math.round(r.x * s - (m.w * s) / 2), y: Math.round(r.y * s - (m.h * s) / 2) };
+  return toSquares(tl, m.w, m.h, s);
 }
 
 /** A route oracle for planLead (centres in squares; avoid circles in squares, their own radius). */
@@ -620,7 +656,7 @@ function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
   const mayRest = rest ? (m, c) => (m.id === L.id && Math.hypot(c.x - rest.x, c.y - rest.y) < 1e-6) || walkable(m, c) : walkable;
   const plan = planLead({ members, leaderId: L.id, drop, target, standing },
     { walkable: mayRest, step, route: routeOracle(origins, s), now });
-  if (rest && !plan.none) {
+  if (!target && !plan.none) {
     try { lineBehind(plan, members, standing, origins, s, narrow); } catch (err) { log?.debug?.("file: the line behind", err); }
   }
   // The start delays, the last within 4 s of the drop (the plan's own time comes off the cap).
@@ -657,7 +693,7 @@ function fightPlan(anchor, contexts, { constrain = {}, group = [] } = {}) {
  * (`leaderAt`: its rest and the square its last step came from, top-left pixels); swarm: round the target. The
  * top-left pixels, or null (no free square it can reach: it stays, named). Reads only.
  */
-function slotAtTurn(token, { shape = "march", target = null, leaderId = null, leaderAt = null, riders = [] } = {}) {
+function slotAtTurn(token, { shape = "march", target = null, leaderId = null, leaderAt = null, riders = [], line = false, group = [] } = {}) {
   if (!feature || !token?.document) return null;
   try {
     const doc = token.document;
@@ -674,27 +710,29 @@ function slotAtTurn(token, { shape = "march", target = null, leaderId = null, le
       at = { at: leader.start, from: toSquares(leaderAt.from ?? leaderAt.at, w, h, s) };
     }
     from(dropPoints(shape === "swarm" ? target : null, leader?.start ?? m.start, leader ?? m));
-    // The leader resting on a narrow way (0.10 R9, constraint 6): the first point clear of every token standing back
-    // along this member's own way to it, one token apart, on the narrow way.
-    if (leader && narrow && m.w <= 1 && m.h <= 1 && narrow.tight(Math.floor(leader.start.y), Math.floor(leader.start.x))) {
-      let way = null;
-      try { way = routeOracle(origins, s)(m, m.start, leader.start, []); } catch { way = null; }
-      if (way) {
-        const gap = MOTION.restGap;
-        const near = p => standing.some(o => Math.hypot(o.x - p.x, o.y - p.y) < o.r + m.r + gap - 1e-6);
-        for (let d = leader.r + m.r + gap; d < 40; d += 0.1) {
-          const [p] = pointsBack(way, [d]);
-          if (!p || !narrow.tight(Math.floor(p.y), Math.floor(p.x))) break;
-          if (!near(p)) return toTopLeft(p, m.w, m.h, s);
-        }
+    const list = leader ? [leader, m] : [m];
+    // Its mates at rest are taken squares, not walls (0.10 F1 B2: one resting in a narrow mouth cut the leader's floods).
+    const mates = new Set(group);
+    const plan = line ? null : planLead({ members: list, leaderId: leader?.id ?? m.id, target: shape === "swarm" ? target : null, leaderAt: at,
+      standing: standing.filter(o => o.id !== leader?.id && !mates.has(o.id)), taken: standing.filter(o => o.id !== leader?.id && mates.has(o.id)) },
+    { walkable, step, now });
+    const e = plan?.members[m.id];
+    const slot = e && !e.stay ? e.slot : null;
+    // The line behind the leader on a narrow way (0.10 R9; F1 B2, as out of combat): the first point back along the
+    // leader's own way (this member's own way to it when the leader did not walk) where the way is narrower than the
+    // token, clear of every token standing by the route's measure (its circles, less its pixel), when it is nearer the
+    // leader than the square planLead gave; `line`: that point only (R3's fallback: no square, or no route to it).
+    if (leader && narrow && m.w <= 1 && m.h <= 1) {
+      let way = leaderAt.way?.length >= 2 ? leaderAt.way.map(p => toSquares(p, leader.w, leader.h, s)) : null;
+      if (!way) { try { way = routeOracle(origins, s)(m, m.start, leader.start, []); } catch { way = null; } }
+      const far = slot && Number.isFinite(e.rank) ? e.rank + 1 : Infinity;
+      const total = way ? pathLength(way) : 0;
+      for (let k = 0; k * 0.1 < Math.min(total + 1e-9, far); k++) {
+        const p = restOn(narrow, pointsBack(way, [k * 0.1])[0], m, s);
+        if (p && narrow.widthAt(p.x, p.y) < 2 * m.r && standing.every(o => Math.hypot(o.x - p.x, o.y - p.y) >= o.r + m.r - 1 / s + LINE_SLACK)) return toTopLeft(p, m.w, m.h, s);
       }
     }
-    const list = leader ? [leader, m] : [m];
-    const plan = planLead({ members: list, leaderId: leader?.id ?? m.id, target: shape === "swarm" ? target : null, leaderAt: at,
-      standing: standing.filter(o => o.id !== leader?.id) }, { walkable, step, now });
-    const e = plan.members[m.id];
-    if (!e || e.stay) return null;
-    return toTopLeft(e.slot, m.w, m.h, s);
+    return slot ? toTopLeft(slot, m.w, m.h, s) : null;
   } catch (err) { log?.debug?.("file: a fight member's square", err); return null; }
 }
 

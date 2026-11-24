@@ -291,13 +291,15 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     const a = centreOf(p), b = centreOf(q);
     return circles.some(c => avoidDist(c, a, b) < c.r - 1e-6);
   };
-  const blockedPx = p => {
-    if (grazes(p, p) || hz.at(p)) return true;
+  /** A square the token may not enter whatever the avoid circles: traps, unseen ground, dnd5e's creature blocking. */
+  const shutPx = p => {
+    if (hz.at(p)) return true;
     if (!blocking) return false;
     const k = Math.floor((elevation / grid.distance) + 1e-8);
     const spaces = doc.getOccupiedGridSpaceOffsets({ x: p.x, y: p.y, elevation, width, height, depth, shape });
     return spaces.some(space => token.layer.isOccupiedGridSpaceBlocking({ ...space, k }, token, { preview: look }));
   };
+  const blockedPx = p => grazes(p, p) || shutPx(p);
 
   const measure = pts => {
     const wps = pts.map(p => waypoint(p));
@@ -395,6 +397,16 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
         }
         return true;
       };
+      const covered = n => {
+        if (!circles) return false;
+        const A = toAbs(n), c = nf.cells(A.I, A.J);
+        for (let k = 0; k < c.comp.length; k++) {
+          if (c.comp[k] !== n.c) continue;
+          const p = { x: c.x[k] * s, y: c.y[k] * s };
+          if (!circles.some(o => avoidDist(o, p, p) < o.r - 1e-6)) return false;
+        }
+        return true;
+      };
       narrow = {
         field: nf, toAbs, fromAbs, okSeg,
         /** A top-left position's centre in squares, and back. */
@@ -403,7 +415,10 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
         more: narrowMore(nf, {
           toAbs, fromAbs,
           cost: (a, b) => stepCost(pos(a), pos(b)),
-          blocked: n => blocked(n) || !inside(pos(n)),
+          // A part of a tight square: the avoid circles shut it only when every passable point of it lies inside one
+          // (0.10 F1 B2: a slot on the centre line shut its neighbours' parts by their squares' centres); okSeg tests
+          // the walk itself.
+          blocked: n => (n.c ? memoGet("pb", `${at(n)}#${n.c}`, () => shutPx(pos(n)) || covered(n)) : blocked(n)) || !inside(pos(n)),
         }),
         tight: n => { const A = toAbs(n); return nf.tight(A.I, A.J); },
       };

@@ -347,6 +347,7 @@ export function walkFrom(origins, step, { ok = () => true, maxCells = Infinity, 
  * @param {{x,y}} spec.drop                     the leader's drop centre (march)
  * @param {{ id?, x, y, w?, h? }|null} [spec.target]  swarm: the token dropped on (its centre and size)
  * @param {{x,y,r,id?}[]} [spec.standing]       tokens standing outside the group (the target among them)
+ * @param {{x,y,r,id?}[]} [spec.taken]          a fight's mates at rest (0.10 F1): taken like slots, shutting no flood
  * @param {{ at: {x,y}, from: {x,y} }} [spec.leaderAt]  the leader already at rest at `at`, its last step from `from`
  *                                              (a fight's later turn); then it is not planned
  * @param {object} o oracles
@@ -379,7 +380,7 @@ export function planLead(spec, o) {
   const n = members.length;
   const flood = { maxCells: (o.cells ?? LEAD.cells) * n + (o.extra ?? LEAD.extra), maxWalk: o.maxWalk ?? LEAD.maxWalk };
   const overStanding = c => standing.some(s => dist(cellCentre(c), s) < s.r + 0.5 - EPS);
-  const claims = [];                      // { x, y, r, id }: slots given out
+  const claims = (spec.taken ?? []).map(t => ({ x: t.x, y: t.y, r: t.r, id: t.id ?? null })); // { x, y, r, id }: slots given out
   const stays = [];                       // { x, y, r, id }: members that stay where they stand
   const blockedBy = list => c => list.some(s => dist(cellCentre(c), s) < s.r + 0.5 - EPS);
   const finish = () => { out.ms = Math.round((now() - t0) * 10) / 10; return out; };

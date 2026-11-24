@@ -74,9 +74,13 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   or stopped part-way rests off the grid on the centre line, in a fight too (a fight's walk is on the grid except
   through the narrow way, its checkpoints where the centre line enters each square, charged core's measure of the way
   walked); a drop in the rock or off the line beside a narrow way rests on its nearest centre-line point (the ruler shows
-  the snapped square as not reached). A group goes leader first and files behind it; dropped on the narrow way they rest
-  on its centre line behind the leader, a token apart. Squares a wall runs through (an off-grid wall) are the only ones
-  this touches: a map whose walls lie on the grid lines routes exactly as before. `pathfind.route` reports `narrow` and
+  the snapped square as not reached). A group goes leader first and files behind it. The points back along the leader's
+  own way where the way is narrower than the token are spots like squares: a member rests on the first one clear of
+  everyone, a token apart on the centre line, when it is nearer the leader than the square behind it would be or when
+  it has no square at all, so a group dropped on the narrow way, or just past its mouth, lines up on it behind the
+  leader (in a fight too, at each member's turn). A group's floods never cross an off-grid wall: a square it runs
+  through counts in the plan by one side only. Squares a wall runs through (an off-grid wall) are the only ones this
+  touches: a map whose walls lie on the grid lines routes exactly as before. `pathfind.route` reports `narrow` and
   `minClearance` (squares).
 - **Click a moving token to stop it** (always on) once it has moved 400 ms (a move you dropped; one another user
   started stops at once): out of combat it stops **exactly where it is drawn** (Joe, 2026-11-23); one whose body is
@@ -376,7 +380,9 @@ runs out, the order one stop settles walkers in) and `drop.test` (the drop and c
 file on the synthetic board with its three handlers, the fight queue and what ends it, the 0.9.0 step 1 gate: 60
 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk, and L3's: 60 seeded fight queues, the leader
 first and through its members, the same charge with or without them in its way, and 200 seeded speed stops; 0.10 R9:
-a group of four over the stair in a fight and out of it, a speed stop part-way on the centre line);
+a group of four over the stair in a fight and out of it, a speed stop part-way on the centre line; 0.10 F1: ten
+marching beside an off-grid wall, 4 to 12 dropped at 13 points along the stair and in room B, in a fight and out of it,
+and a rider grabbed in a group);
 `telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). `test/sim/` is the
 simulator (0.9.0 step 5; 0.10 L1 the leader plan, L2 its motion, L3 the fight and its own kinds of seed, Joe's
