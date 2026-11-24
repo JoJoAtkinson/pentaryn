@@ -775,3 +775,35 @@ a click stops the group and its waves; another user's stop makes the sender drop
 (its own stop write does not); a hidden tab sends the waves at once, once; a wave skips a member moved since and
 does not send one through a door shut since (named).
 
+### 17.4 Step 4: the fight file
+
+A group drag in a fight with `groupDrags` on is the fight file (`drop.mjs` `fightFile`): nothing moves at the drop
+(the wrap returns null). The members (leaders; a rider goes with its mount as one entry) are ordered by `sequence`
+over their straight walks from start to formation spot, least walk left first. An async loop takes each in turn: a
+member deleted ends the queue; one no longer at its start (or dropped again) is skipped; otherwise its way is routed
+**when its turn comes** (`routeAtTurn`): round every token standing then outside its stack (the members already moved
+where they came to rest, the others where they stand; circles on whole squares), to its formation spot or, with a
+token standing there, the nearest clear square it can reach (`clearOfWalls`). No route: it stays, named. The route
+gets a checkpoint at every square (`withCheckpoints`, kept only at the same measured cost) and goes as a normal single
+move (`TokenDocument#move`, the module's option and the group's), so step 1's per-square test (walls now, an undrawn
+token, a token standing still) applies to every square and core charges it as any single move. The loop awaits core's
+promise (true when the whole walk ended, false when stopped or prevented) and then the token's movement animation.
+A watchdog of the walk's own time (its squares at the token's speed) plus 3 s moves the queue on. A walk that ends
+false (a click, a door shut across it, a square refused) ends the queue: the group stops there.
+
+What empties the queue: a click on any member (`stop.mjs` `groupCancel` on the sender's client; a GM's click on a
+player's walker reaches the sender through `stopOwn`, a player's click on the GM's walker through the relay `stop`,
+and both now cancel the whole group); a turn change or the fight's end (`updateCombat` with a turn, round, started or active change;
+`deleteCombat`); a new drop by this client; a deleted member (`deleteToken`). The members not sent are named ("Did not
+move, the group's walk was ended: …") after a turn change, a deleted member or a stop on the way, not after the
+dragger's own click or drop. More than the cap (12), or pathfinding off on this client: refused, "In a fight, drag one
+token at a time." Tier C's setting `fightGroupDrags` is deleted (the GM's client removes its stored row once:
+`RETIRED.world`), `groupMode` loses `fightTier`, and `groupDrags` covers both.
+
+Gate (`test/drop.test.mjs`): two members through the door walk one at a time, the second only once the first's walk
+resolved, each a square a step with a checkpoint at every square, never through a wall, charged exactly 5 ft a square;
+the second is routed round where the first came to rest; 40 seeded fight group drags (2-4 members, 0-2 tokens
+standing) hold the same per square, never through a token standing at that member's turn, nobody resting on anybody,
+every member walked or named, no watchdog needed; a mount and its rider go as one entry; the queue ends on a click (the walker stopped by
+`stopMovement`, nobody else sent, no notice), a turn change and a deleted member (both named), and a new drop; the
+watchdog moves a walk that never resolves on after its time plus 3 s and not before; more than 12 is refused.

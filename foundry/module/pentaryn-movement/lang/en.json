@@ -51,7 +51,8 @@
       "named": {
         "noRoute": "No route there: {name} is in the way. The ghost button under the Ruler lets you pass.",
         "aToken": "a token",
-        "stayed": "Stayed where they stand, with no free spot they can reach: {names}."
+        "stayed": "Stayed where they stand, with no free spot they can reach: {names}.",
+        "notSent": "Did not move, the group's walk was ended: {names}."
       },
       "fightGroup": "In a fight, drag one token at a time."
     },
@@ -91,12 +92,8 @@
         "hint": "Off: every drag is plain Foundry dragging (no path round walls, no group plan). The GM's toolbar button (route icon, Token controls) flips it in one click. It also switches itself off after repeated failures, and tells the GM."
       },
       "groupDrags": {
-        "name": "Group drags out of combat",
-        "hint": "When several tokens are dragged together outside a fight, each walks its own way to its own spot around the drop point, filing through doors without overlapping. Off: they move as Foundry moves them, stopping before any token in the way."
-      },
-      "fightGroupDrags": {
-        "name": "Group drags in a fight (tier C, testing)",
-        "hint": "When several tokens are dragged together during a fight, moves whose ways do not meet go together and the others set off as the one before them arrives. Off (the default while it is tested): they move as Foundry moves them, stopping before any token in the way, each charged the squares it walks."
+        "name": "Group drags",
+        "hint": "When several tokens are dragged together outside a fight, each walks its own way to its own spot around the drop point, filing through doors. In a fight they walk one at a time, each round the tokens standing when its turn comes and charged the squares it walks. Off: they move as Foundry moves them, stopping before any token in the way."
       }
     },
     "assist": {

@@ -156,6 +156,18 @@
     "name": "updateToken"
   },
   {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
     "kind": "once",
     "name": "setup"
   },

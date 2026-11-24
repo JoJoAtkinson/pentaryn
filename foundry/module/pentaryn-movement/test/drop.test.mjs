@@ -189,7 +189,7 @@ test("the drop and click wraps are in; status().group reports them", () => {
   const g = api.status().group;
   assert.deepEqual(g.patched, { drop: true, click: true });
   assert.equal(g.enabled, true);
-  assert.equal(g.fight, false, "tier C (fight group drags) is off by default");
+  assert.equal(g.fight, true, "a group drag in a fight is the fight file (0.9.0: tier C gone)");
   assert.equal(api.selftest().ok, true, JSON.stringify(api.selftest().checks));
 });
 
@@ -1448,7 +1448,7 @@ test("0.8.0 / 0.9.0 notices: the players see \"No route there\", \"Stopped short
   const lang = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
   const shown = Object.keys(lang.PENTARYN_MOVEMENT.notify).filter(k => typeof lang.PENTARYN_MOVEMENT.notify[k] === "string");
   assert.deepEqual(shown.sort(), ["fightGroup", "noRoute", "stoppedShort"]);
-  assert.deepEqual(Object.keys(lang.PENTARYN_MOVEMENT.notify.named).sort(), ["aToken", "noRoute", "stayed"]);
+  assert.deepEqual(Object.keys(lang.PENTARYN_MOVEMENT.notify.named).sort(), ["aToken", "noRoute", "notSent", "stayed"]);
   assert.equal(lang.PENTARYN_MOVEMENT.notify.stoppedShort, "Stopped short, way blocked.");
 });
 
@@ -2078,22 +2078,264 @@ test("0.9.0 B0: a member with no spot it can reach stays where it stands and is 
   }
 });
 
-test("0.9.0: a group drag in a fight is refused with a notice (until the fight file); nothing moves", () => {
+/** Let the fight queue's promises and timers run: `ms` of the mocked clock in 10 ms steps, microtasks between. */
+async function runFor(ms) {
+  for (let t = 0; t < ms; t += 10) { mock.timers.tick(10); for (let i = 0; i < 12; i++) await Promise.resolve(); }
+}
+/** Hold every move of these tokens until the test settles it: id → [{ waypoints, options, settle(v) }]. */
+function holdMoves(ts) {
+  const held = new Map();
+  for (const t of ts) {
+    held.set(t.document.id, []);
+    t.document.move = (waypoints, options) => {
+      F.calls.push({ op: "move", id: t.document.id, waypoints, options });
+      return new Promise(r => held.get(t.document.id).push({ waypoints, options, settle: v => { t.document._source.x = waypoints.at(-1).x; t.document._source.y = waypoints.at(-1).y; r(v); } }));
+    };
+  }
+  return held;
+}
+/** A fight group's tokens on the scene (and drawn), the others off it for the test; returns the restore. */
+function fightScene(ts) {
   combatFlag = true;
   clock.step = 0;
-  const ts = [makeToken("b0fA000000000001", 400, 200), makeToken("b0fB000000000001", 300, 200)];
+  for (const t of ts) t.visible = true;
   const others = keepOnly(ts);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts];
+  return () => {
+    combatFlag = false;
+    F.canvas.tokens.placeables = saved;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  };
+}
+
+test("0.9.0 fight file: a group drag in a fight walks one member at a time, each a single move routed at its turn, a checkpoint every square, charged exactly", async () => {
+  const ts = [makeToken("ffoA000000000001", 400, 200), makeToken("ffoB000000000001", 300, 200)];
+  const restore = fightScene(ts);
+  const held = holdMoves(ts);
+  try {
+    const from = F.calls.length;
+    assert.equal(dropWith(ts[0], contextsFor(ts, 0, 400)), null, "nothing moves at the drop");
+    assert.equal(api.status().group.last.result, "queue");
+    await runFor(100);
+    const moves = () => F.calls.slice(from).filter(c => c.op === "move");
+    assert.equal(moves().length, 1, "one member at a time");
+    const first = moves()[0];
+    assert.ok(api.status().group.groups >= 1, "held as one group");
+    assert.equal(typeof first.options.pentarynMovementGroup, "string", "tagged as one group (a click on one stops them)");
+    held.get(first.id)[0].settle(true);
+    await runFor(100);
+    assert.equal(moves().length, 2, "the next one goes when the first has walked");
+    const second = moves()[1];
+    assert.notEqual(second.id, first.id);
+    held.get(second.id)[0].settle(true);
+    await runFor(100);
+    for (const m of moves()) {
+      const t = ts.find(x => x.document.id === m.id);
+      const start = m.id === first.id ? { x: first.id === ts[0].document.id ? 400 : 300, y: 200 } : { x: second.id === ts[0].document.id ? 400 : 300, y: 200 };
+      const path = [wp(start.x, start.y), ...m.waypoints];
+      for (let k = 1; k < path.length; k++) {
+        assert.equal(Math.max(Math.abs(path[k].x - path[k - 1].x), Math.abs(path[k].y - path[k - 1].y)), S, `${m.id}: one square a step`);
+        assert.equal(crossing(center(path[k - 1]), center(path[k])).length, 0, `${m.id}: through a wall`);
+        assert.equal(path[k].checkpoint, true, "a checkpoint every square");
+      }
+      assert.equal(Token5e.prototype.measureMovementPath.call(t, path).cost, 5 * m.waypoints.length, "charged 5 ft a square");
+      assert.ok(center(m.waypoints.at(-1)).y > 400, "past the door");
+    }
+    const q = api.status().group.queue;
+    assert.deepEqual([q.members, q.sent, q.running, q.ended], [2, 2, false, "done"]);
+    assert.equal(sent(from).length, 0, "no batched update: each is its own move");
+  } finally { restore(); tickBy(60000); }
+});
+
+test("0.9.0 fight file: the second member is routed round the first where it came to rest (the tokens standing at its turn), never onto it", async () => {
+  // Both dropped into the one square past the door: the grabbed one takes it, the other the nearest clear square.
+  const ts = [makeToken("ffrA000000000001", 400, 300), makeToken("ffrB000000000001", 400, 200)];
+  const restore = fightScene(ts);
+  const held = holdMoves(ts);
+  try {
+    const from = F.calls.length;
+    dropWith(ts[0], contextsFor(ts, 0, 200));
+    await runFor(100);
+    const moves = () => F.calls.slice(from).filter(c => c.op === "move");
+    held.get(moves()[0].id)[0].settle(true);
+    await runFor(200);
+    assert.equal(moves().length, 2);
+    const a = moves()[0], b = moves()[1];
+    held.get(b.id)[0].settle(true);
+    await runFor(50);
+    const restA = center(a.waypoints.at(-1));
+    for (const p of b.waypoints) assert.ok(Math.hypot(center(p).x - restA.x, center(p).y - restA.y) >= S - 1, `onto the first: ${JSON.stringify(b.waypoints.map(w => [w.x, w.y]))}`);
+  } finally { restore(); tickBy(60000); }
+});
+
+test("0.9.0 fight file: a stack (a mount and its rider) goes as one entry, the rider walking its mount's way at its offset in the same turn", async () => {
+  const mount = makeToken("ffsM000000000001", 100, 100, { size: 2 });
+  const rider = makeToken("ffsR000000000001", 100, 100);
+  const other = makeToken("ffsO000000000001", 600, 100);
+  const restore = fightScene([mount, rider, other]);
+  const held = holdMoves([mount, rider, other]);
+  try {
+    const from = F.calls.length;
+    assert.equal(dropWith(mount, contextsFor([mount, rider, other], 200, 0)), null);
+    await runFor(100);
+    const moves = () => F.calls.slice(from).filter(c => c.op === "move");
+    const first = moves().map(m => m.id).sort();
+    const stackFirst = first.includes(mount.document.id);
+    assert.deepEqual(first, stackFirst ? [mount.document.id, rider.document.id].sort() : [other.document.id], `one entry at a time: ${JSON.stringify(first)}`);
+    const settleAll = () => { for (const m of moves()) for (const h of held.get(m.id)) h.settle(true); };
+    settleAll();
+    await runFor(200);
+    settleAll();
+    await runFor(200);
+    const mv = id => moves().find(m => m.id === id);
+    assert.ok(mv(mount.document.id) && mv(rider.document.id) && mv(other.document.id), `everyone walked: ${JSON.stringify(moves().map(m => m.id))} ${JSON.stringify(api.status().group.queue)} ${JSON.stringify(api.status().group.told)}`);
+    assert.deepEqual(mv(rider.document.id).waypoints.map(w => [w.x, w.y]), mv(mount.document.id).waypoints.map(w => [w.x, w.y]), "the rider on its mount's way");
+    assert.equal(api.status().group.queue.members, 2, "two entries: the stack and the other");
+  } finally { restore(); tickBy(60000); }
+});
+
+test("0.9.0 fight file gate: the queue ends on a click (stop), a turn change and a deleted member; the members not sent stay, named when the dragger did not end it", async () => {
+  const cases = ["click", "turn", "deleted"];
+  for (const why of cases) {
+    const ts = [makeToken(`ffq${why[0]}A00000000001`, 400, 200), makeToken(`ffq${why[0]}B00000000001`, 300, 200), makeToken(`ffq${why[0]}C00000000001`, 500, 200)];
+    const restore = fightScene(ts);
+    const held = holdMoves(ts);
+    try {
+      const from = F.calls.length;
+      assert.equal(dropWith(ts[0], contextsFor(ts, 0, 400)), null);
+      await runFor(100);
+      const moves = () => F.calls.slice(from).filter(c => c.op === "move");
+      assert.equal(moves().length, 1, why);
+      const walking = sceneTokens.get(moves()[0].id);
+      if (why === "click") {
+        walking.movement = { id: "mvffq", state: "pending", user: { isSelf: true } };
+        const r = await api.stop(walking);
+        assert.equal(r.ok, true, JSON.stringify(r));
+        assert.ok(F.calls.slice(from).some(c => c.op === "stopMovement" && c.id === walking.id), "the walker stops on the square it holds");
+        held.get(walking.id)[0].settle(false);
+      } else if (why === "turn") {
+        F.Hooks.callAll("updateCombat", { id: "cmb" }, { turn: 1 }, {}, game.user.id);
+        held.get(walking.id)[0].settle(true);
+      } else {
+        const gone = ts.find(t => t.document.id !== walking.id);
+        sceneTokens.delete(gone.document.id);
+        F.Hooks.callAll("deleteToken", gone.document, {}, game.user.id);
+        held.get(walking.id)[0].settle(true);
+      }
+      walking.movement = { state: "completed", user: { isSelf: true } };
+      await runFor(5000);
+      assert.equal(moves().length, 1, `${why}: nobody else is sent`);
+      const q = api.status().group.queue;
+      assert.equal(q.running, false, `${why}: the queue ended`);
+      assert.equal(q.ended, why, JSON.stringify(q));
+      const named = F.calls.slice(from).filter(c => c.op === "notify" && /named\.notSent|Did not move/.test(c.message));
+      if (why === "click") assert.equal(named.length, 0, "a click is the dragger's own doing: no notice");
+      else assert.equal(named.length, 1, `${why}: the members not sent are named`);
+    } finally { restore(); tickBy(60000); }
+  }
+});
+
+test("0.9.0 fight file: a new drop empties the queue; the watchdog (walk time + 3 s) moves a walk that never ends on to the next member", async () => {
+  const ts = [makeToken("ffwA000000000001", 400, 200), makeToken("ffwB000000000001", 300, 200)];
+  const restore = fightScene(ts);
+  holdMoves(ts);
+  try {
+    let from = F.calls.length;
+    dropWith(ts[0], contextsFor(ts, 0, 400));
+    await runFor(100);
+    const moves = () => F.calls.slice(from).filter(c => c.op === "move");
+    assert.equal(moves().length, 1);
+    // Never settled: about 4 squares at 6 a second, then 3 s.
+    await runFor(2500);
+    assert.equal(moves().length, 1, "not before the watchdog");
+    await runFor(2500);
+    assert.equal(moves().length, 2, "the watchdog moved the queue on");
+    assert.ok(api.status().group.queue.watchdog >= 1);
+    // A new drop (of anything) empties it.
+    const c = makeToken("ffwC000000000001", 100, 100);
+    F.canvas.tokens.placeables = [...ts, c];
+    dropWith(c, contextsFor([c], 100, 0));
+    await runFor(6000);
+    assert.equal(moves().filter(m => m.id !== c.document.id).length, 2, "nothing more from the emptied queue");
+    assert.equal(api.status().group.queue.ended, "drop");
+    sceneTokens.delete(c.document.id);
+  } finally { restore(); tickBy(60000); }
+});
+
+test("0.9.0 fight file gate: 40 seeded fight group drags (2-4 members, tokens standing): each member's move a square a step with a checkpoint at every square, never through a wall or a token standing at its turn, never resting on one, charged exactly 5 ft a square", async () => {
+  let walks = 0, stays = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const rand = rng(7000 + seed);
+    const sq = n => Math.floor(rand() * n) * S;
+    const taken = new Set();
+    const spot = () => { for (;;) { const p = { x: sq(10), y: sq(8) }; const k = `${p.x},${p.y}`; if (!taken.has(k)) { taken.add(k); return p; } } };
+    const tag = String(seed).padStart(3, "0");
+    const ms = [];
+    for (let k = 0, n = 2 + Math.floor(rand() * 3); k < n; k++) { const p = spot(); ms.push(makeToken(`fg${tag}M${k}00000000`, p.x, p.y)); }
+    const stand = [];
+    for (let k = 0, n = Math.floor(rand() * 3); k < n; k++) { const p = spot(); stand.push(makeToken(`fg${tag}S${k}00000000`, p.x, p.y)); }
+    const restore = fightScene([...ms, ...stand]);
+    const all = [...ms, ...stand];
+    const log = [];
+    for (const t of ms) {
+      t.document.move = (waypoints, options) => {
+        // What stands at this member's turn: every other token where the server has it.
+        const at = all.filter(o => o !== t).map(o => ({ id: o.document.id, c: center(o.document._source) }));
+        log.push({ t, from: { ...t.document._source }, waypoints, at });
+        t.document._source.x = waypoints.at(-1).x; t.document._source.y = waypoints.at(-1).y;
+        return Promise.resolve(true);
+      };
+    }
+    const delta = { x: sq(8) - 4 * S, y: sq(8) - 4 * S };
+    const why = `seed ${seed}: members ${JSON.stringify(ms.map(t => [t.document._source.x, t.document._source.y]))} standing ${JSON.stringify(stand.map(t => [t.document._source.x, t.document._source.y]))} delta ${JSON.stringify(delta)}`;
+    try {
+      const from = F.calls.length;
+      dropWith(ms[0], contextsFor(ms, delta.x, delta.y));
+      for (let i = 0; i < 40 && api.status().group.queue?.running; i++) await runFor(50);
+      const q = api.status().group.queue;
+      assert.equal(q?.running, false, `${why}: the queue ended`);
+      assert.equal(q.watchdog, 0, `${why}: no walk needed the watchdog`);
+      for (const m of log) {
+        walks += 1;
+        const path = [m.from, ...m.waypoints];
+        for (let k = 1; k < path.length; k++) {
+          const a = path[k - 1], b = path[k];
+          assert.equal(Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)), S, `${why}: ${m.t.document.id} one square a step`);
+          assert.equal(b.checkpoint, true, `${why}: a checkpoint every square`);
+          assert.equal(crossing(center(a), center(b)).length, 0, `${why}: ${m.t.document.id} step ${k} through a wall`);
+          for (const o of m.at) assert.ok(avoidDist({ x: o.c.x, y: o.c.y, r: 99 }, center(a), center(b)) >= 99 - 1e-6, `${why}: ${m.t.document.id} step ${k} into ${o.id} standing at its turn`);
+        }
+        assert.equal(Token5e.prototype.measureMovementPath.call(m.t, path).cost, 5 * m.waypoints.length, `${why}: charged 5 ft a square`);
+      }
+      // Every member walked, or was named.
+      const walked = new Set(log.map(m => m.t.document.id));
+      const named = F.calls.slice(from).filter(c => c.op === "notify" && /Stayed where they stand|named\.stayed/.test(c.message)).map(c => c.message).join(" ");
+      for (const t of ms) {
+        const still = delta.x === 0 && delta.y === 0;
+        if (!walked.has(t.document.id) && !still) { stays += 1; assert.ok(named.includes(t.document.id) || q.skipped, `${why}: ${t.document.id} neither walked nor named`); }
+      }
+      // Nobody rests on anybody.
+      for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+        const a = center(all[i].document._source), b = center(all[j].document._source);
+        assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= S - 1e-6, `${why}: ${all[i].document.id} rests on ${all[j].document.id}`);
+      }
+    } finally { restore(); tickBy(60000); }
+  }
+  assert.ok(walks >= 40, `walked: ${walks}, stayed: ${stays}`);
+});
+
+test("0.9.0: a group drag in a fight of more than the cap is refused with a notice; nothing moves", () => {
+  const ts = [];
+  for (let k = 0; k < 13; k++) ts.push(makeToken(`ffx${String(k).padStart(2, "0")}00000000001`, (k % 7) * S, 100 + Math.floor(k / 7) * S));
+  const restore = fightScene(ts);
   try {
     const from = F.calls.length;
     assert.equal(dropWith(ts[0], contextsFor(ts, 0, 100)), null);
     assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.fightGroup"));
     assert.deepEqual([api.status().group.last.mode, api.status().group.last.reason], ["refused", "fightGroup"]);
-  } finally {
-    combatFlag = false;
-    for (const t of ts) sceneTokens.delete(t.document.id);
-    for (const [k, v] of others) sceneTokens.set(k, v);
-    tickBy(60000);
-  }
+  } finally { restore(); tickBy(60000); }
 });
 
 test("0.9.0 planGroup(refs, point): B0's plan as a dry run (each member's slot, waypoints, why it stays); nothing moves", () => {

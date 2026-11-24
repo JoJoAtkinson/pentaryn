@@ -21,7 +21,7 @@ export const MANIFEST = Object.freeze({
         doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope }, combatExempt: string[], "
-        + "group: { enabled, fight, patched: { drop, click }, regime, limits, groups, last, fallbacks, stopped, cut, step, undo, told, pending, wave, flushed, perf }, "
+        + "group: { enabled, fight, patched: { drop, click }, regime, limits, groups, last, fallbacks, stopped, cut, step, undo, told, pending, wave, flushed, queue, perf }, "
         + "stop: { last }, "
         + "assist: { tripped }, migrated }",
       gm: false, writes: false, legacy: true,
@@ -29,14 +29,14 @@ export const MANIFEST = Object.freeze({
         + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
         + "are wrapped, every setting key with its scope (ghost and ownedOnTop are client settings), and combatExempt: the ids "
         + "of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks). "
-        + "group (0.4.0; 0.9.0 the drop): drag help on this client — enabled (tier B, groupDrags), fight (false: a group drag in a fight is refused with a notice in 0.9.0), "
+        + "group (0.4.0; 0.9.0 the drop): drag help on this client — enabled (groupDrags), fight (groupDrags: a group drag in a fight is the fight file, one member at a time), "
         + "whether the drop and click wraps are in, the regime of your controlled tokens (combat when one is in a started combat, else free), the "
         + "limits, how many groups this client holds (a click on one member stops them all), the last drop (mode, reason, result, ms, async, stacked, plan) "
         + "and the last few reasons a drop went to core; stopped: the last stop of a group; cut: the last wall raised or door shut that stopped moves this client drives (out of combat, where drawn); "
         + "step (0.8.3): the last next square of a move this client drove that it did not send (why: wall, standing, unrendered, wallUnrendered); undo (0.8.3): the last move whose undo entries were merged into one; "
         + "told (0.9.0): the last notices this client showed (kind, reason, text); pending (0.9.0): the file's waves this client still has to send ([{ gid, at, ids }]); "
         + "wave: the last later wave it sent (members, sent, skipped: no longer at their start, shut: a wall across their way, short); flushed: the last hidden-tab flush (members); "
-        + "perf: drops handled, the last and longest (ms). stop.last (0.4.11): this client's last "
+        + "queue: the last fight queue (members, sent, stayed, skipped, watchdog, ended: done / click / turn / drop / deleted / stopped, running); perf: drops handled, the last and longest (ms). stop.last (0.4.11): this client's last "
         + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole), or null. "
         + "assist.tripped (0.8.0): the circuit breaker's trip on this client ({ at, why }) or null; migrated: what migrateSettings carried over at ready.",
     },
@@ -160,7 +160,7 @@ export const MANIFEST = Object.freeze({
         + "(the pentaryn-movement.stopOwn query: GM sender only), so a GM may stop any move; a player asks the "
         + "active GM through this row's relay, which stops it only when it started the move and the sender owns the "
         + "token (NOT_INITIATOR / NOT_OWNER otherwise). Stopping a member of a group stops the whole group: on the client "
-        + "that sent it every member and its unsent waves; elsewhere this one, and the dragger's screen "
+        + "that sent it every member, its unsent waves and its fight queue; elsewhere this one, and the dragger's screen "
         + "stops the rest. Never held back by the 400 ms arming a click waits for. NOT_MOVING when it "
         + "is not moving or you cannot control it.",
     },

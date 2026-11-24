@@ -23,7 +23,7 @@
  * a player clicking its own token as the GM's group set off was ignored, and the token walked on); so is a move
  * this client never saw start. The API's stop() is never held back.
  * A click on one member of a group stops the whole group (decision 3 as revised 2026-11-24; 0.9.0 §4 step 3). On the
- * client that sent the group, every member and its unsent waves. On any other client, the one
+ * client that sent the group, every member and its unsent waves (or its fight queue). On any other client, the one
  * clicked: the dragger's screen sees that stop and stops the rest (file.mjs onGroupTag). When the dragger is no longer
  * there, the clicker stops every member it owns too. Out of combat each stops exactly where it is drawn; one whose body
  * is across a door's line is carried just past the line along its own route (Joe's decision 2 as revised 2026-11-23,
@@ -417,7 +417,7 @@ function owns(token) {
 
 /**
  * Stop `token` by the table's decision `how`, and with it the rest of its group (decision 3 as revised 2026-11-24): on
- * the client that sent the group every member (its unsent waves go too); elsewhere the one clicked,
+ * the client that sent the group every member (its unsent waves and fight queue go too); elsewhere the one clicked,
  * the dragger's screen stopping the rest (every member this user owns when the dragger is gone). Out of combat each
  * stops exactly where it is drawn (one in a doorway just past the door's line); in a fight each finishes the square it
  * is in. Returns the stops' promises.
@@ -439,7 +439,7 @@ function stopToken(token, how, via = "api") {
   // Not the dragger's: the dragger's screen stops the rest when it sees this stop, unless it is gone.
   const draggerHere = !held && !!sender && game.users?.get?.(sender)?.active !== false && sender !== game.user?.id;
   const list = draggerHere ? [token] : [token, ...others.filter(owns)];
-  // The dragger's client: the whole group and its unsent waves too.
+  // The dragger's client: the whole group, its unsent waves and its fight queue too.
   if (held) { try { feature.exposed.groupCancel?.(doc.id, { why: "click" }); } catch (err) { log?.debug?.("stop the group", err); } }
   const skip = new Set(list.map(t => t.document.id));
   const claims = [];
@@ -718,7 +718,7 @@ async function stop(doc, opts = {}, qctx = null) {
   if (qctx?.user) {
     if (!doc?.testUserPermission?.(qctx.user, "OWNER")) return { ok: false, code: "NOT_OWNER", reason: "the sender does not own that token" };
     if (!doc.movement?.user?.isSelf) return { ok: false, code: "NOT_INITIATOR", reason: "this client did not start that move" };
-    // A click on any member stops the whole group (decision 3 as revised 2026-11-24): its unsent waves go too.
+    // A click on any member stops the whole group (decision 3 as revised 2026-11-24): its fight queue empties too.
     feature.exposed.groupCancel?.(doc.id, { why: "click" });
     return { ok: await stopSafely(doc), how: "stop", tokenId: doc.id };
   }

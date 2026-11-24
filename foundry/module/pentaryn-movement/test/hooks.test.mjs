@@ -11,7 +11,7 @@ const F = await movementWorld({ patchable: false });
 await import("../movement.mjs");
 const atLoad = F.hooks.slice();
 
-test("registration manifest equals golden/hooks.json (46 entries, today's order; 0.3.0 appends pathfind's 15, 0.4.0 the drop's and stop's setup and stop's moveToken, 0.4.1 stop's canvasReady, 0.4.2 stop's updateToken, 0.4.11 stop's refreshToken, 0.8.0 telemetry's canvasReady; 0.9.0 the drop (was group): its preMoveToken, undo-entry updateToken, createWall and updateWall, then the file's group-tag updateToken; the reservations, the guard, the reload resumes, tier C and the waiting cue gone)", () => {
+test("registration manifest equals golden/hooks.json (entries in today's order; 0.3.0 appends pathfind's 15, 0.4.0 the drop's and stop's setup and stop's moveToken, 0.4.1 stop's canvasReady, 0.4.2 stop's updateToken, 0.4.11 stop's refreshToken, 0.8.0 telemetry's canvasReady; 0.9.0 the drop (was group): its preMoveToken, undo-entry updateToken, createWall and updateWall, then the file's group-tag updateToken (and since step 4 its fight queue's deleteToken, updateCombat and deleteCombat); the reservations, the guard, the reload resumes, tier C and the waiting cue gone; 49 since step 4)", () => {
   pinJSON("hooks", atLoad, import.meta.url);
   assert.deepEqual(atLoad.map(h => (h.kind === "once" ? `once ${h.name}` : h.name)), [
     "once init", "once setup", "getSceneControlButtons", "renderSceneControls", "drawTokenLayer", "canvasReady",
@@ -20,6 +20,7 @@ test("registration manifest equals golden/hooks.json (46 entries, today's order;
     "once setup", "createWall", "updateWall", "deleteWall", "createRegion", "updateRegion", "deleteRegion",
     "createRegionBehavior", "updateRegionBehavior", "deleteRegionBehavior", "createToken", "updateToken", "deleteToken", "controlToken",
     "canvasReady", "once setup", "preMoveToken", "updateToken", "createWall", "updateWall", "updateToken",
+    "deleteToken", "updateCombat", "deleteCombat",
     "once setup", "moveToken", "updateToken", "canvasReady", "refreshToken",
     "canvasReady", "once ready",
   ]);

@@ -14,9 +14,9 @@ tags: [foundry, module, pentaryn-movement, movement, pathfinding]
 > **0.9.0 on the branch `movement-0.9`** (main keeps 0.8.5 until the GPU round): no reservations, runtime guard, deadline
 > or waiting ring; a single drop goes at once; a group drag out of combat gets every member's spot and route in one
 > pass, then a start delay (all 0 on open ground, filing through a door, the last within 4 s; one with no spot it can
-> reach stays and is named); a click on any member stops the whole group; a group drag in a fight is refused ("In a
-> fight, drag one token at a time.") until the fight file; in a fight every next square is tested against the walls as
-> they are now. The module
+> reach stays and is named); a group drag in a fight walks one member at a time, each a single move routed at its turn
+> (a click, a turn change, a new drop or a deleted member ends the queue); a click on any member stops the whole group;
+> `fightGroupDrags` is gone; in a fight every next square is tested against the walls as they are now. The module
 > README's "Drag movement" has the branch's state; this page is rewritten for 0.9 at the handoff.
 
 There is nothing to learn: drag, and it works out the rest. Since 0.8.0 it ships in three tiers, each with its own GM switch (*Settings → Pentaryn Movement*); a tier that has not passed its acceptance rounds ships switched off.

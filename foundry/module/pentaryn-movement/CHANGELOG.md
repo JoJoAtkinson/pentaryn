@@ -8,6 +8,29 @@ on its way or named in a notice, and nothing ever waits for another mover. Two t
 the branch `movement-0.9`; `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until the GPU round of §4 step 8.
 Plan §17.
 
+### Step 4 — the fight file
+
+- **[declared] A group drag in a fight walks one member at a time** (Joe, 2026-11-24; `drop.mjs` `fightFile`):
+  nothing moves at the drop; the members, in order (`sequence` over their straight walks, least walk left first),
+  each get a normal single move when their turn comes, routed then round every token standing then (the members
+  already moved where they came to rest), to their formation spot or the nearest clear square, a checkpoint at every
+  square, charged by core as any single move; the next one starts when that walk's promise and animation are done. A
+  stack (a mount and its rider) goes as one entry. A member with no route stays, named.
+- **[declared] What ends the queue:** a click on any member (or a walk stopped or prevented on the way), a turn change
+  or the fight's end, a new drop by the dragger, a deleted member. The members not sent are named ("Did not move, the
+  group's walk was ended: …") unless the dragger's own click or drop ended it. A watchdog (the walk's time plus 3 s)
+  moves a walk that never ends on, so the queue cannot hang. More than 12 members, or pathfinding off on that screen:
+  refused ("In a fight, drag one token at a time.").
+- **[declared] Tier C deleted:** the world setting `fightGroupDrags` is gone (the GM's client deletes its stored row
+  once), `groupMode` has no `fightTier`; `groupDrags` covers group drags in and out of combat. `status().group.fight`
+  is `groupDrags`; `status().group.queue` reports the last fight queue (members, sent, stayed, skipped, watchdog,
+  ended, running). New hooks: `deleteToken`, `updateCombat`, `deleteCombat` (49 registrations).
+- Gate (`test/drop.test.mjs`): one member at a time, each a square a step with a checkpoint at every square, charged
+  exactly 5 ft a square, the second routed round where the first rests; 40 seeded fight group drags (2-4 members,
+  tokens standing) the same, never through a wall or a token standing at its turn, nobody resting on anybody, every
+  member walked or named; a stack goes as one entry; the queue ends on a click, a turn change, a deleted member and a
+  new drop; the watchdog moves on after the walk's time plus 3 s and not before.
+
 ### Step 3 — B1, the file
 
 - **[declared] Start delays on B0's plan** (`file-core.mjs` `staggerFile`): the members that move, in `sequence`

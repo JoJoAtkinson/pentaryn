@@ -56,7 +56,7 @@ test("init registers the nine settings (golden/settings-register.json; 0.8.0 fol
   }));
   pinJSON("settings-register", rows, import.meta.url);
   assert.deepEqual(rows.map(r => r.key), ["ghostPolicy", "ghostPolicyLast", "ghost", "ownedOnTop", "pathfinding", "pathfindMine", "groupDrags",
-    "fightGroupDrags", "assist"]);
+    "assist"]);
 });
 
 test("setup wraps both prototypes and marks them __pentarynMovement", () => {

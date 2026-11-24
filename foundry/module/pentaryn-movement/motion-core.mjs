@@ -295,13 +295,13 @@ export const GROUP_MAX = 12;
  *   plan      group-planned (slots, routes, delays)
  *   straight  ghost / unconstrained out of combat: core's straight lines, rest overlaps nudged
  *   core      core's own updates
- * `enabled`: tier B (out of combat, setting groupDrags); `fightTier`: tier C (in a fight, setting fightGroupDrags,
- * 0.8.0). A fight's group drop with tier C off is core's move with hard-obstacle cuts (reason "fightTier").
+ * `enabled`: the setting groupDrags (0.9.0: in a fight too, where "plan" is the fight file, one member at a time;
+ * tier C and its fightGroupDrags are gone).
  */
-export function groupMode({ enabled = true, fightTier = true, members = 0, gridType = 1, direct = false, planned = false,
+export function groupMode({ enabled = true, members = 0, gridType = 1, direct = false, planned = false,
   waypoints = false, ghost = false, unconstrained = false, combat = false, pathfind = null } = {}) {
   if (members < 2) return { mode: "core", reason: "single" };
-  if (combat ? !fightTier : !enabled) return { mode: "core", reason: combat ? "fightTier" : "off" };
+  if (!enabled) return { mode: "core", reason: "off" };
   if (members > GROUP_MAX) return { mode: "core", reason: "tooMany" };
   if (gridType !== 1) return { mode: "core", reason: "grid" };
   if (direct) return { mode: "core", reason: "direct" };

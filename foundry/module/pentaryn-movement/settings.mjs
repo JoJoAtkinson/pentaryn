@@ -1,10 +1,11 @@
 /**
  * Pentaryn Movement — settings. The only file outside lib/ that calls game.settings.register/get.
  *
- * Nine rows: the four ghost / owned-on-top rows in their historic order, then the drag help's five (0.8.0, plan
- * §16.6): world `pathfinding` and client `pathfindMine` (tier A), the tier gates `groupDrags` (B) and
- * `fightGroupDrags` (C), and the GM toolbar's `assist`. 0.8.0 folded smoothCorners and clickToStop in (always on)
- * and renamed groupMovement to groupDrags; migrateSettings() carries old values over once. Every row carries full
+ * Eight rows: the four ghost / owned-on-top rows in their historic order, then the drag help's four (0.8.0, plan
+ * §16.6): world `pathfinding` and client `pathfindMine` (tier A), the group gate `groupDrags` (out of combat the
+ * file, in a fight one member at a time; 0.9.0 removed tier C's `fightGroupDrags`), and the GM toolbar's `assist`.
+ * 0.8.0 folded smoothCorners and clickToStop in (always on) and renamed groupMovement to groupDrags;
+ * migrateSettings() carries old values over once. Every row carries full
  * literal label keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
  * i18n gate proves each one. A row's onChange calls whatever the feature registered for that key with
  * onSettingChange(); the feature does that during its synchronous install, before `init`.
@@ -83,14 +84,7 @@ export const SETTINGS = Object.freeze([
     name: "PENTARYN_MOVEMENT.settings.groupDrags.name",
     hint: "PENTARYN_MOVEMENT.settings.groupDrags.hint",
     onChange: forward("groupDrags"),
-    doc: "Tier B (0.8.0; was groupMovement): several tokens dragged together out of combat each walk their own way to their own spot, filing through doors. Off: core's move, cut before standing tokens.",
-  },
-  {
-    key: "fightGroupDrags", scope: "world", config: true, type: Boolean, default: false,
-    name: "PENTARYN_MOVEMENT.settings.fightGroupDrags.name",
-    hint: "PENTARYN_MOVEMENT.settings.fightGroupDrags.hint",
-    onChange: forward("fightGroupDrags"),
-    doc: "Tier C (0.8.0): several tokens dragged together in a fight, by space (moves whose ways do not meet go together, the others one after the other's arrival). Off (the default until tier C passes): core's move with hard-obstacle cuts.",
+    doc: "Group drags (0.8.0; was groupMovement): out of combat the file (0.9.0: each member its own spot and route, start delays within 4 s, filing through doors); in a fight one member at a time, each a single move routed at its turn (0.9.0, replaces tier C). Off: core's move, cut before standing tokens.",
   },
   {
     key: "assist", scope: "world", config: true, type: Boolean, default: true,
@@ -131,7 +125,7 @@ export function registerSettings() {
 const rawSetting = settingReader(MODULE, SETTINGS);
 
 /** The drag help's keys the table switch (`assist`) and the circuit breaker turn off. */
-const ASSISTED = Object.freeze({ pathfinding: "off", groupDrags: false, fightGroupDrags: false });
+const ASSISTED = Object.freeze({ pathfinding: "off", groupDrags: false });
 
 /**
  * The circuit breaker (0.8.0, telemetry.mjs): after repeated fallbacks or errors in a session the drag help switches
@@ -157,9 +151,12 @@ export const setting = key => {
 /*  0.8.0: the old rows' values carried over     */
 /* -------------------------------------------- */
 
-/** Rows 0.8.0 removed: world key → the row it became (or null: folded in, always on). */
+/**
+ * Rows removed: world key → the row it became (or null: folded in, or gone). 0.8.0: groupMovement became groupDrags;
+ * 0.9.0: fightGroupDrags (tier C) is gone, a group drag in a fight being the fight file under groupDrags.
+ */
 export const RETIRED = Object.freeze({
-  world: { groupMovement: "groupDrags" },
+  world: { groupMovement: "groupDrags", fightGroupDrags: null },
   client: { smoothCorners: null, clickToStop: null },
 });
 

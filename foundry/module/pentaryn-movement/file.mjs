@@ -1,7 +1,7 @@
 /**
- * Pentaryn Movement — the feature: the file, a group drag out of combat (0.9.0, plan
- * context/plans/pathfinding-2026-11.md §17; Fable's review 2 §2 "Tier B, the file"). drop.mjs asks it through
- * ctx.exposed at run time (never an import between two features).
+ * Pentaryn Movement — the feature: the file, a group drag (0.9.0, plan context/plans/pathfinding-2026-11.md §17;
+ * Fable's review 2 §2 "Tier B, the file", "Fights, one at a time"). drop.mjs asks it through ctx.exposed at run time
+ * (never an import between two features).
  *
  * B0, the floor (§4 step 2): at the drop, one pass (file-core planFile) gives every member its slot (the free spot
  * nearest its formation spot that it can reach) and an A* route round the tokens standing outside the drop and round
@@ -11,9 +11,9 @@
  * members at 0 go in the drop's own update; every later wave goes by setTimeout (drop.mjs sends it). No settle, no
  * second pass, no reservations.
  *
- * Which tokens move together: this client holds every group it sent until its members are at rest and its waves are
- * sent (read when asked), and every client learns a group's members and its sender from the update option its moves
- * carry (GROUP_OPT).
+ * Which tokens move together: this client holds every group it sent until its members are at rest, its waves are
+ * sent and its fight queue is done (read when asked), and every client learns a group's members and its sender from
+ * the update option its moves carry (GROUP_OPT).
  *
  * The three runtime handlers share one primitive, stop where drawn (§2):
  *   - a click on any member stops the whole group (decision 3 as revised 2026-11-24): the clicker stops the one
@@ -39,8 +39,8 @@ let feature = null;
 const GROUP_OPT = "pentarynMovementGroup";
 
 /**
- * Groups this client sent: id → { ids: Set, scene, at, waves: [{ at, ids, timer }], send }. `waves`: the waves still
- * to send and `send(ids)` the sender (drop.mjs).
+ * Groups this client sent: id → { ids: Set, scene, at, waves: [{ at, ids, timer }], send, queue }. `waves`: the
+ * waves still to send and `send(ids)` the sender (drop.mjs); `queue`: a fight's one-at-a-time queue ({ cancel(why) }).
  */
 const groups = new Map();
 const groupOf = new Map();                 // token id → group id
@@ -70,13 +70,13 @@ function holdGroup(ids, scene) {
     if (old && groups.get(old)) groups.get(old).ids.delete(id);
     groupOf.set(id, gid);
   }
-  groups.set(gid, { ids: new Set(ids), scene, at: Date.now(), waves: [], send: null });
+  groups.set(gid, { ids: new Set(ids), scene, at: Date.now(), waves: [], send: null, queue: null });
   prune();
   return gid;
 }
 
-/** Is a group still busy on this client: a wave to send? */
-const busy = g => g.waves.length > 0;
+/** Is a group still busy on this client: a wave to send, or a fight queue running? */
+const busy = g => g.waves.length > 0 || !!g.queue;
 
 /** Drop groups whose members are all at rest, or older than HOLD_MS (no timers: read when asked). */
 function prune() {
@@ -95,22 +95,26 @@ function heldCount() { prune(); return groups.size; }
 
 /**
  * Stop a group this client sent (click-to-stop): it is no longer held. Returns the ids of its members (the caller
- * stops those moving), or [] when this client holds no group for the token. Its unsent waves go too.
+ * stops those moving), or [] when this client holds no group for the token. Its unsent waves and its fight queue go too
+ * (`why`: what stopped it, for the queue).
  */
 function groupCancel(tokenId, { why = "click" } = {}) {
   const gid = groupOf.get(tokenId);
   const g = gid ? groups.get(gid) : null;
   if (!g) return [];
-  dropGroup(gid);
+  dropGroup(gid, why);
   return [...g.ids];
 }
 
-/** Forget group `gid` on this client: its unsent waves are dropped. */
-function dropGroup(gid) {
+/** Forget group `gid` on this client: its unsent waves are dropped and its fight queue emptied. */
+function dropGroup(gid, why = "click") {
   const g = groups.get(gid);
   if (!g) return;
   for (const w of g.waves) clearTimeout(w.timer);
   g.waves = [];
+  const q = g.queue;
+  g.queue = null;
+  try { q?.cancel?.(why); } catch (err) { log?.debug?.("file: empty the fight queue", err); }
   for (const id of g.ids) if (groupOf.get(id) === gid) groupOf.delete(id);
   groups.delete(gid);
 }
@@ -176,6 +180,53 @@ function pendingWaves() {
   return out;
 }
 
+/* -------------------------------------------- */
+/*  A fight's queue (step 4)                    */
+/* -------------------------------------------- */
+
+/** Register group gid's fight queue ({ cancel(why) }): the group is busy until it ends (fileQueueDone). */
+function setQueue(gid, queue) {
+  const g = groups.get(gid);
+  if (!g) return false;
+  g.queue = queue;
+  return true;
+}
+
+/** A fight queue ended on its own: the group is held only while its members walk. */
+function queueDone(gid, queue) {
+  const g = groups.get(gid);
+  if (g && g.queue === queue) { g.queue = null; g.at = Date.now(); }
+}
+
+/** Empty every fight queue this client runs (a turn change, a new drop): { gid, ids } of each. */
+function cancelQueues(why) {
+  const out = [];
+  for (const [gid, g] of [...groups]) {
+    if (!g.queue) continue;
+    const q = g.queue;
+    g.queue = null;
+    try { q.cancel?.(why); } catch (err) { log?.debug?.("file: empty the fight queue", err); }
+    out.push({ gid, ids: [...g.ids] });
+  }
+  return out;
+}
+
+/** deleteToken, this client: a member of a fight queue it runs was deleted, so that queue ends. */
+function onDeleteToken(doc) {
+  const gid = doc?.id ? groupOf.get(doc.id) : null;
+  const g = gid ? groups.get(gid) : null;
+  if (!g?.queue) return;
+  const q = g.queue;
+  g.queue = null;
+  try { q.cancel?.("deleted"); } catch (err) { log?.debug?.("file: empty the fight queue", err); }
+}
+
+/** updateCombat / deleteCombat, this client: a turn change (or the fight's end) empties every fight queue it runs. */
+function onCombatChange(_combat, changes) {
+  if (changes && !("turn" in changes) && !("round" in changes) && !("started" in changes) && !("active" in changes)) return;
+  cancelQueues("turn");
+}
+
 /** A click (or the API) stopped a group (stop.mjs): recorded for status().group.stopped. */
 function groupNoteStop({ why = "click", members = 0, whole = false } = {}) {
   stopped = { at: new Date().toISOString(), why, members, whole };
@@ -201,8 +252,8 @@ function groupMembers(tokenId) {
 /**
  * updateToken, every client: remember which group a move belongs to (its update option) and who sent it. On the
  * client that sent a group, another user's stop of one member (a click's displace, decision 3 as revised 2026-11-24)
- * stops the whole group: its unsent waves are dropped, and every other member still walking is stopped where it is
- * drawn (out of combat) or on the square it holds (in a fight).
+ * stops the whole group: its unsent waves are dropped, its fight queue emptied, and every other member still walking
+ * is stopped where it is drawn (out of combat) or on the square it holds (in a fight).
  */
 function onGroupTag(doc, options, userId) {
   const gid = options?.[GROUP_OPT];
@@ -364,15 +415,19 @@ export function install(reg, ctx) {
   feature = ctx;
   log = ctx.log;
   reg.on("updateToken", (doc, _changes, options, userId) => onGroupTag(doc, options, userId), { label: "updateToken: which group a move belongs to; another user's stop of a member stops the group this client sent" });
+  reg.on("deleteToken", doc => onDeleteToken(doc), { label: "deleteToken: a deleted member ends its fight queue" });
+  reg.on("updateCombat", (combat, changes) => onCombatChange(combat, changes), { label: "updateCombat: a turn change empties the fight queues" });
+  reg.on("deleteCombat", combat => onCombatChange(combat, null), { label: "deleteCombat: the fight's end empties the fight queues" });
   try { globalThis.document?.addEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   ctx.expose({ groupCancel, groupMembers, groupNoteStop, groupHold: holdGroup, groupHeld: heldCount, groupStopped: stoppedLast,
     groupMax: () => FILE_MAX, groupPlan: planDrop, groupWaypoints: waypointsFor, groupDryRun: dryRun,
-    groupWaves: scheduleWaves, groupPending: pendingWaves, groupFlushed: () => (flushLast ? { ...flushLast } : null) });
+    groupWaves: scheduleWaves, groupPending: pendingWaves, groupFlushed: () => (flushLast ? { ...flushLast } : null),
+    groupQueue: setQueue, groupQueueDone: queueDone, groupCancelQueues: cancelQueues });
 }
 
 export function uninstall() {
   try { globalThis.document?.removeEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
-  for (const gid of [...groups.keys()]) dropGroup(gid);
+  for (const gid of [...groups.keys()]) dropGroup(gid, "uninstall");
   flushLast = null;
   groups.clear();
   groupOf.clear();
