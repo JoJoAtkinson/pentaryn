@@ -3758,3 +3758,103 @@ test("0.10 F1 B3 (R2) fight: a Large mount with its rider dragged one square up-
     assert.deepEqual([mv?.waypoints.at(-1).x, mv?.waypoints.at(-1).y], [300, 300], "the mount on its drop square");
   } finally { restore(); done(); tickBy(60000); }
 });
+
+/** The leader's side of a wall a→b (squares): the sign of the cross product at centre c (pixels). */
+const sideOf = (a, b, c) => Math.sign((b[0] - a[0]) * (c.y / S - a[1]) - (b[1] - a[1]) * (c.x / S - a[0]));
+/** Record every route search's goal (its last waypoint, pixels top-left) while `fn` runs. */
+function routeGoals(fn) {
+  const goals = [];
+  const orig = Token5e.prototype.findMovementPath;
+  Token5e.prototype.findMovementPath = function (waypoints, options = {}) {
+    if (options.preview && waypoints.length === 2) goals.push({ ...waypoints[1] });
+    return orig.call(this, waypoints, options);
+  };
+  try { return { out: fn(), goals }; } finally { Token5e.prototype.findMovementPath = orig; }
+}
+
+test("0.10 F1 B1 (R3, R9): planLead's floods never cross an off-grid wall — ten march beside a wall at x 12.4 (a closed room, a diagonal, a stub with an open end): no failed search, nobody named, nobody rests across the wall; the same wall on the grid as before", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const old = { walls: world.walls, rect: F.canvas.dimensions };
+  const saved = F.canvas.tokens.placeables;
+  const box = (x0, y0, x1, y1) => [[x0, y0, x1, y0], [x1, y0, x1, y1], [x1, y1, x0, y1], [x0, y1, x0, y0]];
+  const variants = {
+    grid: [12, 4, 12, 14],
+    offgrid: [12.4, 4, 12.4, 14],
+    diagonal: [12.2, 4, 13.1, 14],
+    stub: [12.4, 4, 12.4, 10],
+  };
+  let uid = 0;
+  try {
+    for (const [name, wall] of Object.entries(variants)) for (const [bx, by] of [[11, 6], [11, 5], [10, 5]]) {
+      world.walls = [...box(4, 4, 20, 14), wall].map(c => [{ x: c[0] * S, y: c[1] * S }, { x: c[2] * S, y: c[3] * S }]);
+      F.canvas.dimensions = { rect: { x: 0, y: 0, width: 2500, height: 2000, contains: (x, y) => x >= 0 && y >= 0 && x <= 2500 && y <= 2000 } };
+      F.fire("updateWall");
+      const spots = [[11, 11], [10, 11], [11, 12], [10, 12], [9, 11], [9, 12], [11, 13], [10, 13], [9, 13], [8, 12]];
+      const ts = spots.map(([x, y]) => makeToken(`f1b1${String(uid++).padStart(5, "0")}`.padEnd(16, "0"), x * S, y * S));
+      const others = keepOnly(ts);
+      for (const t of ts) t.visible = true;
+      F.canvas.tokens.placeables = [...ts];
+      const tag = `${name} drop ${bx},${by}`;
+      try {
+        const src = ts[0].document._source;
+        const from = F.calls.length;
+        const out = dropWith(ts[0], contextsFor(ts, bx * S - src.x, by * S - src.y));
+        const last = api.status().group.last;
+        assert.equal(last.result, "plan", tag);
+        assert.deepEqual(last.stayed, [], `${tag}: nobody named`);
+        assert.equal(last.plan.failed, 0, `${tag}: no failed route search (${last.plan.searches} searches)`);
+        const by2 = fileMoves(out, from);
+        const lead = sideOf(wall.slice(0, 2), wall.slice(2), center(ts[0].document._source));
+        for (const t of ts) {
+          const m = by2[t.document.id];
+          const path = [{ ...t.document._source }, ...(m?.waypoints ?? [])];
+          for (let k = 1; k < path.length; k++) assert.equal(crossingCore(center(path[k - 1]), center(path[k])).length, 0, `${tag}: ${t.document.id} through a wall`);
+          assert.equal(sideOf(wall.slice(0, 2), wall.slice(2), center(path.at(-1))), lead, `${tag}: ${t.document.id} rests across the wall at ${JSON.stringify(center(path.at(-1)))}`);
+        }
+      } finally {
+        for (const t of ts) sceneTokens.delete(t.document.id);
+        for (const [k, v] of others) sceneTokens.set(k, v);
+        tickBy(60000);
+      }
+    }
+  } finally { F.canvas.tokens.placeables = saved; world.walls = old.walls; F.canvas.dimensions = old.rect; F.fire("updateWall"); }
+});
+
+/** Where a token may stand on Joe's S05 with the long door shut: room A, room B or the stair (radius 5.5 to 6.5). */
+const inS05 = c => {
+  const x = c.x / S, y = c.y / S, d = Math.hypot(x - 10, y - 38.5);
+  return (x > 4 && x < 10 && ((y > 29 && y < 35) || (y > 42 && y < 48))) || (x >= 10 && d >= 5.5 && d <= 6.5);
+};
+/** S05's start spots for n heroes (its four, then room A's free squares). */
+const s05Spots = n => [...S05.tokens.filter(t => t.w === 1).map(t => [t.x, t.y]), [5, 31], [6, 31], [7, 31], [9, 31], [5, 30], [6, 30], [9, 34], [7, 34]].slice(0, n);
+
+test("0.10 F1 B1 (R3, R9) on Joe's S05: six and twelve dropped in room B over the stair — no route search to a square outside the C (the enclosed middle, the rock), none fails", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  let uid = 0;
+  try {
+    for (const n of [6, 12]) for (const [bx, by] of [[7, 45], [6, 44], [8, 46]]) {
+      const ts = s05Spots(n).map(([x, y]) => makeToken(`f1bB${String(uid++).padStart(5, "0")}`.padEnd(16, "0"), x * S, y * S));
+      const others = keepOnly(ts);
+      for (const t of ts) t.visible = true;
+      F.canvas.tokens.placeables = [...ts];
+      const tag = `${n} dropped at ${bx},${by}`;
+      try {
+        const src = ts[0].document._source;
+        const { out, goals } = routeGoals(() => dropWith(ts[0], contextsFor(ts, bx * S - src.x, by * S - src.y)));
+        assert.ok(Array.isArray(out), tag);
+        const last = api.status().group.last;
+        for (const g of goals) assert.ok(inS05(center(g)), `${tag}: a route searched to ${JSON.stringify(center(g))}, outside the C`);
+        assert.equal(last.plan.failed, 0, `${tag}: no failed route search (${last.plan.searches} searches, stayed ${last.stayed.length})`);
+      } finally {
+        for (const t of ts) sceneTokens.delete(t.document.id);
+        for (const [k, v] of others) sceneTokens.set(k, v);
+        tickBy(60000);
+      }
+    }
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});
+

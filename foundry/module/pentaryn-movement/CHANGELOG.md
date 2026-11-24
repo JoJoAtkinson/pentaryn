@@ -45,6 +45,15 @@ touching that token first, and the rest close in round it from their own sides, 
   target. A Large mount with its rider dragged one square up-left swarmed round its own rider and moved the other way;
   down-right it was "No route there". Now each diagonal is a march, the mount on its drop square, the rider on it. At a
   fight member's turn its own riders are not in its way either (`slotAtTurn` `riders`).
+- **[declared] A group's floods never cross an off-grid wall** (B1; R3, R4, R9): the leader plan's one step between
+  squares joined two squares wherever any part of one met any part of the other, so its per-square floods came into a
+  tight square by one part and left by another, across the wall. Now a tight square stands for one part in the plan,
+  the first a flood over the narrow field's own nodes from the drop reaches (`file.mjs` `narrowParts`, lazy, at most
+  `LEAD.far` nodes; a plain step into it only when its centre lies in that part), and a member rests in it only in that
+  part. Ten marching beside a wall at x = 12.4 (a closed room, a diagonal, a stub with an open end): no failed search,
+  nobody named, nobody across the wall (were 5 failed and 1 named; the same wall on the grid unchanged). S05, six and
+  twelve dropped in room B: no route searched to a square outside the C, none fails (were 2 and 8 named after trying
+  squares in the enclosed middle). A map whose walls lie on the grid lines never floods: its steps are the walls'.
 
 ### Step N — any passage shape (R9)
 

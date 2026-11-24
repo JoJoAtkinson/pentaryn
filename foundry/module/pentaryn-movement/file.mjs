@@ -28,7 +28,7 @@
  * A wave skips a member no longer at its start (drop.mjs).
  */
 
-import { STAGGER, planLead, staggerFile } from "./file-core.mjs";
+import { LEAD, STAGGER, footprintCells, heap, planLead, staggerFile } from "./file-core.mjs";
 import { GROUP_MAX, MOTION, radiusOf } from "./motion-core.mjs";
 import { pathLength } from "./group-core.mjs";
 import { pointsBack } from "./narrow-core.mjs";
@@ -456,9 +456,6 @@ function oraclesFor(anchor, contexts, constrain = {}, group = []) {
     }
     return avoidMemo.get(m.id);
   };
-  const walkable = (m, c) => {
-    try { return restWalkable(m, c, s) && !hazards(m)?.at?.(toTopLeft(c, m.w, m.h, s)); } catch { return false; }
-  };
   // One step for a 1×1 body (the lattice on whole squares: node (i, j) is the square at row i, column j).
   const lead = members[0];
   let field = null;
@@ -468,17 +465,76 @@ function oraclesFor(anchor, contexts, constrain = {}, group = []) {
     field = fieldFor(lead.token, at, at, { preview: true, constrain, automation: dnd5eMovementAutomation(), memo: feature.exposed.pathfindMemo?.() ?? new Map(),
       narrowCache: feature.exposed.pathfindNarrowCache?.() ?? null });
   } catch (err) { log?.debug?.("file: the step field", err); field = null; }
-  // Through a narrow way (0.10 R9) two squares join where a part of one meets a part of the other (narrow-core).
+  // Through a narrow way (0.10 R9) two squares join where a part of one meets a part of the other (narrow-core). A tight
+  // square stands for one part in the plan (0.10 F1 B1): the first the drop's own flood over the field's nodes settles,
+  // so planLead's floods, per square, never come in by one part and leave by another across the wall. Its plain step is
+  // its centre's part's. A map with no tight square never floods: its steps are the walls', as before.
   const nf = field?.narrow?.field ?? null;
+  const parts = nf ? narrowParts(field, nf) : null;
   const step = (a, b) => {
     if (!field) return true;
     try {
-      if (field.wall(a, b)) return true;
-      if (!nf || (!nf.tight(a.i, a.j) && !nf.tight(b.i, b.j))) return false;
-      return nf.adjacent(a.i, a.j, b.i - a.i, b.j - a.j).length > 0;
+      const ta = !!nf?.tight(a.i, a.j), tb = !!nf?.tight(b.i, b.j);
+      if (!ta && !tb) return !!field.wall(a, b);
+      const ca = ta ? parts.of(a.i, a.j) : 0, cb = tb ? parts.of(b.i, b.j) : 0;
+      if (ca === null || cb === null) return false;
+      const plain = (t, c, q) => !t || nf.cells(q.i, q.j).centre === c;
+      if (plain(ta, ca, a) && plain(tb, cb, b) && field.wall(a, b)) return true;
+      return nf.adjacent(a.i, a.j, b.i - a.i, b.j - a.j).some(([x, y]) => x === ca && y === cb);
     } catch { return false; }
   };
-  return { s, members, standing, origins, walkable, step, narrow: nf, mine };
+  // A member rests in a tight square only in the part the plan uses (B1: a square's centre beside the wall's far side).
+  const onPart = (m, c) => (m.w <= 1 && m.h <= 1 ? [c] : footprintCells(c, m.w, m.h).map(q => ({ x: q.j + 0.5, y: q.i + 0.5 }))).every(p => {
+    const I = Math.floor(p.y), J = Math.floor(p.x);
+    if (!nf?.tight(I, J)) return true;
+    const n = nf.nodeAt(p);
+    return !!n && n.c === parts.of(I, J);
+  });
+  const walkable = (m, c) => {
+    try { return restWalkable(m, c, s) && !hazards(m)?.at?.(toTopLeft(c, m.w, m.h, s)) && onPart(m, c); } catch { return false; }
+  };
+  /** Where the drop's flood starts (centres in squares): the leader's drop (march) or the target's squares (swarm). */
+  const from = points => { try { parts?.from(points); } catch (err) { log?.debug?.("file: the narrow flood", err); } };
+  return { s, members, standing, origins, walkable, step, narrow: nf, mine, from };
+}
+
+const N8 = [[0, 1, 1], [1, 0, 1], [0, -1, 1], [-1, 0, 1], [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]];
+
+/**
+ * The part of each tight square a plan uses (0.10 F1 B1): a flood over the narrow field's nodes (square I, J and part
+ * c; c 0 a plain square) from the drop, its plain steps the walls' (`field.wall`), the others the field's (`more`), at
+ * most LEAD.far nodes; a tight square's part is the first of its parts it settles. Lazy: it runs only as far as a
+ * question needs. { from(points), of(I, J) → c, or null for a square it never reaches }.
+ */
+function narrowParts(field, nf) {
+  const h = heap(), best = new Map(), done = new Set(), part = new Map();
+  const push = (n, d) => {
+    const k = `${n.I},${n.J}#${n.c}`;
+    if (d < (best.get(k) ?? Infinity) - 1e-9) { best.set(k, d); h.push(d, n); }
+  };
+  const run = until => {
+    while (h.size && done.size < LEAD.far) {
+      const [d, n] = h.pop();
+      const k = `${n.I},${n.J}#${n.c}`;
+      if (done.has(k) || d > best.get(k) + 1e-9) continue;
+      done.add(k);
+      const sq = `${n.I},${n.J}`;
+      if (n.c > 0 && !part.has(sq)) part.set(sq, n.c);
+      if (n.c === 0) for (const [di, dj, c] of N8) if (field.wall({ i: n.I, j: n.J }, { i: n.I + di, j: n.J + dj })) push({ I: n.I + di, J: n.J + dj, c: 0 }, d + c);
+      for (const x of nf.more(n)) push({ I: x.I, J: x.J, c: x.c }, d + (x.zero ? 0 : x.I !== n.I && x.J !== n.J ? Math.SQRT2 : 1));
+      if (part.has(until)) return;
+    }
+  };
+  return {
+    from(points) {
+      for (const p of points) {
+        const I = Math.floor(p.y), J = Math.floor(p.x);
+        const n = nf.tight(I, J) ? nf.nodeAt(p) : { I, J, c: 0 };
+        if (n) push({ I: n.I, J: n.J, c: n.c }, 0);
+      }
+    },
+    of(I, J) { const sq = `${I},${J}`; if (!part.has(sq)) run(sq); return part.get(sq) ?? null; },
+  };
 }
 
 /**
@@ -533,6 +589,12 @@ function routeOracle(origins, s) {
   };
 }
 
+/** Where the drop's narrow flood starts (squares): the target's squares (swarm), else the leader's drop. */
+function dropPoints(target, drop, L) {
+  if (target) return footprintCells(target, target.w ?? 1, target.h ?? 1).map(c => ({ x: c.j + 0.5, y: c.i + 0.5 }));
+  return L.w <= 1 && L.h <= 1 ? [drop] : footprintCells(drop, L.w, L.h).map(c => ({ x: c.j + 0.5, y: c.i + 0.5 }));
+}
+
 /**
  * Plan a group drop by the leader rule (out of combat): the shape from where it lands (R2), planLead's slots and
  * routes, then the start delays (staggerFile, R5: the leader at once, the pack one wave later, single file only at a
@@ -542,7 +604,7 @@ function routeOracle(origins, s) {
  */
 function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
   if (!feature || !anchor || contexts.length < 1) return null;
-  const { s, members, standing, origins, walkable, step, narrow, mine } = oraclesFor(anchor, contexts, constrain, group);
+  const { s, members, standing, origins, walkable, step, narrow, mine, from } = oraclesFor(anchor, contexts, constrain, group);
   const L = members[0];
   const target = targetOf(anchor, L.formation, mine, s);
   // A march dropped in a tight square (0.10 R9): the leader rests where it may there, on the narrow way's centre line.
@@ -554,6 +616,7 @@ function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
       if (rp) { rest = toSquares(rp, L.w, L.h, s); drop = rest; }
     } catch (err) { log?.debug?.("file: a rest point", err); rest = null; }
   }
+  from(dropPoints(target, drop, L));
   const mayRest = rest ? (m, c) => (m.id === L.id && Math.hypot(c.x - rest.x, c.y - rest.y) < 1e-6) || walkable(m, c) : walkable;
   const plan = planLead({ members, leaderId: L.id, drop, target, standing },
     { walkable: mayRest, step, route: routeOracle(origins, s), now });
@@ -578,9 +641,10 @@ function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
 function fightPlan(anchor, contexts, { constrain = {}, group = [] } = {}) {
   if (!feature || !anchor || !contexts.length) return null;
   try {
-    const { s, members, standing, walkable, step, mine } = oraclesFor(anchor, contexts, constrain, group);
+    const { s, members, standing, walkable, step, mine, from } = oraclesFor(anchor, contexts, constrain, group);
     const L = members[0];
     const target = targetOf(anchor, L.formation, mine, s);
+    from(dropPoints(target, L.formation, L));
     const plan = planLead({ members, leaderId: L.id, drop: L.formation, target, standing }, { walkable, step, now });
     // The order (R7): the leader, then least walk left; each member's square is picked at its own turn (slotAtTurn).
     return { shape: plan.shape, target, order: plan.byWalk?.length ? plan.byWalk : plan.order, leader: L.id };
@@ -599,7 +663,7 @@ function slotAtTurn(token, { shape = "march", target = null, leaderId = null, le
     const doc = token.document;
     const s = gridSize(token);
     const ctx = { token, destination: { ...doc._source }, foundPath: [], waypoints: [] };
-    const { members, standing, walkable, step, origins, narrow } = oraclesFor(token, [ctx], {}, riders);
+    const { members, standing, walkable, step, origins, narrow, from } = oraclesFor(token, [ctx], {}, riders);
     const m = members[0];
     let leader = null, at = null;
     if (shape === "march") {
@@ -609,6 +673,7 @@ function slotAtTurn(token, { shape = "march", target = null, leaderId = null, le
       leader = { id: ldoc.id, w, h, r: radiusOf(w, h), start: toSquares(leaderAt.at, w, h, s) };
       at = { at: leader.start, from: toSquares(leaderAt.from ?? leaderAt.at, w, h, s) };
     }
+    from(dropPoints(shape === "swarm" ? target : null, leader?.start ?? m.start, leader ?? m));
     // The leader resting on a narrow way (0.10 R9, constraint 6): the first point clear of every token standing back
     // along this member's own way to it, one token apart, on the narrow way.
     if (leader && narrow && m.w <= 1 && m.h <= 1 && narrow.tight(Math.floor(leader.start.y), Math.floor(leader.start.x))) {

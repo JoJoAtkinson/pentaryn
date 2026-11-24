@@ -281,7 +281,7 @@ export function footprintCells(c, w = 1, h = w) {
 }
 
 /** A tiny binary heap of [d, key]. */
-function heap() {
+export function heap() {
   const a = [];
   return {
     get size() { return a.length; },
