@@ -1112,3 +1112,151 @@ queue's members unnamed: a new drop of other tokens leaves it running, a member 
 
 Open after L2: zero passThrough / restOverlap (L3's gate); the fight's leader rules (R7: through its members, checkpoints
 on free squares, speed running out); the page gate (R11); the narrow passages (R9); the door plug above.
+
+### 18.3 Step L3: the fight and the simulator (review 3 §4 steps 6 and 7)
+
+Tests first throughout (`fight.test` the pure side, `drop.test` "0.10 L3", `file-core.test` the FIFO order, `sim.test`
+SIM-L3-01..10); each failed on L2's code before it passed (the regression seeds: each holds with its fix and breaks
+with that fix alone switched off in the simulator's model).
+
+**The fight** (R6, R7; `drop.mjs` runFight / routeAtTurn / walkOne, new `fightSteps`; `motion-core` `fightWalk`). The
+order is planLead's new `byWalk`: the leader, then least walk left (ties by id), whatever slots the plan gives out
+(`file.mjs` fightPlan; `status().group.queue.order`). Each member is slotted and routed at its turn as in L1 (march:
+behind where the leader came to rest). The leader routes through its own group (never through anyone else; it rests
+on none): `routeAtTurn` leaves the queue's members out of its avoid circles, `walkOne` lets its next squares through
+them (`leadThrough`, read by the per-square test `stepMeetsStanding`), and a square inside a member is no checkpoint
+(`fightWalk`'s `free`), so its updates end only on free squares and a click while it is inside a member carries it on
+to the next free one. No ally cost anywhere (R6): the leader's charge is core's measure of the squares it walks.
+
+**The speed stop** (R7). dnd5e 6.1.1's own reading (`TokenRuler5e #getSpeedBasedStyle`, dnd5e.mjs:84843):
+`actor.system.attributes.movement.speeds[action]` (a type with `walkFallback`, or one dnd5e does not know: at least the
+walking speed), creatures only, less the sum of `TokenDocument#movementHistory[*].cost` (core clears the history when
+the combatant's turn starts, combat.mjs `_clearMovementHistoryOnStartTurn`; a non-finite cost is left out)
+(`group-adapter` `movementLeft`). `fightSteps` measures the walk's prefixes with core's `measureMovementPath` and cuts
+it at the last free square whose cost the movement left pays for (`fightWalk`'s `end`; `paid`: the last square paid
+for, `inside` the paid squares past the end that lie inside a member). Nothing left: it does not move. Both are named
+once at the queue's end ("Out of movement this turn, stopped short: …", lang `named.speed`). No usable speed (no actor,
+not a creature, 0, a teleport action): the whole way, as a single drag (unchanged; its own regression test).
+`status().group.queue.walks`: `{ id, planned, sent, left, why, inside }` a member.
+
+**The simulator, one mode, its own kinds** (`test/sim/scenario.mjs` KINDS). 0.9's generator is kept draw for draw as
+`legacy` (40 %: the regression seeds and the overlap comparison run on it); then `swarm` (a visible target 1×1, 2×2 or
+3×3 in the target room, the drop on it), `hidden` (the GM's drag onto a hidden token: a march), `tunnel` (map `tunnel`:
+a one-wide tunnel of 10-16, sometimes bent, a party of 3-12 queued in it, the leader at the back 60 % or the front),
+`crowd` (map `hall`: 10-24 across two big rooms and a 2-3 wide door), `station` (Joe's playground, below). Every kind
+but legacy gives most members in a fight a walking speed (10-40 ft) and some movement already spent; the invariants
+gain `wrongCharge` `overSpeed` and the leader's multi-square update (every square but the last inside a member) and the
+new **`shape`** (test/sim/shape.mjs, shared with the L1 gate: march, nobody rests beside or ahead of the leader by an
+independent flood from B; swarm, the leader touches the target whenever a touching square was free and reachable),
+judged on every plan as its screen made it, and in a fight on every member's square at its turn. The engine splits a
+fight's update at checkpoints (a `checkpoint: false` waypoint joins the next), carries the cost on broadcasts, records
+the squares inside other tokens of a multi-square update. **Joe's stations** (`test/fixtures/stations.json`, written
+from b10/pg/stations.json by a scratch tool): the 14 on the square grid (S05 and S06 are off-grid curves, R9's step),
+station-local squares; thin walls and one-way walls (`test/fixtures/grid.mjs` `walls`: a crossing or a touch blocks, a
+one-way wall from its open side does not, `motion-core` `wallOpenFrom`), doors with their states (closed, locked and
+secret ones stay shut; an open one may be shut), each scenario's tokens and drop points; the dragged group by station
+(heroes; S01/S02 sometimes the monsters, S04 the monsters, S15 the villagers, S14 both four-hero groups head to head);
+S11's mud left out (no terrain cost in the simulator), a rider on its mount left out (no stacks).
+
+**What the simulator found, and the fixes** (each in the module and its model; seeds are the regressions):
+- *The order every screen sees* (`file-core` `staggerFile`): a drop's waves reach every client in send order (a lost
+  packet or a stall holds the later ones back with it, never ahead), so a member whose route passes another's slot is
+  sent no later than it, and one whose route passes another's start no earlier. L2's four passThrough seeds (315, 954,
+  1451, 1522) were all a member sent before one that then walked through it at its slot on a lagging screen
+  (SIM-L3-01). `file-core.test`: 953 drops, 8,353 ordered pairs, none out of order.
+- *One stop settles the front ones first* (`motion-core` `stopOrder`; stop.mjs, file.mjs, drop.mjs cutAcross): of two
+  near each other (touching plus 1.5 squares) the one walking toward the other is behind; the front one rests where it
+  is drawn, the ones behind are carried back along their ways into room nobody took (SIM-L3-02; 0.9's 4157, 4881).
+- *A walk on looked at again* (stop.mjs displace): a carry whose way a door shut since crosses (a click just after a
+  door shut, before this screen knew) takes its spot again along its way (SIM-L3-03, L2's 1097).
+- *The same stop for this screen's walkers heading into it* (stop.mjs `stopAlso`): one of this screen's own walkers
+  counts where it is drawn, not where it is going, and if its way comes into a spot the stop rests a token on it is
+  stopped by the same stop (SIM-L3-04; L2's 230).
+- *A hidden tab keeps its waves* (file.mjs onVisibility): 0.8 to L2 sent every remaining wave at once, so a whole file
+  set off together and jammed in the doorway; now they stay on their timers (whole seconds there), one due past 3 s
+  timed for 3 s, the last by 4 s (SIM-L3-05).
+- *Make room* (stop.mjs `makeRoom`): one with no spot along its own way, inside only members the same stop rested,
+  rests where drawn when those can be carried on along their own ways (SIM-L3-06).
+- *A waiting member's slot* (file.mjs `groupPendingEnds`, stop.mjs takenAround; drop.mjs sendWave): no stop carries a
+  token onto where a member still waiting for its wave will rest, and no wave sends a member onto a spot a stop is
+  carrying a token to (SIM-L3-07, L2's 6166, 7154).
+- *A fight's next square never onto a walker's own square* (drop.mjs stepMeetsStanding) when that walker rests there
+  (its move's last square) or has had no next square for 500 ms (its screen held up, or gone); one about to walk on is
+  passed as before, so two crossing still brush (SIM-L3-08: 0.9.0's open 3599, a player's tab dropped mid-walk and its
+  token was walked onto).
+- *A brush is no overlap* (stop.mjs takenAround `enters`): a carry that sets off within 0.05 square of a token at rest
+  is not "leaving" it and may not go on through it (SIM-L3-09).
+- *A wave's stayer blocks the whole wave* (drop.mjs sendWave): a member that stays is in the way of every other member
+  of the same wave, also of one looked at before it (SIM-L3-10).
+
+**Gates.**
+- 60 seeded fight queues (`drop.test` "0.10 L3 gate"): **green**. 215 walks; the leader first, then least walk left
+  (`queue.order`); every member charged exactly core's measure, 5 ft a square; the leader's charge the same with its
+  members in its lane and with them moved off it; nobody through or onto a standing non-member; the leader through its
+  own members on 192 steps, no checkpoint inside one. The 0.9.0 40-seed fight gate holds with the leader's exception.
+- 200 seeded speed stops (`drop.test` "0.10 L3 gate (R7)"): **green**. 255 members stopped where their movement ran
+  out (53 with nothing left did not move, named), 75 with no usable speed walked the whole way; never one past the last
+  paid square, a non-leader never short of it, the leader short only by squares inside its members. A single drag in a
+  fight with 10 ft left still walks the whole way (as 0.9.0).
+- `make foundry-movement-sim SEEDS=10000`, the full mix: passThrough **0**, wallCross 0, wrongCharge 0, unsent 0,
+  errors 0, shape **0**; restOverlap **4** (5418, 6142, 8249, 9191; below). 12 seeds flagged as same-instant races (not
+  failed). Members dropped 62,381, never moved 25,618, named 22,061.
+- The legacy mix (0.9's generator draw for draw), 10,000 seeds: passThrough **0**, wallCross, wrongCharge, unsent,
+  errors, shape 0; restOverlap **2** (2357, 9124; below). **0.9.0's open seeds** (§17.5, §17.7: passThrough 5002, 5386;
+  restOverlap 3599, 3773, 5188, 7391, 8004, 8958) all hold (3599 with SIM-L3-08); **L2's open seeds** (passThrough
+  315, 954, 1451, 1522; restOverlap 230, 1097, 1399) all hold.
+- Mover overlap against 0.9.0's B1, re-run here on 0.9.0's own simulator (`ee93442b`, B1, the same sums: 18,015
+  episodes, p95 1,900 ms, 4,539 square-seconds; the plan's §17.5 had 18,045 / 1,883 / 4,543): on the legacy mix
+  **14,417 episodes, p95 1,767 ms, 2,952 square-seconds**, better on all three, with the leader's walk through its own
+  members while both move counted apart as R6's (1,940 episodes, p95 2,733 ms, 1,096 square-seconds); all of them
+  together 16,357 / 2,033 ms / 4,048 (see the deviations). The full mix: 25,830 episodes, p95 2,033 ms, 6,409
+  square-seconds (crowds of 24 and tunnels overlap by nature), the leader's apart 2,082.
+- The suite's quick run (`sim.test`): 60 seeds of every kind (maps, both modes, kinds ≥ 5) and the regression seeds,
+  36 tests. Earlier regression seeds that L3's fixes now cover too were found again on the legacy mix (SIM5-01 721 →
+  424, SIM5-02 41 → 86, SIM-L2-01 1412 → 9736; SIM-L3-02 and -05 likewise).
+- Mechanical: `make foundry-movement-check` 446 pass, 0 fail, 0 todo (conformance 95.9 %, C30 / C56); `make test`
+  2,461 passed, 9 skipped, 4 xfailed; `make foundry-module-index && make check-context` OK (the same 32 warnings).
+- **Red**: six seeds in 20,000 runs leave two tokens on each other, all a stop of a packed file or crowd:
+  - 2357 (legacy, a two-wide corridor): a door cut of one member; the same stop stops the two beside it; the middle one
+    lies 0.12 inside the one cut, with the shut door ahead and the other behind, and the one cut cannot make room (its
+    own way ahead crosses the door): named "Stopped on another token".
+  - 9124 (legacy, a two-wide corridor): a click stops two brushing; the one behind is carried back along its way; a
+    door shuts before that walk on goes; its second look finds the door behind and the other ahead: 0.28 inside, named.
+  - 5418, 6142, 8249 (crowds of 17 to 24 in a two- or three-wide door): a click, or a door cut (6142: a click and a cut
+    30 ms apart), of members jammed shoulder to shoulder; nowhere along any member's way is clear and nobody it lies in
+    can move along its own: 0.10 to 0.69 inside, named.
+  - 9191 (a tunnel, a second group): a door cut stops a file of eight in a one-wide tunnel (front first, each clear of
+    the next), but the stop's writes are separate updates and one of them reached the server 440 ms after its
+    neighbour's (a lost packet): on a player's screen the later one walked on to its square, onto the one already
+    stopped, until its own stop came.
+  Each is a stop's resolution along the tokens' own ways running out (decision 2, R12: no search, no off-way spot);
+  the last is a stop's writes not going as one update.
+
+**Deviations from BINDING and why.**
+- *Net lines* (R12): file-core 614 → 631 (+17: the FIFO bounds, `byWalk`), file.mjs 592 → 630 (+38: the hidden-tab
+  rule, the waiting members' slots, the stop order), drop.mjs 1,503 → 1,592 (+89: `fightSteps`, `leadThrough`, the own
+  square rule, the wave's second round, the cut's `stopAlso`); stop.mjs 871 → 1,075 (+204: the stop order, the walk-on
+  claims and second look, `stopAlso`, `makeRoom`), motion-core 513 → 570 (`fightWalk`, `stopOrder`), group-adapter
+  471 → 496 (`movementLeft`). Module 8,358 → 8,788 lines. Why: the fight's leader rules and the speed stop are new
+  behaviour; the rest is what the simulator's zero rest overlap needed of a stop of several tokens.
+- *Decision 2 and R12 on stops*: a stop now carries tokens along their own ways in more cases (the ones behind back
+  first; one already rested carried on to make room; this screen's walkers heading into a stop's spot stopped too). No
+  search and no spot off a token's own way (R12's straight-line last resort stays deleted). Why: R8's zero rest
+  overlap, and Joe 2026-11-24 "at rest nobody overlaps".
+- *A hidden tab* (0.8's "sends its waves at once", not BINDING): replaced by the waves on their own timers; R5's 4 s
+  holds. Why: the flush set a whole file off together, the simulator's commonest jam.
+- *A fight's next square* (Joe 2026-11-24: two movers may brush): a walker that rests on the square, or whose screen
+  has held it up for 500 ms, now counts as standing there. Why: 0.9.0's 3599 and two-screen fights rested two tokens
+  on one square; crossing walkers still brush.
+- *The overlap comparison* is made on the legacy mix with the leader's walk through its own moving members counted
+  apart (R6 allows it; 0.9.0 had no leader). Counted in, the p95 duration is 2,033 ms against 0.9.0's 1,900 (episodes
+  and square-seconds still better).
+- *One code commit, one record* (as L2): the pieces share drop.mjs, stop.mjs, file.mjs and the simulator's model.
+- The pending-slot rule and the wave's second round have their failing tests in the simulator (SIM-L3-07, SIM-L3-10)
+  and are mirrored line for line in the model; no board test of their own.
+- Defaults taken without a human: scratch `b10/auto-decisions.md` "L3".
+
+Open after L3: the six rest-overlap seeds above (a stop of a jam: a stop's writes as one update for 9191; for the jams either a
+cascade along the tokens' own ways or Joe's word on a short settle off them); the page gate (R11, needs a deploy); the
+narrow passages and the stair (R9, review 3 §4 step 9); L2's door plug (a drop just past a door's mouth), not looked
+at again.
