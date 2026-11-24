@@ -68,7 +68,10 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   started stops at once): out of combat it stops **exactly where it is drawn** (Joe, 2026-11-23); one whose body is
   across a door's line, or that would rest inside a token at rest or a member the same stop stopped, is carried on
   along its own route just clear of it (0.9.0 step 5; never through a wall or a token at rest; the leader of a group
-  carries on through its own members to the first free spot). With no clear spot anywhere along its own way (0.10:
+  carries on through its own members to the first free spot). Several stopped at once settle front first (0.10 L3):
+  the one in front where it is drawn, the ones behind it carried back along their own ways (or the one in front carried
+  on along its own, to make room), never onto a spot another stop on this screen is still carrying a token to or a
+  waiting member's square; this screen's other walkers heading into a spot the stop rests one on stop too. With no clear spot anywhere along its own way (0.10:
   no straight line off it any more), a click leaves it walking on to its own square ("Could not stop clear of another
   token, so walked on to its own square: …"), and a door or wall that cut it leaves it where it is drawn, named
   ("Stopped on another token, …: drag it clear"). In a fight it finishes the square it is in,
@@ -77,7 +80,8 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   stand.
 - **In a fight, every square is checked before it is sent** (Joe, 2026-11-23): against the walls as they are now (a
   door shut mid-walk stops the token on the square it holds, charged for the squares it walked); never from a screen
-  that no longer shows the token's map; never into a token standing still.
+  that no longer shows the token's map; never into a token standing still, nor (0.10 L3) onto the square of a walker
+  that rests there or whose screen has held it up for half a second.
 - **A door shut or a wall raised across a walk out of combat** stops it where it is drawn; a group member not yet
   sent whose way it crosses stays where it stands, named.
 - **Several tokens out of combat — the leader rule** (`groupDrags`; 0.10, Joe 2026-11-24): the token you grab and
@@ -97,13 +101,20 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   drop. Nobody rests on anybody, nobody walks through a token standing still outside the group; two members both
   moving may brush on the way. One with no square it can reach stays where it stands and is
   named: "Stayed where they stand, with no free spot they can reach: Talo." The leader with no way there moves
-  nobody: "No route there". A tab sent to the background sends the waiting members at once. `planGroup(tokens,
+  nobody: "No route there". A tab sent to the background keeps the waiting members in order (0.10 L3: its timers
+  fire on whole seconds; the last still goes within 4 s of the drop). `planGroup(tokens,
   point)` dry-runs it (the shape, the leader, the target, each member's square, route, start delay and why it stays).
 - **Several tokens in a fight — one at a time** (`groupDrags`; 0.9.0, the leader rule 0.10): nothing moves at the drop;
   the leader walks first, then the others one after the other (least walk left first), each a normal single move whose
   square is picked when its turn comes (behind where the leader came to rest in a march, round the target in a swarm)
   and routed round the tokens standing then (the ones already moved where they came to rest), a checkpoint at every
-  square, charged exactly what it walks. The leader with no way moves nobody ("No route there"). A stack (a
+  square, charged exactly what it walks. The leader walks straight through its own group (0.10 L3; never through
+  anyone else) and costs nothing extra for it (2024 rules: an ally's space is no Difficult Terrain); its moves end
+  only on free squares, so a click while it is inside a member carries it on to the next free one. **A member whose
+  speed runs out stops** on the last free square its movement this turn pays for (dnd5e's walking speed less what its
+  movement history already cost this turn, as the system's own ruler colours it); one with nothing left does not
+  move; both are named ("Out of movement this turn, stopped short: …"). A token with no speed on its sheet walks the
+  whole way, as a single drag does; a single drag is unchanged. The leader with no way moves nobody ("No route there"). A stack (a
   mount and its rider) goes as one. About a second per member per 30 ft. A click on the walker, a turn change or a
   deleted member ends the queue (the members not sent are named, except after your own click); a new drop of other
   tokens leaves it running (0.10), one of its members dropped again leaves the queue. A walk that never ends is moved
@@ -112,8 +123,9 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   dragged alone carries its rider.
 - **Notices**: "No route there.", "Stopped short, way blocked.", "In a fight, drag one token at a time.", the
   members of a group drag that stayed, by name, the members a fight's queue (or a wave this screen no longer draws:
-  you changed scene) did not send ("Did not move, the group's walk was ended: …"), and a stop that found no clear
-  spot along its way (above). The reason behind each is in the telemetry (`telemetry()`) and in
+  you changed scene) did not send ("Did not move, the group's walk was ended: …"), the members of a fight's group drag
+  whose movement ran out ("Out of movement this turn, stopped short: …"), and a stop that found no clear spot along
+  its way (above). The reason behind each is in the telemetry (`telemetry()`) and in
   `status().group.told`.
 - **Up to 24 tokens** in one group drag (0.10; was 12), out of combat and in a fight; more: core's own drop out of
   combat, refused in a fight.
@@ -308,7 +320,7 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and wall tests (reads only) |
 | `drop.mjs` | the feature (0.9.0, was `group.mjs`): the drop wrap — single drops, the file's first update and its later waves, the fight queue, a fight's every square, a wall across a walk, riders, undo |
 | `file-core.mjs` | pure (0.10): `planLead` — the leader rule (march and swarm ranks, each member's best reachable square and one route, the members that stay), `walkFrom` (the floods); `staggerFile` — the motion (0.10 L2, R5): the leader at once, the pack a wave later, single file only at a narrow point (`narrowZones`), a member held while another would walk through it at rest, the last within 4 s |
-| `file.mjs` | the feature (0.10): the shape from the drop (`targetOf`), planLead's oracles on the canvas (rest test, one step on the pathfinder's shared memo, routes round circles), a fight's order and each member's square at its turn, the dry run, which tokens move together, the waves' timers and the hidden-tab flush, the fight queues and what empties them, the group-wide stop |
+| `file.mjs` | the feature (0.10): the shape from the drop (`targetOf`), planLead's oracles on the canvas (rest test, one step on the pathfinder's shared memo, routes round circles), a fight's order and each member's square at its turn, the dry run, which tokens move together, the waves' timers and a hidden tab's (whole seconds, the last by 4 s), the fight queues and what empties them, the group-wide stop |
 | `stop.mjs` | the feature: the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `styles/movement.css` | the dimmed combat badge (`.pm-blocked`) |
@@ -326,13 +338,17 @@ an earlier slot or a member that stays, march nobody beside or ahead, swarm the 
 most 1.2 searches a member and under 3 % failed; planning time), `file-core.test` (the motion on the leader plan's
 routes, 0.10 L2: open ground is the leader plus one wave, a file of 20 one wave, a door single file and spread out
 past it, a leader anywhere in a one-wide tunnel of 2 to 20 reaches the front in 400 seeds, the last within 4 s, and on
-800 seeded drops nobody walking into a member at rest and no two in one narrow point) and `drop.test` (the drop and click wraps, the
-file on the synthetic board with its three handlers, the fight queue and what ends it, and the 0.9.0 step 1 gate: 60
-seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
+800 seeded drops nobody walking into a member at rest and no two in one narrow point; L3: a drop's waves in the order
+every screen sees them), `fight.test` (0.10 L3, the fight's pure side: the order, where a walk may rest, where its speed
+runs out, the order one stop settles walkers in) and `drop.test` (the drop and click wraps, the
+file on the synthetic board with its three handlers, the fight queue and what ends it, the 0.9.0 step 1 gate: 60
+seeded fight drags charged exactly 5 ft a square, a door shut mid-walk, and L3's: 60 seeded fight queues, the leader
+first and through its members, the same charge with or without them in its way, and 200 seeded speed stops);
 `telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). `test/sim/` is the
-simulator (0.9.0 step 5; 0.10 L1 the leader plan, L2 its motion): the real cores (`file-core` planLead / staggerFile,
-`motion-core` clearAlong, the pathfind-core A*) on virtual clients over a jittered, lossy network;
+simulator (0.9.0 step 5; 0.10 L1 the leader plan, L2 its motion, L3 the fight and its own kinds of seed, Joe's
+playground stations among them): the real cores (`file-core` planLead / staggerFile, `motion-core` clearAlong /
+fightWalk / stopOrder, the pathfind-core A*) on virtual clients over a jittered, lossy network;
 `sim.test.mjs` runs 60 seeds and one regression seed per defect it found; `make foundry-movement-sim
 SEEDS=10000` is the full run. Fixtures are
 synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.

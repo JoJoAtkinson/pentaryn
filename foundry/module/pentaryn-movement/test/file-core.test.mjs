@@ -6,7 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld } from "./fixtures/grid.mjs";
 import { DUNGEON } from "./fixtures/dungeon.mjs";
-import { STAGGER, narrowZones, planLead, staggerFile } from "../file-core.mjs";
+import { STAGGER, narrowZones, planLead, routeEnters, staggerFile } from "../file-core.mjs";
 import { closeTime, delayed, dist, nearestWhile, positionAt, trajectory } from "../motion-core.mjs";
 
 const EPS = 1e-6;
@@ -379,6 +379,37 @@ test("R5 gate (L2; 600 seeded drops on random floors, 200 in the dungeon, on the
   // Crowded (soft: they go at the least crowded step, never cut): a leader more than 4 s behind its frontmost member
   // (the pack capped), or a member whose start and slot both lie on earlier members' routes.
   assert.ok(crowdedDrops <= drops * 0.05, `${crowdedDrops} of ${drops} drops crowded`);
+});
+
+/** A walk X passes the circle of member Y at rest (by more than the slack: a brush is not a pass). */
+const passes = (X, c, r) => !!routeEnters(X.points, X.r, [{ x: c.x, y: c.y, r }], STAGGER.slack);
+
+test("L3 FIFO order (every screen gets a drop's waves in the order they were sent): a member whose slot lies on another's route is never sent before it, one whose start lies on another's route never after it; the leader excepted (R6). 600 seeded floors, 200 dungeon drops, 200 lines in a one-wide way", () => {
+  let drops = 0, pairs = 0, broken = 0;
+  const lines = [];
+  for (let seed = 1; seed <= 200; seed++) {
+    const rand = rng(77000 + seed);
+    const g = gridWorld(TUNNEL40);
+    const n = 3 + Math.floor(rand() * 8), x0 = 2 + Math.floor(rand() * 6);
+    const ms = Array.from({ length: n }, (_, k) => member(`m${k}`, { x: x0 + k + 0.5, y: 2.5 }));
+    lines.push({ seed: 77000 + seed, g, members: ms, standing: [], anchorId: ms[Math.floor(rand() * n)].id, drop: { x: 30.5 + Math.floor(rand() * 6), y: 2.5 } });
+  }
+  const all = [...Array.from({ length: 600 }, (_, k) => scenario(k + 1)), ...Array.from({ length: 200 }, (_, k) => scenario(1001 + k, DUNGEON)), ...lines];
+  for (const sc of all) {
+    const plan = planOf(sc);
+    if (plan.none) continue;
+    const t = timeOf(sc, plan);
+    drops += 1;
+    const walks = walksOf(sc, plan).filter(w => w.id !== plan.leader);
+    for (const X of walks) for (const Y of walks) {
+      if (X === Y) continue;
+      const d = id => t.delays[id];
+      if (passes(X, Y.points.at(-1), Y.r)) { pairs += 1; if (d(X.id) > d(Y.id) + 1e-6) { broken += 1; assert.fail(`seed ${sc.seed}: ${X.id} (${d(X.id)} ms) passes ${Y.id}'s slot, sent after it (${d(Y.id)} ms)`); } }
+      if (passes(X, Y.points[0], Y.r)) { pairs += 1; if (d(Y.id) > d(X.id) + 1e-6) { broken += 1; assert.fail(`seed ${sc.seed}: ${X.id} (${d(X.id)} ms) passes ${Y.id}'s start, sent before it leaves (${d(Y.id)} ms)`); } }
+    }
+  }
+  if (process.env.PM_STATS) console.log({ fifo: { drops, pairs, broken } });
+  assert.ok(pairs >= 200, `ordered pairs ${pairs}`);
 });
 
 test("closeTime / nearestWhile (L2): how long two movers are closer than a limit; the nearest a mover comes to a point in a time window", () => {

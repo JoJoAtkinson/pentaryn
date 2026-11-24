@@ -6,8 +6,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { gridWorld } from "./fixtures/grid.mjs";
-import { flood } from "../group-core.mjs";
 import { footprintCells, planLead, routeEnters, walkFrom } from "../file-core.mjs";
+import { marchBreaches, swarmBreaches } from "./sim/shape.mjs";
 
 const EPS = 1e-6;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -299,45 +299,19 @@ test("L1 gate (800 seeded floors and tunnels, 2-20 members, march and swarm, Med
     const step = o.step;
     if (!target) {
       tot.march += 1;
-      // Nobody beside or ahead: each follower's square nearer B (the leader's last step's square) than the leader's own.
-      const Ls = plan.members[leader.id].slot;
-      const mine = footprintCells(Ls, leader.w, leader.h);
-      const mineK = new Set(mine.map(c => `${c.i},${c.j}`));
-      const occ = c => standing.some(s => dist({ x: c.j + 0.5, y: c.i + 0.5 }, s) < s.r + 0.5 - EPS);
+      // Nobody beside or ahead: each follower's square nearer B (the leader's last step's square) than the leader's own
+      // (the shape rule the simulator judges too: test/sim/shape.mjs).
       const B = plan.behind;
       if (!B) { assert.equal(plan.stayed.length, members.length - 1, `seed ${seed}: no square behind, all named`); continue; }
-      const fromB = flood({ i: Math.floor(B.y), j: Math.floor(B.x) }, (a, b) => step(a, b) && !occ(b) && !mineK.has(`${b.i},${b.j}`), 60);
-      const fromL = new Map();
-      for (const c of mine) for (const [k, d] of flood(c, (a, b) => step(a, b) && !occ(b), 60)) fromL.set(k, Math.min(d, fromL.get(k) ?? Infinity));
-      for (const m of members) {
-        const e = plan.members[m.id];
-        if (m.id === leader.id || e.stay) continue;
-        for (const c of footprintCells(e.slot, m.w, m.h)) {
-          const k = `${c.i},${c.j}`;
-          const dB = fromB.get(k) ?? Infinity, dL = fromL.get(k) ?? Infinity;
-          const back = (c.j + 0.5 - Ls.x) * plan.lastStep.x + (c.i + 0.5 - Ls.y) * plan.lastStep.y;
-          assert.ok(dB < dL - EPS || (Math.abs(dB - dL) <= EPS && back < -EPS), `seed ${seed}: ${m.id} beside or ahead of the leader (${k}: from B ${dB}, from the leader ${dL})`);
-        }
-      }
+      const followers = members.filter(m => m.id !== leader.id && !plan.members[m.id].stay).map(m => ({ id: m.id, w: m.w, h: m.h, slot: plan.members[m.id].slot }));
+      const breaches = marchBreaches({ leader, at: plan.members[leader.id].slot, behind: B, lastStep: plan.lastStep, followers, standing, step });
+      assert.deepEqual(breaches, [], `seed ${seed}: beside or ahead of the leader`);
     } else {
       tot.swarm += 1;
-      const T = footprintCells(target, target.w, target.h);
-      const touching = s => footprintCells(s, leader.w, leader.h).some(c => T.some(f => Math.max(Math.abs(f.i - c.i), Math.abs(f.j - c.j)) === 1));
       const Ls = plan.members[leader.id].slot;
-      if (touching(Ls)) { tot.leaderTouch += 1; continue; }
-      // Not touching: no free touching square the leader could stand on and reach (round the tokens standing).
-      const cands = new Map();
-      for (const f of T) for (let di = -leader.h; di <= 1; di++) for (let dj = -leader.w; dj <= 1; dj++) {
-        const c = { x: f.j + dj + leader.w / 2, y: f.i + di + leader.h / 2 };
-        if (touching(c) && footprintCells(c, leader.w, leader.h).every(q => !T.some(t => t.i === q.i && t.j === q.j))) cands.set(`${c.x},${c.y}`, c);
-      }
-      for (const c of cands.values()) {
-        if (!g.walkable(leader, c) || standing.some(s => dist(c, s) < s.r + leader.r - EPS)) continue;
-        const touchOk = footprintCells(c, leader.w, leader.h).some(q => T.some(t => Math.max(Math.abs(t.i - q.i), Math.abs(t.j - q.j)) === 1 && step(t, q)));
-        if (!touchOk) continue;
-        const pts = o.route(leader, leader.start, c, standing);
-        assert.equal(pts, null, `seed ${seed}: a touching square ${JSON.stringify(c)} was free and reachable, the leader took ${JSON.stringify(Ls)}`);
-      }
+      const breaches = swarmBreaches({ leader, at: Ls, target, standing, walkable: g.walkable, step, route: o.route });
+      if (!breaches.length && footprintCells(Ls, leader.w, leader.h).some(c => footprintCells(target, target.w, target.h).some(f => Math.max(Math.abs(f.i - c.i), Math.abs(f.j - c.j)) === 1))) tot.leaderTouch += 1;
+      assert.deepEqual(breaches, [], `seed ${seed}: a touching square was free and reachable, the leader took ${JSON.stringify(Ls)}`);
     }
   }
   const perMember = tot.searches / tot.members, failed = tot.failed / Math.max(1, tot.searches);

@@ -57,6 +57,31 @@ export function speedOf(token, action = token.document?.movementAction) {
 }
 
 /**
+ * The movement a token has left this turn, read the way dnd5e 6.1.1's own token ruler colours its ranges
+ * (TokenRuler5e #getSpeedBasedStyle): the actor's speed for the movement action (one with walkFallback, or a type
+ * dnd5e does not know, at least its walking speed), less what its movement history already cost this turn (core
+ * clears the history when its turn starts; a waypoint core could not measure is left out). { speed, spent, left } in
+ * the scene's units, or null when the actor has no usable speed (not a creature, no movement data, 0, a teleport):
+ * then a fight's group member walks the whole way, as a single drag does (0.10 L3, R7). Reads only.
+ */
+export function movementLeft(token, action = token?.document?.movementAction) {
+  const doc = token?.document;
+  let sys = null;
+  try { sys = (doc?.actor ?? token?.actor)?.system ?? null; } catch { sys = null; }
+  if (!sys?.isCreature) return null;
+  const speeds = sys.attributes?.movement?.speeds;
+  if (!speeds || typeof speeds !== "object") return null;
+  if (globalThis.CONFIG?.Token?.movement?.actions?.[action]?.teleport) return null;
+  const types = globalThis.CONFIG?.DND5E?.movementTypes ?? {};
+  let speed = Number(speeds[action] ?? 0);
+  if (types[action]?.walkFallback || !types[action]) speed = Math.max(speed, Number(speeds.walk ?? 0));
+  if (!(speed > 0) || !Number.isFinite(speed)) return null;
+  let spent = 0;
+  for (const w of doc?.movementHistory ?? []) if (Number.isFinite(w?.cost)) spent += w.cost;
+  return { speed, spent, left: Math.max(0, speed - spent) };
+}
+
+/**
  * One member record from a drag context: start = the token's source position, formation = the
  * context's destination (core's same-delta, snapped drop point), corePath = core's found path.
  */

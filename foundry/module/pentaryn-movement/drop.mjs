@@ -28,10 +28,10 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { GROUP_MAX, MOTION, cellChain, dist, firstLegAcross, groupMode, radiusOf, routeAhead, wallOpenFrom, waves as wavesOf } from "./motion-core.mjs";
+import { GROUP_MAX, MOTION, cellChain, dist, fightWalk, firstLegAcross, groupMode, radiusOf, routeAhead, wallOpenFrom, waves as wavesOf } from "./motion-core.mjs";
 import { coalesceHistory, freePrefix, onCell, pathLength, prefixOf, stacksOf } from "./group-core.mjs";
 import { avoidDist, skipReason } from "./pathfind-core.mjs";
-import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, movementFacts, othersOf, restWalkable, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
+import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, movementFacts, movementLeft, othersOf, restWalkable, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
@@ -121,10 +121,12 @@ function tellBlockedBy(grabbed, blockerId) {
  * `key` "notSent", the members a fight queue never sent because its walk was ended (a turn change, a deleted member, a
  * member stopped on the way); with "stopInside" (0.10 L2), a token a wall cut left on another token, with no free
  * spot along its own way, and "walkedOn", one a click could not stop clear of another, so it walked on to its own
- * square (stop.mjs stopOne).
+ * square (stop.mjs stopOne); "speed" (0.10 L3, R7), the members of a fight's group drag whose movement ran out this
+ * turn before their own square (one with none left did not move).
  */
 const NAMED = Object.freeze({ stayed: "PENTARYN_MOVEMENT.notify.named.stayed", notSent: "PENTARYN_MOVEMENT.notify.named.notSent",
-  stopInside: "PENTARYN_MOVEMENT.notify.named.stopInside", walkedOn: "PENTARYN_MOVEMENT.notify.named.walkedOn" });
+  stopInside: "PENTARYN_MOVEMENT.notify.named.stopInside", walkedOn: "PENTARYN_MOVEMENT.notify.named.walkedOn",
+  speed: "PENTARYN_MOVEMENT.notify.named.speed" });
 function tellStayed(docs, reason = "stayed", key = "stayed") {
   const names = docs.map(nameFor).join(", ");
   const text = game.i18n.format(NAMED[key] ?? NAMED.stayed, { names });
@@ -690,6 +692,16 @@ function blocksMove(wall) {
 /** Core movement ids of moves this client started by a drag or for the module (their continuations name them in `chain`). */
 const driven = new Map();                  // movement id → when (ms)
 const DRIVEN_TTL_MS = 60000;
+/** A fight's leader walking now → the ids of its group (0.10 L3, R6): its next squares pass through them. */
+const leadThrough = new Map();
+/** token id → when this client last saw it move (ms): a fight's walker with no square for this long is held up there. */
+const lastWriteAt = new Map();
+const HELD_MS = 500;
+function noteWrite(doc) {
+  if (!doc?.id) return;
+  lastWriteAt.set(doc.id, Date.now());
+  if (lastWriteAt.size > 500) lastWriteAt.delete(lastWriteAt.keys().next().value);
+}
 
 /** A waypoint's centre and the token's circle (squares). */
 function stepCircle(doc, p, s) {
@@ -727,19 +739,29 @@ function moving(t) {
 /**
  * Does the fight step a → b (squares, centres) of `doc` come inside a token standing still on this page (drawn, counted
  * for routes, same level and layer, not a stack mate)? One already overlapping where the step starts is no new block;
- * one moving is not standing (two movers may brush, Joe 2026-11-24). The token's id, or null.
+ * one moving is not standing (two movers may brush, Joe 2026-11-24), unless its own square (where its document is) is
+ * the step's end and it rests there or is held up there (0.10 L3); a fight's leader passes through its own group's
+ * members (R6: `leadThrough`, while its walk runs). The token's id, or null.
  */
 function stepMeetsStanding(doc, a, b, s) {
   const mates = stackmates(doc.id);
+  const through = leadThrough.get(doc.id);
   for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
     const o = t?.document;
-    if (!o?._source || o.id === doc.id || t.isPreview || t.destroyed || mates.has(o.id) || !countsForRoutes(t)) continue;
+    if (!o?._source || o.id === doc.id || t.isPreview || t.destroyed || mates.has(o.id) || through?.has(o.id) || !countsForRoutes(t)) continue;
     if (o._source.level !== undefined && doc._source.level !== undefined && o._source.level !== doc._source.level) continue;
     if (!sameLayer(doc, o)) continue;
-    if (moving(t)) continue;
     const c = stepCircle(o, o._source, s);
     const rr = b.r + c.r - 0.02;
     if (Math.hypot(a.x - c.x, a.y - c.y) < rr) continue;
+    // A walker passing by is no block, nor one about to walk on from its square (two crossing may brush); but one whose
+    // own square (its document) is this next square and that rests there (its move's last square), or that has had no
+    // next square for a while (its screen held up, or gone), is (0.10 L3: two from two screens rested on one square).
+    if (moving(t)) {
+      const held = o.movement?.state !== "pending" || Date.now() - (lastWriteAt.get(o.id) ?? 0) > HELD_MS;
+      if (held && Math.hypot(b.x - c.x, b.y - c.y) < rr) return o.id;
+      continue;
+    }
     if (segPt(c, a, b) < rr) return o.id;
   }
   return null;
@@ -849,8 +871,15 @@ function cutAcross(wall) {
   // `wall`: a wall cut them, so none walks on (stop.mjs stopOne).
   const group = { skip: new Set(cut.map(t => t.document.id)), claims: [], wall: true };
   const out = [];
-  for (const token of cut) {
+  // The front ones first (0.10 L3: a packed file is never rested back to front).
+  let ordered = cut;
+  try { ordered = feature.exposed.stopOrderOf?.(cut) ?? cut; } catch (err) { log?.debug?.("cut: the order", err); }
+  for (const token of ordered) {
     try { feature.exposed.stopDisplace?.(token, group); out.push(token.document.id); } catch (err) { log?.debug?.("cut: stop where drawn", err); }
+  }
+  // This screen's other walkers whose way comes into where the cut rested one stop too (0.10 L3).
+  if (out.length) {
+    try { for (const id of feature.exposed.stopAlso?.(group) ?? []) out.push(id); } catch (err) { log?.debug?.("cut: also", err); }
   }
   if (out.length) {
     cutLast = { at: new Date().toISOString(), why: "wall", wall: wall.id ?? null, members: out.length };
@@ -1101,7 +1130,7 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
     const ends = new Map([...Object.entries(now0).map(([id, wps]) => [id, wps.at(-1)]), ...[...later].map(([id, v]) => [id, v.wps.at(-1)])]);
     const stayed = new Set();                  // members a wave left where they stand (named)
     const send = list => sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends, stayed });
-    feature.exposed.groupWaves?.(gid, waveList, send);
+    feature.exposed.groupWaves?.(gid, waveList, send, ends);
   }
   if (res[0].length) noteInFlight(scene, res[0], res[1].movement);
   return res[0].length ? res : null;
@@ -1150,16 +1179,32 @@ function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene
     const offPlan = !same(doc._source, ends.get(id)) && !same(doc._source, starts.get(id));
     if (offPlan || stayed.has(id)) others.push(circleOf(doc));
   }
+  // Where this client's stops are carrying tokens on to (0.10 L3, the simulator's seed 6166): in the wave's way too.
+  try {
+    for (const wo of feature.exposed.stopWalkingOn?.() ?? []) others.push({ ...toSquares(wo, wo.w, wo.h, s), r: radiusOf(wo.w, wo.h), id: wo.id });
+  } catch (err) { log?.debug?.("wave: the walks on", err); }
   const movement = {}, updates = [], shut = [], undrawn = [];
+  // One that stays is in the way of every other member of the wave, also of one looked at before it (0.10 L3, the
+  // simulator's seed 5479): round again until nobody more stays.
+  const go = new Map();
+  for (let again = true; again;) {
+    again = false;
+    for (const id of live) {
+      if (go.get(id) === null) continue;
+      const doc = scene.tokens.get(id);
+      const token = doc?.object;
+      // Not drawn on this page any more (the dragger views another scene): it stays where it stands, named (0.10 L2
+      // fix (c): it used to leave the group silently).
+      if (!token || token.destroyed) { go.set(id, null); if (doc) { undrawn.push(doc); stayed.add(id); } continue; }
+      const wps = later.get(id).wps;
+      const kept = wayShut(doc, { ...doc._source }, wps) ? null : freeOfOthers(token, { ...doc._source }, wps, others);
+      if (!kept || kept.short) { go.set(id, null); shut.push(doc); stayed.add(id); others.push(circleOf(doc)); again = true; continue; }
+      go.set(id, wps);
+    }
+  }
   for (const id of live) {
-    const doc = scene.tokens.get(id);
-    const token = doc?.object;
-    // Not drawn on this page any more (the dragger views another scene): it stays where it stands, named (0.10 L2
-    // fix (c): it used to leave the group silently).
-    if (!token || token.destroyed) { if (doc) { undrawn.push(doc); stayed.add(id); } continue; }
-    const wps = later.get(id).wps;
-    const kept = wayShut(doc, { ...doc._source }, wps) ? null : freeOfOthers(token, { ...doc._source }, wps, others);
-    if (!kept || kept.short) { shut.push(doc); stayed.add(id); others.push(circleOf(doc)); continue; }
+    const wps = go.get(id);
+    if (!wps) continue;
     movement[id] = { ...(base[id] ?? { planned: false }), waypoints: wps };
     updates.push({ _id: id });
   }
@@ -1249,13 +1294,14 @@ function fightFile(grabbed, contexts, riders, seq) {
   const tag = gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null;
   let wake = null;
   const q = {
-    gid, done: false, why: null, current: null, shape, target: fp?.target ?? null, leaderId: anchor.document.id, leaderAt: null,
+    gid, done: false, why: null, current: null, shape, target: fp?.target ?? null, leaderId: anchor.document.id, leaderAt: null, ids: new Set(ids),
     cancel(why) { if (this.done) return; this.done = true; this.why = why; try { wake?.(); } catch (err) { log?.debug?.("fight: wake", err); } },
     woken: null,
   };
   q.woken = new Promise(r => { wake = r; });
   if (gid) feature.exposed.groupQueue?.(gid, q);
-  fightLast = { at: new Date().toISOString(), members: entries.length, sent: 0, stayed: 0, there: [], skipped: 0, watchdog: 0, ended: null, running: true };
+  fightLast = { at: new Date().toISOString(), members: entries.length, order: entries.map(e => e.id), sent: 0, stayed: 0, there: [], skipped: 0, watchdog: 0,
+    walks: [], ended: null, running: true };
   const rec = fightLast;
   runFight(q, entries, { scene, gid, tag, seq, rec }).catch(err => failed("fight", err)).finally(() => {
     rec.running = false;
@@ -1273,7 +1319,7 @@ function deadline(q, ms) {
 }
 
 async function runFight(q, entries, { scene, gid, tag, seq, rec }) {
-  const stayed = [];
+  const stayed = [], spent = [];
   let k = 0, walked = false;           // walked: entry k was sent (it walks, or walked, on its own)
   for (; k < entries.length; k++) {
     walked = false;
@@ -1299,6 +1345,17 @@ async function runFight(q, entries, { scene, gid, tag, seq, rec }) {
       if (e.leader) q.leaderAt = { at: { x: doc._source.x, y: doc._source.y }, from: { x: doc._source.x, y: doc._source.y } };
       continue;
     }
+    // Where it may rest and how far its movement this turn takes it (R6, R7): the leader's updates end only on free
+    // squares (it passes through its own members), and a member whose speed runs out stops on the last free square
+    // its movement pays for. With no square paid for it does not move, named.
+    const fw = fightSteps(token, e, way);
+    rec.walks.push({ id: e.id, planned: fw.planned, sent: fw.sent, left: fw.left, why: fw.why, inside: fw.inside });
+    if (fw.short && fw.why === "speed") spent.push(doc);
+    if (!fw.waypoints.length) {
+      if (e.leader) q.leaderAt = { at: { x: doc._source.x, y: doc._source.y }, from: { x: doc._source.x, y: doc._source.y } };
+      continue;
+    }
+    way.waypoints = fw.waypoints;
     q.current = e.id;
     walked = true;
     const r = await walkOne(q, token, e, way, { gid, tag });
@@ -1318,6 +1375,7 @@ async function runFight(q, entries, { scene, gid, tag, seq, rec }) {
     if (r === false) { q.cancel("stopped"); break; }
   }
   if (stayed.length) tellStayed(stayed, "fight");
+  if (spent.length) tellStayed(spent, "fight:speed", "speed");
   // The members a turn change, a deleted member or a stop on the way left unsent are named (a click or a new drop is
   // the dragger's own doing).
   const left = entries.slice(k + (walked ? 1 : 0)).map(e => scene?.tokens?.get?.(e.id)).filter(Boolean);
@@ -1337,6 +1395,8 @@ async function routeAtTurn(token, e, q = null) {
   const others = othersOf(skip, s);
   const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
   const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box: false, id: o.id }));
+  // The leader walks through its own group's members (R6), never through anyone else; it rests on none.
+  const avoid = e.leader && q?.ids ? circles.filter(o => !q.ids.has(o.id)) : circles;
   const taken = p => { const c = centre(p); return circles.some(o => Math.hypot(c.x - o.x, c.y - o.y) < o.r); };
   const member = { token, r, w, h };
   const fits = p => { try { return restWalkable(member, { x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s }, s); } catch { return false; } };
@@ -1359,7 +1419,7 @@ async function routeAtTurn(token, e, q = null) {
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
   const start = centre(origin);
   if (Math.round(start.x) === Math.round(centre(end).x) && Math.round(start.y) === Math.round(centre(end).y)) return { stay: "there" };
-  const live = circles.filter(o => avoidDist(o, start, start) >= o.r);
+  const live = avoid.filter(o => avoidDist(o, start, start) >= o.r);
   const opts = { preview: true, avoid: live.length ? live : null };
   const dest = { ...origin, ...end, explicit: true, checkpoint: true };
   let rr = null;
@@ -1379,7 +1439,7 @@ async function routeAtTurn(token, e, q = null) {
 async function walkOne(q, token, e, way, { gid, tag }) {
   const doc = token.document;
   const scene = doc.parent;
-  const wps = withCheckpoints(token, [way.origin, ...way.waypoints]);
+  const wps = way.waypoints;
   const s = gridSize(token);
   const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
   const squares = pathLength([way.origin, ...wps].map(p => toSquares(p, w, h, s)));
@@ -1387,6 +1447,7 @@ async function walkOne(q, token, e, way, { gid, tag }) {
   const opts = { method: "api", pentarynMovementFile: gid ?? true, ...(tag ? { [GROUP_OPT]: tag } : {}), ...(e.leader ? { [LEAD_OPT]: [doc.id, ...e.riders.map(x => x.id)] } : {}) };
   const ids = [doc.id, ...e.riders.map(x => x.id)];
   try { feature.exposed.noteDrop?.(ids); } catch (err) { log?.debug?.("fight: noteDrop", err); }
+  if (e.leader && q.ids) for (const id of ids) leadThrough.set(id, q.ids);
   const dl = deadline(q, walkMs + FIGHT_WATCH_MS);
   try {
     const moves = [Promise.resolve(doc.move(wps, opts))];
@@ -1407,7 +1468,45 @@ async function walkOne(q, token, e, way, { gid, tag }) {
   } catch (err) {
     failed("fightMove", err);
     return false;
-  } finally { dl.clear(); }
+  } finally {
+    dl.clear();
+    if (e.leader) for (const id of ids) leadThrough.delete(id);
+  }
+}
+
+/**
+ * A fight member's waypoints as it walks them (0.10 L3, R6 / R7; motion-core fightWalk): a checkpoint at every square
+ * (withCheckpoints), except where it would rest inside a token at rest (the leader passing through its own members:
+ * its updates end only on free squares), cut at the last free square its movement this turn pays for (dnd5e's speed
+ * less its movement history, group-adapter movementLeft; core's measure of the walk). No usable speed: the whole way.
+ * { waypoints, planned, sent, left, short, why, inside }: planned / sent in squares, `inside` the paid squares past the
+ * end that lie inside a member. Never throws: on a failed read the walk is left whole.
+ */
+function fightSteps(token, e, way) {
+  const doc = token.document;
+  const s = gridSize(token);
+  const w = doc._source.width ?? 1, h = doc._source.height ?? 1, r = radiusOf(w, h);
+  let wps = withCheckpoints(token, [way.origin, ...way.waypoints]);
+  let speed = null;
+  try { speed = movementLeft(token); } catch (err) { log?.debug?.("fight: the movement left", err); speed = null; }
+  const out = { waypoints: wps, planned: wps.length, sent: wps.length, left: speed ? speed.left : null, short: false, why: null, inside: 0 };
+  try {
+    const rest = othersOf([{ id: doc.id, token }, ...e.riders.map(x => ({ id: x.id, token: null }))], s);
+    const free = k => {
+      const c = toSquares(wps[k - 1], w, h, s);
+      return !rest.some(o => Math.hypot(c.x - o.x, c.y - o.y) < o.r + r - 0.02);
+    };
+    let costs = null;
+    if (speed) {
+      costs = [0];
+      for (let k = 1; k <= wps.length; k++) costs.push(token.measureMovementPath([way.origin, ...wps.slice(0, k)], { preview: false })?.cost ?? Infinity);
+    }
+    const fw = fightWalk(wps.length + 1, { free, costs, left: speed ? speed.left : null });
+    wps = wps.slice(0, fw.end).map((p, k) => ({ ...p, checkpoint: fw.checkpoints[k + 1] }));
+    if (wps.length) wps[wps.length - 1] = { ...wps.at(-1), explicit: true, checkpoint: true };
+    Object.assign(out, { waypoints: wps, sent: fw.end, short: fw.short, why: fw.why, inside: fw.paid - fw.end });
+  } catch (err) { log?.debug?.("fight: the walk's squares", err); }
+  return out;
 }
 
 function patchDrop() {
@@ -1473,7 +1572,7 @@ export function install(reg, ctx) {
   if (ctx.late) dropPatched = patchDrop();
   else reg.once("setup", () => { dropPatched = patchDrop(); }, { guard: false, label: "setup: wrap _prepareDragLeftDropUpdates (the drop)" });
   reg.on("preMoveToken", (doc, move, options) => onPreMove(doc, move, options), { label: "preMoveToken: the next square of a move this client drives (walls now, an undrawn token, standing tokens)" });
-  reg.on("updateToken", (doc, _changes, options, userId) => { inFlight.delete(doc?.id); onUndoEntry(doc, options, userId); }, { label: "updateToken: one undo entry for one move (a fight's squares); a wave's write is back" });
+  reg.on("updateToken", (doc, _changes, options, userId) => { inFlight.delete(doc?.id); noteWrite(doc); onUndoEntry(doc, options, userId); }, { label: "updateToken: one undo entry for one move (a fight's squares); a wave's write is back; when a token last moved" });
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: stop moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: stop moves across a shut door" });
   ctx.expose({ groupFollower, singleAvoid, groupStatus, groupCutAcross: cutAcross, groupInFlight: restsInFlight, groupTellStayed: tellStayed,
@@ -1486,6 +1585,8 @@ export function uninstall() {
   dropPatched = false;
   stackOf.clear();
   driven.clear();
+  leadThrough.clear();
+  lastWriteAt.clear();
   undoKeyOf.clear();
   undoTokenKey.clear();
   last = null;

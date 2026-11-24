@@ -16,8 +16,8 @@
  * callback on the fake clock, so a seed replays exactly.
  */
 
-import { planLead, staggerFile, STAGGER } from "../../file-core.mjs";
-import { clearAlong, waves as wavesOf, cellChain } from "../../motion-core.mjs";
+import { planLead, routeEnters, staggerFile, STAGGER } from "../../file-core.mjs";
+import { clearAlong, fightWalk, stopOrder, waves as wavesOf, cellChain } from "../../motion-core.mjs";
 import { freePrefix, pathLength } from "../../group-core.mjs";
 import { dist, SPEED } from "./engine.mjs";
 import { crosses } from "./maps.mjs";
@@ -46,6 +46,9 @@ export function onSquares(points) {
   return out.filter((p, k) => k === 0 || dist(p, out[k - 1]) > 1e-9);
 }
 
+/** group-adapter movementLeft: squares of movement left this turn (speed in ft less what it walked), null: no usable speed. */
+export const movementLeft = d => (d?.walk > 0 ? Math.max(0, d.walk / 5 - (d.cost ?? 0)) : null);
+
 export class Movement {
   constructor(c, env) {
     Object.assign(this, { c, env });
@@ -57,6 +60,7 @@ export class Movement {
     this.walkOn = new Map();
     this.inFlight = new Map();        // drop.mjs inFlight: id → where this client just sent it (echo not back)
     this.lateStops = new Map();       // file.mjs lateStops: id → until (a stopped group's member whose wave was in flight)
+    this.lastSeen = new Map();        // drop.mjs lastWriteAt: id → when this client last saw it move
     c.listeners.push(msg => this.onBroadcast(msg));
     c.preStep = (id, a, b) => this.preStep(id, a, b);
     c.reloadListeners = [() => this.onReload()];
@@ -99,7 +103,8 @@ export class Movement {
     for (const id of ids) this.latestDrop.set(id, seq);
     const seen = Object.fromEntries(ids.map(id => [id, 0]));
     for (const [id, ord] of this.c.seen) seen[id] = ord;
-    this.env.drops.push({ client: this.c.id, ids: [...ids], t0: this.now, combat, seq, leader, seen: new Map(this.c.seen) });
+    this.env.drops.push({ client: this.c.id, ids: [...ids], t0: this.now, combat, seq, leader, seen: new Map(this.c.seen),
+      left: Object.fromEntries(ids.map(id => [id, movementLeft(this.doc(id))])) });
     return seq;
   }
   hold(ids, seq) {
@@ -132,11 +137,12 @@ export class Movement {
   /** file.mjs targetOf: the token outside the group the drop lands on (every token is visible in the simulator). */
   targetOf(ids, dest) {
     const skip = new Set(ids);
-    const d = [...this.c.view.values()].find(o => !skip.has(o.id) && Math.abs(dest.x - o.x) < o.w / 2 && Math.abs(dest.y - o.y) < o.h / 2);
+    // Inside its box (its top-left edge in, as file.mjs reads the drop's centre); a hidden token never (R2).
+    const d = [...this.c.view.values()].find(o => !skip.has(o.id) && !o.hidden && dest.x >= o.x - o.w / 2 && dest.x < o.x + o.w / 2 && dest.y >= o.y - o.h / 2 && dest.y < o.y + o.h / 2);
     return d ? { id: d.id, x: d.x, y: d.y, w: d.w, h: d.h } : null;
   }
   /** file.mjs oraclesFor's step: one step between neighbouring squares (walls; a diagonal past a wall corner is shut). */
-  stepOf(g) { return (a, b) => g.free(b.i, b.j) && (a.i === b.i || a.j === b.j || (g.free(a.i, b.j) && g.free(b.i, a.j))); }
+  stepOf(g) { return g.stepOpen ?? ((a, b) => g.free(b.i, b.j) && (a.i === b.i || a.j === b.j || (g.free(a.i, b.j) && g.free(b.i, a.j)))); }
   dropGroup(ids, anchorId, dest) {
     const combat = this.env.server.inCombat;
     // 0.10 L2: a new drop no longer empties this client's fight queues (a member dropped again is skipped there).
@@ -152,8 +158,10 @@ export class Movement {
       .filter(m => plan.members[m.id]?.points?.length >= 2 && !plan.members[m.id].stay)
       .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed, left: plan.members[m.id].left }));
     const capMs = Math.max(0, Math.floor((STAGGER.capMs - plan.ms) / STAGGER.stepMs) * STAGGER.stepMs);
-    const timing = staggerFile(walks, { capMs, leaderId: plan.leader, step: this.stepOf(g) });
+    const timing = staggerFile(walks, { capMs, leaderId: plan.leader, step: this.stepOf(g), fifo: !this.env.noFifo });
     this.env.record("plan", { client: this.c.id, seq, ms: plan.ms, shape: plan.shape, leader: plan.leader, target: plan.target, none: plan.none,
+      behind: plan.behind, lastStep: plan.lastStep, targetBox: target, standing: this.othersOf(ids), doors: new Map(this.c.doors), combat: false,
+      members: members.map(m => ({ id: m.id, w: m.w, h: m.h, r: m.r, start: { ...m.start } })),
       searches: plan.searches, failed: plan.failed, stayed: plan.stayed, delays: timing.delays,
       slots: Object.fromEntries(members.map(m => [m.id, plan.members[m.id]?.slot ?? m.start])),
       why: Object.fromEntries(plan.stayed.map(id => [id, plan.members[id].stay])) });
@@ -165,6 +173,7 @@ export class Movement {
       if (there.length) this.env.record("there", { client: this.c.id, ids: there });
       if (!walks.length) return;
       const grp = this.hold(walks.map(w => w.id), seq);
+      grp.t0 = this.now;
       grp.starts = new Map(members.map(m => [m.id, { ...m.start }]));
       grp.wps = new Map(walks.map(w => [w.id, w.points.slice(1)]));
       grp.ends = new Map(walks.map(w => [w.id, { ...w.points.at(-1) }]));
@@ -196,8 +205,9 @@ export class Movement {
       return ok;
     });
     // drop.mjs sendWave (0.9.0 step 5): mates resting off their plan (cut, stopped) or left where they stand by an
-    // earlier wave are in this wave's way too.
+    // earlier wave are in this wave's way too; and (0.10 L3) where this client's stops are carrying tokens on to.
     const others = this.othersOf([...grp.ids]);
+    for (const [oid, w] of this.env.noPendingEnds ? [] : this.walkOn) if (w.target && !w.sent && this.now - w.at <= 3000) others.push({ x: w.target.x, y: w.target.y, r: this.doc(oid).r, id: oid });
     const fix = !this.env.noWaveRests;
     for (const id of fix ? grp.ids : []) {
       if (live.includes(id)) continue;
@@ -210,18 +220,39 @@ export class Movement {
     // drop.mjs sendWave (0.10 L1, R12): each member goes its whole way, or stays where it stands, named (a door shut
     // across it since, or a token at rest in it); one that stays is in the way of the ones after it.
     const items = [], shut = [];
-    for (const id of live) {
-      const at = grp.starts.get(id), wps = grp.wps.get(id);
-      const whole = this.c.doorCut(at, wps) < 0 && freePrefix([at, ...wps], this.doc(id).r, others).full;
-      if (!whole) { shut.push(id); grp.stayed.add(id); if (fix) others.push(circle(id, at)); continue; }
-      items.push({ id, waypoints: wps });
+    // drop.mjs sendWave (0.10 L3): one that stays is in the way of every other member of the wave, round again.
+    const stays = new Set();
+    for (let again = true; again;) {
+      again = false;
+      for (const id of live) {
+        if (stays.has(id)) continue;
+        const at = grp.starts.get(id), wps = grp.wps.get(id);
+        const whole = this.c.doorCut(at, wps) < 0 && freePrefix([at, ...wps], this.doc(id).r, others).full;
+        if (!whole) { stays.add(id); shut.push(id); grp.stayed.add(id); if (fix) others.push(circle(id, at)); again = !this.env.noWaveAgain; }
+      }
     }
+    for (const id of live) if (!stays.has(id)) items.push({ id, waypoints: grp.wps.get(id) });
     this.named(shut, "wave");
     for (const it of items) this.inFlight.set(it.id, { ...it.waypoints.at(-1), at: this.now });
     if (items.length) this.c.moveMany(items, { options: { gid: grp.gid, seq: grp.seq } });
   }
   /** file.mjs onVisibility: a tab going to the background sends every remaining wave now. */
-  onHidden() { for (const g of [...this.groups.values()]) if (g.waves.length) this.fireWaves(g, [...g.waves]); }
+  /**
+   * file.mjs onVisibility (0.10 L3): a tab going to the background keeps its waves in order on their own timers (a
+   * hidden tab fires them on whole seconds); one due past 3 s after the drop is timed for 3 s, so the last goes by 4 s.
+   * (`bgFlush`: 0.8 to L2's flush of every wave at once, for the regression proof.)
+   */
+  onHidden() {
+    if (this.env.bgFlush) { for (const g of [...this.groups.values()]) if (g.waves.length) this.fireWaves(g, [...g.waves]); return; }
+    for (const g of [...this.groups.values()]) {
+      for (const w of [...g.waves]) {
+        const at = g.t0 + w.at;
+        if (at <= g.t0 + 3000) continue;
+        this.c.clearTimeout(w.timer);
+        w.timer = this.c.setTimeout(() => this.fireWaves(g, [w]), Math.max(0, g.t0 + 3000 - this.now));
+      }
+    }
+  }
   onReload() { this.groups.clear(); this.groupOf.clear(); this.env.record("reload", { client: this.c.id }); }
 
   /* ---- drop.mjs fightFile / runFight / routeAtTurn / walkOne ---- */
@@ -229,11 +260,12 @@ export class Movement {
     // file.mjs fightPlan: the order (planLead with no search: the leader, then least walk left).
     const g0 = this.grid(true);
     const plan = planLead({ members, leaderId, drop: dest, target, standing: this.othersOf(members.map(m => m.id)) }, { walkable: g0.walkable, step: this.stepOf(g0) });
-    const order = plan.order;
+    // file.mjs fightPlan (0.10 L3, R7): the leader, then least walk left.
+    const order = plan.byWalk?.length ? plan.byWalk : plan.order;
     const entries = order.map(id => ({ ...members.find(m => m.id === id), leader: id === leaderId, dest }));
     if (!entries.length) return;
     const grp = this.hold(entries.map(e => e.id), seq);
-    const q = { k: 0, done: false, why: null, entries, current: null, grp, shape: plan.shape, target, leaderId, leaderAt: null };
+    const q = { k: 0, done: false, why: null, entries, current: null, grp, shape: plan.shape, target, leaderId, leaderAt: null, ids: new Set(entries.map(e => e.id)) };
     grp.queue = q;
     this.env.record("queue", { client: this.c.id, seq, order, shape: plan.shape });
     this.c.exec(this.now, () => this.nextInQueue(q));
@@ -265,7 +297,7 @@ export class Movement {
     const g = this.grid(true);
     const others = this.othersOf([e.id]);
     const taken = p => others.some(o => dist(p, o) < o.r + e.r - 0.01);
-    let end = null;
+    let end = null, judge = null;
     if (e.leader && q.shape === "march") end = taken(e.dest) || !g.walkable(e, e.dest) ? this.nearestFree(e, e.dest, taken, g) : e.dest;
     else {
       const leader = q.shape === "march" && q.leaderAt ? { ...q.entries.find(x => x.leader), start: { ...q.leaderAt.at } } : null;
@@ -275,11 +307,16 @@ export class Movement {
           leaderAt: leader ? q.leaderAt : null, standing: others.filter(o => o.id !== leader?.id) }, { walkable: g.walkable, step: this.stepOf(g) });
         const x = p.members[e.id];
         end = x && !x.stay ? x.slot : null;
+        // What the shape judge needs (scenario.mjs `shape`): the rule as this turn saw it.
+        judge = { shape: q.shape, behind: p.behind, lastStep: p.lastStep, leaderAt: leader ? { ...q.leaderAt.at } : null, leader: leader ? { id: leader.id, w: leader.w, h: leader.h, r: leader.r } : null,
+          member: { id: e.id, w: e.w, h: e.h, r: e.r, start: { x: d.x, y: d.y } }, standing: others.filter(o => o.id !== leader?.id), targetBox: q.target, doors: new Map(this.c.doors) };
       }
     }
     let pts = null, why = end ? "fight:noRoute" : "fight:noSpot";
+    // The leader walks through its own group's members (R6), never through anyone else.
+    const avoid = e.leader ? others.filter(o => !q.ids.has(o.id)) : others;
     if (end && dist(end, e.start) <= 1e-6) why = "fight:there";
-    else if (end) { pts = this.route(g, e, e.start, end, others); if (!(pts?.length >= 2)) pts = null; }
+    else if (end) { pts = this.route(g, e, e.start, end, avoid); if (!(pts?.length >= 2)) pts = null; }
     if (!pts && e.leader && why !== "fight:there") {
       // The leader with no way: nobody moves, "No route there" (R10).
       this.named(q.entries.slice(q.k).map(x => x.id), "fight:noRoute");
@@ -291,10 +328,22 @@ export class Movement {
       if (e.leader) q.leaderAt = { at: { x: d.x, y: d.y }, from: { x: d.x, y: d.y } };
       q.k += 1; return this.nextInQueue(q);
     }
-    const wps = onSquares(pts).slice(1);
-    this.env.record("slot", { client: this.c.id, id: e.id, slot: { ...pts.at(-1) } });
+    // drop.mjs fightSteps (0.10 L3, R6 / R7): a checkpoint on every free square only (the leader inside its members),
+    // cut at the last free square its movement this turn pays for (speed in ft less what it walked this turn).
+    let wps = onSquares(pts).slice(1);
+    const planned = wps.length;
+    const left = movementLeft(d);
+    const fw = fightWalk(wps.length + 1, { free: k => !others.some(o => dist(wps[k - 1], o) < o.r + e.r - 0.02), costs: [...Array(wps.length + 1).keys()], left });
+    wps = wps.slice(0, fw.end).map((p, k) => ({ ...p, checkpoint: fw.checkpoints[k + 1] }));
+    if (wps.length) wps[wps.length - 1].checkpoint = true;
+    this.env.record("slot", { client: this.c.id, id: e.id, slot: { ...pts.at(-1) }, end: wps.length ? { ...wps.at(-1) } : { x: d.x, y: d.y }, planned, sent: fw.end, left, short: fw.short, lead: e.leader, judge });
+    if (fw.short && fw.why === "speed") this.named([e.id], "fight:speed");
+    if (!wps.length) {
+      if (e.leader) q.leaderAt = { at: { x: d.x, y: d.y }, from: { x: d.x, y: d.y } };
+      q.k += 1; return this.nextInQueue(q);
+    }
     q.current = e.id;
-    const mv = this.c.move(e.id, wps, { combat: true, options: { gid: q.grp.gid, seq: q.grp.seq } });
+    const mv = this.c.move(e.id, wps, { combat: true, options: { gid: q.grp.gid, seq: q.grp.seq, ...(e.leader ? { lead: true } : {}) } });
     if (!mv) return this.endQueue(q, "stopped");
     const walkMs = (pathLength(pts) / SPEED) * 1000;
     let settled = false;
@@ -323,16 +372,42 @@ export class Movement {
     };
     this.c.setTimeout(poll, 16);
   }
+  /** stop.mjs stopAll (0.10 L3): one stop's walkers, the front ones first (motion-core stopOrder). */
+  stopOrdered(ids) {
+    if (this.env.noOrder) return ids;
+    const items = ids.map(id => {
+      const way = this.c.wayAhead(id);
+      const at = way[0] ?? this.c.drawn(id);
+      const nx = way.find((q, k) => k > 0 && dist(q, at) > 1e-6);
+      const L = nx ? dist(nx, at) : 0;
+      return { id, at, r: this.doc(id)?.r ?? 0.5, dir: L > 1e-9 ? { x: (nx.x - at.x) / L, y: (nx.y - at.y) / L } : null };
+    });
+    return stopOrder(items, { margin: 1.5 });
+  }
+  /** drop.mjs leadThrough: the group of a fight queue this client runs whose leader `id` is walking now. */
+  leadThrough(id) {
+    for (const g of this.groups.values()) if (g.queue && g.queue.leaderId === id && g.queue.current === id) return g.queue.ids;
+    return null;
+  }
   /** file.mjs cancelQueues (a new drop, a turn change, the fight's end). */
   cancelQueues(why) { for (const g of this.groups.values()) if (g.queue) this.endQueue(g.queue, why); }
 
-  /** drop.mjs onPreMove, a fight's next square: never into a token standing still on this page. */
+  /** drop.mjs onPreMove, a fight's next square: never into a token standing still on this page (the leader passes its own members). */
   preStep(id, a, b) {
     const me = this.doc(id);
+    const through = this.leadThrough(id);
+    if (this.env.debugSteps) this.env.record("pre", { client: this.c.id, id, a, b, view: [...this.c.view.values()].filter(o => o.id !== id && dist(o, b) < 2).map(o => ({ id: o.id, x: o.x, y: o.y, moving: this.moving(o.id), st: o.mv?.state })) });
     for (const o of this.c.view.values()) {
-      if (o.id === id || this.moving(o.id)) continue;
+      if (o.id === id || through?.has(o.id)) continue;
       const rr = me.r + o.r - 0.02;
       if (dist(a, o) < rr) continue;
+      // 0.10 L3: a walker passing is no block, but its own square (where its document is) is.
+      if (this.moving(o.id)) {
+        // drop.mjs stepMeetsStanding (0.10 L3): its own square, when it rests there (its last square) or is held up.
+        const held = o.mv?.state !== "pending" || this.now - (this.lastSeen.get(o.id) ?? 0) > 500;
+        if (!this.env.noOwnSquare && held && dist(b, o) < rr) { this.env.record("cut", { client: this.c.id, why: "step", id, against: o.id }); return false; }
+        continue;
+      }
       if (segDist(o, a, b) < rr) { this.env.record("cut", { client: this.c.id, why: "step", id, against: o.id }); return false; }
     }
     return true;
@@ -353,7 +428,7 @@ export class Movement {
     if (held) this.cancelGroup(id, "click");
     const out = [];
     const group = { skip: new Set(this.env.noStopClear ? list : list.filter(t => this.c.animating(t))), claims: [] };
-    for (const t of list) {
+    for (const t of combat ? list : this.stopOrdered(list)) {
       if (combat) {
         // stop / query: this client's own move stops; another's is asked of whoever started it (400 ms).
         if (this.doc(t)?.mv?.user === this.c.id) { this.c.stopMovement(t); out.push(t); }
@@ -369,6 +444,7 @@ export class Movement {
       this.displace(t, { gid: tag?.gid ?? this.groupOf.get(t) ?? null }, group);
       out.push(t);
     }
+    if (!combat) this.stopAlso(group);
     this.env.record("stop", { client: this.c.id, id, members: out, held, senderHere });
     return out;
   }
@@ -400,16 +476,96 @@ export class Movement {
     const list = ids.filter(x => (x !== id || self) && this.doc(x)?.mv?.user === this.c.id && this.moving(x));
     const group = { skip: new Set(list.filter(x => this.c.animating(x))), claims: [] };
     if (restAt && !this.env.noStopAt) group.claims.push({ id, x: restAt.x, y: restAt.y, r: this.doc(id)?.r ?? 0.5 });
-    for (const x of list) {
+    for (const x of this.env.server.inCombat ? list : this.stopOrdered(list)) {
       if (this.env.server.inCombat) this.c.stopMovement(x);
       else if (this.c.animating(x)) this.displace(x, {}, group);
     }
+    this.stopAlso(group);
   }
   /** The leader of a drop this client's view has moving (0.10 R6): file.mjs groupMembers + ghost.mjs leading. */
   leading(id) {
     let d = null;
     for (const x of this.env.drops) if (x.ids.includes(id)) d = x;
     return !!d && d.leader === id && d.ids.length > 1 && this.c.animating(id) ? new Set(d.ids.filter(x => x !== id)) : null;
+  }
+  /**
+   * stop.mjs displaceIn + stopSpot / pastDoor: where it is drawn; carried on along its own route (1.5 squares ahead,
+   * else back the way it came) just clear of a door's line, of a token at rest and of a spot this same stop gave out
+   * (`group`: { skip, claims }), never through a shut door. The leader inside its own members carries on through them
+   * to the first free spot, however far (0.10 R6, R7). With no clear spot along its way it stays where drawn, named
+   * (0.10 L2 fix (a): the straight-line last resort is gone).
+   */
+  /** stop.mjs takenAround: the tokens at rest (and spots given out) a stop of `id` must not rest in, and the walkers. */
+  restsFor(id, skip, claims) {
+    const rest = [...claims.filter(c => c.id !== id)];
+    const walkers = [];
+    for (const [oid, f] of this.env.noStopClear ? [] : this.inFlight) {
+      if (oid === id || skip.has(oid) || this.now - f.at > 3000) continue;
+      rest.push({ x: f.x, y: f.y, r: this.doc(oid).r });
+    }
+    // stop.mjs walkingOn (0.10 L3): where this client's other stops are carrying tokens on to.
+    for (const [oid, w] of this.env.noWalkOnClaims ? [] : this.walkOn) {
+      if (oid === id || skip.has(oid) || !w.target || this.now - w.at > 3000 || w.sent) continue;
+      rest.push({ x: w.target.x, y: w.target.y, r: this.doc(oid).r, id: oid });
+    }
+    // file.mjs groupPendingEnds (0.10 L3): where this client's members still waiting for their wave will rest.
+    for (const g of this.env.noPendingEnds ? [] : this.groups.values()) {
+      for (const w of g.waves) for (const oid of w.ids) {
+        if (oid === id || skip.has(oid) || !g.ends?.has(oid)) continue;
+        const e = g.ends.get(oid);
+        rest.push({ x: e.x, y: e.y, r: this.doc(oid)?.r ?? 0.5, id: oid });
+      }
+    }
+    for (const [oid, o] of this.c.view) {
+      if (oid === id || skip.has(oid)) continue;
+      // stop.mjs takenAround (0.10 L3): one of this client's own walkers counts where it is drawn, not where it is
+      // going: if its way meets where this stop rests a token, the same stop stops it too (stopAlso).
+      const own = !this.env.noStopAlso && o.mv?.user === this.c.id && this.c.animating(oid);
+      if (!own) rest.push({ x: o.x, y: o.y, r: o.r, id: oid });
+      if (this.c.animating(oid)) walkers.push({ ...this.c.drawn(oid), r: o.r });
+    }
+    return { rest, walkers };
+  }
+  /**
+   * stop.mjs stopAlso (0.10 L3): this client's own walkers whose way ahead comes into a spot this stop rests a token
+   * on (or that are inside one now) are stopped by the same stop, front first, until none is left.
+   */
+  stopAlso(group) {
+    if (this.env.noStopAlso || this.env.server.inCombat) return [];
+    const out = [];
+    for (let round = 0; round < 6; round++) {
+      const add = [];
+      for (const [oid, o] of this.c.view) {
+        if (group.skip.has(oid) || o.mv?.user !== this.c.id || !this.c.animating(oid)) continue;
+        const way = this.c.wayAhead(oid);
+        const cs = group.claims.filter(c => c.id !== oid);
+        if (cs.some(c => dist(way[0], c) < o.r + c.r - 0.05) || routeEnters(way, o.r, cs, 0.05)) add.push(oid);
+      }
+      if (!add.length) break;
+      for (const a of add) group.skip.add(a);
+      for (const a of this.stopOrdered(add)) { this.displace(a, {}, group); out.push(a); }
+    }
+    if (out.length) this.env.record("stopAlso", { client: this.c.id, ids: out });
+    return out;
+  }
+  /** stop.mjs alongWay: motion-core clearAlong as a stop runs it, from `drawn` along `way` ({ ahead, behind }). */
+  alongWay(id, drawn, way, { rest, walkers }) {
+    const d = this.doc(id);
+    const lines = this.env.world.map.doors;
+    const across = p => lines.some(l => segDist(p, l.a, l.b) < d.r - 1e-6);
+    const inside = list => p => list.some(c => dist(p, c) < d.r + c.r - 0.01);
+    const onRest = this.env.noStopClear ? () => false : inside(rest);
+    const taken = p => onRest(p) || inside(walkers)(p);
+    const restIn = (c, p) => dist(p, c) < d.r + c.r - 0.01;
+    const mates = this.leading(id);
+    return clearAlong(drawn, way.ahead, way.behind, {
+      // Into a token at rest it was not inside at `from` (0.10 L3, seed 4491: a brush, within 0.05 square, is not
+      // inside: a walk on that set off brushing one went on through it).
+      enters: this.env.noStopClear ? null : (from, p) => rest.some(c => !mates?.has(c.id) && restIn(c, p) && !(dist(from, c) < d.r + c.r - (this.env.noDeeper ? 0.01 : 0.05))),
+      bad: p => across(p) || onRest(p), taken: this.env.noStopClear ? null : taken,
+      wallBetween: (a, b) => this.c.doorCut(a, [b]) >= 0, step: 0.05, aheadMax: onRest(drawn) && mates ? Infinity : PAST_DOOR,
+      behindMax: onRest(drawn) ? Infinity : PAST_DOOR,
+    });
   }
   /**
    * stop.mjs displaceIn + stopSpot / pastDoor: where it is drawn; carried on along its own route (1.5 squares ahead,
@@ -425,36 +581,21 @@ export class Movement {
     const claims = group?.claims ?? [];
     const lines = this.env.world.map.doors;
     const across = p => lines.some(l => segDist(p, l.a, l.b) < d.r - 1e-6);
-    const rest = [...claims.filter(c => c.id !== id)];
-    const walkers = [];
-    for (const [oid, f] of this.env.noStopClear ? [] : this.inFlight) {
-      if (oid === id || skip.has(oid) || this.now - f.at > 3000) continue;
-      rest.push({ x: f.x, y: f.y, r: this.doc(oid).r });
-    }
-    for (const [oid, o] of this.c.view) {
-      if (oid === id || skip.has(oid)) continue;
-      rest.push({ x: o.x, y: o.y, r: o.r, id: oid });
-      if (this.c.animating(oid)) walkers.push({ ...this.c.drawn(oid), r: o.r });
-    }
+    const rw = this.restsFor(id, skip, claims);
     const inside = list => p => list.some(c => dist(p, c) < d.r + c.r - 0.01);
-    const onRest = this.env.noStopClear ? () => false : inside(rest);
-    const taken = p => onRest(p) || inside(walkers)(p);
+    const onRest = this.env.noStopClear ? () => false : inside(rw.rest);
+    const legs = this.c.legs.get(id) ?? [];
+    const way = { ahead: this.c.wayAhead(id).slice(1), behind: [...legs.filter(l => l.t0 <= this.now).map(l => l.a)].reverse() };
     let p = drawn, via = [];
     if (across(drawn) || onRest(drawn)) {
-      const legs = this.c.legs.get(id) ?? [];
-      const ahead = this.c.wayAhead(id).slice(1);
-      const behind = [...legs.filter(l => l.t0 <= this.now).map(l => l.a)].reverse();
       // motion-core clearAlong, as stop.mjs pastDoor calls it.
-      const restIn = (c, p) => dist(p, c) < d.r + c.r - 0.01;
-      const mates = this.leading(id);
-      let found = clearAlong(drawn, ahead, behind, {
-        enters: this.env.noStopClear ? null : (from, p) => rest.some(c => !mates?.has(c.id) && restIn(c, p) && !restIn(c, from)),
-        bad: p => across(p) || onRest(p), taken: this.env.noStopClear ? null : taken,
-        wallBetween: (a, b) => this.c.doorCut(a, [b]) >= 0, step: 0.05, aheadMax: onRest(drawn) && mates ? Infinity : PAST_DOOR,
-        behindMax: onRest(drawn) ? Infinity : PAST_DOOR,
-      });
+      const found = this.alongWay(id, drawn, way, rw);
+      if (this.env.debugStops && !found) this.env.record("stuck", { client: this.c.id, id, drawn, ahead: way.ahead.slice(0, 3), behind: way.behind.slice(0, 3),
+        rest: rw.rest.filter(c => dist(c, drawn) < 3).map(c => ({ id: c.id, x: +c.x.toFixed(2), y: +c.y.toFixed(2) })) });
       if (found) ({ p, via } = found);
-      else if (onRest(drawn) && !group?.wall && !this.env.noWalkOn && !onRest(d)) {
+      else if (onRest(drawn) && !across(drawn) && this.makeRoom(id, drawn, d, group, rw)) {
+        // stop.mjs makeRoom (0.10 L3): the members of this same stop it lies in were carried on along their own ways.
+      } else if (onRest(drawn) && !group?.wall && !this.env.noWalkOn && !onRest(d)) {
         // stop.mjs stopOne (0.10 L2 fix (a)): not stopped, it walks on to the end of its own move (named).
         claims.push({ id, x: d.x, y: d.y, r: d.r });
         this.named([id], "walkedOn");
@@ -463,12 +604,57 @@ export class Movement {
         this.named([id], "stopInside");
       }
     }
-    claims.push({ id, x: p.x, y: p.y, r: d.r });
     this.c.stopMovement(id);
     this.c.stopAnimation(id);
     this.c.move(id, [drawn], { animate: false, options: { stop: true, ...(p !== drawn ? { stopAt: { x: p.x, y: p.y } } : {}), ...extra }, why: "stop" });
+    const mid = `${this.c.id}:${this.c.mids}`;
+    claims.push({ id, x: p.x, y: p.y, r: d.r, from: { ...drawn }, way, mid, extra });
+    if (this.env.debugStops) this.env.record("displace", { client: this.c.id, id, drawn, p, onRest: onRest(drawn), across: across(drawn) });
     // stop.mjs displace: the walk on goes once the stop's own write is back (from where it was drawn).
-    if (p !== drawn) this.walkOn.set(id, { mid: `${this.c.id}:${this.c.mids}`, wps: [...via, p], extra });
+    if (p !== drawn) this.walkOn.set(id, { mid, wps: [...via, p], extra, target: { ...p }, at: this.now, from: { ...drawn }, way });
+  }
+  /**
+   * stop.mjs makeRoom (0.10 L3): a token of a stop with no clear spot along its own way, drawn inside members this
+   * same stop already rested (and nothing else), may rest where it is drawn when each of those can be carried on
+   * along its own way clear of it (one more walk on each, never through a wall or a token at rest). True when done.
+   */
+  makeRoom(id, drawn, d, group, rw) {
+    if (this.env.noMakeRoom || !group) return false;
+    const mine = c => dist(drawn, c) < d.r + c.r - 0.01;
+    const blockers = rw.rest.filter(mine);
+    const ys = blockers.map(c => group.claims.find(k => k.id === c.id && k === c));
+    if (!blockers.length || ys.some(y => !y?.way)) return false;
+    const me = { id, x: drawn.x, y: drawn.y, r: d.r };
+    const moves = [];
+    for (const y of ys) {
+      const others = group.claims.filter(k => k !== y);
+      const rwy = this.restsFor(y.id, group.skip, [...others, me]);
+      const again = this.alongWay(y.id, y.from, y.way, rwy);
+      if (!again) return false;
+      moves.push({ y, again });
+    }
+    for (const { y, again } of moves) {
+      y.x = again.p.x; y.y = again.p.y;
+      this.walkOn.set(y.id, { mid: y.mid, wps: [...again.via, again.p], extra: y.extra, target: { ...again.p }, at: this.now, from: { ...y.from }, way: y.way });
+    }
+    this.env.record("makeRoom", { client: this.c.id, id, moved: moves.map(m => m.y.id) });
+    return true;
+  }
+  /**
+   * stop.mjs displace's walkOn (0.10 L3): the walk on goes from where the stop rested it; when a door shut since crosses
+   * it, its spot again along the same way with the doors as this client knows them now; with none it stays, named
+   * when that is on another token.
+   */
+  sendWalkOn(id, w) {
+    if (this.c.doorCut(w.from, w.wps) < 0 || this.env.noWalkOnCheck) return this.c.move(id, w.wps, { options: { stop: true, ...w.extra }, why: "pastDoor" });
+    w.sent = "none";
+    const rw = this.restsFor(id, new Set([id]), []);
+    const again = w.way ? this.alongWay(id, w.from, w.way, rw) : null;
+    if (!again) {
+      if (rw.rest.some(c => dist(w.from, c) < this.doc(id).r + c.r - 0.01)) this.named([id], "stopInside");
+      return null;
+    }
+    return this.c.move(id, [...again.via, again.p], { options: { stop: true, ...w.extra }, why: "pastDoor" });
   }
   onBroadcast(msg) {
     if (msg.type === "door") { if (!msg.open) this.cutAcross(this.env.world.doorCell(msg.door)); return; }
@@ -476,13 +662,14 @@ export class Movement {
     const late = [];
     for (const it of msg.items) {
       this.inFlight.delete(it.id);
+      if (it.kind === "move" || it.kind === "displace") this.lastSeen.set(it.id, this.now);
       // file.mjs onGroupTag / stopLate: this client's own wave write of a member of a stopped group.
       if (msg.user === this.c.id && it.kind === "move" && !msg.options?.stop && this.lateStops.has(it.id)) {
         if (this.now <= this.lateStops.get(it.id)) late.push(it.id);
         this.lateStops.delete(it.id);
       }
       const w = msg.user === this.c.id ? this.walkOn.get(it.id) : null;
-      if (w && it.mid === w.mid && !w.sent) { const mv = this.c.move(it.id, w.wps, { options: { stop: true, ...w.extra }, why: "pastDoor" }); w.sent = mv?.mid ?? "none"; }
+      if (w && it.mid === w.mid && !w.sent) { const mv = this.sendWalkOn(it.id, w); w.sent = mv?.mid ?? "none"; }
       if (it.gid) this.tags.set(it.id, { gid: it.gid, user: msg.user, at: this.now });
       // Another user's stop of a member of a group this client sent stops the whole group (decision 3, 2026-11-24).
       if (msg.options?.stop && msg.user !== this.c.id && this.groupOf.has(it.id)) this.stopGroupHere(it.id, "foreign", false, msg.options.stopAt ?? null);
@@ -492,10 +679,11 @@ export class Movement {
       this.c.setTimeout(() => {
         const list = late.filter(id => this.moving(id));
         const group = { skip: new Set(list.filter(id => this.c.animating(id))), claims: [] };
-        for (const id of list) {
+        for (const id of this.env.server.inCombat ? list : this.stopOrdered(list)) {
           if (this.env.server.inCombat) this.c.stopMovement(id);
           else if (this.c.animating(id)) this.displace(id, {}, group);
         }
+        this.stopAlso(group);
         this.env.record("lateStop", { client: this.c.id, ids: list });
       }, 0);
     }
@@ -510,7 +698,8 @@ export class Movement {
       for (let k = 1; k < way.length; k++) if (crosses(way[k - 1], way[k], door.a, door.b)) { cut.push(id); break; }
     }
     const group = { skip: new Set(cut), claims: [], wall: true };
-    for (const id of cut) { this.displace(id, {}, group); this.env.record("cut", { client: this.c.id, why: "door", id }); }
+    for (const id of this.stopOrdered(cut)) { this.displace(id, {}, group); this.env.record("cut", { client: this.c.id, why: "door", id }); }
+    this.stopAlso(group);
   }
   /** A stop of token id that walks on clear (stop.mjs displace's second write) not yet drawn on client c: still moving. */
   stopping(c, id) {

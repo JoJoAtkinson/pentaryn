@@ -4,7 +4,16 @@
 // the model it still breaks one, so the seed keeps exercising the case (the stop.mjs fixes also have their own unit
 // tests: drop.test.mjs "simulator (step 5)"). 0.10 L1: the leader plan gives every seed new slots, so the regression
 // seeds were found again on it (the first four of seeds 1-6000 that hold with the fix and break without it); L2 (the
-// motion) found them again the same way (seeds 1-8000), and one for its fix (b). The full run is
+// motion) found them again the same way (seeds 1-8000), and one for its fix (b). 0.10 L3 adds the leader rule's own
+// kinds of seed (swarm, hidden, tunnel, crowd, Joe's stations; scenario.mjs KINDS) and keeps 0.9's draws as the
+// "legacy" mix: the regression seeds run on it, so each stays the case it was found as. L3's own regressions: the
+// order every screen sees (SIM-L3-01, L2's open passThrough seeds), a stop settling the front ones first (SIM-L3-02,
+// 0.9's open rest overlaps), a walk on looked at again when a door shut since (SIM-L3-03), a stop that stops this
+// screen's walkers heading into it too (SIM-L3-04), a hidden tab's waves kept on their timers (SIM-L3-05), a member
+// making room along its own way (SIM-L3-06), a waiting member's slot no stop's spot (SIM-L3-07), a fight's next square
+// never onto a walker's own square (SIM-L3-08, 0.9.0's open seed), a brush that is no overlap (SIM-L3-09) and a wave's
+// stayer in the way of the whole wave (SIM-L3-10). With all
+// of L3 in, earlier regression seeds that no longer break with only their own fix off were found again. The full run is
 // `make foundry-movement-sim SEEDS=10000` (scripts/foundry/movement_sim.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -12,16 +21,24 @@ import { runSeed } from "./scenario.mjs";
 
 const invs = r => [...new Set(r.failures.map(f => f.inv))];
 
-test("the simulator runs on the real cores: 60 seeds, every map and mode, every hard invariant holds", () => {
-  const maps = new Set(), modes = new Set();
+test("the simulator runs on the real cores: 60 seeds, every kind, map and mode, every hard invariant holds (the two shape rules too)", () => {
+  const maps = new Set(), modes = new Set(), kinds = new Set();
   for (let s = 1; s <= 60; s++) {
     const r = runSeed(s);
     maps.add(r.meta.map.replace(/\d$/, ""));
     modes.add(r.meta.combat ? "fight" : "explore");
+    kinds.add(r.meta.kind);
     assert.deepEqual(r.failures, [], `seed ${s}: ${JSON.stringify(r.failures[0])}`);
   }
-  assert.ok(maps.size >= 5, `maps covered: ${[...maps]}`);
+  assert.ok(maps.size >= 8, `maps covered: ${[...maps]}`);
   assert.equal(modes.size, 2, `modes covered: ${[...modes]}`);
+  assert.ok(kinds.size >= 5, `kinds covered: ${[...kinds]}`);
+});
+
+test("the simulator's legacy mix is 0.9's scenario generator, draw for draw (the regression seeds and the overlap comparison run on it)", () => {
+  const r = runSeed(1234, { mix: "legacy", events: true });
+  assert.equal(r.meta.kind, "legacy");
+  assert.ok(["hard", "tJunction1", "tJunction2", "corridor2", "diagonal", "deadEnd"].includes(r.meta.map), r.meta.map);
 });
 
 test("the simulator replays: the same seed gives the same record", () => {
@@ -31,29 +48,92 @@ test("the simulator replays: the same seed gives the same record", () => {
   assert.equal(a.events.length, b.events.length);
 });
 
-for (const seed of [19, 138, 492, 721]) {
+const legacy = { mix: "legacy" };
+for (const seed of [19, 138, 424, 492]) {
   test(`SIM5-01 (seed ${seed}): a wave never walks a member through a mate at rest off its slot or one a wave left standing (0.10: a wave's member goes its whole way or stays)`, () => {
-    assert.deepEqual(invs(runSeed(seed)), []);
-    const off = invs(runSeed(seed, { noWaveRests: true }));
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    const off = invs(runSeed(seed, { ...legacy, noWaveRests: true }));
     assert.ok(off.includes("restOverlap") || off.includes("passThrough"), `without the fix the seed still shows it: ${off}`);
   });
 }
 
-for (const seed of [2, 41, 60, 69]) {
+for (const seed of [2, 60, 69, 86]) {
   test(`SIM5-02 (seed ${seed}): a stop (a click, a door shut) never leaves two tokens at rest inside each other: the later one is carried clear along its way`, () => {
-    assert.deepEqual(invs(runSeed(seed)), []);
-    assert.ok(invs(runSeed(seed, { noStopClear: true })).includes("restOverlap"), "without the fix the seed still shows it");
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    assert.ok(invs(runSeed(seed, { ...legacy, noStopClear: true })).includes("restOverlap"), "without the fix the seed still shows it");
   });
 }
 
-test("SIM-L2-01 (seed 1412, L1's open rest overlap): another user's stop of a member that carries it on names its final spot, and the dragger's screen never rests a mate there (0.10 L2 fix (b))", () => {
-  assert.deepEqual(invs(runSeed(1412)), []);
-  assert.ok(invs(runSeed(1412, { noStopAt: true })).includes("restOverlap"), "without the fix the seed still shows it");
+test("SIM-L2-01 (seed 9736; L1's open seed 1412 now holds with L3's stops too): another user's stop of a member that carries it on names its final spot, and the dragger's screen never rests a mate there (0.10 L2 fix (b))", () => {
+  assert.deepEqual(invs(runSeed(9736, legacy)), []);
+  assert.ok(invs(runSeed(9736, { ...legacy, noStopAt: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+for (const seed of [315, 954, 1451, 1522]) {
+  test(`SIM-L3-01 (seed ${seed}, L2's open passThrough): a drop's waves reach every screen in send order, so one whose route passes a member's slot goes no later than it (file-core staggerFile, 0.10 L3)`, () => {
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    assert.ok(invs(runSeed(seed, { ...legacy, noFifo: true })).includes("passThrough"), "without the fix the seed still shows it");
+  });
+}
+
+for (const seed of [2660, 4157, 4881, 5138]) {
+  test(`SIM-L3-02 (seed ${seed}, an open rest overlap of L2 / 0.9): one stop of a packed file settles the front ones first, the ones behind carried back along their ways (motion-core stopOrder, 0.10 L3)`, () => {
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    assert.ok(invs(runSeed(seed, { ...legacy, noOrder: true })).includes("restOverlap"), "without the fix the seed still shows it");
+  });
+}
+
+test("SIM-L3-03 (seed 1097, L2's open rest overlap): a stop's walk on that a door shut since would cross takes its spot again along its way, with the doors as they are now (stop.mjs, 0.10 L3)", () => {
+  assert.deepEqual(invs(runSeed(1097, legacy)), []);
+  assert.ok(invs(runSeed(1097, { ...legacy, noWalkOnCheck: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+for (const seed of [230, 2680, 5072]) {
+  test(`SIM-L3-04 (seed ${seed}${seed === 230 ? ", L2's open rest overlap" : ""}): a stop also stops this screen's own walkers whose way comes into a spot it rests a token on (stop.mjs stopAlso, 0.10 L3)`, () => {
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    assert.ok(invs(runSeed(seed, { ...legacy, noStopAlso: true })).includes("restOverlap"), "without the fix the seed still shows it");
+  });
+}
+
+for (const seed of [607, 756, 933]) {
+  test(`SIM-L3-05 (seed ${seed}, a crowd or a station): a tab going to the background keeps its waves on their own timers, not all at once (file.mjs onVisibility, 0.10 L3)`, () => {
+    assert.deepEqual(invs(runSeed(seed)), []);
+    assert.ok(invs(runSeed(seed, { bgFlush: true })).includes("restOverlap"), "without the fix the seed still shows it");
+  });
+}
+
+for (const seed of [275, 6341, 6452]) {
+  test(`SIM-L3-06 (seed ${seed}): a member of a stop with no spot along its own way, inside only members the same stop rested, rests where drawn when they can be carried on along their own ways (stop.mjs makeRoom, 0.10 L3)`, () => {
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    assert.ok(invs(runSeed(seed, { ...legacy, noMakeRoom: true })).includes("restOverlap"), "without the fix the seed still shows it");
+  });
+}
+
+for (const seed of [6166, 7154]) {
+  test(`SIM-L3-07 (seed ${seed}, an open rest overlap of L2): a stop never carries a token onto a slot a member still waiting for its wave will rest on, and a wave never sends one onto a spot a stop is carrying a token to (stop.mjs, drop.mjs sendWave, 0.10 L3)`, () => {
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    assert.ok(invs(runSeed(seed, { ...legacy, noPendingEnds: true })).includes("restOverlap"), "without the fix the seed still shows it");
+  });
+}
+
+test("SIM-L3-08 (seed 3599, 0.9.0's open rest overlap): in a fight a next square is never sent onto a walker's own square when it rests there or its screen has held it up (drop.mjs stepMeetsStanding, 0.10 L3)", () => {
+  assert.deepEqual(invs(runSeed(3599, legacy)), []);
+  assert.ok(invs(runSeed(3599, { ...legacy, noOwnSquare: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+test("SIM-L3-09 (seed 4491): a stop's carry that sets off only brushing a token at rest never goes on through it (stop.mjs takenAround enters, 0.10 L3)", () => {
+  assert.deepEqual(invs(runSeed(4491, legacy)), []);
+  assert.ok(invs(runSeed(4491, { ...legacy, noDeeper: true })).includes("passThrough"), "without the fix the seed still shows it");
+});
+
+test("SIM-L3-10 (seed 5479): a wave member that stays is in the way of every other member of the wave, also of one looked at before it (drop.mjs sendWave, 0.10 L3)", () => {
+  assert.deepEqual(invs(runSeed(5479, legacy)), []);
+  assert.ok(invs(runSeed(5479, { ...legacy, noWaveAgain: true })).includes("passThrough"), "without the fix the seed still shows it");
 });
 
 test("SIM5-03: most members dropped move (0.9: one whose formation spot lay behind a wall came along; 0.10: the leader rule has no formation spots, each takes the best square it can reach)", () => {
   let dropped = 0, unmoved = 0;
-  for (let s = 1; s <= 120; s++) { const r = runSeed(s); dropped += r.stats.dropped; unmoved += r.stats.unmoved; }
+  for (let s = 1; s <= 120; s++) { const r = runSeed(s, legacy); dropped += r.stats.dropped; unmoved += r.stats.unmoved; }
   // Before the fix 46 % of the dropped members never moved (named); after it 29 % (2,000 seeds: a stay is named, the
   // rest are a door shut, a click, a turn change, a dead end).
   assert.ok(unmoved / dropped < 0.36, `${unmoved} of ${dropped} never moved`);

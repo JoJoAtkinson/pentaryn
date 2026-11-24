@@ -153,7 +153,7 @@ export class Server {
     this.inCombat = false;
     this.lastWrite = new Map();     // token id → the ord of the last move / displace the server applied
   }
-  addToken(t) { this.tokens.set(t.id, { ...t, cost: 0, mv: null }); }
+  addToken(t) { this.tokens.set(t.id, { cost: 0, ...t, cost0: t.cost ?? 0, mv: null }); }
   snapshot() {
     return { tokens: [...this.tokens.values()].map(t => ({ ...t, mv: t.mv ? { ...t.mv } : null })), doors: new Map(this.doors) };
   }
@@ -169,15 +169,18 @@ export class Server {
         if (it.kind === "move" && it.waypoints?.length) {
           const end = it.waypoints.at(-1);
           tok.x = end.x; tok.y = end.y;
-          let steps = 0;
+          let steps = 0, inside = null;
           if (it.combat) {
             let p = before;
             for (const q of it.waypoints) { steps += Math.round(Math.max(Math.abs(q.x - p.x), Math.abs(q.y - p.y))); p = q; }
             tok.cost += steps;
+            // A fight's update of more than one square (0.10 L3: the leader passing through its own members): which of
+            // its squares before the last lay inside another token at rest here.
+            if (it.waypoints.length > 1) inside = it.waypoints.slice(0, -1).map(q => [...this.tokens.values()].filter(o => o.id !== tok.id && dist(q, o) < o.r + tok.r - 0.02).map(o => o.id));
           }
           tok.mv = { mid: it.mid, user: from.id, state: it.pending ? "pending" : "completed", combat: !!it.combat };
-          this.log.push({ t: this.sim.now, ord: out.ord, user: from.id, id: it.id, kind: "move", mid: it.mid, from: before, waypoints: it.waypoints.map(p => ({ ...p })), combat: !!it.combat, steps, why: it.why ?? null, gid: it.gid ?? null });
-          out.items.push({ ...it, from: before });
+          this.log.push({ t: this.sim.now, ord: out.ord, user: from.id, id: it.id, kind: "move", mid: it.mid, from: before, waypoints: it.waypoints.map(p => ({ ...p })), combat: !!it.combat, steps, inside, lead: !!it.lead, why: it.why ?? null, gid: it.gid ?? null });
+          out.items.push({ ...it, from: before, cost: tok.cost });
         } else if (it.kind === "displace") {
           tok.x = it.to.x; tok.y = it.to.y;
           tok.mv = { mid: it.mid, user: from.id, state: "completed", combat: !!it.combat };
@@ -197,6 +200,18 @@ export class Server {
     }
     for (const c of this.clients) this.net.down(c, out);
   }
+}
+
+/** A fight's waypoints → its updates: each ends at a checkpoint (one with `checkpoint: false` joins the next; 0.10 L3). */
+export function segmentsOf(wps) {
+  const out = [];
+  let cur = [];
+  for (const p of wps) {
+    cur.push(p);
+    if (p.checkpoint !== false) { out.push(cur); cur = []; }
+  }
+  if (cur.length) out.push(cur);
+  return out;
 }
 
 /**
@@ -354,6 +369,7 @@ export class Client {
           this.addLegs(it.id, it.from, it.waypoints, it.speed ?? SPEED);
           const end = it.waypoints.at(-1);
           d.x = end.x; d.y = end.y;
+          if (Number.isFinite(it.cost)) d.cost = it.cost;
           // Every client has the movement's pending waypoints (TokenDocument#movement.pending), not only its square under way.
           d.mv = { mid: it.mid, user: msg.user, state: it.pending ? "pending" : "completed", combat: !!it.combat, chain: it.chain ?? [], rest: it.pending ? (it.rest ?? []) : [] };
         } else if (it.kind === "displace") {
@@ -414,15 +430,15 @@ export class Client {
       return { mid };
     }
     const from = { x: d.x, y: d.y };
-    let wps = waypoints.map(p => ({ x: p.x, y: p.y }));
+    let wps = waypoints.map(p => ({ x: p.x, y: p.y, ...(p.checkpoint === false ? { checkpoint: false } : {}) }));
     const cut = this.doorCut(from, wps);
     if (cut === 0) return null;
     if (cut > 0) wps = wps.slice(0, cut);
     // The module's preMoveToken runs for a fresh move too (drop.mjs onPreMove): a fight's first square into a token
     // standing still is not sent either.
     if (combat && this.preStep && this.preStep(id, from, wps[0]) === false) return null;
-    const segs = combat ? wps.map(p => [p]) : [wps];
-    const mv = { mid: this.newMid(), segs, k: 0, stopped: false, combat, why, speed, chain: [], from };
+    const segs = combat ? segmentsOf(wps) : [wps];
+    const mv = { mid: this.newMid(), segs, k: 0, stopped: false, combat, why, speed, chain: [], from, lead: !!options.lead };
     this.moves.set(id, mv);
     this.sendSeg(id, mv, options, onSent);
     return mv;
@@ -433,7 +449,7 @@ export class Client {
     mv.sentAt = this.sim.now;
     mv.onSent = onSent;
     const prev = mv.k === 0 ? mv.from : mv.segs[mv.k - 1].at(-1);
-    this.emit({ type: "update", items: [{ id, kind: "move", mid: mv.mid, waypoints: seg, pending, rest: mv.segs.slice(mv.k + 1).flat().map(p => ({ ...p })), combat: mv.combat, why: mv.why, speed: mv.speed, k: mv.k, gid: options.gid ?? null, sentFrom: { ...prev } }], options: mv.k === 0 ? options : {} });
+    this.emit({ type: "update", items: [{ id, kind: "move", mid: mv.mid, waypoints: seg.map(p => ({ x: p.x, y: p.y })), pending, rest: mv.segs.slice(mv.k + 1).flat().map(p => ({ x: p.x, y: p.y })), combat: mv.combat, why: mv.why, speed: mv.speed, k: mv.k, gid: options.gid ?? null, lead: !!mv.lead, sentFrom: { ...prev } }], options: mv.k === 0 ? options : {} });
   }
   /** Several tokens' moves in one update (scene.updateEmbeddedDocuments): one ord, each token its own movement. */
   moveMany(list, { combat = false, options = {}, why = null } = {}) {
@@ -443,11 +459,11 @@ export class Client {
       const d = this.view.get(id);
       if (!d || !waypoints?.length) continue;
       const from = { x: d.x, y: d.y };
-      let wps = waypoints.map(p => ({ x: p.x, y: p.y }));
+      let wps = waypoints.map(p => ({ x: p.x, y: p.y, ...(p.checkpoint === false ? { checkpoint: false } : {}) }));
       const cut = this.doorCut(from, wps);
       if (cut === 0) continue;
       if (cut > 0) wps = wps.slice(0, cut);
-      const segs = combat ? wps.map(p => [p]) : [wps];
+      const segs = combat ? segmentsOf(wps) : [wps];
       const mv = { mid: this.newMid(), segs, k: 0, stopped: false, combat, why, speed: SPEED, chain: [], from };
       this.moves.set(id, mv);
       started.push(id);

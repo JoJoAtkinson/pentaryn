@@ -24,7 +24,7 @@
  *     a member whose wave was on its way then stops where it is drawn as soon as its move comes back (lateStops);
  *   - a wall or door change stops this client's walkers whose way it crosses (drop.mjs cutAcross), and a wave sent
  *     after it is tested against the walls as they are then (a member whose way is shut stays where it is drawn);
- *   - a hidden tab sends its remaining waves at once (its timers would be throttled).
+ *   - a hidden tab keeps its waves in order on their own timers (0.10 L3: they fire on whole seconds), the last by 4 s.
  * A wave skips a member no longer at its start (drop.mjs).
  */
 
@@ -144,17 +144,26 @@ function stopLate(doc) {
       lateBatch = null;
       const docs = list.filter(d => d?.object && !d.object.destroyed);
       const group = { skip: new Set(docs.map(d => d.id)), claims: [] };
-      for (const d of docs) {
+      for (const d of orderOf(docs)) {
         try {
           if (inCombat(d)) feature?.exposed?.stopSafely?.(d);
           else feature?.exposed?.stopDisplace?.(d.object, group);
           lateCount += 1;
         } catch (err) { log?.debug?.("file: a late stop", err); }
       }
+      try { feature?.exposed?.stopAlso?.(group); } catch (err) { log?.debug?.("file: a late stop's also", err); }
       if (stopped && docs.length) stopped.late = (stopped.late ?? 0) + docs.length;
     }, 0);
   }
   lateBatch.push(doc);
+}
+
+/** Documents one stop settles, the front ones first (stop.mjs stopOrderOf, 0.10 L3). */
+function orderOf(docs) {
+  try {
+    const tokens = feature?.exposed?.stopOrderOf?.(docs.map(d => d.object)) ?? null;
+    return tokens ? tokens.map(t => t.document) : docs;
+  } catch (err) { log?.debug?.("file: the stop's order", err); return docs; }
 }
 
 /** Forget group `gid` on this client: its unsent waves are dropped and its fight queue emptied. */
@@ -179,10 +188,12 @@ function dropGroup(gid, why = "click") {
  * (drop.mjs: skips one no longer at its start, tests its way against the walls as they are then). A wave at 0 is the
  * drop's own update and never comes here.
  */
-function scheduleWaves(gid, waves, send) {
+function scheduleWaves(gid, waves, send, ends = null) {
   const g = groups.get(gid);
   if (!g || typeof send !== "function") return 0;
   g.send = send;
+  g.t0 = Date.now();
+  g.ends = ends instanceof Map ? ends : null;
   for (const w of waves) {
     if (!(w.ids?.length) || !(w.at > 0)) continue;
     const wave = { at: w.at, ids: [...w.ids], timer: null };
@@ -209,19 +220,44 @@ function fireWaves(gid, list) {
 }
 
 let flushLast = null;
-/** The page went to the background: its timers would be throttled, so every remaining wave goes now (§2). */
+/** The latest a hidden tab's wave is timed for (ms after the drop): its timers fire on the next whole second, so by 4 s. */
+const HIDDEN_LAST_MS = 3000;
+/**
+ * The page went to the background (0.10 L3; 0.8 to L2 sent every remaining wave at once, and a whole file set off
+ * together: the simulator's crowds jammed in the doorway and a door cut left them on each other). A hidden tab's
+ * timers fire on whole seconds, so the waves keep their order on their own timers; one due later than 3 s after the
+ * drop is timed for 3 s, and the last still goes within 4 s of the drop.
+ */
 function onVisibility() {
   if (globalThis.document?.visibilityState !== "hidden") return;
-  let n = 0;
+  let kept = 0, retimed = 0;
+  const t = Date.now();
   for (const [gid, g] of [...groups]) {
-    if (!g.waves.length) continue;
-    n += g.waves.reduce((a, w) => a + w.ids.length, 0);
-    fireWaves(gid, [...g.waves]);
+    const t0 = g.t0 ?? t;
+    for (const w of [...g.waves]) {
+      if (t0 + w.at <= t0 + HIDDEN_LAST_MS) { kept += w.ids.length; continue; }
+      clearTimeout(w.timer);
+      w.timer = setTimeout(() => fireWaves(gid, [w]), Math.max(0, t0 + HIDDEN_LAST_MS - t));
+      retimed += w.ids.length;
+    }
   }
-  if (n) {
-    flushLast = { at: new Date().toISOString(), members: n };
-    feature?.exposed?.tele?.("flush", { members: n });
+  if (kept + retimed) {
+    flushLast = { at: new Date().toISOString(), members: kept + retimed, kept, retimed };
+    feature?.exposed?.tele?.("flush", { members: kept + retimed });
   }
+}
+
+/**
+ * Where this client's members still waiting for their wave will rest (0.10 L3, the simulator's seed 6166: a stop
+ * carried a token onto one): [{ id, x, y }] (top-left pixels, the plan's), for stop.mjs takenAround.
+ */
+function pendingEnds() {
+  const out = [];
+  for (const g of groups.values()) {
+    if (!g.ends) continue;
+    for (const w of g.waves) for (const id of w.ids) { const e = g.ends.get(id); if (e) out.push({ id, x: e.x, y: e.y }); }
+  }
+  return out;
 }
 
 /** The waves this client still has to send: [{ gid, at, ids }] (status). */
@@ -344,13 +380,14 @@ function stopGroupHere(doc, why, restAt = null) {
     const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
     group.claims.push({ id: doc.id, x: restAt.x + (w * s) / 2, y: restAt.y + (h * s) / 2, r: radiusOf(w, h) * s });
   }
-  for (const d of list) {
+  for (const d of orderOf(list)) {
     try {
       if (inCombat(d)) feature?.exposed?.stopSafely?.(d);
       else feature?.exposed?.stopDisplace?.(d.object, group);
       out.push(d.id);
     } catch (err) { log?.debug?.("file: stop a member", err); }
   }
+  try { for (const id of feature?.exposed?.stopAlso?.(group) ?? []) out.push(id); } catch (err) { log?.debug?.("file: stop also", err); }
   groupNoteStop({ why, members: out.length + 1, whole: true });
   return out;
 }
@@ -480,7 +517,8 @@ function fightPlan(anchor, contexts, { constrain = {} } = {}) {
     const L = members[0];
     const target = targetOf(anchor, L.formation, new Set(members.map(m => m.id)), s);
     const plan = planLead({ members, leaderId: L.id, drop: L.formation, target, standing }, { walkable, step, now });
-    return { shape: plan.shape, target, order: plan.order, leader: L.id };
+    // The order (R7): the leader, then least walk left; each member's square is picked at its own turn (slotAtTurn).
+    return { shape: plan.shape, target, order: plan.byWalk?.length ? plan.byWalk : plan.order, leader: L.id };
   } catch (err) { log?.debug?.("file: a fight's plan", err); return null; }
 }
 
@@ -572,7 +610,7 @@ export function install(reg, ctx) {
   try { globalThis.document?.addEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   ctx.expose({ groupCancel, groupMembers, groupNoteStop, groupHold: holdGroup, groupHeld: heldCount, groupStopped: stoppedLast,
     groupMax: () => GROUP_MAX, groupPlan: planDrop, groupFightPlan: fightPlan, groupSlotAtTurn: slotAtTurn, groupWaypoints: waypointsFor, groupDryRun: dryRun,
-    groupWaves: scheduleWaves, groupPending: pendingWaves, groupFlushed: () => (flushLast ? { ...flushLast } : null),
+    groupWaves: scheduleWaves, groupPending: pendingWaves, groupPendingEnds: pendingEnds, groupFlushed: () => (flushLast ? { ...flushLast } : null),
     groupQueue: setQueue, groupQueueDone: queueDone, groupCancelQueues: cancelQueues });
 }
 

@@ -38,6 +38,46 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### Step L3 — the fight and the simulator
+
+- **[declared] The fight's leader** (R6, R7): in a fight's group drag the leader walks first, straight through its own
+  group (never through anyone else), at no extra cost (2024 rules; no house rule, no hook); its moves end only on
+  free squares (a square inside a member is no checkpoint), so a click while it is inside one carries it on to the
+  next free square. The others follow one at a time, the leader first and then least walk left (planLead `byWalk`;
+  `status().group.queue.order`), each slotted and routed at its turn behind where the leader came to rest.
+- **[declared] The speed stop** (R7): a group member whose speed runs out in a fight stops on the last free square its
+  movement this turn pays for: dnd5e 6.1.1's own reading (its token ruler's speed for the movement action, a walk
+  fallback included, less the cost in the token's movement history this turn; `group-adapter` `movementLeft`) against
+  core's measure of the walk (`motion-core` `fightWalk`). One with nothing left does not move. Both are named ("Out of
+  movement this turn, stopped short: …"). No usable speed on the sheet: the whole way. Single drags unchanged.
+  `status().group.queue.walks`.
+- **[declared] The order every screen sees** (R8, the simulator's passThrough): a drop's waves reach every client in
+  the order they were sent, so a member whose route passes another's slot is sent no later than that one, and one
+  whose route passes another's start no earlier (`file-core` `staggerFile`). L2's open passThrough seeds (315, 954,
+  1451, 1522) hold with it and fail without it.
+- **[declared] One stop settles the front ones first** (R8, the simulator's restOverlap): a click, another user's stop
+  or a door cut of several walkers drawn overlapping rests the one in front where it is drawn and carries the ones
+  behind back along their own ways (`motion-core` `stopOrder`). A stop never rests a token where another stop on this
+  screen is still carrying one on to, and a stop's walk on that a door shut since would cross takes its spot again
+  along its way with the walls as they are now (`stop.mjs`). This screen's other walkers whose way comes into a spot
+  the stop rests a token on are stopped by the same stop (`stopAlso`; an own walker counts where it is drawn, not
+  where it is going); one left inside only members the same stop rested rests where it is drawn when they can be
+  carried on along their own ways (`makeRoom`); a stop never carries a token onto the slot of a member still waiting
+  for its wave, nor a wave a member onto a spot a stop is carrying one to; a brush (within 0.05 square) is no overlap a
+  carry may leave through. A wave's member that stays is in the way of the whole wave.
+- **[declared] A tab going to the background keeps its waves** on their own timers (a hidden tab fires them on whole
+  seconds, in order); one due past 3 s is timed for 3 s, so the last still goes within 4 s (0.8 to L2 sent them all
+  at once, and a whole file set off together). `status().group.flushed.kept / retimed`.
+- **[declared] A fight's next square is never sent onto a walker's own square** when that walker rests there (its
+  move's last square) or has had no next square for 500 ms (its screen held up, or gone); one about to walk on is
+  passed, as before (0.9.0's open simulator seed 3599: a token whose player dropped mid-walk was walked onto).
+- **[declared] The simulator, one mode**: the leader rule's own seeds beside 0.9's mix (kept draw for draw as
+  `legacy`): swarms on visible targets of three sizes, drops on hidden tokens, a party queued in a one-wide tunnel with
+  its leader at the back or the front, crowds of up to 24, fights with limited speed, and Joe's playground stations on
+  the square grid (`test/fixtures/stations.json`, thin and one-way walls, doors, scenarios, drop points). New
+  invariant `shape` (march: nobody rests beside or ahead of the leader; swarm: the leader touches the target when a
+  touching square was free); `wrongCharge` judges a leader's update through its members and the speed stop.
+
 ### Step L2 — the motion
 
 - **[declared] The leader goes first, the pack one wave later** (R5): the leader in the drop's own update, everyone

@@ -148,9 +148,10 @@ function zoneSpans(tr, zonesAt) {
  * @param {{ id: string, r: number, points: {x,y}[], speed?: number, left?: number }[]} walks  the members that move, in
  *        the plan's order (the leader first, then least walk left); centres in squares, speed in squares per second,
  *        left: its walk to the drop (planLead's), which says whether the leader starts behind
- * @param {{ leaderId?: string, step?: (a, b) => boolean, capMs?: number, stepMs?: number, gap?: number }} [o]
+ * @param {{ leaderId?: string, step?: (a, b) => boolean, capMs?: number, stepMs?: number, gap?: number, fifo?: boolean }} [o]
  *        leaderId: the leader (delay 0, never held, no rest check against it); step: one step between neighbouring
- *        squares (the narrow points); capMs: the latest start; gap: the latency buffer (squares) between two waves
+ *        squares (the narrow points); capMs: the latest start; gap: the latency buffer (squares) between two waves;
+ *        fifo: false leaves out the order every screen sees (0.10 L3; only the simulator's regression proof does)
  * @returns {{ delays: Object<string, number>, order: string[], total: number, crowded: string[], pack: number }}
  *          order: the start order (the plan's); total: the largest delay; crowded: the members that found no clear
  *          delay under the cap (they go at the least crowded one); pack: the pack's own start
@@ -204,18 +205,29 @@ export function staggerFile(walks, o = {}) {
     };
     return atRest(B, A, same ? -step : gap / A.v) || atRest(A, B, same ? -step : gap / B.v);
   };
+  // The order every screen sees (0.10 L3): a drop's waves reach every client in the order they were sent, each a
+  // whole update (a lost packet or a stalled tab holds the later ones back with it, never ahead of it). So one whose
+  // route passes a member's slot goes no later than that member, and one whose route passes a member's start goes no
+  // earlier than that member: on no screen is a member at rest in a way it was sent through. Not for the leader (R6).
+  const passes = (X, c, r) => !!routeEnters(X.w.points, X.w.r, [{ x: c.x, y: c.y, r }], STAGGER.slack);
   const delays = {}, crowded = [], timed = [];
   for (const w of list) {
     const me = info.get(w.id);
     if (me.lead) { delays[w.id] = 0; timed.push({ me, d: 0 }); continue; }
+    let lo = pack, hi = capStep;
+    for (const t of o.fifo === false ? [] : timed) {
+      if (t.me.lead) continue;
+      if (passes(t.me, w.points.at(-1), w.r) || passes(me, t.me.w.points[0], t.me.w.r)) lo = Math.max(lo, t.d);
+      if (passes(me, t.me.w.points.at(-1), t.me.w.r) || passes(t.me, w.points[0], w.r)) hi = Math.min(hi, t.d);
+    }
     let best = null;
-    for (let d = pack; d <= capStep + EPS; d += step) {
+    for (let d = lo; d <= Math.max(lo, hi) + EPS; d += step) {
       let n = 0;
       for (const t of timed) if (conflict(me, d, t.me, t.d)) n += 1;
       if (best === null || n < best.n) best = { d, n };
       if (n === 0) break;
     }
-    if (best.n > 0) crowded.push(w.id);
+    if (best.n > 0 || lo > hi + EPS) crowded.push(w.id);
     delays[w.id] = best.d;
     timed.push({ me, d: best.d });
   }
@@ -345,10 +357,11 @@ export function walkFrom(origins, step, { ok = () => true, maxCells = Infinity, 
  *                                              nothing is searched (a fight routes at its turn).
  * @param {() => number} [o.now]                the plan's clock (ms)
  * @returns {{ shape: "march"|"swarm", leader: string, target: string|null, none: boolean,
- *            members: Object<string, { slot, points, stay?, rank?, atStart?, left }>, order: string[], stayed: string[],
+ *            members: Object<string, { slot, points, stay?, rank?, atStart?, left }>, order: string[], byWalk: string[], stayed: string[],
  *            searches: number, failed: number, ms: number, behind: {x,y}|null, lastStep: {x,y}|null }}
  *          none: the leader has no way (nobody moves, "No route there"); stayed: the members named; left: a member's
- *          walk to the drop (the leader's squares in a march, the target's in a swarm) from where it starts
+ *          walk to the drop (the leader's squares in a march, the target's in a swarm) from where it starts; byWalk:
+ *          the leader, then least walk left (a fight's order, 0.10 L3 R7: its slots are picked at each turn)
  */
 export function planLead(spec, o) {
   const now = o.now ?? (() => 0);
@@ -359,7 +372,7 @@ export function planLead(spec, o) {
   const standing = (spec.standing ?? []).map(s => ({ x: s.x, y: s.y, r: s.r, id: s.id ?? null }));
   const target = spec.target ?? null;
   const shape = target ? "swarm" : "march";
-  const out = { shape, leader: L?.id ?? null, target: target?.id ?? null, none: false, members: {}, order: [], stayed: [],
+  const out = { shape, leader: L?.id ?? null, target: target?.id ?? null, none: false, members: {}, order: [], byWalk: [], stayed: [],
     searches: 0, failed: 0, ms: 0, behind: null, lastStep: null };
   if (!L) return out;
   const route = o.route ?? null;
@@ -383,8 +396,11 @@ export function planLead(spec, o) {
     for (const m of members) { out.members[m.id] = { slot: { ...m.start }, points: [m.start], stay: why }; }
     out.stayed = members.map(m => m.id);
     out.order = [L.id, ...members.filter(m => m !== L).map(m => m.id)];
+    out.byWalk = byWalk(m => { let b = Infinity; for (const c of footprintCells(m.start, m.w, m.h)) b = Math.min(b, lead.get(cellKey(c.i, c.j)) ?? Infinity); return b; });
     return finish();
   };
+  // A fight's order (R7): the leader, then least walk left (ties by id), whatever slots are given out.
+  const byWalk = d => [L.id, ...members.filter(m => m !== L).sort((a, b) => (d(a) - d(b)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map(m => m.id)];
 
   // The walk to the drop (the leader's squares in a march, the target's in a swarm), round the tokens standing: out
   // until every member's own square is settled (their "walk left" and their way in), at most LEAD.far squares. Its
@@ -610,5 +626,6 @@ export function planLead(spec, o) {
   out.stayed = out.order.filter(id => out.members[id]?.stay);
   // Each member's walk to the drop from where it starts (the leader's own, in a march): who is in front (staggerFile).
   for (const m of members) if (out.members[m.id]) out.members[m.id].left = walkLeft(m);
+  out.byWalk = byWalk(walkLeft);
   return finish();
 }

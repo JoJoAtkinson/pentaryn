@@ -7,13 +7,60 @@
 
 import { search, stringPull, directPath } from "../../pathfind-core.mjs";
 import { flood } from "../../group-core.mjs";
+import { wallOpenFrom } from "../../motion-core.mjs";
 
-export function gridWorld(ascii, { clock = null, gridLattice = false, pull = true } = {}) {
+/**
+ * Does the move p → q meet thin wall w ({ a, b, dir? }, squares)? A crossing or a touch of the wall's line counts (as
+ * Foundry 14's lineSegmentIntersection, t within 1e-8), except a one-way wall met from its open side (motion-core
+ * wallOpenFrom, Foundry's orientPoint); a move that only starts on the line (leaving it) does not.
+ */
+export function meetsWall(p, q, w) {
+  const o = (u, v, x) => (v.x - u.x) * (x.y - u.y) - (v.y - u.y) * (x.x - u.x);
+  const d1 = o(w.a, w.b, p), d2 = o(w.a, w.b, q), d3 = o(p, q, w.a), d4 = o(p, q, w.b);
+  const E = 1e-9;
+  const on = (u, v, x) => Math.min(u.x, v.x) - E <= x.x && x.x <= Math.max(u.x, v.x) + E && Math.min(u.y, v.y) - E <= x.y && x.y <= Math.max(u.y, v.y) + E;
+  let hit = false;
+  if (((d1 > E && d2 < -E) || (d1 < -E && d2 > E)) && ((d3 > E && d4 < -E) || (d3 < -E && d4 > E))) hit = true;
+  else if (Math.abs(d2) <= E && on(w.a, w.b, q) && Math.abs(d1) > E) hit = true;                 // ends on the line
+  else if (Math.abs(d3) <= E && on(p, q, w.a) && Math.abs(d1) > E && Math.abs(d2) > E) hit = true;   // through its end
+  else if (Math.abs(d4) <= E && on(p, q, w.b) && Math.abs(d1) > E && Math.abs(d2) > E) hit = true;
+  if (!hit) return false;
+  if (w.dir && wallOpenFrom([w.a.x, w.a.y, w.b.x, w.b.y], w.dir, p)) return false;
+  return true;
+}
+
+/**
+ * `walls` (optional): thin walls on top of the ASCII rock, [{ a, b, dir? }] in squares (a station of Joe's playground,
+ * 0.10 L3): a move whose covered squares' centres cross one is refused, and a token may not rest with a wall through
+ * its body (its box inset 0.1 square).
+ */
+export function gridWorld(ascii, { clock = null, gridLattice = false, pull = true, walls = [] } = {}) {
   const rows = ascii.trim().split("\n").map(r => r.trim());
   const H = rows.length, W = rows[0].length;
   const free = (i, j) => i >= 0 && j >= 0 && i < H && j < W && rows[i][j] !== "#";
   const EPS = 1e-6;
   const calls = { route: 0, avoid: 0 };
+  const thin = (walls ?? []).filter(w => w?.a && w?.b);
+  /** Does the straight move p → q of a w×h token meet a thin wall (each covered square's centre's own line)? */
+  const crossesThin = (p, q, w = 1, h = w) => {
+    if (!thin.length) return false;
+    for (let a = 0; a < h; a++) for (let b = 0; b < w; b++) {
+      const ox = -w / 2 + b + 0.5, oy = -h / 2 + a + 0.5;
+      const P = { x: p.x + ox, y: p.y + oy }, Q = { x: q.x + ox, y: q.y + oy };
+      if (Math.hypot(Q.x - P.x, Q.y - P.y) < EPS) continue;
+      if (thin.some(t => meetsWall(P, Q, t))) return true;
+    }
+    return false;
+  };
+  /** One step between neighbouring squares (walls only): rock, a thin wall, a diagonal past a corner of either. */
+  const stepOpen = (a, b) => {
+    if (!free(b.i, b.j)) return false;
+    const c = n => ({ x: n.j + 0.5, y: n.i + 0.5 });
+    if (thin.length && thin.some(t => meetsWall(c(a), c(b), t))) return false;
+    if (a.i === b.i || a.j === b.j) return true;
+    if (!free(a.i, b.j) || !free(b.i, a.j)) return false;
+    return !thin.length || (stepOpen(a, { i: a.i, j: b.j }) && stepOpen({ i: a.i, j: b.j }, b) && stepOpen(a, { i: b.i, j: a.j }) && stepOpen({ i: b.i, j: a.j }, b));
+  };
 
   /** Every cell a w×h box at top-left cell (i, j) covers is floor. */
   const fits = (i, j, w = 1, h = w) => {
@@ -25,6 +72,7 @@ export function gridWorld(ascii, { clock = null, gridLattice = false, pull = tru
    * (the adapter casts one wall ray per covered square, core one from the centre).
    */
   const lineFits = (p, q, w = 1, h = w) => {
+    if (crossesThin(p, q, w, h)) return false;
     const n = Math.max(2, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / 0.05));
     for (let k = 0; k <= n; k++) {
       const x = p.x + (q.x - p.x) * k / n, y = p.y + (q.y - p.y) * k / n;
@@ -37,6 +85,11 @@ export function gridWorld(ascii, { clock = null, gridLattice = false, pull = tru
   /** At rest: the token's box (inset 0.1 square) is on floor. */
   const walkableAt = (x, y, w = 1, h = w) => {
     const x0 = x - w / 2 + 0.1, x1 = x + w / 2 - 0.1, y0 = y - h / 2 + 0.1, y1 = y + h / 2 - 0.1;
+    if (thin.length) {
+      const box = [[{ x: x0, y: y0 }, { x: x1, y: y0 }], [{ x: x1, y: y0 }, { x: x1, y: y1 }], [{ x: x1, y: y1 }, { x: x0, y: y1 }], [{ x: x0, y: y1 }, { x: x0, y: y0 }]];
+      const inBox = p => p.x > x0 && p.x < x1 && p.y > y0 && p.y < y1;
+      for (const t of thin) if (inBox(t.a) || inBox(t.b) || box.some(([u, v]) => meetsWall(u, v, { a: t.a, b: t.b }))) return false;
+    }
     for (let i = Math.floor(y0); i <= Math.floor(y1); i++) for (let j = Math.floor(x0); j <= Math.floor(x1); j++) {
       if (!free(i, j)) return false;
     }
@@ -126,7 +179,7 @@ export function gridWorld(ascii, { clock = null, gridLattice = false, pull = tru
     return (rock(1, 0) && rock(-1, 0)) || (rock(0, 1) && rock(0, -1));
   });
 
-  return { rows, free, walkable, walkDistanceFrom, route, narrow, calls, lineFits, cramped };
+  return { rows, free, walkable, walkDistanceFrom, route, narrow, calls, lineFits, cramped, stepOpen, thin };
 }
 
 /** Distance from point c to segment p–q. */

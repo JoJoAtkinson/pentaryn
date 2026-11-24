@@ -54,7 +54,8 @@
         "stayed": "Stayed where they stand, with no free spot they can reach: {names}.",
         "notSent": "Did not move, the group's walk was ended: {names}.",
         "stopInside": "Stopped on another token, with no free spot along its own way: {names}. Drag it clear.",
-        "walkedOn": "Could not stop clear of another token, so walked on to its own square: {names}."
+        "walkedOn": "Could not stop clear of another token, so walked on to its own square: {names}.",
+        "speed": "Out of movement this turn, stopped short: {names}."
       },
       "fightGroup": "In a fight, drag one token at a time."
     },

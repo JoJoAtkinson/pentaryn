@@ -333,6 +333,63 @@ export function cellChain(nodes, every = MOTION.checkpointEvery) {
   return out.map((c, n) => ({ ...c, checkpoint: n === out.length - 1 || (n > 0 && n % Math.max(every, 1) === 0) }));
 }
 
+/**
+ * A group member's walk in a fight (0.10 L3; Joe's leader rule R6 / R7): where it may rest and how far it goes. The
+ * walk's squares are k = 0 (its start) .. n − 1 (its square). `free(k)`: may it rest on square k (outside every token
+ * at rest: the leader passes through its own members, never rests inside one). `costs[k]`: core's measured cost from
+ * its start to square k; `left`: the movement it has left this turn (dnd5e's speed less the movement history's cost;
+ * null or not finite: no usable speed, it walks the whole way, as a single drag does). It walks to `end`, the last
+ * free square its movement pays for (0: none, it does not move); `checkpoints[k]` (k ≤ end) marks the squares a
+ * fight's update may end on (every free one: core commits a fight's walk square by square); `short`: it stops before
+ * its own square, `why` "speed"; `paid`: the last square its movement pays for (end ≤ paid: the squares between are
+ * inside a member).
+ */
+export function fightWalk(n, { free = () => true, costs = null, left = null } = {}) {
+  const limited = Number.isFinite(left) && Array.isArray(costs);
+  const ok = k => { try { return !!free(k); } catch { return false; } };
+  let end = 0, paid = 0;
+  for (let k = 1; k < n; k++) {
+    if (limited && !(costs[k] <= left + EPS)) break;
+    paid = k;
+    if (ok(k)) end = k;
+  }
+  const checkpoints = Array.from({ length: end + 1 }, (_, k) => k > 0 && ok(k));
+  const short = end < n - 1;
+  return { end, paid, checkpoints, short, why: short && limited ? "speed" : null };
+}
+
+/**
+ * The order one stop of several walkers settles them in (0.10 L3; the simulator's door cuts and clicks of a packed
+ * file): the front ones first, so that each one behind, finding the one ahead resting where it is drawn, is carried
+ * back along the way it came, where nobody has been rested yet. Of two that overlap where they are drawn, the one
+ * walking toward the other (its direction `dir` pointing at it more) is behind it; so of two near each other (closer
+ * than touching plus `margin`): a jammed crowd settles front to back, and each one behind can still back off into the
+ * room the ones behind it have not taken yet. `items`: [{ id, at, dir, r }] (any units; dir a unit vector, or null when
+ * it is not walking). The ids; the given order wherever nothing says otherwise (and for a cycle).
+ */
+export function stopOrder(items, { margin = 0 } = {}) {
+  const n = items.length;
+  const before = Array.from({ length: n }, () => []);
+  const need = new Array(n).fill(0);
+  const toward = (a, b) => (a.dir ? a.dir.x * (b.at.x - a.at.x) + a.dir.y * (b.at.y - a.at.y) : 0);
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const A = items[i], B = items[j];
+    if (dist(A.at, B.at) >= A.r + B.r + margin - EPS) continue;
+    const ta = toward(A, B), tb = toward(B, A);
+    if (ta > tb + EPS) { before[j].push(i); need[i] += 1; }        // A walks into B: B first
+    else if (tb > ta + EPS) { before[i].push(j); need[j] += 1; }
+  }
+  const out = [], done = new Array(n).fill(false);
+  while (out.length < n) {
+    let k = need.findIndex((c, x) => !done[x] && c === 0);
+    if (k < 0) k = done.findIndex(d => !d);
+    done[k] = true;
+    out.push(items[k].id);
+    for (const x of before[k]) need[x] -= 1;
+  }
+  return out;
+}
+
 /* -------------------------------------------- */
 /*  Decision tables                             */
 /* -------------------------------------------- */
