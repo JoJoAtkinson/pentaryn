@@ -10,6 +10,8 @@
  *     target);
  *   - routes: the real pathfind-core A* (test/fixtures/grid.mjs gridWorld), round the tokens standing as this client
  *     sees them, a fight's on whole squares with motion-core cellChain (a checkpoint every square).
+ *   - a stop (0.10 L3 fix round): its writes in one update (stop.mjs stopBatched, the engine's `batched`), its tokens
+ *     settled together when one by one they would rest inside each other (motion-core spotsAlong, settleAlong);
  * What is left here is the wiring the glue does with Foundry (each function names the one it stands for): the wave
  * timers, the three handlers (a click stops the group, a door shut stops the walkers it crosses, a hidden tab sends
  * its waves at once), the fight queue's wait and watchdog, onPreMove's per-square test. No Promises: every wait is a
@@ -17,7 +19,7 @@
  */
 
 import { planLead, routeEnters, staggerFile, STAGGER } from "../../file-core.mjs";
-import { clearAlong, fightWalk, stopOrder, waves as wavesOf, cellChain } from "../../motion-core.mjs";
+import { clearAlong, fightWalk, settleAlong, spotsAlong, stopOrder, waves as wavesOf, cellChain } from "../../motion-core.mjs";
 import { freePrefix, pathLength } from "../../group-core.mjs";
 import { dist, SPEED } from "./engine.mjs";
 import { crosses } from "./maps.mjs";
@@ -414,7 +416,8 @@ export class Movement {
   }
 
   /* ---- stop.mjs stopToken (a click) and file.mjs onGroupTag ---- */
-  click(id) {
+  click(id) { return this.batch(() => this.clickNow(id)); }
+  clickNow(id) {
     const d = this.doc(id);
     if (!d || !this.moving(id) || !(this.c.isGM || d.owner === this.c.id)) return null;
     const combat = this.env.server.inCombat;
@@ -471,16 +474,124 @@ export class Movement {
    * file.mjs stopGroupHere: the dragger's screen stops every member still walking; never one where the stopped one
    * will rest when its stop carries it on (its write names the spot, `restAt`; 0.10 L2 fix (b)).
    */
-  stopGroupHere(id, why, self = false, restAt = null) {
-    const ids = this.cancelGroup(id, why);
-    const list = ids.filter(x => (x !== id || self) && this.doc(x)?.mv?.user === this.c.id && this.moving(x));
-    const group = { skip: new Set(list.filter(x => this.c.animating(x))), claims: [] };
-    if (restAt && !this.env.noStopAt) group.claims.push({ id, x: restAt.x, y: restAt.y, r: this.doc(id)?.r ?? 0.5 });
-    for (const x of this.env.server.inCombat ? list : this.stopOrdered(list)) {
-      if (this.env.server.inCombat) this.c.stopMovement(x);
-      else if (this.c.animating(x)) this.displace(x, {}, group);
+  stopGroupHere(id, why, self = false, restAt = null, stopped = []) {
+    return this.batch(() => {
+      const ids = this.cancelGroup(id, why);
+      // The other tokens the same foreign stop wrote (one update) are that user's to stop (0.10 L3 fix round).
+      const theirs = new Set(stopped.filter(x => x !== id));
+      const list = ids.filter(x => (x !== id || self) && !theirs.has(x) && this.doc(x)?.mv?.user === this.c.id && this.moving(x));
+      const group = { skip: new Set(list.filter(x => this.c.animating(x))), claims: [] };
+      // Where the foreign stop carries each of its tokens on to (its write names them by id).
+      for (const [oid, at] of Object.entries(this.env.noStopAt ? {} : restAt ?? {})) {
+        if (at && Number.isFinite(at.x)) group.claims.push({ id: oid, x: at.x, y: at.y, r: this.doc(oid)?.r ?? 0.5 });
+      }
+      for (const x of this.env.server.inCombat ? list : this.stopOrdered(list)) {
+        if (this.env.server.inCombat) this.c.stopMovement(x);
+        else if (this.c.animating(x)) this.displace(x, {}, group);
+      }
+      this.stopAlso(group);
+    });
+  }
+  /**
+   * stop.mjs's batch (0.10 L3 fix round): one stop's unanimated writes go as one update, and before they go the stop's
+   * tokens are settled together when the one-by-one stop left two inside each other or a walk on through one at rest
+   * (settle); a token still inside another after that is named.
+   */
+  batch(fn) {
+    if (this.env.noBatch || this.batching) return fn();
+    this.batching = new Set();
+    this.later = new Map();
+    try {
+      return this.c.batched(() => {
+        const out = fn();
+        for (let round = 0; round < 3; round++) {
+          let more = false;
+          for (const g of this.batching) {
+            this.settle(g);
+            if (!this.env.server.inCombat && this.stopAlso(g).length) more = true;
+          }
+          if (!more) break;
+        }
+        return out;
+      });
+    } finally {
+      const later = this.later;
+      const groups = [...this.batching];
+      // stop.mjs: a stop's tokens stay known for a walk on's second look (3 s).
+      this.recent = [...(this.recent ?? []).filter(x => this.now - x.at <= 3000), ...groups.map(group => ({ group, at: this.now }))];
+      this.batching = null; this.later = null;
+      for (const [id, why] of later) {
+        const k = groups.flatMap(g => g.claims).find(c => c.id === id);
+        const rw = this.restsFor(id, new Set([id]), groups.flatMap(g => g.claims).filter(c => c.id !== id));
+        if (!k || rw.rest.some(c => dist(k, c) < k.r + c.r - 0.01)) this.named([id], why);
+      }
     }
-    this.stopAlso(group);
+  }
+  /** A stop's notice that waits for the batch's settle (the module's displace names it at the flush). */
+  nameLater(id, why) { if (this.later) this.later.set(id, why); else this.named([id], why); }
+  /**
+   * stop.mjs settle (0.10 L3 fix round): when one stop's tokens, each settled in turn, are left inside each other or
+   * inside a token at rest, or one's walk on passes through where another rests, all of them are settled together,
+   * each along its own way (motion-core spotsAlong, settleAlong); none found: as they are.
+   */
+  settle(group, depth = 0) {
+    if (this.env.noSettle) return;
+    const ks = group.claims.filter(k => k.from && k.way);
+    if (!ks.length) return;
+    const ids = new Set([...group.skip, ...ks.map(k => k.id)]);
+    const lines = this.env.world.map.doors;
+    const info = ks.map(k => {
+      const d = this.doc(k.id);
+      // Not the stop's own tokens; still the spots it gave out to others (another user's stop named, one walking on).
+      const rw = this.restsFor(k.id, ids, group.claims.filter(c => !ks.includes(c)));
+      const statics = rw.rest.filter(c => !ids.has(c.id) || !ks.some(o => o.id === c.id));
+      const own = rw.walkers.filter(w => w.own && !ids.has(w.id));
+      return { k, d, rw, statics, own };
+    });
+    const pathOf = k => [k.from, ...(this.walkOn.get(k.id)?.mid === k.mid ? this.walkOn.get(k.id).wps : [])];
+    const near = (a, b, rr) => dist(a, b) < rr - 0.01;
+    const crossed = (k, o) => {
+      const path = pathOf(k);
+      if (path.length < 2 || dist(path[0], o) < k.r + o.r - 0.05 || this.leading(k.id)?.has(o.id)) return false;
+      for (let j = 1; j < path.length; j++) if (segDist(o, path[j - 1], path[j]) < k.r + o.r - 0.01) return true;
+      return false;
+    };
+    const wrong = info.some(({ k, statics }) => statics.some(c => near(k, c, k.r + c.r))
+      || ks.some(o => o !== k && (near(k, o, k.r + o.r) || crossed(k, o))));
+    if (!wrong) return;
+    const blockers = new Set();
+    const items = info.map(({ k, d, rw, statics, own }) => {
+      const across = p => lines.some(l => segDist(p, l.a, l.b) < d.r - 1e-6);
+      const inside = list => p => list.some(c => dist(p, c) < d.r + c.r - 0.01);
+      const mates = this.leading(k.id);
+      const cands = spotsAlong({ drawn: k.from, ahead: k.way.ahead, behind: k.way.behind,
+        free: p => !across(p) && !inside(statics)(p) && !inside(rw.walkers.filter(w => !ids.has(w.id)))(p),
+        enters: (from, p) => {
+          const c = [...statics, ...own].find(c => !mates?.has(c.id) && dist(p, c) < d.r + c.r - 0.01 && !(dist(from, c) < d.r + c.r - 0.05));
+          if (c && own.includes(c)) blockers.add(c.id);
+          return !!c;
+        },
+        wallBetween: (a, b) => this.c.doorCut(a, [b]) >= 0, step: 0.05, aheadMax: PAST_DOOR, behindMax: Infinity });
+      return { id: k.id, r: d.r, drawn: k.from, mates, cands };
+    });
+    const out = settleAlong(items);
+    this.env.record("settle", { client: this.c.id, ids: ks.map(k => k.id), solved: !!out });
+    // Unsettled with one of this screen's own walkers in the way of a token's walk on: the same stop stops it too, and
+    // they are settled again together.
+    if (!out && blockers.size && depth < 2 && !this.env.noSettleWalkers) {
+      for (const id of this.stopOrdered([...blockers])) { group.skip.add(id); this.displace(id, {}, group); }
+      return this.settle(group, depth + 1);
+    }
+    if (!out) return;
+    for (const k of ks) {
+      const { p, via } = out.get(k.id);
+      k.x = p.x; k.y = p.y;
+      const moved = dist(p, k.from) > 1e-9;
+      if (moved) this.walkOn.set(k.id, { mid: k.mid, wps: [...via, p], extra: k.extra, target: { ...p }, at: this.now, from: { ...k.from }, way: k.way });
+      else if (this.walkOn.get(k.id)?.mid === k.mid) this.walkOn.delete(k.id);
+      const b = this.c.batch?.find(x => x.item.id === k.id && x.item.mid === k.mid);
+      if (b) b.options = { ...b.options, stopAt: moved ? { [k.id]: { x: p.x, y: p.y } } : undefined };
+    }
   }
   /** The leader of a drop this client's view has moving (0.10 R6): file.mjs groupMembers + ghost.mjs leading. */
   leading(id) {
@@ -496,7 +607,7 @@ export class Movement {
    * (0.10 L2 fix (a): the straight-line last resort is gone).
    */
   /** stop.mjs takenAround: the tokens at rest (and spots given out) a stop of `id` must not rest in, and the walkers. */
-  restsFor(id, skip, claims) {
+  restsFor(id, skip, claims, { pending = true } = {}) {
     const rest = [...claims.filter(c => c.id !== id)];
     const walkers = [];
     for (const [oid, f] of this.env.noStopClear ? [] : this.inFlight) {
@@ -509,7 +620,7 @@ export class Movement {
       rest.push({ x: w.target.x, y: w.target.y, r: this.doc(oid).r, id: oid });
     }
     // file.mjs groupPendingEnds (0.10 L3): where this client's members still waiting for their wave will rest.
-    for (const g of this.env.noPendingEnds ? [] : this.groups.values()) {
+    for (const g of this.env.noPendingEnds || !pending ? [] : this.groups.values()) {
       for (const w of g.waves) for (const oid of w.ids) {
         if (oid === id || skip.has(oid) || !g.ends?.has(oid)) continue;
         const e = g.ends.get(oid);
@@ -522,7 +633,7 @@ export class Movement {
       // going: if its way meets where this stop rests a token, the same stop stops it too (stopAlso).
       const own = !this.env.noStopAlso && o.mv?.user === this.c.id && this.c.animating(oid);
       if (!own) rest.push({ x: o.x, y: o.y, r: o.r, id: oid });
-      if (this.c.animating(oid)) walkers.push({ ...this.c.drawn(oid), r: o.r });
+      if (this.c.animating(oid)) walkers.push({ ...this.c.drawn(oid), r: o.r, ...(own ? { id: oid, own: true } : {}) });
     }
     return { rest, walkers };
   }
@@ -589,26 +700,37 @@ export class Movement {
     let p = drawn, via = [];
     if (across(drawn) || onRest(drawn)) {
       // motion-core clearAlong, as stop.mjs pastDoor calls it.
-      const found = this.alongWay(id, drawn, way, rw);
+      let found = this.alongWay(id, drawn, way, rw);
+      // A waiting member's slot is a stop's last choice, not a wall (0.10 L3 fix round): with no spot clear of every
+      // slot, one clear of the tokens themselves; that member's wave then finds its slot taken and stays, named.
+      if (!found && !this.env.noSlotLast) {
+        const rw2 = this.restsFor(id, skip, claims, { pending: false });
+        if (rw2.rest.length < rw.rest.length) found = this.alongWay(id, drawn, way, rw2);
+      }
       if (this.env.debugStops && !found) this.env.record("stuck", { client: this.c.id, id, drawn, ahead: way.ahead.slice(0, 3), behind: way.behind.slice(0, 3),
         rest: rw.rest.filter(c => dist(c, drawn) < 3).map(c => ({ id: c.id, x: +c.x.toFixed(2), y: +c.y.toFixed(2) })) });
       if (found) ({ p, via } = found);
       else if (onRest(drawn) && !across(drawn) && this.makeRoom(id, drawn, d, group, rw)) {
         // stop.mjs makeRoom (0.10 L3): the members of this same stop it lies in were carried on along their own ways.
+      } else if ((found = this.roomAlong(id, drawn, d, way, group, rw))) {
+        // stop.mjs roomAlong (0.10 L3 fix round): a spot along its own way clear of all but members of this same stop,
+        // and those carried on along their own ways clear of it.
+        ({ p, via } = found);
       } else if (onRest(drawn) && !group?.wall && !this.env.noWalkOn && !onRest(d)) {
         // stop.mjs stopOne (0.10 L2 fix (a)): not stopped, it walks on to the end of its own move (named).
         claims.push({ id, x: d.x, y: d.y, r: d.r });
         this.named([id], "walkedOn");
         return;
       } else if (onRest(drawn)) {
-        this.named([id], "stopInside");
+        this.nameLater(id, "stopInside");
       }
     }
     this.c.stopMovement(id);
     this.c.stopAnimation(id);
-    this.c.move(id, [drawn], { animate: false, options: { stop: true, ...(p !== drawn ? { stopAt: { x: p.x, y: p.y } } : {}), ...extra }, why: "stop" });
+    this.c.move(id, [drawn], { animate: false, options: { stop: true, ...(p !== drawn ? { stopAt: { [id]: { x: p.x, y: p.y } } } : {}), ...extra }, why: "stop" });
     const mid = `${this.c.id}:${this.c.mids}`;
-    claims.push({ id, x: p.x, y: p.y, r: d.r, from: { ...drawn }, way, mid, extra });
+    claims.push({ id, x: p.x, y: p.y, r: d.r, from: { ...drawn }, way, mid, extra, wall: !!group?.wall });
+    if (group && this.batching) this.batching.add(group);
     if (this.env.debugStops) this.env.record("displace", { client: this.c.id, id, drawn, p, onRest: onRest(drawn), across: across(drawn) });
     // stop.mjs displace: the walk on goes once the stop's own write is back (from where it was drawn).
     if (p !== drawn) this.walkOn.set(id, { mid, wps: [...via, p], extra, target: { ...p }, at: this.now, from: { ...drawn }, way });
@@ -620,25 +742,60 @@ export class Movement {
    */
   makeRoom(id, drawn, d, group, rw) {
     if (this.env.noMakeRoom || !group) return false;
-    const mine = c => dist(drawn, c) < d.r + c.r - 0.01;
+    const moves = this.roomAt(id, drawn, d, group, rw);
+    if (!moves) return false;
+    this.commitRoom(id, moves);
+    return true;
+  }
+  /** stop.mjs roomAt: the walks on that clear `at` for token `id` (each member of this stop it overlaps there), or null. */
+  roomAt(id, at, d, group, rw) {
+    const mine = c => dist(at, c) < d.r + c.r - 0.01;
     const blockers = rw.rest.filter(mine);
     const ys = blockers.map(c => group.claims.find(k => k.id === c.id && k === c));
-    if (!blockers.length || ys.some(y => !y?.way)) return false;
-    const me = { id, x: drawn.x, y: drawn.y, r: d.r };
+    if (!blockers.length || ys.some(y => !y?.way)) return null;
+    const me = { id, x: at.x, y: at.y, r: d.r };
     const moves = [];
     for (const y of ys) {
       const others = group.claims.filter(k => k !== y);
       const rwy = this.restsFor(y.id, group.skip, [...others, me]);
       const again = this.alongWay(y.id, y.from, y.way, rwy);
-      if (!again) return false;
+      if (!again) return null;
       moves.push({ y, again });
     }
+    return moves;
+  }
+  /**
+   * stop.mjs roomAlong (0.10 L3 fix round, the simulator's jams at a door): the first spot along its own way that is
+   * clear of every token at rest but members of this same stop, where those it overlaps can each be carried on along
+   * their own ways clear of it (roomAt); its walk there enters nothing it did not start inside. { p, via } or null.
+   */
+  roomAlong(id, drawn, d, way, group, rw) {
+    if (this.env.noRoomAlong || this.env.noMakeRoom || !group) return null;
+    const lines = this.env.world.map.doors;
+    const across = p => lines.some(l => segDist(p, l.a, l.b) < d.r - 1e-6);
+    const claimed = new Set(group.claims);
+    const statics = rw.rest.filter(c => !claimed.has(c));
+    const inside = list => p => list.some(c => dist(p, c) < d.r + c.r - 0.01);
+    const onStatic = inside(statics), onClaim = inside(rw.rest.filter(c => claimed.has(c)));
+    const mates = this.leading(id);
+    const own = rw.walkers.filter(w => w.own);
+    let moves = null;
+    const found = clearAlong(drawn, way.ahead, way.behind, {
+      enters: (from, p) => [...rw.rest, ...own].some(c => !mates?.has(c.id) && dist(p, c) < d.r + c.r - 0.01 && !(dist(from, c) < d.r + c.r - 0.05)),
+      bad: p => across(p) || onStatic(p) || (onClaim(p) && !(moves = this.roomAt(id, p, d, group, rw))),
+      taken: p => inside(rw.walkers)(p), wallBetween: (a, b) => this.c.doorCut(a, [b]) >= 0, step: 0.05,
+      aheadMax: PAST_DOOR, behindMax: Infinity,
+    });
+    if (!found) return null;
+    if (moves && inside(rw.rest.filter(c => claimed.has(c)))(found.p)) this.commitRoom(id, moves);
+    return found;
+  }
+  commitRoom(id, moves) {
     for (const { y, again } of moves) {
       y.x = again.p.x; y.y = again.p.y;
       this.walkOn.set(y.id, { mid: y.mid, wps: [...again.via, again.p], extra: y.extra, target: { ...again.p }, at: this.now, from: { ...y.from }, way: y.way });
     }
     this.env.record("makeRoom", { client: this.c.id, id, moved: moves.map(m => m.y.id) });
-    return true;
   }
   /**
    * stop.mjs displace's walkOn (0.10 L3): the walk on goes from where the stop rested it; when a door shut since crosses
@@ -651,10 +808,46 @@ export class Movement {
     const rw = this.restsFor(id, new Set([id]), []);
     const again = w.way ? this.alongWay(id, w.from, w.way, rw) : null;
     if (!again) {
+      if (this.settleAgain(id, w)) return null;
       if (rw.rest.some(c => dist(w.from, c) < this.doc(id).r + c.r - 0.01)) this.named([id], "stopInside");
       return null;
     }
     return this.c.move(id, [...again.via, again.p], { options: { stop: true, ...w.extra }, why: "pastDoor" });
+  }
+  /**
+   * stop.mjs settleAgain (0.10 L3 fix round, seed 9124: a door shut, unknown to this screen when it stopped them, across
+   * a walk on): the token with no spot along its way any more, inside members of its own stop resting where they were
+   * drawn, is settled again with them, each along its own way with the walls as they are now (motion-core settleAlong);
+   * those it moves walk on there. True when done.
+   */
+  settleAgain(id, w) {
+    if (this.env.noSettleAgain || !w.way) return false;
+    const grp = (this.recent ?? []).find(x => x.group.claims.some(k => k.id === id && k.mid === w.mid))?.group;
+    if (!grp) return false;
+    const me = this.doc(id);
+    const mates = grp.claims.filter(k => k.id !== id && k.from && k.way && dist(k, k.from) < 1e-6 && !this.c.animating(k.id)
+      && dist(this.doc(k.id), k) < 1e-6 && dist(w.from, k) < me.r + k.r - 0.01);
+    if (!mates.length) return false;
+    const lines = this.env.world.map.doors;
+    const ids = new Set([id, ...mates.map(k => k.id)]);
+    const item = (oid, from, way) => {
+      const d = this.doc(oid);
+      const rw = this.restsFor(oid, ids, []);
+      const across = p => lines.some(l => segDist(p, l.a, l.b) < d.r - 1e-6);
+      const inside = list => p => list.some(c => dist(p, c) < d.r + c.r - 0.01);
+      return { id: oid, r: d.r, drawn: from, cands: spotsAlong({ drawn: from, ahead: way.ahead, behind: way.behind,
+        free: p => !across(p) && !inside(rw.rest)(p) && !inside(rw.walkers)(p),
+        enters: (f, p) => rw.rest.some(c => dist(p, c) < d.r + c.r - 0.01 && !(dist(f, c) < d.r + c.r - 0.05)),
+        wallBetween: (a, b) => this.c.doorCut(a, [b]) >= 0, step: 0.05, aheadMax: PAST_DOOR, behindMax: Infinity }) };
+    };
+    const out = settleAlong([item(id, w.from, w.way), ...mates.map(k => item(k.id, k.from, k.way))]);
+    this.env.record("settleAgain", { client: this.c.id, id, mates: mates.map(k => k.id), solved: !!out });
+    if (!out) return false;
+    for (const [oid, { p, via }] of out) {
+      const from = oid === id ? w.from : mates.find(k => k.id === oid).from;
+      if (dist(p, from) > 1e-9) this.c.move(oid, [...via, p], { options: { stop: true }, why: "pastDoor" });
+    }
+    return true;
   }
   onBroadcast(msg) {
     if (msg.type === "door") { if (!msg.open) this.cutAcross(this.env.world.doorCell(msg.door)); return; }
@@ -672,11 +865,11 @@ export class Movement {
       if (w && it.mid === w.mid && !w.sent) { const mv = this.sendWalkOn(it.id, w); w.sent = mv?.mid ?? "none"; }
       if (it.gid) this.tags.set(it.id, { gid: it.gid, user: msg.user, at: this.now });
       // Another user's stop of a member of a group this client sent stops the whole group (decision 3, 2026-11-24).
-      if (msg.options?.stop && msg.user !== this.c.id && this.groupOf.has(it.id)) this.stopGroupHere(it.id, "foreign", false, msg.options.stopAt ?? null);
+      if (msg.options?.stop && msg.user !== this.c.id && this.groupOf.has(it.id)) this.stopGroupHere(it.id, "foreign", false, msg.options.stopAt ?? null, msg.items.map(x => x.id));
     }
     if (late.length) {
       // setTimeout 0 in file.mjs: one batch, one stop's claims.
-      this.c.setTimeout(() => {
+      this.c.setTimeout(() => this.batch(() => {
         const list = late.filter(id => this.moving(id));
         const group = { skip: new Set(list.filter(id => this.c.animating(id))), claims: [] };
         for (const id of this.env.server.inCombat ? list : this.stopOrdered(list)) {
@@ -685,11 +878,12 @@ export class Movement {
         }
         this.stopAlso(group);
         this.env.record("lateStop", { client: this.c.id, ids: list });
-      }, 0);
+      }), 0);
     }
   }
   /** drop.mjs cutAcross: out of combat, this client's walkers whose way the shut door crosses stop where drawn. */
-  cutAcross(door) {
+  cutAcross(door) { return this.batch(() => this.cutNow(door)); }
+  cutNow(door) {
     if (this.env.server.inCombat) return;
     const cut = [];
     for (const [id, d] of this.c.view) {

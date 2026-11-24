@@ -102,6 +102,15 @@ const layer = { _draggedToken: null, _movementPlanningContext: null };
 // The tokens' own Scene (TokenDocument#parent): waves go to it, not to whatever the canvas shows.
 const viewedScene = F.canvas.scene;
 const sceneDoc = { id: SCENE, grid, regions: [], tokens: sceneTokens, updateEmbeddedDocuments: (...a) => viewedScene.updateEmbeddedDocuments(...a),
+  // Scene#moveTokens (one update for several tokens, 0.10 L3 fix round: one stop's writes): recorded, then each token's
+  // movement as its own TokenDocument#move would record it (the options shared, as core passes them to every hook).
+  async moveTokens(instructions, options) {
+    F.calls.push({ op: "moveTokens", ids: Object.keys(instructions), options });
+    const ids = Object.keys(instructions);
+    const done = ids.map(id => sceneTokens.get(id)?.move(instructions[id].waypoints, { ...options, method: instructions[id].method }));
+    const res = await Promise.all(done);
+    return Object.fromEntries(ids.map((id, k) => [id, res[k]]));
+  },
   // The walls as the adapter reads them (wall ends a smoothed route keeps its body clear of).
   // A test may set its own list (null: back to the world's).
   _walls: null,
@@ -1030,6 +1039,37 @@ test("0.10 L3 (simulator: a file cut by a door): one stop of a packed file settl
   }
 });
 
+test("0.10 L3 fix round (simulator seed 9191): one stop of several tokens writes them in one update (Scene#moveTokens), each carried one's spot named by id", async () => {
+  combatFlag = false;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const path = [{ x: 0, y: 100 }, { x: 900, y: 100 }];
+  const back = walking("batB00000000001A", { x: 220, y: 100 }, { x: 900, y: 100 }, path);
+  const mid = walking("batM00000000001A", { x: 280, y: 100 }, { x: 900, y: 100 }, path);
+  const front = walking("batF00000000001A", { x: 340, y: 100 }, { x: 900, y: 100 }, path);
+  const from = F.calls.length;
+  world.walls.push([{ x: 600, y: 0 }, { x: 600, y: 300 }]);
+  try {
+    F.fire("createWall", { id: "batWall000000001", parent: sceneDoc, _source: { c: [600, 0, 600, 300], move: 20 } }, {}, "gm");
+    const batches = F.calls.slice(from).filter(c => c.op === "moveTokens");
+    assert.equal(batches.length, 1, "one update");
+    const ids = [back, mid, front].map(t => t.document.id);
+    assert.deepEqual([...batches[0].ids].sort(), [...ids].sort());
+    assert.equal(batches[0].options.animate, false);
+    assert.equal(batches[0].options.pentarynMovementStop, true);
+    const at = batches[0].options.pentarynMovementStopAt ?? {};
+    assert.equal(at[front.document.id] ?? null, null, "the front one rests where it is drawn");
+    assert.ok(at[mid.document.id] && at[back.document.id], `the ones carried back are named: ${JSON.stringify(at)}`);
+    await settleWrites();
+    const rest = restsAfter(from, ids);
+    assert.deepEqual(rest[mid.document.id], { ...rest[mid.document.id], x: at[mid.document.id].x, y: at[mid.document.id].y }, "named where it then rests");
+  } finally {
+    world.walls.pop();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
 test("0.10 L3 (simulator seeds 2596, 6212 …): a stop also stops this screen's own walkers whose way comes into a spot it rests a token on; their destinations are no rest of the stop's", async () => {
   // The leader cut by a door rested inside the spot a mate was still walking to, with nowhere along its way (a token
   // standing behind it): named, and the mate walked on onto it.
@@ -1081,6 +1121,38 @@ test("0.10 L3 (simulator seeds 9124, 6452 …): a member of a stop with no spot 
     void stand;
   } finally {
     world.walls.pop();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("0.10 L3 fix round (simulator seeds 6572, 9631, 1569): a stop's tokens are settled together: no walk on passes a token the same stop rests on its way, and none rests inside another", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  // x walks east, drawn inside s (at rest), with s2 shutting its way ahead; w, another walker of this screen, comes
+  // west toward x's way back. Stopped one by one, x is carried back past w (clear of where w is drawn) and w, heading
+  // into x's spot, is stopped where it is drawn: x's walk on would pass through w at rest.
+  const x = walking("setX00000000001A", { x: 400, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  const w = walking("setW00000000001A", { x: 280, y: 100 }, { x: 0, y: 100 }, [{ x: 900, y: 100 }, { x: 0, y: 100 }]);
+  makeToken("setS00000000001A", 430, 100);
+  makeToken("setT00000000001A", 560, 100);
+  const from = F.calls.length;
+  try {
+    x._onClickLeft({});
+    await flush();
+    const rest = restsAfter(from, [x.document.id, w.document.id]);
+    const px = rest[x.document.id], pw = rest[w.document.id];
+    assert.ok(px && pw, `both stopped: ${JSON.stringify(rest)}`);
+    assert.ok(Math.hypot(px.x - pw.x, px.y - pw.y) >= S - 1, `apart: ${JSON.stringify(rest)}`);
+    for (const [p, o] of [[px, { x: 430, y: 100 }], [pw, { x: 430, y: 100 }], [px, { x: 560, y: 100 }]]) assert.ok(Math.hypot(p.x - o.x, p.y - o.y) >= S - 1, `clear of those at rest: ${JSON.stringify(rest)}`);
+    // x's walk on (400 → px along y 100) never passes w where it rests.
+    const lo = Math.min(400, px.x), hi = Math.max(400, px.x);
+    assert.ok(pw.x + S - 1 <= lo || pw.x - S + 1 >= hi, `x's walk on passes w at rest: ${JSON.stringify(rest)}`);
+    assert.ok(!F.calls.slice(from).some(c => c.op === "notify" && /Stopped on another token/.test(c.message)), "nobody named on another token");
+  } finally {
+    x.animationContexts.clear(); w.animationContexts.clear();
     sceneTokens.clear();
     for (const [k, v] of saved) sceneTokens.set(k, v);
   }
@@ -1747,6 +1819,45 @@ test("0.10 L3 (simulator, seed 1477): a stop's walk on that a wall raised since 
     t.document.movement = { state: "completed", user: { isSelf: true } };
     sceneTokens.delete(t.document.id);
     for (const [k, v] of others) sceneTokens.set(k, v);
+  }
+});
+
+test("0.10 L3 fix round (simulator seed 9124): a walk on whose way back a wall shut since, inside a member of its own stop that rests where drawn, is settled again with it: that one walks on clear along its own way", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const path = [{ x: 0, y: 100 }, { x: 900, y: 100 }];
+  const f = walking("agnF00000000001A", { x: 340, y: 100 }, { x: 900, y: 100 }, path);
+  const b = walking("agnB00000000001A", { x: 280, y: 100 }, { x: 900, y: 100 }, path);
+  // b's stop write is held, so its walk on (back along its way, clear of f) is still to go when the wall rises.
+  let release = null;
+  const move0 = b.document.move;
+  b.document.move = (waypoints, options) => { F.calls.push({ op: "move", id: b.document.id, waypoints, options }); return options?.animate === false ? new Promise(r => { release = () => r(true); }) : Promise.resolve(true); };
+  const from = F.calls.length;
+  try {
+    f._onClickLeft({});
+    await flush();
+    assert.ok(release, "b was stopped too (its way came into f's spot)");
+    // The server has both where the stop rested them; f is at rest.
+    Object.assign(f.document._source, { x: 340, y: 100 });
+    Object.assign(b.document._source, { x: 280, y: 100 });
+    f.animationContexts.clear();
+    world.walls.push([{ x: 300, y: 0 }, { x: 300, y: 300 }]);
+    release();
+    await flush();
+    const fm = F.calls.slice(from).filter(c => c.op === "move" && c.id === f.document.id);
+    const bm = F.calls.slice(from).filter(c => c.op === "move" && c.id === b.document.id);
+    assert.equal(bm.length, 1, `b stays where it was drawn: ${JSON.stringify(bm.map(m => m.waypoints))}`);
+    const end = fm.at(-1).waypoints.at(-1);
+    assert.ok(fm.length === 2 && end.x >= 380 - 1 && end.x <= 340 + 1.5 * S && end.y === 100, `f walks on clear of b along its way: ${JSON.stringify(fm.map(m => m.waypoints))}`);
+    assert.ok(!F.calls.slice(from).some(c => c.op === "notify" && /Stopped on another token/.test(c.message)), "nobody named on another token");
+  } finally {
+    world.walls.pop();
+    b.document.move = move0;
+    f.animationContexts.clear(); b.animationContexts.clear();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
   }
 });
 
@@ -2475,6 +2586,27 @@ test("0.10 L2 fix (b): another user's stop of a member carried on past a door na
     const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === mate.document.id).at(-1)?.waypoints?.at(-1);
     assert.ok(end, "the mate is stopped");
     assert.ok(Math.hypot(end.x - 300, end.y - 100) >= S - 1, `never at rest on the carried one's final spot: ${JSON.stringify(end)}`);
+  } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
+});
+
+test("0.10 L3 fix round (simulator seed 9191): another user's stop of several members in one update names each one's final spot by id; the dragger's screen rests no mate on any of them and leaves the others of that update to it", async () => {
+  const f = fileDrop("y");
+  try {
+    const [first, mate, carried] = f.ts;
+    Object.assign(mate.document, { x: 300, y: 100 });
+    mate.position = { x: 300, y: 100 };
+    mate.animationContexts.set(mate.movementAnimationName, {});
+    mate.document.movement = { state: "completed", user: { isSelf: true }, constrainOptions: {}, origin: wp(0, 100), passed: { waypoints: [wp(900, 100)] }, pending: { waypoints: [] } };
+    const from = F.calls.length;
+    // One foreign update stopped `first` (where drawn) and `carried` (carried on to 300, 100): core calls the hook per document with the update's options.
+    const options = { animate: false, pentarynMovementStop: true, pentarynMovementStopAt: { [first.document.id]: null, [carried.document.id]: { x: 300, y: 100 } } };
+    F.Hooks.callAll("updateToken", first.document, { x: 100, y: 300 }, options, "otherUser000001");
+    F.Hooks.callAll("updateToken", carried.document, { x: 260, y: 300 }, options, "otherUser000001");
+    await flush();
+    const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === mate.document.id).at(-1)?.waypoints?.at(-1);
+    assert.ok(end, "the mate is stopped");
+    assert.ok(Math.hypot(end.x - 300, end.y - 100) >= S - 1, `never at rest on the second one's final spot: ${JSON.stringify(end)}`);
+    assert.ok(!F.calls.slice(from).some(c => c.op === "move" && (c.id === first.document.id || c.id === carried.document.id)), "the update's own tokens are its sender's");
   } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
 });
 

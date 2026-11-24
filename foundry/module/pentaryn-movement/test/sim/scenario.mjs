@@ -224,7 +224,7 @@ export function scenario(seed, opts = {}) {
   // as it was at 0802bc85, for a before/after run on that commit's cores.
   const before = !!opts.before;
   const env = { world, server, clients, noWaveRests: before || !!opts.noWaveRests, noStopClear: before || !!opts.noStopClear, noStopAt: !!opts.noStopAt,
-    noFightSpots: before || !!opts.noFightSpots, noOrder: !!opts.noOrder, noFifo: !!opts.noFifo, noWalkOnClaims: !!opts.noWalkOnClaims, noWalkOnCheck: !!opts.noWalkOnCheck, noStopAlso: !!opts.noStopAlso, bgFlush: !!opts.bgFlush, noOwnSquare: !!opts.noOwnSquare, noPendingEnds: !!opts.noPendingEnds, noMakeRoom: !!opts.noMakeRoom, noDeeper: !!opts.noDeeper, noWaveAgain: !!opts.noWaveAgain, debugSteps: !!opts.debugSteps, debugStops: !!opts.debugStops, events: [], drops: [], mods: null,
+    noFightSpots: before || !!opts.noFightSpots, noOrder: !!opts.noOrder, noFifo: !!opts.noFifo, noWalkOnClaims: !!opts.noWalkOnClaims, noWalkOnCheck: !!opts.noWalkOnCheck, noStopAlso: !!opts.noStopAlso, bgFlush: !!opts.bgFlush, noOwnSquare: !!opts.noOwnSquare, noPendingEnds: !!opts.noPendingEnds, noMakeRoom: !!opts.noMakeRoom, noDeeper: !!opts.noDeeper, noWaveAgain: !!opts.noWaveAgain, noBatch: !!opts.noBatch, noSlotLast: !!opts.noSlotLast, noRoomAlong: !!opts.noRoomAlong, noSettle: !!opts.noSettle, noSettleWalkers: !!opts.noSettleWalkers, noSettleAgain: !!opts.noSettleAgain, debugSteps: !!opts.debugSteps, debugStops: !!opts.debugStops, events: [], drops: [], mods: null,
     record: (kind, data) => env.events.push({ t: sim.now, kind, ...data }) };
   for (const c of clients) { c.world = world; c.init(server.snapshot()); }
   // What the sender knew when it sent each walk: every token where its documents had it (passThrough's hard test).

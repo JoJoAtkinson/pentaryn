@@ -38,6 +38,32 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### Step L3, fix round — one stop, one update; a stop's tokens settled together
+
+- **[declared] One stop's writes go as one update** (R8, the simulator's seed 9191): a click, a door or wall cut,
+  another user's stop seen on the dragger's screen and a group's late stops write every token they stop in one
+  `Scene#moveTokens` (`stop.mjs` `stopBatched`; a lone one as before). A file of eight cut by a door was stopped front
+  first in eight updates; one was late on the wire and, on a player's screen, the one behind it walked on into it.
+  The write names where each one carried on will rest by id (`pentarynMovementStopAt: { [id]: { x, y } | null }`); the
+  dragger's screen claims them all and leaves that update's tokens to its sender (`file.mjs` `stopGroupHere`).
+- **[declared] A stop's tokens settled together** (R8; the simulator's seeds 345, 6572, 6982, 9631, a walk on carried
+  through a token the same stop then rested on its way, and 1569, 2357, a jam at a door): when the one-by-one stop
+  leaves two inside each other or one inside a token at rest, or one walk on passes through where another rests, every
+  token of that stop takes one of its own spots along its own way (`motion-core` `spotsAlong`: where drawn, ahead at
+  most 1.5 squares, back the whole way it came; `settleAlong`: no two at rest inside each other, no walk on through
+  one at rest, the front ones keep their best spot first, conflict-directed backjumping within a budget). A walker of
+  this screen in a token's way back stops with them and they are settled again. No search, no spot off a token's way.
+- **[declared] Room along the way** (seed 5418): one with no clear spot along its way takes the first spot along it
+  that the members of its stop it would lie in can make room for along their own ways (`roomAlong`, makeRoom's spot
+  search along its way).
+- **[declared] A walk on's second look settles again** (seed 9124: a door this screen did not yet know was shut, across
+  a walk on back): inside members of its own stop resting where drawn, it is settled with them, and those it moves walk
+  on clear along their own ways (`settleAgain`).
+- **[declared] A waiting member's slot is a stop's last choice** (seed 8249): with no spot clear of every slot of a
+  member still waiting for its wave, the stop takes one clear of the tokens themselves; that member's wave finds its
+  slot taken and stays, named.
+- Notices: "Stopped on another token" is given after the settle, only for a token still inside another.
+
 ### Step L3 — the fight and the simulator
 
 - **[declared] The fight's leader** (R6, R7): in a fight's group drag the leader walks first, straight through its own

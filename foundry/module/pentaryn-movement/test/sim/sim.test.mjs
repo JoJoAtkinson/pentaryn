@@ -12,7 +12,9 @@
 // screen's walkers heading into it too (SIM-L3-04), a hidden tab's waves kept on their timers (SIM-L3-05), a member
 // making room along its own way (SIM-L3-06), a waiting member's slot no stop's spot (SIM-L3-07), a fight's next square
 // never onto a walker's own square (SIM-L3-08, 0.9.0's open seed), a brush that is no overlap (SIM-L3-09) and a wave's
-// stayer in the way of the whole wave (SIM-L3-10). With all
+// stayer in the way of the whole wave (SIM-L3-10). The L3 fix round: one stop's writes as one update (SIM-L3-11), a
+// waiting member's slot a stop's last choice (SIM-L3-12), a stop's tokens settled together (SIM-L3-13, -14), room made
+// along a token's way (SIM-L3-15) and a walk on's second look settling again (SIM-L3-16). With all
 // of L3 in, earlier regression seeds that no longer break with only their own fix off were found again. The full run is
 // `make foundry-movement-sim SEEDS=10000` (scripts/foundry/movement_sim.mjs).
 import { test } from "node:test";
@@ -57,7 +59,7 @@ for (const seed of [19, 138, 424, 492]) {
   });
 }
 
-for (const seed of [2, 60, 69, 86]) {
+for (const seed of [258, 380, 437, 575]) {
   test(`SIM5-02 (seed ${seed}): a stop (a click, a door shut) never leaves two tokens at rest inside each other: the later one is carried clear along its way`, () => {
     assert.deepEqual(invs(runSeed(seed, legacy)), []);
     assert.ok(invs(runSeed(seed, { ...legacy, noStopClear: true })).includes("restOverlap"), "without the fix the seed still shows it");
@@ -76,26 +78,27 @@ for (const seed of [315, 954, 1451, 1522]) {
   });
 }
 
-for (const seed of [2660, 4157, 4881, 5138]) {
+// The L3 fix round's settle (SIM-L3-13) now also covers these seeds, so each still shows its case with the settle off.
+for (const seed of [4157, 4881, 5138]) {
   test(`SIM-L3-02 (seed ${seed}, an open rest overlap of L2 / 0.9): one stop of a packed file settles the front ones first, the ones behind carried back along their ways (motion-core stopOrder, 0.10 L3)`, () => {
     assert.deepEqual(invs(runSeed(seed, legacy)), []);
-    assert.ok(invs(runSeed(seed, { ...legacy, noOrder: true })).includes("restOverlap"), "without the fix the seed still shows it");
+    assert.ok(invs(runSeed(seed, { ...legacy, noOrder: true, noSettle: true })).includes("restOverlap"), "without the fix (and the settle) the seed still shows it");
   });
 }
 
-test("SIM-L3-03 (seed 1097, L2's open rest overlap): a stop's walk on that a door shut since would cross takes its spot again along its way, with the doors as they are now (stop.mjs, 0.10 L3)", () => {
-  assert.deepEqual(invs(runSeed(1097, legacy)), []);
-  assert.ok(invs(runSeed(1097, { ...legacy, noWalkOnCheck: true })).includes("restOverlap"), "without the fix the seed still shows it");
+test("SIM-L3-03 (seed 9124; L2's open seed 1097 now holds with the fix round too): a stop's walk on that a door shut since would cross takes its spot again along its way, with the doors as they are now (stop.mjs, 0.10 L3)", () => {
+  assert.deepEqual(invs(runSeed(9124, legacy)), []);
+  assert.ok(invs(runSeed(9124, { ...legacy, noWalkOnCheck: true })).includes("restOverlap"), "without the fix the seed still shows it");
 });
 
-for (const seed of [230, 2680, 5072]) {
-  test(`SIM-L3-04 (seed ${seed}${seed === 230 ? ", L2's open rest overlap" : ""}): a stop also stops this screen's own walkers whose way comes into a spot it rests a token on (stop.mjs stopAlso, 0.10 L3)`, () => {
+for (const seed of [2680, 5072]) {
+  test(`SIM-L3-04 (seed ${seed}): a stop also stops this screen's own walkers whose way comes into a spot it rests a token on (stop.mjs stopAlso, 0.10 L3)`, () => {
     assert.deepEqual(invs(runSeed(seed, legacy)), []);
     assert.ok(invs(runSeed(seed, { ...legacy, noStopAlso: true })).includes("restOverlap"), "without the fix the seed still shows it");
   });
 }
 
-for (const seed of [607, 756, 933]) {
+for (const seed of [607, 756, 1209]) {
   test(`SIM-L3-05 (seed ${seed}, a crowd or a station): a tab going to the background keeps its waves on their own timers, not all at once (file.mjs onVisibility, 0.10 L3)`, () => {
     assert.deepEqual(invs(runSeed(seed)), []);
     assert.ok(invs(runSeed(seed, { bgFlush: true })).includes("restOverlap"), "without the fix the seed still shows it");
@@ -105,7 +108,7 @@ for (const seed of [607, 756, 933]) {
 for (const seed of [275, 6341, 6452]) {
   test(`SIM-L3-06 (seed ${seed}): a member of a stop with no spot along its own way, inside only members the same stop rested, rests where drawn when they can be carried on along their own ways (stop.mjs makeRoom, 0.10 L3)`, () => {
     assert.deepEqual(invs(runSeed(seed, legacy)), []);
-    assert.ok(invs(runSeed(seed, { ...legacy, noMakeRoom: true })).includes("restOverlap"), "without the fix the seed still shows it");
+    assert.ok(invs(runSeed(seed, { ...legacy, noMakeRoom: true, noSettle: true })).includes("restOverlap"), "without the fix (and the settle) the seed still shows it");
   });
 }
 
@@ -123,12 +126,44 @@ test("SIM-L3-08 (seed 3599, 0.9.0's open rest overlap): in a fight a next square
 
 test("SIM-L3-09 (seed 4491): a stop's carry that sets off only brushing a token at rest never goes on through it (stop.mjs takenAround enters, 0.10 L3)", () => {
   assert.deepEqual(invs(runSeed(4491, legacy)), []);
-  assert.ok(invs(runSeed(4491, { ...legacy, noDeeper: true })).includes("passThrough"), "without the fix the seed still shows it");
+  assert.ok(invs(runSeed(4491, { ...legacy, noDeeper: true, noSettle: true })).includes("passThrough"), "without the fix (and the settle) the seed still shows it");
 });
 
 test("SIM-L3-10 (seed 5479): a wave member that stays is in the way of every other member of the wave, also of one looked at before it (drop.mjs sendWave, 0.10 L3)", () => {
   assert.deepEqual(invs(runSeed(5479, legacy)), []);
   assert.ok(invs(runSeed(5479, { ...legacy, noWaveAgain: true })).includes("passThrough"), "without the fix the seed still shows it");
+});
+
+test("SIM-L3-11 (seed 9191, a tunnel file cut by a door): one stop's writes go as one update, so no screen has one of them stopped while the next still walks on onto it (stop.mjs, file.mjs, drop.mjs cutAcross; 0.10 L3 fix round)", () => {
+  assert.deepEqual(invs(runSeed(9191)), []);
+  assert.ok(invs(runSeed(9191, { noBatch: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+test("SIM-L3-12 (seed 8249, a crowd cut by a door): a waiting member's slot is a stop's last choice, not a wall: with no spot clear of every slot, one clear of the tokens themselves (stop.mjs stopSpot, 0.10 L3 fix round)", () => {
+  assert.deepEqual(invs(runSeed(8249)), []);
+  assert.ok(invs(runSeed(8249, { noSlotLast: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+for (const seed of [345, 6572, 6982, 9631]) {
+  test(`SIM-L3-13 (seed ${seed}): a stop's tokens are settled together, so no walk on passes through a token the same stop rests on its way (stop.mjs settleTogether, motion-core settleAlong, 0.10 L3 fix round)`, () => {
+    assert.deepEqual(invs(runSeed(seed, legacy)), []);
+    assert.ok(invs(runSeed(seed, { ...legacy, noSettle: true })).includes("passThrough"), "without the fix the seed still shows it");
+  });
+}
+
+test("SIM-L3-14 (seed 2357, a two-wide corridor cut by a door): unsettled with this screen's own walker in a token's way, the same stop stops it too and settles them together (stop.mjs settleTogether, 0.10 L3 fix round)", () => {
+  assert.deepEqual(invs(runSeed(2357, legacy)), []);
+  assert.ok(invs(runSeed(2357, { ...legacy, noSettleWalkers: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+test("SIM-L3-15 (seed 5418, a crowd of 18 at a door): with no spot along its way clear of all, a spot along it the members of its stop it lies in make room for (stop.mjs roomAlong, 0.10 L3 fix round)", () => {
+  assert.deepEqual(invs(runSeed(5418)), []);
+  assert.ok(invs(runSeed(5418, { noRoomAlong: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
+
+test("SIM-L3-16 (seed 9124, a door shut across a walk on before this screen knew): the walk on's second look settles it again with the members of its stop it lies in (stop.mjs settleAgain, 0.10 L3 fix round)", () => {
+  assert.deepEqual(invs(runSeed(9124, legacy)), []);
+  assert.ok(invs(runSeed(9124, { ...legacy, noSettleAgain: true })).includes("restOverlap"), "without the fix the seed still shows it");
 });
 
 test("SIM5-03: most members dropped move (0.9: one whose formation spot lay behind a wall came along; 0.10: the leader rule has no formation spots, each takes the best square it can reach)", () => {

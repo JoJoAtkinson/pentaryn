@@ -848,6 +848,10 @@ function routeLeft(token) {
  * as they are when it is sent (onPreMove). Ghost and the unconstrained tool pass. Returns the ids stopped.
  */
 function cutAcross(wall) {
+  // One cut, one update (stop.mjs stopBatched, 0.10 L3 fix round).
+  return feature?.exposed?.stopBatched ? feature.exposed.stopBatched(() => cutNow(wall)) : cutNow(wall);
+}
+function cutNow(wall) {
   const scene = wall?.parent;
   const c = wall?._source?.c ?? wall?.c;
   if (!feature || !scene?.tokens || !Array.isArray(c) || c.length < 4 || !blocksMove(wall)) return [];

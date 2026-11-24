@@ -426,7 +426,10 @@ export class Client {
     if (!animate) {
       const mid = this.newMid();
       this.moves.delete(id);
-      this.emit({ type: "update", items: [{ id, kind: "displace", mid, to: { ...waypoints.at(-1) }, combat, why }], options });
+      const item = { id, kind: "displace", mid, to: { ...waypoints.at(-1) }, combat, why };
+      // One stop of several tokens (stop.mjs's batch, 0.10 L3 fix round): its writes go as one update (Scene#moveTokens).
+      if (this.batch) this.batch.push({ item, options });
+      else this.emit({ type: "update", items: [item], options });
       return { mid };
     }
     const from = { x: d.x, y: d.y };
@@ -450,6 +453,23 @@ export class Client {
     mv.onSent = onSent;
     const prev = mv.k === 0 ? mv.from : mv.segs[mv.k - 1].at(-1);
     this.emit({ type: "update", items: [{ id, kind: "move", mid: mv.mid, waypoints: seg.map(p => ({ x: p.x, y: p.y })), pending, rest: mv.segs.slice(mv.k + 1).flat().map(p => ({ x: p.x, y: p.y })), combat: mv.combat, why: mv.why, speed: mv.speed, k: mv.k, gid: options.gid ?? null, lead: !!mv.lead, sentFrom: { ...prev } }], options: mv.k === 0 ? options : {} });
+  }
+  /**
+   * stop.mjs's batch: the unanimated stops `fn` writes go as one update (Scene#moveTokens), the options shared, each
+   * one's spot to walk on to named by its id (`stopAt`, a map). Nested: the outer one sends.
+   */
+  batched(fn) {
+    if (this.batch) return fn();
+    this.batch = [];
+    try { return fn(); } finally {
+      const b = this.batch;
+      this.batch = null;
+      if (b.length) {
+        const stopAt = {};
+        for (const { item, options } of b) stopAt[item.id] = options.stopAt?.[item.id] ?? null;
+        this.emit({ type: "update", items: b.map(x => x.item), options: { ...b[0].options, stopAt } });
+      }
+    }
   }
   /** Several tokens' moves in one update (scene.updateEmbeddedDocuments): one ord, each token its own movement. */
   moveMany(list, { combat = false, options = {}, why = null } = {}) {

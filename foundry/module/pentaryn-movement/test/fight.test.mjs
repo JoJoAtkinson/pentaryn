@@ -115,3 +115,37 @@ test("L3 stopOrder: one stop of several walkers settles the front ones first (of
   assert.deepEqual(stopOrder(crowd), ["back", "front"], "apart: the given order");
   assert.deepEqual(stopOrder(crowd, { margin: 1.5 }), ["front", "back"], "near: the front one first");
 });
+
+test("L3 fix round settleAlong: a stop's tokens each along its own way, none resting inside another and no walk on through one at rest (the cascade a greedy stop misses: the one in front backs off first)", async () => {
+  const { settleAlong, spotsAlong } = await import("../motion-core.mjs");
+  const ok = () => true;
+  // A file of three in a one-wide corridor walking east into a shut door at x = 6 (nothing ahead), drawn overlapping:
+  // c at 5.5 (front, against the door), b at 5.0, a at 4.6. Greedy front first: c stays, b back to 4.5, a back to 3.5.
+  const east = (x, y = 1) => ({ drawn: { x, y }, ahead: [], behind: [{ x: 0, y }] });
+  const free = p => p.x <= 5.5 + 1e-9;                     // the door: nothing past 5.5
+  const mk = (id, x) => ({ id, r: 0.5, ...east(x), cands: spotsAlong({ drawn: { x, y: 1 }, ahead: [], behind: [{ x: 0, y: 1 }], free, step: 0.05, aheadMax: 1.5, behindMax: Infinity }) });
+  const items = [mk("c", 5.5), mk("b", 5.0), mk("a", 4.6)];
+  const out = settleAlong(items);
+  assert.ok(out, "solved");
+  const at = id => out.get(id).p;
+  assert.equal(at("c").x, 5.5, "the front one where it is drawn");
+  assert.ok(Math.abs(at("b").x - 4.5) < 0.051 && Math.abs(at("a").x - 3.5) < 0.101, JSON.stringify([...out]));
+  // The cascade (simulator seeds 6572, 9631): x was carried back through where y rests. y must back off first (it is
+  // behind x's way), or x must not pass it: no solution leaves y on x's way at rest.
+  const two = [
+    { id: "x", r: 0.5, drawn: { x: 5, y: 1 }, cands: spotsAlong({ drawn: { x: 5, y: 1 }, ahead: [], behind: [{ x: 0, y: 1 }], free: p => p.x <= 4 + 1e-9, step: 0.05, aheadMax: 0, behindMax: Infinity }) },
+    { id: "y", r: 0.5, drawn: { x: 3.6, y: 1 }, cands: spotsAlong({ drawn: { x: 3.6, y: 1 }, ahead: [{ x: 0, y: 1 }], behind: [{ x: 9, y: 1 }], free: ok, step: 0.05, aheadMax: 1.5, behindMax: 1.5 }) },
+  ];
+  const o2 = settleAlong(two);
+  assert.ok(o2, "solved");
+  const px = o2.get("x").p, py = o2.get("y").p;
+  assert.ok(Math.hypot(px.x - py.x, px.y - py.y) >= 1 - 0.011, "apart at rest");
+  const path = [two[0].drawn, ...o2.get("x").via, px];
+  const near = Math.min(...path.slice(1).map((q, k) => {
+    const a = path[k], L = Math.hypot(q.x - a.x, q.y - a.y) || 1, t = Math.max(0, Math.min(1, ((py.x - a.x) * (q.x - a.x) + (py.y - a.y) * (q.y - a.y)) / (L * L)));
+    return Math.hypot(py.x - (a.x + (q.x - a.x) * t), py.y - (a.y + (q.y - a.y) * t));
+  }));
+  assert.ok(near >= 1 - 0.011, `x's walk on never passes y at rest: ${JSON.stringify([px, py])}`);
+  // Nowhere: null (the caller keeps its own answer).
+  assert.equal(settleAlong([{ id: "p", r: 0.5, drawn: { x: 1, y: 1 }, cands: [{ p: { x: 1, y: 1 }, via: [] }] }, { id: "q", r: 0.5, drawn: { x: 1.2, y: 1 }, cands: [{ p: { x: 1.2, y: 1 }, via: [] }] }]), null);
+});

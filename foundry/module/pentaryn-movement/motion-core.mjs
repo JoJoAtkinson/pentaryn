@@ -390,6 +390,93 @@ export function stopOrder(items, { margin = 0 } = {}) {
   return out;
 }
 
+/**
+ * The spots along a token's own way a stop may rest it on (0.10 L3 fix round; settleAlong's candidates): where it is
+ * drawn, then ahead at most `aheadMax`, then back the way it came at most `behindMax`, every `step`, each where
+ * `free(p)` holds, walking no further a way once a wall is between two samples (`wallBetween`) or it would enter a token
+ * at rest (`enters(from, p)`), as clearAlong walks. At most `max`. [{ p, via }] (via: the corners passed on the way).
+ */
+export function spotsAlong({ drawn, ahead, behind, free, wallBetween = null, enters = null, step, aheadMax, behindMax, snap = p => p, max = 200 }) {
+  const out = free(drawn) ? [{ p: drawn, via: [] }] : [];
+  const along = (list, lim) => {
+    const via = [];
+    let prev = drawn, walked = 0, last = drawn;
+    for (const q of list) {
+      const L = Math.hypot(q.x - prev.x, q.y - prev.y);
+      const n = Math.max(1, Math.ceil(L / step));
+      for (let i = 1; i <= n; i++) {
+        walked += L / n;
+        if (walked > lim || out.length >= max) return;
+        const p = snap({ x: prev.x + ((q.x - prev.x) * i) / n, y: prev.y + ((q.y - prev.y) * i) / n });
+        if (wallBetween?.(last, p) || enters?.(drawn, p)) return;
+        last = p;
+        if (free(p)) out.push({ p, via: [...via] });
+      }
+      via.push(snap({ x: q.x, y: q.y }));
+      prev = q;
+    }
+  };
+  along(ahead, aheadMax);
+  along(behind, behindMax);
+  return out;
+}
+
+/** The least distance from `p` to the polyline `path`. */
+function pathDist(p, path) {
+  if (path.length === 1) return dist(p, path[0]);
+  let best = Infinity;
+  for (let k = 1; k < path.length; k++) {
+    const a = path[k - 1], b = path[k];
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    const t = L2 ? Math.min(Math.max(((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+    best = Math.min(best, Math.hypot(p.x - (a.x + (b.x - a.x) * t), p.y - (a.y + (b.y - a.y) * t)));
+  }
+  return best;
+}
+
+/**
+ * One stop of several tokens settled together (0.10 L3 fix round: the simulator's jams, a crowd stopped in a door,
+ * and a walk on carried through a token the same stop then rested on its way): each takes one of its own spots
+ * (`cands`, spotsAlong's, its best first), so that no two rest inside each other and no walk on passes through a
+ * token at rest at its end (one setting off from inside another is leaving it: `leave`; the leader of a group passes
+ * through its own members, `mates`). The tokens in the order given (the stop's: the front ones first) keep their best
+ * spot wherever the ones after them can still be settled; conflict-directed backjumping, at most `budget` tries.
+ * `items`: [{ id, r, drawn, cands: [{ p, via }], mates? }] (any units). A Map id → { p, via }, or null (none found).
+ */
+export function settleAlong(items, { budget = 40000, eps = 0.01, leave = 0.05 } = {}) {
+  const n = items.length;
+  if (items.some(it => !it.cands?.length)) return null;
+  const paths = items.map(it => it.cands.map(c => [it.drawn, ...c.via, c.p]));
+  const through = (i, a, j, b) => {
+    const I = items[i], J = items[j], q = J.cands[b].p, rr = I.r + J.r;
+    if (I.mates?.has(J.id) || paths[i][a].length < 2) return false;
+    if (dist(I.drawn, q) < rr - leave) return false;          // it sets off from inside J's spot: leaving it
+    return pathDist(q, paths[i][a]) < rr - eps;
+  };
+  const fits = (i, a, j, b) => dist(items[i].cands[a].p, items[j].cands[b].p) >= items[i].r + items[j].r - eps
+    && !through(i, a, j, b) && !through(j, b, i, a);
+  const pick = new Array(n).fill(-1);
+  let work = 0;
+  const solve = k => {
+    if (k === n) return { ok: true };
+    const conf = new Set();
+    for (let a = 0; a < items[k].cands.length; a++) {
+      if (++work > budget) return { ok: false, conf: null };
+      let bad = -1;
+      for (let j = 0; j < k && bad < 0; j++) if (!fits(k, a, j, pick[j])) bad = j;
+      if (bad >= 0) { conf.add(bad); continue; }
+      pick[k] = a;
+      const r = solve(k + 1);
+      if (r.ok || !r.conf) return r;
+      if (!r.conf.has(k)) return r;                           // k is not what stops the ones after it: jump back
+      for (const x of r.conf) if (x !== k) conf.add(x);
+    }
+    return { ok: false, conf };
+  };
+  if (!solve(0).ok) return null;
+  return new Map(items.map((it, k) => [it.id, it.cands[pick[k]]]));
+}
+
 /* -------------------------------------------- */
 /*  Decision tables                             */
 /* -------------------------------------------- */

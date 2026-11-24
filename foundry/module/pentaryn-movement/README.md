@@ -71,7 +71,13 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   carries on through its own members to the first free spot). Several stopped at once settle front first (0.10 L3):
   the one in front where it is drawn, the ones behind it carried back along their own ways (or the one in front carried
   on along its own, to make room), never onto a spot another stop on this screen is still carrying a token to or a
-  waiting member's square; this screen's other walkers heading into a spot the stop rests one on stop too. With no clear spot anywhere along its own way (0.10:
+  waiting member's square (unless that is the only clear spot left: then that member stays, named); this screen's other
+  walkers heading into a spot the stop rests one on stop too. One stop's writes go to the server as **one update**
+  (0.10 L3 fix round), so no screen ever sees one of them stopped while the next still walks on into it; and when, one
+  by one, two would be left inside each other or one walk on would pass through a token the stop rests on its way, the
+  stop's tokens are **settled together**, each along its own way (the front ones keep their spot first; a walker of
+  this screen in the way stops too). A walk on that a door shut meanwhile blocks is settled again with the tokens of
+  its stop it lies in. With no clear spot anywhere along its own way (0.10:
   no straight line off it any more), a click leaves it walking on to its own square ("Could not stop clear of another
   token, so walked on to its own square: …"), and a door or wall that cut it leaves it where it is drawn, named
   ("Stopped on another token, …: drag it clear"). In a fight it finishes the square it is in,

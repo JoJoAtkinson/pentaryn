@@ -139,7 +139,7 @@ let lateBatch = null;
 function stopLate(doc) {
   if (!lateBatch) {
     lateBatch = [];
-    setTimeout(() => {
+    setTimeout(() => batched(() => {
       const list = lateBatch ?? [];
       lateBatch = null;
       const docs = list.filter(d => d?.object && !d.object.destroyed);
@@ -153,7 +153,7 @@ function stopLate(doc) {
       }
       try { feature?.exposed?.stopAlso?.(group); } catch (err) { log?.debug?.("file: a late stop's also", err); }
       if (stopped && docs.length) stopped.late = (stopped.late ?? 0) + docs.length;
-    }, 0);
+    }), 0);
   }
   lateBatch.push(doc);
 }
@@ -359,6 +359,9 @@ function onGroupTag(doc, options, userId) {
   stopGroupHere(doc, "foreign", options.pentarynMovementStopAt ?? null);
 }
 
+/** Run one stop as one update (stop.mjs stopBatched, 0.10 L3 fix round). */
+const batched = fn => (feature?.exposed?.stopBatched ? feature.exposed.stopBatched(fn) : fn());
+
 /**
  * Stop the group token `doc` belongs to, on the client that sent it: everything unsent goes, and each other member
  * still walking stops where it is drawn (stop.mjs's displace out of combat; stopSafely in a fight). `restAt`: where the
@@ -366,19 +369,25 @@ function onGroupTag(doc, options, userId) {
  * 0.10 L2 fix (b): a mate was rested there). Returns the ids stopped (the members' ids, `doc` itself left to whoever
  * stopped it).
  */
-function stopGroupHere(doc, why, restAt = null) {
+function stopGroupHere(doc, why, restAt = null) { return batched(() => stopGroupNow(doc, why, restAt)); }
+function stopGroupNow(doc, why, restAt) {
   const ids = groupCancel(doc.id, { why });
   const scene = doc.parent;
   const out = [];
-  const list = ids.filter(id => id !== doc.id).map(id => scene?.tokens?.get?.(id))
+  // `restAt` names, by id, every token one stop wrote in its update (0.10 L3 fix round: one stop, one update); those
+  // are the sender's. An older write named only `doc`'s spot ({ x, y }).
+  const named = Number.isFinite(restAt?.x) ? { [doc.id]: restAt } : (restAt && typeof restAt === "object" ? restAt : {});
+  const list = ids.filter(id => id !== doc.id && !(id in named)).map(id => scene?.tokens?.get?.(id))
     .filter(d => d?.object && !d.object.destroyed && d.movement?.user?.isSelf && movingNow(d));
   // One stop for the rest: none rests inside another, nor inside the one stopped already, nor where it will rest
   // (0.9.0 simulator, step 5; 0.10 L2).
   const group = { skip: new Set(list.map(d => d.id)), claims: [] };
-  if (Number.isFinite(restAt?.x) && Number.isFinite(restAt?.y) && doc._source) {
-    const s = gridSize(doc.object ?? { document: doc });
-    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
-    group.claims.push({ id: doc.id, x: restAt.x + (w * s) / 2, y: restAt.y + (h * s) / 2, r: radiusOf(w, h) * s });
+  for (const [id, at] of Object.entries(named)) {
+    const d = scene?.tokens?.get?.(id) ?? (id === doc.id ? doc : null);
+    if (!d?._source || !Number.isFinite(at?.x) || !Number.isFinite(at?.y)) continue;
+    const s = gridSize(d.object ?? { document: d });
+    const w = d._source.width ?? 1, h = d._source.height ?? 1;
+    group.claims.push({ id, x: at.x + (w * s) / 2, y: at.y + (h * s) / 2, r: radiusOf(w, h) * s });
   }
   for (const d of orderOf(list)) {
     try {
