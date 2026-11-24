@@ -35,7 +35,13 @@ export const LIMITS = Object.freeze({
 });
 
 const EPS = 1e-6;
-const key = n => `${n.i},${n.j}`;
+/** A node's key: a square `i,j`; a part of a tight square (narrow-core's component c ≥ 1) `i,j#c`. */
+const key = n => (n.c ? `${n.i},${n.j}#${n.c}` : `${n.i},${n.j}`);
+/**
+ * A step through a narrow way (spec.more) is a hair dearer in the straightness tie-break than a plain step of the same
+ * cost, so where the plain square test finds a route the search keeps it, waypoint for waypoint (R9).
+ */
+const FINE_TIE = 0.01;
 export const nodeKey = key;
 export const edgeKey = (a, b) => `${a.i},${a.j}>${b.i},${b.j}`;
 
@@ -137,6 +143,8 @@ export function cornerOk(a, b, wall) {
  * @param {{i,j}} spec.goal
  * @param {(a, b) => number|null} spec.edge       cost of one step, null when blocked
  * @param {(a, b) => boolean} [spec.wall]          walls only, for the corner rule (default: edge !== null)
+ * @param {(n) => {n: {i,j,c?}, cost: number}[]} [spec.more]  extra neighbours (narrow ways, R9): a node `{ i, j, c }`
+ *                                                  with c ≥ 1 is a part of a tight square, reached only through these
  * @param {number} [spec.unit=1]                    the cheapest step's cost (heuristic scale)
  * @param {{minI,maxI,minJ,maxJ}} [spec.bounds]     nodes outside are never expanded
  * @param {number} [spec.maxNodes]
@@ -144,7 +152,7 @@ export function cornerOk(a, b, wall) {
  * @returns {{ run(budgetMs?: number): "found"|"none"|"more", path: {i,j}[]|null, costs: number[]|null, expanded: number }}
  */
 export function search(spec) {
-  const { start, goal, edge, unit = 1, bounds = null, maxNodes = LIMITS.maxNodes, now = () => 0 } = spec;
+  const { start, goal, edge, unit = 1, bounds = null, maxNodes = LIMITS.maxNodes, now = () => 0, more = null } = spec;
   const wall = spec.wall ?? ((a, b) => edge(a, b) !== null);
   const goalKey = key(goal);
   const nodes = new Map();       // key → { n, g, e, parent, closed }
@@ -180,6 +188,25 @@ export function search(spec) {
       rec.closed = true;
       job.expanded += 1;
       if (key(rec.n) === goalKey) { finish(rec); return job.state; }
+      if (more) {
+        let extra = null;
+        try { extra = more(rec.n); } catch { extra = null; }
+        for (const x of extra ?? []) {
+          const m = x?.n;
+          if (!m || !inBounds(m) || !Number.isFinite(x.cost) || x.cost < 0) continue;
+          const mk = key(m);
+          const old = nodes.get(mk);
+          if (old?.closed) continue;
+          const g = rec.g + x.cost;
+          const e = rec.e + Math.hypot(m.i - rec.n.i, m.j - rec.n.j) + FINE_TIE;
+          if (old && (g > old.g + EPS || (Math.abs(g - old.g) <= EPS && e >= old.e - EPS))) continue;
+          const r = old ?? { n: m, closed: false };
+          r.g = g; r.e = e; r.parent = rec;
+          nodes.set(mk, r);
+          open.push({ rec: r, f: g + h(m), fe: e + euclid(m, goal) });
+        }
+      }
+      if (rec.n.c) continue;                       // a part of a tight square has no plain steps
       for (const [di, dj] of STEPS) {
         const m = { i: rec.n.i + di, j: rec.n.j + dj };
         if (!inBounds(m)) continue;

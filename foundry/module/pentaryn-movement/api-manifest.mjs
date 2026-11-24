@@ -107,12 +107,13 @@ export const MANIFEST = Object.freeze({
     {
       path: "pathfind.status",
       params: [],
-      returns: "{ mode, mine, smoothCorners: true, patched, gridType, memo, limits, last: { at, tokenId, legs, found, nodes, ms, reached, of, arcs, improved, async, memo } | null }",
+      returns: "{ mode, mine, smoothCorners: true, patched, gridType, memo, limits, last: { at, tokenId, legs, found, nodes, ms, reached, of, arcs, improved, async, memo, narrow, minClearance } | null }",
       gm: false, writes: false,
       since: "0.3.0",
       doc: "Drag pathfinding on this client: the world mode (everyone / gm / off), this client's two settings, whether "
         + "Token#findMovementPath is wrapped, the step-cache size, the search limits, and what the last search did "
-        + "(nodes expanded, ms, explicit waypoints reached of how many, arcs placed, whether it beat the straight drag).",
+        + "(nodes expanded, ms, explicit waypoints reached of how many, arcs placed, whether it beat the straight drag; "
+        + "0.10: narrow, a way narrower than the token on it, and minClearance, the least distance of its centre from a wall in squares, null off the narrow ways).",
     },
     {
       path: "pathfind.route",
@@ -121,12 +122,15 @@ export const MANIFEST = Object.freeze({
         { name: "opts", type: "{ to: { x, y }, preview?: boolean, smooth?: boolean }",
           doc: "to: the destination top-left in pixels; preview: count only walls this user has seen (default false); smooth: corner arcs (default this client's setting)" },
       ],
-      returns: "{ ok, reached, straight, waypoints: [{ x, y, explicit }], cost, arcs, legs: [{ state, nodes, corners, arcs }], ms } | { ok: false, reason }",
+      returns: "{ ok, reached, straight, waypoints: [{ x, y, explicit }], cost, arcs, legs: [{ state, nodes, corners, arcs, narrow?, minClearance? }], ms, narrow, minClearance, goal } | { ok: false, reason }",
       gm: false, writes: false,
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
       since: "0.3.0",
       doc: "Dry run of a drag: the path the pathfinder would give that token to opts.to, without moving it. Needs a drawn "
-        + "canvas (a browser tab, not the headless GM). straight: the plain drag already got there; cost in feet as the ruler measures it.",
+        + "canvas (a browser tab, not the headless GM). straight: the plain drag already got there; cost in feet as the ruler measures it. "
+        + "0.10 (any passage shape): narrow, the way passes where it is narrower than the token (its centre on the way's centre line, 0.15 square "
+        + "or more from every wall); minClearance, the least distance of its centre from a wall along the narrow way, in squares (null off one); "
+        + "goal, where a destination in a tight square was moved to rest (the nearest centre-line point; null: where asked).",
     },
     {
       path: "planGroup",

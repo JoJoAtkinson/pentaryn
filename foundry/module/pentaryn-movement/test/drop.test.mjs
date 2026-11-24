@@ -3493,3 +3493,188 @@ test("0.9.0 planGroup(refs, point): the plan as a dry run (each member's slot, w
     for (const [k, v] of others) sceneTokens.set(k, v);
   }
 });
+
+/* -------------------------------------------- */
+/*  0.10 R9: narrow ways in a fight (Joe's S05, the spiral C stair)              */
+/* -------------------------------------------- */
+
+const S05 = JSON.parse(readFileSync(new URL("./fixtures/narrow-stations.json", import.meta.url), "utf8")).stations.find(s => s.id === "S05");
+/** S05's walls (pixels, the default scenario) on a canvas big enough; returns the restore. */
+function onStair() {
+  const old = { walls: world.walls, rect: F.canvas.dimensions };
+  world.walls = S05.walls.filter(w => !w.only).map(w => [{ x: w.c[0] * S, y: w.c[1] * S }, { x: w.c[2] * S, y: w.c[3] * S }]);
+  F.canvas.dimensions = { rect: { x: 0, y: 0, width: 2500, height: 5000, contains: (x, y) => x >= 0 && y >= 0 && x <= 2500 && y <= 5000 } };
+  F.fire("updateWall");
+  return () => { world.walls = old.walls; F.canvas.dimensions = old.rect; F.fire("updateWall"); };
+}
+/** The stair's centre-line error (px) at a centre: half the difference of its distances to the two curved walls, and its width there. */
+function stairLine(p) {
+  const chain = grp => Math.min(...S05.walls.filter(w => w.grp === grp).map(w => {
+    const a = { x: w.c[0] * S, y: w.c[1] * S }, b = { x: w.c[2] * S, y: w.c[3] * S };
+    const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+    const t = Math.min(Math.max(((p.x - a.x) * dx + (p.y - a.y) * dy) / L2, 0), 1);
+    return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
+  }));
+  const di = chain("S05.stair.in"), dout = chain("S05.stair.out");
+  return { err: Math.abs(di - dout) / 2, width: di + dout };
+}
+const minWall = p => Math.min(...world.walls.map(([a, b]) => {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  const t = L2 ? Math.min(Math.max(((p.x - a.x) * dx + (p.y - a.y) * dy) / L2, 0), 1) : 0;
+  return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
+}));
+
+test("0.10 R9 fight: a group of four over the spiral C stair — the leader first, then one at a time, each walk through the stair on its centre line, checkpoints where it enters a square; charged core's measure (double only in a painted mud region); nobody at rest on another", async () => {
+  const done = onStair();
+  const ts = S05.tokens.filter(t => t.w === 1).map((t, k) => noSpeed(makeToken(`r9f${k}00000000001`, t.x * S, t.y * S)));
+  const restore = fightScene(ts);
+  const log = [];
+  for (const t of ts) {
+    t.document.move = (waypoints, options) => {
+      log.push({ t, from: { ...t.document._source }, waypoints });
+      t.document._source.x = waypoints.at(-1).x; t.document._source.y = waypoints.at(-1).y;
+      return Promise.resolve(true);
+    };
+  }
+  try {
+    // The leader (Hero 1, 800, 3300) dropped in room B (600, 4400).
+    assert.equal(dropWith(ts[0], contextsFor(ts, -200, 1100)), null);
+    for (let i = 0; i < 80 && api.status().group.queue?.running; i++) await runFor(50);
+    const q = api.status().group.queue;
+    assert.equal(q.ended, "done", JSON.stringify(q));
+    assert.equal(log[0].t, ts[0], "the leader walks first");
+    assert.equal(new Set(log.map(m => m.t)).size, 4, "all four walked, one at a time");
+    const mudIn = p => {
+      // Joe's mud region (S05 scenario mud) over the whole stair: a polygon in squares.
+      const pts = S05.regions[0].shape.points;
+      let inside = false;
+      for (let k = 0, j = pts.length / 2 - 1; k < pts.length / 2; j = k++) {
+        const xi = pts[2 * k] * S, yi = pts[2 * k + 1] * S, xj = pts[2 * j] * S, yj = pts[2 * j + 1] * S;
+        if ((yi > p.y) !== (yj > p.y) && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    };
+    for (const m of log) {
+      const path = [m.from, ...m.waypoints];
+      assert.ok(path.some(w => w.x > 1300), `${m.t.document.id} walks over the stair`);
+      for (let k = 1; k < path.length; k++) {
+        assert.equal(crossingCore(center(path[k - 1]), center(path[k])).length, 0, `${m.t.document.id} step ${k} through a wall`);
+        const off = path[k].x % S !== 0 || path[k].y % S !== 0;
+        if (!off) continue;
+        // Off the grid (the narrow way): 0.15 square clear, within 0.05 square of the centre line where narrower
+        // than the token, and a checkpoint only where it enters a new square (or at its end).
+        const c = center(path[k]);
+        assert.ok(minWall(c) >= 14.8, `${m.t.document.id} at ${c.x},${c.y}: ${minWall(c)} px clear`);
+        const line = stairLine(c);
+        if (line.width < S && c.x > 1020) assert.ok(line.err <= 5, `${m.t.document.id} at ${c.x},${c.y}: ${line.err} px off the centre line`);
+        const same = cell(center(path[k - 1])).i === cell(c).i && cell(center(path[k - 1])).j === cell(c).j;
+        if (k < path.length - 1) assert.equal(path[k].checkpoint, !same, `${m.t.document.id} waypoint ${k}`);
+      }
+      // Charged exactly core's measure: 5 ft a square entered; in the mud, each square entered inside it twice.
+      const plain = costOf(m.t, m.from, m.waypoints);
+      let entered = 0, mud = 0;
+      for (let k = 1; k < path.length; k++) {
+        const a = cell(center(path[k - 1])), b = cell(center(path[k]));
+        const n = Math.max(Math.abs(a.i - b.i), Math.abs(a.j - b.j));
+        entered += n;
+        if (n && mudIn(center(path[k]))) mud += n;
+      }
+      assert.equal(plain, 5 * entered, "5 ft a square, nothing for the narrowness");
+      const orig = Token5e.prototype.measureMovementPath;
+      Token5e.prototype.measureMovementPath = function (wps) {
+        let cost = 0;
+        for (let k = 1; k < wps.length; k++) {
+          const a = cell(center(wps[k - 1])), b = cell(center(wps[k]));
+          cost += Math.max(Math.abs(a.i - b.i), Math.abs(a.j - b.j)) * 5 * (mudIn(center(wps[k])) ? 2 : 1);
+        }
+        return { cost, distance: cost };
+      };
+      try { assert.equal(costOf(m.t, m.from, m.waypoints), plain + 5 * mud, "double only inside the mud"); }
+      finally { Token5e.prototype.measureMovementPath = orig; }
+    }
+    // At rest: nobody on another, all in room B, the leader in front.
+    const ends = ts.map(t => center(t.document._source));
+    for (let a = 0; a < ends.length; a++) for (let b = a + 1; b < ends.length; b++) assert.ok(Math.hypot(ends[a].x - ends[b].x, ends[a].y - ends[b].y) >= 98, "no overlap at rest");
+    for (const e of ends) assert.ok(e.y > 4200 && e.x < 1000, `rests in room B: ${JSON.stringify(e)}`);
+  } finally { restore(); done(); tickBy(60000); }
+});
+
+test("0.10 R9 fight: a leader whose speed runs out on the stair stops part-way, off the grid, on the centre line; the group dropped mid-stair forms a line behind it", async () => {
+  const done = onStair();
+  const ts = S05.tokens.filter(t => t.w === 1).map((t, k) => makeToken(`r9s${k}00000000001`, t.x * S, t.y * S));
+  withSpeed(ts[0], 40);                                   // 8 squares: room A to part-way up the stair
+  for (const t of ts.slice(1)) noSpeed(t);
+  const restore = fightScene(ts);
+  const log = [];
+  for (const t of ts) {
+    t.document.move = (waypoints, options) => {
+      log.push({ t, from: { ...t.document._source }, waypoints });
+      t.document._source.x = waypoints.at(-1).x; t.document._source.y = waypoints.at(-1).y;
+      return Promise.resolve(true);
+    };
+  }
+  try {
+    assert.equal(dropWith(ts[0], contextsFor(ts, -200, 1100)), null);
+    for (let i = 0; i < 80 && api.status().group.queue?.running; i++) await runFor(50);
+    const lead = log.find(m => m.t === ts[0]);
+    const end = lead.waypoints.at(-1);
+    const c = center(end);
+    assert.ok(end.x % S !== 0 || end.y % S !== 0, `off the grid: ${end.x}, ${end.y}`);
+    assert.ok(c.x > 1020, "on the stair");
+    assert.ok(minWall(c) >= 14.8, `${minWall(c)} px clear`);
+    const line = stairLine(c);
+    assert.ok(line.width >= S || line.err <= 5, `${line.err} px off the centre line`);
+    const w = api.status().group.queue.walks.find(x => x.id === ts[0].document.id);
+    assert.equal(w.why, "speed");
+    assert.ok(costOf(ts[0], lead.from, lead.waypoints) <= 40, "never past what its movement pays for");
+    // The others (no speed: the whole way) queue behind it along the stair, one token apart, none on another.
+    const rest = ts.map(t => center(t.document._source));
+    for (let a = 0; a < rest.length; a++) for (let b = a + 1; b < rest.length; b++) assert.ok(Math.hypot(rest[a].x - rest[b].x, rest[a].y - rest[b].y) >= 98, `no overlap at rest ${a} ${b}`);
+  } finally { restore(); done(); tickBy(60000); }
+});
+
+test("0.10 R9: a group of four over the spiral C stair out of combat — the leader in the drop's update, the rest a wave later and filing behind it over the stair; dropped mid-stair, they rest on the centre line behind it, one token apart", () => {
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  try {
+    for (const [name, dx, dy, mid] of [["roomB", -200, 1100, false], ["midStair", 750, 450, true]]) {
+      const ts = S05.tokens.filter(t => t.w === 1).map((t, k) => makeToken(`r9g${name.slice(0, 2)}${k}0000000001`, t.x * S, t.y * S));
+      for (const t of ts) { t.visible = true; sceneTokens.set(t.document.id, t.document); }
+      F.canvas.tokens.placeables = [...ts];
+      const from = F.calls.length;
+      // Mid-stair: the leader (Hero 1, top-left 800, 3300) dropped on the square whose centre (1600, 3800) lies in the
+      // stair beside the narrowest point: it rests on the centre line there.
+      const out = dropWith(ts[0], contextsFor(ts, dx, dy));
+      const plan = api.status().group.last;
+      assert.equal(plan.shape, "march", name);
+      const by = fileMoves(out, from);
+      assert.equal(by[ts[0].document.id]?.wave, 0, `${name}: the leader goes in the drop's own update`);
+      const ends = [];
+      for (const t of ts) {
+        const m = by[t.document.id];
+        assert.ok(m?.waypoints?.length, `${name}: ${t.document.id} moves (stayed: ${JSON.stringify(plan.stayed)})`);
+        const path = [{ ...t.document._source }, ...m.waypoints];
+        for (let k = 1; k < path.length; k++) assert.equal(crossingCore(center(path[k - 1]), center(path[k])).length, 0, `${name}: ${t.document.id} through a wall`);
+        for (const w of m.waypoints) if (center(w).x > 1020) assert.ok(minWall(center(w)) >= 14.8, `${name}: ${t.document.id} at ${JSON.stringify(center(w))}`);
+        if (t !== ts[0]) assert.ok(m.wave >= 1, `${name}: ${t.document.id} after the leader`);
+        assert.ok(path.some(w => w.x > 1100), `${name}: ${t.document.id} over the stair`);
+        ends.push(center(m.waypoints.at(-1)));
+      }
+      for (let a = 0; a < ends.length; a++) for (let b = a + 1; b < ends.length; b++) assert.ok(Math.hypot(ends[a].x - ends[b].x, ends[a].y - ends[b].y) >= 98, `${name}: no overlap at rest`);
+      if (mid) {
+        // The leader on the centre line at the narrowest; the next members on the stair behind it, on its centre line.
+        const line = stairLine(ends[0]);
+        assert.ok(line.err <= 5, `the leader ${line.err} px off the centre line at ${JSON.stringify(ends[0])}`);
+        const onStairEnds = ends.slice(1).filter(e => e.x > 1020);
+        assert.ok(onStairEnds.length >= 2, `members behind it on the stair: ${JSON.stringify(ends)}`);
+        for (const e of onStairEnds) {
+          const l = stairLine(e);
+          assert.ok(l.width >= S || l.err <= 5, `a member ${l.err} px off the centre line at ${JSON.stringify(e)}`);
+          assert.ok(e.y < ends[0].y, "behind the leader (it came from room A, the stair's north end)");
+        }
+      }
+      for (const t of ts) sceneTokens.delete(t.document.id);
+      tickBy(60000);
+    }
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});

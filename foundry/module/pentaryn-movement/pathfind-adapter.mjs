@@ -29,6 +29,52 @@
  */
 
 import { SECRET_DOOR, avoidDist, avoidRegion, segmentsCross } from "./pathfind-core.mjs";
+import { narrowField, narrowMore } from "./narrow-core.mjs";
+
+/**
+ * The narrow-way field for a token of 1×1 or smaller on its scene (0.10 R9, narrow-core): the walls that block its
+ * movement action both ways, in squares (pixels / grid size); a closed or locked door is a wall, an open one is not, a
+ * secret door always is (a route never uses one); a one-way wall is crossed only from its open side and costs no
+ * clearance. In a player's preview only the walls that player has seen count, a piece at a time (half a square,
+ * explored or visible at its middle), as core counts a collision. `cache` (pathfind.mjs's, dropped when a wall or
+ * door changes and, for a preview, when this client's fog is explored) keeps one field per scene, wall type, size and
+ * preview. null for a bigger token (decision 8: only where its body fits), the unconstrained tool, or no wall test.
+ */
+export function narrowFor(token, { wallType = "move", look = false, ignoreWalls = false, width = 1, height = 1, cache = null } = {}) {
+  if (!wallType || ignoreWalls || width > 1 || height > 1) return null;
+  const doc = token?.document;
+  const scene = doc?.parent;
+  const s = scene?.grid?.size ?? globalThis.canvas?.grid?.size ?? 100;
+  const pad = Math.max(width, height) / 2;
+  const key = `${scene?.id ?? "?"}|${wallType}|${pad}|${look ? `p${game.user?.id}` : "f"}`;
+  if (cache?.has(key)) return cache.get(key);
+  const seen = c => globalThis.canvas?.fog?.isPointExplored?.(c) || globalThis.canvas?.visibility?.testVisibility?.(c, { tolerance: 1 });
+  const walls = [], lines = [];
+  for (const w of scene?.walls ?? []) {
+    const c = w?.c;
+    if (!Array.isArray(c) || c.length < 4) continue;
+    if (Number(w[wallType] ?? w.move ?? 1) <= 0) continue;
+    const door = Number(w.door) || 0;
+    if (door > 0 && door !== SECRET_DOOR && Number(w.ds) === 1) continue;
+    const dir = Number(w.dir) || 0;
+    // A preview counts a wall only where the player has seen it, half a square at a time.
+    const L = Math.hypot(c[2] - c[0], c[3] - c[1]) / s;
+    const n = look ? Math.max(1, Math.ceil(L / 0.5)) : 1;
+    for (let k = 0; k < n; k++) {
+      const a = { x: c[0] + ((c[2] - c[0]) * k) / n, y: c[1] + ((c[3] - c[1]) * k) / n };
+      const b = { x: c[0] + ((c[2] - c[0]) * (k + 1)) / n, y: c[1] + ((c[3] - c[1]) * (k + 1)) / n };
+      if (look && !seen({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })) continue;
+      const seg = [a.x / s, a.y / s, b.x / s, b.y / s];
+      if ((dir === 1 || dir === 2) && door !== SECRET_DOOR) lines.push({ c: seg, dir });
+      else walls.push(seg);
+    }
+  }
+  // A one-way wall's piece lies on the wall's own line, so its open side is the wall's.
+  const field = narrowField(walls, { pad, lines });
+  field.s = s;
+  cache?.set(key, field);
+  return field;
+}
 
 /** Is a token with these dimensions at waypoint `w` inside `region` (core's own test)? */
 function insideRegion(doc, region, w) {
@@ -129,7 +175,7 @@ function creatureBlocking(token, constrain, automation) {
  * settings.mjs). Results are memoised in `memo` (a Map the feature keeps and clears when walls,
  * regions, doors or tokens change).
  */
-export function fieldFor(token, from, to, { preview = false, constrain = {}, measureOptions = {}, terrainOptions = {}, memo = new Map(), automation = "none", avoid = null, rounded = false } = {}) {
+export function fieldFor(token, from, to, { preview = false, constrain = {}, measureOptions = {}, terrainOptions = {}, memo = new Map(), automation = "none", avoid = null, rounded = false, narrowCache = null } = {}) {
   const doc = token.document;
   const grid = doc.parent?.grid ?? canvas.grid;
   const s = grid.size;
@@ -321,9 +367,52 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     return !steps.slice(1).some(w => blockedPx(w));
   };
 
+  // Narrow ways (0.10 R9): a token of 1×1 or smaller whose lattice nodes are whole squares (node (i, j) the square
+  // its centre is in) also steps through the parts of tight squares, the narrow field's.
+  let narrow = null;
+  try {
+    const cx = lat.x + (width * s) / 2, cy = lat.y + (height * s) / 2;
+    const aligned = Math.abs(cx / s - Math.floor(cx / s) - 0.5) < 1e-6 && Math.abs(cy / s - Math.floor(cy / s) - 0.5) < 1e-6;
+    const nf = aligned ? narrowFor(token, { wallType, look, ignoreWalls: !!constrain.ignoreWalls, width, height, cache: narrowCache }) : null;
+    if (nf) {
+      const oj = Math.floor(cx / s), oi = Math.floor(cy / s);
+      const toAbs = n => ({ I: n.i + oi, J: n.j + oj });
+      const fromAbs = (I, J, c) => (c ? { i: I - oi, j: J - oj, c } : { i: I - oi, j: J - oj });
+      const tl = p => ({ x: p.x * s - (width * s) / 2, y: p.y * s - (height * s) / 2 });
+      /** The band's own test of a straight move (centres in squares): tokens standing, traps, unseen ground, creatures. */
+      const okSeg = (p, q) => {
+        if (circles) {
+          const a = { x: p.x * s, y: p.y * s }, b = { x: q.x * s, y: q.y * s };
+          if (circles.some(c => avoidDist(c, a, b) < c.r - 1e-6)) return false;
+        }
+        if (!hz.line(tl(p), tl(q))) return false;
+        if (!blocking) return true;
+        const L = Math.hypot(q.x - p.x, q.y - p.y);
+        const n = Math.max(1, Math.ceil(L / 0.25));
+        for (let k = 0; k <= n; k++) {
+          const x = p.x + ((q.x - p.x) * k) / n, y = p.y + ((q.y - p.y) * k) / n;
+          if (blocked(fromAbs(Math.floor(y), Math.floor(x), 0))) return false;
+        }
+        return true;
+      };
+      narrow = {
+        field: nf, toAbs, fromAbs, okSeg,
+        /** A top-left position's centre in squares, and back. */
+        centre: p => ({ x: (p.x + (width * s) / 2) / s, y: (p.y + (height * s) / 2) / s }),
+        topLeft: tl,
+        more: narrowMore(nf, {
+          toAbs, fromAbs,
+          cost: (a, b) => stepCost(pos(a), pos(b)),
+          blocked: n => blocked(n) || !inside(pos(n)),
+        }),
+        tight: n => { const A = toAbs(n); return nf.tight(A.I, A.J); },
+      };
+    }
+  } catch { narrow = null; }
+
   return {
     s, unit: grid.distance, pos, nodeOf, onLattice, waypoint, start: nodeOf(from), goal: nodeOf(to),
-    edge, wall, lineOk, clear, cost: measure, blocked, look, terrain, blocking, avoided: hz,
+    edge, wall, lineOk, clear, cost: measure, blocked, look, terrain, blocking, avoided: hz, narrow,
     lattice: rect ? {
       minI: Math.floor((rect.y - lat.y) / s), maxI: Math.ceil((rect.y + rect.height - lat.y) / s),
       minJ: Math.floor((rect.x - lat.x) / s), maxJ: Math.ceil((rect.x + rect.width - lat.x) / s),

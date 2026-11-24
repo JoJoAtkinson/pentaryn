@@ -38,6 +38,33 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### Step N — any passage shape (R9)
+
+Not a feature of its own and no switch (Joe, 2026-11-24): the pathfinder itself handles any passage shape; the spiral C
+stair that started the build is a test case. Plan §18.4.
+- **[declared] `narrow-core.mjs`** (new, pure): a square is tight when a wall that blocks movement runs through its
+  interior (an off-grid wall). Tight squares and their neighbours are cut into eighth-square cells; a cell passes when
+  some point in it keeps **0.15 square** from every wall (the token's centre; any token up to 1×1, so a way of 0.3 square
+  passes though the token is wider); a square's nodes are the connected groups of its passable cells, so a square
+  crossed by two lanes (a hairpin, a thin wall) is two nodes and no link crosses the wall between them. Built lazily
+  where a search touches, cached per scene until a wall or door changes (a player's preview: the walls seen, re-read
+  when fog is explored).
+- **[declared] The A* on squares** (`pathfind-core` `search`, a `more` hook) gets the extra neighbours through the parts
+  of tight squares, each step what a square step costs; on ties a plain step wins, so a map whose walls lie on the grid
+  lines routes exactly as before, waypoint for waypoint.
+- **[declared] The walk** (`walkFor`): through the narrow way the eighth-cell path of least length × a penalty under
+  the padding radius (the token's own), then a band settled on it (smoothed; on the centre line, within 0.025, where the
+  way is narrower than the token; out to the padding radius where there is room), its chords (every sample every 1/16
+  square keeps 0.15), sent as one move. Out of combat the whole leg is the band; in a fight only the narrow stretch, the
+  rest on the grid, with its checkpoints where the centre line enters each square (`drop.mjs` `withCheckpoints`,
+  `fightSteps` keep a narrow walk's shape points unmarked).
+- **[declared] Rest on the centre line**: a drop point in a tight square goes to where the token may rest there (its
+  nearest centre-line point; `pathfind.route` reports it as `goal`); a fight leader dropped there too; a march dropped
+  on the narrow way puts the members behind the leader on its own way, a token apart (`file.mjs` `lineBehind`, and at a
+  fight member's turn); planLead's step oracle joins two squares where a part of one meets a part of the other.
+- **[declared] R13**: `pathfind.route` and `pathfind.status().last` report `narrow` and `minClearance` (squares).
+- A Large or bigger never uses it (decision 8, unchanged). Nothing costs more for being narrow.
+
 ### Step L3, the ruling — a door is not shut on a jam
 
 - **[declared] "Door blocked: <name> is in the doorway"** (R8, the simulator's seed 6142; Fable's ruling for Joe):

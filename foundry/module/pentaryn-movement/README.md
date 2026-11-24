@@ -64,6 +64,20 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   can see; never a secret door, never through a teleport / change-level region unless it ends there. What the ruler
   shows is what the drop walks and charges, and the drop goes at once: no queue, no start delay. No way there:
   nothing moves, "No route there" (naming the token standing in the only way when you can read its name).
+- **Any passage shape** (0.10, R9; no switch of its own: it is the pathfinder, and the drag-help button stays the only
+  off switch): a way narrower than the token still passes as long as the token's centre can keep **0.15 square (9 in)**
+  from every wall, so a way of 0.3 square or more (1.5 ft) passes and a narrower one is refused ("No route there", or
+  the long way round). A curved stair, a diagonal slit, a funnel, a hairpin, a field of pillars: one drag crosses it in
+  one smooth motion **on the way's centre line** (padded off the walls by the token's own radius where there is room).
+  Only tokens up to 1×1; a Large or bigger goes only where its body fits (decision 8: the long way round, or it stops
+  before the mouth). Nothing costs more for being narrow: only a Difficult Terrain region the GM paints. A token dropped
+  or stopped part-way rests off the grid on the centre line, in a fight too (a fight's walk is on the grid except
+  through the narrow way, its checkpoints where the centre line enters each square, charged core's measure of the way
+  walked); a drop in the rock or off the line beside a narrow way rests on its nearest centre-line point (the ruler shows
+  the snapped square as not reached). A group goes leader first and files behind it; dropped on the narrow way they rest
+  on its centre line behind the leader, a token apart. Squares a wall runs through (an off-grid wall) are the only ones
+  this touches: a map whose walls lie on the grid lines routes exactly as before. `pathfind.route` reports `narrow` and
+  `minClearance` (squares).
 - **Click a moving token to stop it** (always on) once it has moved 400 ms (a move you dropped; one another user
   started stops at once): out of combat it stops **exactly where it is drawn** (Joe, 2026-11-23); one whose body is
   across a door's line, or that would rest inside a token at rest or a member the same stop stopped, is carried on
@@ -323,8 +337,9 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `combat-adapter.mjs` | combats and scenes → plain core inputs |
 | `ghost.mjs` | the feature: patches, sort (0.10: the leader of a moving group drawn on top on every screen), toolbar, refresh, the incorporeal exception on the player's side |
 | `ghost-combat.mjs` | the GM's ghost-in-combat flag: Token HUD toggle, `setGhost(creature, { combat })`, `inspect` |
-| `pathfind-core.mjs` | pure: A*, cost-preserving string pulling, corner arcs, the skip rules |
-| `pathfind-adapter.mjs` | a token and its drag options → wall / creature / cost step tests (reads only) |
+| `pathfind-core.mjs` | pure: A* (0.10: extra neighbours through narrow ways, `more`), cost-preserving string pulling, corner arcs, the skip rules |
+| `narrow-core.mjs` | pure (0.10, R9): narrow ways — tight squares (an off-grid wall through them), eighth-square cells passable at 0.15 square and their parts (a square crossed by two lanes is two nodes), the A*'s extra neighbours, the fine path, the band settled on the centre line, its chords, a fight's checkpoints where it enters a square, the rest point, the line behind a leader |
+| `pathfind-adapter.mjs` | a token and its drag options → wall / creature / cost step tests, and (0.10) the scene's narrow-way field for a token up to 1×1 (reads only) |
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
 | `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, how long two movers are close (`closeTime`), waves, cell chains, clearAlong, one-way walls (`wallOpenFrom`), decision tables; cuts (`freePrefix`), the flood, one undo entry per move, tokens that start stacked (`stacksOf`; 0.10 L2, from the deleted `sequence-core.mjs`) (0.9.0: the 0.8 planner, settle and the rest passes are gone; 0.10: the candidate lattices too) |
 | `telemetry-core.mjs`, `telemetry.mjs` | pure: the ring buffer, its summary and report text, the breaker's rule; the feature: telemetry, the circuit breaker, the Alt+W key (0.8.0) |
@@ -343,7 +358,13 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 (frozen characterisation from the migration checkpoint), the hook manifest, patch records, the API
 goldens, i18n keys and logging; `pathfind-core.test` (A* on synthetic wall maps: corners, doors,
 one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equality) and
-`pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-props.test` (the flood, `freePrefix`, trajectories, waves, click rows), `lead.test` (the leader plan, 0.10 L1: the tunnel repro, march, swarm rings round Medium / Large / Huge, and the gate: 800 seeded
+`pathfind.test` (the wrap against a token whose core path stops at the first wall; 0.10: Joe's S05 spiral C stair
+through the wrap, a drop off its centre line, a Large refused); `narrow.test` (0.10 R9, any passage shape on pure
+geometry: 400 seeded room-to-room routes over generated C stairs, both ways, each found, never through a wall, 0.15
+square clear, within 0.05 of the centre line where narrower than the token, no zigzag, warm under 50 ms; a funnel of
+0.3 passes and 0.29 is refused; a hairpin whose lanes share squares; pillar fields; Joe's stations S05 and S06 from the
+ZZ Playground (`test/fixtures/narrow-stations.json`); the Large and the long way round; a fight's checkpoints; walls
+on the grid lines routing exactly as before); `group-props.test` (the flood, `freePrefix`, trajectories, waves, click rows), `lead.test` (the leader plan, 0.10 L1: the tunnel repro, march, swarm rings round Medium / Large / Huge, and the gate: 800 seeded
 floors and tunnels with 2-20 members, every member in place or named, no rest overlap, no route into a standing token,
 an earlier slot or a member that stays, march nobody beside or ahead, swarm the leader touching whenever it could, at
 most 1.2 searches a member and under 3 % failed; planning time), `file-core.test` (the motion on the leader plan's
@@ -354,7 +375,8 @@ every screen sees them), `fight.test` (0.10 L3, the fight's pure side: the order
 runs out, the order one stop settles walkers in) and `drop.test` (the drop and click wraps, the
 file on the synthetic board with its three handlers, the fight queue and what ends it, the 0.9.0 step 1 gate: 60
 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk, and L3's: 60 seeded fight queues, the leader
-first and through its members, the same charge with or without them in its way, and 200 seeded speed stops);
+first and through its members, the same charge with or without them in its way, and 200 seeded speed stops; 0.10 R9:
+a group of four over the stair in a fight and out of it, a speed stop part-way on the centre line);
 `telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). `test/sim/` is the
 simulator (0.9.0 step 5; 0.10 L1 the leader plan, L2 its motion, L3 the fight and its own kinds of seed, Joe's

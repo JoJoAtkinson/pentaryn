@@ -28,7 +28,9 @@ function hit(p, q, a, b) {
 
 const world = { walls: [] };
 // A wall may carry door / ds (core's WALL_DOOR_TYPES / WALL_DOOR_STATES): an open door (ds 1) never collides, as in core.
-const crossing = (o, dpt) => world.walls.filter(w => w.ds !== 1).map(([a, b]) => hit(o, dpt, a, b)).filter(Boolean);
+// `world.touch` (the 0.10 R9 stair tests): a touch of a wall counts too, as Foundry 14.370's lineSegmentIntersection.
+const touchHit = (p, q, a, b) => hit(p, q, a, b) ?? (segmentsCross(p, q, a, b) && Math.hypot(q.x - p.x, q.y - p.y) > 1e-9 ? { x: p.x, y: p.y } : null);
+const crossing = (o, dpt) => world.walls.filter(w => w.ds !== 1).map(([a, b]) => (world.touch ? touchHit : hit)(o, dpt, a, b)).filter(Boolean);
 const door = (a, b, door = 1, ds = 0) => Object.assign([a, b], { door, ds });
 /** The token's Scene as the adapter reads it: walls (door type, segment) and regions. */
 const sceneDoc = {
@@ -541,4 +543,103 @@ test("AR2-06: out of combat a route keeps its square clear of a standing token's
   const box = fieldFor(t, wp(0, 0), wp(500, 0), { avoid: [{ ...stand, box: true }] });
   assert.equal(box.clear(p, q), false, "a box does not");
   assert.equal(box.clear({ x: 0, y: 0 }, { x: 0, y: 200 }), true, "a way a whole square off it is clear");
+});
+
+/* -------------------------------------------- */
+/*  0.10 R9: narrow ways (Joe's S05, the spiral C stair, through the wrap)       */
+/* -------------------------------------------- */
+
+const { readFileSync } = await import("node:fs");
+const S05 = JSON.parse(readFileSync(new URL("./fixtures/narrow-stations.json", import.meta.url), "utf8")).stations.find(s => s.id === "S05");
+/** S05's walls in pixels (the default scenario: the long way's door shut), on a canvas big enough to hold it. */
+function onStair() {
+  world.walls = S05.walls.filter(w => !w.only).map(w => [{ x: w.c[0] * S, y: w.c[1] * S }, { x: w.c[2] * S, y: w.c[3] * S }]);
+  const old = F.canvas.dimensions;
+  F.canvas.dimensions = { rect: { x: 0, y: 0, width: 2500, height: 5000, contains: (x, y) => x >= 0 && y >= 0 && x <= 2500 && y <= 5000 } };
+  world.touch = true;
+  F.fire("updateWall");
+  return () => { F.canvas.dimensions = old; world.walls = []; world.touch = false; F.fire("updateWall"); };
+}
+/** The least distance (px) of a path's centre line, sampled every 1/16 square, to any wall; and whether it crosses one. */
+function clearanceOf(path, size = 1) {
+  const segD = (p, a, b) => {
+    const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+    const t = L2 ? Math.min(Math.max(((p.x - a.x) * dx + (p.y - a.y) * dy) / L2, 0), 1) : 0;
+    return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
+  };
+  let min = Infinity, through = false;
+  for (let k = 1; k < path.length; k++) {
+    const a = center({ ...path[k - 1], width: size, height: size }), b = center({ ...path[k], width: size, height: size });
+    if (crossing(a, b).length) through = true;
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (S / 16)));
+    for (let s = 0; s <= n; s++) {
+      const p = { x: a.x + ((b.x - a.x) * s) / n, y: a.y + ((b.y - a.y) * s) / n };
+      for (const [u, v] of world.walls) min = Math.min(min, segD(p, u, v));
+    }
+  }
+  return { min, through };
+}
+
+test("R9: a drag over Joe's spiral C stair (S05) crosses from room A to room B in one route on the centre line, 0.15 square clear", async () => {
+  await arcs(true);
+  const done = onStair();
+  try {
+    const t = makeToken({ x: 800, y: 3300 });
+    const job = drag(t, [wp(800, 3300), wp(600, 4400)]);
+    const path = job.result;
+    assert.deepEqual([path.at(-1).x, path.at(-1).y], [600, 4400], "reaches room B");
+    const c = clearanceOf(path);
+    assert.equal(c.through, false);
+    assert.ok(c.min >= 14.9, `clearance ${c.min} px: ${JSON.stringify(path.map(w => [w.x, w.y]))}`);
+    assert.ok(path.some(w => w.x > 1300), "over the stair (it bulges east of the rooms)");
+    const last = api.pathfind.status().last;
+    assert.equal(last.narrow, true);
+    assert.ok(last.minClearance >= 0.149, JSON.stringify(last));
+    for (const w of path.slice(1, -1)) assert.equal(w.explicit, false);
+    // pathfind.route reports it too (R13).
+    Object.assign(t.document, { object: t, documentName: "Token", uuid: "Scene.sceneA.Token.tok0000000000001" });
+    const r = api.pathfind.route(t.document, { to: { x: 600, y: 4400 } });
+    assert.equal(r.reached, true);
+    assert.equal(r.narrow, true);
+    assert.ok(r.minClearance >= 0.149 && r.minClearance < 0.5, String(r.minClearance));
+  } finally { done(); }
+});
+
+test("R9: a destination dropped off the stair's centre line rests on it (the nearest centre-line point)", async () => {
+  const done = onStair();
+  try {
+    const t = makeToken({ x: 800, y: 3300 });
+    // Shift-dropped 0.1 square east of the centre line at the narrowest (0.4 wide): top-left (1560, 3800).
+    const job = drag(t, [wp(800, 3300), { ...wp(1560, 3800), snapped: false }]);
+    const end = job.result.at(-1);
+    assert.ok(Math.abs(end.x - 1550) <= 1 && Math.abs(end.y - 3800) <= 1, `rests at ${end.x}, ${end.y}`);
+    assert.equal(clearanceOf(job.result).through, false);
+    Object.assign(t.document, { object: t, documentName: "Token", uuid: "Scene.sceneA.Token.tok0000000000001" });
+    const r = api.pathfind.route(t.document, { to: { x: 1560, y: 3800 } });
+    assert.ok(r.reached && r.goal && Math.abs(r.goal.x - 1550) <= 1, JSON.stringify(r.goal));
+  } finally { done(); }
+});
+
+test("R9 / decision 8: a Large never takes the narrow way: with no way round it is not routed through the stair", async () => {
+  const done = onStair();
+  try {
+    const t = makeToken({ x: 400, y: 3000, size: 2 });
+    t.document.id = "tokLarge00000001";
+    const job = drag(t, [wp(400, 3000, 2), wp(600, 4400, 2)]);
+    const path = job.result;
+    assert.ok(!(path.at(-1).x === 600 && path.at(-1).y === 4400), "not through");
+    assert.ok(!path.some(w => w.x > 1050), "never onto the stair");
+    // Where it stops, its whole body (a 2×2: radius 100 px) is clear of every wall (decision 8: stop before the mouth).
+    const c = center({ ...path.at(-1), width: 2, height: 2 });
+    const body = Math.min(...world.walls.map(([u, v]) => {
+      const dx = v.x - u.x, dy = v.y - u.y, L2 = dx * dx + dy * dy;
+      const t = L2 ? Math.min(Math.max(((c.x - u.x) * dx + (c.y - u.y) * dy) / L2, 0), 1) : 0;
+      return Math.hypot(c.x - u.x - dx * t, c.y - u.y - dy * t);
+    }));
+    assert.ok(body >= 98, `its body ${body} px from a wall at ${JSON.stringify(c)}`);
+    Object.assign(t.document, { object: t, documentName: "Token", uuid: "Scene.sceneA.Token.tokLarge00000001" });
+    const r = api.pathfind.route(t.document, { to: { x: 600, y: 4400 } });
+    assert.equal(r.reached, false);
+    assert.equal(r.narrow, false);
+  } finally { done(); }
 });

@@ -197,11 +197,14 @@ function modeFor(grabbed, contexts) {
 
 /**
  * The waypoints after `path[0]` with every cell between lattice neighbours inserted as a snapped
- * checkpoint. Kept only when core measures the expanded path at exactly the same cost.
+ * checkpoint. Kept only when core measures the expanded path at exactly the same cost. Off the lattice (a narrow
+ * way's walk on its centre line, 0.10 R9) a waypoint is a checkpoint where it enters a new square; one the pathfinder
+ * left no checkpoint in the square the walk is already in stays none (its shape, not a place to stop).
  */
 function withCheckpoints(token, path) {
   const s = gridSize(token);
   const out = [];
+  const square = p => `${Math.floor((p.x + ((p.width ?? 1) * s) / 2) / s)},${Math.floor((p.y + ((p.height ?? 1) * s) / 2) / s)}`;
   for (let k = 1; k < path.length; k++) {
     const a = path[k - 1], b = path[k];
     const di = (b.y - a.y) / s, dj = (b.x - a.x) / s;
@@ -211,8 +214,8 @@ function withCheckpoints(token, path) {
       for (const c of cells.slice(1, -1)) {
         out.push({ ...b, x: a.x + c.j * s, y: a.y + c.i * s, snapped: true, explicit: false, checkpoint: c.checkpoint });
       }
-    }
-    out.push({ ...b, checkpoint: true });
+      out.push({ ...b, checkpoint: true });
+    } else out.push({ ...b, checkpoint: k === path.length - 1 || b.checkpoint !== false || square(a) !== square(b) });
   }
   try {
     const before = token.measureMovementPath(path, { preview: false })?.cost;
@@ -1428,8 +1431,12 @@ async function routeAtTurn(token, e, q = null) {
   let end = null;
   if (e.leader && (q?.shape ?? "march") === "march") {
     const end0 = { ...e.dest };
+    // Dropped in a tight square (0.10 R9): where it may rest there, on the narrow way's centre line, off the grid.
+    let rest = null;
+    try { rest = feature.exposed.pathfindRestPoint?.(token, end0, { preview: true }) ?? null; } catch (err) { log?.debug?.("fight: a rest point", err); }
+    if (rest && !taken(rest)) end = { ...e.dest, x: rest.x, y: rest.y, snapped: false };
     // On a token, or where it cannot stand (off the scene, in rock): the nearest clear square (as a march out of combat).
-    if (taken(end0) || !fits(end0)) {
+    else if (taken(end0) || !fits(end0)) {
       let spot = null;
       try { spot = clearOfWalls(token, end0, { taken, snap: true }); } catch (err) { log?.debug?.("fight: a clear square", err); }
       if (spot && !taken(spot) && fits(spot)) end = { ...e.dest, x: spot.x, y: spot.y, snapped: true };
@@ -1527,7 +1534,8 @@ function fightSteps(token, e, way) {
       for (let k = 1; k <= wps.length; k++) costs.push(token.measureMovementPath([way.origin, ...wps.slice(0, k)], { preview: false })?.cost ?? Infinity);
     }
     const fw = fightWalk(wps.length + 1, { free, costs, left: speed ? speed.left : null });
-    wps = wps.slice(0, fw.end).map((p, k) => ({ ...p, checkpoint: fw.checkpoints[k + 1] }));
+    // A narrow way's shape points inside a square stay none (withCheckpoints); its end is one.
+    wps = wps.slice(0, fw.end).map((p, k) => ({ ...p, checkpoint: fw.checkpoints[k + 1] && p.checkpoint !== false }));
     if (wps.length) wps[wps.length - 1] = { ...wps.at(-1), explicit: true, checkpoint: true };
     Object.assign(out, { waypoints: wps, sent: fw.end, short: fw.short, why: fw.why, inside: fw.paid - fw.end });
   } catch (err) { log?.debug?.("fight: the walk's squares", err); }

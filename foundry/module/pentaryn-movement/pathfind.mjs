@@ -23,7 +23,8 @@ import { LIMITS } from "./pathfind-core.mjs";
 import { MOTION } from "./motion-core.mjs";
 import { MODULE } from "./movement-core.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
-import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
+import { fieldFor, narrowFor, placesToAvoid } from "./pathfind-adapter.mjs";
+import { walkFor } from "./narrow-core.mjs";
 import { fitPath } from "./group-adapter.mjs";
 
 /**
@@ -68,6 +69,15 @@ function dropMemo() {
   memoBorn = Date.now();
 }
 
+/**
+ * The narrow-way fields (0.10 R9, narrow-core), one per scene, wall type, size and preview: they depend on the walls
+ * alone (and, for a player's preview, the fog this client has explored), so they outlive the step cache. Dropped when
+ * a wall or door changes, on a new canvas, and (a preview's) when fog is explored.
+ */
+let narrowCache = new Map();
+function dropNarrow() { narrowCache = new Map(); }
+function dropNarrowPreview() { for (const k of [...narrowCache.keys()]) if (!k.endsWith("|f")) narrowCache.delete(k); }
+
 /** The FogManager this client listens to for "explored" (core's TokenLayer re-plans on it too). */
 let fogTarget = null;
 function watchFog() {
@@ -76,10 +86,12 @@ function watchFog() {
   unwatchFog();
   if (typeof fog?.addEventListener !== "function") return;
   fog.addEventListener("explored", dropMemo);
+  fog.addEventListener("explored", dropNarrowPreview);
   fogTarget = fog;
 }
 function unwatchFog() {
   fogTarget?.removeEventListener?.("explored", dropMemo);
+  fogTarget?.removeEventListener?.("explored", dropNarrowPreview);
   fogTarget = null;
 }
 
@@ -104,6 +116,55 @@ function skipFor(token, waypoints, options) {
   });
 }
 
+/** The narrow field this token's move would use (0.10 R9), or null (a bigger token, ghost, no wall test). */
+function narrowOf(token, wp, options) {
+  const src = token.document?._source ?? {};
+  const w = wp?.width ?? src.width ?? 1, h = wp?.height ?? src.height ?? 1;
+  if (options?.constrainOptions?.ignoreWalls || w > 1 || h > 1) return null;
+  const action = wp?.action ?? token.document?.movementAction;
+  const cfg = CONFIG.Token?.movement?.actions?.[action];
+  const wallType = cfg ? cfg.walls : "move";
+  const look = !!options?.preview && !game.user?.isGM && !!globalThis.canvas?.visibility?.tokenVision;
+  return narrowFor(token, { wallType, look, width: w, height: h, cache: narrowCache });
+}
+
+/**
+ * Where a token may rest near top-left position `p` on a narrow way (0.10 R9: a drop point inside a tight area means
+ * the nearest centre-line point): { x, y } top-left pixels, the same point when it already keeps the pass radius
+ * (the centre line where the way is narrower than the token), or null when `p` is not in a tight square or nothing
+ * near is passable. Reads only.
+ */
+function restPointFor(token, p, options = {}) {
+  const nf = narrowOf(token, p, options);
+  if (!nf || !Number.isFinite(p?.x) || !Number.isFinite(p?.y)) return null;
+  const s = nf.s;
+  const src = token.document?._source ?? {};
+  const w = p.width ?? src.width ?? 1, h = p.height ?? src.height ?? 1;
+  const c = { x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s };
+  if (!nf.tight(Math.floor(c.y), Math.floor(c.x))) return null;
+  const r = nf.restPoint(c);
+  if (!r) return null;
+  return { x: Math.round(r.x * s - (w * s) / 2), y: Math.round(r.y * s - (h * s) / 2) };
+}
+
+/**
+ * A drag's or a route's explicit waypoints with each one in a tight square moved to where the token may rest there
+ * (restPointFor; it moves at most a few pixels where it already stands on the centre line). The same array when none
+ * moves.
+ */
+function narrowGoals(token, waypoints, options) {
+  let out = null;
+  for (let k = 1; k < (waypoints?.length ?? 0); k++) {
+    const p = waypoints[k];
+    if (!p || (!p.explicit && k < waypoints.length - 1)) continue;
+    const r = restPointFor(token, p, options);
+    if (!r || (Math.abs(r.x - p.x) < 1 && Math.abs(r.y - p.y) < 1)) continue;
+    out ??= [...waypoints];
+    out[k] = { ...p, x: r.x, y: r.y, snapped: false };
+  }
+  return out ?? waypoints;
+}
+
 /** A leg can be searched when only x/y change along it (no elevation, size, level or action change). */
 function searchable(a, b) {
   const keys = ["elevation", "width", "height", "level", "action", "shape"];
@@ -123,25 +184,85 @@ function inCombat(token) {
 function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   const leg = { a, b, state: "more", points: null, arcs: 0, nodes: 0, field: null, job: null };
   if (!searchable(a, b)) { leg.state = "none"; return leg; }
+  const fight = inCombat(token);
   const f = fieldFor(token, a, b, {
     preview: !!options.preview, constrain: options.constrainOptions ?? {},
     measureOptions: options.measureOptions ?? {}, terrainOptions: options.terrainOptions ?? {},
-    memo: memoNow(), automation: dnd5eMovementAutomation(), avoid, rounded: !inCombat(token),
+    memo: memoNow(), automation: dnd5eMovementAutomation(), avoid, rounded: !fight, narrowCache,
   });
   leg.field = f;
-  // An unsnapped start joins the lattice at its nearest node, if that first move is open.
-  const start = f.nodeOf(a);
-  const lead = f.onLattice(a) ? null : f.pos(start);
+  const nf = f.narrow;
+  // An unsnapped start joins the lattice at its nearest node, if that first move is open. In a tight square (0.10
+  // R9: a token resting on a narrow way's centre line) it starts in the part of the square it stands in instead.
+  let start = f.nodeOf(a);
+  let lead = f.onLattice(a) ? null : f.pos(start);
+  if (nf && (nf.tight(start) || (lead && !f.clear(a, lead)))) {
+    const at = nf.field.nodeAt(nf.centre(a));
+    if (at) { start = nf.fromAbs(at.I, at.J, at.c); lead = null; }
+  }
   if (lead && !f.clear(a, lead)) { leg.state = "none"; return leg; }
   leg.lead = lead;
-  // A goal off the lattice (H2-01): the route ends on its node, then one short hop to the goal, which must be open.
-  const tail = f.onLattice(b) ? null : f.pos(f.goal);
+  // A goal off the lattice (H2-01): the route ends on its node, then one short hop to the goal, which must be open;
+  // in a tight square the part of it the goal lies in, the walk ending on the goal itself.
+  let goal = f.goal;
+  let tail = f.onLattice(b) ? null : f.pos(f.goal);
+  if (nf && (nf.tight(goal) || (tail && !(f.clear(tail, b) || (tail.x === Math.round(b.x) && tail.y === Math.round(b.y)))))) {
+    const at = nf.field.nodeAt(nf.centre(b));
+    if (at) { goal = nf.fromAbs(at.I, at.J, at.c); tail = null; leg.fineGoal = true; }
+  }
   if (tail && !(f.clear(tail, b) || (tail.x === Math.round(b.x) && tail.y === Math.round(b.y)))) { leg.state = "none"; return leg; }
   leg.job = pf.searchWide({
-    start, goal: f.goal, edge: f.edge, wall: f.wall, unit: f.unit, maxNodes: LIMITS.maxNodes, now,
+    start, goal, edge: f.edge, wall: f.wall, unit: f.unit, maxNodes: LIMITS.maxNodes, now, more: nf?.more ?? null,
   }, f.lattice);
   leg.finish = () => {
     leg.nodes = leg.job.expanded;
+    // Through a narrow way (R9): one walk on its centre line, its corners every chord of it (no string pull, no arcs:
+    // the band is both); in a fight its checkpoints are where the centre line enters each square.
+    const path = leg.job.path;
+    const parts = !!nf && !!path?.some(n => n.c);
+    // On whole squares only (no part of a tight square): today's route, unless it passes a tight square closer than
+    // the pass radius to a wall (constraint 1: the finer test only where the plain one fails).
+    const plainOk = () => {
+      const pulled = pf.stringPull(path, leg.job.costs, { edge: f.edge, wall: f.wall, lineOk: f.lineOk });
+      const c = pulled.map(n => nf.centre(f.pos(n)));
+      const pts = [nf.centre(a), ...c.slice(1, -1), nf.centre(b)];
+      for (let k = 1; k < pts.length; k++) {
+        const p = pts[k - 1], q = pts[k];
+        if (!nf.field.tight(Math.floor(p.y), Math.floor(p.x)) && !nf.field.tight(Math.floor(q.y), Math.floor(q.x))
+          && !nf.field.crosses(p, q)) {
+          // A segment between two plain squares may still cut a tight one: its samples tell.
+          const L = Math.hypot(q.x - p.x, q.y - p.y);
+          let tight = false;
+          for (let s = 1; s < Math.ceil(L / 0.5) && !tight; s++) { const t = s / Math.ceil(L / 0.5); tight = nf.field.tight(Math.floor(p.y + (q.y - p.y) * t), Math.floor(p.x + (q.x - p.x) * t)); }
+          if (!tight) continue;
+        }
+        const dp = nf.field.clearance(p.x, p.y), dq = nf.field.clearance(q.x, q.y);
+        if (dp < nf.field.passMin || dq < nf.field.passMin || !nf.field.segOk(p, dp, q, dq)) return false;
+      }
+      return true;
+    };
+    if (nf && (parts || (path?.some(n => nf.tight(n)) && !plainOk()))) {
+      const pull = (k0, k1) => {
+        const sub = path.slice(k0, k1 + 1), sc = leg.job.costs.slice(k0, k1 + 1);
+        const kept = pf.stringPull(sub, sc, { edge: f.edge, wall: f.wall, lineOk: f.lineOk });
+        return kept.map(n => k0 + sub.indexOf(n));
+      };
+      let walk = null;
+      try {
+        walk = walkFor(nf.field, path.map(n => ({ ...nf.toAbs(n), c: n.c ?? 0 })),
+          { from: nf.centre(a), to: nf.centre(b), fight, pull, okSeg: nf.okSeg });
+      } catch (err) { log?.debug?.("narrow walk", err); walk = null; }
+      if (walk) {
+        const pts = walk.points.slice(1, -1).map(p => ({ ...nf.topLeft(p), ...(p.checkpoint !== undefined ? { checkpoint: !!p.checkpoint } : {}) }));
+        leg.points = pts;
+        leg.smoothed = null;
+        leg.narrow = { narrow: !!walk.narrow, minClearance: walk.minClearance, settled: walk.settled };
+        return;
+      }
+      // No walk that keeps the radius: a path through a part of a tight square is no route; one on whole squares
+      // is the plain test's, as before.
+      if (path.some(n => n.c)) { leg.state = "none"; leg.points = null; return; }
+    }
     const pulled = pf.stringPull(leg.job.path, leg.job.costs, { edge: f.edge, wall: f.wall, lineOk: f.lineOk });
     let pts = pulled.map(n => ({ ...f.pos(n), lattice: true }));
     if (lead) pts = [{ x: a.x, y: a.y }, ...pts];
@@ -157,10 +278,13 @@ function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   return leg;
 }
 
-/** Waypoints for the expanded list: the corners as non-explicit, non-checkpoint waypoints. */
+/**
+ * Waypoints for the expanded list: the corners as non-explicit, non-checkpoint waypoints (a narrow way's walk in a
+ * fight names its own: where its centre line enters a square).
+ */
 function cornerWaypoints(leg, useArcs) {
   const pts = (useArcs && leg.smoothed) || leg.points || [];
-  return pts.map(p => leg.field.waypoint(p, { snapped: p.lattice ? !!leg.b.snapped : false }));
+  return pts.map(p => leg.field.waypoint(p, { snapped: p.lattice ? !!leg.b.snapped : false, ...(p.checkpoint !== undefined ? { checkpoint: p.checkpoint } : {}) }));
 }
 
 /* -------------------------------------------- */
@@ -229,12 +353,19 @@ function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid
       at: new Date().toISOString(), tokenId: token.document?.id ?? null, legs: legs.length,
       found: legs.filter(l => l.state === "found").length, nodes: legs.reduce((s, l) => s + l.nodes, 0),
       ms: Math.round(ms * 10) / 10, reached: reach, of: waypoints.length, arcs, improved: best !== base.result,
-      async: ms > LIMITS.sliceMs, memo: memo.size,
+      async: ms > LIMITS.sliceMs, memo: memo.size, ...narrowOfLegs(legs),
     };
     return best;
   };
 
   return { step, result, legs };
+}
+
+/** A plan's narrow-way facts (R13): narrow (a way narrower than the token on it), minClearance (squares), or {}. */
+function narrowOfLegs(legs) {
+  const n = legs.filter(l => l.state === "found" && l.narrow);
+  if (!n.length) return { narrow: false, minClearance: null };
+  return { narrow: n.some(l => l.narrow.narrow), minClearance: Math.round(Math.min(...n.map(l => l.narrow.minClearance)) * 1000) / 1000 };
 }
 
 /**
@@ -360,9 +491,14 @@ function patchFind() {
     target: proto, name: "findMovementPath", label: "Token#findMovementPath",
     marker: "__pentarynMovementPath", adjustments: "movement-pathfind-find-path",
   }, function (wrapped, waypoints, options = {}) {
-    const base = wrapped(waypoints, options);
-    if (bypass) return base;
-    try { return pathfindJob(this, waypoints, options, wrapped, base) ?? base; }
+    if (bypass) return wrapped(waypoints, options);
+    // A point dropped in a tight square is where the token may rest there (R9), when this drag is pathfound.
+    let wps = waypoints;
+    try {
+      if (!feature?.exposed?.groupFollower?.(this) && !skipFor(this, waypoints, options)) wps = narrowGoals(this, waypoints, options);
+    } catch (err) { log.debug?.("narrow goals", err); wps = waypoints; }
+    const base = wrapped(wps, options);
+    try { return pathfindJob(this, wps, options, wrapped, base) ?? base; }
     catch (err) { log.warnOnce("pathfind", "pathfinding skipped (further errors suppressed)", err); return base; }
   });
   return true;
@@ -449,7 +585,8 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
     try { return token.findMovementPath(w, o); } finally { bypass = false; }
   };
   const t0 = now();
-  const ends = [origin, dest];
+  let ends = [origin, dest];
+  try { if (!constrainOptions?.ignoreWalls) ends = narrowGoals(token, ends, options); } catch { ends = [origin, dest]; }
   const base = call(ends, options);
   if (!Array.isArray(base?.result)) return { reached: false, straight: false, path: null, cost: null, legs: [], arcs: 0, ms: 0 };
   const reached = pf.reachedCount(base.result, ends, same);
@@ -464,7 +601,7 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
       { x: base.result[k - 1].x + (w * s) / 2, y: base.result[k - 1].y + (h * s) / 2 },
       { x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 }))));
   const squeezed = !constrainOptions?.ignoreWalls && fitPath(token, base.result).cut;
-  let path = base.result, legs = [], arcs = 0, partial = null, unfinished = false;
+  let path = base.result, legs = [], arcs = 0, partial = null, unfinished = false, narrow = { narrow: false, minClearance: null };
   if (reached === 1 || crosses || risky || squeezed) {
     const smoothing = (smooth ?? arcsOn()) && !inCombat(token);
     const big = !constrainOptions?.ignoreWalls && ((w > 1) || (h > 1));
@@ -478,7 +615,8 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
     if (big && path?.length) { try { partial = fitPath(token, path).path; } catch { partial = null; } }
     if ((crosses || risky || squeezed) && path === base.result) path = null;   // no way round: the caller keeps what it had
     else if (path && !constrainOptions?.ignoreWalls && fitPath(token, path).cut) path = null;
-    legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs }));
+    legs = plan.legs.map(l => ({ state: l.state, nodes: l.nodes, corners: l.points?.length ?? 0, arcs: l.arcs, ...(l.narrow ? { narrow: l.narrow.narrow, minClearance: l.narrow.minClearance } : {}) }));
+    narrow = narrowOfLegs(plan.legs);
     // Stopped by its cap with a leg still searching: "not found yet", never "no way there" (H4-01).
     unfinished = legs.some(l => l.state === "more");
     arcs = last?.arcs ?? 0;
@@ -487,7 +625,7 @@ function* routeSteps(token, origin, dest, { preview = false, smooth = null, avoi
   return {
     reached: !!path && pf.reachedCount(path, ends, same) === 2,
     straight: reached === 2 && !crosses && !risky, path, cost, legs, arcs, ms: Math.round((now() - t0) * 10) / 10,
-    unfinished, partial,
+    unfinished, partial, ...narrow, goal: ends[1] === dest ? null : { x: ends[1].x, y: ends[1].y },
   };
 }
 
@@ -510,6 +648,9 @@ function route(tokenDoc, opts = {}) {
     straight: r.straight,
     waypoints: (r.path ?? []).map(w => ({ x: w.x, y: w.y, explicit: !!w.explicit })),
     cost: r.cost, arcs: r.arcs, legs: r.legs, ms: r.ms,
+    // 0.10 R9: through a way narrower than the token, the least clearance from a wall (squares), and the rest point
+    // a destination in a tight square moved to (null: where asked).
+    narrow: !!r.narrow, minClearance: r.minClearance ?? null, goal: r.goal ?? null,
   };
 }
 
@@ -538,8 +679,10 @@ export function install(reg, ctx) {
   for (const key of ["pathfinding", "pathfindMine"]) ctx.onSettingChange(key, onSetting);
   if (ctx.late) findPatched = patchFind();
   else reg.once("setup", () => { findPatched = patchFind(); }, { guard: false, label: "setup: wrap findMovementPath" });
-  for (const h of DROP_HOOKS) reg.on(h, dropMemo, { label: `${h}: drop path cache` });
-  reg.on("canvasReady", () => { dropMemo(); watchFog(); }, { label: "canvasReady: drop path cache, watch fog explored" });
+  // A wall or door change also drops the narrow-way fields (0.10 R9): they depend on the walls alone.
+  const dropWalls = () => { dropMemo(); dropNarrow(); };
+  for (const h of DROP_HOOKS) reg.on(h, h.endsWith("Wall") ? dropWalls : dropMemo, { label: `${h}: drop path cache` });
+  reg.on("canvasReady", () => { dropMemo(); dropNarrow(); watchFog(); }, { label: "canvasReady: drop path cache, watch fog explored" });
   if (ctx.late) watchFog();
   ctx.expose({
     pathfindStatus: status,
@@ -551,6 +694,8 @@ export function install(reg, ctx) {
     pathfindSkip: token => !!skipFor(token, [null, null], { constrainOptions: {} }),
     pathfindPatched: () => findPatched,
     pathfindMemo: memoNow,
+    pathfindNarrowCache: () => narrowCache,
+    pathfindRestPoint: restPointFor,
   });
 }
 
@@ -560,6 +705,7 @@ export function uninstall() {
   findPatched = false;
   unwatchFog();
   dropMemo();
+  dropNarrow();
   last = null;
   if (feature) for (const key of ["pathfinding", "pathfindMine"]) feature.onSettingChange(key, null);
   feature = null;
