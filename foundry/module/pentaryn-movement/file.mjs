@@ -8,9 +8,11 @@
  * (the pathfinder's, round the tokens standing outside the group and the squares given out before it; the leader's
  * through its own group), the floods on the pathfinder's shared step memo. A member with no square it can reach stays
  * and is named; the leader with no way moves nobody ("No route there").
- * The start delays (0.9's B1, unchanged until L2): each member that moves gets one (file-core staggerFile, the last
- * at most 4 s after the drop). The members at 0 go in the drop's own update; every later wave goes by setTimeout
- * (drop.mjs sends it). In a fight: the order and each member's square at its turn (fightPlan, slotAtTurn).
+ * The motion (0.10 L2, R5): the leader goes in the drop's own update, the pack one wave (150 ms) later, or once a
+ * leader that starts behind is a wave past the frontmost member; single file only at a narrow point (a door, a
+ * one-wide way), and a member is held while one would walk through it at rest; the last at most 4 s after the drop
+ * (file-core staggerFile). Every later wave goes by setTimeout (drop.mjs sends it). In a fight: the order and each
+ * member's square at its turn (fightPlan, slotAtTurn).
  *
  * Which tokens move together: this client holds every group it sent until its members are at rest, its waves are
  * sent and its fight queue is done (read when asked), and every client learns a group's members and its sender from
@@ -27,7 +29,7 @@
  */
 
 import { STAGGER, planLead, staggerFile } from "./file-core.mjs";
-import { radiusOf } from "./motion-core.mjs";
+import { GROUP_MAX, radiusOf } from "./motion-core.mjs";
 import { avoidDist } from "./pathfind-core.mjs";
 import { gridSize, inCombat, memberOf, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
@@ -52,8 +54,6 @@ const tagOf = new Map();
 const HOLD_MS = 60000;
 let stopped = null;                        // the last stop of a group (stop.mjs), for status()
 
-/** The most members a group drag plans (more: core's own drop; R11 raises it to 24 once the page gate passes). */
-const FILE_MAX = 12;
 
 /** A moving token: drawn walking, or between two squares of its move. */
 function movingNow(doc) {
@@ -320,22 +320,30 @@ function onGroupTag(doc, options, userId) {
   }
   if (!options?.pentarynMovementStop || !doc?.id || userId === globalThis.game?.user?.id) return;
   if (!groupOf.has(doc.id)) return;
-  stopGroupHere(doc, "foreign");
+  stopGroupHere(doc, "foreign", options.pentarynMovementStopAt ?? null);
 }
 
 /**
  * Stop the group token `doc` belongs to, on the client that sent it: everything unsent goes, and each other member
- * still walking stops where it is drawn (stop.mjs's displace out of combat; stopSafely in a fight). Returns the ids
- * stopped (the members' ids, `doc` itself left to whoever stopped it).
+ * still walking stops where it is drawn (stop.mjs's displace out of combat; stopSafely in a fight). `restAt`: where the
+ * stop of `doc` will rest when it is carried on past a door or clear of a token (its write names it, top-left pixels;
+ * 0.10 L2 fix (b): a mate was rested there). Returns the ids stopped (the members' ids, `doc` itself left to whoever
+ * stopped it).
  */
-function stopGroupHere(doc, why) {
+function stopGroupHere(doc, why, restAt = null) {
   const ids = groupCancel(doc.id, { why });
   const scene = doc.parent;
   const out = [];
   const list = ids.filter(id => id !== doc.id).map(id => scene?.tokens?.get?.(id))
     .filter(d => d?.object && !d.object.destroyed && d.movement?.user?.isSelf && movingNow(d));
-  // One stop for the rest: none rests inside another, nor inside the one stopped already (0.9.0 simulator, step 5).
+  // One stop for the rest: none rests inside another, nor inside the one stopped already, nor where it will rest
+  // (0.9.0 simulator, step 5; 0.10 L2).
   const group = { skip: new Set(list.map(d => d.id)), claims: [] };
+  if (Number.isFinite(restAt?.x) && Number.isFinite(restAt?.y) && doc._source) {
+    const s = gridSize(doc.object ?? { document: doc });
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    group.claims.push({ id: doc.id, x: restAt.x + (w * s) / 2, y: restAt.y + (h * s) / 2, r: radiusOf(w, h) * s });
+  }
   for (const d of list) {
     try {
       if (inCombat(d)) feature?.exposed?.stopSafely?.(d);
@@ -438,11 +446,12 @@ function routeOracle(origins, s) {
 
 /**
  * Plan a group drop by the leader rule (out of combat): the shape from where it lands (R2), planLead's slots and
- * routes, then the start delays (staggerFile; the last within 4 s of the drop). `anchor` is the grabbed token (or its
- * mount); riders walk with their leaders (drop.mjs). Returns { plan, members, timing }, or null when there is nothing
- * to plan. Reads only; never throws past the caller's catch (drop.mjs: core's drop).
+ * routes, then the start delays (staggerFile, R5: the leader at once, the pack one wave later, single file only at a
+ * narrow point, the last within 4 s of the drop). `anchor` is the grabbed token (or its mount); riders walk with their
+ * leaders (drop.mjs). Returns { plan, members, timing }, or null when there is nothing to plan. Reads only; never
+ * throws past the caller's catch (drop.mjs: core's drop).
  */
-function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
+function planDrop(anchor, contexts, { constrain = {} } = {}) {
   if (!feature || !anchor || contexts.length < 1) return null;
   const { s, members, standing, origins, walkable, step } = oraclesFor(anchor, contexts, constrain);
   const L = members[0];
@@ -452,10 +461,10 @@ function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
   // The start delays, the last within 4 s of the drop (the plan's own time comes off the cap).
   const walks = plan.order.map(id => members.find(m => m.id === id))
     .filter(m => plan.members[m.id]?.points?.length >= 2 && !plan.members[m.id].stay)
-    .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed }));
+    .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed, left: plan.members[m.id].left }));
   const capMs = Math.max(0, Math.floor((STAGGER.capMs - (plan.ms ?? 0)) / STAGGER.stepMs) * STAGGER.stepMs);
   const t1 = now();
-  const timing = stagger ? staggerFile(walks, { capMs }) : { delays: Object.fromEntries(walks.map(w => [w.id, 0])), order: walks.map(w => w.id), total: 0, crowded: [] };
+  const timing = staggerFile(walks, { capMs, leaderId: plan.leader, step });
   timing.ms = Math.round((now() - t1) * 10) / 10;
   return { plan, members, timing };
 }
@@ -539,7 +548,7 @@ function dryRun(refs, point) {
   const s = gridSize(tokens[0]);
   return {
     ok: true, result: plan.none ? "none" : "plan", shape: plan.shape, leader: plan.leader, target: plan.target,
-    ms: plan.ms, searches: plan.searches, failed: plan.failed, order: plan.order, starts: timing.order, total: timing.total,
+    ms: plan.ms, searches: plan.searches, failed: plan.failed, order: plan.order, starts: timing.order, total: timing.total, pack: timing.pack,
     members: members.map(m => {
       const e = plan.members[m.id];
       const wps = waypointsFor(m, e);
@@ -562,7 +571,7 @@ export function install(reg, ctx) {
   reg.on("deleteCombat", combat => onCombatChange(combat, null), { label: "deleteCombat: the fight's end empties the fight queues" });
   try { globalThis.document?.addEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   ctx.expose({ groupCancel, groupMembers, groupNoteStop, groupHold: holdGroup, groupHeld: heldCount, groupStopped: stoppedLast,
-    groupMax: () => FILE_MAX, groupPlan: planDrop, groupFightPlan: fightPlan, groupSlotAtTurn: slotAtTurn, groupWaypoints: waypointsFor, groupDryRun: dryRun,
+    groupMax: () => GROUP_MAX, groupPlan: planDrop, groupFightPlan: fightPlan, groupSlotAtTurn: slotAtTurn, groupWaypoints: waypointsFor, groupDryRun: dryRun,
     groupWaves: scheduleWaves, groupPending: pendingWaves, groupFlushed: () => (flushLast ? { ...flushLast } : null),
     groupQueue: setQueue, groupQueueDone: queueDone, groupCancelQueues: cancelQueues });
 }

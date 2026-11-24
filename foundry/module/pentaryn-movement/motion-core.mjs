@@ -232,6 +232,55 @@ function hit(t, q, tau) {
   return { t, d: Math.sqrt(Math.max(q.a * tau * tau + q.b * tau + q.c, 0)) };
 }
 
+/** The measure of { τ in [0, T] : q(τ) < lim² } (one stretch of two linear motions). */
+function measureBelow(q, lim, T) {
+  if (lim <= 0 || !(T > 0)) return 0;
+  const c = q.c - lim * lim;
+  if (q.a < 1e-12) {
+    if (Math.abs(q.b) < 1e-12) return c < 0 ? T : 0;
+    const root = Math.min(Math.max(-c / q.b, 0), T);
+    return q.b > 0 ? root : T - root;
+  }
+  const disc = q.b * q.b - 4 * q.a * c;
+  if (disc <= 0) return 0;
+  const s = Math.sqrt(disc);
+  return Math.max(0, Math.min((-q.b + s) / (2 * q.a), T) - Math.max((-q.b - s) / (2 * q.a), 0));
+}
+
+/**
+ * How long (ms) two trajectories are both moving and closer than `lim` (0.10 L2, R5: a deep, long overlap of two
+ * movers holds a pair apart; a crossing on open ground is brief). Exact for piecewise-linear motion.
+ */
+export function closeTime(A, B, lim) {
+  const bt = breakpoints(A, B);
+  let total = 0;
+  for (let k = 1; k < bt.length; k++) {
+    const t0 = bt[k - 1], t1 = bt[k], T = t1 - t0;
+    if (!(T > 0) || !moving(A, t0, t1) || !moving(B, t0, t1)) continue;
+    const a0 = positionAt(A, t0), b0 = positionAt(B, t0), a1 = positionAt(A, t1), b1 = positionAt(B, t1);
+    const P = { x: a0.x - b0.x, y: a0.y - b0.y };
+    const V = { x: ((a1.x - a0.x) - (b1.x - b0.x)) / T, y: ((a1.y - a0.y) - (b1.y - b0.y)) / T };
+    total += measureBelow(quad(P, V), lim, T);
+  }
+  return total;
+}
+
+/** The nearest a trajectory comes to point `p` while it moves within [t0, t1] (ms), or Infinity when it does not move then. */
+export function nearestWhile(tr, p, t0, t1) {
+  const lo = Math.max(t0, tr.start), hi = Math.min(t1, tr.end);
+  if (!(hi >= lo) || !(tr.end > tr.start)) return Infinity;
+  let best = Infinity;
+  for (let k = 1; k < tr.pts.length; k++) {
+    const s0 = Math.max(lo, tr.times[k - 1]), s1 = Math.min(hi, tr.times[k]);
+    if (s1 < s0) continue;
+    const a = positionAt(tr, s0), b = positionAt(tr, s1);
+    const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+    const u = L2 > 1e-12 ? Math.min(Math.max(((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+    best = Math.min(best, Math.hypot(p.x - (a.x + (b.x - a.x) * u), p.y - (a.y + (b.y - a.y) * u)));
+  }
+  return best;
+}
+
 /** The smallest distance between two trajectories over all time (tests and status). */
 export function minSeparation(A, B) {
   const bt = breakpoints(A, B);
@@ -288,7 +337,8 @@ export function cellChain(nodes, every = MOTION.checkpointEvery) {
 /*  Decision tables                             */
 /* -------------------------------------------- */
 
-export const GROUP_MAX = 12;
+/** The most members a group drag takes, out of combat and in a fight (0.10 R11: 24, was 12). */
+export const GROUP_MAX = 24;
 
 /**
  * How should a drop with these drag contexts be committed? Pure inputs, one row per reason.
@@ -344,6 +394,20 @@ export function segmentsCross(p, q, a, b) {
     && Math.min(u.y, v.y) - EPS <= w.y && w.y <= Math.max(u.y, v.y) + EPS;
   return (Math.abs(d1) <= EPS && on(a, b, p)) || (Math.abs(d2) <= EPS && on(a, b, q))
     || (Math.abs(d3) <= EPS && on(p, q, a)) || (Math.abs(d4) <= EPS && on(p, q, b));
+}
+
+/**
+ * Does a one-way wall let a move from `origin` through (0.10 L2 fix (d))? Foundry's own reading (Edge#orientPoint and
+ * the polygon's wall inclusion): a wall with a direction (dir 1 LEFT, 2 RIGHT) blocks only a move that starts on the
+ * other side of it; a move from the side it names, or a wall with no direction (0, BOTH), and a start on its line, do
+ * not pass. `c` is the wall's [x0, y0, x1, y1]; any units.
+ */
+export function wallOpenFrom(c, dir, origin) {
+  const d = Number(dir);
+  if (!(d === 1 || d === 2) || !Array.isArray(c) || c.length < 4 || !origin) return false;
+  const o = (c[1] - origin.y) * (c[2] - origin.x) - (c[0] - origin.x) * (c[3] - origin.y);
+  if (Math.abs(o) < 1e-9) return false;
+  return (o < 0 ? 1 : 2) === d;
 }
 
 /**

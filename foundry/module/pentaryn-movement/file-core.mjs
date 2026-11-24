@@ -3,15 +3,15 @@
  * rule, 2026-11-24; Fable's review 3 §1). No Foundry globals.
  *   - planLead (below, "The leader plan"): the token grabbed leads; where it is dropped picks the shape (march / swarm);
  *     each member takes the best-ranked free square it can reach and gets one route search to it.
- *   - staggerFile: the start delays of the members that move (the last within 4 s of the drop).
+ *   - staggerFile (0.10 L2, R5): the start delays: the leader at once, the pack one wave later, single file only at a
+ *     narrow point (the last within 4 s of the drop).
  * Units: centres in grid squares (as motion-core). Touching is fine; coming inside is not. (0.10 L1: the 0.9 B0
  * planner, its formation spots, candidate rings, walk ratio, tries, route-clearance test, fixed-point passes,
  * reorders and waveWays are gone.)
  */
 
-import { MOTION, delayed, dist, firstConflict, trajectory } from "./motion-core.mjs";
+import { MOTION, closeTime, delayed, dist, nearestWhile, trajectory } from "./motion-core.mjs";
 import { firstIntrusion, pathLength } from "./group-core.mjs";
-import { sequence } from "./sequence-core.mjs";
 
 const EPS = 1e-6;
 
@@ -35,17 +35,30 @@ export function routeEnters(points, r, circles, slack = SLACK) {
 }
 
 /* -------------------------------------------- */
-/*  The start delays (0.9 B1, step 3)           */
+/*  The start delays (0.10 L2, R5)              */
 /* -------------------------------------------- */
 
 /**
- * B1's timing (Fable's review 2 §2 "Tier B, the file", §4 step 3). Every start delay is a multiple of `stepMs` (one
- * wave each), and the last one is at most `capMs` after the drop: within 4 s of the drop every member's move is on the
- * server (the one rule). Never a cut and never a second pass: a member that finds no clear delay under the cap takes
- * the one it meets fewest walkers at (soft: two movers may brush, Joe 2026-11-24); its route and slot stay B0's, so
- * nothing hard depends on the timing. (0.10 L1: unchanged from 0.9; L2 replaces it.)
+ * The motion of a group drag out of combat (Joe 2026-11-24; plan §18.2; Fable's review 3 §1 "Motion"). The leader
+ * goes in the drop's own update (delay 0); the pack one wave later (150 ms, about one square), or, when the leader
+ * starts behind, once it is a wave past the frontmost member (4 s at most). Members wait; they never step aside. One
+ * pack on open ground: a pair is held apart only
+ *   - at a narrow point (a one-wide square, or the door in a thin wall): one through at a time;
+ *   - for a deep, long overlap of the two while both move (two ways merging into one lane);
+ *   - when one would walk through the other at rest (still at its start, or already at its slot).
+ * The leader is never held, and walks through its own members (R6): no rest check is made against it. Every delay is
+ * a multiple of `stepMs`, the last at most `capMs` after the drop (within 4 s of the drop every member is on its way,
+ * the one rule); a member that finds no clear delay under the cap goes at the one it meets fewest at (soft), never
+ * cut short: its route and slot are planLead's.
  */
-export const STAGGER = Object.freeze({ capMs: 4000, stepMs: MOTION.waveMs });
+export const STAGGER = Object.freeze({
+  capMs: 4000,          // the latest start (ms after the drop, the plan's own time off)
+  stepMs: MOTION.waveMs,// one wave (one batched update)
+  deep: 0.5,            // squares: two movers closer than touching by more than this ...
+  longMs: 400,          // ... for longer than this (ms) are a lane, not a crossing
+  slack: 0.05,          // squares a mover sent in a later wave may graze a member at rest by (the simulator's)
+  brush: 0.15,          // ... and one sent in the same update (MOTION.contact: a brush, never a pass-through)
+});
 
 /** Axis-aligned box of a trajectory's points, grown by `pad`. */
 function boxOf(pts, pad) {
@@ -56,49 +69,158 @@ function boxOf(pts, pad) {
 const boxesMeet = (a, b) => !(a.x0 > b.x1 || b.x0 > a.x1 || a.y0 > b.y1 || b.y0 > a.y1);
 
 /**
- * The start delays of a file.
- * @param {{ id: string, r: number, points: {x,y}[], speed?: number }[]} walks  the members that move, in the plan's
- *        order (the leader first, then least walk left first); centres in squares, speed in squares per second
- * @param {{ capMs?: number, stepMs?: number, gap?: number }} [o]  capMs: the latest start (ms after the drop)
- * @returns {{ delays: Object<string, number>, order: string[], total: number, crowded: string[] }}
- *          order: the start order (sequence-core: never one walking through another standing at its start, nor into
- *          another resting at its end, when an order exists; plan order otherwise); total: the largest delay;
- *          crowded: the members that found no clear delay under the cap (they go at the least crowded one)
- *
- * Each member in that order takes the first delay at which it meets none of the members already timed: as they are
- * drawn from the same update (one wave, no latency buffer), or one wave apart (MOTION.motionGap either way along its
- * way). A member whose walk never comes near another's (open ground) goes at 0.
+ * The narrow points of a floor, from one step between neighbouring squares (`step(a, b)`, walls only; a square (i, j)
+ * is row i, column j): a one-wide square (walled on both sides along one axis: a corridor, the gap in a thick wall),
+ * and the door in a thin wall (an open step whose two neighbouring steps alongside are walled). Each a 1×1 box.
+ * Returns p (squares) → the boxes holding p: [{ key, x, y }] (their centres).
+ */
+export function narrowZones(step) {
+  const open = (a, b) => { try { return !!step(a, b); } catch { return false; } };
+  const cells = new Map(), edges = new Map();
+  const narrowCell = (i, j) => {
+    const k = `${i},${j}`;
+    if (!cells.has(k)) {
+      const c = { i, j };
+      cells.set(k, (!open(c, { i, j: j - 1 }) && !open(c, { i, j: j + 1 })) || (!open(c, { i: i - 1, j }) && !open(c, { i: i + 1, j })));
+    }
+    return cells.get(k);
+  };
+  // The step from (i, j) down (di = 1) or right (dj = 1); its neighbours alongside are shifted across it.
+  const narrowEdge = (i, j, di, dj) => {
+    const k = `${i},${j},${di}`;
+    if (!edges.has(k)) {
+      const a = { i, j }, b = { i: i + di, j: j + dj };
+      const si = dj, sj = di;
+      edges.set(k, open(a, b) && !narrowCell(a.i, a.j) && !narrowCell(b.i, b.j)
+        && !open({ i: a.i - si, j: a.j - sj }, { i: b.i - si, j: b.j - sj }) && !open({ i: a.i + si, j: a.j + sj }, { i: b.i + si, j: b.j + sj }));
+    }
+    return edges.get(k);
+  };
+  return p => {
+    const i = Math.floor(p.y), j = Math.floor(p.x);
+    const out = [];
+    if (narrowCell(i, j)) out.push({ key: `c${i},${j}`, x: j + 0.5, y: i + 0.5 });
+    const vi = p.y - i >= 0.5 ? i : i - 1;
+    if (narrowEdge(vi, j, 1, 0)) out.push({ key: `v${vi},${j}`, x: j + 0.5, y: vi + 1 });
+    const hj = p.x - j >= 0.5 ? j : j - 1;
+    if (narrowEdge(i, hj, 0, 1)) out.push({ key: `h${i},${hj}`, x: hj + 1, y: i + 0.5 });
+    return out;
+  };
+}
+
+/** The parameter range [u0, u1] of segment a→b inside the open box of half-size h round c, or null (Liang–Barsky). */
+function clipBox(a, b, c, h) {
+  let u0 = 0, u1 = 1;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  for (const [p, q] of [[-dx, a.x - (c.x - h)], [dx, c.x + h - a.x], [-dy, a.y - (c.y - h)], [dy, c.y + h - a.y]]) {
+    if (Math.abs(p) < 1e-12) { if (q <= 0) return null; continue; }
+    const r = q / p;
+    if (p < 0) u0 = Math.max(u0, r); else u1 = Math.min(u1, r);
+    if (u0 >= u1) return null;
+  }
+  return [u0, u1];
+}
+
+/** When trajectory `tr` is inside each narrow box it passes: Map key → [[t0, t1], …] (ms, its own times). */
+function zoneSpans(tr, zonesAt) {
+  const out = new Map();
+  if (!zonesAt) return out;
+  for (let k = 1; k < tr.pts.length; k++) {
+    const a = tr.pts[k - 1], b = tr.pts[k], ta = tr.times[k - 1], tb = tr.times[k];
+    const n = Math.max(1, Math.ceil(dist(a, b) / 0.2));
+    const seen = new Map();
+    for (let s = 0; s <= n; s++) for (const z of zonesAt({ x: a.x + ((b.x - a.x) * s) / n, y: a.y + ((b.y - a.y) * s) / n })) seen.set(z.key, z);
+    for (const z of seen.values()) {
+      const u = clipBox(a, b, z, 0.5);
+      if (!u || u[1] - u[0] < 1e-9) continue;
+      const iv = [ta + (tb - ta) * u[0], ta + (tb - ta) * u[1]];
+      const list = out.get(z.key) ?? [];
+      const last = list.at(-1);
+      if (last && iv[0] <= last[1] + EPS) last[1] = Math.max(last[1], iv[1]); else list.push(iv);
+      out.set(z.key, list);
+    }
+  }
+  return out;
+}
+
+/**
+ * The start delays of a group drag.
+ * @param {{ id: string, r: number, points: {x,y}[], speed?: number, left?: number }[]} walks  the members that move, in
+ *        the plan's order (the leader first, then least walk left); centres in squares, speed in squares per second,
+ *        left: its walk to the drop (planLead's), which says whether the leader starts behind
+ * @param {{ leaderId?: string, step?: (a, b) => boolean, capMs?: number, stepMs?: number, gap?: number }} [o]
+ *        leaderId: the leader (delay 0, never held, no rest check against it); step: one step between neighbouring
+ *        squares (the narrow points); capMs: the latest start; gap: the latency buffer (squares) between two waves
+ * @returns {{ delays: Object<string, number>, order: string[], total: number, crowded: string[], pack: number }}
+ *          order: the start order (the plan's); total: the largest delay; crowded: the members that found no clear
+ *          delay under the cap (they go at the least crowded one); pack: the pack's own start
  */
 export function staggerFile(walks, o = {}) {
   const cap = Math.max(0, o.capMs ?? STAGGER.capMs);
   const step = Math.max(1, o.stepMs ?? STAGGER.stepMs);
   const gap = o.gap ?? MOTION.motionGap;
+  const capStep = Math.floor(cap / step + EPS) * step;
   const list = (walks ?? []).filter(w => w?.id && w.points?.length >= 2);
-  const byId = new Map(list.map(w => [w.id, w]));
-  const order = sequence(list).order;
-  const steps = [];
-  for (let d = 0; d <= cap + EPS; d += step) steps.push(d);
-  const fixed = [];               // { tr, r, d, box }
-  const delays = {}, crowded = [];
-  for (const id of order) {
-    const w = byId.get(id);
+  const zonesAt = typeof o.step === "function" ? narrowZones(o.step) : null;
+  const L = list.find(w => w.id === o.leaderId) ?? null;
+  const info = new Map(list.map(w => {
+    const v = (w.speed ?? MOTION.speed) / 1000;                       // squares per ms
     const tr = trajectory(w.points, { speed: w.speed ?? MOTION.speed });
-    const box = boxOf(tr.pts, w.r + gap);
-    const near = fixed.filter(f => boxesMeet(box, f.box));
+    return [w.id, { w, tr, v, box: boxOf(w.points, w.r), spans: zoneSpans(tr, zonesAt), lead: w === L }];
+  }));
+  // The pack: one wave after the leader; when the leader starts behind (by walk to the drop, planLead's `left`), once
+  // it is a wave past the frontmost member.
+  let pack = 0;
+  if (L && list.length > 1) {
+    const lefts = list.filter(w => w !== L).map(w => w.left).filter(Number.isFinite);
+    const behind = Number.isFinite(L.left) && lefts.length ? Math.max(0, L.left - Math.min(...lefts)) : 0;
+    pack = Math.min(capStep, Math.ceil((step + behind / info.get(L.id).v) / step - EPS) * step);
+  }
+  /** Does member B (at delay dB) conflict with A (at dA)? */
+  const conflict = (B, dB, A, dA) => {
+    if (!boxesMeet(B.box, A.box)) return false;
+    const same = Math.abs(dA - dB) < EPS;
+    const TA = delayed(A.tr, dA), TB = delayed(B.tr, dB);
+    // A narrow point: one through at a time (the latency buffer between two waves).
+    for (const [key, sa] of A.spans) {
+      const sb = B.spans.get(key);
+      if (!sb) continue;
+      const m = same ? 0 : gap / Math.min(A.v, B.v);
+      for (const [a0, a1] of sa) for (const [b0, b1] of sb) {
+        if (Math.min(a1 + dA + m, b1 + dB) - Math.max(a0 + dA - m, b0 + dB) > 1) return true;
+      }
+    }
+    // A deep, long overlap of the two moving (two ways merging into one lane).
+    if (closeTime(TA, TB, A.w.r + B.w.r - STAGGER.deep) > STAGGER.longMs) return true;
+    // One walking through the other at rest: still at its start, or already at its slot. Never against the leader.
+    if (A.lead || B.lead) return false;
+    // In the same update a brush is soft, and so is a pass as the other arrives (a crossing): one wave after it has
+    // come to rest it is at rest. Across waves the latency buffer: it may be drawn leaving late, or arriving early.
+    const atRest = (M, R, mR) => {
+      const lim = M.w.r + R.w.r - (same ? STAGGER.brush : STAGGER.slack);
+      const TM = M === A ? TA : TB, TR = R === A ? TA : TB;
+      return nearestWhile(TM, R.w.points[0], -Infinity, TR.start + mR) < lim - EPS
+        || nearestWhile(TM, R.w.points.at(-1), TR.end - mR, Infinity) < lim - EPS;
+    };
+    return atRest(B, A, same ? -step : gap / A.v) || atRest(A, B, same ? -step : gap / B.v);
+  };
+  const delays = {}, crowded = [], timed = [];
+  for (const w of list) {
+    const me = info.get(w.id);
+    if (me.lead) { delays[w.id] = 0; timed.push({ me, d: 0 }); continue; }
     let best = null;
-    for (const d of steps) {
-      const mine = delayed(tr, d);
+    for (let d = pack; d <= capStep + EPS; d += step) {
       let n = 0;
-      for (const f of near) if (firstConflict(mine, f.tr, w.r, f.r, { sameWave: Math.abs(f.d - d) < EPS, gap }) !== null) n += 1;
+      for (const t of timed) if (conflict(me, d, t.me, t.d)) n += 1;
       if (best === null || n < best.n) best = { d, n };
       if (n === 0) break;
     }
-    if (best.n > 0) crowded.push(id);
-    delays[id] = best.d;
-    fixed.push({ tr: delayed(tr, best.d), r: w.r, d: best.d, box: boxOf(tr.pts, w.r) });
+    if (best.n > 0) crowded.push(w.id);
+    delays[w.id] = best.d;
+    timed.push({ me, d: best.d });
   }
   const total = Object.values(delays).reduce((a, b) => Math.max(a, b), 0);
-  return { delays, order, total, crowded };
+  return { delays, order: list.map(w => w.id), total, crowded, pack };
 }
 
 /* -------------------------------------------- */
@@ -223,9 +345,10 @@ export function walkFrom(origins, step, { ok = () => true, maxCells = Infinity, 
  *                                              nothing is searched (a fight routes at its turn).
  * @param {() => number} [o.now]                the plan's clock (ms)
  * @returns {{ shape: "march"|"swarm", leader: string, target: string|null, none: boolean,
- *            members: Object<string, { slot, points, stay?, rank?, atStart? }>, order: string[], stayed: string[],
+ *            members: Object<string, { slot, points, stay?, rank?, atStart?, left }>, order: string[], stayed: string[],
  *            searches: number, failed: number, ms: number, behind: {x,y}|null, lastStep: {x,y}|null }}
- *          none: the leader has no way (nobody moves, "No route there"); stayed: the members named
+ *          none: the leader has no way (nobody moves, "No route there"); stayed: the members named; left: a member's
+ *          walk to the drop (the leader's squares in a march, the target's in a swarm) from where it starts
  */
 export function planLead(spec, o) {
   const now = o.now ?? (() => 0);
@@ -485,5 +608,7 @@ export function planLead(spec, o) {
   }
   if (out.members[L.id]?.stay) return everyoneStays("noRoute");
   out.stayed = out.order.filter(id => out.members[id]?.stay);
+  // Each member's walk to the drop from where it starts (the leader's own, in a march): who is in front (staggerFile).
+  for (const m of members) if (out.members[m.id]) out.members[m.id].left = walkLeft(m);
   return finish();
 }

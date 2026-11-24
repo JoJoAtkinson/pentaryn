@@ -3,14 +3,14 @@
  * standing about, a table of virtual clients (the GM, one to three players, the headless bot), the disturbances
  * (jittered latency always; TCP loss, fog stalls on player tabs, a backgrounded initiator, an observer's dropped socket
  * and reload some of the time), the drops (a group drag, sometimes a second client's drag at nearly the same moment),
- * and what cuts into them (a click, a door shut, a turn change in a fight). `b0: true` runs the same seed with every
- * start delay 0 (B0), for the mover-overlap comparison.
+ * and what cuts into them (a click, a door shut, a turn change in a fight). (0.10 L2: one mode; 0.9's B0 is gone.)
  *
  * The invariants (§2's hard list; each judged on the server's record and on every drawing client's view, frame by
  * frame, on circles):
  *   passThrough   a token drawn moving never comes inside a token standing still: one outside its drop, a mate resting
  *                 at its slot, one named (it stays) (0.05 sq of numeric slack). A mate a stop left short of its slot,
- *                 or one still waiting for its wave, is a mover's business (soft, reported).
+ *                 or one still waiting for its wave, is a mover's business (soft, reported); so is the leader of a
+ *                 drop walking through its own members (0.10 R6, reported as "leader").
  *   wallCross     no committed leg crosses rock; nothing a client sends after it knows a door is shut crosses its line
  *   wrongCharge   in a fight every committed update is one square on from the last, never a position write, and the
  *                 cost recorded is the squares walked
@@ -106,11 +106,12 @@ export function scenario(seed, opts = {}) {
   if (dropped) { const a = T0 + sim.uniform(200, 2000); dropped.offline.push({ a, b: a + 5000 }); }
 
   // noWaveRests / noStopClear switch off the step-5 fixes in the model (drop.mjs sendWave's mates at rest, stop.mjs's
-  // stop clear of a token at rest): a regression seed must still fail with its fix off.
+  // stop clear of a token at rest), noStopAt the 0.10 L2 one (file.mjs stopGroupHere's claim of the carried one's final
+  // spot): a regression seed must still fail with its fix off.
   // `before: true` is all of them, with noFightSpots (drop.mjs routeAtTurn tries only its formation square): the glue
   // as it was at 0802bc85, for a before/after run on that commit's cores.
   const before = !!opts.before;
-  const env = { world, server, clients, b0: !!opts.b0, noWaveRests: before || !!opts.noWaveRests, noStopClear: before || !!opts.noStopClear,
+  const env = { world, server, clients, noWaveRests: before || !!opts.noWaveRests, noStopClear: before || !!opts.noStopClear, noStopAt: !!opts.noStopAt,
     noFightSpots: before || !!opts.noFightSpots, events: [], drops: [], mods: null,
     record: (kind, data) => env.events.push({ t: sim.now, kind, ...data }) };
   for (const c of clients) { c.world = world; c.init(server.snapshot()); }
@@ -169,7 +170,7 @@ export function scenario(seed, opts = {}) {
   if (turnAt !== null) at(turnAt, "turn change", () => { for (const c of clients) net.down(c, { type: "turn" }); });
   for (const c of clients) c.listeners.push(msg => { if (msg.type === "turn") mods.get(c.id).cancelQueues("turn"); });
 
-  const meta = { seed, map: map.name, combat, b0: env.b0, players: nPlayers, lossy, fog, byPlayer, backgrounded, dropped: dropped?.id ?? null,
+  const meta = { seed, map: map.name, combat, players: nPlayers, lossy, fog, byPlayer, backgrounded, dropped: dropped?.id ?? null,
     twoGroups: !!other.length, doorShut, clickAt, turnAt, actions };
   return { sim, world, server, clients, mods, env, meta, END: T0 + 14000, T0 };
 }
@@ -218,6 +219,8 @@ export function runSeed(seed, opts = {}) {
     return !!s && dist(c.drawn(B, t), s) > 0.05 && namedAt(db, B) > t;
   };
 
+  /** M leads the drop S is a member of (R6: the leader walks through its own members, drawn on top; reported). */
+  const leaderOf = (M, S, t) => { const d = dropOf(M, t); return !!d && d.leader === M && d.ids.length > 1 && dropOf(S, t) === d; };
   /** Did the walk M is drawn on know S where S stands now (its sender's documents when it sent it)? */
   const foreseen = (c, M, S, t) => {
     const mv = c.view.get(M)?.mv;
@@ -261,7 +264,7 @@ export function runSeed(seed, opts = {}) {
           if (ma && mb) kind = "mover";
           else if (ma || mb) {
             const [M, S] = ma ? [A, B] : [B, A];
-            kind = waiting(c, S, t) ? "waiting" : shortMate(c, M, S, t) ? "shortMate" : depth <= STAND_SLACK ? null : foreseen(c, M, S, t) ? "passThrough" : "unforeseen";
+            kind = waiting(c, S, t) ? "waiting" : shortMate(c, M, S, t) ? "shortMate" : depth <= STAND_SLACK ? null : leaderOf(M, S, t) ? "leader" : foreseen(c, M, S, t) ? "passThrough" : "unforeseen";
           } else kind = waiting(c, A, t) || waiting(c, B, t) ? null : depth > STAND_SLACK ? "rest" : null;
         }
         // One episode per pair at a time: it ends when the pair leaves its kind.

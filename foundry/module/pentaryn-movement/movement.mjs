@@ -17,9 +17,9 @@
  *   pathfind-adapter.mjs a Token and its drag options → the step tests the search uses (reads only)
  *   pathfind.mjs         the feature: wraps Token#findMovementPath
  *   motion-core.mjs      PURE trajectories, the cell chain, the group / click decision tables (0.4.0)
- *   group-core.mjs       PURE candidates, cuts, the flood, one undo entry per move (0.4.0)
+ *   group-core.mjs       PURE cuts, the flood, one undo entry per move, tokens that start stacked (0.4.0; 0.10 L2)
  *   group-adapter.mjs    tokens and drag contexts → member records and oracles (reads only)
- *   sequence-core.mjs    PURE tokens that start stacked (0.8.0)
+ *   file-core.mjs        PURE the leader plan (planLead) and its motion (staggerFile) (0.10)
  *   file.mjs             the feature: a group drag out of combat, which tokens move together (0.9.0)
  *   drop.mjs             the feature: wraps Token#_prepareDragLeftDropUpdates (single drops, groups, a fight's every square; 0.9.0)
  *   stop.mjs             the feature: wraps Token#_onClickLeft (click to stop)

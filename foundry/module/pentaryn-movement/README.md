@@ -67,8 +67,11 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
 - **Click a moving token to stop it** (always on) once it has moved 400 ms (a move you dropped; one another user
   started stops at once): out of combat it stops **exactly where it is drawn** (Joe, 2026-11-23); one whose body is
   across a door's line, or that would rest inside a token at rest or a member the same stop stopped, is carried on
-  along its own route just clear of it (0.9.0 step 5; never through a wall; with nowhere along its way, the nearest
-  clear spot). In a fight it finishes the square it is in,
+  along its own route just clear of it (0.9.0 step 5; never through a wall or a token at rest; the leader of a group
+  carries on through its own members to the first free spot). With no clear spot anywhere along its own way (0.10:
+  no straight line off it any more), a click leaves it walking on to its own square ("Could not stop clear of another
+  token, so walked on to its own square: …"), and a door or wall that cut it leaves it where it is drawn, named
+  ("Stopped on another token, …: drag it clear"). In a fight it finishes the square it is in,
   so the movement spent stays exact; a GM may stop anyone's move. A click on any member of a moving group stops the
   whole group (Joe, 2026-11-24): the dragger's screen stops the rest, and the members not yet sent stay where they
   stand.
@@ -86,9 +89,13 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   touching it first, and the rest close in round it from their own sides, ring by ring (8 squares touch a Medium, 12 a
   Large, 16 a Huge). A hidden token never makes a swarm, for the GM either: it is just a token in the way. Each member
   takes the best square it can reach and gets one route to it, round the tokens standing outside the drag and the
-  squares already given out. Then each gets a start delay: through a door they file, and the last one is on its way
-  within 4 s of the drop. Nobody rests on anybody, nobody walks through a token standing still or onto a mate's
-  square; two members both moving may brush on the way. One with no square it can reach stays where it stands and is
+  squares already given out. **The motion** (0.10 L2): the leader sets off at once and the rest one wave (150 ms,
+  about a square) later as one pack; a leader that starts behind walks through its own group to the front first,
+  drawn on top of it on every screen, and the pack sets off once it is a square past the frontmost member. Single file
+  only where the way is narrow: through a door one at a time, in a one-wide tunnel a line, spreading out again past
+  it; a member also waits while another would walk through it at rest. The last one is on its way within 4 s of the
+  drop. Nobody rests on anybody, nobody walks through a token standing still outside the group; two members both
+  moving may brush on the way. One with no square it can reach stays where it stands and is
   named: "Stayed where they stand, with no free spot they can reach: Talo." The leader with no way there moves
   nobody: "No route there". A tab sent to the background sends the waiting members at once. `planGroup(tokens,
   point)` dry-runs it (the shape, the leader, the target, each member's square, route, start delay and why it stays).
@@ -97,15 +104,19 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   square is picked when its turn comes (behind where the leader came to rest in a march, round the target in a swarm)
   and routed round the tokens standing then (the ones already moved where they came to rest), a checkpoint at every
   square, charged exactly what it walks. The leader with no way moves nobody ("No route there"). A stack (a
-  mount and its rider) goes as one. About a second per member per 30 ft. A click on the walker, a turn change, a new
-  drop or a deleted member ends the queue (the members not sent are named, except after your own click or drop); a
-  walk that never ends is moved on after its own time plus 3 s. More than 12: "In a fight, drag one token at a
-  time."
+  mount and its rider) goes as one. About a second per member per 30 ft. A click on the walker, a turn change or a
+  deleted member ends the queue (the members not sent are named, except after your own click); a new drop of other
+  tokens leaves it running (0.10), one of its members dropped again leaves the queue. A walk that never ends is moved
+  on after its own time plus 3 s. More than 24 (0.10; was 12): "In a fight, drag one token at a time."
 - **Tokens that start stacked stay stacked**: a rider on its mount walks its mount's way at its offset; a mount
   dragged alone carries its rider.
 - **Notices**: "No route there.", "Stopped short, way blocked.", "In a fight, drag one token at a time.", the
-  members of a group drag that stayed, by name, and the members a fight's queue did not send ("Did not move, the
-  group's walk was ended: …"). The reason behind each is in the telemetry (`telemetry()`) and in `status().group.told`.
+  members of a group drag that stayed, by name, the members a fight's queue (or a wave this screen no longer draws:
+  you changed scene) did not send ("Did not move, the group's walk was ended: …"), and a stop that found no clear
+  spot along its way (above). The reason behind each is in the telemetry (`telemetry()`) and in
+  `status().group.told`.
+- **Up to 24 tokens** in one group drag (0.10; was 12), out of combat and in a fight; more: core's own drop out of
+  combat, refused in a fight.
 - **Fail-open and the circuit breaker**: an exception inside a drop sends core's own move and is logged. After 3
   errors or 6 failed plans in a session the drag help switches itself off on that screen; on the GM's screen it also
   turns `assist` off for the table, and the GM is told either way.
@@ -136,8 +147,7 @@ mover's own client. Verified on core 14.370 / dnd5e 6.1.1.
 | `ownedOnTop` | client | `true` | owned tokens on top — `game.settings.get("pentaryn-movement", "ownedOnTop")` |
 | `pathfinding` | world | `everyone` | tier A, drag pathfinding: Everyone / GM only / Off (read live on every drag) |
 | `pathfindMine` | client | `true` | this client's drags find a path (corners always rounded where free, 0.8.0) |
-| `groupDrags` | world | `true` | group drags: out of combat the file, in a fight one member at a time (0.8.0; was `groupMovement`, migrated once; 0.9.0 folded tier C's `fightGroupDrags` in, its row deleted once) |
-| `groupStagger` | world | `true` | 0.9.0, B1 against B0: on, a group drag out of combat starts its members in waves within 4 s (they file through doors); off, every member sets off at once on its own route. `status().group.stagger`, `status().group.last.plan.tier` |
+| `groupDrags` | world | `true` | group drags: out of combat the file, in a fight one member at a time (0.8.0; was `groupMovement`, migrated once; 0.9.0 folded tier C's `fightGroupDrags` in, its row deleted once; 0.10 deleted 0.9.0's `groupStagger`, B1 against B0, its stored row removed once) |
 | `assist` | world | `true` | the table's drag help; off = plain Foundry dragging for everyone (pathfinding reads off, both tiers false); the GM's toolbar button flips it (0.4.9); the circuit breaker turns it off (0.8.0) |
 
 Keybinding: `wrongMove` (Alt+W) files "that move was wrong" (0.8.0). Retired in 0.8.0: `smoothCorners` and
@@ -288,17 +298,16 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `movement-core.mjs` | pure rules, constants, label key maps |
 | `settings.mjs` | the `SETTINGS` and `KEYBINDINGS` tables, the assist switch and the breaker's trip, the 0.8.0 migration |
 | `combat-adapter.mjs` | combats and scenes → plain core inputs |
-| `ghost.mjs` | the feature: patches, sort, toolbar, refresh, the incorporeal exception on the player's side |
+| `ghost.mjs` | the feature: patches, sort (0.10: the leader of a moving group drawn on top on every screen), toolbar, refresh, the incorporeal exception on the player's side |
 | `ghost-combat.mjs` | the GM's ghost-in-combat flag: Token HUD toggle, `setGhost(creature, { combat })`, `inspect` |
 | `pathfind-core.mjs` | pure: A*, cost-preserving string pulling, corner arcs, the skip rules |
 | `pathfind-adapter.mjs` | a token and its drag options → wall / creature / cost step tests (reads only) |
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
-| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, clearAlong, decision tables; cuts (`freePrefix`), the flood, one undo entry per move (0.9.0: the 0.8 planner, settle and the rest passes are gone; 0.10: the candidate lattices too) |
-| `sequence-core.mjs` | pure: tokens that start stacked, and `sequence` (the file's start order, a fight queue's order) |
+| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, how long two movers are close (`closeTime`), waves, cell chains, clearAlong, one-way walls (`wallOpenFrom`), decision tables; cuts (`freePrefix`), the flood, one undo entry per move, tokens that start stacked (`stacksOf`; 0.10 L2, from the deleted `sequence-core.mjs`) (0.9.0: the 0.8 planner, settle and the rest passes are gone; 0.10: the candidate lattices too) |
 | `telemetry-core.mjs`, `telemetry.mjs` | pure: the ring buffer, its summary and report text, the breaker's rule; the feature: telemetry, the circuit breaker, the Alt+W key (0.8.0) |
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and wall tests (reads only) |
 | `drop.mjs` | the feature (0.9.0, was `group.mjs`): the drop wrap — single drops, the file's first update and its later waves, the fight queue, a fight's every square, a wall across a walk, riders, undo |
-| `file-core.mjs` | pure (0.10): `planLead` — the leader rule (march and swarm ranks, each member's best reachable square and one route, the members that stay), `walkFrom` (the floods); `staggerFile` — the capped start delays (0.9's B1) |
+| `file-core.mjs` | pure (0.10): `planLead` — the leader rule (march and swarm ranks, each member's best reachable square and one route, the members that stay), `walkFrom` (the floods); `staggerFile` — the motion (0.10 L2, R5): the leader at once, the pack a wave later, single file only at a narrow point (`narrowZones`), a member held while another would walk through it at rest, the last within 4 s |
 | `file.mjs` | the feature (0.10): the shape from the drop (`targetOf`), planLead's oracles on the canvas (rest test, one step on the pathfinder's shared memo, routes round circles), a fight's order and each member's square at its turn, the dry run, which tokens move together, the waves' timers and the hidden-tab flush, the fight queues and what empties them, the group-wide stop |
 | `stop.mjs` | the feature: the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
@@ -314,15 +323,17 @@ one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equ
 `pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-props.test` (the flood, `freePrefix`, trajectories, waves, click rows), `lead.test` (the leader plan, 0.10 L1: the tunnel repro, march, swarm rings round Medium / Large / Huge, and the gate: 800 seeded
 floors and tunnels with 2-20 members, every member in place or named, no rest overlap, no route into a standing token,
 an earlier slot or a member that stays, march nobody beside or ahead, swarm the leader touching whenever it could, at
-most 1.2 searches a member and under 3 % failed; planning time), `file-core.test` (the start delays on the leader
-plan's routes: every delay a wave step, the last within 4 s, two movers meeting in fewer drops than all at once) and `drop.test` (the drop and click wraps, the
+most 1.2 searches a member and under 3 % failed; planning time), `file-core.test` (the motion on the leader plan's
+routes, 0.10 L2: open ground is the leader plus one wave, a file of 20 one wave, a door single file and spread out
+past it, a leader anywhere in a one-wide tunnel of 2 to 20 reaches the front in 400 seeds, the last within 4 s, and on
+800 seeded drops nobody walking into a member at rest and no two in one narrow point) and `drop.test` (the drop and click wraps, the
 file on the synthetic board with its three handlers, the fight queue and what ends it, and the 0.9.0 step 1 gate: 60
 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
-`sequence-core.test` (stacks, and the start order), `telemetry-core.test` and `telemetry.test` (the ring, the
+`telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). `test/sim/` is the
-simulator (0.9.0 step 5; 0.10 L1 the leader plan): the real cores (`file-core` planLead / staggerFile, `motion-core`
-clearAlong, `sequence-core`, the pathfind-core A*) on virtual clients over a jittered, lossy network;
-`sim.test.mjs` runs 60 seeds as B1 and B0 and one regression seed per defect it found; `make foundry-movement-sim
+simulator (0.9.0 step 5; 0.10 L1 the leader plan, L2 its motion): the real cores (`file-core` planLead / staggerFile,
+`motion-core` clearAlong, the pathfind-core A*) on virtual clients over a jittered, lossy network;
+`sim.test.mjs` runs 60 seeds and one regression seed per defect it found; `make foundry-movement-sim
 SEEDS=10000` is the full run. Fixtures are
 synthetic (`test/` is published). One golden: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, review the diff.
 

@@ -350,10 +350,14 @@ export function ownedRank({ isGM, enabled, isOwner } = {}) {
   return !isGM && enabled !== false && isOwner ? 1 : 0;
 }
 
-/** The mesh sort for the primary canvas group: elevation still wins, then owned, then sort. */
+/** The rank of the leader of a moving group drag (0.10 L2, R6): above owned (1), on every screen. */
+export const LEAD_RANK = 2;
+
+/** The mesh sort for the primary canvas group: elevation still wins, then the rank (leader 2, owned 1), then sort. */
 export function meshSort(docSort, rank) {
   const s = Number.isFinite(docSort) ? docSort : 0;
-  return rank ? s + RAISE : s;
+  const k = Number.isFinite(rank) ? rank : rank ? 1 : 0;
+  return k > 0 ? s + RAISE * k : s;
 }
 
 /**

@@ -30,12 +30,52 @@ touching that token first, and the rest close in round it from their own sides, 
 - **[declared] A later wave sends a member whole or not at all** (R12): a wall or door shut across its way, or a token
   now at rest in it, and it stays where it stands, named (no more cutting short).
 - **[declared] `status().group.last`** for a group drag: `shape` (march / swarm), `leader`, `target`, `stayed` (the ids
-  named), `waves`, `plan: { timingMs, searches, failed, total, tier, members, crowded, staggerMs }` (`passes` gone).
+  named), `waves`, `plan: { timingMs, searches, failed, total, tier, members, crowded, staggerMs }` (`passes` gone;
+  L2: `tier` gone, `pack` added).
   `planGroup(refs, point)`: `shape`, `leader`, `target`, `searches`, `failed`, each member's `route` (waypoints).
 - **Deleted**: `planFile`, `candidatesFor`, `orderOf`, `FILE` (rings, tries, walkRatio, reorders), the route-clearance
   test, the fixed-point passes, `waveWays` (file-core); `fightSpots` and `routeAtTurn`'s spot list (file.mjs, drop.mjs);
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
+
+### Step L2 — the motion
+
+- **[declared] The leader goes first, the pack one wave later** (R5): the leader in the drop's own update, everyone
+  else one wave (150 ms, about a square) after it as one pack; a leader that starts behind (by walk to the drop)
+  walks through its own group to the front first, and the pack sets off once it is a wave past the frontmost member
+  (4 s at most). Single file only at a narrow point: a one-wide square (a corridor, the gap in a thick wall) or the
+  door in a thin wall, one through at a time (`file-core` `narrowZones`, from the same step oracle planLead uses);
+  two members whose ways merge into one lane for long (deeper than half a square for over 400 ms) are held apart too,
+  and a member waits while another would walk through it at rest (a brush in the same update, or a pass as it
+  arrives, is soft). Crossing paths on open ground go as one pack. The last start is within 4 s of the drop; one that
+  finds no clear start goes at the least crowded one, never cut short. `status().group.last.plan.pack`.
+- **[declared] The leader drawn on top** (R6): its move carries `pentarynMovementLead` (its id, and its riders' so they
+  stay above their mount); every client lifts it a rank above owned-on-top in the mesh sort and the layer's click order
+  while it walks, and drops it when
+  its move ends (no document write; `status().group.leading`). A stop of the leader inside its own members carries it
+  on through them to the first free spot along its way, however far. The simulator reports the leader through its
+  own members as allowed, never a failure.
+- **[declared] Up to 24 tokens** in a group drag, out of combat and in a fight (R11; was 12). More: core's drop out of
+  combat, "In a fight, drag one token at a time." in a fight. (The page gate, under 100 ms for 8 and 250 ms for 20 on
+  the GPU page, is a later step's.)
+- **[declared] Fix: a stop's straight-line last resort is gone** (Fable's review 3 §4): a token a stop finds inside a
+  token at rest with no clear spot along its own way (ahead 1.5 squares, back the whole way it came) is no longer
+  walked in a straight line to the nearest clear spot (through whatever stood between). A click leaves it walking on to
+  its own square when that is clear, named ("Could not stop clear of another token, so walked on to its own square");
+  a wall or door cut, or a square that is not clear, leaves it where it is drawn, named ("Stopped on another token,
+  …").
+- **[declared] Fix: a mate never rests on the carried one's spot**: another user's stop of a member that carries it on
+  past a door names its final spot in its write (`pentarynMovementStopAt`), and the dragger's screen, stopping the rest
+  of the group, never rests a mate there.
+- **[declared] Fix: no silent leave**: a wave whose members this screen no longer draws (the dragger changed scene)
+  names them ("Did not move, the group's walk was ended: …").
+- **[declared] Fix: one-way walls**: in a fight's per-square check (and a wave's wall test) a one-way wall met from its
+  open side no longer stops the token (Foundry's own side test).
+- **[declared] A new drop no longer empties a fight queue** (R12): it left the queue's members unnamed; a member
+  dropped again leaves the queue, the rest walk on.
+- **Deleted**: `sequence-core.mjs` (`stacksOf` moved to group-core; `sequence`, the ordering search, with it), the
+  world setting `groupStagger` and B0 (every member at once; its stored row is removed once by the active GM:
+  `RETIRED.world.groupStagger`), `status().group.stagger` and `last.plan.tier`, the simulator's B0 mode.
 
 ## 0.9.0 — branch movement-0.9 (Fable's review 2), deployed for Joe's hands-on 2026-11-24
 

@@ -52,7 +52,9 @@
         "noRoute": "No route there: {name} is in the way. The ghost button under the Ruler lets you pass.",
         "aToken": "a token",
         "stayed": "Stayed where they stand, with no free spot they can reach: {names}.",
-        "notSent": "Did not move, the group's walk was ended: {names}."
+        "notSent": "Did not move, the group's walk was ended: {names}.",
+        "stopInside": "Stopped on another token, with no free spot along its own way: {names}. Drag it clear.",
+        "walkedOn": "Could not stop clear of another token, so walked on to its own square: {names}."
       },
       "fightGroup": "In a fight, drag one token at a time."
     },
@@ -94,10 +96,6 @@
       "groupDrags": {
         "name": "Group drags",
         "hint": "When several tokens are dragged together, the one you grab leads. Dropped on the floor, it ends on the drop square and the others gather behind it; dropped on a token you can see, they surround that token, the leader touching it first. Outside a fight they file through doors; in a fight they walk one at a time, the leader first, each round the tokens standing when its turn comes and charged the squares it walks. Off: they move as Foundry moves them, stopping before any token in the way."
-      },
-      "groupStagger": {
-        "name": "Group drags: staggered starts",
-        "hint": "On: a group dragged outside a fight sets off in waves (all within 4 seconds) so its members file through doors one after another. Off: every member sets off at once on its own route, which is quicker but they may brush past each other in a doorway."
       }
     },
     "assist": {

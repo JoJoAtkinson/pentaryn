@@ -79,3 +79,31 @@ test("migrateSettings: the active GM carries groupMovement over to groupDrags an
     gm.active = gmActive;
   }
 });
+
+test("migrateSettings (0.10 L2): the active GM deletes 0.9.0's groupStagger row once (B0 against B1 is gone); nothing moves to another row", async () => {
+  const me = game.user;
+  const wasGM = me.isGM;
+  Object.defineProperty(me, "isGM", { value: true, configurable: true, writable: true });
+  const gm = game.users.get(GM);
+  const gmActive = gm.active;
+  gm.active = false;                                 // this client is the active GM
+  const deleted = [];
+  const old = { value: "false", delete: async () => { deleted.push("groupStagger"); } };
+  const savedStorage = game.settings.storage;
+  game.settings.storage = new Map([["world", { getSetting: key => (key === `${MOD}.groupStagger` ? old : null) }]]);
+  const local = new Map([[`${MOD}.clickToStop`, "false"], [`${MOD}.smoothCorners`, "true"], [`${MOD}.pathfindMine`, "true"]]);
+  globalThis.localStorage = { getItem: k => (local.has(k) ? local.get(k) : null), removeItem: k => local.delete(k) };
+  try {
+    const r = await migrateSettings();
+    assert.deepEqual(r.world.groupStagger, { value: false, to: null, moved: true });
+    assert.deepEqual(deleted, ["groupStagger"], "its stored row deleted");
+    assert.equal(game.settings.get(MOD, "groupDrags"), true, "no other row touched");
+    assert.equal(game.settings.settings.has(`${MOD}.groupStagger`), false, "no longer registered");
+  } finally {
+    await game.settings.set(MOD, "groupDrags", true);
+    game.settings.storage = savedStorage;
+    delete globalThis.localStorage;
+    Object.defineProperty(me, "isGM", { value: wasGM, configurable: true, writable: true });
+    gm.active = gmActive;
+  }
+});

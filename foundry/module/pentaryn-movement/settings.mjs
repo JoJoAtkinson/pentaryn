@@ -1,10 +1,10 @@
 /**
  * Pentaryn Movement — settings. The only file outside lib/ that calls game.settings.register/get.
  *
- * Nine rows: the four ghost / owned-on-top rows in their historic order, then the drag help's five (0.8.0, plan
+ * Eight rows: the four ghost / owned-on-top rows in their historic order, then the drag help's four (0.8.0, plan
  * §16.6): world `pathfinding` and client `pathfindMine` (tier A), the group gate `groupDrags` (out of combat the
- * file, in a fight one member at a time; 0.9.0 removed tier C's `fightGroupDrags`), the GM toolbar's `assist`, and
- * (0.9.0) `groupStagger`, B1 against B0: the file's start delays, or every member at once.
+ * file, in a fight one member at a time; 0.9.0 removed tier C's `fightGroupDrags`) and the GM toolbar's `assist`.
+ * (0.10 L2 removed 0.9.0's `groupStagger`, B1 against B0: the motion is the leader rule's, one way.)
  * 0.8.0 folded smoothCorners and clickToStop in (always on) and renamed groupMovement to groupDrags;
  * migrateSettings() carries old values over once. Every row carries full
  * literal label keys, the two hidden ones too (D-M3; never shown, since config: false rows do not render), so the
@@ -85,7 +85,7 @@ export const SETTINGS = Object.freeze([
     name: "PENTARYN_MOVEMENT.settings.groupDrags.name",
     hint: "PENTARYN_MOVEMENT.settings.groupDrags.hint",
     onChange: forward("groupDrags"),
-    doc: "Group drags (0.8.0; was groupMovement): the token grabbed leads (0.10): dropped on the floor a march (the leader on the drop square, the rest behind it), on a visible token outside the group a swarm round it; out of combat start delays within 4 s, filing through doors; in a fight the leader first, then one member at a time, each a single move whose square is picked and routed at its turn (0.9.0, replaces tier C). Off: core's move, cut before standing tokens.",
+    doc: "Group drags (0.8.0; was groupMovement): the token grabbed leads (0.10): dropped on the floor a march (the leader on the drop square, the rest behind it), on a visible token outside the group a swarm round it; out of combat the leader at once and the rest a wave later as one pack, single file only at a narrow point, the last within 4 s (0.10 L2); in a fight the leader first, then one member at a time, each a single move whose square is picked and routed at its turn (0.9.0, replaces tier C). Up to 24 tokens (0.10). Off: core's move, cut before standing tokens.",
   },
   {
     key: "assist", scope: "world", config: true, type: Boolean, default: true,
@@ -93,13 +93,6 @@ export const SETTINGS = Object.freeze([
     hint: "PENTARYN_MOVEMENT.settings.assist.hint",
     onChange: forward("assist"),
     doc: "The table's drag help (0.4.9): off, every drag is plain Foundry dragging (no pathfinding, no group plan, no single-drop routing); the GM's toolbar button flips it. Pathfinding and the tier gates keep their own values. The circuit breaker (0.8.0) switches it off after repeated failures.",
-  },
-  {
-    key: "groupStagger", scope: "world", config: true, type: Boolean, default: true,
-    name: "PENTARYN_MOVEMENT.settings.groupStagger.name",
-    hint: "PENTARYN_MOVEMENT.settings.groupStagger.hint",
-    onChange: forward("groupStagger"),
-    doc: "0.9.0, B1 against B0 (Fable's review 2 §4 step 7): on (B1, the file), a group drag out of combat starts its members in waves within 4 s so they file through doors; off (B0), every member sets off in the drop's own update on its own route. Read live on every group drop; fights are one at a time either way.",
   },
 ]);
 
@@ -161,10 +154,11 @@ export const setting = key => {
 
 /**
  * Rows removed: world key → the row it became (or null: folded in, or gone). 0.8.0: groupMovement became groupDrags;
- * 0.9.0: fightGroupDrags (tier C) is gone, a group drag in a fight being the fight file under groupDrags.
+ * 0.9.0: fightGroupDrags (tier C) is gone, a group drag in a fight being the fight file under groupDrags; 0.10:
+ * groupStagger (B0 against B1) is gone, the motion being the leader rule's (R5).
  */
 export const RETIRED = Object.freeze({
-  world: { groupMovement: "groupDrags", fightGroupDrags: null },
+  world: { groupMovement: "groupDrags", fightGroupDrags: null, groupStagger: null },
   client: { smoothCorners: null, clickToStop: null },
 });
 

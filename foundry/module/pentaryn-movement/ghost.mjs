@@ -7,7 +7,8 @@
  * the entry's `reg.offAll()` removes the hooks.
  *
  *  - Owned on top: a player's own tokens are lifted on that player's screen only, in the mesh sort
- *    (what is drawn on top) and the token layer's child order (what takes the click).
+ *    (what is drawn on top) and the token layer's child order (what takes the click). The leader of a moving
+ *    group drag (0.10 L2, R6) is lifted a rank above that on every screen while it walks (its move's option).
  *  - Ghost: Token#_getDragConstrainOptions and TokenLayer#_prepareKeyboardMovementUpdates are wrapped
  *    so a player's own token gets core's unconstrained-movement constrain options (ignoreWalls,
  *    ignoreCost; dnd5e's ignoreTokens) while ghost is in effect. The rules are in movement-core.
@@ -89,6 +90,72 @@ function sceneFor(sceneId) {
 
 function ownedRankOf(token) {
   return core.ownedRank({ isGM: game.user.isGM, enabled: context().ownedOnTop, isOwner: !!token?.document?.isOwner });
+}
+
+/* -------------------------------------------- */
+/*  The leader drawn on top (0.10 L2, R6)       */
+/* -------------------------------------------- */
+
+/**
+ * The leader of a group drag walks through its own members (Joe 2026-11-24, R6), drawn on top of them on every
+ * screen while it does: its move carries `pentarynMovementLead` (its own id, with its riders' after it: update options
+ * reach every client, and a batch's options are shared, so the ids say which of the batch lead), and every client lifts
+ * those tokens a rank
+ * above owned-on-top (core.LEAD_RANK) until its move ends. No document write: the mesh sort and the layer's click
+ * order only. token id → { token, age (ms, counted by the polls) }.
+ */
+const LEAD_OPT = "pentarynMovementLead";
+const leading = new Map();
+/** How long a lead mark is kept at least (its move's animation starts after the update), and at most (ms). */
+const LEAD_MIN_MS = 300;
+const LEAD_MAX_MS = 60000;
+const LEAD_POLL_MS = 100;
+let leadTimer = null;
+
+/** Is this token's movement still drawn walking, or between two squares of its move? */
+function walkingNow(token) {
+  const doc = token?.document;
+  let animating = false;
+  try { animating = !!token?.animationContexts?.has?.(token.movementAnimationName) || (token?.animationContexts?.size ?? 0) > 0; } catch { animating = false; }
+  const st = doc?.movement?.state;
+  return animating || st === "pending" || st === "paused";
+}
+
+function relift(token) {
+  try { token?.renderFlags?.set?.({ refreshState: true }); } catch (err) { log?.debug?.("lead: refresh", err); }
+  if (canvas?.tokens?.objects) canvas.tokens.objects.sortDirty = true;
+}
+
+/** updateToken, every client: a move naming this token its group's leader (or a rider of it) lifts it while it walks. */
+function onLeadMove(doc, options) {
+  const named = options?.[LEAD_OPT];
+  if (!doc?.id || !(Array.isArray(named) ? named.includes(doc.id) : named === doc.id)) return;
+  const token = doc.object ?? null;
+  leading.set(doc.id, { token, age: 0 });
+  if (token) relift(token);
+  if (!leadTimer) leadTimer = setTimeout(pollLeaders, LEAD_POLL_MS);
+}
+
+/** Drop the marks of the leaders whose move has ended (and of any left past LEAD_MAX_MS; ages count the polls). */
+function pollLeaders() {
+  leadTimer = null;
+  for (const [id, m] of [...leading]) {
+    const tok = m.token;
+    m.age += LEAD_POLL_MS;
+    const gone = !tok || tok.destroyed || tok._destroyed;
+    if (gone || m.age > LEAD_MAX_MS || (m.age >= LEAD_MIN_MS && !walkingNow(tok))) {
+      leading.delete(id);
+      if (!gone) relift(tok);
+    }
+  }
+  if (leading.size) leadTimer = setTimeout(pollLeaders, LEAD_POLL_MS);
+}
+
+/** This client's rank for a token: the leader of a moving group above owned-on-top, then owned. */
+function rankOf(token) {
+  const id = token?.document?.id ?? token?.id;
+  if (id && leading.has(id)) return core.LEAD_RANK;
+  return ownedRankOf(token);
 }
 
 /** Every setting key with its scope, so a console reader never has to guess one (finding -23). */
@@ -181,7 +248,7 @@ function sortTokenObjects() {
   const children = this.children;
   for (let i = 0; i < children.length; i++) children[i]._lastSortedIndex = i;
   const key = new Map(children.map(c => [c, {
-    elevation: c.document?.elevation ?? 0, rank: ownedRankOf(c), sort: c.document?.sort ?? 0,
+    elevation: c.document?.elevation ?? 0, rank: rankOf(c), sort: c.document?.sort ?? 0,
     zIndex: c.zIndex ?? 0, index: c._lastSortedIndex
   }]));
   children.sort((a, b) => core.compareTokens(key.get(a), key.get(b)));
@@ -216,7 +283,7 @@ function installLayerSort(layer = canvas?.tokens) {
 function onRefreshToken(token, flags) {
   const mesh = token?.mesh;
   if (!mesh || token._destroyed) return;
-  mesh.sort = core.meshSort(token.document?.sort, ownedRankOf(token));
+  mesh.sort = core.meshSort(token.document?.sort, rankOf(token));
   if ((flags?.refreshState || flags?.refreshMesh) && ghostFor(token)) {
     mesh.alpha = token.alpha * (token.document?.alpha ?? 1) * GHOST_ALPHA;
   }
@@ -474,12 +541,14 @@ export function install(reg, ctx) {
     for (const t of actor.getActiveTokens?.() ?? []) t.renderFlags.set({ refreshState: true });
     if (canvas?.tokens?.objects) canvas.tokens.objects.sortDirty = true;
   }, { guard: false, label: "updateActor: ownership re-sort" });
-  reg.on("updateToken", (doc, changes) => {
+  reg.on("updateToken", (doc, changes, options) => {
+    // The leader of a group drag is drawn on top while it moves (0.10 R6: its move's option names it).
+    onLeadMove(doc, options);
     // An unlinked token's flag lands on its delta (the synthetic actor), which arrives as a Token update.
     if (changes?.delta?.flags?.[MODULE] !== undefined || "actorLink" in (changes ?? {}) || "actorId" in (changes ?? {})) queueRefresh();
     if (!("sort" in (changes ?? {})) && !("elevation" in (changes ?? {}))) return;
     if (canvas?.tokens?.objects) canvas.tokens.objects.sortDirty = true;
-  }, { guard: false, label: "updateToken: sort/elevation re-sort" });
+  }, { guard: false, label: "updateToken: sort/elevation re-sort; the leader of a moving group on top (0.10)" });
 
   for (const h of COMBAT_HOOKS) reg.on(h, () => { invalidate(); queueRefresh(); }, { guard: false, label: `${h}: refresh` });
 
@@ -498,6 +567,7 @@ export function install(reg, ctx) {
     status,
     ghostFor,
     combatActive,
+    leadingIds: () => [...leading.keys()],
     setGhost: on => onPlayerToggle(!!on),
     patched: () => ({ drag: dragPatched, keyboard: keyboardPatched }),
   });
@@ -510,6 +580,9 @@ export function uninstall() {
   for (const h of [dragHandle, keyboardHandle, sortPatch?.handle]) h?.unwrap();
   dragHandle = keyboardHandle = sortPatch = null;
   dragPatched = keyboardPatched = false;
+  clearTimeout(leadTimer);
+  leadTimer = null;
+  leading.clear();
   lastToolKey = null;
   clearedBy = clearedScene = null;
   if (feature) for (const key of Object.keys(ON_SETTING)) feature.onSettingChange(key, null);

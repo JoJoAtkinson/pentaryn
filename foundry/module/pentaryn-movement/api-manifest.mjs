@@ -21,7 +21,7 @@ export const MANIFEST = Object.freeze({
         doc: "a scene id or Scene, bare or as opts.sceneId; default: the viewed scene" }],
       returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
         + "sceneId, version, settings: { <key>: scope }, combatExempt: string[], "
-        + "group: { enabled, fight, patched: { drop, click }, regime, limits, groups, last, fallbacks, stopped, cut, step, undo, told, pending, wave, flushed, queue, perf }, "
+        + "group: { enabled, fight, patched: { drop, click }, regime, limits, groups, last, fallbacks, stopped, cut, step, undo, told, pending, wave, flushed, queue, leading, perf }, "
         + "stop: { last }, "
         + "assist: { tripped }, migrated }",
       gm: false, writes: false, legacy: true,
@@ -29,15 +29,15 @@ export const MANIFEST = Object.freeze({
         + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
         + "are wrapped, every setting key with its scope (ghost and ownedOnTop are client settings), and combatExempt: the ids "
         + "of your tokens there that may ghost through the fight (incorporeal feat or the GM's flag; [] when no fight blocks). "
-        + "group (0.4.0; 0.9.0 the drop): drag help on this client — enabled (groupDrags), fight (groupDrags: a group drag in a fight is the fight file, one member at a time), stagger (groupStagger: B1 staggered starts, false B0 all at once; last.plan.tier names which ran), "
+        + "group (0.4.0; 0.9.0 the drop): drag help on this client — enabled (groupDrags), fight (groupDrags: a group drag in a fight is the fight file, one member at a time), "
         + "whether the drop and click wraps are in, the regime of your controlled tokens (combat when one is in a started combat, else free), the "
-        + "limits, how many groups this client holds (a click on one member stops them all), the last drop (mode, reason, result, ms, async, stacked; 0.10 a group's shape: march / swarm, leader, target, stayed: the ids named, waves, plan: { timingMs, searches, failed, total, tier, members, crowded, staggerMs }) "
+        + "limits (maxMembers: 24 since 0.10), how many groups this client holds (a click on one member stops them all), the last drop (mode, reason, result, ms, async, stacked; 0.10 a group's shape: march / swarm, leader, target, stayed: the ids named, waves, plan: { timingMs, searches, failed, total: the last start, pack: the pack's start (one wave after the leader, or once a leader that starts behind is a wave past the frontmost member), members, crowded, staggerMs }) "
         + "and the last few reasons a drop went to core; stopped: the last stop of a group (late: members whose wave was on its way, stopped when their move came back; lateTotal); cut: the last wall raised or door shut that stopped moves this client drives (out of combat, where drawn); "
         + "step (0.8.3): the last next square of a move this client drove that it did not send (why: wall, standing, unrendered, wallUnrendered); undo (0.8.3): the last move whose undo entries were merged into one; "
         + "told (0.9.0): the last notices this client showed (kind, reason, text); pending (0.9.0): the file's waves this client still has to send ([{ gid, at, ids }]); "
-        + "wave: the last later wave it sent (members, sent, skipped: no longer at their start, shut: a wall across their way, short); flushed: the last hidden-tab flush (members); "
-        + "queue: the last fight queue (members, sent, stayed, there: the ids already on their square, skipped, watchdog, ended: done / click / turn / drop / deleted / stopped / noRoute, running); perf: drops handled, the last and longest (ms). stop.last (0.4.11): this client's last "
-        + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole), or null. "
+        + "wave: the last later wave it sent (members, sent, skipped: no longer at their start, shut: a wall across their way, undrawn: no longer drawn here, named); flushed: the last hidden-tab flush (members); "
+        + "queue: the last fight queue (members, sent, stayed, there: the ids already on their square, skipped, watchdog, ended: done / click / turn / deleted / stopped / noRoute, running; 0.10 a new drop no longer ends it); leading (0.10): the ids drawn on top now, each the leader of a group drag still walking (its move's pentarynMovementLead); perf: drops handled, the last and longest (ms). stop.last (0.4.11): this client's last "
+        + "click-stop (tokenId, name, how, via: click / board / door / api, members, whole, pastDoor, walkedOn: members it could not stop clear of a token at rest, which walked on to their own squares), or null. "
         + "assist.tripped (0.8.0): the circuit breaker's trip on this client ({ at, why }) or null; migrated: what migrateSettings carried over at ready.",
     },
     {
@@ -135,7 +135,7 @@ export const MANIFEST = Object.freeze({
           doc: "the tokens, the first being the one grabbed (the leader); all drawn on this canvas" },
         { name: "point", type: "{ x, y }", doc: "the leader's drop point, top-left pixels (on a token outside the group that this client sees: a swarm round it)" },
       ],
-      returns: "{ ok, result: \"plan\" | \"none\" | \"core\", shape: \"march\" | \"swarm\", leader, target, ms, searches, failed, order, starts, total, "
+      returns: "{ ok, result: \"plan\" | \"none\" | \"core\", shape: \"march\" | \"swarm\", leader, target, ms, searches, failed, order, starts, total, pack, "
         + "members: [{ id, name, slot: { x, y }, route: [{ x, y }], waypoints, stay, delay }] } | { ok: false, code, reason }",
       gm: false, writes: false,
       since: "0.4.0",
@@ -144,7 +144,8 @@ export const MANIFEST = Object.freeze({
         + "its mount), target (the token dropped on, or null); each member's rest slot (top-left pixels), its route (waypoints, top-left "
         + "pixels) and their count, why it stays when it does (stay: noSpot, noRoute, blocked, budget; null when it goes or "
         + "is in place already) and its start delay (ms after the drop; null when it does not move); the plan's time, route searches "
-        + "and failed searches, the order members were planned in, the start order (starts) and the last start (total, at most 4000); "
+        + "and failed searches, the order members were planned in, the start order (starts), the last start (total, at most 4000) and the "
+        + "pack's (pack: the leader at 0, the rest one wave later or once a leader that starts behind is past them; 0.10 L2); "
         + "result none: the leader has no way (nobody moves). Nothing moves. Needs a "
         + "drawn canvas (a browser tab, not the headless GM). NOT_FOUND / BAD_ARGS / NO_CANVAS as a refusal object.",
     },

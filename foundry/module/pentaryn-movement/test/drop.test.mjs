@@ -1036,8 +1036,9 @@ test("0.9.0 simulator (step 5): a stop carried clear of a token at rest walks on
   }
 });
 
-test("0.9.0 simulator (step 5): a token drawn inside one at rest with no clear spot along its way stops on the nearest clear spot instead", async () => {
-  // Seeds 583 / 1740: a stop's own short walk on was cut by a door shut across it, inside the token it was leaving.
+test("0.10 L2 fix (a): a token drawn inside one at rest with no clear spot along its own way stays where it is drawn, named (the straight-line last resort is gone)", async () => {
+  // Seeds 583 / 1740 (0.9): a stop's own short walk on was cut by a door shut across it, inside the token it was
+  // leaving. 0.9 then walked a straight line to the nearest clear spot (through whatever stood between); now it stays.
   combatFlag = false;
   clock.step = 0;
   const saved = new Map(sceneTokens);
@@ -1049,8 +1050,12 @@ test("0.9.0 simulator (step 5): a token drawn inside one at rest with no clear s
     const r = await api.stop(t.document);
     assert.equal(r.ok, true, JSON.stringify(r));
     await flush();
-    const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id).at(-1)?.waypoints?.at(-1);
-    assert.ok(end && Math.hypot(end.x - 300, end.y - 100) >= S - 1, `clear of the one at rest: ${JSON.stringify(end)}`);
+    const moves = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id);
+    assert.equal(moves.length, 1, `one write, where it is drawn (no walk on): ${JSON.stringify(moves.map(m => m.waypoints))}`);
+    assert.deepEqual([moves[0].waypoints.at(-1).x, moves[0].waypoints.at(-1).y], [330, 100]);
+    const told = api.status().group.told[0];
+    assert.equal(told?.reason, "stopInside", JSON.stringify(api.status().group.told));
+    assert.match(told.text, /brsF000000000001/);
   } finally {
     t.animationContexts.clear();
     sceneTokens.clear();
@@ -1058,7 +1063,7 @@ test("0.9.0 simulator (step 5): a token drawn inside one at rest with no clear s
   }
 });
 
-test("0.9.0 simulator (step 5, seed 6156): a stop carried clear never walks on through another token at rest on its way", async () => {
+test("0.9.0 simulator (step 5, seed 6156) / 0.10 L2 fix (a): a stop never walks on through another token at rest on its way; a click with no clear spot along its way leaves it walking on to its own square, named (no overlap at rest, R8)", async () => {
   combatFlag = false;
   clock.step = 0;
   const saved = new Map(sceneTokens);
@@ -1073,11 +1078,65 @@ test("0.9.0 simulator (step 5, seed 6156): a stop carried clear never walks on t
     assert.equal(r.ok, true, JSON.stringify(r));
     await flush();
     const moves = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id);
-    const end = moves.at(-1).waypoints.at(-1);
-    assert.ok(!(end.y === 100 && end.x < 225), `never on through B: ${JSON.stringify(end)}`);
-    for (const [x, y] of [[400, 100], [225, 100]]) assert.ok(Math.hypot(end.x - x, end.y - y) >= S - 1, `at rest clear of both: ${JSON.stringify(end)}`);
+    assert.deepEqual(moves, [], "no write: no straight line off its way, no rest inside A, never on through B");
+    assert.ok(!F.calls.slice(from).some(c => c.op === "stopMovement" && c.id === t.document.id), "its own move goes on to its square (900, 100)");
+    assert.equal(api.status().group.told[0]?.reason, "walkedOn");
+    assert.equal(api.status().stop.last.walkedOn, 1);
   } finally {
     t.animationContexts.clear();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("0.10 L2 fix (a): a wall cut that leaves a token inside one at rest with no clear spot along its way stops it where it is drawn, named (it cannot walk on)", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  const t = walking("brsH000000000001", { x: 330, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  makeToken("brsI000000000001", 400, 100);
+  makeToken("brsJ000000000001", 225, 100);
+  world.walls.push([{ x: 600, y: 0 }, { x: 600, y: 300 }]);
+  const from = F.calls.length;
+  try {
+    F.fire("createWall", { id: "brsWall000000002", parent: sceneDoc, _source: { c: [600, 0, 600, 300], move: 20 } }, {}, "gm");
+    await settleWrites();
+    const moves = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id);
+    assert.equal(moves.length, 1, JSON.stringify(moves.map(m => m.waypoints)));
+    assert.deepEqual([moves[0].waypoints.at(-1).x, moves[0].waypoints.at(-1).y], [330, 100], "where it is drawn");
+    assert.equal(api.status().group.told[0]?.reason, "stopInside");
+  } finally {
+    world.walls.pop();
+    t.animationContexts.clear();
+    sceneTokens.clear();
+    for (const [k, v] of saved) sceneTokens.set(k, v);
+  }
+});
+
+test("0.10 L2 (R6, R7): the leader stopped while it walks through its own members carries on along its way to the first free spot, however far", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const saved = new Map(sceneTokens);
+  sceneTokens.clear();
+  // The leader drawn inside the first of three members standing in a row ahead of it (a file it walks through).
+  const t = walking("ldrL000000000001", { x: 230, y: 100 }, { x: 900, y: 100 }, [{ x: 0, y: 100 }, { x: 900, y: 100 }]);
+  const ms = [[1, 200], [2, 300], [3, 400]].map(([k, x]) => makeToken(`ldrM${k}00000000001`, x, 100));
+  makeToken("ldrB000000000001", 100, 100);                 // and one behind it, at rest where it came from
+  // Another user's group drag: every client learns its members from the moves' option, and its leader from its own.
+  for (const m of ms) F.Hooks.callAll("updateToken", m.document, {}, { pentarynMovementGroup: "gLDR" }, "otherUser000001");
+  F.Hooks.callAll("updateToken", t.document, { x: 900 }, { pentarynMovementLead: t.document.id, pentarynMovementGroup: "gLDR" }, "otherUser000001");
+  const from = F.calls.length;
+  try {
+    assert.ok(api.status().group.leading.includes(t.document.id), "it leads");
+    const r = await api.stop(t.document);
+    assert.equal(r.ok, true, JSON.stringify(r));
+    await flush();
+    const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === t.document.id).at(-1).waypoints.at(-1);
+    assert.ok(end.y === 100 && end.x >= 500 - 1 && end.x <= 520, `on past its members to the first free spot: ${JSON.stringify(end)}`);
+  } finally {
+    t.animationContexts.clear();
+    tickBy(1000);
     sceneTokens.clear();
     for (const [k, v] of saved) sceneTokens.set(k, v);
   }
@@ -1566,7 +1625,7 @@ test("0.8.0 / 0.9.0 notices: the players see \"No route there\", \"Stopped short
   const lang = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
   const shown = Object.keys(lang.PENTARYN_MOVEMENT.notify).filter(k => typeof lang.PENTARYN_MOVEMENT.notify[k] === "string");
   assert.deepEqual(shown.sort(), ["fightGroup", "noRoute", "stoppedShort"]);
-  assert.deepEqual(Object.keys(lang.PENTARYN_MOVEMENT.notify.named).sort(), ["aToken", "noRoute", "notSent", "stayed"]);
+  assert.deepEqual(Object.keys(lang.PENTARYN_MOVEMENT.notify.named).sort(), ["aToken", "noRoute", "notSent", "stayed", "stopInside", "walkedOn"]);
   assert.equal(lang.PENTARYN_MOVEMENT.notify.stoppedShort, "Stopped short, way blocked.");
 });
 
@@ -1659,6 +1718,29 @@ test("AR1-01: out of combat, a continuation from a page that no longer draws the
     assert.notEqual(F.fireCall("preMoveToken", t.document, door, { _movementArguments: { continuationId: "c2" } }), false);
   } finally {
     delete t.document.rendered;
+    sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  }
+});
+
+test("0.10 L2 fix (d): in a fight a one-way wall met from its open side does not stop the next square; from its other side it does", () => {
+  combatFlag = true;
+  const t = makeToken("owwA000000000001", 700, 100);
+  const others = keepOnly([t]);
+  // Drawn top to bottom with dir 1 (LEFT): open from the west, a wall from the east (as Foundry's orientPoint reads it).
+  sceneDoc.walls = [...world.walls.map(([a, b]) => ({ c: [a.x, a.y, b.x, b.y], door: 0, ds: 0, move: 20 })), { c: [800, 0, 800, 300], door: 0, ds: 0, move: 20, dir: 1 }];
+  try {
+    t.document.rendered = true;
+    const east = moveOp("mvOWW00000000001", { x: 700, y: 100 }, { x: 800, y: 100 });
+    assert.notEqual(F.fireCall("preMoveToken", t.document, east, {}), false, "from the open side it goes");
+    t.document._source.x = 800;
+    const west = moveOp("mvOWW00000000002", { x: 800, y: 100 }, { x: 700, y: 100 });
+    assert.equal(F.fireCall("preMoveToken", t.document, west, {}), false, "from the walled side it does not");
+    assert.equal(api.status().group.step.why, "wall");
+  } finally {
+    sceneDoc.walls = null;
+    delete t.document.rendered;
+    combatFlag = false;
     sceneTokens.delete(t.document.id);
     for (const [k, v] of others) sceneTokens.set(k, v);
   }
@@ -2079,37 +2161,6 @@ test("0.9.0 B1 handlers: a click on one member stops the whole group, its unsent
   } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
 });
 
-test("0.9.0 Fable check, blocker 1: groupStagger off is B0 (every member in the drop's own update, no waves); on is B1", async () => {
-  await game.settings.set(MOD, "groupStagger", false);
-  combatFlag = false;
-  clock.step = 0;
-  const ts = [makeToken("b0sA000000000001", 400, 200), makeToken("b0sB000000000001", 300, 200), makeToken("b0sC000000000001", 500, 200)];
-  const others = keepOnly(ts);
-  try {
-    assert.equal(api.status().group.stagger, false);
-    const from = F.calls.length;
-    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
-    assert.ok(Array.isArray(out), "planned at the drop");
-    assert.deepEqual(out[0].map(u => u._id).sort(), ts.map(t => t.document.id).sort(), "every member in the drop's own update");
-    assert.deepEqual(api.status().group.pending, [], "no wave");
-    const plan = api.status().group.last.plan;
-    assert.deepEqual([plan.tier, plan.total, api.status().group.last.waves], ["B0", 0, 1]);
-    tickBy(5000);
-    assert.equal(sent(from).length, 0, "nothing later");
-  } finally {
-    for (const t of ts) sceneTokens.delete(t.document.id);
-    for (const [k, v] of others) sceneTokens.set(k, v);
-    await game.settings.set(MOD, "groupStagger", true);
-    tickBy(60000);
-  }
-  const f = fileDrop("t");
-  try {
-    assert.equal(api.status().group.stagger, true);
-    assert.equal(api.status().group.last.plan.tier, "B1");
-    assert.ok(f.waiting.length >= 1, "B1 files them");
-  } finally { f.restore(); }
-});
-
 test("0.9.0 Fable check, blocker 3 (seeds 58, 373, 535, 588): a click while a member's wave is on its way stops that member where it is drawn as soon as its move comes back", async () => {
   for (const how of ["click", "foreign"]) {
     const f = fileDrop(how === "click" ? "L" : "M");
@@ -2219,6 +2270,42 @@ test("0.9.0 B1 handlers: another user's stop of one member (its displace) makes 
   } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
 });
 
+test("0.10 L2 fix (b): another user's stop of a member carried on past a door names its final spot, and the dragger's stop never rests a mate there", async () => {
+  const f = fileDrop("x");
+  try {
+    const [, mate, carried] = f.ts;
+    // The mate walks along y 100 and is drawn at (300, 100), exactly where the carried one's stop ends.
+    Object.assign(mate.document, { x: 300, y: 100 });
+    mate.position = { x: 300, y: 100 };
+    mate.animationContexts.set(mate.movementAnimationName, {});
+    mate.document.movement = { state: "completed", user: { isSelf: true }, constrainOptions: {}, origin: wp(0, 100), passed: { waypoints: [wp(900, 100)] }, pending: { waypoints: [] } };
+    const from = F.calls.length;
+    F.Hooks.callAll("updateToken", carried.document, { x: 260, y: 300 }, { animate: false, pentarynMovementStop: true, pentarynMovementStopAt: { x: 300, y: 100 } }, "otherUser000001");
+    await flush();
+    const end = F.calls.slice(from).filter(c => c.op === "move" && c.id === mate.document.id).at(-1)?.waypoints?.at(-1);
+    assert.ok(end, "the mate is stopped");
+    assert.ok(Math.hypot(end.x - 300, end.y - 100) >= S - 1, `never at rest on the carried one's final spot: ${JSON.stringify(end)}`);
+  } finally { f.ts.forEach(t => t.animationContexts.clear()); f.restore(); }
+});
+
+test("0.10 L2 fix (c): a wave whose members this client no longer draws (the dragger changed scene) names them; none leaves silently", () => {
+  const f = fileDrop("v");
+  const objects = new Map(f.ts.map(t => [t.document.id, t.document.object]));
+  try {
+    for (const t of f.waiting) t.document.object = null;
+    const from = F.calls.length;
+    tickBy(4500);
+    assert.equal(sent(from).length, 0, "nothing sent from a page that does not draw them");
+    const told = api.status().group.told.filter(x => x.reason === "wave:scene").map(x => x.text).join(" ");
+    assert.ok(told, JSON.stringify(api.status().group.told));
+    for (const t of f.waiting) assert.match(told, new RegExp(t.document.id));
+    assert.match(told, /Did not move/, "named as not sent");
+  } finally {
+    for (const t of f.ts) t.document.object = objects.get(t.document.id);
+    f.restore();
+  }
+});
+
 test("0.9.0 B1 handlers: a tab going to the background sends its remaining waves at once", () => {
   const f = fileDrop("h");
   try {
@@ -2284,7 +2371,7 @@ test("0.9.0 simulator (step 5): members a token come to rest in their way cuts s
   }
 });
 
-test("0.9.0 B0: no route crosses a token standing outside the drop, and no member rests on it", () => {
+test("0.9.0 the file: no route crosses a token standing outside the drop, and no member rests on it", () => {
   combatFlag = false;
   clock.step = 0;
   const ts = [makeToken("b0sA000000000001", 100, 100), makeToken("b0sB000000000001", 100, 200)];
@@ -2312,7 +2399,7 @@ test("0.9.0 B0: no route crosses a token standing outside the drop, and no membe
   }
 });
 
-test("0.9.0 B0: a member with no spot it can reach stays where it stands and is named; the others go; nobody moving at all is \"No route there\"", () => {
+test("0.9.0 the file: a member with no spot it can reach stays where it stands and is named; the others go; nobody moving at all is \"No route there\"", () => {
   combatFlag = false;
   clock.step = 0;
   const ts = [makeToken("b0nA000000000001", 400, 200), makeToken("b0nB000000000001", 100, 200)];
@@ -2531,8 +2618,8 @@ test("0.9.0 fight file gate: the queue ends on a click (stop), a turn change and
   }
 });
 
-test("0.9.0 fight file: a new drop empties the queue; the watchdog (walk time + 3 s) moves a walk that never ends on to the next member", async () => {
-  const ts = [makeToken("ffwA000000000001", 400, 200), makeToken("ffwB000000000001", 300, 200)];
+test("0.9.0 fight file: the watchdog (walk time + 3 s) moves a walk that never ends on to the next member; 0.10 L2: a new drop of another token leaves the queue running", async () => {
+  const ts = [makeToken("ffwA000000000001", 400, 200), makeToken("ffwB000000000001", 300, 200), makeToken("ffwE000000000001", 500, 200)];
   const restore = fightScene(ts);
   holdMoves(ts);
   try {
@@ -2547,13 +2634,14 @@ test("0.9.0 fight file: a new drop empties the queue; the watchdog (walk time + 
     await runFor(2500);
     assert.equal(moves().length, 2, "the watchdog moved the queue on");
     assert.ok(api.status().group.queue.watchdog >= 1);
-    // A new drop (of anything) empties it.
+    // A new drop of another token (0.10 L2: no longer empties the queue, which then left its members unnamed).
     const c = makeToken("ffwC000000000001", 100, 100);
     F.canvas.tokens.placeables = [...ts, c];
     dropWith(c, contextsFor([c], 100, 0));
     await runFor(6000);
-    assert.equal(moves().filter(m => m.id !== c.document.id).length, 2, "nothing more from the emptied queue");
-    assert.equal(api.status().group.queue.ended, "drop");
+    const q = api.status().group.queue;
+    assert.equal(q.ended, "done", `the queue went on to its end: ${JSON.stringify(q)}`);
+    assert.equal(moves().filter(m => m.id !== c.document.id).length + q.there.length + q.stayed, 3, "its last member was walked, in place or named");
     sceneTokens.delete(c.document.id);
   } finally { restore(); tickBy(60000); }
 });
@@ -2628,9 +2716,10 @@ test("0.9.0 fight file gate: 40 seeded fight group drags (2-4 members, tokens st
   assert.ok(walks >= 40, `walked: ${walks}, stayed: ${stays}`);
 });
 
-test("0.9.0: a group drag in a fight of more than the cap is refused with a notice; nothing moves", () => {
+test("0.9.0 / 0.10 R11: a group drag in a fight of more than the cap (24, was 12) is refused with a notice; nothing moves", () => {
+  assert.equal(api.status().group.limits.maxMembers, 24, "the cap is 24");
   const ts = [];
-  for (let k = 0; k < 13; k++) ts.push(makeToken(`ffx${String(k).padStart(2, "0")}00000000001`, (k % 7) * S, 100 + Math.floor(k / 7) * S));
+  for (let k = 0; k < 25; k++) ts.push(makeToken(`ffx${String(k).padStart(2, "0")}00000000001`, (k % 9) * S, 100 + Math.floor(k / 9) * S));
   const restore = fightScene(ts);
   try {
     const from = F.calls.length;
@@ -2732,6 +2821,37 @@ test("0.10 L1 tunnel repro on the board: three dragged deep into a one-wide corr
       const path = [t.document._source, ...moves[t.document.id].waypoints];
       for (let k = 1; k < path.length; k++) assert.equal(crossing(center(path[k - 1]), center(path[k])).length, 0, `${t.document.id} leg ${k} crosses a wall`);
     }
+  } finally {
+    world.walls.splice(world.walls.length - extra.length, extra.length);
+    F.canvas.tokens.placeables = saved;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.10 L2 (R5, R6) on the board: the leader goes in the drop's own update naming itself the leader (drawn on top), the pack one wave later, single file through the door and down the one-wide way", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const extra = [[{ x: 400, y: 400 }, { x: 400, y: 1000 }], [{ x: 500, y: 400 }, { x: 500, y: 1000 }]];
+  world.walls.push(...extra);
+  const ts = [makeToken("l2tA000000000001", 400, 200), makeToken("l2tB000000000001", 300, 200), makeToken("l2tC000000000001", 500, 200)];
+  const others = keepOnly(ts);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts];
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 700));
+    assert.ok(Array.isArray(out), "planned at the drop");
+    assert.deepEqual(out[0].map(u => u._id), [ts[0].document.id], "only the leader in the drop's own update");
+    assert.deepEqual(out[1].pentarynMovementLead, [ts[0].document.id], "its move names it the leader (every client draws it on top)");
+    const last = api.status().group.last;
+    assert.equal(last.plan.pack, 150, "the pack one wave after the leader");
+    const moves = fileMoves(out, from);
+    const waves = ts.slice(1).map(t => moves[t.document.id].wave).sort();
+    assert.ok(waves[0] >= 1 && waves[1] > waves[0], `one through the door at a time: waves ${waves}`);
+    for (const t of ts.slice(1)) assert.equal(moves[t.document.id].options?.pentarynMovementLead, undefined, "a wave names no leader");
+    assert.ok(last.plan.total <= 4000);
   } finally {
     world.walls.splice(world.walls.length - extra.length, extra.length);
     F.canvas.tokens.placeables = saved;

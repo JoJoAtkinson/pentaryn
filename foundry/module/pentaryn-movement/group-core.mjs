@@ -1,8 +1,9 @@
 /**
  * Pure helpers shared by the drop, the file and the stop (pentaryn-movement 0.9). No Foundry globals. Units as
  * motion-core.mjs: centres in grid squares. A route cut short, the walk-distance flood and the one-Ctrl+Z history
- * merge. (0.9: the 0.4 to 0.8 group planner, settle, the reslot and the rest passes are gone; 0.10 L1: the candidate
- * lattices round a formation spot too. The planning is file-core.mjs, plan context/plans/pathfinding-2026-11.md §18.)
+ * merge, and the tokens that start stacked (0.10 L2: from sequence-core, deleted). (0.9: the 0.4 to 0.8 group
+ * planner, settle, the reslot and the rest passes are gone; 0.10 L1: the candidate lattices round a formation spot
+ * too. The planning is file-core.mjs, plan context/plans/pathfinding-2026-11.md §18.)
  */
 
 import { dist } from "./motion-core.mjs";
@@ -164,4 +165,35 @@ export function coalesceHistory(hist, key, scan = 60) {
   for (const i of [...idx].reverse()) hist.splice(i, 1);
   hist.splice(at, 0, merged);
   return idx.length;
+}
+
+/**
+ * Tokens that start stacked (a rider on its mount, a familiar on a shoulder, a grappled pair): circles that overlap by
+ * more than `slack` squares. Returns groups of ids (union of overlapping pairs), each with its leader: the largest,
+ * then `prefer` (the grabbed token), then list order. Singletons are left out.
+ * @param {{ id: string, c: {x,y}, r: number, size?: number }[]} items
+ */
+export function stacksOf(items, { slack = 0.25, prefer = null } = {}) {
+  const parent = new Map(items.map(i => [i.id, i.id]));
+  const find = id => { let p = id; while (parent.get(p) !== p) p = parent.get(p); return p; };
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const a = items[i], b = items[j];
+      if (dist(a.c, b.c) < a.r + b.r - slack) parent.set(find(b.id), find(a.id));
+    }
+  }
+  const groups = new Map();
+  for (const it of items) {
+    const root = find(it.id);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(it);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    const size = it => it.size ?? it.r;
+    const lead = [...g].sort((a, b) => size(b) - size(a) || (b.id === prefer) - (a.id === prefer) || g.indexOf(a) - g.indexOf(b))[0];
+    out.push({ leader: lead.id, riders: g.filter(x => x !== lead).map(x => ({ id: x.id, dx: x.c.x - lead.c.x, dy: x.c.y - lead.c.y })) });
+  }
+  return out;
 }

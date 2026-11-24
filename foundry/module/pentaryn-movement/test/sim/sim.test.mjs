@@ -1,25 +1,24 @@
 // The simulator in the module's suite (0.9.0, Fable's review 2 §4 step 5): a smoke run of seeds on the real cores
-// (file-core planLead / staggerFile, sequence-core, the pathfind-core A*), and one regression per defect it found
+// (file-core planLead / staggerFile, the pathfind-core A*), and one regression per defect it found
 // (SIM5-01 ... SIM5-03). Each regression seed holds every hard invariant with the fix, and with the fix switched off in
 // the model it still breaks one, so the seed keeps exercising the case (the stop.mjs fixes also have their own unit
 // tests: drop.test.mjs "simulator (step 5)"). 0.10 L1: the leader plan gives every seed new slots, so the regression
-// seeds were found again on it (the first four of seeds 1-6000 that hold with the fix and break without it). The full
-// run is `make foundry-movement-sim SEEDS=10000` (scripts/foundry/movement_sim.mjs).
+// seeds were found again on it (the first four of seeds 1-6000 that hold with the fix and break without it); L2 (the
+// motion) found them again the same way (seeds 1-8000), and one for its fix (b). The full run is
+// `make foundry-movement-sim SEEDS=10000` (scripts/foundry/movement_sim.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runSeed } from "./scenario.mjs";
 
 const invs = r => [...new Set(r.failures.map(f => f.inv))];
 
-test("the simulator runs on the real cores: 60 seeds as B1 and as B0, every map and mode, every hard invariant holds", () => {
+test("the simulator runs on the real cores: 60 seeds, every map and mode, every hard invariant holds", () => {
   const maps = new Set(), modes = new Set();
   for (let s = 1; s <= 60; s++) {
-    for (const b0 of [false, true]) {
-      const r = runSeed(s, { b0 });
-      maps.add(r.meta.map.replace(/\d$/, ""));
-      modes.add(r.meta.combat ? "fight" : "explore");
-      assert.deepEqual(r.failures, [], `seed ${s} ${b0 ? "B0" : "B1"}: ${JSON.stringify(r.failures[0])}`);
-    }
+    const r = runSeed(s);
+    maps.add(r.meta.map.replace(/\d$/, ""));
+    modes.add(r.meta.combat ? "fight" : "explore");
+    assert.deepEqual(r.failures, [], `seed ${s}: ${JSON.stringify(r.failures[0])}`);
   }
   assert.ok(maps.size >= 5, `maps covered: ${[...maps]}`);
   assert.equal(modes.size, 2, `modes covered: ${[...modes]}`);
@@ -32,7 +31,7 @@ test("the simulator replays: the same seed gives the same record", () => {
   assert.equal(a.events.length, b.events.length);
 });
 
-for (const seed of [492, 800, 1014, 2409]) {
+for (const seed of [19, 138, 492, 721]) {
   test(`SIM5-01 (seed ${seed}): a wave never walks a member through a mate at rest off its slot or one a wave left standing (0.10: a wave's member goes its whole way or stays)`, () => {
     assert.deepEqual(invs(runSeed(seed)), []);
     const off = invs(runSeed(seed, { noWaveRests: true }));
@@ -40,12 +39,17 @@ for (const seed of [492, 800, 1014, 2409]) {
   });
 }
 
-for (const seed of [41, 75, 145, 230]) {
+for (const seed of [2, 41, 60, 69]) {
   test(`SIM5-02 (seed ${seed}): a stop (a click, a door shut) never leaves two tokens at rest inside each other: the later one is carried clear along its way`, () => {
     assert.deepEqual(invs(runSeed(seed)), []);
     assert.ok(invs(runSeed(seed, { noStopClear: true })).includes("restOverlap"), "without the fix the seed still shows it");
   });
 }
+
+test("SIM-L2-01 (seed 1412, L1's open rest overlap): another user's stop of a member that carries it on names its final spot, and the dragger's screen never rests a mate there (0.10 L2 fix (b))", () => {
+  assert.deepEqual(invs(runSeed(1412)), []);
+  assert.ok(invs(runSeed(1412, { noStopAt: true })).includes("restOverlap"), "without the fix the seed still shows it");
+});
 
 test("SIM5-03: most members dropped move (0.9: one whose formation spot lay behind a wall came along; 0.10: the leader rule has no formation spots, each takes the best square it can reach)", () => {
   let dropped = 0, unmoved = 0;

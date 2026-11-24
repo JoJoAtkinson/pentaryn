@@ -5,15 +5,16 @@
  * suite, so it lives outside the module's test/ (blueprint C43); its regression seeds run in the suite as
  * test/sim/sim.test.mjs.
  *
- * 0.9.0 (Fable's review 2 §4 step 5): the module's real cores (file-core planFile / staggerFile, sequence-core, the
- * pathfind-core A*) on the engine's virtual clients. Each seed FROM .. FROM+SEEDS-1 runs twice, as B1 (the file's start
- * delays) and as B0 (every delay 0), every hard invariant judged on both; mover-vs-mover overlap is reported as p95
- * depth and duration, B1 beside B0. Prints a line per failing run and a summary; exits 1 when any run fails.
+ * 0.9.0 (Fable's review 2 §4 step 5): the module's real cores (file-core planLead / staggerFile, the pathfind-core A*)
+ * on the engine's virtual clients. Each seed FROM .. FROM+SEEDS-1 runs once (0.10 L2: one mode, the leader rule's
+ * motion; 0.9's B0 is gone), every hard invariant judged; mover-vs-mover overlap is reported as p95 depth and duration,
+ * and the leader walking through its own members (R6) is reported, never failed. Prints a line per failing run and a
+ * summary; exits 1 when any run fails.
  *
  *   node scripts/foundry/movement_sim.mjs [--seeds 2000] [--from 1] [--seed N] [--json] [--only inv1,inv2] [--map hard] [--opts JSON]
  *
- * --opts fixes scenario choices (scenario.mjs): combat, loss, fog, background, door, click, two, turn (booleans), b0
- * (only that mode). `--seed N` prints one seed's whole record (B1, or B0 with --opts '{"b0":true}').
+ * --opts fixes scenario choices (scenario.mjs): combat, loss, fog, background, door, click, two, turn (booleans).
+ * `--seed N` prints one seed's whole record.
  */
 
 import { runSeed, pct } from "../../foundry/module/pentaryn-movement/test/sim/scenario.mjs";
@@ -34,23 +35,23 @@ if (one !== null) {
 
 const N = Number(opt("seeds", 2000));
 const FROM = Number(opt("from", 1));
-const modes = "b0" in extra ? [extra.b0 ? "B0" : "B1"] : ["B1", "B0"];
+const modes = ["run"];
 const INVS = ["passThrough", "wallCross", "wrongCharge", "unsent", "restOverlap", "errors"];
 const out = {};
-for (const mode of modes) out[mode] = { byInv: Object.fromEntries(INVS.map(k => [k, []])), byKind: {}, movers: [], shortMate: [], waiting: [], unforeseen: [], seedsWithMover: 0, races: 0, unmoved: 0, named: 0, dropped: 0 };
+for (const mode of modes) out[mode] = { byInv: Object.fromEntries(INVS.map(k => [k, []])), byKind: {}, movers: [], shortMate: [], waiting: [], unforeseen: [], leader: [], seedsWithMover: 0, races: 0, unmoved: 0, named: 0, dropped: 0 };
 const failing = [];
 const t0 = Date.now();
 for (let s = FROM; s < FROM + N; s++) {
   for (const mode of modes) {
     const o = out[mode];
     let r;
-    try { r = runSeed(s, { map, ...extra, b0: mode === "B0" }); }
+    try { r = runSeed(s, { map, ...extra }); }
     catch (err) { r = { seed: s, meta: {}, movers: [], stats: {}, failures: [{ inv: "errors", err: String(err?.stack ?? err).split("\n").slice(0, 3).join(" | ") }] }; }
     const fs = only ? r.failures.filter(f => only.includes(f.inv)) : r.failures;
     const kind = `${r.meta.map ?? "?"}/${r.meta.combat ? "fight" : "explore"}`;
     const k = (o.byKind[kind] ??= { runs: 0, failed: 0 });
     k.runs += 1;
-    for (const m of r.movers) (m.kind === "mover" ? o.movers : m.kind === "shortMate" ? o.shortMate : m.kind === "unforeseen" ? o.unforeseen : o.waiting).push(m);
+    for (const m of r.movers) (m.kind === "mover" ? o.movers : m.kind === "shortMate" ? o.shortMate : m.kind === "unforeseen" ? o.unforeseen : m.kind === "leader" ? o.leader : o.waiting).push(m);
     if (r.movers.some(m => m.kind === "mover")) o.seedsWithMover += 1;
     o.races += (r.stats.races?.length ?? 0) ? 1 : 0; o.unmoved += r.stats.unmoved ?? 0; o.named += r.stats.named ?? 0; o.dropped += r.stats.dropped ?? 0;
     if (!fs.length) continue;
@@ -66,7 +67,7 @@ const sum = list => ({ episodes: list.length, p95Depth: +pct(list.map(m => m.dep
 const report = Object.fromEntries(Object.entries(out).map(([mode, o]) => [mode, {
   failedRuns: failing.filter(f => f.mode === mode).length,
   byInv: Object.fromEntries(Object.entries(o.byInv).map(([k, v]) => [k, v.length])),
-  mover: { ...sum(o.movers), seeds: o.seedsWithMover }, shortMate: sum(o.shortMate), waiting: sum(o.waiting), unforeseen: sum(o.unforeseen),
+  mover: { ...sum(o.movers), seeds: o.seedsWithMover }, shortMate: sum(o.shortMate), waiting: sum(o.waiting), unforeseen: sum(o.unforeseen), leader: sum(o.leader),
   members: { dropped: o.dropped, unmoved: o.unmoved, named: o.named }, raceSeeds: o.races, byKind: o.byKind,
 }]));
 if (flag("json")) {
@@ -75,16 +76,17 @@ if (flag("json")) {
   for (const f of failing) {
     const m = f.meta;
     const tags = [m.lossy && "loss", m.fog && "stalls", m.backgrounded && "background", m.dropped && `drop:${m.dropped}`, m.twoGroups && "two", m.doorShut && "door", m.clickAt && "click", m.turnAt && "turn", m.byPlayer && "player"].filter(Boolean).join(" ");
-    console.log(`seed ${f.seed} ${f.mode}  ${f.kind}  [${tags}]  ${f.invs.join(",")}  ${JSON.stringify(f.first).slice(0, 240)}`);
+    console.log(`seed ${f.seed}  ${f.kind}  [${tags}]  ${f.invs.join(",")}  ${JSON.stringify(f.first).slice(0, 240)}`);
   }
-  console.log(`\n${N} seeds from ${FROM} × ${modes.join("+")} in ${(ms / 1000).toFixed(1)} s`);
+  console.log(`\n${N} seeds from ${FROM} in ${(ms / 1000).toFixed(1)} s`);
   for (const [mode, r] of Object.entries(report)) {
-    console.log(`${mode}: ${r.failedRuns} failing runs`);
+    console.log(`${r.failedRuns} failing runs`);
     for (const inv of INVS) console.log(`  ${inv.padEnd(12)} ${String(r.byInv[inv] ?? 0).padStart(5)}  e.g. ${(out[mode].byInv[inv] ?? []).slice(0, 10).join(" ")}`);
     const mv = r.mover;
     console.log(`  mover overlap: ${mv.episodes} episodes in ${mv.seeds} seeds; depth p95 ${mv.p95Depth} max ${mv.maxDepth} sq; duration p95 ${mv.p95Ms} max ${mv.maxMs} ms`);
     console.log(`  past a mate waiting for its wave: ${r.waiting.episodes} (p95 ${r.waiting.p95Depth} sq, ${r.waiting.p95Ms} ms); past a mate stopped short: ${r.shortMate.episodes} (p95 ${r.shortMate.p95Depth} sq, ${r.shortMate.p95Ms} ms)`);
     console.log(`  through a token come to rest after the walk was sent (its sender could not know): ${r.unforeseen.episodes} (p95 ${r.unforeseen.p95Depth} sq, ${r.unforeseen.p95Ms} ms)`);
+    console.log(`  the leader through its own members at rest (R6, allowed): ${r.leader.episodes} (p95 ${r.leader.p95Depth} sq, ${r.leader.p95Ms} ms)`);
     console.log(`  rest overlap flagged as a same-instant race (not failed): ${r.raceSeeds} seeds`);
     console.log(`  members dropped ${r.members.dropped}, never moved ${r.members.unmoved}, named ${r.members.named}`);
   }

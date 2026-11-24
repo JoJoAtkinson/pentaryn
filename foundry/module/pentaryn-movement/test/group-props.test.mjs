@@ -2,7 +2,7 @@
 // seeded so a failure reproduces: the seed is in the message.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { flood, freePrefix, prefixOf, onCell } from "../group-core.mjs";
+import { flood, freePrefix, prefixOf, onCell, stacksOf } from "../group-core.mjs";
 import { MOTION, trajectory, delayed, positionAt, firstConflict, minSeparation, waves, cellChain, dist, radiusOf, groupMode, clickStop } from "../motion-core.mjs";
 
 /** mulberry32: small seeded PRNG. */
@@ -99,6 +99,10 @@ test("edge: radiusOf and groupMode boundaries and precedence", () => {
   assert.equal(radiusOf(0.5), 0.25);
   assert.equal(groupMode({ members: 2 }).mode, "plan");
   assert.equal(groupMode({ members: 12 }).mode, "plan");
+  // R11 (0.10 L2): the cap is 24, out of combat and in a fight (was 12).
+  assert.equal(groupMode({ members: 24 }).mode, "plan");
+  assert.equal(groupMode({ members: 25 }).reason, "tooMany");
+  assert.equal(groupMode({ members: 24, combat: true }).mode, "plan");
   assert.equal(groupMode({ members: 0 }).reason, "single");
   assert.equal(groupMode({ enabled: false, members: 99, gridType: 0 }).reason, "off");
   assert.equal(groupMode({ members: 99, gridType: 0 }).reason, "tooMany");
@@ -150,4 +154,24 @@ test("freePrefix: the way as far as it is free; S1R1-02 not at rest in a one-wid
   // prefixOf: a null cut is the whole route, a cut at a point or between two.
   assert.equal(prefixOf(way, null), way);
   assert.deepEqual(prefixOf(way, { k: 0, t: 0.5 }).at(-1), { x: 3.5, y: 0.5 });
+});
+
+// Tokens that start stacked (0.8.0; group-core since 0.10 L2, sequence-core deleted).
+test("stacksOf: a rider on its mount, a familiar on a shoulder, a grappled pair; neighbours touching are no stack", () => {
+  const items = [
+    { id: "mount", c: { x: 1, y: 1 }, r: 1, size: 4 },          // a Large at (0,0)-(2,2)
+    { id: "rider", c: { x: 0.5, y: 0.5 }, r: 0.5, size: 1 },    // a Medium on its top-left square
+    { id: "owl", c: { x: 5.4, y: 5.4 }, r: 0.25, size: 0.25 },  // a Tiny on the shoulder of
+    { id: "hero", c: { x: 5.5, y: 5.5 }, r: 0.5, size: 1 },
+    { id: "left", c: { x: 8.5, y: 0.5 }, r: 0.5, size: 1 },     // two side by side: touching, no stack
+    { id: "right", c: { x: 9.5, y: 0.5 }, r: 0.5, size: 1 },
+  ];
+  const st = stacksOf(items, { prefer: "rider" });
+  const byLeader = Object.fromEntries(st.map(s => [s.leader, s.riders.map(r => r.id)]));
+  assert.deepEqual(byLeader, { mount: ["rider"], hero: ["owl"] }, "the largest leads; touching neighbours are left alone");
+  const rider = st.find(s => s.leader === "mount").riders[0];
+  assert.deepEqual([rider.dx, rider.dy], [-0.5, -0.5]);
+  // Two of one size: the grabbed one leads.
+  const pair = stacksOf([{ id: "a", c: { x: 0.5, y: 0.5 }, r: 0.5 }, { id: "b", c: { x: 0.6, y: 0.5 }, r: 0.5 }], { prefer: "b" });
+  assert.equal(pair[0].leader, "b");
 });

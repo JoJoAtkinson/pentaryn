@@ -48,7 +48,7 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
-test("init registers the nine settings (golden/settings-register.json; 0.8.0 folded three in and added the tier gates; 0.9.0 groupStagger)", () => {
+test("init registers the eight settings (golden/settings-register.json; 0.8.0 folded three in and added the tier gates; 0.9.0 groupStagger, gone in 0.10 L2)", () => {
   F.fire("init");
   const rows = [...game.settings.settings.values()].filter(s => s.namespace === MOD).map(s => ({
     key: s.key, scope: s.scope, config: s.config, type: s.type?.name ?? null, default: s.default,
@@ -56,7 +56,7 @@ test("init registers the nine settings (golden/settings-register.json; 0.8.0 fol
   }));
   pinJSON("settings-register", rows, import.meta.url);
   assert.deepEqual(rows.map(r => r.key), ["ghostPolicy", "ghostPolicyLast", "ghost", "ownedOnTop", "pathfinding", "pathfindMine", "groupDrags",
-    "assist", "groupStagger"]);
+    "assist"]);
 });
 
 test("setup wraps both prototypes and marks them __pentarynMovement", () => {
@@ -174,6 +174,46 @@ test("refreshToken: owned ghost token is lifted and faded; destroyed token untou
   F.fire("refreshToken", dead, { refreshState: true });
   assert.deepEqual(dead.mesh, { alpha: 1, sort: null });
   F.fire("refreshToken", { mesh: null }, { refreshState: true });   // no mesh: nothing, no throw
+  assert.equal(F.hookErrors.length, 0);
+});
+
+test("R6 (0.10 L2): the leader of a group drag is drawn on top of everyone while it moves, on a client that did not start the move (its move's option, no document write); back in its place when the move ends", async () => {
+  await reset();
+  const lead = token({ id: "lead0000000000001", owner: false, sort: 4 });
+  const mine = token({ id: "mine0000000000001", owner: true, sort: 9 });
+  lead.document.object = lead;
+  lead.movementAnimationName = "Token.lead.animateMovement";
+  lead.animationContexts = new Map([[lead.movementAnimationName, {}]]);
+  const from = mark();
+  // The dragger is someone else (GM); this client (the player) only receives the update with its option.
+  F.fire("updateToken", lead.document, { x: 300 }, { pentarynMovementLead: lead.id, pentarynMovementGroup: "g1" }, GM);
+  F.fire("refreshToken", lead, { refreshState: true });
+  F.fire("refreshToken", mine, { refreshState: true });
+  assert.equal(lead.mesh.sort, meshSort(4, 2), "a rank above owned");
+  assert.ok(lead.mesh.sort > mine.mesh.sort, "drawn above the player's own token");
+  assert.equal(game.pentaryn.movement.status().group.leading.includes(lead.id), true, "status().group.leading names it");
+  assert.equal(since(from).filter(c => /update/.test(c.op ?? "")).length, 0, "no document write");
+  // Another token's move with the option naming someone else is not lifted.
+  const other = token({ id: "othr000000000001", owner: false, sort: 4 });
+  F.fire("updateToken", other.document, { x: 300 }, { pentarynMovementLead: lead.id }, GM);
+  F.fire("refreshToken", other, { refreshState: true });
+  assert.equal(other.mesh.sort, 4);
+  // A leader's rider is named after it (the ids of the batch that lead): lifted too, so it stays above its mount.
+  const rider = token({ id: "ridr000000000001", owner: false, sort: 5 });
+  F.fire("updateToken", rider.document, { x: 300 }, { pentarynMovementLead: ["lead0000000000001", rider.id] }, GM);
+  F.fire("refreshToken", rider, { refreshState: true });
+  assert.equal(rider.mesh.sort, meshSort(5, 2));
+  // Still walking: still on top (the page's timers run one by one: a poll schedules the next).
+  const ticks = async ms => { for (let t = 0; t < ms; t += 50) mock.timers.tick(50); await flush(); };
+  await ticks(400);
+  F.fire("refreshToken", lead, { refreshState: true });
+  assert.equal(lead.mesh.sort, meshSort(4, 2));
+  // Its move ends (no movement animation left): back where it belongs.
+  lead.animationContexts.clear();
+  await ticks(400);
+  F.fire("refreshToken", lead, { refreshState: true });
+  assert.equal(lead.mesh.sort, 4, "back in its place");
+  assert.equal(game.pentaryn.movement.status().group.leading.includes(lead.id), false);
   assert.equal(F.hookErrors.length, 0);
 });
 
