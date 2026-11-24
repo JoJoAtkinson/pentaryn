@@ -439,11 +439,13 @@ function targetOf(anchor, centre, ids, s) {
  * squares (the walls a 1×1 body of the leader meets, on the pathfinder's shared step memo, so the rank flood, the
  * walk to the drop and every member's reach share one answer per step).
  */
-function oraclesFor(anchor, contexts, constrain = {}) {
+function oraclesFor(anchor, contexts, constrain = {}, group = []) {
   const s = gridSize(anchor);
   const ordered = [...contexts].sort((a, b) => (a.token === anchor ? -1 : b.token === anchor ? 1 : 0));
   const members = ordered.map(c => memberOf(c, s));
-  const standing = othersOf(members, s);
+  // Every token dragged is in the group (0.10 F1 B3, R1): a rider walks with its mount, never stands in the way.
+  const mine = new Set([...members.map(m => m.id), ...(group ?? [])]);
+  const standing = othersOf(members, s).filter(o => !mine.has(o.id));
   const origins = new Map(members.map(m => [m.id, feature.exposed.pathfindOrigin?.(m.token.document) ?? { ...m.token.document._source }]));
   const avoidMemo = new Map();
   const hazards = m => {
@@ -476,7 +478,7 @@ function oraclesFor(anchor, contexts, constrain = {}) {
       return nf.adjacent(a.i, a.j, b.i - a.i, b.j - a.j).length > 0;
     } catch { return false; }
   };
-  return { s, members, standing, origins, walkable, step, narrow: nf };
+  return { s, members, standing, origins, walkable, step, narrow: nf, mine };
 }
 
 /**
@@ -538,11 +540,11 @@ function routeOracle(origins, s) {
  * leaders (drop.mjs). Returns { plan, members, timing }, or null when there is nothing to plan. Reads only; never
  * throws past the caller's catch (drop.mjs: core's drop).
  */
-function planDrop(anchor, contexts, { constrain = {} } = {}) {
+function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
   if (!feature || !anchor || contexts.length < 1) return null;
-  const { s, members, standing, origins, walkable, step, narrow } = oraclesFor(anchor, contexts, constrain);
+  const { s, members, standing, origins, walkable, step, narrow, mine } = oraclesFor(anchor, contexts, constrain, group);
   const L = members[0];
-  const target = targetOf(anchor, L.formation, new Set(members.map(m => m.id)), s);
+  const target = targetOf(anchor, L.formation, mine, s);
   // A march dropped in a tight square (0.10 R9): the leader rests where it may there, on the narrow way's centre line.
   let drop = L.formation, rest = null;
   if (!target && L.w <= 1 && L.h <= 1) {
@@ -573,12 +575,12 @@ function planDrop(anchor, contexts, { constrain = {} } = {}) {
  * A fight's group drag at the drop (R7): its shape, its target and the order the members walk in (the leader, then
  * least walk left; planLead with no search). { shape, target, order } or null. Reads only.
  */
-function fightPlan(anchor, contexts, { constrain = {} } = {}) {
+function fightPlan(anchor, contexts, { constrain = {}, group = [] } = {}) {
   if (!feature || !anchor || !contexts.length) return null;
   try {
-    const { s, members, standing, walkable, step } = oraclesFor(anchor, contexts, constrain);
+    const { s, members, standing, walkable, step, mine } = oraclesFor(anchor, contexts, constrain, group);
     const L = members[0];
-    const target = targetOf(anchor, L.formation, new Set(members.map(m => m.id)), s);
+    const target = targetOf(anchor, L.formation, mine, s);
     const plan = planLead({ members, leaderId: L.id, drop: L.formation, target, standing }, { walkable, step, now });
     // The order (R7): the leader, then least walk left; each member's square is picked at its own turn (slotAtTurn).
     return { shape: plan.shape, target, order: plan.byWalk?.length ? plan.byWalk : plan.order, leader: L.id };
@@ -591,13 +593,13 @@ function fightPlan(anchor, contexts, { constrain = {} } = {}) {
  * (`leaderAt`: its rest and the square its last step came from, top-left pixels); swarm: round the target. The
  * top-left pixels, or null (no free square it can reach: it stays, named). Reads only.
  */
-function slotAtTurn(token, { shape = "march", target = null, leaderId = null, leaderAt = null } = {}) {
+function slotAtTurn(token, { shape = "march", target = null, leaderId = null, leaderAt = null, riders = [] } = {}) {
   if (!feature || !token?.document) return null;
   try {
     const doc = token.document;
     const s = gridSize(token);
     const ctx = { token, destination: { ...doc._source }, foundPath: [], waypoints: [] };
-    const { members, standing, walkable, step, origins, narrow } = oraclesFor(token, [ctx]);
+    const { members, standing, walkable, step, origins, narrow } = oraclesFor(token, [ctx], {}, riders);
     const m = members[0];
     let leader = null, at = null;
     if (shape === "march") {

@@ -38,6 +38,14 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### F1 — Fable's design check (review F1: B1, B2, B3)
+
+- **[declared] A rider is in its group for the plan** (B3; R1, R2): `drop.mjs` passes every token dragged (riders
+  too) to `groupPlan` / `groupFightPlan`, and `file.mjs` leaves them out of the tokens standing and out of the swarm's
+  target. A Large mount with its rider dragged one square up-left swarmed round its own rider and moved the other way;
+  down-right it was "No route there". Now each diagonal is a march, the mount on its drop square, the rider on it. At a
+  fight member's turn its own riders are not in its way either (`slotAtTurn` `riders`).
+
 ### Step N — any passage shape (R9)
 
 Not a feature of its own and no switch (Joe, 2026-11-24): the pathfinder itself handles any passage shape; the spiral C

@@ -3678,3 +3678,83 @@ test("0.10 R9: a group of four over the spiral C stair out of combat — the lea
     }
   } finally { F.canvas.tokens.placeables = saved; done(); }
 });
+
+/* -------------------------------------------- */
+/*  0.10 F1: Fable's design check (review-f1 B1, B2, B3)                         */
+/* -------------------------------------------- */
+
+/** Open floor (no walls) on a 1000 px canvas for a test; returns the restore. */
+function openFloor() {
+  const old = world.walls;
+  world.walls = [];
+  F.fire("updateWall");
+  return () => { world.walls = old; F.fire("updateWall"); };
+}
+
+test("0.10 F1 B3 (R1, R2): a rider is in its group for the plan — grabbed, its mount leads one entry in a march; a Large mount moved one square on each diagonal marches onto its drop square with its rider, never a swarm round its own rider", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = openFloor();
+  const saved = F.canvas.tokens.placeables;
+  let uid = 0;
+  const cases = [
+    // [name, rider top-left (squares), grabbed, dx, dy]
+    ["rider grabbed, +4,0", [5, 5], "rider", 4, 0],
+    ["rider top-left, -1,-1", [4, 4], "mount", -1, -1],
+    ["rider top-left, +1,+1", [4, 4], "mount", 1, 1],
+    ["rider bottom-right, -1,-1", [5, 5], "mount", -1, -1],
+    ["rider bottom-right, +1,+1", [5, 5], "mount", 1, 1],
+    ["rider bottom-right, +1,-1", [5, 5], "mount", 1, -1],
+    ["rider bottom-right, -1,+1", [5, 5], "mount", -1, 1],
+    ["rider grabbed, +1,+1", [5, 5], "rider", 1, 1],
+  ];
+  try {
+    for (const [name, [rx, ry], grab, dx, dy] of cases) {
+      const id = k => `f1b3${String(uid++).padStart(4, "0")}${k}`.padEnd(16, "0");
+      const mount = makeToken(id("M"), 400, 400, { size: 2 }), rider = makeToken(id("R"), rx * S, ry * S);
+      const a = makeToken(id("A"), 200, 700), b = makeToken(id("B"), 300, 800);
+      const ts = [mount, rider, a, b];
+      const others = keepOnly(ts);
+      for (const t of ts) t.visible = true;
+      F.canvas.tokens.placeables = [...ts];
+      try {
+        const from = F.calls.length;
+        const g = grab === "rider" ? rider : mount;
+        const out = dropWith(g, contextsFor(ts, dx * S, dy * S));
+        const last = api.status().group.last;
+        assert.equal(last.result, "plan", `${name}: planned (${JSON.stringify(last)})`);
+        assert.equal(last.shape, "march", `${name}: a march, never a swarm round its own rider`);
+        assert.equal(last.target, null, name);
+        assert.equal(last.leader, mount.document.id, `${name}: the mount leads`);
+        assert.equal(last.plan.members, 3, `${name}: the stack is one entry`);
+        assert.deepEqual(last.stayed, [], `${name}: nobody named`);
+        const by = fileMoves(out, from);
+        const end = t => by[t.document.id]?.waypoints?.at(-1);
+        assert.deepEqual([end(mount)?.x, end(mount)?.y], [400 + dx * S, 400 + dy * S], `${name}: the mount on its drop square`);
+        assert.deepEqual([end(rider)?.x, end(rider)?.y], [rx * S + dx * S, ry * S + dy * S], `${name}: the rider on it`);
+      } finally {
+        for (const t of ts) sceneTokens.delete(t.document.id);
+        for (const [k, v] of others) sceneTokens.set(k, v);
+        tickBy(60000);
+      }
+    }
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});
+
+test("0.10 F1 B3 (R2) fight: a Large mount with its rider dragged one square up-left in a fight is a march (its own rider is never the target)", async () => {
+  const done = openFloor();
+  const mount = noSpeed(makeToken("f1b3fM0000000001", 400, 400, { size: 2 })), rider = noSpeed(makeToken("f1b3fR0000000001", 400, 400));
+  const a = noSpeed(makeToken("f1b3fA0000000001", 200, 700)), b = noSpeed(makeToken("f1b3fB0000000001", 300, 800));
+  const ts = [mount, rider, a, b];
+  const restore = fightScene(ts);
+  const held = holdMoves(ts);
+  try {
+    assert.equal(dropWith(mount, contextsFor(ts, -S, -S)), null);
+    const last = api.status().group.last;
+    assert.equal(last.shape, "march", JSON.stringify(last));
+    assert.equal(last.target, null);
+    await settleQueue(held);
+    const mv = F.calls.filter(c => c.op === "move" && c.id === mount.document.id).at(-1);
+    assert.deepEqual([mv?.waypoints.at(-1).x, mv?.waypoints.at(-1).y], [300, 300], "the mount on its drop square");
+  } finally { restore(); done(); tickBy(60000); }
+});

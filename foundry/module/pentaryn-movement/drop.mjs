@@ -1101,7 +1101,9 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
   const lead = riders?.get(grabbed.document.id)?.leader;
   const anchor = lead ? (contexts.find(c => c.token.document.id === lead)?.token ?? grabbed) : grabbed;
   const leaders = riders?.size ? contexts.filter(c => !riders.has(c.token.document.id)) : contexts;
-  const out = feature.exposed.groupPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} });
+  // Every token dragged is in the group for the plan (0.10 F1 B3): a rider never stands in the way, nor is the target.
+  const group = contexts.map(c => c.token.document.id);
+  const out = feature.exposed.groupPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {}, group });
   if (!out) { fellBack("noPlan"); last.result = "core"; return carryRiders(riders, result); }
   const { plan, members, timing } = out;
   const delays = timing?.delays ?? {};
@@ -1304,7 +1306,8 @@ function fightFile(grabbed, contexts, riders, seq) {
   const lead = riders?.get(grabbed.document.id)?.leader;
   const anchor = lead ? (leaders.find(c => c.token.document.id === lead)?.token ?? grabbed) : grabbed;
   let fp = null;
-  try { fp = feature.exposed.groupFightPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} }) ?? null; }
+  const group = contexts.map(c => c.token.document.id);
+  try { fp = feature.exposed.groupFightPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {}, group }) ?? null; }
   catch (err) { log?.debug?.("fight: the plan", err); }
   const ids0 = leaders.map(c => c.token.document.id);
   const order = (fp?.order ?? [anchor.document.id, ...ids0.filter(id => id !== anchor.document.id)]).filter(id => ids0.includes(id));
@@ -1443,7 +1446,7 @@ async function routeAtTurn(token, e, q = null) {
     } else end = end0;
   } else {
     let p = null;
-    try { p = feature.exposed.groupSlotAtTurn?.(token, { shape: q?.shape ?? "march", target: q?.target ?? null, leaderId: q?.leaderId ?? null, leaderAt: q?.leaderAt ?? null }) ?? null; }
+    try { p = feature.exposed.groupSlotAtTurn?.(token, { shape: q?.shape ?? "march", target: q?.target ?? null, leaderId: q?.leaderId ?? null, leaderAt: q?.leaderAt ?? null, riders: e.riders.map(x => x.id) }) ?? null; }
     catch (err) { log?.debug?.("fight: a member's square", err); }
     if (p && !taken(p)) end = { ...e.dest, x: p.x, y: p.y, snapped: true };
   }
