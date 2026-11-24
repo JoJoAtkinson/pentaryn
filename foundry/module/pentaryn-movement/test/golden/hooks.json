@@ -181,6 +181,10 @@
   },
   {
     "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
     "name": "moveToken"
   },
   {

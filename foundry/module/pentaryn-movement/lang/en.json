@@ -47,7 +47,11 @@
         "exempt": "Your incorporeal creature may move through walls during the fight. Click the ghost button under the Ruler to use it."
       },
       "noRoute": "No route there.",
-      "stoppedShort": "Stopped short, way blocked."
+      "stoppedShort": "Stopped short, way blocked.",
+      "named": {
+        "noRoute": "No route there: {name} is in the way. The ghost button under the Ruler lets you pass.",
+        "aToken": "a token"
+      }
     },
     "settings": {
       "policy": {

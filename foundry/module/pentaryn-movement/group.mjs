@@ -33,7 +33,7 @@ import { cutsFor, onWay, sequence, stacksOf } from "./sequence-core.mjs";
 import { hideCue, showCue } from "./cue-ui.mjs";
 import { LIMITS, avoidDist, skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, continuationInFlight, countsForRoutes, cutAtWalls, drawnPosition, gridSize, inCombat, memberOf, movementFacts, movingOthers, narrowPoints, othersOf, pinDrawn, restWalkable, sameLayer, speedOf, stopWhereDrawn, toSquares, toTopLeft, unpin } from "./group-adapter.mjs";
-import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
+import { fieldFor, placesToAvoid, sceneHasTerrain } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
@@ -789,7 +789,7 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
    * A route search run in slices with a yield between them (`yield*` it from the plan), its own time capped at `cap`
    * ms. Round `avoid` as route(). The route, or null (no way, or not found within the cap: `unfinished` says which).
    */
-  const sliced = function* (rec, to, avoid, cap) {
+  const sliced = function* (rec, to, avoid, cap, partial = false) {
     const steps = feature.exposed.pathfindRouteSteps;
     const { origin, dest } = destOf(rec, to);
     const gen = steps(rec.token, origin, dest, {
@@ -804,7 +804,12 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
       yield "route";
     }
     v = v.value;
-    if (!v?.reached || !v.path?.length) { unfinished = !!v?.unfinished; return null; }
+    if (!v?.reached || !v.path?.length) {
+      unfinished = !!v?.unfinished;
+      // The way as far as it goes (a big token as far as its body fits), for toward.
+      if (partial && v?.partial?.length >= 2) { unfinished = false; return asRoute(rec, v.partial, null); }
+      return null;
+    }
     return asRoute(rec, v.path, v.cost);
   };
   /**
@@ -856,6 +861,38 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     }
     return crampMemo.get(k);
   };
+  /**
+   * toward(), searched in slices (0.8.5, AR3-10): a big member that fits no door searched the whole map in one go,
+   * up to ROUTE_MS (250 ms) of one task on the dragging page (live B2: a 277 ms long frame at the drop).
+   */
+  const towardSliced = function* (m, from, to) {
+    unfinished = false;
+    const rec = byId.get(m.id);
+    if (!rec) return null;
+    const shown = shownFor(m, to);
+    if (shown) return measured(shown.map(p => ({ ...p })));
+    if (typeof feature.exposed.pathfindRouteSteps !== "function") return toward(m, from, to);
+    return yield* sliced(rec, to, [], ROUTE_MS, true);
+  };
+  /**
+   * A way (centres, squares) as core draws it on a scene with terrain (0.8.5, AR3-04): core's own terrain path
+   * (Token#createTerrainMovementPath, split where the terrain changes) and each segment's difficulty, by which core
+   * divides the animation's speed. Only on a scene with terrain; null when core gives nothing.
+   */
+  let terrainPath;
+  try { terrainPath = sceneHasTerrain(anchor.token.document?.parent) ? (m, points) => {
+    const rec = byId.get(m.id);
+    const token = rec?.token;
+    if (!token || typeof token.createTerrainMovementPath !== "function") return null;
+    const d = token.document;
+    const base = { elevation: d._source.elevation ?? 0, width: rec.w, height: rec.h, shape: d._source.shape, action: d.movementAction ?? "walk",
+      snapped: false, explicit: false, checkpoint: false };
+    if (d._source.level !== undefined) base.level = d._source.level;
+    const wps = points.map(p => ({ ...base, ...toTopLeft(p, rec.w, rec.h, s) }));
+    const path = token.createTerrainMovementPath(wps, { preview: true });
+    if (!Array.isArray(path) || path.length < 2) return null;
+    return { points: path.map(w => toSquares(w, rec.w, rec.h, s)), difficulty: path.slice(1).map(w => Math.max(Number(w?.terrain?.difficulty) || 1, 1)) };
+  } : undefined; } catch (err) { log?.debug?.("plan: terrain", err); terrainPath = undefined; }
   return {
     walkable,
     walkDistance,
@@ -864,6 +901,8 @@ function oraclesFor(members, anchor, { combat, constrain, clock = null }) {
     routeSliced,
     routeLong,
     toward,
+    towardSliced,
+    terrainPath,
     unfinished: () => unfinished,
     narrow: (points, r) => narrowPoints(anchor.token, points, r, s),
     now: clock?.now ?? now,
@@ -1409,6 +1448,9 @@ function flush(g) {
   }
   for (const w of waves) { g.pending.delete(w); for (const id of w.ids ?? []) hideCue(id); }
   feature.exposed.tele?.("wave", { reason: "flushed", members: updates.length, of: list.length });
+  // Members the flush keeps where they stand are told now, not when a background tab's throttled look finds them at
+  // rest past the deadline (0.8.5, AR3-09: "Stopped short" came 10.05-10.13 s after the tab was hidden).
+  if (updates.length < list.length) tell("short", "flushStay");
   if (!updates.length) return 0;
   const fake = { at: waves[0].at, ids: updates.map(u => u._id), updates, movement };
   sendWave(g, fake, updates, movement).then(() => { for (const w of waves) prunePending(g.gid, { at: w.at }); });
@@ -1482,9 +1524,12 @@ function groupCancel(tokenId, { only = false } = {}) {
   const gid = groupOf.get(tokenId);
   const g = gid ? groups.get(gid) : null;
   if (!g) return [];
-  if (only) { g.ids.delete(tokenId); groupOf.delete(tokenId); prunePending(gid, { id: tokenId }); return [tokenId]; }
+  if (only) { g.ids.delete(tokenId); groupOf.delete(tokenId); prunePending(gid, { id: tokenId }); dropHolds([tokenId]); return [tokenId]; }
   g.stopped = true;
   const ids = [...g.ids];
+  stoppedGroups.add(gid);
+  if (stoppedGroups.size > 50) stoppedGroups.delete(stoppedGroups.values().next().value);
+  dropHolds(ids);
   forget(gid);
   return ids;
 }
@@ -1516,6 +1561,23 @@ function onGroupTag(doc, options) {
   if (!doc?.id || typeof gid !== "string") return;
   tagOf.set(doc.id, { gid, at: Date.now() });
   if (tagOf.size > 500) tagOf.delete(tagOf.keys().next().value);
+}
+
+/**
+ * updateToken, every client: a member of a group this client holds was teleported (a displace that is not the
+ * module's own: a pins teleport or gather, a portal, a macro) while its walk was still to come (0.8.5, AR3-08: a later
+ * wave walked ZZ Pinned back from the teleport spot into House A, 1 run in 3). The teleport wins: the member leaves
+ * the group, its unsent waves and any held step go.
+ */
+function onTeleported(doc, changes, options) {
+  if (!doc?.id || !groupOf.has(doc.id) || moduleKeyed(options)) return;
+  if (!changes || !("x" in changes || "y" in changes)) return;
+  const wps = options?.movement?.[doc.id]?.waypoints;
+  const displaced = options?.teleport === true || (Array.isArray(wps) && wps.some(w => w?.action === "displace"));
+  if (!displaced) return;
+  groupCancel(doc.id, { only: true });
+  dropHolds([doc.id]);
+  feature?.exposed?.tele?.("cut", { reason: "teleported", id: doc.id });
 }
 
 /**
@@ -1617,6 +1679,7 @@ function groupStopOne(tokenId, spot = null) {
     catch (err) { log?.debug?.("stop one: back off the stopped member", err); }
   }
   const backed = new Set(out);
+  const ways = [];
   for (const id of g.ids) {
     if (backed.has(id)) continue;
     const d = scene.tokens?.get(id);
@@ -1632,7 +1695,32 @@ function groupStopOne(tokenId, spot = null) {
     const dw = d._source.width ?? 1, dh = d._source.height ?? 1, rm = radiusOf(dw, dh) * s;
     const from0 = { x: route.from.x + (dw * s) / 2, y: route.from.y + (dh * s) / 2 };
     const circles = g.avoid.filter(a => Math.hypot(from0.x - a.x, from0.y - a.y) >= a.r + rm - 1e-6);
-    const wps = shortBehind(token, route, circles);
+    ways.push({ id, d, token, onWay, route, wps: shortBehind(token, route, circles), w: dw, h: dh });
+  }
+  // The walks on, together (0.8.5, AR3-05 / AR3-06): a member cut short behind the stopped one rests where another,
+  // not cut, still walks (live B15: Hero 5 and Hero 6 walked on 0.65 square inside each other for 2.2 s after a
+  // player stopped Hero 1). From where each is drawn now, the cut ones first, settle() cuts what would still meet.
+  if (ways.length > 1) {
+    try {
+      const order = [...ways.filter(x => x.wps !== x.route.waypoints), ...ways.filter(x => x.wps === x.route.waypoints)];
+      const list = order.map(x => ({ id: x.id, r: radiusOf(x.w, x.h), w: x.w, h: x.h, speed: speedOf(x.token), delay: 0, cut: null,
+        points: [x.route.from, ...x.wps].map(p => toSquares(p, x.w, x.h, s)) }));
+      const gen = settle(list, { statics: g.avoid.map(a => ({ x: a.x / s, y: a.y / s, r: a.r / s })), combat: false,
+        allowedFor: e => ((e.w ?? 1) > 1 || (e.h ?? 1) > 1 ? c => onCell(c, e.w, e.h) : null) });
+      let v = gen.next();
+      while (!v.done) v = gen.next();
+      for (const x of order) {
+        const r = v.value.get(x.id);
+        if (!r?.changed) continue;
+        if (r.still) { x.wps = []; continue; }
+        const path = cutPath([{ ...x.route.from }, ...x.wps], r.cut, false);
+        const wps = path.slice(1);
+        if (wps.length) wps[wps.length - 1] = { ...wps.at(-1), explicit: true, checkpoint: true };
+        x.wps = wps;
+      }
+    } catch (err) { log?.debug?.("stop one: the walks on together", err); }
+  }
+  for (const { id, d, token, onWay, route, wps } of ways) {
     if (wps === route.waypoints) continue;
     out.push(id);
     feature.exposed.tele?.("cut", { reason: "behindStopped", id });
@@ -1761,7 +1849,7 @@ function onPreMove(doc, move, options) {
     }
     // AR2-01: a drag's first square (or a wave, a queued single drop) sent after this page left the scene is as
     // unmeasured as a continuation: in a fight it is not sent; out of one, not across a wall that blocks it now.
-    if (doc.rendered !== false) return true;
+    if (doc.rendered !== false) { noteLeaving(doc, move); return true; }
   } else {
     if (!chain.some(id => driven.has(id))) return true;
     if (move.id) driven.set(move.id, now);
@@ -1773,7 +1861,7 @@ function onPreMove(doc, move, options) {
   const to = move.destination ?? move.passed?.waypoints?.at(-1);
   if (!to) return true;
   const a = stepCircle(doc, from, s), b = stepCircle(doc, to, s);
-  let why = null;
+  let why = null, whyHit = null;
   if (!doc.rendered) {
     if (fight) why = "unrendered";
     else {
@@ -1784,15 +1872,174 @@ function onPreMove(doc, move, options) {
       }
     }
   } else if (fight) {
-    if (stepMeetsStill(doc, a, b, s, scene)) why = "standing";
+    const hit = stepMeetsStill(doc, a, b, s, scene);
+    if (hit) {
+      why = "standing"; whyHit = hit;
+      // The token in the way is still moving (about to leave its square): held, not stopped (AR3-03).
+      if (holdStep(doc, move, to, hit)) return false;
+    }
   }
-  if (!why) return true;
+  if (!why) { noteLeaving(doc, move); return true; }
   feature.exposed.tele?.("cut", { reason: `step:${why}`, id: doc.id });
-  stepLast = { at: new Date().toISOString(), id: doc.id, name: doc.name, why, fight };
+  stepLast = { at: new Date().toISOString(), id: doc.id, name: doc.name, why, fight, hit: whyHit };
   tell("short", `step:${why}`);
   return false;
 }
 let stepLast = null;
+
+/**
+ * The square each token this client moves has been let leave (0.8.5): its next square passed this test (or its move
+ * set off) from there. A token of this client's between two squares that has not been let leave the square it holds
+ * stays on it for the test (staysPut): a follower stepping into it before its own next square is sent walked onto it
+ * whenever that square was then held or refused (the simulator, seeds 9 and 156: a member 0.97 inside another).
+ */
+const leaving = new Map();                 // token id → { x, y, at, to } (top-left pixels; `to`: the square it was let step to)
+const CLAIM_MS = 2000;
+function noteLeaving(doc, move) {
+  const from = move?.origin ?? doc?._source;
+  if (!doc?.id || !from) return;
+  const to = move?.destination ?? null;
+  leaving.set(doc.id, { x: from.x, y: from.y, at: Date.now(), to: to && Number.isFinite(to.x) ? { x: to.x, y: to.y } : null });
+  if (leaving.size > 400) for (const [k, v] of leaving) if (Date.now() - v.at > DRIVEN_TTL_MS) leaving.delete(k);
+}
+
+/* -------------------------------------------- */
+/*  A fight step held for a token about to leave (0.8.5)  */
+/* -------------------------------------------- */
+
+/**
+ * A fight's next square into a token that is itself still moving (between two squares, or walking into its last):
+ * not sent now, as before, but held, and the rest of the walk is sent from the square it holds as soon as the step is
+ * clear (0.8.5, AR3-03). 0.8.4 stopped it for good: in a file every member's next square is the square of the one
+ * ahead until that one's own next square is sent, so the whole file of a fight's group drag (tier C off) stopped after
+ * one square, and a tier C follower that set off in step with the one ahead stopped with it. Not sending the square
+ * costs nothing (core charges the squares walked); the rest is a new move of the same turn, charged square by square
+ * as before, merged into the same undo entry. The hold looks again every HOLD_LOOK_MS and ends: the step clear (the
+ * walk goes on), the token in the way at rest and not itself held (it stays: "Stopped short, way blocked"), the turn
+ * changed, the token moved by anything else, its group stopped, or HOLD_MAX_MS gone.
+ */
+const holds = new Map();                   // token id → { doc, wps, t0, at, turn, gid, waiters, timer }
+const HOLD_LOOK_MS = 100;
+const HOLD_MAX_MS = 3000;
+const HOLD_GAP = 0.75;                     // squares: the latency buffer a held member keeps behind the one ahead
+let holdLast = null;
+const holdCounts = { held: 0, resumed: 0, gaveUp: 0 };
+
+/** The token a step test's answer names ("stays:<id>", "next:<id>", ...), or null. */
+function blockerOf(scene, hit) {
+  const id = typeof hit === "string" ? hit.split(":")[1] : null;
+  return id ? scene?.tokens?.get?.(id) ?? null : null;
+}
+/** Is the token moving now (between squares, drawn walking) or itself held for one ahead of it? */
+function movingNow(o) {
+  if (!o?._source) return false;
+  if (holds.has(o.id) || o.movement?.state === "pending") return true;
+  try { return !!(o.object && movementFacts(o.object).animating); } catch { return false; }
+}
+/** Which turn of which combat a token's scene is on (a hold never carries a walk into another turn). */
+function turnOf(doc) {
+  const c = doc?.parent ? game.combats?.find?.(x => x?.active && x.started !== false && x.scene?.id === doc.parent.id) : null;
+  return c ? `${c.id}:${c.round}:${c.turn}` : null;
+}
+const WP_KEYS = ["x", "y", "elevation", "width", "height", "shape", "action", "snapped", "explicit", "checkpoint"];
+const cleanWp = w => Object.fromEntries(WP_KEYS.filter(k => w[k] !== undefined).map(k => [k, w[k]]));
+
+/** onPreMove: hold this step when the token in its way is moving. True when held (the step is not sent). */
+function holdStep(doc, move, to, hit) {
+  if (globalThis.CONFIG?.debug?.[`${MODULE}.noHold`]) return false;
+  const bl = blockerOf(doc.parent, hit);
+  if (!bl || bl.id === doc.id || !movingNow(bl)) return false;
+  const wps = [to, ...(move?.pending?.waypoints ?? [])].filter(w => w && !w.intermediate && Number.isFinite(w.x) && Number.isFinite(w.y)).map(cleanWp);
+  if (!wps.length) return false;
+  const prev = holds.get(doc.id);
+  if (prev?.timer) clearTimeout(prev.timer);
+  const h = { doc, wps, t0: prev?.t0 ?? Date.now(), at: { x: doc._source.x, y: doc._source.y }, turn: turnOf(doc), gid: groupOf.get(doc.id) ?? null,
+    waiters: prev?.waiters ?? [], timer: null, against: bl.id };
+  holds.set(doc.id, h);
+  holdCounts.held += 1;
+  holdLast = { at: new Date().toISOString(), id: doc.id, name: doc.name, against: bl.id, what: "held" };
+  feature.exposed.tele?.("yield", { reason: "stepHold", id: doc.id });
+  try { showCue(doc.id, "hold"); } catch (err) { log?.debug?.("hold: cue", err); }
+  h.timer = setTimeout(() => lookHold(doc.id), HOLD_LOOK_MS);
+  return true;
+}
+
+/** A held step: walk on when it is clear, or end the hold. */
+function lookHold(id) {
+  const h = holds.get(id);
+  if (!h) return;
+  h.timer = null;
+  const doc = h.doc, token = doc?.object;
+  const end = (resumed, why) => {
+    if (holds.get(id) === h) holds.delete(id);
+    try { hideCue(id); } catch (err) { log?.debug?.("hold: cue", err); }
+    holdLast = { at: new Date().toISOString(), id, name: doc?.name ?? id, against: h.against, what: why };
+    if (!resumed) for (const fn of h.waiters.splice(0)) { try { fn(false); } catch (err) { log?.debug?.("hold: waiter", err); } }
+    return resumed;
+  };
+  if (!feature || !token || token.destroyed || !doc._source) return end(false, "gone");
+  if (h.gid && !groups.has(h.gid) && stoppedGroups.has(h.gid)) return end(false, "groupStopped");
+  if (!inCombat(doc) || turnOf(doc) !== h.turn) return end(false, "turn");
+  if (doc._source.x !== h.at.x || doc._source.y !== h.at.y || doc.movement?.state === "pending") return end(false, "moved");
+  const scene = doc.parent;
+  const s = scene?.grid?.size ?? gridSize(token);
+  const a = stepCircle(doc, doc._source, s), b = stepCircle(doc, h.wps[0], s);
+  const wall = stepThroughWall(scene, { x: a.x * s, y: a.y * s }, { x: b.x * s, y: b.y * s });
+  let hit = wall ? "wall" : stepMeetsStill(doc, a, b, s, scene);
+  // Clear, but the one it waited for is drawn within the latency buffer of the square it would step to: it waits that
+  // little longer, so a file walks a buffer apart, not on each other's heels (the simulator: on another client's view
+  // a member one square behind is drawn inside the one ahead whenever their updates arrive apart).
+  if (!hit) {
+    const ahead = scene?.tokens?.get?.(h.against);
+    try {
+      if (ahead?.object && movingNow(ahead)) {
+        const at = toSquares(drawnPosition(ahead.object), ahead._source.width ?? 1, ahead._source.height ?? 1, s);
+        if (Math.hypot(at.x - b.x, at.y - b.y) < b.r + radiusOf(ahead._source.width ?? 1, ahead._source.height ?? 1) + HOLD_GAP) hit = `buffer:${ahead.id}`;
+      }
+    } catch (err) { log?.debug?.("hold: the one ahead", err); }
+  }
+  if (!hit) {
+    end(true, "resumed");
+    holdCounts.resumed += 1;
+    const opts = { pentarynMovementResume: true };
+    if (h.gid && groups.has(h.gid)) opts[GROUP_OPT] = h.gid;
+    const sent = walkOnFight(doc, h.wps, opts);
+    const done = ok => { for (const fn of h.waiters.splice(0)) { try { fn(ok); } catch (err) { log?.debug?.("hold: waiter", err); } } };
+    if (!sent) { done(false); return false; }
+    Promise.resolve(sent).then(() => done(true), () => done(false));
+    return true;
+  }
+  const bl = blockerOf(scene, hit);
+  if (wall || !movingNow(bl) || Date.now() - h.t0 > HOLD_MAX_MS) {
+    holdCounts.gaveUp += 1;
+    feature.exposed.tele?.("cut", { reason: "step:standing", id });
+    stepLast = { at: new Date().toISOString(), id, name: doc.name, why: wall ? "wall" : "standing", fight: true, hit };
+    tell("short", "step:standing");
+    return end(false, wall ? "wall" : "gaveUp");
+  }
+  h.timer = setTimeout(() => lookHold(id), HOLD_LOOK_MS);
+  return false;
+}
+
+/** A promise of a held token's outcome (true: it walked on; false: it stays), or null when it is not held. */
+function holdOutcome(id) {
+  const h = holds.get(id);
+  if (!h) return null;
+  return new Promise(resolve => h.waiters.push(resolve));
+}
+
+/** Drop the holds of these tokens (a click, a turn change, a stop of their group). */
+function dropHolds(ids) {
+  for (const id of ids ?? []) {
+    const h = holds.get(id);
+    if (!h) continue;
+    if (h.timer) clearTimeout(h.timer);
+    holds.delete(id);
+    try { hideCue(id); } catch (err) { log?.debug?.("hold: cue", err); }
+    for (const fn of h.waiters.splice(0)) { try { fn(false); } catch (err) { log?.debug?.("hold: waiter", err); } }
+  }
+}
+const stoppedGroups = new Set();
 
 /** The tokens a fight step of `doc` can meet on this page: drawn, counted for routes, same level and layer, not its stack mates. */
 function stepOthers(doc) {
@@ -1827,8 +2074,12 @@ function nextSquareOf(o) {
  */
 function staysPut(t, s, scene, depth = 3) {
   const o = t.document;
+  // Held here for one ahead of it (0.8.5): it stays on its square until its hold ends, whatever core's state says yet.
+  if (holds.has(o.id)) return true;
   if (o.movement?.state !== "pending") return true;
   if (!o.movement?.user?.isSelf) return false;
+  const l = leaving.get(o.id);
+  if (!l || l.x !== o._source.x || l.y !== o._source.y) return true;
   const next = nextSquareOf(o);
   if (!next) return true;
   if (depth <= 0) return true;
@@ -1847,26 +2098,36 @@ function stepMeetsStill(doc, a, b, s, scene, depth = 3) {
     const o = t.document;
     const c = stepCircle(o, o._source, s);
     const rr = b.r + c.r - 0.02;
+    // A square this client has just let another token step to, before the server's echo says so (0.8.5): two held
+    // members walking on in the same moment took one square (the simulator, seed 34).
+    const l = leaving.get(o.id);
+    if (l?.to && Date.now() - l.at < CLAIM_MS && (l.to.x !== o._source.x || l.to.y !== o._source.y)) {
+      const n = stepCircle(o, l.to, s);
+      const rn = n.r + b.r - 0.02;
+      if (Math.hypot(n.x - a.x, n.y - a.y) >= rn && segPt(n, a, b) < rn) return `claimed:${o.id}`;
+    }
     const next = o.movement?.state === "pending" ? nextSquareOf(o) : null;
     if (next) {
       const n = stepCircle(o, next, s);
-      // Its next square is the one this step ends on, or the one this token stands on (head-on).
-      if (Math.hypot(n.x - b.x, n.y - b.y) < n.r + b.r - 0.02) return true;
-      if (Math.hypot(n.x - a.x, n.y - a.y) < n.r + a.r - 0.02 && Math.hypot(a.x - c.x, a.y - c.y) >= rr) return true;
+      // Its next square is the one this step ends on, or a trade: it steps onto this token's square while this one
+      // steps onto its own (head-on). One that only follows into the square this one leaves is no block (AR3-03: in
+      // a file every member's follower steps into its square, and the whole file stopped after one square).
+      if (Math.hypot(n.x - b.x, n.y - b.y) < n.r + b.r - 0.02) return `next:${o.id}`;
+      if (Math.hypot(n.x - a.x, n.y - a.y) < n.r + a.r - 0.02 && Math.hypot(b.x - c.x, b.y - c.y) < rr
+        && Math.hypot(a.x - c.x, a.y - c.y) >= rr) return `trade:${o.id}`;
     }
     // One it already overlaps where it stands (it started stacked or pressed together): not a new block.
     if (Math.hypot(a.x - c.x, a.y - c.y) < rr) continue;
     if (segPt(c, a, b) >= rr) continue;
-    // Drawn walking into its last square: it comes to rest there; a step ending there is barred (AR2-02).
+    // Drawn walking into its last square: it comes to rest there; a step ending there is barred (AR2-02), and so is one
+    // passing it there (0.8.5: a diagonal step past its corner went 0.29 square into it once it was at rest; the
+    // simulator, seed 34).
     const f = movementFacts(t);
-    if (f.animating && o.movement?.state !== "pending") {
-      if (Math.hypot(b.x - c.x, b.y - c.y) < rr) return true;
-      continue;
-    }
+    if (f.animating && o.movement?.state !== "pending") return `arriving:${o.id}`;
     // At rest, or between squares (drawn walking into its square or waiting there) with its own next square barred.
-    if (staysPut(t, s, scene, depth)) return true;
+    if (staysPut(t, s, scene, depth)) return `stays:${o.id}`;
   }
-  return false;
+  return null;
 }
 
 /* -------------------------------------------- */
@@ -1983,7 +2244,7 @@ function takenForCut(scene, id, movers, claims) {
  * free of every token standing (0.8.0: the first-square gate is gone; a walk that would meet a standing token is cut
  * before it, on a whole square, and one that would not get off where it is does not move). Costed: a move.
  */
-function walkOnFight(doc, waypoints) {
+function walkOnFight(doc, waypoints, extra = {}) {
   const token = doc.object;
   if (!feature || !token || token.destroyed || !waypoints?.length) return false;
   let wps = waypoints;
@@ -1994,7 +2255,7 @@ function walkOnFight(doc, waypoints) {
   if (!wps.length) return false;
   if (wps.short) feature.exposed.tele?.("cut", { reason: "resumeStanding", id: doc.id });
   try {
-    Promise.resolve(doc.move(wps, { method: "api", ...republish(doc, doc._source, wps) })).catch(err => log?.debug?.("resume a fight walk", err));
+    return Promise.resolve(doc.move(wps, { method: "api", ...republish(doc, doc._source, wps), ...extra })).catch(err => { log?.debug?.("resume a fight walk", err); return false; });
   } catch (err) { log?.debug?.("resume a fight walk", err); }
   return true;
 }
@@ -2269,7 +2530,9 @@ function watchGoals(seq, grabbed, contexts) {
     const resting = live.some(sent) && live.every(m => {
       const doc = scene.tokens.get(m.id);
       const t = doc.object;
-      return !(t && movementFacts(t).animating) && doc.movement?.state !== "pending" && !groups.has(groupOf.get(m.id));
+      // A background page draws no frames, so its animations never end there: at rest is the server's word (AR3-09).
+      const hidden = globalThis.document?.visibilityState === "hidden";
+      return (hidden || !(t && movementFacts(t).animating)) && doc.movement?.state !== "pending" && !groups.has(groupOf.get(m.id));
     });
     if (!resting && now - g.t0 < LIFE.deadlineMs + GOAL_GRACE_MS) { setTimeout(look, GOAL_LOOK_MS); return; }
     goals.delete(seq);
@@ -2297,6 +2560,26 @@ function tell(kind, reason = kind) {
   if (t - (noticeAt[kind] ?? -Infinity) < NOTICE_GAP_MS) return;
   noticeAt[kind] = t;
   try { globalThis.ui?.notifications?.warn?.(NOTICES[kind] ?? NOTICES.short, { localize: true }); }
+  catch (err) { log?.debug?.("notice", err); }
+}
+
+/**
+ * A single drag with no way round a token standing in its only way (0.8.5, AR3-12; Fable's §3: "a PC passes a standing
+ * ally in a one-wide corridor: a decided answer, such as the ghost toggle, and No route there names it"): "No route
+ * there", naming the token when this user can read its name (the GM, its owner, or a nameplate shown to everyone),
+ * and the ghost button that walks through it. A token whose name this user cannot see is "a token".
+ */
+function tellBlockedBy(grabbed, blockerId) {
+  const doc = grabbed?.document?.parent?.tokens?.get?.(blockerId) ?? null;
+  const modes = globalThis.CONST?.TOKEN_DISPLAY_MODES ?? {};
+  const shown = doc && (game.user?.isGM || doc.isOwner || [modes.HOVER ?? 30, modes.ALWAYS ?? 50].includes(doc.displayName));
+  const name = shown ? doc.name : game.i18n.localize("PENTARYN_MOVEMENT.notify.named.aToken");
+  feature?.exposed?.tele?.("notice", { notice: "noRoute", reason: "blockedBy" });
+  const t = Date.now();
+  toldAt = t;
+  if (t - (noticeAt.noRoute ?? -Infinity) < NOTICE_GAP_MS) return;
+  noticeAt.noRoute = t;
+  try { globalThis.ui?.notifications?.warn?.(game.i18n.format("PENTARYN_MOVEMENT.notify.named.noRoute", { name })); }
   catch (err) { log?.debug?.("notice", err); }
 }
 
@@ -2463,7 +2746,7 @@ function aroundOthers(grabbed, c, result) {
   // passed 0.11 square into a standing token's square); in a fight on whole squares, the circle (5e's diagonal past a
   // standing ally).
   const box = !inCombat(doc);
-  const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box }));
+  const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box, id: o.id }));
   const taken = p => { const q = centre(p); return circles.some(o => Math.hypot(q.x - o.x, q.y - o.y) < o.r); };
   let end = m.waypoints.at(-1);
   let moved = false;
@@ -2478,7 +2761,8 @@ function aroundOthers(grabbed, c, result) {
   const live = circles.filter(o => avoidDist(o, start, start) >= o.r);
   let prev = start, through = false;
   const wps = moved ? [...m.waypoints.slice(0, -1), end] : m.waypoints;
-  for (const q of wps.map(centre)) { if (live.some(o => avoidDist(o, prev, q) < o.r)) { through = true; break; } prev = q; }
+  let by = null;
+  for (const q of wps.map(centre)) { const o = live.find(c => avoidDist(c, prev, q) < c.r); if (o) { through = true; by = o.id ?? null; break; } prev = q; }
   if (!through && !moved) return false;
   const dest = { ...origin, ...end, explicit: true, checkpoint: true };
   let r1 = null;
@@ -2494,9 +2778,9 @@ function aroundOthers(grabbed, c, result) {
   // No way round them: core's way (to the spot beside it, the last leg bent to it), walked only as far as it is free
   // of them, and the dragger is told (0.5.0; before, it walked straight through).
   const kept = freeOfOthers(grabbed, origin, wps, others);
-  if (!kept.length) return { stay: true };
+  if (!kept.length) return { stay: true, by };
   m.waypoints = kept;
-  return kept.length === wps.length && !kept.short ? true : { short: true };
+  return kept.length === wps.length && !kept.short ? true : { short: true, by };
 }
 
 /**
@@ -2685,7 +2969,8 @@ function onDrop(grabbed, event, result) {
       if (around?.later) return aroundLater(grabbed, result, around.later);
       // No way round a token standing in its only way (0.5.0): it stops before it, or does not move at all.
       if (around?.stay || around?.short) {
-        tell(around.stay ? "noRoute" : "short", around.stay ? "noRoute" : "standingInTheWay");
+        if (around.stay && around.by) tellBlockedBy(grabbed, around.by);
+        else tell(around.stay ? "noRoute" : "short", around.stay ? "noRoute" : "standingInTheWay");
         Object.assign(last, { reason: "noRoute", result: around.stay ? "none" : "short", ms: 0 });
         if (around.stay) return null;
         if (info.combat) checkpointAll(contexts, result[1]);
@@ -3037,7 +3322,13 @@ function commitFight(d, b) {
   const watchArrival = id => {
     arrivalOf(d.scene.tokens?.get?.(id))
       .catch(err => log?.debug?.("fight: arrival", err))
-      .finally(() => { arrived.add(id); hideCue(id); pump(); });
+      .finally(() => {
+        // Its next square held for one ahead of it (0.8.5): it has not arrived until the hold ends; walked on, its
+        // new move's arrival is watched.
+        const held = holdOutcome(id);
+        if (held) { held.then(on => { if (on && groups.get(d.gid) === g) watchArrival(id); else { arrived.add(id); hideCue(id); pump(); } }); return; }
+        arrived.add(id); hideCue(id); pump();
+      });
   };
   const go = ids => {
     for (const id of ids) { sentIds.add(id); (d.sentIds ??= new Set()).add(id); for (const rid of ridersOf(id)) d.sentIds.add(rid); }
@@ -3068,8 +3359,12 @@ function commitFight(d, b) {
         if (walkersMeet([{ points: pts, r: m.r, speed: m.speed, delay: 0 }], walkers, { combat: true })) return "wait";
       }
     } catch (err) { log?.debug?.("fight: the walks in a member's way", err); }
+    // Members of this move still walking are not standing in its way (AR3-02: between two squares a fight walker reads as
+    // standing on the square it holds, and each follower on the bridge was cut behind the one ahead, then the next behind
+    // it): the sequence answers for them (`ahead`). Members at rest, and every token outside the move, are.
+    const walking = [...sentIds].filter(x => !arrived.has(x) && movement[x]?.waypoints?.length);
     let others = [];
-    try { others = othersOf([...mates].map(x => ({ id: x, token: d.scene.tokens?.get?.(x)?.object })).filter(x => x.token), s); }
+    try { others = othersOf([...mates, ...walking].map(x => ({ id: x, token: d.scene.tokens?.get?.(x)?.object })).filter(x => x.token), s); }
     catch (err) { log?.debug?.("fight: the tokens standing in a member's way", err); }
     const wps = freeOfOthers(token, { ...doc._source }, movement[id].waypoints, others);
     if (!wps.short) return "go";
@@ -3087,7 +3382,10 @@ function commitFight(d, b) {
   const startPx = new Map(order.map(m => [m.id, { x: m.token.document._source.x, y: m.token.document._source.y }]));
   const ahead = (id, p) => {
     if (arrived.has(p)) return true;
-    if (!sentIds.has(p) || !movement[p]?.waypoints?.length) return false;
+    // One with no walk left (cut to where it stands by cutsFor) never sets off: it stands, and the walks were cut round
+    // it (AR3-02: the grabbed Hero 8 waited for seven heroes cut where they stood until the deadline, and nobody moved).
+    if (!movement[p]?.waypoints?.length) return true;
+    if (!sentIds.has(p)) return false;
     const pd = d.scene.tokens?.get?.(p), pm = byId.get(p);
     // Its way as sent (cut by cutsFor or its vet), never the plan's: it rests where its walk ends.
     const pts = pm && startPx.has(p) ? onSquares([startPx.get(p), ...movement[p].waypoints], s).map(q => toSquares(q, pm.w, pm.h, s)) : null;
@@ -3675,6 +3973,7 @@ function groupStatus() {
     cut: cutLast ? { ...cutLast } : null,
     held: heldLast ? { ...heldLast } : null,
     step: stepLast ? { ...stepLast } : null,
+    hold: { ...holdCounts, live: holds.size, last: holdLast ? { ...holdLast } : null },
     undo: undoLast ? { ...undoLast } : null,
     reservations: reserve.status(),
     perf: { ...perf },
@@ -3724,7 +4023,7 @@ function dryRun(refs, point) {
   const s = gridSize(tokens[0]);
   return {
     ok: true, result: "plan", reason: info.reason, combat: info.combat, constricted: plan.constricted, anchorRoute,
-    formation: plan.formation, replans: plan.replans, cut: plan.cut, stayed: plan.stayed, ms: plan.ms,
+    formation: plan.formation, replans: plan.replans, cut: plan.cut, stayed: plan.stayed, ms: plan.ms, why: plan.why ?? null,
     members: prep.members.map(m => {
       const e = plan.members[m.id];
       return {
@@ -3778,6 +4077,7 @@ export function install(reg, ctx) {
   // cleared: the rest of its group stops with it (live R4-3).
   reg.on("updateToken", (doc, _changes, options) => onHistoryCleared(doc, options), { label: "updateToken: a turn change stops the whole group" });
   reg.on("updateToken", (doc, _changes, options) => onGroupTag(doc, options), { label: "updateToken: which group a move belongs to (click stops the group)" });
+  reg.on("updateToken", (doc, changes, options) => onTeleported(doc, changes, options), { label: "updateToken: a member teleported mid-walk leaves its group (the teleport wins)" });
   reg.on("updateToken", (doc, _changes, options, userId) => onUndoEntry(doc, options, userId), { label: "updateToken: one undo entry for one move (a group's waves, a fight's squares)" });
   reg.on("updateToken", (doc, changes, options, userId) => onForeignStop(doc, changes, options, userId), { label: "updateToken: a member another user stopped (the rest stop short behind it)" });
   // Server-ordered reservations (0.6.0): every client records each plan as it arrives, sets it off, drops it.

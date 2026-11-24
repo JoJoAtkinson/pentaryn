@@ -85,7 +85,10 @@ tiers, each with its own switch, and a tier that has not passed its acceptance r
   arrival) ends by the move's one 10 s deadline; then it stays where it is, "Stopped short, way blocked". A queued or
   yielding token wears an amber dashed ring on the screen of whoever moved it, so nobody drags it again.
 - **Two notices only**: "No route there." and "Stopped short, way blocked." The reason behind each is in the
-  telemetry (`telemetry()`), not on screen.
+  telemetry (`telemetry()`), not on screen. "No route there" names the token standing in the only way when you can
+  read its name (0.8.5): "No route there: Talo is in the way. The ghost button under the Ruler lets you pass."
+- **In a fight, a token behind one still moving waits a beat** (0.8.5): its next square is held until the one ahead
+  has gone, then its walk goes on from the square it holds (a file walks a little apart, never on each other's heels).
 - **Fail-open and the circuit breaker** (0.8.0): an exception inside a move sends core's own move (cut before standing
   tokens) and is logged. After 3 errors or 6 failed plans in a session the drag help switches itself off on that
   screen; on the GM's screen it also turns `assist` off for the table, and the GM is told either way.

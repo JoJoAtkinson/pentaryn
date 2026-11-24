@@ -44,7 +44,7 @@ for (const [seed, inv] of [[14, "passThrough"], [156, "moverBound"]]) {
   });
 }
 
-for (const seed of [6, 7, 15]) {
+for (const seed of [6, 7, 33]) {
   test(`SIM-04 / SIM-05 (seed ${seed}): a group dropped on a page that goes to the background before its group exists is flushed, clear of the first wave`, () => {
     const r = runSeed(seed, BACKGROUND);
     assert.equal(r.meta.backgrounded, true);

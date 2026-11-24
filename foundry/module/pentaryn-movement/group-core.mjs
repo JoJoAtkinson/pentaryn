@@ -108,6 +108,28 @@ export function alongRoute(points, c) {
   return at;
 }
 
+/**
+ * How far c is from the end of the polyline walking by it (squares): to the nearest point of a leg, then along the
+ * rest of the way (AR3-01). A member beside the route (a row of heroes facing a door) is ranked by how far it has to
+ * walk, not by where its foot of the perpendicular falls (alongRoute put every member east of a door on the corner
+ * by the door, ahead of those standing at its mouth).
+ */
+export function remainingVia(points, c) {
+  if (!(points?.length >= 2)) return points?.length ? dist(points[0], c) : 0;
+  const lens = [];
+  let total = 0;
+  for (let k = 1; k < points.length; k++) { const L = dist(points[k - 1], points[k]); lens.push(L); total += L; }
+  let best = Infinity, run = 0;
+  for (let k = 1; k < points.length; k++) {
+    const p = points[k - 1], q = points[k], L = lens[k - 1];
+    const t = L > EPS ? Math.min(Math.max(((c.x - p.x) * (q.x - p.x) + (c.y - p.y) * (q.y - p.y)) / (L * L), 0), 1) : 0;
+    const off = Math.hypot(c.x - (p.x + (q.x - p.x) * t), c.y - (p.y + (q.y - p.y) * t));
+    best = Math.min(best, off + (total - run - t * L));
+    run += L;
+  }
+  return best;
+}
+
 /** Distance from c to the polyline. */
 export function offRoute(points, c) {
   let best = points.length ? dist(points[0], c) : Infinity;
@@ -500,11 +522,11 @@ export function freePrefix(points, r, circles, { allowed = null, restOk = null }
  * @param {(c, r) => boolean} [o.restOk]  may a member (radius r) cut short rest at c (not in a one-wide corridor or a doorway)?
  * @returns {Generator<string, Map<string, { cut, delay, points, still, changed }>>}
  */
-export function* settle(list, { statics = [], walkers = [], combat = false, allowedFor = () => null, keep = null, restOk = null } = {}) {
+export function* settle(list, { statics = [], walkers = [], combat = false, allowedFor = () => null, keep = null, restOk = null, trajectoryFor = null } = {}) {
   const cur = list.map(m => ({ ...m, cut: m.cut ?? null, changed: false }));
   const build = e => {
     e.pts = prefixOf(e.points, e.cut);
-    e.tr = delayed(trajectory(e.pts, { speed: e.speed ?? MOTION.speed }), e.delay ?? 0);
+    e.tr = delayed(trajectoryFor ? trajectoryFor(e.pts, e) : trajectory(e.pts, { speed: e.speed ?? MOTION.speed }), e.delay ?? 0);
     e.wave = Math.ceil((e.delay ?? 0) / MOTION.waveMs - EPS);
     e.still = e.pts.length < 2 || e.tr.end <= e.tr.start + EPS;
     return e;
@@ -585,10 +607,11 @@ export function* settle(list, { statics = [], walkers = [], combat = false, allo
     }
     // What it gave way to (S2R2-01): a walk of another move is what a drop queues for (the queue reads it again).
     if (c.by?.walker && c.by.id) (c.victim.walks ??= new Set()).add(c.by.id);
+    (c.victim.gaveWay ??= new Set()).add(c.by?.id ?? "?");
     shrink(c.victim, c.hit);
   }
   return new Map(cur.map(e => [e.id, { cut: e.cut, delay: e.still ? 0 : (e.delay ?? 0), points: e.pts, still: e.still, changed: e.changed,
-    walks: e.changed && e.walks ? [...e.walks] : [] }]));
+    walks: e.changed && e.walks ? [...e.walks] : [], gaveWay: e.gaveWay ? [...e.gaveWay] : [] }]));
 }
 
 /* -------------------------------------------- */
@@ -658,6 +681,9 @@ export function* planGroup(spec, o) {
     }
   }
   const rmax = Math.max(...members.map(m => m.r));
+  // In a fight the rest spots are whole squares, side by side as a fight stands (AR3-02: the 0.2-square rest gap of open
+  // ground ruled out every second square of a one-wide corridor, and three of eight heroes got no spot at all).
+  const restGap = combat ? 0 : MOTION.restGap;
   const out = {};
   const timer = budget(o.now);
   const avoidOf = (m, to) => crowdFor(m, m.start, to, others);
@@ -667,6 +693,25 @@ export function* planGroup(spec, o) {
     if (typeof o.routeSliced === "function") return yield* o.routeSliced(m, from, to, opts);
     return o.route(m, from, to, opts);
   };
+
+  // Difficult terrain (0.8.5, AR3-04): core draws a step in a Mud region at its speed divided by the difficulty
+  // (Token#_modifyAnimationMovementSpeed), so a member slowed in the mud was caught by the one behind it still on firm
+  // ground (live B8: NPC 6 walked 0.33 square into NPC 5 for 1.26 s). With `o.terrainPath` (the glue's, on a scene with
+  // terrain) every trajectory the plan times is timed square by square as core draws it.
+  const slowMemo = new WeakMap();
+  const trOf = (points, m) => {
+    if (typeof o.terrainPath !== "function" || !(points?.length >= 2)) return trajectoryOf(points, m.speed);
+    let byM = slowMemo.get(points);
+    if (!byM) { byM = new Map(); slowMemo.set(points, byM); }
+    if (!byM.has(m.id)) {
+      let t = null;
+      try { t = o.terrainPath(m, points); } catch { t = null; }
+      byM.set(m.id, t?.points?.length >= 2 && t.difficulty?.some(d => d > 1)
+        ? trajectory(t.points, { speed: m.speed ?? MOTION.speed, difficulty: t.difficulty }) : trajectoryOf(points, m.speed));
+    }
+    return byM.get(m.id);
+  };
+  const byIdAll = new Map(members.map(m => [m.id, m]));
 
   // The anchor's own route first: it decides "constricted".
   let anchorRoute = null;
@@ -692,7 +737,7 @@ export function* planGroup(spec, o) {
   if (!anchorRoute) {
     // No way round the tokens standing in the way: the way that ignores them, as far as it is free (0.5.0). No way
     // at all (walls, a shut door): nothing to plan around, and nobody moves (decision 7).
-    let t = o.toward?.(anchor, anchor.start, anchor.formation) ?? null;
+    let t = typeof o.towardSliced === "function" ? yield* o.towardSliced(anchor, anchor.start, anchor.formation) : (o.toward?.(anchor, anchor.start, anchor.formation) ?? null);
     // Its search ran out before it found the way (FR1-07: a loaded tab refused a group drag with "No route there" for
     // a way the single drag of the same token walked): finished in slices, never "no route" for a way that is there.
     if (!(t?.points?.length >= 2) && o.unfinished?.() && o.routeLong) t = yield* o.routeLong(anchor, anchor.start, anchor.formation, { avoid: [] });
@@ -703,15 +748,28 @@ export function* planGroup(spec, o) {
     anchorRoute = { ...t, cut: p.cut, short: anchorShort };
   }
   const excluded = [];
+  /** Why a member ended as it did (telemetry and the dry run): member id → reason codes, in order. */
+  const why = {};
+  const note = (id, w) => { (why[id] ??= []).push(w); };
   // The gap: where the anchor's route is narrower than two group diameters (its whole way, also when it stops short).
   const narrowPts = o.narrow?.(anchorRoute.points, rmax) ?? [];
   const gap = narrowPts[0] ?? null;
   const constricted = narrowPts.length > 0;
 
-  // File order (constricted): front first — furthest along the anchor's route, then nearest the goal.
-  const along = c => alongRoute(anchorRoute.points, c);
+  // File order (constricted): front first — the least walk left by the anchor's route (to it, then along it; AR3-01:
+  // the foot of the perpendicular put every member east of House A's door ahead of the three at its mouth, who then
+  // waited 5-9 s, past the deadline), then nearest the goal.
+  const toGo = new Map();
+  const left = c => {
+    const k = `${c.x},${c.y}`;
+    if (!toGo.has(k)) toGo.set(k, remainingVia(anchorRoute.points, c));
+    return toGo.get(k);
+  };
   const goal = anchor.formation;
-  const front = (a, b) => along(b.start) - along(a.start) || dist(a.start, goal) - dist(b.start, goal) || (a.id < b.id ? -1 : 1);
+  const front = (a, b) => {
+    const d = left(a.start) - left(b.start);
+    return (Math.abs(d) > 1e-6 ? d : 0) || dist(a.start, goal) - dist(b.start, goal) || (a.id < b.id ? -1 : 1);
+  };
   // Slot depth: how far past the gap (so the first through takes the spot furthest from it, laterally
   // too, and nobody rests in the way of those behind); along the route when the gap has no point.
   const depthOf = c => dist(c, gap);
@@ -722,12 +780,17 @@ export function* planGroup(spec, o) {
   // The anchor dropped in the gap's mouth (0.5.0: with nothing allowed to brush past it, it would plug the gap for
   // everyone behind it): it goes last, and every other member rests past it.
   // Only at the mouth onto open floor: dropped inside a corridor, the file keeps its order (front first).
+  // Not when the anchor stands at the head of a file in a narrow way (AR3-02: the grabbed Hero 8 led seven heroes along
+  // the one-wide bridge into Room E, dropped in the room's mouth): every member behind it passes its start, so going
+  // last left nobody a way out, and nobody moved. It goes first; the others take their spots round it.
+  const anchorHeads = members.length > 1 && members.every(m => m.id === anchorId || left(m.start) > left(anchor.start) + EPS)
+    && (!openAt(anchor.start) || narrowPts.some(p => dist(p, anchor.start) < anchor.r + rmax + MOTION.restGap - EPS));
   const anchorLast = constricted && narrowPts.some(p => dist(p, anchor.formation) < anchor.r + rmax + MOTION.restGap - EPS)
-    && openAt(anchor.formation);
+    && openAt(anchor.formation) && !anchorHeads;
 
   /** A member with no route to `to`: the way that ignores the standing tokens, as far as it is free; else it stays. */
   function* shortRoute(m, to) {
-    const t = o.toward?.(m, m.start, to) ?? null;
+    const t = typeof o.towardSliced === "function" ? yield* o.towardSliced(m, m.start, to) : (o.toward?.(m, m.start, to) ?? null);
     yield "route";
     if (!(t?.points?.length >= 2)) return { points: [{ x: m.start.x, y: m.start.y }], length: 0, data: null, cut: null, short: true };
     const p = freePrefix(t.points, m.r, others, { allowed: allowedFor(m), restOk });
@@ -742,10 +805,53 @@ export function* planGroup(spec, o) {
     const obstacles = [...others, ...reserved, ...excluded.map(m => ({ ...(routes.has(m.id) ? pathOf(routes.get(m.id)).at(-1) : m.start), r: m.r }))];
     const live = members.filter(m => !excluded.includes(m));
     const a = assignSlots({ members: live, anchorId, walkable: o.walkable, walkDistance: o.walkDistance,
-      others: obstacles, constricted, combat, rank, depthOf, route: anchorRoute.points, narrowPts, openAt, anchorLast });
+      others: obstacles, constricted, combat, gap: restGap, rank, depthOf, route: anchorRoute.points, narrowPts, openAt, anchorLast });
     slots = a;
+    // Ahead of the grabbed one in the file, but given a spot short of its drop point on its own way (more members ahead
+    // of it than spots past its drop point: a one-wide dead end): the grabbed one could reach its spot only through
+    // theirs, and in a fight nobody could go first (AR3-02: Heroes 1, 2, 7 and 8 never moved). Those spots and the drop
+    // point are dealt again in file order, deepest first: the grabbed one stops short of where it was dropped, behind
+    // the members ahead of it (its rule: it lands where it was dropped, or stops short of it).
+    if (round === 0 && constricted && !anchorLast && !anchorRoute.short) {
+      const way = anchorRoute.points;
+      const reachAt = alongRoute(way, anchor.formation);
+      const blocking = live.filter(q => q.id !== anchorId && a.slots[q.id] && left(q.start) < left(anchor.start) - EPS
+        && offRoute(way, a.slots[q.id]) < anchor.r + q.r - EPS && alongRoute(way, a.slots[q.id]) < reachAt - EPS);
+      // Only when it has no way round those spots (a room leaves one; a one-wide dead end does not).
+      let round_ = null;
+      if (blocking.length) {
+        timer.member();
+        const ring = blocking.map(q => ({ x: a.slots[q.id].x, y: a.slots[q.id].y, r: q.r + anchor.r }));
+        round_ = yield* routeIn(anchor, anchor.start, anchor.formation, { avoid: [...avoidOf(anchor, anchor.formation), ...ring] });
+        yield "route";
+        if (round_ && detourTooLong(pathLength(way), round_.length)) round_ = null;
+      }
+      if (blocking.length && !round_) {
+        const before = new Map(blocking.map(q => [q.id, a.slots[q.id]]));
+        const spots = [anchor.formation, ...blocking.map(q => a.slots[q.id])].sort((p, q) => alongRoute(way, q) - alongRoute(way, p));
+        const file = [...blocking].sort(front);
+        file.forEach((q, k) => { a.slots[q.id] = { x: spots[k].x, y: spots[k].y }; });
+        const spot = spots.at(-1);
+        const moved = { ...anchor, formation: { x: spot.x, y: spot.y } };
+        timer.member();
+        const r = yield* routeIn(moved, moved.start, moved.formation, { avoid: avoidOf(moved, moved.formation) });
+        yield "route";
+        if (r) {
+          note(anchorId, `behindFile:${blocking.length}`);
+          anchor = moved;
+          members = members.map(m => (m.id === anchorId ? anchor : m));
+          a.slots[anchorId] = { ...anchor.formation };
+          anchorRoute = { ...r, short: true };
+          anchorShort = true;
+          routes.set(anchorId, anchorRoute);
+        } else {
+          for (const q of blocking) a.slots[q.id] = before.get(q.id);
+        }
+      }
+    }
     for (const id of a.missing) {
       const m = members.find(x => x.id === id);
+      note(id, "noSlot");
       excluded.push(m);
       routes.set(id, yield* shortRoute(m, m.formation));
     }
@@ -765,7 +871,7 @@ export function* planGroup(spec, o) {
         if (timer.overTotal()) return { result: "core", reason: "budget" };
       } else if (timer.over()) return { result: "core", reason: "budget" };
       if (r) routes.set(m.id, r);
-      else { excluded.push(m); changed = true; routes.set(m.id, yield* shortRoute(m, slot)); }
+      else { note(m.id, "noRouteToSlot"); excluded.push(m); changed = true; routes.set(m.id, yield* shortRoute(m, slot)); }
     }
     if (!changed) break;
   }
@@ -782,7 +888,7 @@ export function* planGroup(spec, o) {
     const end = pts.at(-1);
     const blocks = members.some(q => q !== m && !excluded.includes(q) && routes.has(q.id)
       && firstIntrusion(pathOf(routes.get(q.id)), q.r, [{ x: end.x, y: end.y, r: m.r }]) !== null);
-    if (blocks) routes.set(m.id, { points: [{ x: m.start.x, y: m.start.y }], length: 0, data: null, cut: null, short: true });
+    if (blocks) { note(m.id, "shortEndBlocks"); routes.set(m.id, { points: [{ x: m.start.x, y: m.start.y }], length: 0, data: null, cut: null, short: true }); }
   }
 
   // Step C: timing. Tokens outside the group walking now (the rest of their walk from the drop) and standing ones
@@ -794,7 +900,7 @@ export function* planGroup(spec, o) {
   const base = [
     ...walkers.map(f => ({ id: `moving:${f.id}`, r: f.r, tr: trajectory(f.points, { speed: f.speed ?? MOTION.speed, delay: f.delay ?? 0 }), wave: 0, foreign: true })),
     ...statics,
-    ...stays.map(m => ({ id: m.id, r: m.r, tr: trajectoryOf(pathOf(routes.get(m.id)), m.speed), wave: 0, still: true })),
+    ...stays.map(m => ({ id: m.id, r: m.r, tr: trOf(pathOf(routes.get(m.id)), m), wave: 0, still: true })),
   ];
   // Timing order: constricted, the file (front first); open ground, shortest remaining route first. Members with no
   // route to their slot go after the others (HX1-05: a Large that fits no door set off at once and walked through
@@ -841,7 +947,7 @@ export function* planGroup(spec, o) {
     if (reslots.has(key)) {
       const hit = reslots.get(key);
       if (!hit) return null;
-      const tr2 = trajectoryOf(hit.points, m.speed);
+      const tr2 = trOf(hit.points, m);
       const d2 = firstFreeDelay(tr2, m.r, fixed, combat) ?? freeDelayFrom(tr2, m.r, fixed, combat, 0);
       return d2 === null ? null : { route: hit, tr: tr2, delay: d2 };
     }
@@ -849,7 +955,7 @@ export function* planGroup(spec, o) {
     const mine = pathLength(pathOf(routes.get(m.id)));
     const lattice = combat || isBig(m) ? cellCandidates(cellTl, m.w ?? 1, m.h ?? 1, GROUP_LIMITS.rings) : hexAll;
     const cands = lattice
-      .filter(c => [...rests, ...ends].every(q => dist(c, q) >= m.r + q.r + MOTION.restGap - EPS)
+      .filter(c => [...rests, ...ends].every(q => dist(c, q) >= m.r + q.r + restGap - EPS)
         && starts.every(q => dist(c, q) >= m.r + q.r - EPS) && o.walkable(m, c) && reachOk(c))
       .sort((a, b) => beyond(b) - beyond(a) || dist(a, want) - dist(b, want));
     // Round those at rest (the ones after it still waiting at their starts are the timing's to answer).
@@ -866,7 +972,7 @@ export function* planGroup(spec, o) {
       // Never the long way round to another spot either (S1R1-01: a 30 s walk round the whole dungeon for a spot
       // the others reached in 6 s through the door): it stops short instead (settle).
       if (!r || detourTooLong(mine, r.length)) continue;
-      const tr2 = trajectoryOf(r.points, m.speed);
+      const tr2 = trOf(r.points, m);
       const d2 = firstFreeDelay(tr2, m.r, fixed, combat) ?? freeDelayFrom(tr2, m.r, fixed, combat, 0);
       if (d2 !== null) { reslots.set(key, r); return { route: r, tr: tr2, delay: d2 }; }
     }
@@ -885,7 +991,7 @@ export function* planGroup(spec, o) {
       timer.member();
       yield "time";
       let route = routes.get(m.id);
-      let tr = trajectoryOf(pathOf(route), m.speed);
+      let tr = trOf(pathOf(route), m);
       let level = 0;
       let delay = firstFreeDelay(tr, m.r, fixed, combat);
       // The members timed after it stand at their starts at least until it sets off.
@@ -894,6 +1000,8 @@ export function* planGroup(spec, o) {
       // its start; Hero 4 then could not go after it, nor before it without plugging Hero 3's way, and Hero 3 took
       // another spot round the whole dungeon)? Then it tries the way round them first, as below.
       const crossesLater = (t, d) => later.some(q => conflicts(delayed(t, d), m.r, { r: q.r, tr: startOf(q) }, combat, false));
+      // The lateral way round the later members' starts, when it is not the long way round (kept for "go last" too).
+      let lat = null;
       if (delay === null || (later.length && crossesLater(tr, delay))) {
         // Lateral re-plan: earlier members' rest circles and the standing tokens as static obstacles (not those
         // already on our start or end).
@@ -915,7 +1023,8 @@ export function* planGroup(spec, o) {
         // Never the long way round (live H3-03: a member re-planned round the others' rest spots walked 83 squares
         // round the dungeon for a 9-square walk through the door): the H2-02 rule; else it waits its turn (safe).
         if (again && !detourTooLong(pathLength(pathOf(route)), again.length)) {
-          const tr2 = trajectoryOf(again.points, m.speed);
+          lat = again;
+          const tr2 = trOf(again.points, m);
           const d2 = firstFreeDelay(tr2, m.r, fixed, combat);
           // Taken when it had no delay at all, or when it no longer walks through a later member's start.
           if (d2 !== null && (delay === null || !crossesLater(tr2, d2))) { route = { ...again, short: route.short }; tr = tr2; delay = d2; level = 1; }
@@ -923,12 +1032,23 @@ export function* planGroup(spec, o) {
       }
       if (delay === null) {
         // Go last: wait until everything walking that it meets is at rest.
-        const blockers = conflictsAt(tr, m.r, 0, fixed, combat);
-        const last = Math.max(0, ...blockers.map(f => f.tr.end));
-        const d = Math.ceil(last / MOTION.delayStep - EPS) * MOTION.delayStep;
         // A long queue (the 0.75-square buffer files a door at about one member per 300 ms): from there, up to
         // twice the delay cap later.
-        const dd = freeDelayFrom(tr, m.r, fixed, combat, d);
+        const goLast = t => {
+          const last = Math.max(0, ...conflictsAt(t, m.r, 0, fixed, combat).map(f => f.tr.end));
+          const d0 = Math.ceil(last / MOTION.delayStep - EPS) * MOTION.delayStep;
+          return { d: d0, dd: freeDelayFrom(t, m.r, fixed, combat, d0) };
+        };
+        let g = goLast(tr);
+        // Going last on a way that brushes a later member still waiting at its start leaves that member no time to
+        // go at all (AR3-01: Hero 3's straight way grazed Hero 2 beside it by 0.03 square; Hero 2 was blocked, and
+        // settle() then kept Heroes 1-4 where they stood). The lateral way round those starts goes last instead.
+        if (lat && later.length && (g.dd === null || crossesLater(tr, g.dd))) {
+          const tr2 = trOf(lat.points, m);
+          const g2 = goLast(tr2);
+          if (g2.dd !== null && !crossesLater(tr2, g2.dd)) { route = { ...lat, short: route.short }; tr = tr2; g = g2; }
+        }
+        const { d, dd } = g;
         if (dd !== null) { delay = dd; level = 2; }
         else {
           // Another free spot it can reach and time clear of everyone (0.5.0: in a packed room the spot it was given
@@ -975,6 +1095,8 @@ export function* planGroup(spec, o) {
     if (p.blocked.length < best.blocked.length) best = p;
   }
 
+  for (const b of best.blocked) note(b.id, `blocked:${b.blocker ?? "-"}`);
+
   // A fight's tier C (0.8.3, AR1-02): the members are sent by space (sequence-core, the glue's commitFight), never by
   // this timing. Its start delays are dropped there, and its settle() left members standing for conflicts in time
   // that the sequence answers by order (live C-1: 6 of 8 stayed where they stood, "Stopped short, way blocked"). The
@@ -994,7 +1116,7 @@ export function* planGroup(spec, o) {
     return {
       result: "plan", members: out, anchorId, constricted, formation: slots?.formation ?? true, sequenced: true,
       reslotted: slots?.reslotted ?? [], excluded: excluded.map(m => m.id), replans, cut: cutIds, stayed,
-      blocked: 0, anchorShort: anchorShort || !!out[anchorId]?.short, ms: timer.elapsed(),
+      blocked: 0, anchorShort: anchorShort || !!out[anchorId]?.short, ms: timer.elapsed(), why,
     };
   }
 
@@ -1003,7 +1125,8 @@ export function* planGroup(spec, o) {
     const e = best.entries[m.id];
     return { id: m.id, r: m.r, w: m.w, h: m.h, speed: m.speed, points: e.route.points, cut: e.route.cut ?? null, delay: e.delay };
   }), ...stays.map(m => ({ id: m.id, r: m.r, w: m.w, h: m.h, speed: m.speed, points: pathOf(routes.get(m.id)), cut: null, delay: 0 }))];
-  const settled = yield* settle(list, { statics: others, walkers, combat, allowedFor, keep: anchorId, restOk });
+  const settled = yield* settle(list, { statics: others, walkers, combat, allowedFor, keep: anchorId, restOk,
+    trajectoryFor: (pts, e) => trOf(pts, byIdAll.get(e.id) ?? e) });
   const cutIds = [], stayed = [];
   for (const m of [...best.seq, ...stays]) {
     const s = settled.get(m.id);
@@ -1013,6 +1136,7 @@ export function* planGroup(spec, o) {
     if (s.changed) (s.still ? stayed : cutIds).push(m.id);
     else if (s.still) stayed.push(m.id);
     const level = s.still ? "stay" : s.changed ? "cut" : route.short ? "short" : e.level;
+    if (s.changed) note(m.id, `settle:${(s.gaveWay ?? []).join("+")}`);
     out[m.id] = { id: m.id, core: false, slot: s.points.at(-1), points: s.points, data: route.data ?? null, cut: s.cut ?? null,
       delay: s.still ? 0 : s.delay, level, length: pathLength(s.points), short, walks: s.walks ?? [] };
   }
@@ -1020,7 +1144,7 @@ export function* planGroup(spec, o) {
     result: "plan", members: out, anchorId, constricted, formation: slots?.formation ?? true,
     reslotted: slots?.reslotted ?? [], excluded: excluded.map(m => m.id), replans, cut: cutIds, stayed,
     blocked: best.blocked.length, anchorShort: anchorShort || !!out[anchorId]?.short,
-    ms: timer.elapsed(),
+    ms: timer.elapsed(), why,
   };
 }
 

@@ -1,5 +1,66 @@
 # Changelog — pentaryn-movement
 
+## 0.8.5 — 2026-11-23
+
+Acceptance round 3 (AR3, frozen 0.8.4) defects for the tiers not yet passed (plan §16.13). Each fix has a test that
+fails on 0.8.4 (`test/ar3.test.mjs` for the planner, `test/group.test.mjs` "AR3-…" for the glue). Diagnosed on the
+BOSS WSL headless harness (the GPU judge was busy): the plan's dry run (`planGroup`, now with a `why` per member) and
+the live drags of M2 / M3.
+
+- **[declared] Out of combat a row of members beside a door left the grabbed one and three others where they stood
+  (AR3-01, blocker).** The file order ranked members by the foot of the perpendicular on the grabbed one's route, so
+  every hero east of House A's door ranked ahead of the three at its mouth, who were timed 5-9 s later (past the
+  deadline); one of them went last on a way that brushed a neighbour still waiting at its start (0.03 square), and
+  settle() then kept Heroes 1-4 where they stood. The file order is now the walk left by the route (`remainingVia`:
+  to the nearest leg, then along the rest), and a member going last takes its lateral way round the later members'
+  starts when its own way brushes one. Live dry run, M2 door: 4 of 9 stayed → only the Large (fits no door) stays,
+  the last sets off at 5.7 s.
+- **[declared] Tier C: over the one-wide bridge nobody moved; at the T-junction four members, the grabbed one among
+  them, never moved (AR3-02, blocker).** Four causes, each fixed: a member cut to where it stands (cutsFor) never
+  counted as arrived, so the grabbed Hero 8 waited for seven heroes until the deadline; the grabbed one heading a
+  one-wide file was sent last ("anchor in the gap's mouth"), past nobody; a member's vet read the members walking
+  ahead of it as standing (between two squares) and cut each follower behind the one ahead; in a fight the 0.2-square
+  rest gap of open ground ruled out every second square of a one-wide dead end (three of eight got no spot), and the
+  grabbed one at the back of the file was given a spot the members ahead of it had to rest short of. Now a member with
+  no walk counts as arrived, the head of a narrow file goes first, a member's own walking group mates are the
+  sequence's to answer, fight spots are side by side, and the grabbed one behind more members than spots past its
+  drop point stops short behind them (its rule: where dropped, or short of it). Live: the bridge file walks into
+  Room E; the T-junction fills the dead end in file order, the grabbed one short with a notice.
+- **[declared] Tier C off (the default): a fight's group drag moved each member one square, then stopped (AR3-03).**
+  The next-square test read a follower stepping into the square the one ahead leaves as a trade, so every member's
+  next square was refused. Only a real trade is refused now. And a step into a token that is still moving is held,
+  not refused for good: the rest of the walk is sent from the square it holds once the step is clear and the one
+  ahead is a latency buffer away (`status().group.hold`); a follower waits until the one ahead has been let leave its
+  square on this page, and a square this page just sent a token to counts as taken before the server's echo. Tier C
+  off's members still walk core's own paths (Joe's 2026-11-23 rule), which in a corridor end at the first wall.
+  Simulator, 300 fights: tier C off 4.1 → 5.6 squares a member, pass-through 40 → 29; tier C 6.8 → 9.9 squares a
+  member, pass-through 23 → 11 (mover-vs-mover 3 → 22, all on a client that had just stalled or lost a packet).
+- **[declared] Out of combat movers caught tokens slowed in difficult terrain (AR3-04, blocker: B8, NPC 6 0.33 square
+  into NPC 5 for 1.26 s in the Mud).** Core draws a step at its speed divided by the terrain's difficulty
+  (`Token#_modifyAnimationMovementSpeed`); the plan timed every member at full speed. On a scene with terrain every
+  trajectory the plan times is now core's terrain path, segment by segment (`terrainPath`). Live dry run, B8: the
+  members behind the ones in the Mud set off 2.1-2.85 s later instead of 0.45 s.
+- **[declared] After a player stopped their tokens in the GM's group, the GM's other members walked on inside each
+  other (AR3-05, AR3-06).** Each was cut short behind the stopped one on its own; their walks on are now settled
+  together (the cut ones first), so none rests where another still walks.
+- **[declared] A pins teleport or gather 1.2 s after a drop was undone by a later wave (AR3-08).** A member displaced
+  by anything but the module leaves its group: its unsent waves and any held step go.
+- **[declared] A backgrounded initiator's members were told "Stopped short" 10.1 s after the hide (AR3-09).** The
+  flush tells at once when it keeps a member where it stands, and the drop's watch reads rest from the server on a
+  background page (no frames there).
+- **[declared] The planning task blocked the page 227-275 ms at a drop (AR3-10).** A member with no route round the
+  tokens (the Large that fits no door) was searched toward its spot in one task of up to 250 ms; it is searched in
+  slices now (`towardSliced`).
+- **[declared] A fight's single drag past a standing ally in a one-wide corridor said "Stopped short", nameless
+  (AR3-12; Fable §3 row 5).** It says "No route there: <name> is in the way. The ghost button under the Ruler lets you
+  pass." (the name only when this user can read it).
+- A token drawn walking into its last square bars a step passing it there, not only one ending there (the simulator:
+  a diagonal step past its corner).
+- Not changed: AR3-07 (two players head-on in a 2-wide lane: each plans round the other group standing; both stop
+  short, both told: `anchorShort` in both telemetries; the DOM harness read the notices after Foundry dismissed them),
+  AR3-11 (the move refused once the GM views another scene is told, `step:unrendered`; same harness reading), AR3-13
+  (the "reading 'position'" TypeError has no stack; this module reads `position` only inside a try).
+
 ## 0.8.4 — 2026-11-23
 
 Acceptance round 2 (AR2, frozen 0.8.3) defects for the tiers not yet passed (plan §16.12). Each fix has a test that

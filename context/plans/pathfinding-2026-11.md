@@ -648,3 +648,27 @@ Simulator, seeds 1-2,000: 383 → 298 failing; tier C off 140 → 57 of 382. Not
 
 The harness measures square footprints. Out of combat 0.8.4 keeps standing tokens' squares clear; in a fight routes stay on circles (a diagonal step past an ally's corner is 5e-legal and the ruler charges it), so a fight's diagonal past a standing token still overlaps square footprints at the corner.
 
+
+### 16.13 pentaryn-movement 0.8.5: acceptance round 3 (AR3, frozen 0.8.4) (2026-11-23)
+
+AR3 ran on frozen 0.8.4 (the BOSS GPU Chrome, three foreground clients, and the BOSS WSL headless clients). No tier passed. The GPU judge was in use afterwards, so 0.8.5 was diagnosed on the WSL harness: the plan's dry run (`planGroup`, whose result now carries a `why` per member: `noSlot`, `noRouteToSlot`, `shortEndBlocks`, `blocked:<id>`, `settle:<ids>`, `behindFile:<n>`) and live drags of M2 / M3 with the telemetry ring. Fixed, each with a test that fails on 0.8.4 (CHANGELOG 0.8.5; `test/ar3.test.mjs`, `test/group.test.mjs` "AR3-…"):
+
+| ID | Tier | Root cause found | Fix |
+|---|---|---|---|
+| AR3-01 | B | file order by the foot of the perpendicular on the grabbed one's route: the row east of the door ranked ahead of the three at its mouth (timed 5-9 s, past the deadline); one going last brushed a neighbour still at its start by 0.03 sq, and settle() then kept Heroes 1-4 where they stood | file order = walk left by the route (`remainingVia`); going last takes the lateral way round later members' starts when its own brushes one |
+| AR3-02 | C | a member cut to where it stands never counted as arrived (the grabbed Hero 8 waited for it until the deadline); the head of a narrow file was sent last; the vet read walking group mates as standing; fight rest spots kept the 0.2-sq open-ground gap (every second square of a dead end); the grabbed one at the back got a spot the members ahead had to rest short of | no walk = arrived; `anchorHeads` (the head of a narrow file goes first); walking mates are the sequence's; fight spots side by side; the grabbed one stops short behind the members ahead when there are more of them than spots past its drop point (`behindFile`) |
+| AR3-03 | C off | the next-square test read a follower stepping into the square the one ahead leaves as a trade: every member's next square was refused | only a real trade is refused; a step into a token still moving is **held** and the rest of the walk sent once clear and a latency buffer behind (`holds`, `status().group.hold`); a follower waits until the one ahead has been let leave its square on this page (`leaving`), and a square this page just sent a token to counts as taken before its echo |
+| AR3-04 | B | core draws a step at its speed over the terrain's difficulty; the plan timed every member at full speed (B8: the Mud) | the plan's trajectories follow core's terrain path (`terrainPath`, `Token#createTerrainMovementPath`) on a scene with terrain |
+| AR3-05 / 06 | B | after another user's stop each member was cut short behind it on its own | their walks on are settled together |
+| AR3-08 | B | a later wave walked a teleported member back | a member displaced by anything but the module leaves its group |
+| AR3-09 | B | the flush's stays were told by the drop's watch, which on a background page waits for animations that never end there | the flush tells at once; the watch reads rest from the server on a hidden page |
+| AR3-10 | B | the way-ignoring-tokens search (`toward`) ran in one task up to 250 ms | `towardSliced` |
+| AR3-12 | A | the fight pass-an-ally refusal was a nameless "Stopped short" | "No route there: <name> is in the way. The ghost button under the Ruler lets you pass." (`notify.named`) |
+
+Also: a token drawn walking into its last square bars a step passing it there, not only one ending there.
+
+**Tier C off** still walks core's own paths (Joe's rule of 2026-11-23: until tier C passes, a fight's group drag is core's move with hard-obstacle cuts); in a corridor core's path for a member whose offset spot is in the rock ends at the first wall, so C-11's "one square each" is now core's path, not the module's refusal. Whether tier C becomes the default stays Joe's call after its rounds.
+
+Simulator, seeds 1-2,000: 298 → 299 failing, with the invariant Joe ranks first improved and more motion: pass-through 205 → 179, rest overlaps 9 → 10, orphans 1 → 0, mover-vs-mover 118 → 153 (on a client that had just stalled or lost a packet, §16.9 class 1). Squares walked per member over 300 fights: tier C off 4.1 → 5.6, tier C 6.8 → 9.9 (pass-through 23 → 11); out of combat unchanged (3.4). The model ports the holds, `leaving`, the claims and the tier C fixes (`noHold`, `noLeaving`, `noClaims`, `noArrivingFix`, `noTradeFix` switch each off).
+
+Not changed, for the next review: AR3-07 (two players head-on in a two-wide lane: each plans round the other group standing; both stop short and both are told, per telemetry; passing needs lane discipline across two plans); AR3-11 (the move refused after the GM views another scene is told, `step:unrendered`); AR3-13 (no stack; this module reads `position` only inside a try). The AR3 harness read notices from the DOM after Foundry dismissed them; several "no notice" findings (AR3-01, AR3-07, AR3-11, AR3-12's A5) had the notice in the telemetry. The next round should hook `ui.notifications.warn`.

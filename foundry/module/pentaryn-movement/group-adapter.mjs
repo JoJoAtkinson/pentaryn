@@ -114,7 +114,7 @@ export function othersOf(members, s) {
     if (lead && !sameLayer(lead, doc)) continue;
     if (level !== undefined && doc._source?.level !== undefined && doc._source.level !== level) continue;
     const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
-    out.push({ ...toSquares(doc._source, w, h, s), r: radiusOf(w, h) });
+    out.push({ ...toSquares(doc._source, w, h, s), r: radiusOf(w, h), id: doc.id });
   }
   return out;
 }

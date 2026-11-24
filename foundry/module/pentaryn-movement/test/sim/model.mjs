@@ -108,6 +108,8 @@ export class Movement {
     this.dropSeq = 0;
     this.yields = new Map();
     this.arrivalWaits = new Map();
+    this.holds = new Map();
+    this.stoppedGroups = new Set();
     this.pubWaits = new Map();
     this.tags = new Map();
     this.notices = [];
@@ -122,10 +124,56 @@ export class Movement {
   preStep(id, a, b) {
     const against = this.env.noStays ? this.stepMeetsStanding083(id, a, b) : this.stepMeetsStill(id, a, b, 3);
     if (against === null) return true;
+    // group.mjs holdStep (0.8.5, AR3-03): the token in the way is still moving: held, the rest sent when clear.
+    if (!this.env.noHold && this.holdStep(id, a, against)) return false;
     this.env.record?.("cut", { why: "step", id, against });
     this.tell("short", "step:standing");
     return false;
   }
+  /** group.mjs movingNow: between squares, drawn walking, or itself held. */
+  movingNow(oid) { return this.holds.has(oid) || this.moving(oid); }
+  /** group.mjs holdStep / lookHold (0.8.5). */
+  holdStep(id, a, against) {
+    if (!this.movingNow(against)) return false;
+    const mv = this.c.moves.get(id);
+    if (!mv) return false;
+    const wps = mv.segs.slice(mv.k).flat().map(p => ({ x: p.x, y: p.y }));
+    if (!wps.length) return false;
+    const prev = this.holds.get(id);
+    const h = { wps, t0: prev?.t0 ?? this.now, at: { x: a.x, y: a.y }, gid: this.groupOf.get(id) ?? null, waiters: prev?.waiters ?? [], against };
+    this.holds.set(id, h);
+    this.env.record?.("hold", { client: this.c.id, id, against });
+    this.c.setTimeout(() => this.lookHold(id, h), 100);
+    return true;
+  }
+  lookHold(id, h) {
+    if (this.holds.get(id) !== h) return;
+    const d = this.doc(id);
+    const end = ok => { if (this.holds.get(id) === h) this.holds.delete(id); if (!ok) for (const fn of h.waiters.splice(0)) fn(false); };
+    if (!d || this.c.moves.has(id) || dist(d, h.at) > 1e-6) { end(false); return; }
+    if (h.gid && this.stoppedGroups.has(h.gid)) { end(false); return; }
+    const b = h.wps[0];
+    const wall = this.blocked(d, d, b);
+    let hit = wall ? "wall" : this.stepMeetsStill(id, { x: d.x, y: d.y }, b, 3);
+    if (hit === null && this.movingNow(h.against)) {
+      const o = this.doc(h.against), at = this.c.drawn(h.against);
+      if (o && at && dist(at, b) < d.r + o.r + 0.75) hit = h.against;
+    }
+    if (hit === null) {
+      end(true);
+      this.env.record?.("resume", { client: this.c.id, id });
+      this.c.move(id, h.wps, { combat: true, options: { keep: true, ...(h.gid ? { gid: h.gid } : {}) }, why: "resume" });
+      for (const fn of h.waiters.splice(0)) fn(true);
+      return;
+    }
+    if (wall || !this.movingNow(hit) || this.now - h.t0 > 3000) { this.tell("short", "step:standing"); end(false); return; }
+    this.c.setTimeout(() => this.lookHold(id, h), 100);
+  }
+  holdOutcome(id) {
+    const h = this.holds.get(id);
+    return h ? new Promise(resolve => h.waiters.push(resolve)) : null;
+  }
+
   /** 0.8.3's test (env.noStays): only a token at rest and not drawn walking; every token between squares leaves. */
   stepMeetsStanding083(id, a, b) {
     const me = this.doc(id);
@@ -147,15 +195,23 @@ export class Movement {
     for (const [oid, o] of this.c.view) {
       if (oid === id) continue;
       const rr = me.r + o.r - 0.02;
+      // group.mjs leaving.to (0.8.5): a square this client has just sent the token to, before its echo.
+      const own = this.env.noClaims ? null : this.c.moves.get(oid);
+      const tgt = own?.segs?.[own.k]?.at(-1);
+      if (tgt && dist(tgt, o) > 1e-6) {
+        const L2t = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+        const tt = L2t > 1e-12 ? Math.min(Math.max(((tgt.x - a.x) * (b.x - a.x) + (tgt.y - a.y) * (b.y - a.y)) / L2t, 0), 1) : 0;
+        if (dist(tgt, a) >= rr && Math.hypot(tgt.x - (a.x + (b.x - a.x) * tt), tgt.y - (a.y + (b.y - a.y) * tt)) < rr) return oid;
+      }
       const next = o.mv?.state === "pending" ? o.mv.rest?.[0] : null;
-      if (next && (dist(next, b) < rr || (dist(next, a) < rr && dist(a, o) >= rr))) return oid;
+      if (next && (dist(next, b) < rr || (dist(next, a) < rr && (this.env.noTradeFix || dist(b, o) < rr) && dist(a, o) >= rr))) return oid;
       if (dist(a, o) < rr) continue;
       const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
       const t = L2 > 1e-12 ? Math.min(Math.max(((o.x - a.x) * (b.x - a.x) + (o.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
       if (Math.hypot(o.x - (a.x + (b.x - a.x) * t), o.y - (a.y + (b.y - a.y) * t)) >= rr) continue;
       if (this.c.animating(oid) && o.mv?.state !== "pending") {
-        if (dist(b, o) < rr) return oid;
-        continue;
+        if (this.env.noArrivingFix && dist(b, o) >= rr) continue;
+        return oid;
       }
       if (this.staysPut(oid, depth)) return oid;
     }
@@ -164,8 +220,15 @@ export class Movement {
   /** group.mjs staysPut (0.8.4): at rest, or waiting between squares on this client with its own next square barred. */
   staysPut(oid, depth) {
     const o = this.doc(oid);
+    if (this.holds.has(oid)) return true;
     if (o?.mv?.state !== "pending") return true;
     if (o.mv.user !== this.c.id) return false;
+    // group.mjs leaving (0.8.5): not yet let leave the square it holds here.
+    if (!this.env.noLeaving) {
+      const mv = this.c.moves.get(oid);
+      const prev = mv ? (mv.k === 0 ? mv.from : mv.segs[mv.k - 1].at(-1)) : null;
+      if (!prev || dist(prev, o) > 1e-6) return true;
+    }
     const next = o.mv.rest?.[0];
     if (!next || depth <= 0) return true;
     if (this.blocked(o, o, next)) return true;
@@ -245,7 +308,7 @@ export class Movement {
   }
   onReload() {
     for (const g of this.groups.values()) for (const t of g.timers) this.c.clearTimeout(t);
-    this.groups.clear(); this.groupOf.clear(); this.yields.clear(); this.arrivalWaits.clear(); this.pubWaits.clear();
+    this.groups.clear(); this.groupOf.clear(); this.yields.clear(); this.arrivalWaits.clear(); this.holds.clear(); this.pubWaits.clear();
     this.reg = registry();
     for (const r of this.env.runs) if (r.client === this.c.id && !over(r.run)) lifeStep(r.run, "cancelled", { now: this.now, why: "reload" });
     if (this.c.canvas) this.startGuard();
@@ -644,6 +707,8 @@ export class Movement {
     if (!g) return [];
     g.stopped = true;
     const ids = [...g.ids];
+    this.stoppedGroups.add(gid);
+    for (const x of ids) { const h = this.holds.get(x); if (h) { this.holds.delete(x); for (const fn of h.waiters.splice(0)) fn(false); } }
     if (!over(g.run)) lifeStep(g.run, "stopped", { now: this.now, why: "click" });
     this.forget(gid);
     return ids;
@@ -755,7 +820,8 @@ export class Movement {
       const walking = this.walkingOutside(g.ids);
       const walkers = [...walking, ...this.liveFor(g.ids, { skip: new Set(walking.map(w => w.id)) }).walkers];
       if (walkers.length && walkersMeet([{ points: pts, r: t.r, speed: SPEED, delay: 0 }], walkers, { combat: true })) return "wait";
-      const others = [...this.c.view.values()].filter(o => o.id !== id).map(o => ({ x: o.x, y: o.y, r: o.r }));
+      const walkingIds = new Set([...sentIds].filter(x => !arrived.has(x) && movement[x]?.length));
+      const others = [...this.c.view.values()].filter(o => o.id !== id && !walkingIds.has(o.id)).map(o => ({ x: o.x, y: o.y, r: o.r }));
       const p = freePrefix(pts, t.r, others, { allowed: c => onCell(c, t.w, t.h) });
       if (p.full) return "go";
       this.env.record?.("cut", { why: "fightStanding", id });
@@ -767,7 +833,8 @@ export class Movement {
     const startOf = new Map(walks.map(w => [w.id, w.points[0]]));
     const ahead = (id, p) => {
       if (arrived.has(p)) return true;
-      if (this.env.noFollow || !sentIds.has(p) || !movement[p]?.length) return false;
+      if (!movement[p]?.length) return true;
+      if (this.env.noFollow || !sentIds.has(p)) return false;
       const pd = this.c.view.get(p), t = this.doc(id);
       const pts = startOf.has(p) ? [startOf.get(p), ...movement[p]] : null;
       if (!pd || !pts || !t || !movement[id]?.length) return false;
@@ -816,7 +883,7 @@ export class Movement {
   /** group.mjs arrivalOf(): this client's own move ended (core's movement promise) and drawn at rest here. */
   arrivalOf(id, fn) {
     const check = () => {
-      if (this.c.moves.has(id) || this.doc(id)?.mv?.state === "pending") { this.c.setTimeout(check, 20); return; }
+      if (this.c.moves.has(id) || this.holds.has(id) || this.doc(id)?.mv?.state === "pending") { this.c.setTimeout(check, 20); return; }
       this.c.whenDrawnAtRest(id, fn);
     };
     check();

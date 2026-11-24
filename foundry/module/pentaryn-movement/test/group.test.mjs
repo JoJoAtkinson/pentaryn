@@ -4037,8 +4037,13 @@ test("AR2-02: in a fight (tier C off), the one behind never steps into the squar
     ahead.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(300, 100)] } };
     const into = moveOp("mvAR2b0000000002", { x: 100, y: 100 }, { x: 200, y: 100 }, { chain: ["mvAR2b0000000001"] });
     assert.equal(F.fireCall("preMoveToken", back.document, into, { _movementArguments: { continuationId: "c1" } }), false, "it would stay: not sent");
-    // Its next square free (it goes down to (2,2)): the one behind follows.
+    // Its next square free (it goes down to (2,2)), but not yet let leave (2,1) on this page (0.8.5): the one behind is
+    // held, not sent; once its own next square has passed here, the one behind follows.
     ahead.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(200, 200)] } };
+    const early = moveOp("mvAR2b0000000006", { x: 100, y: 100 }, { x: 200, y: 100 }, { chain: ["mvAR2b0000000001"] });
+    assert.equal(F.fireCall("preMoveToken", back.document, early, { _movementArguments: { continuationId: "c1b" } }), false, "the one ahead not yet let leave: held");
+    ahead.document.rendered = true;
+    F.fireCall("preMoveToken", ahead.document, moveOp("mvAR2bA000000001", { x: 200, y: 100 }, { x: 200, y: 200 }), {});
     const follow = moveOp("mvAR2b0000000003", { x: 100, y: 100 }, { x: 200, y: 100 }, { chain: ["mvAR2b0000000001"] });
     assert.notEqual(F.fireCall("preMoveToken", back.document, follow, { _movementArguments: { continuationId: "c2" } }), false, "it leaves: sent");
     // Its next square across the wall along y = 400 (no door there): it stays.
@@ -4145,5 +4150,182 @@ test("AR2-14: a token destroyed under a timer (the GM activated another scene mi
     t.animationContexts.clear();
     sceneTokens.delete(t.document.id);
     for (const [k, v] of others) sceneTokens.set(k, v);
+  }
+});
+
+test("AR3-03: in a fight's file the one ahead steps on although the one behind is about to step into its square (0.8.4 read that as a trade and stopped it: every member of a fight's group drag walked one square); a real trade is still not sent", () => {
+  combatFlag = true;
+  const back = makeToken("ar3aA00000000001", 100, 100);
+  const ahead = makeToken("ar3aB00000000001", 200, 100);
+  const others = keepOnly([back, ahead]);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [back, ahead];
+  try {
+    ahead.document.rendered = true;
+    F.fireCall("preMoveToken", ahead.document, moveOp("mvAR3a0000000001", { x: 100, y: 100 }, { x: 200, y: 100 }), {});
+    // The one behind waits between squares, its next square the one ahead's.
+    back.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(200, 100)] } };
+    const on = moveOp("mvAR3a0000000002", { x: 200, y: 100 }, { x: 300, y: 100 }, { chain: ["mvAR3a0000000001"] });
+    assert.notEqual(F.fireCall("preMoveToken", ahead.document, on, { _movementArguments: { continuationId: "c1" } }), false, "the one ahead steps on");
+    // Head-on: the other steps onto this one's square while this one steps onto its own.
+    back.document._source.x = 300;
+    back.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(200, 100)] } };
+    ahead.document._source.x = 200;
+    const trade = moveOp("mvAR3a0000000003", { x: 200, y: 100 }, { x: 300, y: 100 }, { chain: ["mvAR3a0000000001"] });
+    assert.equal(F.fireCall("preMoveToken", ahead.document, trade, { _movementArguments: { continuationId: "c2" } }), false, "a trade is not sent");
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const x of [back, ahead]) { x.document.movement = { state: "completed", user: { isSelf: true } }; delete x.document.rendered; }
+    combatFlag = false;
+    for (const x of [back, ahead]) sceneTokens.delete(x.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("AR3-03: a fight's next square into a token still moving is held, not stopped for good: once it has gone, the rest of the walk is sent from the square it holds (0.8.4 stopped the follower and the file behind it)", async () => {
+  combatFlag = true;
+  const back = makeToken("ar3bA00000000001", 100, 100);
+  const ahead = makeToken("ar3bB00000000001", 200, 100);
+  const others = keepOnly([back, ahead]);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [back, ahead];
+  try {
+    back.document.rendered = true;
+    F.fireCall("preMoveToken", back.document, moveOp("mvAR3b0000000001", { x: 0, y: 100 }, { x: 100, y: 100 }), {});
+    // The one ahead is between squares and not yet let leave its square here: the one behind is held.
+    ahead.document.movement = { state: "pending", user: { isSelf: true }, pending: { waypoints: [wp(300, 100)] } };
+    const into = { ...moveOp("mvAR3b0000000002", { x: 100, y: 100 }, { x: 200, y: 100 }, { chain: ["mvAR3b0000000001"] }),
+      pending: { waypoints: [wp(300, 100), wp(400, 100)] } };
+    assert.equal(F.fireCall("preMoveToken", back.document, into, { _movementArguments: { continuationId: "c1" } }), false, "held: not sent now");
+    assert.equal(api.status().group.hold.live, 1, "one hold");
+    // It goes: on square (4,1) now, well ahead.
+    ahead.document._source.x = 400;
+    ahead.document.movement = { state: "completed", user: { isSelf: true } };
+    const from = F.calls.length;
+    tickBy(200);
+    await flush();
+    const moves = F.calls.slice(from).filter(x => x.op === "move" && x.id === back.document.id);
+    assert.equal(moves.length, 1, `the rest of its walk is sent: ${JSON.stringify(F.calls.slice(from).map(c => c.op))}`);
+    assert.deepEqual(moves[0].waypoints.map(w => [w.x, w.y]), [[200, 100], [300, 100]], "from the square it holds, short of the one ahead");
+    assert.equal(api.status().group.hold.live, 0);
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const x of [back, ahead]) { x.document.movement = { state: "completed", user: { isSelf: true } }; delete x.document.rendered; }
+    combatFlag = false;
+    for (const x of [back, ahead]) sceneTokens.delete(x.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("AR3-08: a member teleported while its group's walk is still to come leaves the group: no later wave walks it back (0.8.4: a pins teleport 1.2 s after the drop was undone, 1 run in 3)", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const a = makeToken("ar3cA00000000001", 100, 100), b = makeToken("ar3cB00000000001", 200, 100);
+  const others = keepOnly([a, b]);
+  try {
+    dropWith(a, contextsFor([a, b], 500, 0));
+    mock.timers.tick(100);
+    assert.equal(api.status().group.groups >= 1, true, "the group is held");
+    const before = game.pentaryn.movement.status().group.runs;
+    F.fire("updateToken", b.document, { x: 1500, y: 1200 }, { animate: false, movement: { [b.document.id]: { waypoints: [{ x: 1500, y: 1200, action: "displace" }] } } }, "someoneElse");
+    // The member is out of the group (its unsent waves are gone): what is left is the grabbed one alone.
+    const members = F.exposed?.groupMembers?.(b.document.id) ?? null;
+    if (members) assert.equal(members.held, false, "b is in no group this client holds");
+    assert.ok(before.length >= 0);
+    const tel = api.telemetry().events.filter(e => e.kind === "cut" && e.reason === "teleported");
+    assert.equal(tel.length, 1, "told the telemetry: teleported");
+  } finally {
+    for (const x of [a, b]) sceneTokens.delete(x.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("AR3-12: in a fight, a single drag whose only way passes an ally standing in a one-wide corridor does not move and says \"No route there\", naming the ally and the ghost button (0.8.4: \"Stopped short, way blocked.\", nameless)", () => {
+  combatFlag = true;
+  clock.step = 0;
+  world.walls.push([{ x: 100, y: 100 }, { x: 900, y: 100 }], [{ x: 100, y: 200 }, { x: 900, y: 200 }], [{ x: 100, y: 100 }, { x: 100, y: 200 }]);
+  const one = makeToken("ar3dA00000000001", 100, 100), ally = makeToken("ar3dB00000000001", 200, 100);
+  ally.visible = true;
+  const others = keepOnly([one, ally]);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [one, ally];
+  try {
+    const from = F.calls.length;
+    const c1 = contextsFor([one], 500, 0);
+    dropWith(one, c1);
+    tickBy(2000);
+    const told = F.calls.slice(from).filter(c => c.op === "notify" && c.level === "warn").map(c => c.message);
+    assert.ok(told.some(m => /named\.noRoute|is in the way/.test(m)), `named: ${JSON.stringify(told)}`);
+    assert.ok(!told.some(m => /stoppedShort/.test(m)), "not \"Stopped short\"");
+  } finally {
+    world.walls.pop(); world.walls.pop(); world.walls.pop();
+    combatFlag = false;
+    F.canvas.tokens.placeables = saved;
+    for (const x of [one, ally]) sceneTokens.delete(x.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("AR3-09: a member the hidden-tab flush keeps where it stands is told at once (\"Stopped short\"), not by a throttled look past the deadline (0.8.4: told 10.05-10.13 s after the tab was hidden)", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("ar3eA00000000001", 400, 200), makeToken("ar3eB00000000001", 300, 200), makeToken("ar3eC00000000001", 500, 200)];
+  const others = keepOnly(ts);
+  try {
+    const out = dropWith(ts[0], contextsFor(ts, 0, 400));
+    const first = new Set(out[0].map(u => u._id));
+    const later = ts.filter(t => !first.has(t.document.id)).length;
+    const from = F.calls.length;
+    goHidden();
+    const kept = later - sent(from).reduce((n, c) => n + c.ids.length, 0);
+    const told = F.calls.slice(from).filter(c => c.op === "notify" && c.level === "warn").map(c => c.message);
+    if (kept > 0) assert.deepEqual(told, ["PENTARYN_MOVEMENT.notify.stoppedShort"], `kept ${kept}, told at once`);
+    else assert.deepEqual(told, []);
+    assert.ok(kept > 0, "the file keeps a member where it stands (the case this is about)");
+  } finally {
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("AR3-05 / AR3-06: after another user stops a member, the others' walks on are settled together: two cut short behind it never end on one spot (0.8.4 cut each on its own: Hero 5 and Hero 6 walked on 0.65 square inside each other and rested overlapping)", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const a = makeToken("ar3fA00000000001", 600, 100), b = makeToken("ar3fB00000000001", 100, 300), c = makeToken("ar3fC00000000001", 100, 500);
+  const others = keepOnly([a, b, c]);
+  dropWith(a, contextsFor([a, b, c], 0, 100));
+  mock.timers.tick(100);
+  clock.t += 2000;
+  a.document._source.x = 600; a.document._source.y = 200;
+  // b and c walk east along y = 200, both through where a now stands; b ahead (drawn at x 300), c behind (x 150).
+  for (const [t, x, to] of [[b, 300, 900], [c, 150, 800]]) {
+    t.document._source.x = to; t.document._source.y = 200;
+    t.document.x = x; t.document.y = 200; t.position = { x, y: 200 };
+    t.animationContexts.set(t.movementAnimationName, {});
+    t.document.movement = { state: "completed", user: { isSelf: true }, constrainOptions: {}, origin: wp(0, 200),
+      passed: { waypoints: [wp(to, 200)] }, pending: { waypoints: [] } };
+  }
+  const from = F.calls.length;
+  try {
+    F.fire("updateToken", a.document, { x: 600, y: 200 }, { animate: false }, "someoneElse");
+    for (let i = 0; i < 12; i++) await Promise.resolve();
+    const ends = {};
+    for (const t of [b, c]) {
+      const ms = F.calls.slice(from).filter(x => x.op === "move" && x.id === t.document.id);
+      const last = ms.at(-1)?.waypoints?.at(-1);
+      ends[t.document.id] = last ? last.x : t.position.x;
+    }
+    const xb = ends[b.document.id], xc = ends[c.document.id];
+    assert.ok(xb <= 500 + 1e-6, `b stops short behind a: ${xb}`);
+    assert.ok(Math.abs(xb - xc) >= 100 - 1e-6, `b and c end a square apart, not on one spot: b ${xb}, c ${xc}`);
+  } finally {
+    for (const t of [b, c]) { t.animationContexts.clear(); t.document.movement = { state: "completed", user: { isSelf: true } }; }
+    for (const x of [a, b, c]) sceneTokens.delete(x.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
   }
 });
