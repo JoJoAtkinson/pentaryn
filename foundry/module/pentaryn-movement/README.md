@@ -77,19 +77,26 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   that no longer shows the token's map; never into a token standing still.
 - **A door shut or a wall raised across a walk out of combat** stops it where it is drawn; a group member not yet
   sent whose way it crosses stays where it stands, named.
-- **Several tokens out of combat — the file** (`groupDrags`; 0.9.0): at the drop every member gets its own spot, the
-  free one nearest its place in the formation that it can reach without going round the far side of a wall (a place
-  that lies behind the room's wall, off the scene or in rock: the nearest spot to it that the drop point reaches), and a
-  route round the tokens standing outside the drag and round the spots already given out. Then each gets a start
-  delay: on open ground all set off at once; through a door they file, each waiting only as long as it needs not to
-  meet the ones before it, and the last one is on its way within 4 s of the drop. Nobody rests on anybody, nobody
-  walks through a token standing still or onto a mate's spot; two members both moving may brush on the way. One with
-  no spot it can reach stays where it stands and is named: "Stayed where they stand, with no free spot they can reach:
-  Talo." Nobody able to go is "No route there". A tab sent to the background sends the waiting members at once.
-  `planGroup(tokens, point)` dry-runs it (each member's spot and start delay).
-- **Several tokens in a fight — one at a time** (`groupDrags`; 0.9.0): nothing moves at the drop; the members walk one
-  after the other, each a normal single move routed when its turn comes, round the tokens standing then (the ones
-  already moved where they came to rest), a checkpoint at every square, charged exactly what it walks. A stack (a
+- **Several tokens out of combat — the leader rule** (`groupDrags`; 0.10, Joe 2026-11-24): the token you grab and
+  drag **leads** (grab a rider and its mount leads). Where you drop it picks the shape. **March** — dropped on the
+  floor: the leader ends on the drop square by its own way (it walks through its own group, never through anyone
+  else), and everyone else rests **behind** it, as close as they fit, never beside or ahead of it ("behind" follows
+  the leader's last step, not the straight drag line); in a one-wide tunnel that is a line behind the leader.
+  **Swarm** — dropped on a token outside the group that you can see (friend, foe or prop): the leader gets a square
+  touching it first, and the rest close in round it from their own sides, ring by ring (8 squares touch a Medium, 12 a
+  Large, 16 a Huge). A hidden token never makes a swarm, for the GM either: it is just a token in the way. Each member
+  takes the best square it can reach and gets one route to it, round the tokens standing outside the drag and the
+  squares already given out. Then each gets a start delay: through a door they file, and the last one is on its way
+  within 4 s of the drop. Nobody rests on anybody, nobody walks through a token standing still or onto a mate's
+  square; two members both moving may brush on the way. One with no square it can reach stays where it stands and is
+  named: "Stayed where they stand, with no free spot they can reach: Talo." The leader with no way there moves
+  nobody: "No route there". A tab sent to the background sends the waiting members at once. `planGroup(tokens,
+  point)` dry-runs it (the shape, the leader, the target, each member's square, route, start delay and why it stays).
+- **Several tokens in a fight — one at a time** (`groupDrags`; 0.9.0, the leader rule 0.10): nothing moves at the drop;
+  the leader walks first, then the others one after the other (least walk left first), each a normal single move whose
+  square is picked when its turn comes (behind where the leader came to rest in a march, round the target in a swarm)
+  and routed round the tokens standing then (the ones already moved where they came to rest), a checkpoint at every
+  square, charged exactly what it walks. The leader with no way moves nobody ("No route there"). A stack (a
   mount and its rider) goes as one. About a second per member per 30 ft. A click on the walker, a turn change, a new
   drop or a deleted member ends the queue (the members not sent are named, except after your own click or drop); a
   walk that never ends is moved on after its own time plus 3 s. More than 12: "In a fight, drag one token at a
@@ -158,7 +165,7 @@ frozen object. Ask it what it offers: `game.pentaryn.movement.describe()` (offli
 | `pinsUnderTokens(scene?)` | — | — | map pins whose centre sits under a visible token on the same scene level (a pin shown on every level, or a token with no level, always counts), player-owned first; `scene` is a Scene or a scene id (an unknown id answers `[]`) (pins belong **beside** tokens: owned-on-top makes a pin under your token unclickable) |
 | `pathfind.status()` | — | — | the mode, this client's two settings, `patched` (the `findMovementPath` wrap), the step-cache size, the limits, and `last`: what the last search did (`nodes`, `ms`, `reached` of `of` explicit waypoints, `arcs`, `improved`, `async`) |
 | `pathfind.route(ref, { to, preview?, smooth? })` | — | — | dry run: the path a drag of that token to `to` (top-left pixels) would get, with its cost in feet; needs a browser tab showing the scene (the headless GM has no canvas) |
-| `planGroup(refs, point)` | — | — | dry run of a group drop (the first ref is the grabbed one, `point` its top-left drop point): each member's slot, start delay, level (0 delay · 1 re-plan or another spot · 2 go last · `short` no route round the tokens in its way, as far as it is free · `cut` stopped short so nothing meets it · `stay` does not move; 0.5.0: there is no `relaxed` or `core` member any more), `short`, and `anchorRoute` (`reached`, `ms`, `waypoints`: the grabbed token's route, searched first with the pathfinder's full budget, as its drag preview is); needs a browser tab |
+| `planGroup(refs, point)` | — | — | dry run of a group drop by the leader rule (0.10; the first ref is the grabbed one, the leader, `point` its top-left drop point): `shape` (`march` / `swarm`), `leader`, `target` (the token dropped on, or null), the plan's `ms`, `searches` and `failed`, the planning `order`, the start order (`starts`) and the last start (`total`), and per member its `slot` (top-left), `route` (its waypoints, top-left pixels), `waypoints` (their count), `delay` (ms after the drop; null when it does not move) and `stay` (why it stays: `noSpot`, `noRoute`, `blocked`, `budget`; null when it goes or is in place); `result` `none` when the leader has no way; needs a browser tab |
 | `stop(ref)` | — | token position / its pending move | stop a moving token as a click would (no 400 ms arming); in combat a player's stop of a move the GM started goes to the active GM through the relay query `pentaryn-movement.stop`, a GM's goes to whoever started it (`pentaryn-movement.stopOwn`) |
 | `telemetry(opts?)` | — | — | this client's drag telemetry (0.8.0): `summary` (counts per kind; plan time median / p95 / max; fallbacks and notices by reason code; fires per plan; the breaker's tallies), `tripped`, `events` (the ring buffer, or the last `opts.seconds`), `filed` |
 | `reportTelemetry()` | — | a whisper | whispers this client's summary to the logged-in GMs (after a session); `NO_GM` with none |
@@ -214,7 +221,7 @@ tier C's arrivals and the waiting cue, with their rows.
 | `TokenLayer#_prepareKeyboardMovementUpdates` | `movement-keyboard-constrain-ghost` | the same for arrow keys (reads the private result shape `result[1].movement[id].constrainOptions`) |
 | `TokenLayer.objects#sortChildren` | `movement-layer-sort-owned` | core's interaction sort plus the owned rank (reads `_lastSortedIndex`) |
 | `Token#findMovementPath` | `movement-pathfind-find-path` | drag pathfinding: splices the found corners in and runs the original again (marker `__pentarynMovementPath`) |
-| `Token#_prepareDragLeftDropUpdates` | `movement-group-drop` | the drop (0.9.0 `drop.mjs`): core's updates, then a single drag's route round standing tokens, a group's one-pass slots and routes (B0, one update); combat cell checkpoints (marker `__pentarynMovementGroup`) |
+| `Token#_prepareDragLeftDropUpdates` | `movement-group-drop` | the drop (0.9.0 `drop.mjs`): core's updates, then a single drag's route round standing tokens, a group's leader plan (0.10: march or swarm, each member's square and route; the first wave in the drop's own update); combat cell checkpoints (marker `__pentarynMovementGroup`) |
 | `Token#_onClickLeft` | `movement-click-stop` | click to stop, before core's click (marker `__pentarynMovementStop`) |
 | `Token#stopAnimation` | `movement-stop-animation-defuse` | every client: empties the tweens' queued links before core terminates them, so no stop throws core's "reading 'chain'" (marker `__pentarynMovementDefuse`) |
 | `CanvasAnimation.animate` | `movement-canvas-animation-registration` | every client: a fresh movement tween's first frame counts only the time since it began, so a move that starts on a stalling page is not drawn ahead of its walk (0.6.3, `status().stop.firstFrames`); a chained tween that completes inside its own first frame (a slow page) leaves its running next link registered under the name, so a stop terminates it (marker `__pentarynMovementAnimReg`, 0.4.8) |
@@ -286,13 +293,13 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 | `pathfind-core.mjs` | pure: A*, cost-preserving string pulling, corner arcs, the skip rules |
 | `pathfind-adapter.mjs` | a token and its drag options → wall / creature / cost step tests (reads only) |
 | `pathfind.mjs` | the feature: the `findMovementPath` wrap, the step cache, `pathfind.status` / `route` |
-| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, clearAlong, decision tables; candidate lattices, cuts (`freePrefix`), the flood, one undo entry per move (0.9.0: the 0.8 planner, settle and the rest passes are gone) |
+| `motion-core.mjs`, `group-core.mjs` | pure: trajectories, conflicts, waves, cell chains, clearAlong, decision tables; cuts (`freePrefix`), the flood, one undo entry per move (0.9.0: the 0.8 planner, settle and the rest passes are gone; 0.10: the candidate lattices too) |
 | `sequence-core.mjs` | pure: tokens that start stacked, and `sequence` (the file's start order, a fight queue's order) |
 | `telemetry-core.mjs`, `telemetry.mjs` | pure: the ring buffer, its summary and report text, the breaker's rule; the feature: telemetry, the circuit breaker, the Alt+W key (0.8.0) |
 | `group-adapter.mjs` | tokens and drag contexts → member records, rest and wall tests (reads only) |
 | `drop.mjs` | the feature (0.9.0, was `group.mjs`): the drop wrap — single drops, the file's first update and its later waves, the fight queue, a fight's every square, a wall across a walk, riders, undo |
-| `file-core.mjs` | pure (0.9.0): B0 — every member's slot and route in one pass, the members that stay, the orders tried; B1 — the capped start delays (`staggerFile`) |
-| `file.mjs` | the feature (0.9.0): B0's oracles on the canvas (rest test, walk flood, routes round circles), the dry run, which tokens move together, the waves' timers and the hidden-tab flush, the fight queues and what empties them, the group-wide stop |
+| `file-core.mjs` | pure (0.10): `planLead` — the leader rule (march and swarm ranks, each member's best reachable square and one route, the members that stay), `walkFrom` (the floods); `staggerFile` — the capped start delays (0.9's B1) |
+| `file.mjs` | the feature (0.10): the shape from the drop (`targetOf`), planLead's oracles on the canvas (rest test, one step on the pathfinder's shared memo, routes round circles), a fight's order and each member's square at its turn, the dry run, which tokens move together, the waves' timers and the hidden-tab flush, the fight queues and what empties them, the group-wide stop |
 | `stop.mjs` | the feature: the click wrap and `stop` |
 | `api-manifest.mjs`, `api.mjs` | the published API |
 | `styles/movement.css` | the dimmed combat badge (`.pm-blocked`) |
@@ -304,15 +311,16 @@ own `ghost` setting when ghost stops being allowed; only a GM writes the world s
 (frozen characterisation from the migration checkpoint), the hook manifest, patch records, the API
 goldens, i18n keys and logging; `pathfind-core.test` (A* on synthetic wall maps: corners, doors,
 one-way walls, a 2×2 token, difficult terrain, a hostile in a doorway, cost equality) and
-`pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-props.test` (the candidate lattices, the flood, `freePrefix`, trajectories, waves, click rows), `file-core.test` (B0's gate: 800 seeded
-drops on random floors and the hard-case dungeon, every member sent or named, no route through a standing token or an
-earlier slot, no two at rest overlapping; B1's gate on the same 800: every delay a wave step, the last within 4 s,
-open ground all 0, two movers meeting in fewer drops than all at once) and `drop.test` (the drop and click wraps, the
+`pathfind.test` (the wrap against a token whose core path stops at the first wall); `group-props.test` (the flood, `freePrefix`, trajectories, waves, click rows), `lead.test` (the leader plan, 0.10 L1: the tunnel repro, march, swarm rings round Medium / Large / Huge, and the gate: 800 seeded
+floors and tunnels with 2-20 members, every member in place or named, no rest overlap, no route into a standing token,
+an earlier slot or a member that stays, march nobody beside or ahead, swarm the leader touching whenever it could, at
+most 1.2 searches a member and under 3 % failed; planning time), `file-core.test` (the start delays on the leader
+plan's routes: every delay a wave step, the last within 4 s, two movers meeting in fewer drops than all at once) and `drop.test` (the drop and click wraps, the
 file on the synthetic board with its three handlers, the fight queue and what ends it, and the 0.9.0 step 1 gate: 60
 seeded fight drags charged exactly 5 ft a square, a door shut mid-walk);
 `sequence-core.test` (stacks, and the start order), `telemetry-core.test` and `telemetry.test` (the ring, the
 breaker, Alt+W, the settings migration), `regressions.test` (every round ID a comment cites names a test). `test/sim/` is the
-simulator (0.9.0 step 5): the real cores (`file-core` planFile / staggerFile / waveWays / candidatesFor, `motion-core`
+simulator (0.9.0 step 5; 0.10 L1 the leader plan): the real cores (`file-core` planLead / staggerFile, `motion-core`
 clearAlong, `sequence-core`, the pathfind-core A*) on virtual clients over a jittered, lossy network;
 `sim.test.mjs` runs 60 seeds as B1 and B0 and one regression seed per defect it found; `make foundry-movement-sim
 SEEDS=10000` is the full run. Fixtures are

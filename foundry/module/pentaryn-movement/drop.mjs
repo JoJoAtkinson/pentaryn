@@ -8,13 +8,15 @@
  *     there is a way; with none, as far as it is free of them, or not at all, and the dragger is told. No publish,
  *     queue, start delay or step-aside: nothing ever waits for another mover. A search still running at the drop
  *     finishes in slices and the token goes when it is done (confirmLater / aroundLater).
- *   - several tokens out of combat (tier B, the file, with file.mjs): slots and routes in one pass (B0), then start
- *     delays (B1, the last within 4 s; on open ground all 0). The members at 0 go in the drop's own update, later
- *     waves by setTimeout; a wave skips a member no longer at its start and is tested against the walls as they are
- *     then. A member with no reachable slot stays and is named in a notice.
- *   - several tokens in a fight (the fight file, §4 step 4; Joe 2026-11-24): one member at a time, in order, each a
- *     normal single move routed when its turn comes round the tokens standing then (exact cost, nothing walked
- *     through); a stack goes as one entry. A click, a turn change, a new drop or a deleted member empties the queue;
+ *   - several tokens out of combat (tier B, with file.mjs; 0.10 the leader rule): the token grabbed leads, the drop
+ *     picks march or swarm, every member its square and route (file-core planLead), then start delays (the last
+ *     within 4 s). The members at 0 go in the drop's own update, later waves by setTimeout; a wave skips a member no
+ *     longer at its start, and a member whose way a wall or door shut since crosses, or a token now at rest stands
+ *     in, stays where it stands, named (never cut short). A member with no square it can reach stays and is named;
+ *     the leader with no way moves nobody ("No route there").
+ *   - several tokens in a fight (the fight file; Joe 2026-11-24): the leader first, then one member at a time, least
+ *     walk left first, each a normal single move whose square is picked and routed when its turn comes, round the
+ *     tokens standing then (exact cost, nothing walked through); a stack goes as one entry. A click, a turn change, a new drop or a deleted member empties the queue;
  *     a watchdog (the walk's time plus 3 s) moves it on, so it cannot hang. More than the group cap: refused.
  *   - ghost / the unconstrained tool / Ctrl waypoints / a planned move: core's own drop, untouched.
  * In a fight every move gets a checkpoint at every square (decision 1), and before each next square of a move this
@@ -28,10 +30,9 @@
 import { MODULE } from "./movement-core.mjs";
 import { MOTION, cellChain, dist, firstLegAcross, groupMode, radiusOf, routeAhead, waves as wavesOf } from "./motion-core.mjs";
 import { coalesceHistory, freePrefix, onCell, pathLength, prefixOf } from "./group-core.mjs";
-import { sequence, stacksOf } from "./sequence-core.mjs";
-import { orderOf, waveWays } from "./file-core.mjs";
+import { stacksOf } from "./sequence-core.mjs";
 import { avoidDist, skipReason } from "./pathfind-core.mjs";
-import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, memberOf, movementFacts, othersOf, restWalkable, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
+import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, movementFacts, othersOf, restWalkable, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
 import { setting } from "./settings.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 
@@ -1025,10 +1026,11 @@ function refuseFight(contexts) {
 }
 
 /**
- * A group drag out of combat, the file (file.mjs): every member's slot and route in one pass (B0), then its start
- * delay (B1). The members at 0 go in the drop's own update; each later wave by setTimeout (file.mjs), sent by
- * sendWave. A member with no reachable slot stays and is named; nobody moving at all is "No route there". A throw is
- * core's own drop (the wrap's catch).
+ * A group drag out of combat (file.mjs; 0.10 the leader rule): the shape from the drop, every member's square and
+ * route (planLead), then its start delay (staggerFile; groupStagger off: all at 0). The members at 0 go in the drop's
+ * own update; each later wave by setTimeout (file.mjs), sent by sendWave. A member with no square it can reach stays
+ * and is named; the leader with no way, or nobody moving at all, is "No route there". A throw is core's own drop (the
+ * wrap's catch).
  */
 function groupDrop(grabbed, contexts, result, riders, seq) {
   const lead = riders?.get(grabbed.document.id)?.leader;
@@ -1050,9 +1052,13 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
     else now0[m.id] = wps;
   }
   const waveList = wavesOf(Object.fromEntries([...later].map(([id, v]) => [id, v.delay])));
-  Object.assign(last, { result: "plan", plan: { tier: stagger ? "B1" : "B0", ms: plan.ms, passes: plan.passes, stayed: plan.stayed.length, members: plan.order.length,
-    waves: waveList.length + (Object.keys(now0).length ? 1 : 0), total: timing?.total ?? 0, crowded: timing?.crowded?.length ?? 0, timingMs: timing?.ms ?? null } });
-  feature.exposed.tele?.("plan", { mode: "file", members: members.length, ms: plan.ms, stayed: plan.stayed.length, waves: waveList.length + 1, total: timing?.total ?? 0 });
+  const waves = waveList.length + (Object.keys(now0).length ? 1 : 0);
+  // R13: the shape, the leader, the target, who stayed, the waves; the plan's time, searches and failed searches.
+  Object.assign(last, { result: "plan", shape: plan.shape, leader: plan.leader, target: plan.target, stayed: [...plan.stayed], waves,
+    plan: { tier: stagger ? "B1" : "B0", timingMs: plan.ms, searches: plan.searches, failed: plan.failed, total: timing?.total ?? 0,
+      members: plan.order.length, crowded: timing?.crowded?.length ?? 0, staggerMs: timing?.ms ?? null } });
+  feature.exposed.tele?.("plan", { mode: "file", shape: plan.shape, members: members.length, ms: plan.ms, searches: plan.searches, failed: plan.failed,
+    stayed: plan.stayed.length, waves, total: timing?.total ?? 0 });
   const movement = {};
   const updates = [];
   for (const [id, wps] of Object.entries(now0)) {
@@ -1062,7 +1068,8 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
   const stayedDocs = plan.stayed.map(id => members.find(m => m.id === id)?.token?.document).filter(Boolean);
   if (!updates.length && !later.size) {
     last.result = "none";
-    if (!stayedDocs.length || plan.stayed.includes(anchor.document.id)) tell("noRoute", "groupNoRoute");
+    // The leader with no way: nobody moves, "No route there" (R10).
+    if (plan.none || !stayedDocs.length || plan.stayed.includes(anchor.document.id)) tell("noRoute", "groupNoRoute");
     else tellStayed(stayedDocs);
     return null;
   }
@@ -1084,8 +1091,7 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
     // Where each member's plan rests it (top-left): a mate resting anywhere else is in the others' way (sendWave).
     const ends = new Map([...Object.entries(now0).map(([id, wps]) => [id, wps.at(-1)]), ...[...later].map(([id, v]) => [id, v.wps.at(-1)])]);
     const stayed = new Set();                  // members a wave left where they stand (named)
-    const sentTo = new Map();                  // id → where a wave sent it (top-left), its echo maybe not back yet
-    const send = list => sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends, stayed, sentTo });
+    const send = list => sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends, stayed });
     feature.exposed.groupWaves?.(gid, waveList, send);
   }
   if (res[0].length) noteInFlight(scene, res[0], res[1].movement);
@@ -1106,13 +1112,13 @@ function wayShut(doc, from, wps) {
 }
 
 /**
- * A later wave of a file (file.mjs's timer, or all at once when the tab goes to the background): each member still at
- * its start and not dropped again since (latestDrop) goes its planned way, unless a wall raised or a door shut since
- * crosses it (it stays where it is drawn: stop where drawn, for a member not yet sent) and only as far as it is free of
- * the tokens standing outside the group now (a hard obstacle; never a second plan). Its riders go with it. Never
- * throws; a failed update is counted (the breaker).
+ * A later wave of a group drag (file.mjs's timer, or all at once when the tab goes to the background): each member
+ * still at its start and not dropped again since (latestDrop) goes its whole planned way, or stays where it stands,
+ * named (R12: never cut short): when a wall raised or a door shut since crosses that way, or a token now at rest
+ * outside the plan stands in it (one standing outside the group, a mate a stop or a cut left off its slot, one an
+ * earlier wave left where it stands). Its riders go with it. Never throws; a failed update is counted (the breaker).
  */
-function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends = new Map(), stayed = new Set(), sentTo = new Map() }) {
+function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends = new Map(), stayed = new Set() }) {
   if (!feature) return;
   const wanted = list.filter(id => later.has(id));
   const live = stillOurs(wanted, scene, starts, seq);
@@ -1120,65 +1126,35 @@ function sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene
   const mates = ids.map(id => ({ id, token: scene?.tokens?.get?.(id)?.object ?? null })).filter(m => m.token);
   let others = [];
   try { others = mates.length ? othersOf(mates, s) : []; } catch (err) { log?.debug?.("wave: the tokens standing", err); }
-  // 0.9.0 simulator (step 5, seeds 382 / 409 / 1958): a mate at rest anywhere but its plan's spot and its start (a
-  // cut or a stop left it there), or one an earlier wave left where it stands, stands in this wave's way too; so
-  // does each member of this wave cut short or staying, for the ones after it.
   const same = (a, b) => !!a && !!b && a.x === b.x && a.y === b.y;
   const circleOf = (doc, p = doc._source) => {
     const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
     return { ...toSquares(p, w, h, s), r: radiusOf(w, h), id: doc.id };
   };
+  // A mate at rest anywhere but its plan's spot and its start (a cut or a stop left it there), or one an earlier wave
+  // left where it stands, stands in this wave's way too (0.9.0 simulator, step 5, seeds 382 / 409 / 1958).
   for (const id of ids) {
     if (live.includes(id) || (riders?.has?.(id))) continue;
     const doc = scene?.tokens?.get?.(id);
     const t = doc?.object;
-    if (!doc?._source || !t || t.destroyed) continue;
-    const to = sentTo.get(id);
-    // Sent short of its plan's spot by an earlier wave: it rests there (walking there still, or its echo not back).
-    if (to && !same(to, ends.get(id)) && (same(doc._source, to) || same(doc._source, starts.get(id)))) { others.push(circleOf(doc, to)); continue; }
-    if (moving(t)) continue;
-    const offPlan = !same(doc._source, ends.get(id)) && !same(doc._source, starts.get(id)) && !same(doc._source, to);
+    if (!doc?._source || !t || t.destroyed || moving(t)) continue;
+    const offPlan = !same(doc._source, ends.get(id)) && !same(doc._source, starts.get(id));
     if (offPlan || stayed.has(id)) others.push(circleOf(doc));
   }
-  // Mates still waiting for a later wave, at their starts: a way cut short never rests on one (it may stay there,
-  // 0.9.0 simulator seed 5361); a full way passes them (they set off later, two movers may brush).
-  const waiting = [];
-  for (const id of new Set((feature.exposed.groupPending?.() ?? []).flatMap(w => w.ids))) {
-    const doc = scene?.tokens?.get?.(id);
-    if (!ids.includes(id) || live.includes(id) || !doc?._source || !same(doc._source, starts.get(id))) continue;
-    waiting.push(circleOf(doc));
-  }
   const movement = {}, updates = [], shut = [];
-  let short = false;
-  // Who walks how far (file-core waveWays): shut or cut to nothing stays, cut short rests there, a shared lane swaps.
-  const { ways } = waveWays(live.filter(id => scene.tokens.get(id)?.object && !scene.tokens.get(id).object.destroyed), {
-    shut: id => { const doc = scene.tokens.get(id); return wayShut(doc, { ...doc._source }, later.get(id).wps); },
-    at: id => circleOf(scene.tokens.get(id)),
-    cut: (id, rests) => {
-      const doc = scene.tokens.get(id);
-      const wps = later.get(id).wps;
-      let kept = freeOfOthers(doc.object, { ...doc._source }, wps, [...others, ...rests]);
-      if (kept.short && kept.length && waiting.length) kept = freeOfOthers(doc.object, { ...doc._source }, wps, [...others, ...rests, ...waiting]);
-      if (kept.short && !kept.length) return null;
-      const way = kept.short ? kept : wps;
-      return { way, end: circleOf(doc, way.at(-1)), short: !!kept.short };
-    },
-  });
   for (const id of live) {
     const doc = scene.tokens.get(id);
     const token = doc?.object;
     if (!token || token.destroyed) continue;
-    const wps = ways.get(id);
-    if (!wps) { shut.push(doc); stayed.add(id); continue; }
-    if (wps !== later.get(id).wps) short = true;
+    const wps = later.get(id).wps;
+    const kept = wayShut(doc, { ...doc._source }, wps) ? null : freeOfOthers(token, { ...doc._source }, wps, others);
+    if (!kept || kept.short) { shut.push(doc); stayed.add(id); others.push(circleOf(doc)); continue; }
     movement[id] = { ...(base[id] ?? { planned: false }), waypoints: wps };
     updates.push({ _id: id });
-    sentTo.set(id, { x: wps.at(-1).x, y: wps.at(-1).y });
   }
   const skipped = wanted.length - live.length;
-  waveLast = { at: new Date().toISOString(), members: wanted.length, sent: updates.length, skipped, shut: shut.length, short };
+  waveLast = { at: new Date().toISOString(), members: wanted.length, sent: updates.length, skipped, shut: shut.length };
   if (shut.length) { feature.exposed.tele?.("cut", { reason: "wave", members: shut.length }); tellStayed(shut, "wave"); }
-  else if (short) tell("short", "wave");
   if (!updates.length) return;
   const res = carryRiders(riders, [updates, { ...opts, movement }]);
   // A rider goes only while it is still where the drop found it.
@@ -1226,46 +1202,47 @@ const FIGHT_WATCH_MS = 3000;
 let fightLast = null;                      // the last fight queue, for status()
 
 /**
- * A group drag in a fight (the fight file, §4 step 4; Joe 2026-11-24): nothing moves at the drop. The members, in
- * order (sequence-core over their straight walks, least walk left first: never one sent through another standing at
- * its start when an order avoids it), each get a normal single move when their turn comes: routed then, round every
- * token standing then (the members already moved where they came to rest, the others where they stand), a checkpoint
- * at every square, charged by core as any single move. The next one starts when that walk has ended (core's move
+ * A group drag in a fight (the fight file; Joe 2026-11-24, the leader rule R7): nothing moves at the drop. The leader
+ * walks first, then the others one at a time, least walk left first (file.mjs fightPlan: planLead's order). Each gets a
+ * normal single move when its turn comes: its square picked then (the leader: the drop square, or the nearest clear
+ * one; the others: planLead for that one member, behind where the leader came to rest in a march, round the target in
+ * a swarm, every other token standing where it is then), routed round every token standing then, a checkpoint at
+ * every square, charged by core as any single move. The next one starts when that walk has ended (core's move
  * promise, then its animation) or the watchdog moves it on. A stack (a mount and its riders) goes as one entry.
  * Returns null.
  */
 function fightFile(grabbed, contexts, riders, seq) {
-  const s = gridSize(grabbed);
   const scene = grabbed.document.parent;
   const leaders = riders?.size ? contexts.filter(c => !riders.has(c.token.document.id)) : contexts;
-  const ms = leaders.map(c => ({ ...memberOf(c, s), c })).filter(m => dist(m.start, m.formation) > 1e-6);
   const ridersOf = id => [...(riders ?? new Map())].filter(([, r]) => r.leader === id).map(([rid, r]) => ({ id: rid, dx: r.dx, dy: r.dy }));
-  const order = sequence(orderOf(ms, null).map(m => ({ id: m.id, r: m.r, points: [m.start, m.formation] }))).order;
-  // Where each may rest when its formation square is no good (off the scene, behind a wall): squares the drop reaches.
   const lead = riders?.get(grabbed.document.id)?.leader;
   const anchor = lead ? (leaders.find(c => c.token.document.id === lead)?.token ?? grabbed) : grabbed;
-  let spots = {};
-  try { spots = feature.exposed.groupSpots?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} }) ?? {}; }
-  catch (err) { log?.debug?.("fight: the spots", err); }
-  const entries = order.map(id => ms.find(m => m.id === id)).map(m => ({
-    id: m.id, start: { x: m.token.document._source.x, y: m.token.document._source.y }, dest: { ...m.c.destination }, riders: ridersOf(m.id),
-    spots: spots[m.id] ?? [],
+  let fp = null;
+  try { fp = feature.exposed.groupFightPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {} }) ?? null; }
+  catch (err) { log?.debug?.("fight: the plan", err); }
+  const ids0 = leaders.map(c => c.token.document.id);
+  const order = (fp?.order ?? [anchor.document.id, ...ids0.filter(id => id !== anchor.document.id)]).filter(id => ids0.includes(id));
+  const shape = fp?.shape ?? "march";
+  const entries = order.map(id => leaders.find(c => c.token.document.id === id)).map(c => ({
+    id: c.token.document.id, start: { x: c.token.document._source.x, y: c.token.document._source.y }, dest: { ...c.destination },
+    riders: ridersOf(c.token.document.id), leader: c.token.document.id === anchor.document.id,
   }));
-  Object.assign(last, { result: "queue", plan: { members: entries.length, order } });
-  feature.exposed.tele?.("plan", { mode: "fightFile", members: entries.length, combat: true });
+  Object.assign(last, { result: "queue", shape, leader: anchor.document.id, target: fp?.target?.id ?? null, stayed: [], waves: 0,
+    plan: { members: entries.length, order } });
+  feature.exposed.tele?.("plan", { mode: "fightFile", shape, members: entries.length, combat: true });
   if (!entries.length) { last.result = "none"; return null; }
   const ids = entries.flatMap(e => [e.id, ...e.riders.map(r => r.id)]);
   const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
   const tag = gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null;
   let wake = null;
   const q = {
-    gid, done: false, why: null, current: null,
+    gid, done: false, why: null, current: null, shape, target: fp?.target ?? null, leaderId: anchor.document.id, leaderAt: null,
     cancel(why) { if (this.done) return; this.done = true; this.why = why; try { wake?.(); } catch (err) { log?.debug?.("fight: wake", err); } },
     woken: null,
   };
   q.woken = new Promise(r => { wake = r; });
   if (gid) feature.exposed.groupQueue?.(gid, q);
-  fightLast = { at: new Date().toISOString(), members: entries.length, sent: 0, stayed: 0, skipped: 0, watchdog: 0, ended: null, running: true };
+  fightLast = { at: new Date().toISOString(), members: entries.length, sent: 0, stayed: 0, there: [], skipped: 0, watchdog: 0, ended: null, running: true };
   const rec = fightLast;
   runFight(q, entries, { scene, gid, tag, seq, rec }).catch(err => failed("fight", err)).finally(() => {
     rec.running = false;
@@ -1294,13 +1271,33 @@ async function runFight(q, entries, { scene, gid, tag, seq, rec }) {
     if (!doc || !token || token.destroyed) { q.cancel("deleted"); break; }
     // Moved (or dropped again) since the drop: it is no longer this queue's.
     if (latestDrop.get(e.id) !== seq || doc._source.x !== e.start.x || doc._source.y !== e.start.y) { rec.skipped += 1; continue; }
-    const way = await routeAtTurn(token, e);
+    const way = await routeAtTurn(token, e, q);
     if (q.done || !feature) break;
-    if (!way.waypoints) { stayed.push(doc); rec.stayed += 1; continue; }
+    if (!way.waypoints && e.leader && way.stay !== "there") {
+      // The leader with no way: nobody moves, "No route there" (R10).
+      tell("noRoute", "groupNoRoute");
+      q.cancel("noRoute");
+      break;
+    }
+    if (!way.waypoints) {
+      // Already on its square ("there"): in place, not named. The leader there still leads from where it stands.
+      if (way.stay === "there") rec.there.push(e.id);
+      else { stayed.push(doc); rec.stayed += 1; }
+      if (e.leader) q.leaderAt = { at: { x: doc._source.x, y: doc._source.y }, from: { x: doc._source.x, y: doc._source.y } };
+      continue;
+    }
     q.current = e.id;
     walked = true;
     const r = await walkOne(q, token, e, way, { gid, tag });
     q.current = null;
+    // Where the leader came to rest, and the square its last step came from: the pack forms behind it (R7).
+    if (e.leader && !token.destroyed) {
+      const wps = [way.origin, ...way.waypoints];
+      const at = { x: token.document._source.x, y: token.document._source.y };
+      let k = wps.length - 1;
+      while (k > 0 && (wps[k].x !== at.x || wps[k].y !== at.y)) k -= 1;
+      q.leaderAt = { at, from: k > 0 ? { x: wps[k - 1].x, y: wps[k - 1].y } : { x: way.origin.x, y: way.origin.y } };
+    }
     if (r === "timeout") { rec.watchdog += 1; continue; }
     if (r === "cancel" || q.done) break;
     rec.sent += 1;
@@ -1315,11 +1312,11 @@ async function runFight(q, entries, { scene, gid, tag, seq, rec }) {
 }
 
 /**
- * One member's way when its turn comes (a fight): round every token standing now outside its stack (circles on whole
- * squares), to its formation spot or, when a token stands there, the nearest clear square it can reach. { origin,
- * waypoints } or { stay }.
+ * One member's way when its turn comes (a fight): its square (the march leader: the drop square, or on a token the
+ * nearest clear square; everyone else: file.mjs slotAtTurn), then one route round every token standing now outside its
+ * stack (circles on whole squares). { origin, waypoints } or { stay }.
  */
-async function routeAtTurn(token, e) {
+async function routeAtTurn(token, e, q = null) {
   const doc = token.document;
   const s = gridSize(token);
   const w = doc._source.width ?? 1, h = doc._source.height ?? 1, r = radiusOf(w, h);
@@ -1328,40 +1325,38 @@ async function routeAtTurn(token, e) {
   const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
   const circles = others.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + r) * s - 1, box: false, id: o.id }));
   const taken = p => { const c = centre(p); return circles.some(o => Math.hypot(c.x - o.x, c.y - o.y) < o.r); };
-  // Its formation square; on a token, the nearest clear square; and where that square is no good (off the scene,
-  // behind a wall, in rock: 0.9.0 simulator, step 5), the squares round it the drop reaches (fightSpots), nearest first.
   const member = { token, r, w, h };
   const fits = p => { try { return restWalkable(member, { x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s }, s); } catch { return false; } };
-  const ends = [];
-  const add = p => { if (p && !taken(p) && fits(p) && !ends.some(q => q.x === p.x && q.y === p.y)) ends.push({ ...e.dest, x: p.x, y: p.y, snapped: true }); };
-  const end0 = { ...e.dest };
-  if (taken(end0)) {
-    let spot = null;
-    try { spot = clearOfWalls(token, end0, { taken, snap: true }); } catch (err) { log?.debug?.("fight: a clear square", err); }
-    add(spot);
-  } else if (fits(end0)) ends.push(end0);
-  for (const p of e.spots ?? []) add(p);
-  if (!ends.length) return { stay: "noSpot" };
+  let end = null;
+  if (e.leader && (q?.shape ?? "march") === "march") {
+    const end0 = { ...e.dest };
+    // On a token, or where it cannot stand (off the scene, in rock): the nearest clear square (as a march out of combat).
+    if (taken(end0) || !fits(end0)) {
+      let spot = null;
+      try { spot = clearOfWalls(token, end0, { taken, snap: true }); } catch (err) { log?.debug?.("fight: a clear square", err); }
+      if (spot && !taken(spot) && fits(spot)) end = { ...e.dest, x: spot.x, y: spot.y, snapped: true };
+    } else end = end0;
+  } else {
+    let p = null;
+    try { p = feature.exposed.groupSlotAtTurn?.(token, { shape: q?.shape ?? "march", target: q?.target ?? null, leaderId: q?.leaderId ?? null, leaderAt: q?.leaderAt ?? null }) ?? null; }
+    catch (err) { log?.debug?.("fight: a member's square", err); }
+    if (p && !taken(p)) end = { ...e.dest, x: p.x, y: p.y, snapped: true };
+  }
+  if (!end) return { stay: "noSpot" };
   const origin = feature.exposed.pathfindOrigin?.(doc) ?? { ...doc._source };
   const start = centre(origin);
+  if (Math.round(start.x) === Math.round(centre(end).x) && Math.round(start.y) === Math.round(centre(end).y)) return { stay: "there" };
   const live = circles.filter(o => avoidDist(o, start, start) >= o.r);
   const opts = { preview: true, avoid: live.length ? live : null };
-  let why = "noRoute";
-  for (const end of ends.slice(0, FIGHT_TRIES)) {
-    if (Math.round(start.x) === Math.round(centre(end).x) && Math.round(start.y) === Math.round(centre(end).y)) return { stay: "there" };
-    const dest = { ...origin, ...end, explicit: true, checkpoint: true };
-    let rr = null;
-    try {
-      const search = feature.exposed.pathfindRouteToAsync;
-      rr = typeof search === "function" ? await search(token, origin, dest, opts) : feature.exposed.pathfindRouteTo?.(token, origin, dest, { ...opts, maxMs: CONFIRM_MS });
-    } catch (err) { log?.debug?.("fight: a route", err); rr = null; }
-    if (rr?.reached && rr.path?.length >= 2) return { origin, waypoints: lastWp(rr.path.slice(1)) };
-    why = "noRoute";
-  }
-  return { stay: why };
+  const dest = { ...origin, ...end, explicit: true, checkpoint: true };
+  let rr = null;
+  try {
+    const search = feature.exposed.pathfindRouteToAsync;
+    rr = typeof search === "function" ? await search(token, origin, dest, opts) : feature.exposed.pathfindRouteTo?.(token, origin, dest, { ...opts, maxMs: CONFIRM_MS });
+  } catch (err) { log?.debug?.("fight: a route", err); rr = null; }
+  if (rr?.reached && rr.path?.length >= 2) return { origin, waypoints: lastWp(rr.path.slice(1)) };
+  return { stay: "noRoute" };
 }
-/** Squares a fight member's turn tries a route to, at most (its formation square or the nearest clear, then fightSpots). */
-const FIGHT_TRIES = 4;
 
 /**
  * Walk one entry (its leader, its riders at their offsets), a checkpoint at every square; resolves true (walked to

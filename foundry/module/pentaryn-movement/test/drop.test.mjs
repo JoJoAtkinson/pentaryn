@@ -27,7 +27,7 @@ const clock = { t: 0, step: 0 };
 Object.defineProperty(globalThis, "performance", { value: { now: () => (clock.t += clock.step) }, configurable: true, writable: true });
 
 /** Segment intersection (proper crossing), the wall test; a move that ends on a wall's line, inside it, hits it too (as core's does). */
-function hit(p, q, a, b) {
+function hit(p, q, a, b, { ends = false } = {}) {
   const d = (u, v, w) => (v.x - u.x) * (w.y - u.y) - (v.y - u.y) * (w.x - u.x);
   const d1 = d(a, b, p), d2 = d(a, b, q), d3 = d(p, q, a), d4 = d(p, q, b);
   if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
@@ -36,11 +36,20 @@ function hit(p, q, a, b) {
   }
   const inside = r => Math.min(a.x, b.x) < r.x && r.x < Math.max(a.x, b.x) || Math.min(a.y, b.y) < r.y && r.y < Math.max(a.y, b.y);
   if (Math.abs(d2) < 1e-9 && Math.abs(d1) > 1e-9 && inside(q)) return { x: q.x, y: q.y };
+  if (!ends) return null;
+  // `ends` (core's own collision, 0.10 L1): a move whose line passes exactly through a wall's end (a door frame's
+  // corner) touches it, and core's lineSegmentIntersection counts a touch (t1 within 1e-8 of 0 or 1).
+  const through = (r, u, v) => Math.min(u.x, v.x) - 1e-9 <= r.x && r.x <= Math.max(u.x, v.x) + 1e-9 && Math.min(u.y, v.y) - 1e-9 <= r.y && r.y <= Math.max(u.y, v.y) + 1e-9
+    && Math.hypot(r.x - u.x, r.y - u.y) > 1e-9 && Math.hypot(r.x - v.x, r.y - v.y) > 1e-9;
+  if (Math.abs(d3) < 1e-9 && Math.abs(d1) > 1e-9 && Math.abs(d2) > 1e-9 && through(a, p, q)) return { x: a.x, y: a.y };
+  if (Math.abs(d4) < 1e-9 && Math.abs(d1) > 1e-9 && Math.abs(d2) > 1e-9 && through(b, p, q)) return { x: b.x, y: b.y };
   return null;
 }
 // A wall across y = 400 with a one-square door at x 400–500.
 const world = { walls: [[{ x: 0, y: 400 }, { x: 400, y: 400 }], [{ x: 500, y: 400 }, { x: 1000, y: 400 }]] };
 const crossing = (o, d) => world.walls.map(([a, b]) => hit(o, d, a, b)).filter(Boolean);
+/** Core's collision (checkCollision, findMovementPath): a touch of a wall's end counts. */
+const crossingCore = (o, d) => world.walls.map(([a, b]) => hit(o, d, a, b, { ends: true })).filter(Boolean);
 const center = w => ({ x: w.x + (w.width ?? 1) * S / 2, y: w.y + (w.height ?? 1) * S / 2, elevation: 0 });
 const cell = p => ({ i: Math.floor(p.y / S), j: Math.floor(p.x / S) });
 
@@ -48,13 +57,13 @@ const Token5e = F.CONFIG.Token.objectClass;
 Token5e.prototype.findMovementPath = function (waypoints, options = {}) {
   const out = [{ ...waypoints[0] }];
   for (let k = 1; k < waypoints.length; k++) {
-    if (!options.constrainOptions?.ignoreWalls && crossing(center(waypoints[k - 1]), center(waypoints[k])).length) break;
+    if (!options.constrainOptions?.ignoreWalls && crossingCore(center(waypoints[k - 1]), center(waypoints[k])).length) break;
     out.push({ ...waypoints[k] });
   }
   return { result: out, promise: Promise.resolve(out), cancel: () => {} };
 };
 Token5e.prototype.checkCollision = function (dest, { origin, mode = "any" } = {}) {
-  const hits = crossing(origin, dest);
+  const hits = crossingCore(origin, dest);
   if (mode === "all") return hits;
   if (mode === "closest") return hits.sort((a, b) => Math.hypot(a.x - origin.x, a.y - origin.y) - Math.hypot(b.x - origin.x, b.y - origin.y))[0] ?? null;
   return hits.length > 0;
@@ -2031,7 +2040,8 @@ test("0.9.0 B1: a group through a door: each member its own route and spot past 
     }
     const last = api.status().group.last;
     assert.deepEqual([last.mode, last.result, last.async], ["plan", "plan", false]);
-    assert.equal(last.plan.stayed, 0);
+    assert.deepEqual(last.stayed, [], "nobody named (0.10 R13: last.stayed, the ids)");
+    assert.deepEqual([last.shape, last.leader, last.target], ["march", ts[0].document.id, null], "dropped on the floor: a march led by the grabbed one");
     assert.ok(!api.status().group.told.some(t => Date.parse(t.at) >= Date.now() - 5), "no notice");
   } finally {
     for (const t of ts) sceneTokens.delete(t.document.id);
@@ -2083,7 +2093,7 @@ test("0.9.0 Fable check, blocker 1: groupStagger off is B0 (every member in the 
     assert.deepEqual(out[0].map(u => u._id).sort(), ts.map(t => t.document.id).sort(), "every member in the drop's own update");
     assert.deepEqual(api.status().group.pending, [], "no wave");
     const plan = api.status().group.last.plan;
-    assert.deepEqual([plan.tier, plan.total, plan.waves], ["B0", 0, 1]);
+    assert.deepEqual([plan.tier, plan.total, api.status().group.last.waves], ["B0", 0, 1]);
     tickBy(5000);
     assert.equal(sent(from).length, 0, "nothing later");
   } finally {
@@ -2319,7 +2329,7 @@ test("0.9.0 B0: a member with no spot it can reach stays where it stands and is 
     assert.deepEqual(ids, [ts[0].document.id], "the grabbed one goes, the sealed-off one stays");
     const told = F.calls.slice(from).filter(c => c.op === "notify" && c.level === "warn").map(c => c.message);
     assert.ok(told.some(m => /named\.stayed|Stayed where they stand/.test(m)), `named: ${JSON.stringify(told)}`);
-    assert.equal(api.status().group.last.plan.stayed, 1);
+    assert.equal(api.status().group.last.stayed.length, 1);
     // Nobody can go: the door shut too.
     world.walls.push([{ x: 400, y: 400 }, { x: 500, y: 400 }]);
     try {
@@ -2596,9 +2606,17 @@ test("0.9.0 fight file gate: 40 seeded fight group drags (2-4 members, tokens st
       // Every member walked, or was named.
       const walked = new Set(log.map(m => m.t.document.id));
       const named = F.calls.slice(from).filter(c => c.op === "notify" && /Stayed where they stand|named\.stayed/.test(c.message)).map(c => c.message).join(" ");
+      // The leader with no way: nobody moves, "No route there" (0.10 R10).
+      const noRoute = q.ended === "noRoute";
+      if (noRoute) {
+        assert.ok(F.calls.slice(from).some(c => c.op === "notify" && c.message === "PENTARYN_MOVEMENT.notify.noRoute"), `${why}: No route there`);
+        assert.equal(log.length, 0, `${why}: nobody moves`);
+      }
       for (const t of ms) {
-        const still = delta.x === 0 && delta.y === 0;
-        if (!walked.has(t.document.id) && !still) { stays += 1; assert.ok(named.includes(t.document.id) || q.skipped, `${why}: ${t.document.id} neither walked nor named`); }
+        const still = (delta.x === 0 && delta.y === 0) || noRoute;
+        // (0.10 L1: one already on its square, a leader dropped where it cannot stand whose nearest clear square is its
+        // own, is in place: queue.there.)
+        if (!walked.has(t.document.id) && !still) { stays += 1; assert.ok(named.includes(t.document.id) || q.skipped || q.there.includes(t.document.id), `${why}: ${t.document.id} neither walked nor named`); }
       }
       // Nobody rests on anybody.
       for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
@@ -2622,7 +2640,108 @@ test("0.9.0: a group drag in a fight of more than the cap is refused with a noti
   } finally { restore(); tickBy(60000); }
 });
 
-test("0.9.0 planGroup(refs, point): B0's plan as a dry run (each member's slot, waypoints, why it stays); nothing moves", () => {
+test("0.10 L1 (R13): planGroup is the leader plan's dry run: dropped on the floor a march, the leader on the drop square and the rest behind it, each member's route; nothing moves", () => {
+  F.canvas.ready = true;
+  const ts = [makeToken("l1pA000000000001", 400, 200), makeToken("l1pB000000000001", 300, 200), makeToken("l1pC000000000001", 500, 200)];
+  const others = keepOnly(ts);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts];
+  try {
+    const from = F.calls.length;
+    const r = api.planGroup(ts.map(t => t.document), { x: 400, y: 700 });
+    assert.deepEqual([r.ok, r.result, r.shape, r.leader, r.target], [true, "plan", "march", ts[0].document.id, null]);
+    assert.ok(r.searches >= 3 && r.searches <= 4 && r.failed <= 1, `about one search a member: ${r.searches} / ${r.failed}`);
+    const by = Object.fromEntries(r.members.map(m => [m.id, m]));
+    assert.deepEqual(by[ts[0].document.id].slot, { x: 400, y: 700 }, "the leader on the drop square");
+    for (const t of ts.slice(1)) {
+      const m = by[t.document.id];
+      assert.equal(m.stay, null);
+      assert.ok(m.slot.y < 700, `${t.document.id} behind the leader (it came from the north): ${JSON.stringify(m.slot)}`);
+      assert.deepEqual(m.route.at(-1), m.slot, `its route ends on its slot: ${JSON.stringify(m)}`);
+      assert.equal(m.waypoints, m.route.length);
+    }
+    assert.equal(sent(from).length, 0);
+    assert.equal(F.calls.slice(from).filter(c => c.op === "move").length, 0);
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  }
+});
+
+test("0.10 L1 (R2): dropped on a token outside the group that this client sees: a swarm round it, the leader touching it first; on a hidden one: a march, never a swarm", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const ts = [makeToken("l1sA000000000001", 100, 100), makeToken("l1sB000000000001", 100, 200), makeToken("l1sC000000000001", 200, 100)];
+  const T = makeToken("l1sT000000000001", 700, 200);
+  T.visible = true;
+  const others = keepOnly([...ts, T]);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts, T];
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 600, 100));
+    const last = api.status().group.last;
+    assert.deepEqual([last.shape, last.leader, last.target], ["swarm", ts[0].document.id, T.document.id]);
+    assert.ok(Number.isFinite(last.plan.searches) && Number.isFinite(last.plan.failed) && Number.isFinite(last.plan.timingMs), JSON.stringify(last.plan));
+    const moves = fileMoves(out, from);
+    const c = center(T.document._source);
+    for (const t of ts) {
+      const end = center(moves[t.document.id].waypoints.at(-1));
+      const ring = Math.max(Math.abs(end.x - c.x), Math.abs(end.y - c.y)) / S;
+      assert.ok(ring > 0.99 && ring < 1.01, `${t.document.id} touches the target: ${JSON.stringify(end)}`);
+    }
+    tickBy(60000);
+    for (const t of ts) { t.document._source.x = t.document.x; t.document._source.y = t.document.y; }
+    // Hidden: never a swarm (the player does not know it is there; the GM would walk round it).
+    T.document.hidden = true;
+    dropWith(ts[0], contextsFor(ts, 600, 100));
+    const l2 = api.status().group.last;
+    assert.deepEqual([l2.shape, l2.target], ["march", null], "a hidden token never makes a swarm");
+  } finally {
+    delete T.document.hidden;
+    F.canvas.tokens.placeables = saved;
+    for (const t of [...ts, T]) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.10 L1 tunnel repro on the board: three dragged deep into a one-wide corridor line up behind the leader, nobody named, about one search a member", () => {
+  combatFlag = false;
+  clock.step = 0;
+  // The door at x 400-500 continued south as a one-wide corridor to the scene's edge.
+  const extra = [[{ x: 400, y: 400 }, { x: 400, y: 1000 }], [{ x: 500, y: 400 }, { x: 500, y: 1000 }]];
+  world.walls.push(...extra);
+  const ts = [makeToken("l1tA000000000001", 400, 200), makeToken("l1tB000000000001", 300, 200), makeToken("l1tC000000000001", 500, 200)];
+  const others = keepOnly(ts);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts];
+  try {
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, 0, 700));
+    assert.ok(Array.isArray(out), "planned at the drop");
+    const last = api.status().group.last;
+    assert.deepEqual(last.stayed, [], `nobody named: ${JSON.stringify(last)}`);
+    assert.ok(last.plan.searches <= 4, `searches: ${last.plan.searches}`);
+    const moves = fileMoves(out, from);
+    const ends = ts.map(t => moves[t.document.id].waypoints.at(-1));
+    assert.deepEqual([ends[0].x, ends[0].y], [400, 900], "the leader at the far end");
+    assert.deepEqual(ends.slice(1).map(e => [e.x, e.y]).sort((a, b) => b[1] - a[1]), [[400, 800], [400, 700]], "a line behind it");
+    for (const t of ts) {
+      const path = [t.document._source, ...moves[t.document.id].waypoints];
+      for (let k = 1; k < path.length; k++) assert.equal(crossing(center(path[k - 1]), center(path[k])).length, 0, `${t.document.id} leg ${k} crosses a wall`);
+    }
+  } finally {
+    world.walls.splice(world.walls.length - extra.length, extra.length);
+    F.canvas.tokens.placeables = saved;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.9.0 planGroup(refs, point): the plan as a dry run (each member's slot, waypoints, why it stays); nothing moves", () => {
   F.canvas.ready = true;
   const ts = [makeToken("b0rA000000000001", 400, 200), makeToken("b0rB000000000001", 300, 200)];
   const others = keepOnly(ts);

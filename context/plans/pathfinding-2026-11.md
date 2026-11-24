@@ -901,4 +901,95 @@ file only at a narrow point; in a fight the leader first, then one at a time; pa
 
 ### 18.1 Step L1: the leader plan (version, the tunnel repro, planLead, the shape from the drop)
 
-Version 0.10.0-dev (module.json, CHANGELOG). The rest of the step is recorded below as it lands.
+Version 0.10.0-dev (module.json, CHANGELOG, `VERSION`). Then, tests first:
+
+**The tunnel repro** (review 3 §2), as a test before the code: four members (a 2×2 block in a room) dropped 11 squares
+into a one-wide tunnel. On 0.9's `planFile` the three followers were named after 17 route searches: a slot could not
+lie on a route already given out (the route-clearance test), the leader is planned first and its route runs the whole
+tunnel, and what was left lay past the leader, whose slot was an obstacle, until the four tries were used up. Now
+(`test/lead.test.mjs`, and on the module's synthetic board in `drop.test.mjs`): a line behind the leader, 4 searches,
+none failed, nobody named.
+
+**`file-core` `planLead`** (pure): squares near the drop get a rank; each member in turn (the leader, then least walk
+left; a member standing where a slot was just given out goes next, so it makes room while there is room) takes the
+best-ranked free square it can reach and gets one route search to it (a second only when the first fails). March: the
+leader to the drop square by its own route (round the tokens standing, through its own members; the drop square not
+free: the nearest free square by walking); ranks are the walk from B, the square the leader steps out of on its last
+step (one leader radius back along that step), the leader's squares shut, only squares nearer B than the leader's own
+(a tie only when it lies behind the last step). Swarm: rings (hops) out from the target's whole footprint, never across
+a wall; the leader has first pick. "Can reach": a flood of the member's whole body (its top-left square; every square
+it covers steps, in the area and free; never a diagonal squeeze past a token, which the route search would refuse)
+from its way in: its own squares when they are in the area, else the square where its shortest walk to the drop enters
+the area, found by walking down one shared walk-distance map (from the leader's or target's squares out until every
+member's start is settled), no search. A tie on rank goes to the least walk. The area: the nearest 6 × members + 40
+squares of that walk, ranks within it. A stay that falls on a slot given out takes that member with it; one across a
+route given out makes it go round (one new search) or stay. The leader with no way: nobody moves. `walkFrom` is a heap
+flood with a settle cap and an `until` set.
+
+**`file.mjs`**: the shape from the drop (`targetOf`: the leader's drop centre inside a token outside the group that
+this client sees and that is not hidden, same level); the oracles: `restWalkable` and the places to avoid, one step
+between neighbouring squares from a 1×1 field of the leader on the pathfinder's shared step memo (`pathfindMemo`, new
+on pathfind.mjs's expose), routes through `pathfindRouteTo` round circles as before; then 0.9's `staggerFile`
+(unchanged until L2). In a fight: `fightPlan` (the shape, the target and the order: planLead with no search) and
+`slotAtTurn` (planLead for one member at its turn, every other token standing where it is then; march: behind where
+the leader came to rest, `leaderAt` from its last waypoints). `drop.mjs` runs them: the leader first; a march leader on
+a token or where it cannot stand takes the nearest clear square (`clearOfWalls`); one already on its square is in place
+(`status().group.queue.there`); the leader with no way ends the queue ("No route there", `ended: "noRoute"`).
+`planGroup` and `status().group.last` carry R13's fields (`shape`, `leader`, `target`, `stayed` ids, `waves`,
+`plan.timingMs / searches / failed / total`).
+
+**Deleted**: `planFile`, `pass`, `settleOrder`, `candidatesFor`, `spotsRound`, `orderOf`, `wayToPoint`, `FILE` (rings,
+tries, walkRatio, reorders, reach), the route-clearance test, the fixed-point passes, the three reorders and `waveWays`
+(file-core); `fightSpots`, the walk flood per member and `routeAtTurn`'s spot list (file.mjs, drop.mjs); sendWave's
+cut-short book-keeping (`sentTo`, the waiting mates; a wave's member goes its whole way or stays, named); the candidate
+lattices (`hexCandidates`, `cellCandidates`, `GROUP_LIMITS`, group-core) and their test; the 0.9 B0 tests.
+
+**Gates.**
+- Tunnel repro: passes (line behind the leader, 4 searches, 0 failed, nobody named), pure and on the board.
+- 800 seeded floors and tunnels (`lead.test.mjs`; a third tunnel maps with bends, rooms and dead ends; 2-20 members,
+  some 2×2; half swarms on Medium / Large / Huge targets; 0-4 tokens standing; walls with one or two doors): 8,776
+  members, every one in place or named (251 named; 50 drops with no way for the leader: the two looked at were a token
+  standing in the one-wide way and a 2×2 leader behind one-wide doors), no rest overlap, no route into a standing token, an earlier slot
+  or a member that stays, march nobody beside or ahead (walk-based, an independent flood), swarm the leader touching in
+  367 of 373 drops and in the other 6 no free touching square it could reach; **0.895 searches a member, 1.88 %
+  failed** (gate ≤ 1.2, < 3 %).
+- Planning in Node, warm, median (two rooms and a door, 40×24): **8 members 12.9 ms, 20 members 49.4 ms** (gate 100 /
+  250). The page gate is later (R11).
+- `make foundry-movement-sim SEEDS=2000` beside 0.9.0's (`ee93442b`): no errors, no wallCross, wrongCharge or unsent,
+  no new failure class.
+
+  | | 0.9.0 B1 | L1 B1 | 0.9.0 B0 | L1 B0 |
+  |---|---|---|---|---|
+  | passThrough | 0 | 9 | 2 | 1 |
+  | restOverlap | 0 | 3 | 5 | 7 |
+  | wallCross / wrongCharge / unsent / errors | 0 | 0 | 0 | 0 |
+  | mover overlap episodes (p95 depth, duration) | 3,465 (0.986, 2,050 ms) | 3,016 (0.985, 1,983 ms) | 6,362 | 6,679 |
+  | members dropped / never moved / named | 8,480 / 2,454 / 1,842 | 8,480 / 2,809 / 2,138 | 8,480 / 2,409 / 1,822 | 8,480 / 2,583 / 1,981 |
+
+  B1's passThrough (367, 599, 944, 1172, 1451, 1522, 1600, 1715, 1771) are one shape: a follower's slot on an earlier
+  follower's route (a line behind the leader), the later one at rest first under fog stalls, so the earlier one walks
+  through it. Review 3 §1 names it: with the route-clearance test gone, "never through a mate at rest" rests on the
+  start order, which is L2's motion. B1's restOverlap (779, 1412, 1542) are stops (a door or a click) of two groups.
+  More named: the leader with no way now moves nobody (R10), and a wave's member that would have been cut short now
+  stays. The simulator's regression seeds were found again on the new plan (SIM5-01: 492, 800, 1014, 2409; SIM5-02:
+  41, 75, 145, 230: each holds with its fix and breaks without it).
+
+**Deviations from BINDING and why.**
+- Kept for L2, though on R12's list: `sequence-core.mjs` (0.9's `staggerFile` orders by `sequence`; `stacksOf`),
+  `groupStagger` and B0. The motion stays 0.9's in L1 by the step's own rule.
+- Net lines: file-core 382 → 489, file.mjs 528 → 583, drop.mjs 1,495 → 1,490, group-core 198 → 167 (+126 in all). Why:
+  planLead carries its own floods (`walkFrom`, a heap Dijkstra with settle caps, ~75 lines) and the fight's square at
+  its turn moved from drop.mjs's formation spots into file.mjs (`fightPlan`, `slotAtTurn`, `targetOf`). L2 deletes
+  0.9's motion (staggerFile, sequence-core, B0) against it.
+- One 0.9 test became an L2 todo: "on open ground every delay is 0" was for formation routes side by side; R5 wants
+  the leader at once and the pack one wave later (`file-core.test`, `todo: L2`).
+- The board's stub collision (`drop.test.mjs`) now counts a touch of a wall's end, as Foundry 14.370's
+  `lineSegmentIntersection` does (t within 1e-8): the leader rule's lines behind a leader run square centre to centre
+  through door-frame corners, which the stub let the pathfinder take and the wave's wall test then refused.
+- Defaults taken without a human (scratch `b10/auto-decisions.md`): a march leader whose drop square is not free takes
+  the nearest free square; a member already on its best square is in place, neither sent nor named.
+
+Open after L1: the motion (R5, R6: pass-through drawn on top, the pack one wave behind the leader, single file only at
+a narrow point) is L2; the fight's leader-only rules (R7: checkpoints on free squares, speed running out) and the cap
+24 with its page gate (R11) are later steps; a fight's checkpoint expansion can still put a diagonal step through a
+wall's end on real Foundry (found while fixing the stub; pre-existing, not judged here).

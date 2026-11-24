@@ -77,7 +77,7 @@ export function buildApiFor(ctx) {
     inspect: actor => toPlain(x.inspectActor(actor)),
     "pathfind.status": () => x.pathfindStatus(),
     "pathfind.route": (token, opts) => x.pathfindRoute(token, opts),
-    planGroup: (refs, point) => toPlain(x.groupDryRun(refs, point)),
+    planGroup: (refs, point) => toPlain(x.groupDryRun(refs, point), { maxDepth: 6 }),
     // `ref` is resolved by the kit (a TokenDocument); through the relay the kit passes core's query context last.
     stop: (doc, opts, qctx) => x.stop(doc, opts, qctx),
     telemetry: opts => x.telemetry(opts),

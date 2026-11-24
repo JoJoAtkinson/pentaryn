@@ -1,15 +1,16 @@
 /**
- * Pentaryn Movement — the feature: the file, a group drag (0.9.0, plan context/plans/pathfinding-2026-11.md §17;
- * Fable's review 2 §2 "Tier B, the file", "Fights, one at a time"). drop.mjs asks it through ctx.exposed at run time
- * (never an import between two features).
+ * Pentaryn Movement — the feature: the file, a group drag (0.10, plan context/plans/pathfinding-2026-11.md §18; Joe's
+ * leader rule, 2026-11-24). drop.mjs asks it through ctx.exposed at run time (never an import between two features).
  *
- * B0, the floor (§4 step 2): at the drop, one pass (file-core planFile) gives every member its slot (the free spot
- * nearest its formation spot that it can reach) and an A* route round the tokens standing outside the drop and round
- * the slots already given out. A member with no reachable slot stays where it stands and is named in a notice.
- * B1, the file (§4 step 3): each member then gets a start delay (file-core staggerFile: in sequence order, the first
- * one at which it meets no member timed before it; the last at most 4 s after the drop; on open ground all 0). The
- * members at 0 go in the drop's own update; every later wave goes by setTimeout (drop.mjs sends it). No settle, no
- * second pass, no reservations.
+ * The plan (0.10 L1): the token grabbed leads (a rider's mount when a rider is grabbed). Where it is dropped picks the
+ * shape: on a token outside the group that this client can see, a SWARM round that token; anywhere else a MARCH, the
+ * leader on the drop square and the rest behind it. file-core planLead gives every member its square and one route
+ * (the pathfinder's, round the tokens standing outside the group and the squares given out before it; the leader's
+ * through its own group), the floods on the pathfinder's shared step memo. A member with no square it can reach stays
+ * and is named; the leader with no way moves nobody ("No route there").
+ * The start delays (0.9's B1, unchanged until L2): each member that moves gets one (file-core staggerFile, the last
+ * at most 4 s after the drop). The members at 0 go in the drop's own update; every later wave goes by setTimeout
+ * (drop.mjs sends it). In a fight: the order and each member's square at its turn (fightPlan, slotAtTurn).
  *
  * Which tokens move together: this client holds every group it sent until its members are at rest, its waves are
  * sent and its fight queue is done (read when asked), and every client learns a group's members and its sender from
@@ -25,8 +26,8 @@
  * A wave skips a member no longer at its start (drop.mjs).
  */
 
-import { FILE, STAGGER, candidatesFor, planFile, staggerFile } from "./file-core.mjs";
-import { flood } from "./group-core.mjs";
+import { STAGGER, planLead, staggerFile } from "./file-core.mjs";
+import { radiusOf } from "./motion-core.mjs";
 import { avoidDist } from "./pathfind-core.mjs";
 import { gridSize, inCombat, memberOf, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
@@ -51,7 +52,7 @@ const tagOf = new Map();
 const HOLD_MS = 60000;
 let stopped = null;                        // the last stop of a group (stop.mjs), for status()
 
-/** The most members a group drag plans (more: core's own drop). */
+/** The most members a group drag plans (more: core's own drop; R11 raises it to 24 once the page gate passes). */
 const FILE_MAX = 12;
 
 /** A moving token: drawn walking, or between two squares of its move. */
@@ -347,19 +348,40 @@ function stopGroupHere(doc, why) {
 }
 
 /* -------------------------------------------- */
-/*  B0: slots and routes in one pass            */
+/*  The leader plan (0.10 L1)                   */
 /* -------------------------------------------- */
 
 const now = () => globalThis.performance?.now?.() ?? Date.now();
 /** One route search's wall-clock cap (ms): a long or impossible route rules that spot out instead of freezing the drop. */
 const ROUTE_MS = 120;
-/** How far (squares, rings of the flood) a slot may be walked from its formation spot (file-core's FILE.reach). */
-const REACH_RINGS = FILE.reach;
 
 /**
- * The oracles file-core asks for a drop (file.mjs's view of the canvas): the member records, the tokens standing
- * outside it, where a member may rest (restWalkable and the places to avoid) and the walk from each formation spot
- * (a flood through walls and blocking creatures, built on first use).
+ * The token a group drop lands on, when it swarms (R2): the leader's drop centre inside a token outside the group
+ * that this client can see (friend, foe or prop), on the same level. A hidden token never (also for the GM): then it
+ * is a march and the token stands in the way. { id, x, y, w, h } (centre and size in squares) or null.
+ */
+function targetOf(anchor, centre, ids, s) {
+  const level = anchor.document?._source?.level;
+  const p = { x: centre.x * s, y: centre.y * s };
+  let best = null;
+  for (const t of globalThis.canvas?.tokens?.placeables ?? []) {
+    const doc = t?.document;
+    if (!doc?._source || ids.has(doc.id) || t.isPreview || t.destroyed || doc.hidden || !t.visible) continue;
+    if (level !== undefined && doc._source.level !== undefined && doc._source.level !== level) continue;
+    const w = doc._source.width ?? 1, h = doc._source.height ?? 1;
+    const x0 = doc._source.x, y0 = doc._source.y;
+    if (p.x < x0 || p.y < y0 || p.x >= x0 + w * s || p.y >= y0 + h * s) continue;
+    const c = toSquares(doc._source, w, h, s);
+    if (!best || Math.hypot(c.x - centre.x, c.y - centre.y) < Math.hypot(best.x - centre.x, best.y - centre.y)) best = { id: doc.id, ...c, w, h };
+  }
+  return best;
+}
+
+/**
+ * The oracles planLead asks for a drop (file.mjs's view of the canvas): the member records, the tokens standing
+ * outside it, where a member may rest (restWalkable and the places to avoid), and one step between neighbouring
+ * squares (the walls a 1×1 body of the leader meets, on the pathfinder's shared step memo, so the rank flood, the
+ * walk to the drop and every member's reach share one answer per step).
  */
 function oraclesFor(anchor, contexts, constrain = {}) {
   const s = gridSize(anchor);
@@ -379,54 +401,24 @@ function oraclesFor(anchor, contexts, constrain = {}) {
   const walkable = (m, c) => {
     try { return restWalkable(m, c, s) && !hazards(m)?.at?.(toTopLeft(c, m.w, m.h, s)); } catch { return false; }
   };
-  // Walk distances from each member's formation spot (walls and blocking creatures), built on first use: the spots
-  // are tried nearest by walking, never one round the far side of a wall (file-core candidatesFor).
-  const floods = new Map();
-  const walk = (m, c) => {
-    if (!floods.has(m.id)) {
-      try {
-        const f = fieldFor(m.token, m.dest, m.dest, { preview: true, constrain, automation: dnd5eMovementAutomation() });
-        floods.set(m.id, { f, walk: flood({ i: 0, j: 0 }, (a, b) => !f.blocked(b) && f.wall(a, b), REACH_RINGS) });
-      } catch (err) { log?.debug?.("file: the walk from a formation spot", err); floods.set(m.id, null); }
-    }
-    const fl = floods.get(m.id);
-    if (!fl) return Math.hypot(c.x - m.formation.x, c.y - m.formation.y);
-    const n = fl.f.nodeOf(toTopLeft(c, m.w, m.h, s));
-    return fl.walk.get(`${n.i},${n.j}`) ?? null;
-  };
-  return { s, members, standing, origins, walkable, walk };
-}
-
-/**
- * A fight's spots (§4 step 4, 0.9.0 simulator step 5): for each member of a drop, the squares it may rest on when its
- * formation square is no good (off the scene, behind a wall, in rock), nearest it first, each one the drop point
- * reaches (file-core candidatesFor with the grabbed one). id → [top-left pixels]. Reads only; {} on any failure.
- */
-function fightSpots(anchor, contexts, { constrain = {} } = {}) {
-  if (!feature || !anchor || !contexts.length) return {};
+  // One step for a 1×1 body (the lattice on whole squares: node (i, j) is the square at row i, column j).
+  const lead = members[0];
+  let field = null;
   try {
-    const { s, members, walkable, walk } = oraclesFor(anchor, contexts, constrain);
-    const lead = members.find(m => m.id === anchor.document.id) ?? members[0];
-    // Never another member's own formation square where that one can rest (it walks there at its turn).
-    const homes = members.filter(m => walkable(m, m.formation)).map(m => ({ id: m.id, x: m.formation.x, y: m.formation.y, r: m.r }));
-    const out = {};
-    for (const m of members) {
-      const free = c => homes.every(o => o.id === m.id || Math.hypot(c.x - o.x, c.y - o.y) >= m.r + o.r - 1e-6);
-      out[m.id] = candidatesFor(m, FILE.rings, walk, lead).filter(c => free(c) && walkable(m, c)).slice(0, 2 * FILE.tries).map(c => toTopLeft(c, m.w, m.h, s));
-    }
-    return out;
-  } catch (err) { log?.debug?.("file: a fight's spots", err); return {}; }
+    const src = lead.token.document._source;
+    const at = { ...src, x: 0, y: 0, width: 1, height: 1, snapped: true };
+    field = fieldFor(lead.token, at, at, { preview: true, constrain, automation: dnd5eMovementAutomation(), memo: feature.exposed.pathfindMemo?.() ?? new Map() });
+  } catch (err) { log?.debug?.("file: the step field", err); field = null; }
+  const step = (a, b) => {
+    if (!field) return true;
+    try { return !!field.wall(a, b); } catch { return false; }
+  };
+  return { s, members, standing, origins, walkable, step };
 }
 
-/**
- * Plan B0 for the leaders of a group drop (riders walk with their leaders, drop.mjs). `anchor` is the grabbed token
- * (or its leader). Returns { plan, members } (file-core's plan, the member records), or null when there is nothing to
- * plan. Reads only; never throws past the caller's catch (drop.mjs: core's drop).
- */
-function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
-  if (!feature || !anchor || contexts.length < 1) return null;
-  const { s, members, standing, origins, walkable, walk } = oraclesFor(anchor, contexts, constrain);
-  const route = (m, from, to, avoid) => {
+/** A route oracle for planLead (centres in squares; avoid circles in squares, their own radius). */
+function routeOracle(origins, s) {
+  return (m, from, to, avoid) => {
     const origin = origins.get(m.id);
     const tl = toTopLeft(to, m.w, m.h, s);
     const onGrid = tl.x % s === 0 && tl.y % s === 0;
@@ -442,8 +434,22 @@ function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
     pts.px = r.path;
     return pts;
   };
-  const plan = planFile({ members, anchorId: anchor.document.id, standing }, { walkable, walk, route, now });
-  // B1: the start delays, the last within 4 s of the drop (the plan's own time comes off the cap).
+}
+
+/**
+ * Plan a group drop by the leader rule (out of combat): the shape from where it lands (R2), planLead's slots and
+ * routes, then the start delays (staggerFile; the last within 4 s of the drop). `anchor` is the grabbed token (or its
+ * mount); riders walk with their leaders (drop.mjs). Returns { plan, members, timing }, or null when there is nothing
+ * to plan. Reads only; never throws past the caller's catch (drop.mjs: core's drop).
+ */
+function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
+  if (!feature || !anchor || contexts.length < 1) return null;
+  const { s, members, standing, origins, walkable, step } = oraclesFor(anchor, contexts, constrain);
+  const L = members[0];
+  const target = targetOf(anchor, L.formation, new Set(members.map(m => m.id)), s);
+  const plan = planLead({ members, leaderId: L.id, drop: L.formation, target, standing },
+    { walkable, step, route: routeOracle(origins, s), now });
+  // The start delays, the last within 4 s of the drop (the plan's own time comes off the cap).
   const walks = plan.order.map(id => members.find(m => m.id === id))
     .filter(m => plan.members[m.id]?.points?.length >= 2 && !plan.members[m.id].stay)
     .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed }));
@@ -452,6 +458,52 @@ function planDrop(anchor, contexts, { constrain = {}, stagger = true } = {}) {
   const timing = stagger ? staggerFile(walks, { capMs }) : { delays: Object.fromEntries(walks.map(w => [w.id, 0])), order: walks.map(w => w.id), total: 0, crowded: [] };
   timing.ms = Math.round((now() - t1) * 10) / 10;
   return { plan, members, timing };
+}
+
+/**
+ * A fight's group drag at the drop (R7): its shape, its target and the order the members walk in (the leader, then
+ * least walk left; planLead with no search). { shape, target, order } or null. Reads only.
+ */
+function fightPlan(anchor, contexts, { constrain = {} } = {}) {
+  if (!feature || !anchor || !contexts.length) return null;
+  try {
+    const { s, members, standing, walkable, step } = oraclesFor(anchor, contexts, constrain);
+    const L = members[0];
+    const target = targetOf(anchor, L.formation, new Set(members.map(m => m.id)), s);
+    const plan = planLead({ members, leaderId: L.id, drop: L.formation, target, standing }, { walkable, step, now });
+    return { shape: plan.shape, target, order: plan.order, leader: L.id };
+  } catch (err) { log?.debug?.("file: a fight's plan", err); return null; }
+}
+
+/**
+ * A fight member's square when its turn comes (R7): planLead for that one member, every other token standing where
+ * it stands now (the members already moved where they came to rest). March: behind where the leader came to rest
+ * (`leaderAt`: its rest and the square its last step came from, top-left pixels); swarm: round the target. The
+ * top-left pixels, or null (no free square it can reach: it stays, named). Reads only.
+ */
+function slotAtTurn(token, { shape = "march", target = null, leaderId = null, leaderAt = null } = {}) {
+  if (!feature || !token?.document) return null;
+  try {
+    const doc = token.document;
+    const s = gridSize(token);
+    const ctx = { token, destination: { ...doc._source }, foundPath: [], waypoints: [] };
+    const { members, standing, walkable, step } = oraclesFor(token, [ctx]);
+    const m = members[0];
+    let leader = null, at = null;
+    if (shape === "march") {
+      const ldoc = leaderId ? doc.parent?.tokens?.get?.(leaderId) : null;
+      if (!ldoc || !leaderAt) return null;
+      const w = ldoc._source.width ?? 1, h = ldoc._source.height ?? 1;
+      leader = { id: ldoc.id, w, h, r: radiusOf(w, h), start: toSquares(leaderAt.at, w, h, s) };
+      at = { at: leader.start, from: toSquares(leaderAt.from ?? leaderAt.at, w, h, s) };
+    }
+    const list = leader ? [leader, m] : [m];
+    const plan = planLead({ members: list, leaderId: leader?.id ?? m.id, target: shape === "swarm" ? target : null, leaderAt: at,
+      standing: standing.filter(o => o.id !== leader?.id) }, { walkable, step, now });
+    const e = plan.members[m.id];
+    if (!e || e.stay) return null;
+    return toTopLeft(e.slot, m.w, m.h, s);
+  } catch (err) { log?.debug?.("file: a fight member's square", err); return null; }
 }
 
 /** A member's waypoints (top-left pixels, after its origin) from its plan entry, or [] when it does not move. */
@@ -463,8 +515,9 @@ function waypointsFor(m, e) {
 }
 
 /**
- * Dry run: what a group drop of these tokens at `point` (the first token's destination, top-left pixels; the others
- * keep their offsets) would do. Nothing moves.
+ * Dry run (R13): what a group drop of these tokens with the first one dropped at `point` (its top-left, pixels) would
+ * do: the shape (march / swarm), the leader, the target, and each member's spot, route, start delay and why it stays.
+ * Nothing moves.
  */
 function dryRun(refs, point) {
   if (!globalThis.canvas?.ready) return { ok: false, code: "NO_CANVAS", reason: "no drawn canvas (a browser tab, not the headless GM)" };
@@ -485,11 +538,13 @@ function dryRun(refs, point) {
   const { plan, members, timing } = out;
   const s = gridSize(tokens[0]);
   return {
-    ok: true, result: "plan", ms: plan.ms, passes: plan.passes, order: plan.order, starts: timing.order, total: timing.total,
+    ok: true, result: plan.none ? "none" : "plan", shape: plan.shape, leader: plan.leader, target: plan.target,
+    ms: plan.ms, searches: plan.searches, failed: plan.failed, order: plan.order, starts: timing.order, total: timing.total,
     members: members.map(m => {
       const e = plan.members[m.id];
+      const wps = waypointsFor(m, e);
       return { id: m.id, name: m.token.document.name, slot: e ? toTopLeft(e.slot, m.w, m.h, s) : null,
-        waypoints: waypointsFor(m, e).length, stay: e?.stay && e.stay !== "still" ? e.stay : null, delay: timing.delays[m.id] ?? null };
+        route: wps.map(p => ({ x: p.x, y: p.y })), waypoints: wps.length, stay: e?.stay ?? null, delay: timing.delays[m.id] ?? null };
     }),
   };
 }
@@ -507,7 +562,7 @@ export function install(reg, ctx) {
   reg.on("deleteCombat", combat => onCombatChange(combat, null), { label: "deleteCombat: the fight's end empties the fight queues" });
   try { globalThis.document?.addEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   ctx.expose({ groupCancel, groupMembers, groupNoteStop, groupHold: holdGroup, groupHeld: heldCount, groupStopped: stoppedLast,
-    groupMax: () => FILE_MAX, groupPlan: planDrop, groupSpots: fightSpots, groupWaypoints: waypointsFor, groupDryRun: dryRun,
+    groupMax: () => FILE_MAX, groupPlan: planDrop, groupFightPlan: fightPlan, groupSlotAtTurn: slotAtTurn, groupWaypoints: waypointsFor, groupDryRun: dryRun,
     groupWaves: scheduleWaves, groupPending: pendingWaves, groupFlushed: () => (flushLast ? { ...flushLast } : null),
     groupQueue: setQueue, groupQueueDone: queueDone, groupCancelQueues: cancelQueues });
 }

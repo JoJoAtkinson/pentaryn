@@ -1,13 +1,11 @@
-// B0, the floor of a group drag out of combat, and B1's start delays on top of it (file-core.mjs, 0.9.0; Fable's
-// review 2 §4 steps 2 and 3). Its gate as property
-// tests on random ASCII floors and the hard-case dungeon, routed with the real pathfind-core A* (test/fixtures/grid.mjs):
-// every member is sent or named; no route crosses a token standing outside the drop or a slot given out before it; no
-// two slots overlap (nor a slot and a token at rest). Seeded: a failure names its seed.
+// The start delays (file-core staggerFile, 0.9 B1; unchanged in 0.10 L1) on the leader plan's routes (planLead; its own
+// gate is lead.test.mjs). Routed with the real pathfind-core A* (test/fixtures/grid.mjs). Seeded: a failure names its
+// seed. (0.10 L1: the 0.9 B0 planner's tests went with it: planFile, orderOf, candidatesFor, waveWays.)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gridWorld, member } from "./fixtures/grid.mjs";
+import { gridWorld } from "./fixtures/grid.mjs";
 import { DUNGEON } from "./fixtures/dungeon.mjs";
-import { FILE, STAGGER, candidatesFor, clearOf, orderOf, planFile, routeEnters, staggerFile, waveWays, wayToPoint } from "../file-core.mjs";
+import { STAGGER, planLead, staggerFile } from "../file-core.mjs";
 import { delayed, dist, minSeparation, trajectory } from "../motion-core.mjs";
 
 const EPS = 1e-6;
@@ -24,14 +22,15 @@ function rng(seed) {
   };
 }
 
-/** The oracles file-core asks, on a grid world: the route keeps out of each circle by the member's own radius too. */
-const oraclesOf = (g, extra = {}) => ({
+/** The oracles planLead asks, on a grid world (as file.mjs: a circle the member starts inside is left out). */
+const oraclesOf = g => ({
   walkable: g.walkable,
-  // No slot behind a wall: walked from the formation spot at most twice the straight way (as file.mjs's flood).
-  walk: (m, c) => g.walkDistanceFrom(m.formation)(c),
-  route: (m, from, to, avoid) => g.route(m, from, to, { avoid: avoid.map(o => ({ x: o.x, y: o.y, r: o.r + m.r - 0.01 })) })?.points ?? null,
-  ...extra,
+  step: (a, b) => g.free(b.i, b.j) && (a.i === b.i || a.j === b.j || (g.free(a.i, b.j) && g.free(b.i, a.j))),
+  route: (m, from, to, avoid) => g.route(m, from, to, { avoid: avoid.map(o => ({ x: o.x, y: o.y, r: o.r + m.r - 0.01 })).filter(c => dist(c, from) >= c.r) })?.points ?? null,
 });
+
+/** A member record: id, start centre, size. */
+const member = (id, start, w = 1) => ({ id, w, h: w, r: w / 2, start, speed: 6 });
 
 /** A random W×H floor: a walled border, scattered pillars, an optional full wall with one or two doors. */
 function randomMap(rand, W = 18, H = 12) {
@@ -74,236 +73,22 @@ function scenario(seed, ascii = null) {
   }
   const target = cells[Math.floor(rand() * cells.length)];
   const anchor = ms0[0];
-  const delta = { x: target.x - anchor.p.x, y: target.y - anchor.p.y };
-  const members = ms0.map(m => member(m.id, m.p, delta, { w: m.w }));
-  return { seed, map, g, members, standing, anchorId: anchor.id };
+  const drop = anchor.w === 2 ? { x: target.x + 0.5, y: target.y + 0.5 } : target;
+  const members = ms0.map(m => member(m.id, m.p, m.w));
+  return { seed, map, g, members, standing, anchorId: anchor.id, drop };
 }
 
-/** Every property of B0's gate, for one plan. */
-function check(sc, plan) {
-  const { members, standing } = sc;
-  const why = `seed ${sc.seed}`;
-  const byId = new Map(members.map(m => [m.id, m]));
-  const order = plan.order;
-  assert.deepEqual([...order].sort(), members.map(m => m.id).sort(), `${why}: every member planned`);
-  const rest = [];                                     // where every member rests: its slot, or its start when it stays
-  for (const id of order) {
-    const m = byId.get(id);
-    const e = plan.members[id];
-    assert.ok(e, `${why}: ${id} has an entry`);
-    const sent = e.points.length >= 2;
-    // At its spot already: dropped within a square of where it stands.
-    const atSpot = e.points.length === 1 && e.atStart && !e.stay && dist(m.start, m.formation) < 1;
-    const named = !!e.stay && plan.stayed.includes(id);
-    assert.ok(sent || atSpot || named, `${why}: ${id} is sent or named (${JSON.stringify(e)})`);
-    assert.equal(Number(!!sent) + Number(!!atSpot) + Number(!!named), 1, `${why}: ${id} is one of sent, at its spot, named`);
-    if (sent) {
-      assert.ok(dist(e.points[0], m.start) < 1e-6, `${why}: ${id}'s route starts where it stands`);
-      assert.ok(dist(e.points.at(-1), e.slot) < 0.05, `${why}: ${id}'s route ends on its slot`);
-      assert.ok(sc.g.walkable(m, e.slot), `${why}: ${id} can stand on its slot`);
-    }
-    rest.push({ id, c: sent ? e.slot : m.start, r: m.r });
-  }
-  // No two at rest overlap (touching is fine), nor one at rest and a token standing outside the drop.
-  for (let i = 0; i < rest.length; i++) {
-    for (let j = i + 1; j < rest.length; j++) {
-      const a = rest[i], b = rest[j];
-      assert.ok(dist(a.c, b.c) >= a.r + b.r - 1e-6, `${why}: ${a.id} and ${b.id} rest overlapping (${dist(a.c, b.c).toFixed(3)})`);
-    }
-    for (const s of standing) assert.ok(dist(rest[i].c, s) >= rest[i].r + s.r - 1e-6, `${why}: ${rest[i].id} rests on standing ${s.id}`);
-  }
-  // No route crosses a token standing outside the drop, a member that stays where it stands, or a slot given out
-  // before it (leaving one it starts inside is allowed: that one is moving). No slot lies on an earlier route.
-  const still = rest.filter(r => !(plan.members[r.id].points.length >= 2)).map(r => ({ x: r.c.x, y: r.c.y, r: r.r, id: r.id }));
-  const given = [], routes = [];
-  for (const id of order) {
-    const m = byId.get(id);
-    const e = plan.members[id];
-    if (!(e.points.length >= 2)) continue;
-    const hard = [...standing, ...still.filter(s => s.id !== id), ...given];
-    const hit = routeEnters(e.points, m.r, hard);
-    assert.equal(hit, null, `${why}: ${id}'s route enters a standing token or an earlier slot at ${JSON.stringify(hit?.at)}`);
-    for (const rt of routes) assert.ok(wayToPoint(rt.points, e.slot) >= m.r + rt.r - 1e-6, `${why}: ${id}'s slot is on ${rt.id}'s route`);
-    given.push({ x: e.slot.x, y: e.slot.y, r: m.r, id });
-    routes.push({ points: e.points, r: m.r, id });
-  }
-  assert.ok(plan.passes <= members.length + 2, `${why}: ${plan.passes} passes`);
-}
+/** The leader plan of a scenario. */
+const planOf = sc => planLead({ members: sc.members, leaderId: sc.anchorId, drop: sc.drop, standing: sc.standing }, oraclesOf(sc.g));
 
-test("orderOf: the grabbed one first, then least walk left first; candidates nearest the formation spot first", () => {
-  const ms = [member("a", { x: 5.5, y: 5.5 }, { x: 4, y: 0 }), member("b", { x: 2.5, y: 5.5 }, { x: 1, y: 0 }), member("c", { x: 9.5, y: 5.5 }, { x: 2, y: 0 })];
-  assert.deepEqual(orderOf(ms, "c").map(m => m.id), ["c", "b", "a"]);
-  const cand = candidatesFor(ms[0]);
-  assert.deepEqual(cand[0], ms[0].formation);
-  for (let k = 2; k < cand.length; k++) assert.ok(dist(cand[k], ms[0].formation) >= dist(cand[k - 1], ms[0].formation) - EPS);
-  assert.ok(clearOf({ x: 0, y: 0 }, 0.5, [{ x: 1, y: 0, r: 0.5 }]), "touching is clear");
-  assert.ok(!clearOf({ x: 0, y: 0 }, 0.5, [{ x: 0.9, y: 0, r: 0.5 }]));
-});
-
-test("B0: a group through one door, every member to its own spot past it in one plan, none through the token standing beside the door", () => {
-  const g = gridWorld(`
-############
-#..........#
-#..........#
-#####.######
-#..........#
-#..........#
-############`);
-  const delta = { x: 0, y: 3 };
-  const ms = [member("a", { x: 5.5, y: 1.5 }, delta), member("b", { x: 4.5, y: 1.5 }, delta), member("c", { x: 6.5, y: 1.5 }, delta), member("d", { x: 5.5, y: 2.5 }, delta)];
-  const standing = [{ id: "s", x: 4.5, y: 4.5, r: 0.5 }];
-  const sc = { seed: "door", g, members: ms, standing, anchorId: "a" };
-  const plan = planFile({ members: ms, anchorId: "a", standing }, oraclesOf(g));
-  check(sc, plan);
-  assert.deepEqual(plan.stayed, [], JSON.stringify(plan.members));
-  for (const m of ms) assert.ok(plan.members[m.id].slot.y > 3, `${m.id} past the door: ${JSON.stringify(plan.members[m.id].slot)}`);
-  // Its drop point is the door's mouth, on every other member's way: it rests beside it, so the others pass.
-  assert.ok(plan.members.a.slot.y > 3 && dist(plan.members.a.slot, ms[0].formation) <= 3.2, `the grabbed one past the door, near its drop point: ${JSON.stringify(plan.members.a.slot)}`);
-});
-
-test("B0: a member with no free spot it can reach stays and is named; the others go", () => {
-  // The room past the door has two squares; three members are dropped into it.
-  const g = gridWorld(`
-#########
-#.......#
-####.####
-####..###
-#########`);
-  const delta = { x: 0, y: 2 };
-  const ms = [member("a", { x: 4.5, y: 1.5 }, delta), member("b", { x: 5.5, y: 1.5 }, delta), member("c", { x: 3.5, y: 1.5 }, delta)];
-  const plan = planFile({ members: ms, anchorId: "a", standing: [] }, oraclesOf(g));
-  check({ seed: "full", g, members: ms, standing: [] }, plan);
-  const sent = ms.filter(m => plan.members[m.id].points.length >= 2).map(m => m.id);
-  assert.ok(sent.includes("a"), "the grabbed one goes");
-  assert.ok(plan.stayed.length >= 1, `someone stays: ${JSON.stringify(plan.members)}`);
-  for (const id of plan.stayed) assert.ok(["noSpot", "noRoute", "through", "budget"].includes(plan.members[id].stay), plan.members[id].stay);
-});
-
-test("B0 (simulator, step 5): members whose formation spot falls behind the room's wall come along to the nearest spots the drop reaches, none named", () => {
-  // The simulator's commonest stay (276 members in 500 seeds): a party dragged to a room's far side, the members whose
-  // same-delta spot lies past its wall stayed where they stood and were named, though the room had space.
-  // Past the wall the floor is rock three squares deep (on a scene, the void beyond the room's walls: walls between).
-  const g = gridWorld(`
-###############
-#..........####
-#..........####
-#..........####
-#..........####
-###############`);
-  const delta = { x: 9, y: 0 };
-  const ms = [member("a", { x: 1.5, y: 1.5 }, delta), member("b", { x: 1.5, y: 3.5 }, delta), member("c", { x: 3.5, y: 1.5 }, delta), member("d", { x: 3.5, y: 3.5 }, delta)];
-  const plan = planFile({ members: ms, anchorId: "a", standing: [] }, oraclesOf(g));
-  check({ seed: "wall", g, members: ms, standing: [] }, plan);
-  assert.deepEqual(plan.stayed, [], `nobody stays: ${JSON.stringify(plan.members)}`);
-  for (const id of ["c", "d"]) {
-    const e = plan.members[id], m = ms.find(x => x.id === id);
-    assert.ok(e.points.length >= 2 && e.slot.x <= 10.5 + EPS, `${id} in the room: ${JSON.stringify(e.slot)}`);
-    assert.ok(dist(e.slot, m.formation) <= 2.3, `${id} near its formation spot: ${JSON.stringify(e.slot)}`);
-  }
-  // A formation spot behind a wall the drop's side cannot reach is never chosen round the wall's far side.
-  const g2 = gridWorld(`
-#############
-#.....#.....#
-#.....#.....#
-#.....#.....#
-#############`);
-  const p2 = planFile({ members: [member("a", { x: 1.5, y: 1.5 }, { x: 3, y: 0 }), member("b", { x: 2.5, y: 2.5 }, { x: 3, y: 0 }), member("c", { x: 3.5, y: 2.5 }, { x: 3, y: 0 })], anchorId: "a", standing: [] }, oraclesOf(g2));
-  for (const id of ["b", "c"]) assert.ok(p2.members[id].slot.x < 6, `${id} on the drop's side of the wall: ${JSON.stringify(p2.members[id])}`);
-});
-
-test("B0: dropped on a token standing there, the grabbed one takes the nearest clear spot it can reach", () => {
-  const g = gridWorld(`
-########
-#......#
-#......#
-########`);
-  const ms = [member("a", { x: 1.5, y: 1.5 }, { x: 4, y: 0 })];
-  const standing = [{ id: "s", x: 5.5, y: 1.5, r: 0.5 }];
-  const plan = planFile({ members: ms, anchorId: "a", standing }, oraclesOf(g));
-  check({ seed: "on", g, members: ms, standing }, plan);
-  const e = plan.members.a;
-  assert.ok(e.points.length >= 2);
-  assert.ok(dist(e.slot, standing[0]) >= 1 - EPS && dist(e.slot, standing[0]) <= 1.5 + EPS, JSON.stringify(e.slot));
-});
-
-test("B0: a member dropped where it stands stays or steps off the others' way; nobody walks through it", () => {
-  const g = gridWorld(`
-##########
-#........#
-#........#
-##########`);
-  // b is dropped where it stands (its formation is its start); a's way passes b's square.
-  const ms = [member("a", { x: 1.5, y: 1.5 }, { x: 6, y: 0 }), { ...member("b", { x: 4.5, y: 1.5 }, { x: 0, y: 0 }) }];
-  const plan = planFile({ members: ms, anchorId: "a", standing: [] }, oraclesOf(g));
-  check({ seed: "still", g, members: ms, standing: [] }, plan);
-  assert.deepEqual(plan.stayed, []);
-  if (plan.members.b.points.length === 1) assert.equal(routeEnters(plan.members.a.points, 0.5, [{ x: 4.5, y: 1.5, r: 0.5 }]), null, "a goes round b");
-  else assert.ok(wayToPoint(plan.members.a.points, plan.members.b.slot) >= 1 - EPS, "b steps off a's way");
-});
-
-test("B0: planning time is bounded; a member not reached by then stays, named \"budget\"", () => {
-  const g = gridWorld(`
-############
-#..........#
-#..........#
-############`);
-  const clock = { t: 0 };
-  const ms = [0, 1, 2, 3, 4].map(k => member(`m${k}`, { x: 1.5 + k, y: 1.5 }, { x: 5, y: 1 }));
-  const o = oraclesOf(g);
-  const plan = planFile({ members: ms, anchorId: "m0", standing: [] }, { ...o, now: () => clock.t,
-    route: (m, f, t, a) => { clock.t += 600; return o.route(m, f, t, a); } });
-  check({ seed: "budget", g, members: ms, standing: [] }, plan);
-  assert.ok(plan.stayed.some(id => plan.members[id].stay === "budget"), JSON.stringify(plan.members));
-  assert.ok(plan.ms <= FILE.totalMs + 2 * 600, `bounded: ${plan.ms}`);
-});
-
-/** Of the members that could reach their own drop spot alone (round the standing tokens), how many B0 sends. */
-function liveness(sc, plan) {
-  let reachable = 0, sent = 0;
-  for (const m of sc.members) {
-    const avoid = sc.standing.map(o => ({ ...o, r: o.r + m.r - 0.01 }));
-    if (!sc.g.walkable(m, m.formation) || !sc.g.route(m, m.start, m.formation, { avoid })) continue;
-    reachable += 1;
-    if (plan.members[m.id].points.length >= 2 || plan.members[m.id].atStart) sent += 1;
-  }
-  return { reachable, sent };
-}
-
-test("B0 gate (600 seeded drops on random floors): every member sent or named; no route through a standing token or an earlier slot; no two slots overlap", () => {
-  let reachable = 0, sent = 0;
-  for (let seed = 1; seed <= 600; seed++) {
-    const sc = scenario(seed);
-    const plan = planFile({ members: sc.members, anchorId: sc.anchorId, standing: sc.standing }, oraclesOf(sc.g));
-    check(sc, plan);
-    const l = liveness(sc, plan);
-    reachable += l.reachable; sent += l.sent;
-  }
-  if (process.env.PM_STATS) console.log({ random: { reachable, sent } });
-  // Most members dropped where they could walk alone get there (or beside it): the floor, not a stay-by-default.
-  assert.ok(sent / reachable >= 0.95, `${sent} of ${reachable} members that could reach their spot alone are sent`);
-});
-
-test("B0 gate on the hard-case dungeon (200 seeds): the same properties through its corridors and maze", () => {
-  let reachable = 0, sent = 0;
-  for (let seed = 1001; seed <= 1200; seed++) {
-    const sc = scenario(seed, DUNGEON);
-    const plan = planFile({ members: sc.members, anchorId: sc.anchorId, standing: sc.standing }, oraclesOf(sc.g));
-    check(sc, plan);
-    const l = liveness(sc, plan);
-    reachable += l.reachable; sent += l.sent;
-  }
-  if (process.env.PM_STATS) console.log({ dungeon: { reachable, sent } });
-  assert.ok(sent / reachable >= 0.9, `${sent} of ${reachable} members that could reach their spot alone are sent`);
-});
-
-/* B1, the file (§4 step 3): capped start delays on B0's routes. */
+/* The start delays (0.9 B1, §4 step 3) on the leader plan's routes. */
 
 /** B1's walks for a plan: the members that move, in plan order. */
 const walksOf = (sc, plan) => plan.order.map(id => sc.members.find(m => m.id === id))
-  .filter(m => plan.members[m.id].points.length >= 2)
+  .filter(m => plan.members[m.id]?.points?.length >= 2 && !plan.members[m.id].stay)
   .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed }));
 
-/** B1's gate for one plan: every delay a wave step, the last within the cap, every mover timed; B0's plan untouched. */
+/** The delays' gate for one plan: every delay a wave step, the last within the cap, every mover timed. */
 function checkStagger(sc, plan, t, capMs = STAGGER.capMs) {
   const why = `seed ${sc.seed}`;
   const walks = walksOf(sc, plan);
@@ -326,7 +111,10 @@ function moverDepth(walks, delays) {
   return worst;
 }
 
-test("B1: on open ground every delay is 0 (a formation dragged across an empty room)", () => {
+// 0.9's "on open ground every delay is 0" was for formation routes side by side; on the leader plan the pack converges
+// behind the leader, and R5 (decisions 2026-11-24) wants the leader in the drop's own update and the pack one wave
+// later: L2 builds that timing (todo until then).
+test("open ground (R5, L2): the leader goes in the drop's own update, the pack one wave (150 ms) later, nobody later than that", { todo: "L2: the motion (0.10 R5) replaces 0.9's staggerFile" }, () => {
   const g = gridWorld(`
 ####################
 #..................#
@@ -344,14 +132,13 @@ test("B1: on open ground every delay is 0 (a formation dragged across an empty r
     if (!delta.x && !delta.y) delta.x = 3;
     // A loose formation: members two squares apart in a 3-wide block, dropped where it fits whole.
     const ms = [];
-    for (let k = 0; k < n; k++) ms.push(member(`m${k}`, { x: 7.5 + 2 * (k % 3), y: 2.5 + 2 * Math.floor(k / 3) }, delta));
-    const sc = { seed, g, members: ms, standing: [], anchorId: "m0" };
-    const plan = planFile({ members: ms, anchorId: "m0", standing: [] }, oraclesOf(g));
-    check(sc, plan);
+    for (let k = 0; k < n; k++) ms.push(member(`m${k}`, { x: 7.5 + 2 * (k % 3), y: 2.5 + 2 * Math.floor(k / 3) }));
+    const sc = { seed, g, members: ms, standing: [], anchorId: "m0", drop: { x: 7.5 + delta.x, y: 2.5 + delta.y } };
+    const plan = planOf(sc);
     const t = staggerFile(walksOf(sc, plan));
     checkStagger(sc, plan, t);
-    assert.deepEqual(Object.values(t.delays).filter(d => d !== 0), [], `seed ${seed}: open ground, all at 0: ${JSON.stringify(t.delays)}`);
-    assert.equal(t.total, 0);
+    assert.equal(t.delays.m0, 0, `seed ${seed}: the leader at once`);
+    assert.ok(t.total <= STAGGER.stepMs, `seed ${seed}: open ground, the pack one wave later: ${JSON.stringify(t.delays)}`);
   }
 });
 
@@ -365,10 +152,9 @@ test("B1: through one door the file staggers (the deeper ones wait their turn), 
 #..........#
 ############`);
   const delta = { x: 0, y: 3 };
-  const ms = [member("a", { x: 5.5, y: 1.5 }, delta), member("b", { x: 4.5, y: 1.5 }, delta), member("c", { x: 6.5, y: 1.5 }, delta), member("d", { x: 5.5, y: 2.5 }, delta)];
-  const sc = { seed: "door", g, members: ms, standing: [], anchorId: "a" };
-  const plan = planFile({ members: ms, anchorId: "a", standing: [] }, oraclesOf(g));
-  check(sc, plan);
+  const ms = [member("a", { x: 5.5, y: 1.5 }), member("b", { x: 4.5, y: 1.5 }), member("c", { x: 6.5, y: 1.5 }), member("d", { x: 5.5, y: 2.5 })];
+  const sc = { seed: "door", g, members: ms, standing: [], anchorId: "a", drop: { x: 5.5 + delta.x, y: 1.5 + delta.y } };
+  const plan = planOf(sc);
   const walks = walksOf(sc, plan);
   const t = staggerFile(walks);
   checkStagger(sc, plan, t);
@@ -388,21 +174,20 @@ test("B1: a cap shorter than the file's needs is honoured (never a cut): the cro
 #..........#
 ############`);
   const delta = { x: 0, y: 3 };
-  const ms = [0, 1, 2, 3, 4, 5].map(k => member(`m${k}`, { x: 2.5 + k, y: 1.5 + (k % 2) }, delta));
-  const sc = { seed: "cap", g, members: ms, standing: [], anchorId: "m0" };
-  const plan = planFile({ members: ms, anchorId: "m0", standing: [] }, oraclesOf(g));
+  const ms = [0, 1, 2, 3, 4, 5].map(k => member(`m${k}`, { x: 2.5 + k, y: 1.5 + (k % 2) }));
+  const sc = { seed: "cap", g, members: ms, standing: [], anchorId: "m0", drop: { x: 2.5 + delta.x, y: 1.5 + delta.y } };
+  const plan = planOf(sc);
   const t = staggerFile(walksOf(sc, plan), { capMs: 300 });
   checkStagger(sc, plan, t, 300);
   for (const w of walksOf(sc, plan)) assert.ok(plan.members[w.id].points.length >= 2, "every planned member still goes");
 });
 
-test("B1 gate (600 seeded drops on random floors, 200 in the dungeon): total stagger at most 4 s; every mover timed; B0's properties unchanged; mover overlap reported, B1 no worse than B0", () => {
+test("B1 gate (600 seeded drops on random floors, 200 in the dungeon, on the leader plan's routes): total stagger at most 4 s; every mover timed; mover overlap reported, B1 no worse than B0", () => {
   let worse = 0, b0 = 0, b1 = 0, filed = 0, drops = 0, maxTotal = 0, met0 = 0, met1 = 0;
   for (const [from, to, map] of [[1, 600, null], [1001, 1200, DUNGEON]]) {
     for (let seed = from; seed <= to; seed++) {
       const sc = scenario(seed, map);
-      const plan = planFile({ members: sc.members, anchorId: sc.anchorId, standing: sc.standing }, oraclesOf(sc.g));
-      check(sc, plan);
+      const plan = planOf(sc);
       const walks = walksOf(sc, plan);
       const t = staggerFile(walks);
       checkStagger(sc, plan, t);
@@ -424,47 +209,3 @@ test("B1 gate (600 seeded drops on random floors, 200 in the dungeon): total sta
   assert.ok(met1 <= met0, `drops where two movers meet: B1 ${met1}, B0 ${met0}`);
 });
 
-test("candidatesFor (simulator, step 5): the spots round the drop point for a formation spot it cannot reach stay on the member's own lattice", () => {
-  // Seeds 1682 / 1930: a 1×1 beside a 2×2 grabbed one was sent half a square in a fight (charged 0 ft for it).
-  const g = gridWorld(`
-###########
-#.......###
-#.......###
-#.......###
-#.......###
-###########`);
-  const anchor = member("a", { x: 2, y: 2 }, { x: 5, y: 1 }, { w: 2 });       // formation (7, 3): whole squares
-  const m = member("b", { x: 3.5, y: 1.5 }, { x: 5, y: 1 });                  // formation (8.5, 2.5): rock
-  const walk = (x, c) => g.walkDistanceFrom(x.formation)(c);
-  const list = candidatesFor(m, FILE.rings, walk, anchor);
-  assert.ok(list.length > 0);
-  for (const c of list) assert.ok(Math.abs(c.x - 0.5 - Math.round(c.x - 0.5)) < EPS && Math.abs(c.y - 0.5 - Math.round(c.y - 0.5)) < EPS, `a whole square: ${JSON.stringify(c)}`);
-});
-
-test("waveWays (simulator, step 5, seed 764): two of one wave in one lane cut short by a token come to rest: the front one goes first, the rear one rests behind it", () => {
-  // A lane along y = 0.5: the blocker at x 0.5; F (front) at 2.5, R (rear) at 3.5, both walking to x 0.5.
-  const blocker = { x: 0.5, y: 0.5, r: 0.5 };
-  const start = { F: { x: 2.5, y: 0.5 }, R: { x: 3.5, y: 0.5 } };
-  const cut = (id, rests) => {
-    const p = [start[id], { x: 0.5, y: 0.5 }];
-    const circles = [blocker, ...rests].filter(c => dist(c, start[id]) >= c.r + 0.5 - EPS);
-    let end = p[1];
-    for (const c of circles) {
-      const stop = c.x + c.r + 0.5 + 0.01;
-      if (stop <= end.x) continue;
-      if (stop > start[id].x + EPS) return null;               // it cannot get off its spot toward it
-      end = { x: stop, y: 0.5 };
-    }
-    if (dist(end, start[id]) < 0.02) return null;
-    return { way: [end], end: { ...end, r: 0.5 }, short: end !== p[1] };
-  };
-  // Plan order puts the rear one first (as B0 can): its rest would fall where the front one stands and then rests.
-  const { ways, stays } = waveWays(["R", "F"], { shut: () => false, at: id => ({ ...start[id], r: 0.5 }), cut });
-  assert.deepEqual(stays, [], JSON.stringify([...ways]));
-  const f = ways.get("F")[0], r = ways.get("R")[0];
-  assert.ok(Math.abs(f.x - 1.51) < 1e-6, `the front one just clear of the blocker: ${JSON.stringify(f)}`);
-  assert.ok(r.x >= f.x + 1 - EPS, `the rear one behind it, not inside it: ${JSON.stringify(r)}`);
-  // A shut way stays, and the one behind it walks only as far as it is free of it.
-  const w2 = waveWays(["R", "F"], { shut: id => id === "F", at: id => ({ ...start[id], r: 0.5 }), cut });
-  assert.deepEqual([...w2.stays].sort(), ["F", "R"], "R starts against F (touching): it cannot get off its spot toward it, so it stays too");
-});

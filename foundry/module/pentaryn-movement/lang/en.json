@@ -93,7 +93,7 @@
       },
       "groupDrags": {
         "name": "Group drags",
-        "hint": "When several tokens are dragged together outside a fight, each walks its own way to its own spot around the drop point, filing through doors. In a fight they walk one at a time, each round the tokens standing when its turn comes and charged the squares it walks. Off: they move as Foundry moves them, stopping before any token in the way."
+        "hint": "When several tokens are dragged together, the one you grab leads. Dropped on the floor, it ends on the drop square and the others gather behind it; dropped on a token you can see, they surround that token, the leader touching it first. Outside a fight they file through doors; in a fight they walk one at a time, the leader first, each round the tokens standing when its turn comes and charged the squares it walks. Off: they move as Foundry moves them, stopping before any token in the way."
       },
       "groupStagger": {
         "name": "Group drags: staggered starts",

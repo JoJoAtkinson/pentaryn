@@ -1,9 +1,10 @@
 // The simulator in the module's suite (0.9.0, Fable's review 2 §4 step 5): a smoke run of seeds on the real cores
-// (file-core planFile / staggerFile, sequence-core, the pathfind-core A*), and one regression per defect it found
+// (file-core planLead / staggerFile, sequence-core, the pathfind-core A*), and one regression per defect it found
 // (SIM5-01 ... SIM5-03). Each regression seed holds every hard invariant with the fix, and with the fix switched off in
-// the model it still breaks one, so the seed keeps exercising the case (the file-core and stop.mjs fixes also have
-// their own unit tests: file-core.test.mjs, drop.test.mjs "simulator (step 5)"). The full run is
-// `make foundry-movement-sim SEEDS=10000` (scripts/foundry/movement_sim.mjs).
+// the model it still breaks one, so the seed keeps exercising the case (the stop.mjs fixes also have their own unit
+// tests: drop.test.mjs "simulator (step 5)"). 0.10 L1: the leader plan gives every seed new slots, so the regression
+// seeds were found again on it (the first four of seeds 1-6000 that hold with the fix and break without it). The full
+// run is `make foundry-movement-sim SEEDS=10000` (scripts/foundry/movement_sim.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runSeed } from "./scenario.mjs";
@@ -31,22 +32,22 @@ test("the simulator replays: the same seed gives the same record", () => {
   assert.equal(a.events.length, b.events.length);
 });
 
-for (const seed of [382, 764, 1958, 5361]) {
-  test(`SIM5-01 (seed ${seed}): a wave cut short at a token come to rest leaves no member resting on a mate, nor walking through one a wave left standing`, () => {
+for (const seed of [492, 800, 1014, 2409]) {
+  test(`SIM5-01 (seed ${seed}): a wave never walks a member through a mate at rest off its slot or one a wave left standing (0.10: a wave's member goes its whole way or stays)`, () => {
     assert.deepEqual(invs(runSeed(seed)), []);
     const off = invs(runSeed(seed, { noWaveRests: true }));
     assert.ok(off.includes("restOverlap") || off.includes("passThrough"), `without the fix the seed still shows it: ${off}`);
   });
 }
 
-for (const seed of [49, 643, 1840, 6156]) {
+for (const seed of [41, 75, 145, 230]) {
   test(`SIM5-02 (seed ${seed}): a stop (a click, a door shut) never leaves two tokens at rest inside each other: the later one is carried clear along its way`, () => {
     assert.deepEqual(invs(runSeed(seed)), []);
     assert.ok(invs(runSeed(seed, { noStopClear: true })).includes("restOverlap"), "without the fix the seed still shows it");
   });
 }
 
-test("SIM5-03: members whose formation spot lies behind a wall come along (file-core candidatesFor with the grabbed one): most members dropped now move", () => {
+test("SIM5-03: most members dropped move (0.9: one whose formation spot lay behind a wall came along; 0.10: the leader rule has no formation spots, each takes the best square it can reach)", () => {
   let dropped = 0, unmoved = 0;
   for (let s = 1; s <= 120; s++) { const r = runSeed(s); dropped += r.stats.dropped; unmoved += r.stats.unmoved; }
   // Before the fix 46 % of the dropped members never moved (named); after it 29 % (2,000 seeds: a stay is named, the

@@ -85,7 +85,7 @@ export const SETTINGS = Object.freeze([
     name: "PENTARYN_MOVEMENT.settings.groupDrags.name",
     hint: "PENTARYN_MOVEMENT.settings.groupDrags.hint",
     onChange: forward("groupDrags"),
-    doc: "Group drags (0.8.0; was groupMovement): out of combat the file (0.9.0: each member its own spot and route, start delays within 4 s, filing through doors); in a fight one member at a time, each a single move routed at its turn (0.9.0, replaces tier C). Off: core's move, cut before standing tokens.",
+    doc: "Group drags (0.8.0; was groupMovement): the token grabbed leads (0.10): dropped on the floor a march (the leader on the drop square, the rest behind it), on a visible token outside the group a swarm round it; out of combat start delays within 4 s, filing through doors; in a fight the leader first, then one member at a time, each a single move whose square is picked and routed at its turn (0.9.0, replaces tier C). Off: core's move, cut before standing tokens.",
   },
   {
     key: "assist", scope: "world", config: true, type: Boolean, default: true,

@@ -9,6 +9,34 @@ leader's last step). Dropped on a token outside the group that you can see it is
 touching that token first, and the rest close in round it from their own sides, ring by ring. Formation offsets
 (everyone keeping its place relative to the others) are gone. The world keeps 0.9.0 until the build is done. Plan §18.
 
+### Step L1 — the leader plan
+
+- **[declared] The tunnel bug** (Joe's hands-on): four members dragged 11 squares into a one-wide tunnel were told
+  there was no room (on 0.9 the three followers were named after 17 route searches: a slot could not lie on a route
+  already given out, and the leader's route ran the whole tunnel). Now they line up behind the leader in 4 searches.
+- **[declared] `file-core` `planLead`**, one mechanism for both shapes: squares near the drop get a rank (march: the
+  walk from the square the leader steps out of on its last step, only squares nearer that one than the leader's own;
+  swarm: rings out from the target's whole footprint, never across a wall); each member in turn (the leader, then
+  least walk left; one standing where a slot was just given out goes next) takes the best-ranked free square it can
+  reach (a flood of its whole body from its way in, shut by the tokens standing and the squares taken) and gets one
+  route search to it. A stack is one entry. The leader with no way moves nobody ("No route there"). `walkFrom`: the
+  heap flood with a settle cap, on the pathfinder's shared step memo (`pathfindMemo`).
+- **[declared] The shape from the drop** (`file.mjs` `targetOf`): dropped on a token outside the group that this
+  client sees (not hidden: also for the GM) is a swarm round it; anywhere else a march.
+- **[declared] In a fight**: the leader first, then least walk left; each member's square is picked when its turn
+  comes (planLead for that one member: behind where the leader came to rest, or round the target), then routed. A
+  leader dropped where it cannot stand takes the nearest clear square; one already on its square is in place
+  (`status().group.queue.there`); the leader with no way ends the queue ("No route there", `ended: "noRoute"`).
+- **[declared] A later wave sends a member whole or not at all** (R12): a wall or door shut across its way, or a token
+  now at rest in it, and it stays where it stands, named (no more cutting short).
+- **[declared] `status().group.last`** for a group drag: `shape` (march / swarm), `leader`, `target`, `stayed` (the ids
+  named), `waves`, `plan: { timingMs, searches, failed, total, tier, members, crowded, staggerMs }` (`passes` gone).
+  `planGroup(refs, point)`: `shape`, `leader`, `target`, `searches`, `failed`, each member's `route` (waypoints).
+- **Deleted**: `planFile`, `candidatesFor`, `orderOf`, `FILE` (rings, tries, walkRatio, reorders), the route-clearance
+  test, the fixed-point passes, `waveWays` (file-core); `fightSpots` and `routeAtTurn`'s spot list (file.mjs, drop.mjs);
+  the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
+  `sequence-core`, `groupStagger` / B0).
+
 ## 0.9.0 — branch movement-0.9 (Fable's review 2), deployed for Joe's hands-on 2026-11-24
 
 Version set from 0.9.0-dev for Joe's 30 minutes (§4 step 7); `main` still 0.8.5. Rollback: check out main's

@@ -1,44 +1,13 @@
 /**
  * Pure helpers shared by the drop, the file and the stop (pentaryn-movement 0.9). No Foundry globals. Units as
- * motion-core.mjs: centres in grid squares. Candidate lattices round a spot, a route cut short, the walk-distance
- * flood and the one-Ctrl+Z history merge. (0.9: the 0.4 to 0.8 group planner, settle, the reslot and the rest
- * passes are gone; the file's own planning is file-core.mjs, plan context/plans/pathfinding-2026-11.md §17.)
+ * motion-core.mjs: centres in grid squares. A route cut short, the walk-distance flood and the one-Ctrl+Z history
+ * merge. (0.9: the 0.4 to 0.8 group planner, settle, the reslot and the rest passes are gone; 0.10 L1: the candidate
+ * lattices round a formation spot too. The planning is file-core.mjs, plan context/plans/pathfinding-2026-11.md §18.)
  */
 
 import { dist } from "./motion-core.mjs";
 
-/** Candidate rings round a spot. */
-export const GROUP_LIMITS = Object.freeze({ rings: 5 });
-
 const EPS = 1e-6;
-
-/** A hex lattice around `c` (c excluded), ring by ring, `pitch` apart. */
-export function hexCandidates(c, pitch, rings = GROUP_LIMITS.rings) {
-  const out = [];
-  const dirs = [[1, 0], [0.5, Math.sqrt(3) / 2], [-0.5, Math.sqrt(3) / 2], [-1, 0], [-0.5, -Math.sqrt(3) / 2], [0.5, -Math.sqrt(3) / 2]];
-  for (let k = 1; k <= rings; k++) {
-    // Start at ring k on direction 4, walk k steps along each of the six sides.
-    let x = c.x + dirs[4][0] * pitch * k, y = c.y + dirs[4][1] * pitch * k;
-    for (let side = 0; side < 6; side++) {
-      for (let s = 0; s < k; s++) {
-        out.push({ x, y });
-        x += dirs[side][0] * pitch;
-        y += dirs[side][1] * pitch;
-      }
-    }
-  }
-  return out;
-}
-
-/** Whole-square offsets of a top-left `tl` for a token `w` squares wide, as centres, nearest first. */
-export function cellCandidates(tl, w = 1, h = w, rings = GROUP_LIMITS.rings) {
-  const out = [];
-  for (let dy = -rings; dy <= rings; dy++) for (let dx = -rings; dx <= rings; dx++) {
-    if (!dx && !dy) continue;
-    out.push({ x: tl.x + dx + w / 2, y: tl.y + dy + h / 2, d: Math.max(Math.abs(dx), Math.abs(dy)) });
-  }
-  return out.sort((a, b) => a.d - b.d).map(({ x, y }) => ({ x, y }));
-}
 
 /** Is centre c a whole-square position for a w×h token (a fight rests on whole cells only)? */
 export const onCell = (c, w = 1, h = w) => [c.x - w / 2, c.y - h / 2].every(v => Math.abs(v - Math.round(v)) < 1e-6);

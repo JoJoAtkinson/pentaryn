@@ -327,7 +327,9 @@ export function runSeed(seed, opts = {}) {
     for (const id of d.ids) {
       const sent = c.sent.find(s => s.t >= d.t0 && s.msg.type === "update" && s.msg.items.some(it => it.id === id))?.t ?? Infinity;
       const told = env.events.find(e => e.kind === "named" && e.client === d.client && e.t >= d.t0 && e.ids.includes(id))?.t ?? Infinity;
-      const excused = env.events.some(e => (e.kind === "excused" || e.kind === "skipped") && e.client === d.client && e.t >= d.t0 && (e.ids?.includes(id) || e.id === id));
+      // Excused: the dragger's own click or drop ended its queue, it was no longer at its start, or (0.10 L1) it is in
+      // place already (its best square is the one it stands on).
+      const excused = env.events.some(e => (e.kind === "excused" || e.kind === "skipped" || e.kind === "there") && e.client === d.client && e.t >= d.t0 && (e.ids?.includes(id) || e.id === id));
       const first = Math.min(sent, told);
       if (first === Infinity) { if (!excused && !reloaded(d.client)) fail("unsent", { what: "never", id, client: d.client, combat: d.combat }); continue; }
       if (!d.combat && d.ids.length > 1 && first - d.t0 - stalled(c, d.t0, first) > SEND_MS) fail("unsent", { what: "late", id, client: d.client, ms: Math.round(first - d.t0) });

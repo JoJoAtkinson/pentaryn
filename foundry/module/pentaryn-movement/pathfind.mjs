@@ -550,6 +550,7 @@ export function install(reg, ctx) {
     pathfindOrigin: originOf,
     pathfindSkip: token => !!skipFor(token, [null, null], { constrainOptions: {} }),
     pathfindPatched: () => findPatched,
+    pathfindMemo: memoNow,
   });
 }
 

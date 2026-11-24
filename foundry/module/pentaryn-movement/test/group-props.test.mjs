@@ -1,8 +1,8 @@
-// Randomized property tests and edge cases for the pure cores (group-core.mjs candidates and flood, motion-core.mjs),
+// Randomized property tests and edge cases for the pure cores (group-core.mjs flood and freePrefix, motion-core.mjs),
 // seeded so a failure reproduces: the seed is in the message.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { hexCandidates, cellCandidates, flood, freePrefix, prefixOf, onCell } from "../group-core.mjs";
+import { flood, freePrefix, prefixOf, onCell } from "../group-core.mjs";
 import { MOTION, trajectory, delayed, positionAt, firstConflict, minSeparation, waves, cellChain, dist, radiusOf, groupMode, clickStop } from "../motion-core.mjs";
 
 /** mulberry32: small seeded PRNG. */
@@ -61,18 +61,6 @@ test("property: positionAt is clamped at both ends and never faster than the spe
 /* -------------------------------------------- */
 /*  Edge cases                                  */
 /* -------------------------------------------- */
-
-test("edge: candidates never include the centre and stay unique", () => {
-  const key = p => `${p.x.toFixed(4)},${p.y.toFixed(4)}`;
-  const hex = hexCandidates({ x: 5, y: 5 }, 1.1);
-  assert.equal(new Set(hex.map(key)).size, hex.length);
-  assert.ok(hex.every(p => dist(p, { x: 5, y: 5 }) > 1e-6));
-  const cells = cellCandidates({ x: 5, y: 5 }, 1, 1);
-  assert.ok(cells.length > 0);
-  assert.equal(new Set(cells.map(key)).size, cells.length);
-  assert.ok(cells.every(p => p.x !== 5 || p.y !== 5));
-});
-
 
 test("edge: waves bucket negative and zero delays at 0, exact multiples in place, empty to empty", () => {
   assert.deepEqual(waves({ a: 0, b: -50, c: 150, d: 151, e: 300 }), [

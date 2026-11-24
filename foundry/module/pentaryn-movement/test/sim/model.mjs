@@ -1,9 +1,12 @@
 /**
  * The module as the simulator runs it (0.9.0; Fable's review 2 §4 step 5): one instance per virtual client. The
  * decisions are the module's own pure code, called as drop.mjs / file.mjs call it:
- *   - a group drop out of combat: file-core planFile (B0: slots and routes in one pass) and staggerFile (B1: the start
- *     delays), motion-core waves (the batches), group-core freePrefix (a wave walked only as far as it is free);
- *   - a group drop in a fight: file-core orderOf + sequence-core sequence (the order), one member at a time;
+ *   - a group drop out of combat: file-core planLead (0.10 L1, the leader rule: the shape from where it lands, every
+ *     member's slot and route) and staggerFile (B1: the start delays), motion-core waves (the batches), group-core
+ *     freePrefix (a wave's member goes its whole way, or stays, named);
+ *   - a group drop in a fight: planLead's order (the leader, then least walk left), one member at a time, each one's
+ *     square picked at its turn (planLead for that one member: behind where the leader came to rest, or round the
+ *     target);
  *   - routes: the real pathfind-core A* (test/fixtures/grid.mjs gridWorld), round the tokens standing as this client
  *     sees them, a fight's on whole squares with motion-core cellChain (a checkpoint every square).
  * What is left here is the wiring the glue does with Foundry (each function names the one it stands for): the wave
@@ -12,10 +15,9 @@
  * callback on the fake clock, so a seed replays exactly.
  */
 
-import { FILE, candidatesFor, planFile, staggerFile, orderOf, waveWays, STAGGER } from "../../file-core.mjs";
-import { sequence } from "../../sequence-core.mjs";
+import { planLead, staggerFile, STAGGER } from "../../file-core.mjs";
 import { clearAlong, waves as wavesOf, cellChain } from "../../motion-core.mjs";
-import { flood, freePrefix, pathLength } from "../../group-core.mjs";
+import { freePrefix, pathLength } from "../../group-core.mjs";
 import { dist, SPEED } from "./engine.mjs";
 import { crosses } from "./maps.mjs";
 
@@ -126,53 +128,47 @@ export class Movement {
     this.c.move(id, wps, { combat, options: { seq } });
   }
 
-  /* ---- drop.mjs groupDrop + file.mjs planDrop (B0, B1) ---- */
+  /* ---- drop.mjs groupDrop + file.mjs planDrop (the leader plan, B1) ---- */
+  /** file.mjs targetOf: the token outside the group the drop lands on (every token is visible in the simulator). */
+  targetOf(ids, dest) {
+    const skip = new Set(ids);
+    const d = [...this.c.view.values()].find(o => !skip.has(o.id) && Math.abs(dest.x - o.x) < o.w / 2 && Math.abs(dest.y - o.y) < o.h / 2);
+    return d ? { id: d.id, x: d.x, y: d.y, w: d.w, h: d.h } : null;
+  }
+  /** file.mjs oraclesFor's step: one step between neighbouring squares (walls; a diagonal past a wall corner is shut). */
+  stepOf(g) { return (a, b) => g.free(b.i, b.j) && (a.i === b.i || a.j === b.j || (g.free(a.i, b.j) && g.free(b.i, a.j))); }
   dropGroup(ids, anchorId, dest) {
     const combat = this.env.server.inCombat;
     this.cancelQueues("drop");
     const seq = this.noteDrop(ids, combat);
-    const a = this.doc(anchorId);
-    const dx = dest.x - a.x, dy = dest.y - a.y;
-    const members = ids.map(id => { const d = this.doc(id); return { id, w: d.w, h: d.h, r: d.r, speed: SPEED, start: { x: d.x, y: d.y }, formation: { x: d.x + dx, y: d.y + dy } }; });
+    const members = ids.map(id => { const d = this.doc(id); return { id, w: d.w, h: d.h, r: d.r, speed: SPEED, start: { x: d.x, y: d.y } }; });
     const g = this.grid(combat);
-    // file.mjs walk: squares walked from the formation spot (a flood of FILE.reach rings through open steps).
-    const floods = new Map();
-    const step = (a, b) => g.free(b.i, b.j) && (a.i === b.i || a.j === b.j || (g.free(a.i, b.j) && g.free(b.i, a.j)));
-    const walk = (m, c) => {
-      if (!floods.has(m.id)) floods.set(m.id, flood({ i: Math.floor(m.formation.y), j: Math.floor(m.formation.x) }, step, FILE.reach ?? 9));
-      return floods.get(m.id).get(`${Math.floor(c.y)},${Math.floor(c.x)}`) ?? null;
-    };
-    if (combat) {
-      // file.mjs fightSpots: squares the drop reaches, nearest the formation square, never another's own square.
-      const lead = members.find(m => m.id === anchorId);
-      const homes = members.filter(m => g.walkable(m, m.formation));
-      for (const m of members) {
-        const free = c => homes.every(o => o.id === m.id || dist(c, o.formation) >= m.r + o.r - 1e-6);
-        m.spots = this.env.noFightSpots ? [] : candidatesFor(m, FILE.rings, walk, lead).filter(c => free(c) && g.walkable(m, c)).slice(0, 2 * FILE.tries);
-      }
-      return this.fightFile(members, seq);
-    }
+    const target = this.targetOf(ids, dest);
+    if (combat) return this.fightFile(members, anchorId, dest, target, seq);
     let clock = 0;
     const route = (m, from, to, avoid) => { clock += ROUTE_MS; return this.route(g, m, from, to, avoid); };
-    const plan = planFile({ members, anchorId, standing: this.othersOf(ids) }, { walkable: g.walkable, walk, route, now: () => clock });
+    const plan = planLead({ members, leaderId: anchorId, drop: dest, target, standing: this.othersOf(ids) }, { walkable: g.walkable, step: this.stepOf(g), route, now: () => clock });
     const walks = plan.order.map(id => members.find(m => m.id === id))
       .filter(m => plan.members[m.id]?.points?.length >= 2 && !plan.members[m.id].stay)
       .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed }));
     const capMs = Math.max(0, Math.floor((STAGGER.capMs - plan.ms) / STAGGER.stepMs) * STAGGER.stepMs);
     const timing = this.env.b0 ? { delays: Object.fromEntries(walks.map(w => [w.id, 0])) } : staggerFile(walks, { capMs });
-    this.env.record("plan", { client: this.c.id, seq, ms: plan.ms, stayed: plan.stayed, delays: timing.delays,
+    this.env.record("plan", { client: this.c.id, seq, ms: plan.ms, shape: plan.shape, leader: plan.leader, target: plan.target, none: plan.none,
+      searches: plan.searches, failed: plan.failed, stayed: plan.stayed, delays: timing.delays,
       slots: Object.fromEntries(members.map(m => [m.id, plan.members[m.id]?.slot ?? m.start])),
-      why: Object.fromEntries(plan.stayed.map(id => { const m = members.find(x => x.id === id); return [id, `${plan.members[id].stay}${g.walkable(m, m.formation) ? "" : ":rock"}`]; })) });
+      why: Object.fromEntries(plan.stayed.map(id => [id, plan.members[id].stay])) });
     // The plan runs inside the drop handler (synchronous); then the drop's own update goes.
     {
-      this.named(plan.stayed, "stayed");
+      this.named(plan.stayed, plan.none ? "noRoute" : "stayed");
+      // A member whose best square is the one it stands on is in place: neither sent nor named (0.10 L1).
+      const there = members.filter(m => plan.members[m.id]?.atStart).map(m => m.id);
+      if (there.length) this.env.record("there", { client: this.c.id, ids: there });
       if (!walks.length) return;
       const grp = this.hold(walks.map(w => w.id), seq);
       grp.starts = new Map(members.map(m => [m.id, { ...m.start }]));
       grp.wps = new Map(walks.map(w => [w.id, w.points.slice(1)]));
       grp.ends = new Map(walks.map(w => [w.id, { ...w.points.at(-1) }]));
       grp.stayed = new Set();
-      grp.sentTo = new Map();
       const now0 = walks.filter(w => !(timing.delays[w.id] > 0));
       for (const w of now0) this.inFlight.set(w.id, { ...w.points.at(-1), at: this.now });
       if (now0.length) this.c.moveMany(now0.map(w => ({ id: w.id, waypoints: w.points.slice(1) })), { options: { gid: grp.gid, seq } });
@@ -199,47 +195,26 @@ export class Movement {
       if (!ok) this.env.record("skipped", { client: this.c.id, id });
       return ok;
     });
-    // drop.mjs sendWave (0.9.0 step 5): mates resting off their plan (cut, stopped), sent short, or left where they
-    // stand by an earlier wave are in this wave's way too.
+    // drop.mjs sendWave (0.9.0 step 5): mates resting off their plan (cut, stopped) or left where they stand by an
+    // earlier wave are in this wave's way too.
     const others = this.othersOf([...grp.ids]);
     const fix = !this.env.noWaveRests;
     for (const id of fix ? grp.ids : []) {
       if (live.includes(id)) continue;
       const d = this.doc(id);
-      if (!d) continue;
-      const to = grp.sentTo.get(id), end = grp.ends.get(id), start = grp.starts.get(id);
+      if (!d || this.moving(id)) continue;
+      const end = grp.ends.get(id), start = grp.starts.get(id);
       const here = { x: d.x, y: d.y };
-      if (to && !same(to, end) && (same(here, to) || same(here, start))) { others.push(circle(id, to)); continue; }
-      if (this.moving(id)) continue;
-      if ((!same(here, end) && !same(here, start) && !same(here, to)) || grp.stayed.has(id)) others.push(circle(id, here));
+      if ((!same(here, end) && !same(here, start)) || grp.stayed.has(id)) others.push(circle(id, here));
     }
-    // drop.mjs sendWave: mates still waiting for a later wave, at their starts (a cut way never rests on one).
-    const pending = new Set(grp.waves.flatMap(w => w.ids));
-    const waiting = fix ? [...pending].filter(id => !live.includes(id) && same({ x: this.doc(id).x, y: this.doc(id).y }, grp.starts.get(id))).map(id => circle(id, grp.starts.get(id))) : [];
-    // file-core waveWays (as drop.mjs sendWave calls it): shut or cut to nothing stays, cut short rests there.
-    const { ways } = fix ? waveWays(live, {
-      shut: id => this.c.doorCut(grp.starts.get(id), grp.wps.get(id)) >= 0,
-      at: id => circle(id, grp.starts.get(id)),
-      cut: (id, rests) => {
-        const at = grp.starts.get(id), wps = grp.wps.get(id), r = this.doc(id).r;
-        let p = freePrefix([at, ...wps], r, [...others, ...rests]);
-        if (!p.full && p.points.length >= 2 && waiting.length) p = freePrefix([at, ...wps], r, [...others, ...rests, ...waiting]);
-        if (!p.full && p.points.length < 2) return null;
-        const way = p.full ? wps : p.points.slice(1);
-        return { way, end: { ...way.at(-1), r }, short: !p.full };
-      },
-    }) : { ways: new Map(live.map(id => {
-      const at = grp.starts.get(id), wps = grp.wps.get(id);
-      if (this.c.doorCut(at, wps) >= 0) return [id, null];
-      const p = freePrefix([at, ...wps], this.doc(id).r, others);
-      return [id, p.full ? wps : p.points.length < 2 ? null : p.points.slice(1)];
-    }).filter(([, w]) => w)) };
+    // drop.mjs sendWave (0.10 L1, R12): each member goes its whole way, or stays where it stands, named (a door shut
+    // across it since, or a token at rest in it); one that stays is in the way of the ones after it.
     const items = [], shut = [];
     for (const id of live) {
-      const way = ways.get(id);
-      if (!way) { shut.push(id); grp.stayed.add(id); continue; }
-      grp.sentTo.set(id, { ...way.at(-1) });
-      items.push({ id, waypoints: way });
+      const at = grp.starts.get(id), wps = grp.wps.get(id);
+      const whole = this.c.doorCut(at, wps) < 0 && freePrefix([at, ...wps], this.doc(id).r, others).full;
+      if (!whole) { shut.push(id); grp.stayed.add(id); if (fix) others.push(circle(id, at)); continue; }
+      items.push({ id, waypoints: wps });
     }
     this.named(shut, "wave");
     for (const it of items) this.inFlight.set(it.id, { ...it.waypoints.at(-1), at: this.now });
@@ -250,15 +225,17 @@ export class Movement {
   onReload() { this.groups.clear(); this.groupOf.clear(); this.env.record("reload", { client: this.c.id }); }
 
   /* ---- drop.mjs fightFile / runFight / routeAtTurn / walkOne ---- */
-  fightFile(members, seq) {
-    const ms = members.filter(m => dist(m.start, m.formation) > 1e-6);
-    const order = sequence(orderOf(ms, null).map(m => ({ id: m.id, r: m.r, points: [m.start, m.formation] }))).order;
-    const entries = order.map(id => ms.find(m => m.id === id));
+  fightFile(members, leaderId, dest, target, seq) {
+    // file.mjs fightPlan: the order (planLead with no search: the leader, then least walk left).
+    const g0 = this.grid(true);
+    const plan = planLead({ members, leaderId, drop: dest, target, standing: this.othersOf(members.map(m => m.id)) }, { walkable: g0.walkable, step: this.stepOf(g0) });
+    const order = plan.order;
+    const entries = order.map(id => ({ ...members.find(m => m.id === id), leader: id === leaderId, dest }));
     if (!entries.length) return;
     const grp = this.hold(entries.map(e => e.id), seq);
-    const q = { k: 0, done: false, why: null, entries, current: null, grp };
+    const q = { k: 0, done: false, why: null, entries, current: null, grp, shape: plan.shape, target, leaderId, leaderAt: null };
     grp.queue = q;
-    this.env.record("queue", { client: this.c.id, seq, order });
+    this.env.record("queue", { client: this.c.id, seq, order, shape: plan.shape });
     this.c.exec(this.now, () => this.nextInQueue(q));
   }
   endQueue(q, why) {
@@ -282,24 +259,38 @@ export class Movement {
       this.env.record("skipped", { client: this.c.id, id: e.id });
       q.k += 1; return this.nextInQueue(q);
     }
-    // routeAtTurn: round every token standing now, to its formation spot or the nearest clear square.
+    // drop.mjs routeAtTurn: the march leader to its drop square (on a token, or where it cannot stand: the nearest
+    // clear one); everyone else to the square file.mjs slotAtTurn picks then (planLead for that one member, every
+    // other token standing where it is now); one route round them all.
     const g = this.grid(true);
     const others = this.othersOf([e.id]);
     const taken = p => others.some(o => dist(p, o) < o.r + e.r - 0.01);
-    // drop.mjs routeAtTurn: its square (on a token, the nearest clear one), then fightSpots, at most FIGHT_TRIES.
-    const ends = [];
-    const add = p => { if (p && !taken(p) && g.walkable(e, p) && !ends.some(x => dist(x, p) < 1e-6)) ends.push(p); };
-    if (taken(e.formation)) add(this.nearestFree(e, e.formation, taken, g));
-    else add(e.formation);
-    for (const p of e.spots ?? []) add(p);
-    let pts = null, why = ends.length ? "fight:noRoute" : "fight:noSpot";
-    for (const end of ends.slice(0, 4)) {
-      if (dist(end, e.start) <= 1e-6) { why = "fight:there"; break; }
-      pts = this.route(g, e, e.start, end, others);
-      if (pts?.length >= 2) break;
-      pts = null;
+    let end = null;
+    if (e.leader && q.shape === "march") end = taken(e.dest) || !g.walkable(e, e.dest) ? this.nearestFree(e, e.dest, taken, g) : e.dest;
+    else {
+      const leader = q.shape === "march" && q.leaderAt ? { ...q.entries.find(x => x.leader), start: { ...q.leaderAt.at } } : null;
+      if (q.shape !== "march" || leader) {
+        const list = leader ? [leader, { ...e, start: { x: d.x, y: d.y } }] : [{ ...e, start: { x: d.x, y: d.y } }];
+        const p = planLead({ members: list, leaderId: leader?.id ?? e.id, target: q.shape === "swarm" ? q.target : null,
+          leaderAt: leader ? q.leaderAt : null, standing: others.filter(o => o.id !== leader?.id) }, { walkable: g.walkable, step: this.stepOf(g) });
+        const x = p.members[e.id];
+        end = x && !x.stay ? x.slot : null;
+      }
     }
-    if (!pts) { this.named([e.id], why); q.k += 1; return this.nextInQueue(q); }
+    let pts = null, why = end ? "fight:noRoute" : "fight:noSpot";
+    if (end && dist(end, e.start) <= 1e-6) why = "fight:there";
+    else if (end) { pts = this.route(g, e, e.start, end, others); if (!(pts?.length >= 2)) pts = null; }
+    if (!pts && e.leader && why !== "fight:there") {
+      // The leader with no way: nobody moves, "No route there" (R10).
+      this.named(q.entries.slice(q.k).map(x => x.id), "fight:noRoute");
+      return this.endQueue(q, "noRoute");
+    }
+    if (!pts) {
+      if (why === "fight:there") this.env.record("there", { client: this.c.id, ids: [e.id] });
+      else this.named([e.id], why);
+      if (e.leader) q.leaderAt = { at: { x: d.x, y: d.y }, from: { x: d.x, y: d.y } };
+      q.k += 1; return this.nextInQueue(q);
+    }
     const wps = onSquares(pts).slice(1);
     this.env.record("slot", { client: this.c.id, id: e.id, slot: { ...pts.at(-1) } });
     q.current = e.id;
@@ -313,6 +304,13 @@ export class Movement {
       this.c.clearTimeout(q.watch);
       if (how === "timeout") this.env.record("watchdog", { client: this.c.id, id: e.id });
       if (how === "stopped") return this.endQueue(q, "stopped");
+      if (e.leader) {
+        // drop.mjs runFight: where the leader came to rest and the square its last step came from.
+        const here = this.doc(e.id), path = [e.start, ...wps];
+        let k = path.length - 1;
+        while (k > 0 && dist(path[k], here) > 1e-6) k -= 1;
+        q.leaderAt = { at: { x: here.x, y: here.y }, from: k > 0 ? { ...path[k - 1] } : { ...e.start } };
+      }
       this.nextInQueue(q);
     };
     q.watch = this.c.setTimeout(() => go("timeout"), walkMs + FIGHT_WATCH_MS);
