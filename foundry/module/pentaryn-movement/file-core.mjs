@@ -359,8 +359,9 @@ export function walkFrom(origins, step, { ok = () => true, maxCells = Infinity, 
  * @param {() => number} [o.now]                the plan's clock (ms)
  * @returns {{ shape: "march"|"swarm", leader: string, target: string|null, none: boolean,
  *            members: Object<string, { slot, points, stay?, rank?, atStart?, left }>, order: string[], byWalk: string[], stayed: string[],
- *            searches: number, failed: number, ms: number, behind: {x,y}|null, lastStep: {x,y}|null }}
- *          none: the leader has no way (nobody moves, "No route there"); stayed: the members named; left: a member's
+ *            searches: number, failed: number, ms: number, behind: {x,y}|null, lastStep: {x,y}|null, blocker: string|null }}
+ *          none: the leader has no way (nobody moves, "No route there"; blocker: the member that stays on its rest
+ *          square, when that is why); stayed: the members named; left: a member's
  *          walk to the drop (the leader's squares in a march, the target's in a swarm) from where it starts; byWalk:
  *          the leader, then least walk left (a fight's order, 0.10 L3 R7: its slots are picked at each turn)
  */
@@ -374,7 +375,7 @@ export function planLead(spec, o) {
   const target = spec.target ?? null;
   const shape = target ? "swarm" : "march";
   const out = { shape, leader: L?.id ?? null, target: target?.id ?? null, none: false, members: {}, order: [], byWalk: [], stayed: [],
-    searches: 0, failed: 0, ms: 0, behind: null, lastStep: null };
+    searches: 0, failed: 0, ms: 0, behind: null, lastStep: null, blocker: null };
   if (!L) return out;
   const route = o.route ?? null;
   const n = members.length;
@@ -547,15 +548,17 @@ export function planLead(spec, o) {
     out.members[m.id] = { slot: { ...m.start }, points: [m.start], stay: why };
     const me = { x: m.start.x, y: m.start.y, r: m.r, id: m.id };
     stays.push(me);
-    // A slot given out where it stands: that member stays too. A route given out through it: round it, else stays.
+    // A slot given out where it stands: that member stays too. A route given out through it: round it, else stays;
+    // the leader, with no way round, keeps its way through it (0.10 sign-off X1, R6: the group never blocks its own
+    // leader; only one standing on its rest square does, and is named).
     for (const [id, e] of Object.entries(out.members)) {
       if (id === m.id || e.stay) continue;
       const other = byId.get(id);
-      if (dist(e.slot, me) < other.r + me.r - EPS) { drop(id); stayHere(other, "blocked"); continue; }
+      if (dist(e.slot, me) < other.r + me.r - EPS) { if (other === L) out.blocker = m.id; drop(id); stayHere(other, "blocked"); continue; }
       if (e.points?.length >= 2 && routeEnters(e.points, other.r, [me])) {
         const avoid = id === L.id && !target ? [...standing, ...stays] : [...standing, ...claims.filter(c => c.id !== id), ...stays];
         const pts = route ? search(other, e.slot, avoid) : null;
-        if (pts) { e.points = pts; e.walk = pathLength(pts); } else { drop(id); stayHere(other, "noRoute"); }
+        if (pts) { e.points = pts; e.walk = pathLength(pts); } else if (other !== L) { drop(id); stayHere(other, "noRoute"); }
       }
     }
   };
@@ -620,8 +623,9 @@ export function planLead(spec, o) {
       if (k > 0) cands.unshift(...cands.splice(k, 1));
     }
     let picked = null, tries = 0, why = cands.length ? "noRoute" : "noSpot";
-    // The leader of a swarm walks through its own group; everyone else round the slots given out and the stays.
-    const avoid = m === L ? [...standing, ...stays] : avoidAll;
+    // The leader of a swarm walks through its own group, also a member that stays (X1); everyone else round the
+    // slots given out and the stays.
+    const avoid = m === L ? standing : avoidAll;
     for (const s of cands) {
       if (!clearOf(s.centre, m.r, avoidAll) || !o.walkable(m, s.centre)) continue;
       if (dist(s.centre, m.start) < EPS) { picked = { slot: s.centre, points: [m.start], atStart: true, rank: s.rank }; break; }

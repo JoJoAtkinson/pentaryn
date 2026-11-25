@@ -1163,8 +1163,10 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
   const stayedDocs = plan.stayed.map(id => members.find(m => m.id === id)?.token?.document).filter(Boolean);
   if (!updates.length && !later.size) {
     last.result = "none";
-    // The leader with no way: nobody moves, "No route there" (R10).
-    if (plan.none || !stayedDocs.length) tell("noRoute", "groupNoRoute");
+    // The leader with no way: nobody moves, "No route there" (R10); naming the member that stays on its rest square
+    // when that is why (0.10 sign-off X1: through any other member of its own group it goes, R6).
+    if (plan.none && plan.blocker) tellBlockedBy(grabbed, plan.blocker);
+    else if (plan.none || !stayedDocs.length) tell("noRoute", "groupNoRoute");
     else tellStayed(stayedDocs);
     return null;
   }

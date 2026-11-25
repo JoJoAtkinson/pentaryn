@@ -103,6 +103,32 @@ test("L1 march: a member already past the leader in a dead end stays, named; the
   assert.deepEqual(none.stayed.sort(), ["A", "L"]);
 });
 
+test("0.10 sign-off X1 (S05.p legs 3, 5): a member that stays where it stands in a one-wide way, on the leader's route: the leader goes through it (its own group, R6), rests clear of it, and the member is named (live: \"No route there.\" for the whole group)", () => {
+  const g = gridWorld(`
+################
+#....##########
+#..............#
+#....##########
+################`);
+  // The ranked area is the two squares behind the drop, both held by members standing on them: X, in the way, has no
+  // free square it can reach and stays; the one-wide way has no way round it.
+  const members = [mem("L", 2.5, 2.5), mem("X", 8.5, 2.5), mem("Y", 13.5, 2.5), mem("Z", 12.5, 2.5)];
+  const plan = planLead({ members, leaderId: "L", drop: { x: 14.5, y: 2.5 } }, oraclesOf(g, { cells: 0, extra: 2 }));
+  assert.equal(plan.none, false, `the leader goes: ${JSON.stringify(plan.members)}`);
+  assert.deepEqual(plan.stayed, ["X"], "the member with no square is named");
+  const L = plan.members.L;
+  assert.deepEqual(L.slot, { x: 14.5, y: 2.5 }, "the leader on the drop square");
+  assert.ok(L.points.length >= 2 && dist(L.points.at(-1), L.slot) < EPS, "its route reaches the drop");
+  assert.ok(routeEnters(L.points, 0.5, [{ x: 8.5, y: 2.5, r: 0.5 }]), "through the member that stays (its own group)");
+  assert.ok(dist(L.slot, members[1].start) >= 1 - EPS, "it rests clear of it");
+  assert.deepEqual([plan.members.Y.slot, plan.members.Z.slot], [{ x: 13.5, y: 2.5 }, { x: 12.5, y: 2.5 }], "the others keep their squares behind it");
+  // Unchanged: a member that stays on the leader's own rest square still stops the group ("No route there").
+  const on = planLead({ members: [mem("L", 2.5, 2.5), mem("X", 14.5, 2.5), mem("Y", 13.5, 2.5)], leaderId: "L", drop: { x: 14.5, y: 2.5 } },
+    oraclesOf(g, { cells: 0, extra: 1 }));
+  assert.equal(on.none, true, `a stayer on the rest square: ${JSON.stringify(on.members)}`);
+  assert.equal(on.blocker, "X", "the notice names it");
+});
+
 const ARENA = `
 ######################
 #....................#
@@ -310,7 +336,10 @@ test("L1 gate (800 seeded floors and tunnels, 2-20 members, march and swarm, Med
       if (e.stay || e.atStart) continue;
       const earlier = m.id === leader.id ? [] : members.filter(x => x.id !== m.id && order.get(x.id) < order.get(m.id) && !plan.members[x.id].stay).map(x => ({ ...plan.members[x.id].slot, r: x.r, id: x.id }));
       const hit = routeEnters(e.points, m.r, [...standing, ...earlier, ...stays.filter(s => s.id !== m.id)]);
-      assert.equal(hit, null, `seed ${seed}: ${m.id}'s route enters a token at rest at ${JSON.stringify(hit?.at)}`);
+      // 0.10 sign-off X1 (R6): the leader goes through a member that stays only when there is no way round it.
+      const own = m.id === leader.id && hit && !routeEnters(e.points, m.r, standing) && !o.route(m, m.start, e.slot, [...standing, ...stays]);
+      if (own) tot.through = (tot.through ?? 0) + 1;
+      assert.ok(!hit || own, `seed ${seed}: ${m.id}'s route enters a token at rest at ${JSON.stringify(hit?.at)}`);
     }
     const step = o.step;
     if (!target) {

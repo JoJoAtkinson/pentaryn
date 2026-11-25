@@ -38,6 +38,19 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### Sign-off — the fixes (Fable F2; plan §18.8)
+
+- **[declared] The leader through a member that stays** (S05.p legs 3 and 5: eight heroes dragged back over the stair
+  answered "No route there." every time once members stood in its mouth): a member with no free square it can reach
+  stays where it stands, and when that was on the leader's route and no way round it exists the whole group stayed.
+  The leader now keeps its way through it (R6: a member of its own group; the group never blocks its own leader); only
+  a member that stays on the leader's own rest square still stops the group, and the notice names it ("No route there:
+  <name> is in the way."). Nothing else goes through anyone (`file-core` `planLead`).
+- **[declared] The line behind the leader on a narrow way tries the next point** (S05.p legs 1 and 2: on the page a
+  member's one route to its point on the line failed, and it stayed, named, or kept a square far back in the other
+  room): a route that fails, or ends too near another's rest, now tries the next clear point back along the leader's
+  way, two routes a member at most, inside the plan's time (`file.mjs` `lineBehind`).
+
 ### Live round 2 — the fixes (plan §18.7)
 
 - **[declared] The page's plan time** (S01.d/k, S07.k, S15.c, and the members named for the plan's budget in S06.h/i,

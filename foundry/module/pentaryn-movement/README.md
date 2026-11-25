@@ -132,8 +132,10 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   it; a member also waits while another would walk through it at rest. The last one is on its way within 4 s of the
   drop. Nobody rests on anybody, nobody walks through a token standing still outside the group; two members both
   moving may brush on the way. One with no square it can reach stays where it stands and is
-  named: "Stayed where they stand, with no free spot they can reach: Talo." The leader with no way there moves
-  nobody: "No route there". A tab sent to the background keeps the waiting members in order (0.10 L3: its timers
+  named: "Stayed where they stand, with no free spot they can reach: Talo." The leader goes through any member of its
+  own group, one that stays where it stands too, when there is no way round it (0.10 sign-off: the group never blocks
+  its own leader). The leader with no way there moves nobody: "No route there"; when a member that stays stands on
+  its drop square, the notice names it. A tab sent to the background keeps the waiting members in order (0.10 L3: its timers
   fire on whole seconds; the last still goes within 4 s of the drop). `planGroup(tokens,
   point)` dry-runs it (the shape, the leader, the target, each member's square, route, start delay and why it stays).
 - **Several tokens in a fight — one at a time** (`groupDrags`; 0.9.0, the leader rule 0.10): nothing moves at the drop;
@@ -373,7 +375,7 @@ square clear, within 0.05 of the centre line where narrower than the token, no z
 ZZ Playground (`test/fixtures/narrow-stations.json`); the Large and the long way round; a fight's checkpoints; walls
 on the grid lines routing exactly as before); `group-props.test` (the flood, `freePrefix`, trajectories, waves, click rows), `lead.test` (the leader plan, 0.10 L1: the tunnel repro, march, swarm rings round Medium / Large / Huge, and the gate: 800 seeded
 floors and tunnels with 2-20 members, every member in place or named, no rest overlap, no route into a standing token,
-an earlier slot or a member that stays, march nobody beside or ahead, swarm the leader touching whenever it could, at
+an earlier slot or a member that stays (the leader through one only when there is no way round it), march nobody beside or ahead, swarm the leader touching whenever it could, at
 most 1.2 searches a member and under 3 % failed; planning time), `file-core.test` (the motion on the leader plan's
 routes, 0.10 L2: open ground is the leader plus one wave, a file of 20 one wave, a door single file and spread out
 past it, a leader anywhere in a one-wide tunnel of 2 to 20 reaches the front in 400 seeds, the last within 4 s, and on

@@ -4085,3 +4085,92 @@ test("0.10 live round 1 (S06.a/e/f, S07.d/l, S05.j3/k3): the leader's route sear
     world.walls = old.walls; F.canvas.dimensions = old.rect; F.fire("updateWall");
   }
 });
+
+/* -------------------------------------------- */
+/*  0.10 sign-off (Fable F2): S05.p             */
+/* -------------------------------------------- */
+
+/** S05.p's eight heroes where live round 3 started them (top-left px): S05's four, then the four extras in room A. */
+const S05P = [[800, 3300], [600, 3300], [400, 3300], [800, 3000], [500, 3300], [700, 3300], [900, 3300], [900, 3400]];
+/** A group drop on S05 with the S05 Large standing in room A (as on the playground): the plan, each member's rest (centre). */
+function s05Drop(tag, starts, dest, { before = null } = {}) {
+  const ts = starts.map(([x, y], k) => makeToken(`${tag}h${k}`.padEnd(16, "0"), x, y));
+  const big = makeToken(`${tag}lg`.padEnd(16, "0"), 400, 3000, { size: 2 });
+  const others = keepOnly([...ts, big]);
+  for (const t of [...ts, big]) t.visible = true;
+  F.canvas.tokens.placeables = [...ts, big];
+  try {
+    before?.(ts);
+    const src = ts[0].document._source;
+    const from = F.calls.length;
+    const out = dropWith(ts[0], contextsFor(ts, dest[0] - src.x, dest[1] - src.y));
+    const last = api.status().group.last;
+    const by = fileMoves(out, from);
+    const ends = checkRest(tag, ts, by);
+    return { last, ends, tops: ts.map((t, k) => { const w = by[t.document.id]?.waypoints?.at(-1) ?? t.document._source; return [w.x, w.y]; }), ts };
+  } finally {
+    for (const t of [...ts, big]) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+}
+/** In the drop's room (A: rows 29-35, B: 42-48, columns 4-10), or on the stair on its centre line where it is narrower than a token. */
+function inRoomOrLine(c, room) {
+  const x = c.x / S, y = c.y / S;
+  if (x > 4 && x < 10 && (room === "A" ? y > 29 && y < 35 : y > 42 && y < 48)) return true;
+  if (x < 10 || !inS05(c)) return false;
+  const l = stairLine(c);
+  return l.width >= S || l.err <= 5;
+}
+
+test("0.10 sign-off X1 (S05.p, live round 3): eight heroes dragged A→B→A→B→A→B over the spiral stair, each leg from where the last left them, the S05 Large standing in room A: every leg plans (never \"No route there.\"), nobody named, each rests in the drop's room or on the stair's centre line, none within 0.98 square of another, no wall crossed; the live leg 3 (members standing in the stair's mouth on the leader's way) goes", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  try {
+    let starts = S05P;
+    ["B", "A", "B", "A", "B"].forEach((room, k) => {
+      const r = s05Drop(`x1l${k}`, starts, room === "B" ? [700, 4500] : [700, 3200]);
+      const tag = `leg ${k + 1} to room ${room}`;
+      assert.equal(r.last.result, "plan", `${tag}: ${JSON.stringify(r.last)}`);
+      assert.deepEqual(r.last.stayed, [], `${tag}: nobody named`);
+      r.ends.forEach((c, j) => assert.ok(inRoomOrLine(c, room), `${tag}: hero ${j + 1} rests at ${JSON.stringify(c)}`));
+      starts = r.tops;
+    });
+    // Live round 3's leg 3 as it stood (diag_s05p.json): five in room A and the stair's mouth, three in room B.
+    const live3 = [[7.5, 32.5], [10.5, 32.52], [8.5, 32.5], [11.58, 32.72], [9.5, 32.5], [9.5, 45.5], [8.5, 44.5], [9.5, 44.5]]
+      .map(([x, y]) => [Math.round(x * S - 50), Math.round(y * S - 50)]);
+    const r = s05Drop("x1lv", live3, [700, 4500]);
+    assert.equal(r.last.result, "plan", `live leg 3: ${JSON.stringify(r.last)}`);
+    assert.deepEqual(r.last.stayed, [], "live leg 3: nobody named");
+    r.ends.forEach((c, j) => assert.ok(inRoomOrLine(c, "B"), `live leg 3: hero ${j + 1} rests at ${JSON.stringify(c)}`));
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});
+
+test("0.10 sign-off X2 (S05.p leg 2, live round 3): a member whose route to its first point on the line behind the leader fails takes the next clear point back (live: Heroes 6-8 kept their squares in room B)", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  try {
+    // Live leg 2's start: the leader and five in room B (one in its mouth), Hero 3 left in room A.
+    const leg2 = [[7.5, 45.5], [9.5, 44.5], [4.5, 33.5], [9.5, 45.5], [10.6, 44.47], [8.5, 46.5], [8.5, 45.5], [8.5, 44.5]]
+      .map(([x, y]) => [Math.round(x * S - 50), Math.round(y * S - 50)]);
+    // Hero 8's first point on the line is 12.61, 33.11 (just behind Hero 4's): its own token refuses that one route
+    // (on the page: a route that failed, or ended too near the next one).
+    let refused = 0;
+    const r = s05Drop("x2l2", leg2, [700, 3200], { before: ts => {
+      const t = ts[7];
+      t.findMovementPath = function (w, o) {
+        const d = w.at(-1);
+        if (!refused && Math.hypot(d.x + 50 - 1261, d.y + 50 - 3311) < 4) { refused += 1; return { result: null }; }
+        return Token5e.prototype.findMovementPath.call(this, w, o);
+      };
+    } });
+    assert.equal(refused, 1, "the first point's route was refused");
+    assert.deepEqual(r.last.stayed, [], "nobody named");
+    r.ends.forEach((c, j) => assert.ok(inRoomOrLine(c, "A"), `hero ${j + 1} rests at ${JSON.stringify(c)}`));
+    for (const j of [5, 6, 7]) assert.ok(r.ends[j].x > 1020, `hero ${j + 1} on the stair behind the leader, not left in room B: ${JSON.stringify(r.ends[j])}`);
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});
