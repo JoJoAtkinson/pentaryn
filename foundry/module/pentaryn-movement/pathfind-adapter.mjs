@@ -28,7 +28,7 @@
  * routes this module invents.
  */
 
-import { SECRET_DOOR, avoidHits, avoidRegion, segmentIndex, segmentsCross } from "./pathfind-core.mjs";
+import { SECRET_DOOR, avoidDist, avoidHits, avoidRegion, segmentIndex, segmentsCross } from "./pathfind-core.mjs";
 import { narrowField, narrowMore } from "./narrow-core.mjs";
 
 /**
@@ -471,19 +471,42 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
       const toAbs = n => ({ I: n.i + oi, J: n.j + oj });
       const fromAbs = (I, J, c) => (c ? { i: I - oi, j: J - oj, c } : { i: I - oi, j: J - oj });
       const tl = p => ({ x: p.x * s - (width * s) / 2, y: p.y * s - (height * s) / 2 });
+      // The band asks okSeg tens of thousands of times a route (0.10.2: 45 % of a stair plan's time on the page, most of
+      // it building the memo's long keys): a square's answer once per field (the same memo answer), and the hazards'
+      // line skipped when it has nothing to test (its own first test).
+      const lineFree = !hz.traps.length && !hz.look;
+      const blockedSq = new Map();
+      let lastI = NaN, lastJ = NaN, lastV = false;
+      const blockedAt = (I, J) => {
+        if (I === lastI && J === lastJ) return lastV;
+        const k = I * 1048576 + J;
+        let v = blockedSq.get(k);
+        if (v === undefined) { v = !!blocked(fromAbs(I, J, 0)); blockedSq.set(k, v); }
+        lastI = I; lastJ = J; lastV = v;
+        return v;
+      };
+      // avoidHits's box test inline (its limit and box per circle once): the full test only for a circle near the move.
+      const cLim = circles ? circles.map(c => c.r - 1e-6) : null;
+      const pa = { x: 0, y: 0 }, pb = { x: 0, y: 0 };
       /** The band's own test of a straight move (centres in squares): tokens standing, traps, unseen ground, creatures. */
       const okSeg = (p, q) => {
         if (circles) {
-          const a = { x: p.x * s, y: p.y * s }, b = { x: q.x * s, y: q.y * s };
-          if (circles.some(c => avoidHits(c, a, b))) return false;
+          const ax = p.x * s, ay = p.y * s, bx = q.x * s, by = q.y * s;
+          const x0 = ax < bx ? ax : bx, x1 = ax < bx ? bx : ax, y0 = ay < by ? ay : by, y1 = ay < by ? by : ay;
+          for (let k = 0; k < circles.length; k++) {
+            const c = circles[k], lim = cLim[k];
+            if (!(lim > 0) || c.x < x0 - lim || c.x > x1 + lim || c.y < y0 - lim || c.y > y1 + lim) continue;
+            pa.x = ax; pa.y = ay; pb.x = bx; pb.y = by;
+            if (avoidDist(c, pa, pb) < lim) return false;
+          }
         }
-        if (!hz.line(tl(p), tl(q))) return false;
+        if (!lineFree && !hz.line(tl(p), tl(q))) return false;
         if (!blocking) return true;
         const L = Math.hypot(q.x - p.x, q.y - p.y);
         const n = Math.max(1, Math.ceil(L / 0.25));
         for (let k = 0; k <= n; k++) {
           const x = p.x + ((q.x - p.x) * k) / n, y = p.y + ((q.y - p.y) * k) / n;
-          if (blocked(fromAbs(Math.floor(y), Math.floor(x), 0))) return false;
+          if (blockedAt(Math.floor(y), Math.floor(x))) return false;
         }
         return true;
       };

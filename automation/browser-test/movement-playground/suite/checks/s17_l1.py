@@ -278,6 +278,55 @@ def p_(t):
     return t.verdict(o3, [("nobody named and no route-timeout notice", not nm and not tmo, f"named {nm}; notices {tmo[:2]}")], num=max(p["lastMs"] or 0 for p in (p1, p2, p3)), unit="ms", expected=note, guards=TIMING_G)
 
 
+# ================================================================ S05.r: no page freeze (0.10.2)
+# The page's long tasks (PerformanceObserver "longtask": every task over 50 ms) and its frame gaps, from the pointerup to
+# the end of the plan (status().group.sliced, its wall time): a plan run in slices between frames never holds the page.
+BLOCK_WATCH = r"""
+if (!window.__pmBlk) {
+  window.__pmBlk = { tasks: [], up: 0, gaps: [], last: 0, on: false };
+  new PerformanceObserver(l => { for (const e of l.getEntries()) window.__pmBlk.tasks.push([e.startTime, e.duration]); }).observe({ type: "longtask" });
+  addEventListener("pointerup", () => { const b = window.__pmBlk; b.up = performance.now(); b.gaps = []; b.last = b.up; b.on = true;
+    const f = t => { if (!b.on) return; b.gaps.push(t - b.last); b.last = t; requestAnimationFrame(f); }; requestAnimationFrame(f); }, true);
+}
+window.__pmBlk.tasks = []; window.__pmBlk.up = 0; return 1;
+"""
+BLOCK_READ = r"""
+const b = window.__pmBlk; const t0 = performance.now();
+while (performance.now() - t0 < 15000) { const s = game.pentaryn.movement.status().group; if (b.up && s.last?.result !== "planning" && s.sliced?.state !== "planning") break; await new Promise(r => setTimeout(r, 50)); }
+b.on = false;
+const s = game.pentaryn.movement.status().group; const sl = s.sliced;
+const sliced = !!sl && Date.parse(sl.at) >= Date.now() - 30000;
+const end = b.up + (sliced ? (sl.wallMs ?? 0) : (s.perf?.lastMs ?? 0)) + 20;
+const during = b.tasks.filter(([st, d]) => st + d >= b.up && st <= end);   // the pointerup's own task too (it starts before the listener)
+const gaps = b.gaps.slice(0, Math.max(1, Math.ceil((end - b.up) / 16)));
+return JSON.stringify({ longest: during.length ? Math.round(Math.max(...during.map(t => t[1]))) : 0, tasks: during.map(t => Math.round(t[1])), maxGap: Math.round(Math.max(0, ...gaps)),
+  lastMs: s.perf?.lastMs ?? null, sliced: sliced ? sl : null, plan: s.last?.plan ?? null, result: s.last?.result ?? null });
+"""
+
+def blocked_drag(t, grp, grab, to):
+    t.rig.ev("gm", BLOCK_WATCH)
+    o = t.drag(grp, grab, to)
+    return o, t.rig.ev("gm", BLOCK_READ, timeout=60)
+
+def block_note(lab, b):
+    sl = b.get("sliced") or {}
+    return f"{lab}: longest task {b['longest']} ms (tasks over 50 ms {b['tasks']}), frame gap {b['maxGap']} ms, the drop's own {b['lastMs']} ms, plan {sl.get('wallMs', b['lastMs'])} ms wall / {sl.get('busyMs', '-')} busy in {sl.get('slices', 0)} slices (longest {sl.get('longestMs', '-')}), leader early {sl.get('early', False)}"
+
+@check("S05.r", S5, "no page freeze (0.10.2): eight heroes dropped A to B over the stair (cold) and back (warm): no main-thread task over 60 ms from the pointerup to the plan's end (the plan in slices between frames), the leader sets off at the drop, nobody named", path="gpu", kind="GATED", timing=True)
+def r_(t):
+    gpu_only(t); add_tokens(t, S5, X5)
+    toggle_door(t); o1, b1 = blocked_drag(t, H8, L5, pt(S5, "dropB"))
+    o2, b2 = blocked_drag(t, H8, L5, pt(S5, "dropA"))
+    nm = named_of(o1, H8) + named_of(o2, H8)
+    conds = []
+    for lab, b in (("cold A->B", b1), ("warm B->A", b2)):
+        conds.append((f"{lab}: longest main-thread task under 60 ms", b["longest"] < 60, block_note(lab, b)))
+        conds.append((f"{lab}: the leader set off at the drop (its plan in slices)", bool((b.get("sliced") or {}).get("early")) or (b.get("lastMs") or 999) < 60, block_note(lab, b)))
+    conds.append(("nobody named", not nm, f"named {nm}"))
+    res = t.verdict(o2, conds, num=max(b1["longest"], b2["longest"]), unit="ms", expected="; ".join(block_note(l, b) for l, b in (("cold", b1), ("warm", b2)))[:600], guards=TIMING_G)
+    return res
+
+
 # ================================================================ S05.q: the five legs over the stair (sign-off F2 X3)
 WA5 = [w for w in W5 if w.get("grp") == ST[S5]["measure"]["stair"]["groups"][0]]
 WB5 = [w for w in W5 if w.get("grp") == ST[S5]["measure"]["stair"]["groups"][1]]

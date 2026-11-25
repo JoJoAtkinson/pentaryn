@@ -18,7 +18,7 @@
  * callback on the fake clock, so a seed replays exactly.
  */
 
-import { planLead, routeEnters, staggerFile, STAGGER } from "../../file-core.mjs";
+import { planLead, planLeadSteps, routeEnters, staggerFile, STAGGER } from "../../file-core.mjs";
 import { clearAlong, fightWalk, settleAlong, shutBlocked, spotsAlong, stopOrder, waves as wavesOf, cellChain } from "../../motion-core.mjs";
 import { freePrefix, pathLength } from "../../group-core.mjs";
 import { dist, SPEED } from "./engine.mjs";
@@ -28,6 +28,13 @@ const ROUTE_MS = 1.5;                 // the plan's clock: ms per route search (
 const FIGHT_WATCH_MS = 3000;          // drop.mjs FIGHT_WATCH_MS
 const PAST_DOOR = 1.5;                // stop.mjs PAST_DOOR_SQUARES
 const HOLD_MS = 60000;                // file.mjs HOLD_MS
+
+/**
+ * 0.10.2 (a plan in slices): `PLAN_CHECK.on(plan, sliced)`, when set, is called for every drop's plan with the same plan
+ * made again in slices (planLeadSteps, its routes generators that yield, `PLAN_CHECK.slice(k)` steps a slice), on the
+ * same clock (the routes' own time). The simulator's own runs never set it.
+ */
+export const PLAN_CHECK = { on: null, slice: () => 1 };
 
 /** Distance from point p to segment a-b. */
 export function segDist(p, a, b) {
@@ -156,6 +163,15 @@ export class Movement {
     let clock = 0;
     const route = (m, from, to, avoid) => { clock += ROUTE_MS; return this.route(g, m, from, to, avoid); };
     const plan = planLead({ members, leaderId: anchorId, drop: dest, target, standing: this.othersOf(ids) }, { walkable: g.walkable, step: this.stepOf(g), route, now: () => clock });
+    if (PLAN_CHECK.on) {
+      let c2 = 0;
+      const self = this;
+      const route2 = function* (m, from, to, avoid) { yield; c2 += ROUTE_MS; yield; return self.route(g, m, from, to, avoid); };
+      const gen = planLeadSteps({ members, leaderId: anchorId, drop: dest, target, standing: this.othersOf(ids) }, { walkable: g.walkable, step: this.stepOf(g), route: route2, now: () => c2 });
+      let r = { done: false }, k = 0, leads = 0;
+      while (!r.done) { const n = PLAN_CHECK.slice(k++); for (let i = 0; i < n && !r.done; i++) { r = gen.next(); if (!r.done && r.value?.lead) leads += 1; } }
+      PLAN_CHECK.on(plan, r.value, { slices: k, leads });
+    }
     const walks = plan.order.map(id => members.find(m => m.id === id))
       .filter(m => plan.members[m.id]?.points?.length >= 2 && !plan.members[m.id].stay)
       .map(m => ({ id: m.id, r: m.r, points: plan.members[m.id].points, speed: m.speed, left: plan.members[m.id].left }));

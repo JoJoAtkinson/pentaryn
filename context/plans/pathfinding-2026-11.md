@@ -1994,3 +1994,39 @@ eight two squares past the open door 2 → 6 inside (every free square of column
 **Left open:** one square past a door the leader plugs it (the grid allows no diagonal past the frame); a room's wall
 squares beyond `LEAD.beside` are not used before the doorway (the rest wait outside); past the stair the line behind
 stays (0.10.1). Not live: the page's plan time with more members routing in is unmeasured (Node 3.6 → 15 ms for twelve).
+
+### 18.12 0.10.2-dev: no page freeze (backlog 2)
+
+**The problem.** A group drop planned inside the drop handler: eight over the S05 stair held the GPU page 0.95 s cold
+(perf.lastMs 943-957; S05.p), twenty on open ground 0.18 s, twenty at 4x throttle 0.82 s. Profile (page, eight over the
+stair): 89 % of it the narrow walk's band (`relax`): the adapter's `okSeg` 45 % (most of it building the memo's long
+string key, avoid circles and all, per square tested), `settle` / `nearest` / `medial` most of the rest.
+
+**What went in.** (a) The plan is a generator end to end (`planDropSteps` → `planLeadSteps` / `lineBehind` → the route
+oracle → `routeToSteps` → the planner's slices, which now also slice a found leg's walk → `walkForSteps` →
+`relaxSteps`, one yield per band iteration); drained it is the old synchronous plan (`drain`), the same code. The drop
+runs it 16 ms; done, it goes out as before. Else `planLater` runs 8 ms slices, letting a frame through when the last is
+24 ms old, on a busy clock (only the slices' own time), so every cap reads the same and the plan is the same. planLead
+yields `{ lead, free }` once the leader's slot and route are known; `free` (no member starts on its slot, the only way
+a later step can make the leader stay) lets it set off in the drop's own update. The rest go when the plan ends, each
+wave timed from the drop through `sendWave`'s test (still at its start, not dropped again, its way open past walls,
+doors and resting tokens as they are then, else named): that is the guard against the world changing mid-plan (a
+door shut, a token come to rest in the way, a second drop, a click on the leader: the group's hold ends, the plan
+stops). One known difference from the synchronous drop: when a member that stays makes the plan re-route the leader
+round it, the leader sent early keeps its first route (through its own member, which R6 allows). (b) Exact
+optimisations, bit-identical walks (800 C-stair walks in Node; every page dry run's slots and routes): okSeg's
+creature test once per square per field with a number key, the hazards' line skipped when empty, avoidHits' box test
+inline; `nearest` one segNear per wall; number keys for the field's buckets; idle band points skipped. No Web Worker.
+
+**Numbers (GPU page, real drags, cold after a door toggle; before = HEAD 263c9df8 on the same page by a module
+override, nothing deployed).** Longest main-thread task from the drop to the plan's end, before → after: S05 eight 950 →
+none over 50 (longest script 28 ms); S07 vault eight 162 → none (25); S15 twelve 187 → none (27); S01 eight 57 → none
+(26); S01 twenty 182 → none (47). Total plan: S05 945 ms blocked → 556 ms work over 1,002 ms wall; S07 159 → 177 / 346;
+S15 184 → 198 / 308; S01 eight 54 → 60 / 101; S01 twenty 180 → 194 / 313 (the generators cost about 8 % on open
+ground). Suite (round f1, module override): S05.r (new, GATED) 3/3, S05.q (HARD, the five legs) pass, S05.p the drop's
+own 21-23 ms, S01.k 3/3 (lastMs 17-28), S01.l at 4x: the drop's own 25-54 ms (was 0.8 s for twenty).
+
+**Left open:** the pack waits for the whole plan, so over the stair it sets off about a second after the leader (R5's
+one wave holds when the plan is under it); frames may still be 50-150 ms apart while it runs (Foundry's own handling
+of the moves' writes, not the plan). Not deployed.
+

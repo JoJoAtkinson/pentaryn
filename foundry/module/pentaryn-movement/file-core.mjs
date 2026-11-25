@@ -12,7 +12,7 @@
 
 import { MOTION, closeTime, delayed, dist, nearestWhile, trajectory } from "./motion-core.mjs";
 import { firstIntrusion, pathLength } from "./group-core.mjs";
-import { pointsBack } from "./narrow-core.mjs";
+import { drain, pointsBack } from "./narrow-core.mjs";
 
 const EPS = 1e-6;
 
@@ -410,7 +410,15 @@ function crossesZone(z) {
  *          walk to the drop (the leader's squares in a march, the target's in a swarm) from where it starts; byWalk:
  *          the leader, then least walk left (a fight's order, 0.10 L3 R7: its slots are picked at each turn)
  */
-export function planLead(spec, o) {
+export function planLead(spec, o) { return drain(planLeadSteps(spec, o)); }
+
+/**
+ * planLead in steps (0.10.2: a big drop over a narrow way never freezes the page). It yields before each member and
+ * inside a route the `route` oracle gives as a generator (file.mjs: the pathfinder's slices); once the leader's slot and
+ * route are known it yields `{ lead }` (its entry, with `id`), so the drop can send the leader at once. Drained it is
+ * planLead (`drain`), the same plan for the same oracles and clock.
+ */
+export function* planLeadSteps(spec, o) {
   const now = o.now ?? (() => 0);
   const t0 = now();
   const members = (spec.members ?? []).map(m => ({ ...m, w: m.w ?? 1, h: m.h ?? m.w ?? 1 }));
@@ -430,10 +438,15 @@ export function planLead(spec, o) {
   const stays = [];                       // { x, y, r, id }: members that stay where they stand
   const blockedBy = list => c => list.some(s => dist(cellCentre(c), s) < s.r + 0.5 - EPS);
   const finish = () => { out.ms = Math.round((now() - t0) * 10) / 10; return out; };
-  const search = (m, to, avoid) => {
+  // No member starts on the leader's slot: nothing later can make the leader stay (only such a member blocks it).
+  const freeOfStarts = (lm, slot) => members.every(q => q === lm || dist(q.start, slot) >= q.r + lm.r - EPS);
+  const search = function* (m, to, avoid) {
     out.searches += 1;
     let pts = null;
-    try { pts = route(m, m.start, to, avoid); } catch { pts = null; }
+    try {
+      const r = route(m, m.start, to, avoid);
+      pts = r && typeof r.next === "function" ? yield* r : r;
+    } catch { pts = null; }
     const ok = pts?.length >= 2 && dist(pts.at(-1), to) <= 0.05 && !routeEnters(pts, m.r, avoid);
     if (!ok) { out.failed += 1; return null; }
     return pts;
@@ -491,12 +504,13 @@ export function planLead(spec, o) {
       else {
         if (!route) out.members[L.id] = { slot, points: null };
         else {
-          const pts = search(L, slot, standing);
+          const pts = yield* search(L, slot, standing);
           if (!pts) return everyoneStays("noRoute");
           out.members[L.id] = { slot, points: pts, walk: pathLength(pts) };
         }
       }
       at = slot;
+      yield { lead: { ...out.members[L.id], id: L.id }, free: freeOfStarts(L, slot) };
       const pts = out.members[L.id].points;
       from = pts?.length >= 2 ? pts.at(-2) : L.start;
     }
@@ -610,7 +624,7 @@ export function planLead(spec, o) {
     }
     return out2;
   };
-  const stayHere = (m, why) => {
+  const stayHere = function* (m, why) {
     out.members[m.id] = { slot: { ...m.start }, points: [m.start], stay: why };
     const me = { x: m.start.x, y: m.start.y, r: m.r, id: m.id };
     stays.push(me);
@@ -620,11 +634,12 @@ export function planLead(spec, o) {
     for (const [id, e] of Object.entries(out.members)) {
       if (id === m.id || e.stay) continue;
       const other = byId.get(id);
-      if (dist(e.slot, me) < other.r + me.r - EPS) { if (other === L) out.blocker = m.id; drop(id); stayHere(other, "blocked"); continue; }
+      if (dist(e.slot, me) < other.r + me.r - EPS) { if (other === L) out.blocker = m.id; drop(id); yield* stayHere(other, "blocked"); continue; }
       if (e.points?.length >= 2 && routeEnters(e.points, other.r, [me])) {
         const avoid = id === L.id && !target ? [...standing, ...stays] : [...standing, ...claims.filter(c => c.id !== id), ...stays];
-        const pts = route ? search(other, e.slot, avoid) : null;
-        if (pts) { e.points = pts; e.walk = pathLength(pts); } else if (other !== L) { drop(id); stayHere(other, "noRoute"); }
+        let pts = null;
+        if (route) pts = yield* search(other, e.slot, avoid);
+        if (pts) { e.points = pts; e.walk = pathLength(pts); } else if (other !== L) { drop(id); yield* stayHere(other, "noRoute"); }
       }
     }
   };
@@ -641,9 +656,10 @@ export function planLead(spec, o) {
   };
   if (!target && out.members[L.id]) makeRoom(out.members[L.id].slot, L.r);
   while (queue.length) {
+    yield;
     const m = queue.shift();
     out.order.push(m.id);
-    if (now() - t0 > (o.totalMs ?? LEAD.totalMs)) { stayHere(m, "budget"); continue; }
+    if (now() - t0 > (o.totalMs ?? LEAD.totalMs)) { yield* stayHere(m, "budget"); continue; }
     const taken = blockedBy([...claims, ...stays]);
     // Its way in: its own square in the area, else where its walk to the drop enters it, else the area's square
     // nearest it.
@@ -711,15 +727,16 @@ export function planLead(spec, o) {
       if (!route) { picked = { slot: s.centre, points: null, rank: s.rank }; break; }
       if (tries >= (o.tries ?? LEAD.tries)) break;
       tries += 1;
-      const pts = search(m, s.centre, avoid);
+      const pts = yield* search(m, s.centre, avoid);
       if (pts) { picked = { slot: s.centre, points: pts, rank: s.rank, walk: pathLength(pts) }; break; }
     }
     if (!picked) {
       if (m === L) return everyoneStays("noRoute");
-      stayHere(m, why);
+      yield* stayHere(m, why);
       continue;
     }
     out.members[m.id] = picked;
+    if (m === L) yield { lead: { ...picked, id: L.id }, free: freeOfStarts(L, picked.slot) };
     claims.push({ x: picked.slot.x, y: picked.slot.y, r: m.r, id: m.id });
     makeRoom(picked.slot, m.r);
   }

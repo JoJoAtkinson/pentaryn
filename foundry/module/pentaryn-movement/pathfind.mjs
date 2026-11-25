@@ -24,7 +24,7 @@ import { MOTION } from "./motion-core.mjs";
 import { MODULE } from "./movement-core.mjs";
 import { dnd5eMovementAutomation, setting } from "./settings.mjs";
 import { fieldFor, narrowFor, placesToAvoid } from "./pathfind-adapter.mjs";
-import { walkFor } from "./narrow-core.mjs";
+import { drain, walkForSteps } from "./narrow-core.mjs";
 import { fitPath } from "./group-adapter.mjs";
 
 /**
@@ -208,6 +208,9 @@ function inCombat(token) {
   try { return token.document?._shouldRecordMovementHistory?.() === true; } catch { return false; }
 }
 
+/** Steps of a narrow way's walk between two looks at the clock (planner's slices). */
+const WALK_CHECK = 4;
+
 /** A resumable search for leg a→b. `points` (pixel top-lefts, a and b excluded) once found. */
 function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   const leg = { a, b, state: "more", points: null, arcs: 0, nodes: 0, field: null, job: null };
@@ -242,7 +245,10 @@ function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
   leg.job = pf.searchWide({
     start, goal, edge: f.edge, wall: f.wall, unit: f.unit, maxNodes: LIMITS.maxNodes, now, more: nf?.more ?? null,
   }, f.lattice);
-  leg.finish = () => {
+  leg.finish = () => drain(leg.finishSteps());
+  // The leg's corners once its search found a path; yields inside a narrow way's walk (0.10.2: the walk is most of a
+  // route over the stair, and planner.step slices it like the search).
+  leg.finishSteps = function* () {
     leg.nodes = leg.job.expanded;
     // Through a narrow way (R9): one walk on its centre line, its corners every chord of it (no string pull, no arcs:
     // the band is both); in a fight its checkpoints are where the centre line enters each square.
@@ -277,7 +283,7 @@ function legPlan(token, a, b, options, smooth, { avoid = null } = {}) {
       };
       let walk = null;
       try {
-        walk = walkFor(nf.field, path.map(n => ({ ...nf.toAbs(n), c: n.c ?? 0 })),
+        walk = yield* walkForSteps(nf.field, path.map(n => ({ ...nf.toAbs(n), c: n.c ?? 0 })),
           { from: nf.centre(a), to: nf.centre(b), fight, pull, okSeg: nf.okSeg });
       } catch (err) { log?.debug?.("narrow walk", err); walk = null; }
       if (walk) {
@@ -329,21 +335,32 @@ function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid
   const t0 = now();
   let ms = 0;
 
+  // A found leg's walk runs in the same slices as the search (leg.walking: its finishSteps, unfinished); the clock is
+  // read every WALK_CHECK of its steps (a band's iteration is a fraction of a millisecond).
+  const walk = (leg, s0, budget) => {
+    for (let n = 1; ; n++) {
+      if (leg.walking.next().done) { leg.walking = null; return true; }
+      if (n % WALK_CHECK === 0 && now() - s0 >= budget) return false;
+    }
+  };
   const step = budget => {
     const s0 = now();
     for (const leg of legs) {
+      if (leg.walking) { if (!walk(leg, s0, budget)) return "more"; continue; }
       if (leg.state !== "more") continue;
       const left = budget - (now() - s0);
       if (left <= 0) return "more";
       const r = leg.job.run(left);
       if (r === "more") return "more";
       leg.state = r;
-      if (r === "found") leg.finish();
+      if (r === "found") { leg.walking = leg.finishSteps(); if (!walk(leg, s0, budget)) return "more"; }
       else leg.nodes = leg.job.expanded;
     }
     ms = now() - t0;
     return "done";
   };
+  /** A walk still running when the search is stopped (its cap) ends now: a found leg always gets its corners. */
+  const settleWalks = () => { for (const leg of legs) if (leg.walking) { drain(leg.walking); leg.walking = null; } };
 
   const build = useArcs => {
     const out = waypoints.slice(0, from + 1);
@@ -355,6 +372,7 @@ function planner(token, waypoints, options, from, wrapped, base, smooth, { avoid
   };
 
   const result = () => {
+    settleWalks();
     const baseReach = pf.reachedCount(base.result, waypoints, same);
     const found = legs.some(l => l.state === "found");
     let best = base.result;
@@ -567,14 +585,23 @@ function originOf(tokenDoc) {
  *           than its per-member budget, so one long or impossible route never freezes the drop.
  * Returns { reached, straight, path, cost, legs, arcs, ms }.
  */
-function routeTo(token, origin, dest, opts = {}) {
-  const t0 = now();
+function routeTo(token, origin, dest, opts = {}) { return drain(routeToSteps(token, origin, dest, opts)); }
+
+/**
+ * routeTo in slices (0.10.2, a group plan that never freezes the page): yields between the search's slices and inside
+ * a narrow way's walk; `clock` is the caller's (a sliced plan's busy time, so its cap counts the route's own work, not
+ * the frames between slices). Drained, it is routeTo.
+ */
+function* routeToSteps(token, origin, dest, opts = {}, clock = now) {
+  const t0 = clock();
   const cap = Math.min(opts.maxMs ?? LIMITS.totalMs, LIMITS.totalMs);
   const gen = routeSteps(token, origin, dest, opts);
-  for (;;) {
-    const r = gen.next(now() - t0 >= cap);
-    if (r.done) return r.value;
+  let r = gen.next(false);
+  while (!r.done) {
+    yield;
+    r = gen.next(clock() - t0 >= cap);
   }
+  return r.value;
 }
 
 /**
@@ -716,6 +743,7 @@ export function install(reg, ctx) {
     pathfindStatus: status,
     pathfindRoute: route,
     pathfindRouteTo: routeTo,
+    pathfindRouteSliced: routeToSteps,
     pathfindRouteToAsync: routeToAsync,
     pathfindRouteSteps: routeSteps,
     pathfindOrigin: originOf,

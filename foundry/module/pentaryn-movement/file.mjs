@@ -28,10 +28,10 @@
  * A wave skips a member no longer at its start (drop.mjs).
  */
 
-import { LEAD, STAGGER, footprintCells, heap, planLead, routeEnters, staggerFile } from "./file-core.mjs";
+import { LEAD, STAGGER, footprintCells, heap, planLead, planLeadSteps, routeEnters, staggerFile } from "./file-core.mjs";
 import { GROUP_MAX, radiusOf } from "./motion-core.mjs";
 import { pathLength } from "./group-core.mjs";
-import { pointsBack } from "./narrow-core.mjs";
+import { drain, pointsBack } from "./narrow-core.mjs";
 import { avoidDist } from "./pathfind-core.mjs";
 import { gridSize, inCombat, memberOf, othersOf, restWalkable, toSquares, toTopLeft } from "./group-adapter.mjs";
 import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
@@ -79,8 +79,11 @@ function holdGroup(ids, scene) {
   return gid;
 }
 
-/** Is a group still busy on this client: a wave to send, or a fight queue running? */
-const busy = g => g.waves.length > 0 || !!g.queue;
+/** Is a group still busy on this client: a wave to send, a fight queue running, or its plan still running (0.10.2)? */
+const busy = g => g.waves.length > 0 || !!g.queue || !!g.planning;
+
+/** A group whose plan still runs in slices (drop.mjs): kept while it plans; `alive` says whether it still is held. */
+function groupPlanning(gid, on) { const g = groups.get(gid); if (g) { g.planning = !!on; g.at = Date.now(); } return !!g; }
 
 /** Drop groups whose members are all at rest, or older than HOLD_MS (no timers: read when asked). */
 function prune() {
@@ -558,12 +561,12 @@ function narrowParts(field, nf) {
  * walk order is then front first: a member resting nearer the leader goes before one behind it, whose way it would
  * pass at rest. Changes `plan` in place.
  */
-function lineBehind(plan, members, standing, origins, s, nf) {
+function* lineBehind(plan, members, standing, origins, s, nf, clock = now) {
   const L = members.find(m => m.id === plan.leader);
   const pts = plan.members[L?.id]?.points;
   if (!nf || !L || plan.none || !(pts?.length >= 2)) return;
   const byId = new Map(members.map(m => [m.id, m]));
-  const route = routeOracle(origins, s);
+  const route = routeOracle(origins, s, null, clock);
   // `slack` (squares): the route's goal moves by a pixel onto the centre line (its own rest point, on whole pixels).
   const clear = (p, r, list, slack = 0) => list.every(o => Math.max(Math.abs(p.x - o.x), Math.abs(p.y - o.y)) >= o.r + r - 1 / s + slack);
   // A rest's walk from the leader: a line point's own; a square's rank (its walk from the square behind the leader), +1.
@@ -574,7 +577,7 @@ function lineBehind(plan, members, standing, origins, s, nf) {
   };
   const total = pathLength(pts);
   // Inside the plan's own time (LEAD.totalMs, planLead's part off it).
-  const until = now() + Math.max(0, LEAD.totalMs - (plan.ms ?? 0));
+  const until = clock() + Math.max(0, LEAD.totalMs - (plan.ms ?? 0));
   // How far back along the leader's way it is still a narrow way for a body of radius r (squares; 0: nowhere on it).
   const tightTo = new Map();
   const narrowEnd = (m) => {
@@ -594,12 +597,13 @@ function lineBehind(plan, members, standing, origins, s, nf) {
   const throughNone = !at || !!nf.tight(Math.floor(at.y), Math.floor(at.x));
   let lined = 0, stranded = 0;
   for (const id of plan.byWalk ?? []) {
+    yield;
     const m = byId.get(id), e = plan.members[id];
     if (!m || m === L || m.w > 1 || m.h > 1 || !e || (e.stay && e.stay !== "noSpot" && e.stay !== "noRoute")) continue;
     const others = [...standing, ...Object.entries(plan.members).filter(([oid]) => oid !== id)
       .map(([oid, o]) => ({ ...(o.stay ? byId.get(oid).start : o.slot), r: byId.get(oid).r, id: oid }))];
     let got = null, failedIn = null;
-    for (let k = 0, tries = 0; !got && tries < LEAD.tries && k * 0.1 < Math.min(total + 1e-9, far(id)) && now() < until; k++) {
+    for (let k = 0, tries = 0; !got && tries < LEAD.tries && k * 0.1 < Math.min(total + 1e-9, far(id)) && clock() < until; k++) {
       const p = restOn(nf, pointsBack(pts, [k * 0.1])[0], m, s);
       if (!p || nf.widthAt(p.x, p.y) >= 2 * m.r || !clear(p, m.r, others, LINE_SLACK)) continue;
       const sq = `${Math.floor(p.y)},${Math.floor(p.x)}`;
@@ -610,7 +614,7 @@ function lineBehind(plan, members, standing, origins, s, nf) {
       const avoid = others.filter(o => !plan.members[o.id] || plan.members[o.id].stay || plan.members[o.id].atStart || far(o.id) < d);
       tries += 1;
       let way = null;
-      try { way = route(m, m.start, p, avoid); } catch { way = null; }
+      try { way = yield* route(m, m.start, p, avoid); } catch { way = null; }
       const end = way?.at(-1);
       // A route that failed, or ended too near another's rest: the next clear point back (0.10 sign-off X2), in the
       // next square (0.10.1, live S05.q: the second on the line failed twice in the square just behind the first's).
@@ -661,9 +665,12 @@ function restOn(nf, q, m, s) {
   return toSquares(tl, m.w, m.h, s);
 }
 
-/** A route oracle for planLead (centres in squares; avoid circles in squares, their own radius). */
-function routeOracle(origins, s, leaderId = null) {
-  return (m, from, to, avoid) => {
+/**
+ * A route oracle for planLead (centres in squares; avoid circles in squares, their own radius): a generator over the
+ * pathfinder's slices (0.10.2), timed on `clock` (a sliced plan's busy time); drained (`drain`) it is the route.
+ */
+function routeOracle(origins, s, leaderId = null, clock = now) {
+  return function* (m, from, to, avoid) {
     const origin = origins.get(m.id);
     const tl = toTopLeft(to, m.w, m.h, s);
     const onGrid = tl.x % s === 0 && tl.y % s === 0;
@@ -672,8 +679,11 @@ function routeOracle(origins, s, leaderId = null) {
     const circles = avoid.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + m.r) * s - 1, box: true }))
       .filter(c => avoidDist(c, start, start) >= c.r);
     let r = null;
-    try { r = feature.exposed.pathfindRouteTo?.(m.token, origin, dest, { preview: true, avoid: circles.length ? circles : null, maxMs: m.id === leaderId ? LEADER_ROUTE_MS : ROUTE_MS }); }
-    catch (err) { log?.debug?.("file: a route", err); r = null; }
+    const opts = { preview: true, avoid: circles.length ? circles : null, maxMs: m.id === leaderId ? LEADER_ROUTE_MS : ROUTE_MS };
+    try {
+      const sliced = feature.exposed.pathfindRouteSliced;
+      r = typeof sliced === "function" ? yield* sliced(m.token, origin, dest, opts, clock) : feature.exposed.pathfindRouteTo?.(m.token, origin, dest, opts);
+    } catch (err) { log?.debug?.("file: a route", err); r = null; }
     if (!r?.reached || !(r.path?.length >= 2)) return null;
     const pts = r.path.map(p => toSquares(p, m.w, m.h, s));
     pts.px = r.path;
@@ -694,9 +704,17 @@ function dropPoints(target, drop, L) {
  * leaders (drop.mjs). Returns { plan, members, timing }, or null when there is nothing to plan. Reads only; never
  * throws past the caller's catch (drop.mjs: core's drop).
  */
-function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
+function planDrop(anchor, contexts, o = {}) { return drain(planDropSteps(anchor, contexts, o)); }
+
+/**
+ * planDrop in steps (0.10.2): it yields between members, inside every route (the pathfinder's slices and a narrow
+ * way's walk) and `{ lead }` once the leader's slot and route are known; `clock` is the plan's (a sliced plan's busy
+ * time). Drained it is planDrop: the same plan.
+ */
+function* planDropSteps(anchor, contexts, { constrain = {}, group = [], clock = now } = {}) {
   if (!feature || !anchor || contexts.length < 1) return null;
   const { s, members, standing, origins, walkable, step, narrow, mine, from } = oraclesFor(anchor, contexts, constrain, group);
+  yield;
   const L = members[0];
   const target = targetOf(anchor, L.formation, mine, s);
   // A march dropped in a tight square (0.10 R9): the leader rests where it may there, on the narrow way's centre line.
@@ -713,10 +731,10 @@ function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
   // The door plug (0.10.2) at a door or a mouth on plain squares only: past a narrow way's tight squares the members
   // line up behind the leader on it (lineBehind).
   const chokeOk = z => !narrow || z.cells.every(c => !narrow.tight(c.i, c.j));
-  const plan = planLead({ members, leaderId: L.id, drop, target, standing },
-    { walkable: mayRest, step, route: routeOracle(origins, s, L.id), now, chokeOk });
+  const plan = yield* planLeadSteps({ members, leaderId: L.id, drop, target, standing },
+    { walkable: mayRest, step, route: routeOracle(origins, s, L.id, clock), now: clock, chokeOk });
   if (!target && !plan.none) {
-    try { lineBehind(plan, members, standing, origins, s, narrow); } catch (err) { log?.debug?.("file: the line behind", err); }
+    try { yield* lineBehind(plan, members, standing, origins, s, narrow, clock); } catch (err) { log?.debug?.("file: the line behind", err); }
   }
   // The start delays, the last within 4 s of the drop (the plan's own time comes off the cap).
   const walks = plan.order.map(id => members.find(m => m.id === id))
@@ -783,7 +801,7 @@ function slotAtTurn(token, { shape = "march", target = null, leaderId = null, le
     // leader than the square planLead gave; `line`: that point only (R3's fallback: no square, or no route to it).
     if (leader && narrow && m.w <= 1 && m.h <= 1) {
       let way = leaderAt.way?.length >= 2 ? leaderAt.way.map(p => toSquares(p, leader.w, leader.h, s)) : null;
-      if (!way) { try { way = routeOracle(origins, s)(m, m.start, leader.start, []); } catch { way = null; } }
+      if (!way) { try { way = drain(routeOracle(origins, s)(m, m.start, leader.start, [])); } catch { way = null; } }
       const far = slot && Number.isFinite(e.rank) ? e.rank + 1 : Infinity;
       const total = way ? pathLength(way) : 0;
       for (let k = 0; k * 0.1 < Math.min(total + 1e-9, far); k++) {
@@ -858,8 +876,8 @@ export function install(reg, ctx) {
   reg.on("deleteCombat", combat => onCombatChange(combat, null), { label: "deleteCombat: the fight's end empties the fight queues" });
   try { globalThis.document?.addEventListener?.("visibilitychange", onVisibility); } catch (err) { log?.debug?.("file: visibility listener", err); }
   ctx.expose({ groupCancel, groupMembers, groupNoteStop, groupHold: holdGroup, groupHeld: heldCount, groupStopped: stoppedLast,
-    groupMax: () => GROUP_MAX, groupPlan: planDrop, groupFightPlan: fightPlan, groupSlotAtTurn: slotAtTurn, groupWaypoints: waypointsFor, groupDryRun: dryRun,
-    groupWaves: scheduleWaves, groupPending: pendingWaves, groupPendingEnds: pendingEnds, groupFlushed: () => (flushLast ? { ...flushLast } : null),
+    groupMax: () => GROUP_MAX, groupPlan: planDrop, groupPlanSteps: planDropSteps, groupFightPlan: fightPlan, groupSlotAtTurn: slotAtTurn, groupWaypoints: waypointsFor, groupDryRun: dryRun,
+    groupWaves: scheduleWaves, groupPlanning, groupAlive: gid => groups.has(gid), groupPending: pendingWaves, groupPendingEnds: pendingEnds, groupFlushed: () => (flushLast ? { ...flushLast } : null),
     groupQueue: setQueue, groupQueueDone: queueDone, groupCancelQueues: cancelQueues });
 }
 

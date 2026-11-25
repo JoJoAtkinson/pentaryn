@@ -56,7 +56,7 @@ let dropSeq = 0;
 const MOVE_MS = 10000;
 
 const now = () => globalThis.performance?.now?.() ?? Date.now();
-const perf = { drops: 0, maxMs: 0, lastMs: null };
+const perf = { drops: 0, maxMs: 0, lastMs: null, planMs: null, longestMs: 0 };
 
 function fellBack(reason) {
   fallbacks.unshift({ at: new Date().toISOString(), reason });
@@ -1133,7 +1133,252 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
   const leaders = riders?.size ? contexts.filter(c => !riders.has(c.token.document.id)) : contexts;
   // Every token dragged is in the group for the plan (0.10 F1 B3): a rider never stands in the way, nor is the target.
   const group = contexts.map(c => c.token.document.id);
-  const out = feature.exposed.groupPlan?.(anchor, leaders, { constrain: grabbed._getDragConstrainOptions?.() ?? {}, group });
+  const o = { constrain: grabbed._getDragConstrainOptions?.() ?? {}, group };
+  const stepsOf = feature.exposed.groupPlanSteps;
+  if (typeof stepsOf !== "function") return launch(grabbed, result, riders, seq, feature.exposed.groupPlan?.(anchor, leaders, o));
+  // 0.10.2 (no page freeze): the plan runs in this drop's own slice (PLAN.syncMs); one done in it goes out with the
+  // drop, as before. A longer one goes on in slices between frames (planLater), the leader at once when it can.
+  const clock = sliceClock();
+  const gen = stepsOf(anchor, leaders, { ...o, clock: clock.now });
+  const forced = forcedSteps();
+  const t0 = now();
+  let r, leadAt = null, n = 0, t = t0;
+  do {
+    r = gen.next();
+    n += 1;
+    if (!r.done && r.value?.lead) leadAt = r.value;
+  } while (!r.done && (forced ? !leadAt : (t = now()) - t0 < PLAN.syncMs));
+  if (r.done) return launch(grabbed, result, riders, seq, r.value);
+  clock.pause(forced || r.done ? now() : t);
+  return planLater(grabbed, contexts, result, riders, seq, { gen, clock, leadAt, t0, forced });
+}
+
+/* -------------------------------------------- */
+/*  A plan in slices (0.10.2)                   */
+/* -------------------------------------------- */
+
+/**
+ * A group plan longer than the drop's own slice (eight over the spiral stair: 0.57-0.89 s, the page frozen) goes on in
+ * slices of PLAN.sliceMs between frames; its clock is the slices' own time (sliceClock), so every cap in it counts the
+ * plan's work, as a synchronous one does, and the plan is the same.
+ */
+const PLAN = Object.freeze({ syncMs: 16, sliceMs: 8, frameMs: 24, frameWaitMs: 100 });
+let planLast = null;                       // the last plan that ran in slices, for status()
+
+/**
+ * `CONFIG.debug["pentaryn-movement.planSteps"]` = n (the tests' own clock): the drop's own slice runs until the leader is
+ * known, every later slice is n of the plan's steps.
+ */
+const forcedSteps = () => { const n = Number(globalThis.CONFIG?.debug?.[`${MODULE}.planSteps`]); return Number.isFinite(n) && n > 0 ? n : 0; };
+
+/**
+ * The plan's clock: the time spent in its slices (ms), not the frames between them. `resume` returns the slice's start
+ * and `pause` takes its end, the times the driver read anyway (one clock read fewer per slice).
+ */
+function sliceClock() {
+  let busy = 0, start = now();
+  return {
+    now: () => busy + (start === null ? 0 : now() - start),
+    pause(at = now()) { if (start !== null) { busy += at - start; start = null; } },
+    resume() { if (start === null) start = now(); return start; },
+    get busy() { return busy; },
+  };
+}
+
+/**
+ * Let the page take input before the next slice, and draw a frame when the last one is PLAN.frameMs old: a task boundary
+ * alone lets Chrome put off its frames by up to ~100 ms while a plan keeps the thread busy (0.10.2, the GPU page: eight
+ * over the stair, 133 ms between two frames with no task over 50 ms). Hidden, or no frame within PLAN.frameWaitMs (a
+ * background tab draws none): the next slice anyway. Off the page (the tests): a timer.
+ */
+let lastFrame = 0;
+function nextSlice() {
+  const win = globalThis.window;
+  const raf = globalThis.requestAnimationFrame;
+  const post = res => {
+    if (typeof globalThis.scheduler?.yield === "function") return globalThis.scheduler.yield().then(res);
+    if (typeof globalThis.MessageChannel !== "function") return setTimeout(res, 0);
+    const ch = new MessageChannel();
+    ch.port1.onmessage = () => { ch.port1.close(); res(); };
+    ch.port2.postMessage(0);
+  };
+  if (!win) return new Promise(res => setTimeout(res, 0));
+  const visible = globalThis.document?.visibilityState !== "hidden";
+  if (!visible || typeof raf !== "function" || now() - lastFrame < PLAN.frameMs) return new Promise(post);
+  return new Promise(res => {
+    let done = false;
+    const go = () => { if (!done) { done = true; post(res); } };
+    raf(() => { lastFrame = now(); go(); });
+    setTimeout(go, PLAN.frameWaitMs);
+  });
+}
+
+/**
+ * The leader may set off before the rest are planned when its slot and route are known (planLead's `{ lead }`) and no
+ * member stands on its slot (only such a member could make it stay: then the plan decides, as before).
+ */
+const earlyLead = l => !!l?.free && !l.lead?.atStart && l.lead?.points?.length >= 2 && !l.lead.stay;
+
+/**
+ * The rest of a group drop's plan, in slices. Nothing of core's update goes out at the drop: the leader's own move does
+ * when it may start early (`leadAt`, the drop's own update), else as soon as it may, else with the others once the
+ * plan is done. Every member then goes as its wave comes (sendWave: still at its start and not dropped again, its way
+ * open past the walls, doors and tokens standing as they are then, else it stays, named), the waves timed from the
+ * drop. A click on the moving leader stops the plan with the group; a new drop of them supersedes it. Returns the
+ * drop's update or null.
+ */
+function planLater(grabbed, contexts, result, riders, seq, { gen, clock, leadAt, t0, forced }) {
+  const scene = grabbed.document.parent;
+  const at = Date.now();
+  const ids = [...new Set(contexts.map(c => c.token.document.id))];
+  const starts = new Map(ids.map(id => [id, { ...(scene?.tokens?.get?.(id)?._source ?? {}) }]));
+  const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
+  const tag = gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null;
+  if (gid) feature.exposed.groupPlanning?.(gid, true);
+  // This drop's record (status().group.last): a later drop replaces `last`, never this one's fields.
+  const rec = last;
+  const job = { at, slices: 0, longestMs: 0, sent: null, done: false, rec };
+  planLast = { at: new Date().toISOString(), members: ids.length, state: "planning", early: false, syncMs: Math.round((now() - t0) * 10) / 10, slices: 0, longestMs: 0, busyMs: null, wallMs: null };
+  Object.assign(rec, { result: "planning", async: true });
+  const opts = {};
+  for (const [k, v] of Object.entries(result[1])) if (k !== "movement") opts[k] = v;
+  if (tag) opts[GROUP_OPT] = tag;
+  const base = result[1].movement ?? {};
+  const ridersOf = id => [...(riders ?? new Map())].filter(([, r]) => r.leader === id).map(([id2]) => id2);
+  const alive = () => !!feature && (!gid || feature.exposed.groupAlive?.(gid) !== false) && ids.some(id => latestDrop.get(id) === seq);
+  const leaderWps = l => feature.exposed.groupWaypoints?.(null, l.lead) ?? [];
+  /** The leader's update (the drop's own, built as launch builds it), or null. */
+  const leaderNow = l => {
+    const wps = leaderWps(l);
+    if (!wps.length) return null;
+    const id = l.lead.id;
+    const options = { ...result[1], movement: { [id]: { ...(base[id] ?? { planned: false }), waypoints: wps } } };
+    options[LEAD_OPT] = [id, ...ridersOf(id)];
+    if (tag) options[GROUP_OPT] = tag;
+    job.sent = new Set([id, ...ridersOf(id)]);
+    planLast.early = true;
+    return carryRiders(riders, [[{ _id: id }], options]);
+  };
+  let early = null;
+  if (earlyLead(leadAt)) {
+    try { early = leaderNow(leadAt); } catch (err) { log.debug?.("plan in slices: the leader at once", err); early = null; job.sent = null; }
+    if (early) noteInFlight(scene, early[0], early[1].movement);
+  }
+  /** The leader found in a later slice: it goes now, its way tested as a wave's (sendWave). */
+  const leadLater = l => {
+    const wps = leaderWps(l);
+    if (!wps.length) return;
+    const id = l.lead.id;
+    job.sent = new Set([id, ...ridersOf(id)]);
+    planLast.early = true;
+    sendWave(grabbed, [id], { later: new Map([[id, { wps, delay: 0 }]]), base, opts: { ...opts, [LEAD_OPT]: [id, ...ridersOf(id)] }, riders, seq, starts, scene, ids });
+  };
+  const finish = out => {
+    job.done = true;
+    if (gid) feature?.exposed?.groupPlanning?.(gid, false);
+    Object.assign(planLast, { busyMs: Math.round(clock.busy * 10) / 10, wallMs: Date.now() - at, slices: job.slices, longestMs: job.longestMs });
+    perf.planMs = planLast.wallMs; perf.longestMs = Math.max(perf.longestMs ?? 0, job.longestMs);
+    if (!feature) return;
+    if (!alive()) { planLast.state = "superseded"; rec.result = "stopped"; return; }
+    planLast.state = "done";
+    launchLater(grabbed, result, riders, seq, out, { job, gid, tag, opts, base, starts, scene, ids, ridersOf });
+  };
+  const fail = err => {
+    job.done = true;
+    if (gid) feature?.exposed?.groupPlanning?.(gid, false);
+    planLast.state = "failed";
+    failed("plan", err);
+    // Fail open (as a throw at the drop): core's move, when nothing of the group has gone yet.
+    if (feature && !job.sent && alive()) {
+      rec.result = "core";
+      fellBack("throw");
+      Promise.resolve(scene.updateEmbeddedDocuments("Token", carryRiders(riders, result)[0], result[1])).catch(e => failed("plan", e));
+    }
+  };
+  (async () => {
+    for (;;) {
+      await nextSlice();
+      if (!feature || !alive()) { if (gid) feature?.exposed?.groupPlanning?.(gid, false); if (planLast) planLast.state = "superseded"; if (rec.result === "planning") rec.result = "stopped"; return; }
+      const s0 = clock.resume();
+      let r, n = 0, t = s0;
+      try {
+        do {
+          r = gen.next();
+          n += 1;
+          if (!r.done && r.value?.lead && !job.sent && earlyLead(r.value)) leadLater(r.value);
+        } while (!r.done && (forced ? n < forced : (t = now()) - s0 < PLAN.sliceMs));
+      } catch (err) { clock.pause(); fail(err); return; }
+      if (forced || r.done) t = now();
+      clock.pause(t);
+      job.slices += 1;
+      job.longestMs = Math.max(job.longestMs, Math.round((t - s0) * 10) / 10);
+      if (r.done) {
+        const f0 = now();
+        try { finish(r.value); } catch (err) { fail(err); }
+        if (planLast) planLast.launchMs = Math.round((now() - f0) * 10) / 10;
+        return;
+      }
+    }
+  })();
+  return early;
+}
+/**
+ * A plan finished in slices: the drop's launch (records, notices) with every member not sent yet going as its wave
+ * comes, timed from the drop: the leader (when it could not go early) and its delay-0 mates now, in one update drawn
+ * on top (R6); each later wave on its own timer, one already due a millisecond apart in its order, so no task sends
+ * them all (each wave's write is a measurable part of a frame).
+ */
+function launchLater(grabbed, result, riders, seq, out, { job, gid, opts, base, starts, scene, ids, ridersOf }) {
+  const rec = job.rec;
+  if (!out) { fellBack("noPlan"); rec.result = job.sent ? "plan" : "core"; if (!job.sent) Promise.resolve(scene.updateEmbeddedDocuments("Token", carryRiders(riders, result)[0], result[1])).catch(e => failed("plan", e)); return; }
+  const { plan, members, timing } = out;
+  const delays = timing?.delays ?? {};
+  const elapsed = Date.now() - job.at;
+  const later = new Map(), now0 = [], timed = {};
+  for (const m of members) {
+    if (job.sent?.has(m.id)) continue;
+    const wps = feature.exposed.groupWaypoints(m, plan.members[m.id]);
+    if (!wps.length) continue;
+    const d = delays[m.id] ?? 0;
+    later.set(m.id, { wps, delay: d });
+    if (d > 0) timed[m.id] = d;
+    else now0.push(m.id);
+  }
+  const waveList = wavesOf(timed).map((w, k) => ({ at: Math.max(1 + k, w.at - elapsed), ids: w.ids }));
+  const waves = waveList.length + (now0.length ? 1 : 0) + (job.sent ? 1 : 0);
+  record(rec, plan, members, timing, waves);
+  rec.async = true;
+  const stayedDocs = plan.stayed.map(id => members.find(m => m.id === id)?.token?.document).filter(Boolean);
+  if (!later.size && !job.sent) {
+    rec.result = "none";
+    if (plan.none && plan.blocker) tellBlockedBy(grabbed, plan.blocker);
+    else if (plan.none || !stayedDocs.length) tell("noRoute", "groupNoRoute");
+    else tellStayed(stayedDocs);
+    return;
+  }
+  if (stayedDocs.length) tellStayed(stayedDocs);
+  const ends = new Map([...later].map(([id, v]) => [id, v.wps.at(-1)]));
+  const stayed = new Set();
+  const send = (list, o = opts) => sendWave(grabbed, list, { later, base, opts: o, riders, seq, starts, scene, ids, ends, stayed });
+  if (now0.length) {
+    const L = plan.leader;
+    send(now0, now0.includes(L) ? { ...opts, [LEAD_OPT]: [L, ...ridersOf(L)] } : opts);
+  }
+  if (gid && waveList.length) feature.exposed.groupWaves?.(gid, waveList, list => send(list), ends);
+}
+
+/** The drop's records (R13) for a plan: status().group.last and the telemetry. */
+function record(rec, plan, members, timing, waves) {
+  Object.assign(rec, { result: "plan", shape: plan.shape, leader: plan.leader, target: plan.target, stayed: [...plan.stayed], waves,
+    plan: { timingMs: plan.ms, searches: plan.searches, failed: plan.failed, total: timing?.total ?? 0, pack: timing?.pack ?? 0,
+      members: plan.order.length, crowded: timing?.crowded?.length ?? 0, staggerMs: timing?.ms ?? null,
+      plug: plan.choke ? { past: plan.choke.past, inside: plan.choke.inside.length } : null } });
+  feature.exposed.tele?.("plan", { mode: "file", shape: plan.shape, members: members.length, ms: plan.ms, searches: plan.searches, failed: plan.failed,
+    stayed: plan.stayed.length, waves, total: timing?.total ?? 0 });
+}
+
+/** A plan done in the drop's own slice: its update now, the later waves on their timers (as before 0.10.2). */
+function launch(grabbed, result, riders, seq, out) {
   if (!out) { fellBack("noPlan"); last.result = "core"; return carryRiders(riders, result); }
   const { plan, members, timing } = out;
   const delays = timing?.delays ?? {};
@@ -1149,12 +1394,7 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
   const waveList = wavesOf(Object.fromEntries([...later].map(([id, v]) => [id, v.delay])));
   const waves = waveList.length + (Object.keys(now0).length ? 1 : 0);
   // R13: the shape, the leader, the target, who stayed, the waves; the plan's time, searches and failed searches.
-  Object.assign(last, { result: "plan", shape: plan.shape, leader: plan.leader, target: plan.target, stayed: [...plan.stayed], waves,
-    plan: { timingMs: plan.ms, searches: plan.searches, failed: plan.failed, total: timing?.total ?? 0, pack: timing?.pack ?? 0,
-      members: plan.order.length, crowded: timing?.crowded?.length ?? 0, staggerMs: timing?.ms ?? null,
-      plug: plan.choke ? { past: plan.choke.past, inside: plan.choke.inside.length } : null } });
-  feature.exposed.tele?.("plan", { mode: "file", shape: plan.shape, members: members.length, ms: plan.ms, searches: plan.searches, failed: plan.failed,
-    stayed: plan.stayed.length, waves, total: timing?.total ?? 0 });
+  record(last, plan, members, timing, waves);
   const movement = {};
   const updates = [];
   for (const [id, wps] of Object.entries(now0)) {
@@ -1639,6 +1879,7 @@ function groupStatus() {
     queue: fightLast ? { ...fightLast } : null,
     leading: feature?.exposed?.leadingIds?.() ?? [],
     perf: { ...perf },
+    sliced: planLast ? { ...planLast } : null,
   };
 }
 
@@ -1680,6 +1921,7 @@ export function uninstall() {
   fallbacks.length = 0;
   latestDrop.clear();
   inFlight.clear();
-  Object.assign(perf, { drops: 0, maxMs: 0, lastMs: null });
+  Object.assign(perf, { drops: 0, maxMs: 0, lastMs: null, planMs: null, longestMs: 0 });
+  planLast = null;
   feature = null;
 }

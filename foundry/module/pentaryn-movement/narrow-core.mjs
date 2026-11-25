@@ -154,8 +154,9 @@ export function narrowField(walls, { lines = [], pad = 0.5, pass = NARROW.pass }
   const passMin = pass - NARROW.eps;
   /** The walls within reach of square (I, J) (from its centre: reach + half its diagonal). */
   const buckets = new Map();
+  // A number key (0.10.2: the band asks for a bucket on every clearance; the string key was a measurable part of it).
   const bucket = (I, J) => {
-    const key = sqKey(I, J);
+    const key = (I + 32768) * 65536 + (J + 32768);
     let b = buckets.get(key);
     if (b) return b;
     const list = chunks.get(`${Math.floor(I / CH)},${Math.floor(J / CH)}`) ?? [];
@@ -182,12 +183,16 @@ export function narrowField(walls, { lines = [], pad = 0.5, pass = NARROW.pass }
   /** The nearest wall point to (x, y), and the nearest one facing it across the way (or null). */
   const near = { d: 0, x: 0, y: 0, k: -1 };
   const opp = { d: 0, x: 0, y: 0, k: -1 };
+  // Each wall's nearest point from the first pass, read again by the second (0.10.2: one segNear per wall, not two).
+  let ND = new Float64Array(64), NX = new Float64Array(64), NY = new Float64Array(64);
   const nearest = (x, y) => {
     const b = bucket(Math.floor(y), Math.floor(x));
+    if (b.length > ND.length) { ND = new Float64Array(2 * b.length); NX = new Float64Array(2 * b.length); NY = new Float64Array(2 * b.length); }
     near.d = R; near.k = -1;
     for (let n = 0; n < b.length; n++) {
       const k = b[n];
       segNear(x, y, W[4 * k], W[4 * k + 1], W[4 * k + 2], W[4 * k + 3], scratch);
+      ND[n] = scratch.d; NX[n] = scratch.x; NY[n] = scratch.y;
       if (scratch.d < near.d) { near.d = scratch.d; near.x = scratch.x; near.y = scratch.y; near.k = k; }
     }
     if (near.k < 0 || near.d < EPS) { opp.k = -1; return; }
@@ -196,11 +201,11 @@ export function narrowField(walls, { lines = [], pad = 0.5, pass = NARROW.pass }
     for (let n = 0; n < b.length; n++) {
       const k = b[n];
       if (k === near.k) continue;
-      segNear(x, y, W[4 * k], W[4 * k + 1], W[4 * k + 2], W[4 * k + 3], scratch);
-      if (scratch.d >= opp.d || scratch.d < EPS) continue;
-      const vx = (x - scratch.x) / scratch.d, vy = (y - scratch.y) / scratch.d;
+      const d = ND[n];
+      if (d >= opp.d || d < EPS) continue;
+      const vx = (x - NX[n]) / d, vy = (y - NY[n]) / d;
       if (ux * vx + uy * vy > NARROW.opposing) continue;
-      opp.d = scratch.d; opp.x = scratch.x; opp.y = scratch.y; opp.k = k;
+      opp.d = d; opp.x = NX[n]; opp.y = NY[n]; opp.k = k;
     }
   };
 
@@ -692,12 +697,26 @@ export function finePath(field, nodes, from, to) {
  * token, else out to the padding radius); a move that would cross a wall, lose the pass radius, or that `okSeg`
  * refuses is not made. Returns the new points.
  */
-export function relax(field, pts, { okSeg = () => true, iterations = NARROW.iterations } = {}) {
+export function relax(field, pts, o = {}) { return drain(relaxSteps(field, pts, o)); }
+
+/** Run a generator to its end, every yield ignored (the synchronous form of a cooperative step). */
+export function drain(gen) {
+  for (;;) { const r = gen.next(); if (r.done) return r.value; }
+}
+
+/** relax, yielding after each iteration (0.10.2: a long band is a page's longest task; the plan slices it). */
+export function* relaxSteps(field, pts, { okSeg = () => true, iterations = NARROW.iterations } = {}) {
   let P = resample(pts, NARROW.spacing);
   if (P.length < 3) return P;
   const pm = field.passMin;
   let D = P.map(p => field.clearance(p.x, p.y));      // each point's clearance, kept as it moves
   let most = 0;                                       // the largest move of this iteration
+  // A point's step depends only on it and its two neighbours (and their clearances, kept with them): one whose last
+  // step moved nothing, none of the three moved since, would move nothing again, and is skipped (0.10.2: most of a
+  // long band settles early while a few points still move; the same band, a fraction of the work).
+  let tick = 0;
+  let changedAt = new Int32Array(P.length).fill(1), idleAt = new Int32Array(P.length);
+  tick = 1;
   const tryMove = (k, q) => {
     const p = P[k];
     let dx = q.x - p.x, dy = q.y - p.y;
@@ -713,6 +732,7 @@ export function relax(field, pts, { okSeg = () => true, iterations = NARROW.iter
     if (!okSeg(P[k - 1], r) || !okSeg(r, P[k + 1])) return false;
     P[k] = r;
     D[k] = dr;
+    changedAt[k] = ++tick;
     if (L > most) most = Math.min(L, NARROW.maxStep);
     return true;
   };
@@ -725,6 +745,9 @@ export function relax(field, pts, { okSeg = () => true, iterations = NARROW.iter
     let moved = 0;
     most = 0;
     for (let k = 1; k < P.length - 1; k++) {
+      const idle = idleAt[k];
+      if (idle && idle > changedAt[k - 1] && idle > changedAt[k] && idle > changedAt[k + 1]) continue;
+      const before = changedAt[k];
       const a = P[k - 1], b = P[k + 1], p = P[k];
       const m = { x: p.x + NARROW.lambda * ((a.x + b.x) / 2 - p.x), y: p.y + NARROW.lambda * ((a.y + b.y) / 2 - p.y) };
       const q = field.settle(m.x, m.y, NARROW.tube);
@@ -738,6 +761,7 @@ export function relax(field, pts, { okSeg = () => true, iterations = NARROW.iter
           if (Math.hypot(q3.x - p.x, q3.y - p.y) > 1e-6) tryMove(k, q3);
         }
       }
+      idleAt[k] = changedAt[k] === before ? ++tick : 0;
     }
     if ((it + 1) % 10 === 0 && it + 1 < iterations) {
       const R = resample(P, NARROW.spacing);
@@ -745,9 +769,10 @@ export function relax(field, pts, { okSeg = () => true, iterations = NARROW.iter
       // A resampled chord may not cut a corner the band went round.
       let ok = R.length >= 2;
       for (let k = 1; ok && k < R.length; k++) if (!field.segOk(R[k - 1], DR[k - 1], R[k], DR[k]) && field.crosses(R[k - 1], R[k])) ok = false;
-      if (ok) { P = R; D = DR; }
+      if (ok) { P = R; D = DR; changedAt = new Int32Array(P.length).fill(++tick); idleAt = new Int32Array(P.length); }
     }
     if (!moved || most < NARROW.settled) break;
+    yield;
   }
   // Last: every point settled once more (the narrow parts within the tube of the centre line).
   for (let k = 1; k < P.length - 1; k++) {
@@ -902,7 +927,10 @@ export function squareEntries(field, pts) {
  * @param {(p, q) => boolean} [o.okSeg]    the caller's own test of a straight move (tokens standing, traps, fog)
  * @returns {{ points: {x,y,checkpoint?}[], minClearance, narrow, settled } | null}
  */
-export function walkFor(field, nodes, { from, to, fight = false, pull = null, okSeg = () => true } = {}) {
+export function walkFor(field, nodes, o = {}) { return drain(walkForSteps(field, nodes, o)); }
+
+/** walkFor, yielding inside its bands (relaxSteps): the same walk, in slices. */
+export function* walkForSteps(field, nodes, { from, to, fight = false, pull = null, okSeg = () => true } = {}) {
   if (!nodes?.length) return null;
   const n = nodes.length;
   const mid = k => ({ x: nodes[k].J + 0.5, y: nodes[k].I + 0.5 });
@@ -945,7 +973,7 @@ export function walkFor(field, nodes, { from, to, fight = false, pull = null, ok
   let pts;
   let settled = true;
   if (!fight) {
-    const band = relax(field, P, { okSeg });
+    const band = yield* relaxSteps(field, P, { okSeg });
     pts = roundTurns(field, simplify(field, band, { okSeg }), { okSeg });
     if (!checkWalk(field, pts, { okSeg, ends: true }).ok) {
       settled = false;
@@ -959,7 +987,7 @@ export function walkFor(field, nodes, { from, to, fight = false, pull = null, ok
     for (const [lo, hi] of marks) {
       for (let k = at; k < lo; k++) pts.push({ x: P[k].x, y: P[k].y });
       const seg = P.slice(lo, hi + 1);
-      let band = roundTurns(field, simplify(field, relax(field, seg, { okSeg }), { okSeg }), { okSeg });
+      let band = roundTurns(field, simplify(field, yield* relaxSteps(field, seg, { okSeg }), { okSeg }), { okSeg });
       if (!checkWalk(field, band, { okSeg, ends: true }).ok) { settled = false; band = seg; }
       const marked = squareEntries(field, band);
       if (pts.length && Math.hypot(pts.at(-1).x - marked[0].x, pts.at(-1).y - marked[0].y) < 1e-9) pts.pop();

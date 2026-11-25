@@ -10,11 +10,28 @@ if (process.env.PENTARYN_HEADLESS_LIBS) env.LD_LIBRARY_PATH = [process.env.PENTA
 const browser = await puppeteer.connect({ browserURL: process.env.GPU_URL || "http://172.19.80.1:9334", protocolTimeout: 180_000, defaultViewport: null });
 const pages = {};
 const logs = {};
-async function open(user, id, cookieFile) {
+// A page may run this module from a local folder instead of the server's copy (`override`: the folder; or the env
+// ZZ_MODULE_OVERRIDE): its requests under /modules/pentaryn-movement/ are answered from there, nothing is deployed.
+const MOD_PATH = "/modules/pentaryn-movement/";
+const TYPES = { mjs: "text/javascript", js: "text/javascript", json: "application/json", css: "text/css", svg: "image/svg+xml", webp: "image/webp", png: "image/png" };
+async function overrideModule(p, dir) {
+  if (!dir) return;
+  const fs = await import("node:fs"), path = await import("node:path");
+  await p.setRequestInterception(true);
+  p.on("request", req => {
+    let u; try { u = new URL(req.url()); } catch { req.continue(); return; }
+    if (!u.pathname.startsWith(MOD_PATH)) { req.continue(); return; }
+    const f = path.join(dir, decodeURIComponent(u.pathname.slice(MOD_PATH.length)));
+    if (!f.startsWith(dir) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { req.continue(); return; }
+    req.respond({ status: 200, contentType: TYPES[f.split(".").pop()] ?? "application/octet-stream", headers: { "Cache-Control": "no-store" }, body: fs.readFileSync(f) });
+  });
+}
+async function open(user, id, cookieFile, override = process.env.ZZ_MODULE_OVERRIDE || null) {
   if (pages[user]) { try { await pages[user].ctx.close(); } catch {} }
   const ctx = await browser.createBrowserContext();
   const p = await ctx.newPage();
   await p.setViewport({ width: 1600, height: 1000 });
+  await overrideModule(p, override);
   logs[user] = [];
   p.on("console", m => { if (["error", "warn"].includes(m.type())) logs[user].push(`${m.type()}: ${m.text()}`.slice(0, 500)); });
   p.on("pageerror", e => logs[user].push(`pageerror: ${e.message}`.slice(0, 500)));
@@ -65,7 +82,7 @@ const server = http.createServer(async (req, res) => {
   let out;
   try {
     const j = body ? JSON.parse(body) : {};
-    if (req.url === "/open") out = await open(j.user, j.id, j.cookieFile);
+    if (req.url === "/open") out = await open(j.user, j.id, j.cookieFile, j.override ?? process.env.ZZ_MODULE_OVERRIDE ?? null);
     else if (req.url === "/openraw") out = await openRaw(j.user, j.id, j);
     else if (req.url === "/eval") out = await run(j.user, j.code);
     else if (req.url === "/mouse") {

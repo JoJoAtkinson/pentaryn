@@ -1,6 +1,37 @@
 # Changelog — pentaryn-movement
 
-## 0.10.2-dev — branch movement-0.9: the door plug (not deployed)
+## 0.10.2-dev — branch movement-0.9: the door plug, no page freeze (not deployed)
+
+- **[declared] No page freeze on a big drop over a narrow way** (`drop.mjs` `groupDrop` / `planLater`, `file.mjs`
+  `planDropSteps`, `file-core` `planLeadSteps`, `pathfind.mjs` `routeToSteps`, `narrow-core` `walkForSteps` /
+  `relaxSteps`). A group drop of eight over the spiral stair held the page 0.57-0.89 s while it planned (S05.p). The
+  plan is now a generator: it yields before each member, between the pathfinder's search slices and inside a narrow
+  way's walk (each band iteration). The drop runs it for 16 ms (`PLAN.syncMs`); a plan done by then goes out with the
+  drop exactly as before. A longer one goes on in 8 ms slices (`PLAN.sliceMs`) between frames (a frame is let through
+  when the last one is 24 ms old; a hidden tab does not wait for one), on a clock that counts only its own slices, so
+  every cap in it reads as before and the plan is the same. The leader sets off in the drop's own update as soon as
+  its slot and route are known and no member starts on its slot (only such a member could make it stay); else it goes
+  with the others. Every other member then goes as its wave comes, timed from the drop (a wave already due goes at
+  once, one wave per task), through the wave's own test: still at its start and not dropped again, its way open past
+  the walls, doors and tokens standing as they are then, else it stays, named. A click on the moving leader while the
+  rest are planned stops the plan with the group; a new drop of them supersedes it. `status().group.sliced`: the last
+  sliced plan (`state`, `early`, `syncMs`, `slices`, `longestMs`, `busyMs`, `wallMs`); `perf.planMs`, `perf.longestMs`.
+- **[declared] Plan time down where it was clear** (same results, bit for bit: 800 stair walks in Node against
+  0.10.2's first commit, and every page dry run's slots and routes): the band's `okSeg` asks each square's
+  creature test once per field with a number key (it built the memo's long key, avoid circles and all, tens of thousands
+  of times a route), skips the hazards' line when there is nothing to test, and does avoidHits' box test inline;
+  `nearest` measures each wall once (not once per pass); the narrow field's buckets have a number key; a band point
+  whose last step moved nothing, none of its neighbours moved since, is skipped.
+- Measured (GPU page, real drags, cold; nothing deployed, the page ran the branch by a module override): longest task
+  from the drop to the plan's end 950 → under 50 ms for eight over the stair (S05), 162 → under 50 for the S07 vault,
+  187 → under 50 for S15's twelve, 57 → under 50 / 182 → under 50 for S01's eight / twenty; the stair's plan 945 ms
+  blocked → 556 ms of work over 1.0 s; open ground about 8 % more work, spread over frames. At 4x throttle the drop's own
+  task stays under 55 ms (twenty took 0.8 s). The pack still waits for the whole plan (over the stair about a second).
+- Tests: `test/sliced.test.mjs` (the plan in slices equals the plan at once on 160 simulator seeds with random slice
+  sizes and routes that yield, the narrow walk on 20 C stairs, the door plug's 45 maps and their swarms, a march over
+  three C stairs); `drop.test` "0.10.2 no freeze" (the same moves sliced and at once, the leader in the drop's own update;
+  a door shut while the plan runs: nobody sent through it, the ones that stay named; a click on the leader ends the
+  plan). Playground suite: S05.r (GATED, GPU: no task over 60 ms from the pointerup to the plan's end).
 
 - **[declared] The door plug: dropped just past a door, more of the party comes through** (`file-core` `planLead`;
   Joe 2026-11-24 / 11-25: "would a little more of the party have come through here?"). A march leader dropped within

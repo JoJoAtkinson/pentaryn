@@ -177,6 +177,10 @@ function dropWith(grabbed, contexts) {
   return grabbed._prepareDragLeftDropUpdates({ interactionData: { contexts } });
 }
 const sent = from => F.calls.slice(from).filter(c => c.op === "scene.update");
+/** A plan running in slices (0.10.2) to its end: each slice waits for a timer (setTimeout 0 off the page). */
+async function planned(max = 50000) {
+  for (let k = 0; k < max && api.status().group.sliced?.state === "planning"; k++) { mock.timers.tick(1); await new Promise(r => setImmediate(r)); }
+}
 /** Every member's waypoints of a file: the drop's own update, then its later waves (after the clock ran 4.5 s). */
 function fileMoves(out, from) {
   const by = {};
@@ -4065,7 +4069,7 @@ test("0.10 F1 B2 (R7, R9) fight on Joe's S05: four dropped at 11 points along th
 
 const S06 = JSON.parse(readFileSync(new URL("./fixtures/narrow-stations.json", import.meta.url), "utf8")).stations.find(s => s.id === "S06");
 
-test("0.10 live round 1 (S06.a/e/f, S07.d/l, S05.j3/k3): the leader's route search on a slow page is not cut at a member's cap — a march of two over S06's S-curve, hairpin and pillar field arrives, nobody named", () => {
+test("0.10 live round 1 (S06.a/e/f, S07.d/l, S05.j3/k3): the leader's route search on a slow page is not cut at a member's cap — a march of two over S06's S-curve, hairpin and pillar field arrives, nobody named", async () => {
   combatFlag = false;
   clock.step = 0;
   const old = { walls: world.walls, rect: F.canvas.dimensions };
@@ -4088,6 +4092,8 @@ test("0.10 live round 1 (S06.a/e/f, S07.d/l, S05.j3/k3): the leader's route sear
         clock.step = 6;
         const from = F.calls.length;
         const out = dropWith(ts[0], ctx);
+        // 0.10.2: a plan this slow goes on in slices (its clock their own time), the same plan.
+        await planned();
         clock.step = 0;
         const last = api.status().group.last;
         assert.equal(last.result, "plan", `${p}: ${JSON.stringify(last)}`);
@@ -4250,4 +4256,97 @@ test("0.10.1 (S05.q leg 4, live round 5, R8): a member whose square is its own s
     });
     for (const j of [5, 6]) assert.ok(r.last.stayed.includes(ids[j]), `hero ${j + 1} (no way onto the stair) is named`);
   } finally { F.canvas.tokens.placeables = saved; done(); }
+});
+
+/* -------------------------------------------- */
+/*  0.10.2: a group plan in slices (no freeze)  */
+/* -------------------------------------------- */
+
+/** A march of four north of the door wall, dropped south through the door; `steps`: every slice that many plan steps. */
+async function slicedDrop(tag, steps, { between = null } = {}) {
+  const ts = [[100, 200], [200, 200], [300, 200], [200, 100]].map(([x, y], k) => makeToken(`sl${tag}${k}`.padEnd(16, "0"), x, y));
+  const others = keepOnly(ts);
+  for (const t of ts) t.visible = true;
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts];
+  if (steps) F.CONFIG.debug = { ...(F.CONFIG.debug ?? {}), [`${MOD}.planSteps`]: steps };
+  try {
+    const ctx = contextsFor(ts, 300, 500);              // the leader (100, 200) to (400, 700): through the door at x 400-500
+    const from = F.calls.length;
+    const out = dropWith(ts[0], ctx);
+    const early = out ? Object.keys(out[1].movement) : [];
+    const lead = out?.[1]?.pentarynMovementLead ?? null;
+    if (between) between(ts, out);
+    await planned();
+    const by = fileMoves(out, from);
+    return { ts, out, early, lead, by, from, status: api.status().group };
+  } finally {
+    if (steps) delete F.CONFIG.debug[`${MOD}.planSteps`];
+    F.canvas.tokens.placeables = saved;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+}
+const wpsOf = r => Object.fromEntries(r.ts.map((t, k) => [k, (r.by[t.document.id]?.waypoints ?? []).map(w => [w.x, w.y])]));
+
+test("0.10.2 no freeze: a group plan run in slices (one plan step a slice) sends every member the moves the plan done in the drop sends, the leader in the drop's own update", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const sync = await slicedDrop("A", 0);
+  assert.equal(sync.status.last.async, false, "done in the drop's own slice");
+  assert.ok(sync.early.length >= 1, "the drop's own update");
+  const sliced = await slicedDrop("B", 1);
+  assert.equal(sliced.status.sliced.state, "done");
+  assert.ok(sliced.status.sliced.slices > 3, `in slices: ${JSON.stringify(sliced.status.sliced)}`);
+  assert.equal(sliced.status.last.result, "plan");
+  assert.equal(sliced.status.last.async, true);
+  assert.deepEqual(sliced.early, [sliced.ts[0].document.id], "the leader alone sets off at the drop");
+  assert.deepEqual(sliced.lead, [sliced.ts[0].document.id], "drawn on top (R6)");
+  assert.equal(sliced.status.sliced.early, true);
+  assert.deepEqual(wpsOf(sliced), wpsOf(sync), "the same way for every member");
+  for (let k = 1; k < 4; k++) assert.ok(wpsOf(sliced)[k].length > 0, `member ${k} sent`);
+  assert.deepEqual(sliced.status.last.stayed, sync.status.last.stayed);
+});
+
+test("0.10.2 no freeze: a door shut while the plan runs is honoured: no member is sent through it, each that stays is named; the leader sent at the drop is the door cut's (R6-3)", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  const shut = [{ x: 400, y: 400 }, { x: 500, y: 400 }];
+  let fromShut = null;
+  try {
+    const r = await slicedDrop("C", 1, { between: () => { fromShut = F.calls.length; world.walls.push(shut); F.fire("updateWall", { id: "slWall0000000001", parent: sceneDoc, c: [400, 400, 500, 400], door: 1, ds: 0, move: 20, _source: { c: [400, 400, 500, 400], door: 1, ds: 0, move: 20 } }, { ds: 0 }, {}, "gm"); } });
+    const later = sent(fromShut).filter(c => r.ts.slice(1).some(t => c.ids?.includes?.(t.document.id) || c.options?.movement?.[t.document.id]));
+    for (const c of later) for (const [id, m] of Object.entries(c.options?.movement ?? {})) {
+      if (id === r.ts[0].document.id) continue;
+      const south = (m.waypoints ?? []).some(w => w.y + 50 > 400);
+      assert.ok(!south, `${id} sent through the shut door: ${JSON.stringify(m.waypoints.map(w => [w.x, w.y]))}`);
+    }
+    const named = F.calls.slice(fromShut).filter(c => c.op === "notify");
+    assert.ok(named.length > 0, "the ones that stay are named");
+    assert.equal(r.status.sliced.state, "done");
+  } finally {
+    const k = world.walls.indexOf(shut);
+    if (k >= 0) world.walls.splice(k, 1);
+    F.fire("updateWall");
+  }
+});
+
+test("0.10.2 no freeze: a click on the moving leader while the plan runs stops the group: the plan ends, nobody else is sent", async () => {
+  combatFlag = false;
+  clock.step = 0;
+  let fromClick = null;
+  const r = await slicedDrop("D", 1, { between: ts => {
+    const t = ts[0];
+    t.document._source = { ...t.document._source, x: 400, y: 700 };   // the server holds the leader's end
+    t.document.x = 150; t.document.y = 250;                          // drawn on its way
+    t.animationContexts.set(t.movementAnimationName, {});
+    clock.t += MOTION.armMs + 10;                                    // click-to-stop arms after the drop
+    fromClick = F.calls.length;
+    t._onClickLeft({});
+    t.animationContexts.clear();
+  } });
+  assert.equal(r.status.sliced.state, "superseded", JSON.stringify(r.status.sliced));
+  const others = r.ts.slice(1).map(t => t.document.id);
+  assert.ok(!sent(fromClick).some(c => others.some(id => c.options?.movement?.[id])), "no member sent after the stop");
 });
