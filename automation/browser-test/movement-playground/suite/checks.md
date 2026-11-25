@@ -99,6 +99,7 @@ Every check starts from the station's reset (its scenario and mode), does one th
 | S07.j | gpu | HARD | 1 |  | default/paths | a door shut mid-walk: nobody through it, each token rests where it is drawn |
 | S07.k | both | GATED | 3 | yes | default/paths | doors: the plan takes under 100 ms (8 members, open door) |
 | S07.l | state | HARD | 1 | yes | default/paths | secret door: the leader ends exactly on the vault drop square |
+| S07.s | state | HARD | 1 |  | default/paths | door plug (0.10.2): the leader dropped 2 squares past the open door, eight heroes: the five free squares of columns 56-57 inside (beside and behind it) each hold a hero before anyone waits outside; nobody ahead of it |
 
 ## S08 Unexplored room
 

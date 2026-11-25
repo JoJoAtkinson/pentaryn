@@ -1,5 +1,27 @@
 # Changelog — pentaryn-movement
 
+## 0.10.2-dev — branch movement-0.9: the door plug (not deployed)
+
+- **[declared] The door plug: dropped just past a door, more of the party comes through** (`file-core` `planLead`;
+  Joe 2026-11-24 / 11-25: "would a little more of the party have come through here?"). A march leader dropped within
+  about three squares past a one-wide door or mouth brought two or three through and the rest lined up outside though
+  the room had space: only squares behind the leader counted, and the first follower took the square just inside the
+  door, which shut the rest of the room off. Now, when the leader's route came through a narrow point (a one-wide
+  square, a door in a thin wall) and it rests within 4 squares of walk past it, on squares that are not narrow, the
+  squares on its side within 2.5 squares of it and never ahead of it go first: those behind it, then those beside it.
+  The square that would shut the others off from the way in fills last. Those with no free square left inside wait
+  outside, behind, as before. Members inside (Node, the leader 1 / 2 / 3 / 5 squares past a thick door, a thin-wall
+  door and a tunnel mouth; 4 / 8 / 12 members): 0.10.1 1 / 2 / 3 / 4-8-12, 0.10.2 1 / 4-8-10 / 4-8-12 / 4-8-12. One past
+  is unchanged: the leader stands in the way in and nobody passes it without a diagonal squeeze past the door frame,
+  which the route refuses.
+- Unchanged: open ground (nobody beside the leader), a one-wide tunnel (the line behind), a narrow way's tight squares
+  (`lineBehind`; file.mjs refuses a narrow point there), a deeper drop, a swarm, a fight (its turn plans with the leader
+  at rest, its order with no search: no plug). `planGroup` and `status().group.last.plan` carry `plug` (the walk past
+  and the squares inside; null when none).
+- Tests: `test/plug.test.mjs` (12 of its 16 fail on 0.10.1); the march shape oracle (`test/sim/shape.mjs`, the L1 gate's
+  and the simulator's) accepts the plug's squares, judged on their own; the regression seeds SIM-L3-01 954 and SIM-L3-11
+  9191 (new slots) re-found as 2412 and 11224. Playground suite: S07.s (HARD, two squares past the open door, eight heroes).
+
 ## 0.10.1 — branch movement-0.9: the stair's stragglers (S05.q)
 
 - **[declared] The line behind the leader on a narrow way, the next square after a failed route** (`file.mjs`

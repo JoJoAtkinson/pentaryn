@@ -12,6 +12,7 @@
 
 import { MOTION, closeTime, delayed, dist, nearestWhile, trajectory } from "./motion-core.mjs";
 import { firstIntrusion, pathLength } from "./group-core.mjs";
+import { pointsBack } from "./narrow-core.mjs";
 
 const EPS = 1e-6;
 
@@ -246,7 +247,13 @@ export function staggerFile(walks, o = {}) {
  *   MARCH (dropped on the floor): the leader ends on the drop square by its own route, round the tokens standing
  *     outside the group and through its own members. A square's rank is its walk from the square the leader steps
  *     out of on its last step (B), the leader's squares shut; only squares nearer B than the leader's own count (a tie
- *     only when it lies behind the leader's last step), so nobody rests beside or ahead of it.
+ *     only when it lies behind the leader's last step), so nobody rests beside or ahead of it. The door plug (0.10.2,
+ *     Joe 2026-11-24 / 11-25): when the leader's route came through a narrow point (a one-wide square, a door in a
+ *     thin wall; narrowZones) and it rests within LEAD.plug of walk past it, on squares that are not narrow, the
+ *     squares on its side within LEAD.beside of it and not ahead of it along its last step (`out.choke.inside`) go
+ *     first: those behind it (by their rank), then those beside it (ranked by that walk); a square of them that would
+ *     shut the others off from the narrow point's way in waits until the others are taken, so the doorway fills last.
+ *     The rest wait outside, behind as before.
  *   SWARM (dropped on a token outside the group): ranks are rings out from the target's whole footprint, never across a
  *     wall (ring 1 touches it). The leader has first pick.
  * "Can reach": a flood from the member's own way in (its own square, else the ranked area's square nearest it), shut
@@ -264,6 +271,8 @@ export const LEAD = Object.freeze({
   rings: 8,            // swarm rings round the target at most
   tries: 2,            // route searches a member at most (the second only after the first failed)
   totalMs: 1500,       // planning time for the whole drop: a member not reached by then stays and is named "budget"
+  plug: 4,             // the door plug (0.10.2): a march leader resting within this walk past a door or mouth ...
+  beside: 2.5,         // ... has the squares inside within this walk of it, not ahead of it, filled first
 });
 
 const cellKey = (i, j) => `${i},${j}`;
@@ -340,6 +349,39 @@ export function walkFrom(origins, step, { ok = () => true, maxCells = Infinity, 
 }
 
 /**
+ * The door plug's narrow point (0.10.2): the nearest narrow point (narrowZones: a one-wide square, the door in a thin
+ * wall) back along the leader's route within LEAD.plug of walk from its rest, when none of the leader's own squares is
+ * narrow (a leader in a tunnel or a doorway keeps the line behind it). { key, x, y, cells, past } or null (cells: its
+ * square, or the two its door joins; past: the walk back to it); `o.chokeOk` may refuse it (then none: a narrow point
+ * farther back never counts).
+ */
+function chokeBehind(points, mine, o) {
+  if (!(points?.length >= 2)) return null;
+  const zonesAt = narrowZones(o.step);
+  if (mine.some(c => zonesAt(cellCentre(c)).some(z => z.key[0] === "c"))) return null;
+  const plug = o.plug ?? LEAD.plug;
+  for (let k = 1; k * 0.1 <= plug + EPS; k++) {
+    const p = pointsBack(points, [k * 0.1])[0];
+    if (!p) return null;
+    const z = zonesAt(p)[0];
+    if (!z) continue;
+    const [a, b] = z.key.slice(1).split(",").map(Number);
+    const cells = z.key[0] === "c" ? [{ i: a, j: b }] : z.key[0] === "v" ? [{ i: a, j: b }, { i: a + 1, j: b }] : [{ i: a, j: b }, { i: a, j: b + 1 }];
+    const out = { ...z, cells, past: k / 10 };
+    return !o.chokeOk || o.chokeOk(out) ? out : null;
+  }
+  return null;
+}
+
+/** Does the step a → b go through narrow point z (into its one-wide square, or across its door)? */
+function crossesZone(z) {
+  const [p, q] = z.key.slice(1).split(",").map(Number);
+  if (z.key[0] === "c") return (a, b) => b.i === p && b.j === q;
+  if (z.key[0] === "v") return (a, b) => Math.min(a.i, b.i) === p && Math.max(a.i, b.i) === p + 1 && (a.j === q || b.j === q);
+  return (a, b) => Math.min(a.j, b.j) === q && Math.max(a.j, b.j) === q + 1 && (a.i === p || b.i === p);
+}
+
+/**
  * Plan a group drag by the leader rule.
  * @param {object} spec
  * @param {{ id, r, w?, h?, start: {x,y} }[]} spec.members  one entry a stack (its leader); the leader among them
@@ -357,9 +399,12 @@ export function walkFrom(origins, step, { ok = () => true, maxCells = Infinity, 
  *                                              the oracle adds m's), or null. Without it the slots are picked and
  *                                              nothing is searched (a fight routes at its turn).
  * @param {() => number} [o.now]                the plan's clock (ms)
+ * @param {(z: {key, x, y, cells}) => boolean} [o.chokeOk]  may this narrow point open the door plug's squares (file.mjs: not
+ *                                              one on a narrow way's tight squares, whose line behind is lineBehind's)?
  * @returns {{ shape: "march"|"swarm", leader: string, target: string|null, none: boolean,
  *            members: Object<string, { slot, points, stay?, rank?, atStart?, left }>, order: string[], byWalk: string[], stayed: string[],
- *            searches: number, failed: number, ms: number, behind: {x,y}|null, lastStep: {x,y}|null, blocker: string|null }}
+ *            searches: number, failed: number, ms: number, behind: {x,y}|null, lastStep: {x,y}|null, blocker: string|null,
+ *            choke: { key, x, y, past, inside: string[] }|null }}
  *          none: the leader has no way (nobody moves, "No route there"; blocker: the member that stays on its rest
  *          square, when that is why); stayed: the members named; left: a member's
  *          walk to the drop (the leader's squares in a march, the target's in a swarm) from where it starts; byWalk:
@@ -375,7 +420,7 @@ export function planLead(spec, o) {
   const target = spec.target ?? null;
   const shape = target ? "swarm" : "march";
   const out = { shape, leader: L?.id ?? null, target: target?.id ?? null, none: false, members: {}, order: [], byWalk: [], stayed: [],
-    searches: 0, failed: 0, ms: 0, behind: null, lastStep: null, blocker: null };
+    searches: 0, failed: 0, ms: 0, behind: null, lastStep: null, blocker: null, choke: null };
   if (!L) return out;
   const route = o.route ?? null;
   const n = members.length;
@@ -424,7 +469,9 @@ export function planLead(spec, o) {
   };
   // The origin of the ranks and of "walk left": the leader's squares (march) or the target's (swarm).
   let rank = new Map(), lead = new Map(), origins = [];
-  let leaderEntry = null;
+  const inside = new Map();               // the door plug's squares (0.10.2): key → walk from the leader
+  const beside = new Set();               // ... those of them not behind the leader (ranked by their walk from it)
+  const wayInto = [];                     // ... and the narrow point's square(s) outside them
   if (!target) {
     // The leader's slot and route (march).
     let at = spec.leaderAt?.at ?? null, from = spec.leaderAt?.from ?? null;
@@ -487,6 +534,24 @@ export function planLead(spec, o) {
         const back = (c.x - at.x) * u.x + (c.y - at.y) * u.y;
         if (d < f - EPS || (Math.abs(d - f) <= EPS && back < -EPS)) rank.set(k, d);
       }
+      const choke = route && !spec.leaderAt ? chokeBehind(out.members[L.id].points, mine, o) : null;
+      if (choke) {
+        // The door plug (0.10.2): the squares on the leader's side of the narrow point, near it, never ahead of it.
+        const shut = crossesZone(choke);
+        const side = (a, b) => o.step(a, b) && !shut(a, b);
+        const near = walkFrom(mine, side, { ok: c => !overStanding(c), maxWalk: o.beside ?? LEAD.beside });
+        // The way in: the narrow point's square(s) outside the leader's side.
+        const ours = walkFrom(mine, side, { maxCells: 2 * flood.maxCells });
+        wayInto.push(...choke.cells.filter(c => !ours.has(cellKey(c.i, c.j))));
+        for (const [k, d] of near) {
+          if (mineKeys.has(k)) continue;
+          const c = cellCentre(parseKey(k));
+          if ((c.x - at.x) * u.x + (c.y - at.y) * u.y > EPS) continue;
+          inside.set(k, d);
+          if (!rank.has(k)) { rank.set(k, d); beside.add(k); }
+        }
+        if (inside.size) out.choke = { key: choke.key, x: choke.x, y: choke.y, past: choke.past, inside: [...inside.keys()] };
+      }
     }
     out.order.push(L.id);
   } else {
@@ -534,13 +599,14 @@ export function planLead(spec, o) {
     const out2 = [];
     for (const [k] of rank) {
       const c = parseKey(k);
-      let worst = -Infinity, all = true;
+      let worst = -Infinity, all = true, tier = 0;
       for (let a = 0; a < m.h && all; a++) for (let b = 0; b < m.w; b++) {
-        const v = rank.get(cellKey(c.i + a, c.j + b));
+        const q = cellKey(c.i + a, c.j + b), v = rank.get(q);
         if (v === undefined) { all = false; break; }
         worst = Math.max(worst, v);
+        tier = Math.max(tier, !inside.has(q) ? 2 : beside.has(q) ? 1 : 0);
       }
-      if (all) out2.push({ c, k, rank: worst, centre: { x: c.j + m.w / 2, y: c.i + m.h / 2 } });
+      if (all) out2.push({ c, k, rank: worst, tier: inside.size ? tier : 0, centre: { x: c.j + m.w / 2, y: c.i + m.h / 2 } });
     }
     return out2;
   };
@@ -604,22 +670,35 @@ export function planLead(spec, o) {
     const reach = origin.length ? walkFrom(origin, bodyStep, { ok: body }) : new Map();
     const avoidAll = [...standing, ...claims, ...stays];
     const cands = spotsFor(m).map(s => ({ ...s, wd: reach.get(s.k) ?? Infinity })).filter(s => Number.isFinite(s.wd))
-      .sort((a, b) => a.rank - b.rank || a.wd - b.wd || (a.k < b.k ? -1 : a.k > b.k ? 1 : 0));
+      .sort((a, b) => a.tier - b.tier || a.rank - b.rank || a.wd - b.wd || (a.k < b.k ? -1 : a.k > b.k ? 1 : 0));
     // A swarm's touching square that would wall off another free touching square from the rest of the area waits
     // (0.10 live round 2, S02.d: a Large one square off a wall; the two squares between the corners and the wall were
     // sealed once both corners were given out, and two members took ring 2 with ring 1 not full).
-    const seals = s => {
-      if (!target || s.rank !== 1) return false;
-      const own = new Set(footprintCells(s.centre, m.w, m.h).map(c => cellKey(c.i, c.j)));
+    // The door plug's squares (0.10.2) the same way: one that would shut another off from the narrow point's way in (the
+    // square just inside the door) waits while one that does not is left. A swarm's "outside" is every ranked square
+    // past ring 1; the door plug's, the narrow point's square(s) outside the leader's side.
+    const inner = s => (target ? s.rank === 1 : s.tier < 2 && inside.size > 0);
+    const sealsWith = own => {
       const open = c => !own.has(cellKey(c.i, c.j)) && freeCell(c);
       const ring = [], outer = [];
-      for (const [k, v] of rank) { const c = parseKey(k); if (open(c)) (v === 1 ? ring : outer).push(c); }
-      if (!ring.length || !outer.length) return false;
-      const got = walkFrom(outer, o.step, { ok: open });
-      return ring.some(c => !got.has(cellKey(c.i, c.j)));
+      for (const [k, v] of rank) { const c = parseKey(k); if (open(c) && (target ? v === 1 : inside.has(k))) ring.push(c); else if (target && open(c)) outer.push(c); }
+      if (!target) outer.push(...wayInto.filter(c => !own.has(cellKey(c.i, c.j))));
+      if (!ring.length || !outer.length) return [];
+      // The door plug's walk, as the member's own flood: never diagonally past a square taken.
+      const by = target ? o.step : (a, b) => o.step(a, b) && (a.i === b.i || a.j === b.j || (open({ i: a.i, j: b.j }) && open({ i: b.i, j: a.j })));
+      const got = walkFrom(outer, by, { ok: open });
+      return ring.filter(c => !got.has(cellKey(c.i, c.j))).map(c => cellKey(c.i, c.j));
     };
-    if (target) {
-      const k = cands.findIndex(s => s.rank === 1 && !seals(s));
+    // A swarm judges every free touching square; the door plug only those it could reach before (one it never could
+    // does not hold the doorway back).
+    const cutBefore = !target && inside.size ? new Set(sealsWith(new Set())) : null;
+    const seals = s => {
+      if (!inner(s)) return false;
+      const cut = sealsWith(new Set(footprintCells(s.centre, m.w, m.h).map(c => cellKey(c.i, c.j))));
+      return cutBefore ? cut.some(k => !cutBefore.has(k)) : cut.length > 0;
+    };
+    if (target || inside.size) {
+      const k = cands.findIndex(s => inner(s) && !seals(s));
       if (k > 0) cands.unshift(...cands.splice(k, 1));
     }
     let picked = null, tries = 0, why = cands.length ? "noRoute" : "noSpot";

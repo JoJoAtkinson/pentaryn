@@ -140,7 +140,7 @@ export const MANIFEST = Object.freeze({
         { name: "point", type: "{ x, y }", doc: "the leader's drop point, top-left pixels (on a token outside the group that this client sees: a swarm round it)" },
       ],
       returns: "{ ok, result: \"plan\" | \"none\" | \"core\", shape: \"march\" | \"swarm\", leader, target, ms, searches, failed, order, starts, total, pack, "
-        + "members: [{ id, name, slot: { x, y }, route: [{ x, y }], waypoints, stay, delay }] } | { ok: false, code, reason }",
+        + "plug: { x, y, past, inside } | null, members: [{ id, name, slot: { x, y }, route: [{ x, y }], waypoints, stay, delay }] } | { ok: false, code, reason }",
       gm: false, writes: false,
       since: "0.4.0",
       doc: "Dry run of a group drop out of combat by the leader rule (0.10): shape (march: dropped on the floor, the leader on the "
@@ -150,6 +150,8 @@ export const MANIFEST = Object.freeze({
         + "is in place already) and its start delay (ms after the drop; null when it does not move); the plan's time, route searches "
         + "and failed searches, the order members were planned in, the start order (starts), the last start (total, at most 4000) and the "
         + "pack's (pack: the leader at 0, the rest one wave later or once a leader that starts behind is past them; 0.10 L2); "
+        + "plug (0.10.2): the door plug a march opened, the narrow point it came through (centre pixels), the walk past it "
+        + "(squares) and the squares inside taken first; null when none. "
         + "result none: the leader has no way (nobody moves). Nothing moves. Needs a "
         + "drawn canvas (a browser tab, not the headless GM). NOT_FOUND / BAD_ARGS / NO_CANVAS as a refusal object.",
     },

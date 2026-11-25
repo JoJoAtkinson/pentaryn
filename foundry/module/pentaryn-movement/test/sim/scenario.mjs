@@ -563,7 +563,7 @@ export function runSeed(seed, opts = {}) {
       const at = e.slots[e.leader];
       if (e.shape === "march") {
         const followers = e.members.filter(m => m.id !== e.leader && !e.stayed.includes(m.id)).map(m => ({ ...m, slot: e.slots[m.id] }));
-        breach(marchBreaches({ leader: L, at, behind: e.behind, lastStep: e.lastStep, followers, standing: e.standing, step: g.stepOpen }), e);
+        breach(marchBreaches({ leader: L, at, behind: e.behind, lastStep: e.lastStep, followers, standing: e.standing, step: g.stepOpen, choke: e.choke }), e);
       } else if (e.targetBox) breach(swarmBreaches({ leader: L, at, target: e.targetBox, standing: e.standing, walkable: g.walkable, step: g.stepOpen, route: routeOn(g) }), e);
     } else if (e.kind === "slot" && e.judge) {
       const j = e.judge;

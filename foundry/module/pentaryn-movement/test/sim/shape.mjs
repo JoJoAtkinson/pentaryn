@@ -3,14 +3,17 @@
  * gate in lead.test.mjs and the simulator's `shape` invariant share them):
  *   march  nobody rests beside or ahead of the leader: every square of every follower's slot is nearer B (the square
  *          the leader steps out of on its last step) than the leader's own squares are, by walk round the tokens
- *          standing with the leader's squares shut; a tie only behind the leader's last step;
+ *          standing with the leader's squares shut; a tie only behind the leader's last step; the door plug (0.10.2):
+ *          when the plan names a narrow point it came through (`choke`), a square also holds that is on the leader's
+ *          side of it within LEAD.beside of walk of the leader, never ahead of it along its last step, the narrow point
+ *          a real one (narrowZones) within LEAD.plug of the leader, the leader's own squares not narrow;
  *   swarm  the leader rests touching the target, unless no free touching square was there that it could stand on and
  *          reach (round the tokens standing).
  * Units: centres in squares; a square (i, j) is row i, column j. Each returns a list of breaches (empty: it holds).
  */
 
 import { flood } from "../../group-core.mjs";
-import { footprintCells } from "../../file-core.mjs";
+import { LEAD, footprintCells, narrowZones } from "../../file-core.mjs";
 
 const EPS = 1e-6;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -24,8 +27,9 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
  * @param {{ id, w, h, slot }[]} o.followers  the members that rest somewhere else than where they stand, or that moved
  * @param {{x,y,r}[]} o.standing         the tokens standing outside the group
  * @param {(a, b) => boolean} o.step     one step between neighbouring squares (walls only)
+ * @param {{ key, x, y }|null} [o.choke] the narrow point the plan says the leader came through (planLead's `choke`)
  */
-export function marchBreaches({ leader, at, behind, lastStep, followers, standing, step }) {
+export function marchBreaches({ leader, at, behind, lastStep, followers, standing, step, choke = null }) {
   const out = [];
   if (!behind) {
     for (const f of followers) out.push({ rule: "march", id: f.id, why: "no square behind, yet it rests elsewhere" });
@@ -37,13 +41,37 @@ export function marchBreaches({ leader, at, behind, lastStep, followers, standin
   const fromB = flood({ i: Math.floor(behind.y), j: Math.floor(behind.x) }, (a, b) => step(a, b) && !occ(b) && !mineK.has(`${b.i},${b.j}`), 60);
   const fromL = new Map();
   for (const c of mine) for (const [k, d] of flood(c, (a, b) => step(a, b) && !occ(b), 60)) fromL.set(k, Math.min(d, fromL.get(k) ?? Infinity));
+  const beside = besideOf({ at, mine, choke, step, occ });
   for (const f of followers) {
     for (const c of footprintCells(f.slot, f.w, f.h)) {
       const k = `${c.i},${c.j}`;
       const dB = fromB.get(k) ?? Infinity, dL = fromL.get(k) ?? Infinity;
       const back = (c.j + 0.5 - at.x) * (lastStep?.x ?? 0) + (c.i + 0.5 - at.y) * (lastStep?.y ?? 0);
+      if (beside.has(k) && back <= EPS) continue;
       if (!(dB < dL - EPS || (Math.abs(dB - dL) <= EPS && back < -EPS))) out.push({ rule: "march", id: f.id, square: k, fromB: dB, fromLeader: dL });
     }
+  }
+  return out;
+}
+
+/**
+ * The door plug's squares (0.10.2), judged on their own: empty unless `choke` is a real narrow point (narrowZones on
+ * `step`) whose box is within LEAD.plug of the leader in a straight line, none of the leader's squares narrow; then the squares
+ * within LEAD.beside of walk of the leader's squares (round the tokens standing) without passing through it.
+ */
+function besideOf({ at, mine, choke, step, occ }) {
+  const out = new Set();
+  if (!choke?.key) return out;
+  const zones = narrowZones(step);
+  if (!zones({ x: choke.x, y: choke.y }).some(z => z.key === choke.key)) return out;
+  if (mine.some(c => zones({ x: c.j + 0.5, y: c.i + 0.5 }).some(z => z.key[0] === "c"))) return out;
+  if (Math.hypot(Math.max(Math.abs(at.x - choke.x) - 0.5, 0), Math.max(Math.abs(at.y - choke.y) - 0.5, 0)) > LEAD.plug + EPS) return out;
+  const [p, q] = choke.key.slice(1).split(",").map(Number);
+  const through = choke.key[0] === "c" ? (a, b) => b.i === p && b.j === q
+    : choke.key[0] === "v" ? (a, b) => Math.min(a.i, b.i) === p && Math.max(a.i, b.i) === p + 1 && (a.j === q || b.j === q)
+      : (a, b) => Math.min(a.j, b.j) === q && Math.max(a.j, b.j) === q + 1 && (a.i === p || b.i === p);
+  for (const c of mine) {
+    for (const [k, d] of flood(c, (a, b) => step(a, b) && !occ(b) && !through(a, b), 4)) if (d <= LEAD.beside + EPS) out.add(k);
   }
   return out;
 }

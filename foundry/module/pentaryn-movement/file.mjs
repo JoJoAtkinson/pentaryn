@@ -710,8 +710,11 @@ function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
   }
   from(dropPoints(target, drop, L));
   const mayRest = rest ? (m, c) => (m.id === L.id && Math.hypot(c.x - rest.x, c.y - rest.y) < 1e-6) || walkable(m, c) : walkable;
+  // The door plug (0.10.2) at a door or a mouth on plain squares only: past a narrow way's tight squares the members
+  // line up behind the leader on it (lineBehind).
+  const chokeOk = z => !narrow || z.cells.every(c => !narrow.tight(c.i, c.j));
   const plan = planLead({ members, leaderId: L.id, drop, target, standing },
-    { walkable: mayRest, step, route: routeOracle(origins, s, L.id), now });
+    { walkable: mayRest, step, route: routeOracle(origins, s, L.id), now, chokeOk });
   if (!target && !plan.none) {
     try { lineBehind(plan, members, standing, origins, s, narrow); } catch (err) { log?.debug?.("file: the line behind", err); }
   }
@@ -800,6 +803,12 @@ function waypointsFor(m, e) {
   return px.slice(1).map((p, k, all) => (k === all.length - 1 ? { ...p, explicit: true, checkpoint: true } : { ...p, checkpoint: false }));
 }
 
+/** The door plug a plan opened (0.10.2): the narrow point (its centre, pixels), the walk past it, its squares inside. */
+function plugOf(plan, s) {
+  const c = plan.choke;
+  return c ? { x: Math.round(c.x * s), y: Math.round(c.y * s), past: c.past, inside: c.inside.length } : null;
+}
+
 /**
  * Dry run (R13): what a group drop of these tokens with the first one dropped at `point` (its top-left, pixels) would
  * do: the shape (march / swarm), the leader, the target, and each member's spot, route, start delay and why it stays.
@@ -826,6 +835,7 @@ function dryRun(refs, point) {
   return {
     ok: true, result: plan.none ? "none" : "plan", shape: plan.shape, leader: plan.leader, target: plan.target,
     ms: plan.ms, searches: plan.searches, failed: plan.failed, order: plan.order, starts: timing.order, total: timing.total, pack: timing.pack,
+    plug: plugOf(plan, s),
     members: members.map(m => {
       const e = plan.members[m.id];
       const wps = waypointsFor(m, e);

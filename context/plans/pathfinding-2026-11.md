@@ -1929,3 +1929,68 @@ change; passes alone at 43 to 50); `make test` 2,461 passed; `make foundry-modul
 **Left open:** the door plug's squares beside the leader (backlog 1, unchanged). Backlog 2 (the stair's stragglers) is
 done. The pathfinder's tight-square node inside a box, though the point is clear, stays as it is: `lineBehind` steps
 round it; a single drag never has a member's box to avoid.
+
+### 18.11 0.10.2-dev: the door plug (backlog 1)
+
+**The rule** (Joe 2026-11-24, refined 2026-11-25; scratch `decisions.md`): judge each in-between state as people coming in.
+A leader dropped just past a door or a mouth: more of the party comes through and takes the free squares just inside,
+beside the leader, never ahead of it; dropped deeper, everyone comes in; only those with no free square inside wait in
+line outside. Rule of thumb: "would a little more of the party have come through here?"
+
+**The cause** (Node, `test/plug.test.mjs`'s three ways in: a gap in a thick wall, a door in a thin wall, the mouth of a
+one-wide tunnel). R3 ranks only squares nearer B (the square the leader steps out of) than the leader's own, so beside
+the leader is never ranked; and of the squares that are, the first follower took B itself or the square just inside the
+door (rank 0 or 1, the nearest to walk to), after which the rest of the room was shut off from the way in and every
+later member's flood found only squares outside. So a leader N squares past brought exactly N in (a line), to 4 past.
+
+**The fix** (`file-core` `planLead`, +~70 lines with two helpers; `file.mjs` one oracle).
+- *The trigger:* the leader's own route (out of combat: a route search and no `leaderAt`) came through a narrow point
+  (`narrowZones`: a one-wide square, the door in a thin wall), the nearest one back along the route within
+  `LEAD.plug` = 4 squares of walk of its rest; none of the leader's own squares is narrow (in a tunnel or on the
+  doorway: the line behind, as before); B exists. `file.mjs` refuses a narrow point on a narrow way's tight squares
+  (`chokeOk`): past the stair `lineBehind` keeps its line (0.10.1, S05.q). Open ground, a swarm and a fight (a turn plans
+  with `leaderAt`, `fightPlan` without a route) never open it.
+- *The squares:* on the leader's side of that point (a flood from its squares that never steps into or across it),
+  within `LEAD.beside` = 2.5 of walk, not ahead along its last step: `out.choke.inside`. They go first: those R3
+  already ranked (behind, by their rank), then the new ones beside it (by that walk), then the rest in R3's order.
+- *The doorway last:* a square of them whose taking cuts another off from the narrow point's way in (the member flood's
+  own diagonal rule: never past a square taken) waits while one that does not is left: the swarm's ring-1 seal check
+  (S02.d), generalised; the swarm's own path is unchanged.
+- `planGroup` and `status().group.last.plan` carry `plug` (`past`, `inside`; null when none). The march shape oracle
+  (`test/sim/shape.mjs`, the L1 gate's and the simulator's) accepts the plug's squares, judged on their own (a real
+  narrow point within `LEAD.plug` of the leader, the leader's squares not narrow, the square within `LEAD.beside` on
+  its side, never ahead).
+
+**Numbers** (members inside, the leader too; Node; the same for all three ways in; 4 / 8 / 12 members):
+
+| leader past the way in | 0.10.1 | 0.10.2-dev |
+|---|---|---|
+| 1 square | 1 / 1 / 1 | 1 / 1 / 1 (the leader stands in the way in; no diagonal squeeze past the frame) |
+| 2 squares | 2 / 2 / 2 | 4 / 8 / 10 (nine free squares within 2.5; two of twelve wait outside) |
+| 3 squares | 3 / 3 / 3 | 4 / 8 / 12 |
+| 4 squares | 4 / 8 / 8 | 4 / 8 / 12 |
+| 5 squares | 4 / 8 / 12 | 4 / 8 / 12 (no plug) |
+
+The board (`drop.test`, the door in the wall at y = 400): six dropped two past, 0.10.1 two inside, now six. Planning
+in Node for twelve two past a door 15 ms (was 3.6: more members walk in, so more route their whole way).
+
+**Tests first** (`test/plug.test.mjs` 16 cases, 12 fail on 0.10.1; `drop.test` "0.10.2 the door plug on the board", fails on
+0.10.1): the counts above with every invariant (in place or named, no rest overlap, no route into a member at rest,
+nobody ahead, the shape oracle); the doorway square left free while the room has space; the trigger (open ground, a
+tunnel's line behind, the doorway itself, deeper than `LEAD.plug`, switched off, refused); a fight unchanged (each
+member's square at its turn and `fightPlan`'s order equal to those with the plug switched off, none opened). Regression
+seeds with new slots re-found: SIM-L3-01 954 → 2412, SIM-L3-11 9191 → 11224. Playground suite: S07.s (HARD), two squares past
+the open door with eight heroes, the five free squares of columns 56-57 each hold a hero, nobody ahead of the leader.
+Not run live: this step does not deploy.
+
+**Gates.** `make foundry-movement-check` 517 pass, 0 fail (conformance 95.9 %, C30 / C56); `make test` 2,461 passed;
+`make foundry-module-index && make check-context` OK; `make foundry-movement-sim SEEDS=10000`: 0 failing runs, every hard
+class 0 (the shape class with the plug's squares judged on their own); against 0.10.1 mover overlap 25,679 → 26,773
+episodes (p95 2,033 → 2,017 ms, 6,377 → 6,471 square-seconds: more members walk through the doors), never moved 25,583 →
+25,589, named 21,989 → 21,983 of 62,381 dropped. The square grid's version of S07 (the simulator's station map, Node):
+eight two squares past the open door 2 → 6 inside (every free square of columns 56-57), three past 3 → 8, four past
+(dropR1) 8 → 8.
+
+**Left open:** one square past a door the leader plugs it (the grid allows no diagonal past the frame); a room's wall
+squares beyond `LEAD.beside` are not used before the doorway (the rest wait outside); past the stair the line behind
+stays (0.10.1). Not live: the page's plan time with more members routing in is unmeasured (Node 3.6 → 15 ms for twelve).

@@ -1151,7 +1151,8 @@ function groupDrop(grabbed, contexts, result, riders, seq) {
   // R13: the shape, the leader, the target, who stayed, the waves; the plan's time, searches and failed searches.
   Object.assign(last, { result: "plan", shape: plan.shape, leader: plan.leader, target: plan.target, stayed: [...plan.stayed], waves,
     plan: { timingMs: plan.ms, searches: plan.searches, failed: plan.failed, total: timing?.total ?? 0, pack: timing?.pack ?? 0,
-      members: plan.order.length, crowded: timing?.crowded?.length ?? 0, staggerMs: timing?.ms ?? null } });
+      members: plan.order.length, crowded: timing?.crowded?.length ?? 0, staggerMs: timing?.ms ?? null,
+      plug: plan.choke ? { past: plan.choke.past, inside: plan.choke.inside.length } : null } });
   feature.exposed.tele?.("plan", { mode: "file", shape: plan.shape, members: members.length, ms: plan.ms, searches: plan.searches, failed: plan.failed,
     stayed: plan.stayed.length, waves, total: timing?.total ?? 0 });
   const movement = {};

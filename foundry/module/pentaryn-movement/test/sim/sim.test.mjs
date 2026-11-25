@@ -72,7 +72,8 @@ test("SIM-L2-01 (seed 9736; L1's open seed 1412 now holds with L3's stops too): 
   assert.ok(invs(runSeed(9736, { ...legacy, noStopAt: true })).includes("restOverlap"), "without the fix the seed still shows it");
 });
 
-for (const seed of [315, 954, 1451, 1522]) {
+// (0.10.2: the door plug gave seed 954 new slots; 2412 is the next of seeds 1-8000 that holds with the fix and breaks without it.)
+for (const seed of [315, 1451, 1522, 2412]) {
   test(`SIM-L3-01 (seed ${seed}, L2's open passThrough): a drop's waves reach every screen in send order, so one whose route passes a member's slot goes no later than it (file-core staggerFile, 0.10 L3)`, () => {
     assert.deepEqual(invs(runSeed(seed, legacy)), []);
     assert.ok(invs(runSeed(seed, { ...legacy, noFifo: true })).includes("passThrough"), "without the fix the seed still shows it");
@@ -137,9 +138,11 @@ test("SIM-L3-10 (seed 5479): a wave member that stays is in the way of every oth
   assert.ok(invs(runSeed(5479, { ...legacy, noWaveAgain: true })).includes("passThrough"), "without the fix the seed still shows it");
 });
 
-test("SIM-L3-11 (seed 9191, a tunnel file cut by a door): one stop's writes go as one update, so no screen has one of them stopped while the next still walks on onto it (stop.mjs, file.mjs, drop.mjs cutAcross; 0.10 L3 fix round)", () => {
-  assert.deepEqual(invs(runSeed(9191)), []);
-  assert.ok(invs(runSeed(9191, { noBatch: true })).includes("restOverlap"), "without the fix the seed still shows it");
+// (0.10.2: the door plug gave seed 9191, a tunnel file cut by a door, new slots; 11224, a crowd in a three-wide hall cut by
+// its door, is the first of seeds 1-20000 that holds with the fix and breaks without it.)
+test("SIM-L3-11 (seed 11224, a crowd cut by a door): one stop's writes go as one update, so no screen has one of them stopped while the next still walks on onto it (stop.mjs, file.mjs, drop.mjs cutAcross; 0.10 L3 fix round)", () => {
+  assert.deepEqual(invs(runSeed(11224)), []);
+  assert.ok(invs(runSeed(11224, { noBatch: true })).includes("restOverlap"), "without the fix the seed still shows it");
 });
 
 test("SIM-L3-12 (seed 8249, a crowd cut by a door): a waiting member's slot is a stop's last choice, not a wall: with no spot clear of every slot, one clear of the tokens themselves (stop.mjs stopSpot, 0.10 L3 fix round)", () => {

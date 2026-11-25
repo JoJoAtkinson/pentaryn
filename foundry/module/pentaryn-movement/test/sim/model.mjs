@@ -162,7 +162,7 @@ export class Movement {
     const capMs = Math.max(0, Math.floor((STAGGER.capMs - plan.ms) / STAGGER.stepMs) * STAGGER.stepMs);
     const timing = staggerFile(walks, { capMs, leaderId: plan.leader, step: this.stepOf(g), fifo: !this.env.noFifo });
     this.env.record("plan", { client: this.c.id, seq, ms: plan.ms, shape: plan.shape, leader: plan.leader, target: plan.target, none: plan.none,
-      behind: plan.behind, lastStep: plan.lastStep, targetBox: target, standing: this.othersOf(ids), doors: new Map(this.c.doors), combat: false,
+      behind: plan.behind, lastStep: plan.lastStep, choke: plan.choke, targetBox: target, standing: this.othersOf(ids), doors: new Map(this.c.doors), combat: false,
       members: members.map(m => ({ id: m.id, w: m.w, h: m.h, r: m.r, start: { ...m.start } })),
       searches: plan.searches, failed: plan.failed, stayed: plan.stayed, delays: timing.delays,
       slots: Object.fromEntries(members.map(m => [m.id, plan.members[m.id]?.slot ?? m.start])),

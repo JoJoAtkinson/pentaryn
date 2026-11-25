@@ -3419,6 +3419,28 @@ test("0.10 L1 (R13): planGroup is the leader plan's dry run: dropped on the floo
   }
 });
 
+test("0.10.2 the door plug on the board: six dropped two squares past the door in the wall at y = 400 all come in, beside and behind the leader, none ahead; planGroup names the plug (0.10.1: two inside)", () => {
+  F.canvas.ready = true;
+  const ts = [[400, 300], [300, 300], [500, 300], [300, 200], [400, 200], [500, 200]].map(([x, y], k) => makeToken(`plugT${k}0000000001`.slice(0, 16), x, y));
+  const others = keepOnly(ts);
+  const saved = F.canvas.tokens.placeables;
+  F.canvas.tokens.placeables = [...ts];
+  try {
+    const r = api.planGroup(ts.map(t => t.document), { x: 400, y: 500 });
+    assert.deepEqual([r.ok, r.result, r.shape], [true, "plan", "march"]);
+    assert.ok(r.plug && r.plug.past > 0 && r.plug.past <= 4 && r.plug.inside >= 5, `the plug opens: ${JSON.stringify(r.plug)}`);
+    const by = Object.fromEntries(r.members.map(m => [m.id, m]));
+    assert.deepEqual(by[ts[0].document.id].slot, { x: 400, y: 500 }, "the leader on the drop square");
+    const inside = r.members.filter(m => !m.stay && m.slot.y >= 400);
+    assert.equal(inside.length, 6, `all six inside: ${JSON.stringify(r.members.map(m => m.slot))}`);
+    for (const m of r.members) assert.ok(m.slot.y <= 500, `${m.id} not ahead of the leader: ${JSON.stringify(m.slot)}`);
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    for (const t of ts) sceneTokens.delete(t.document.id);
+    for (const [k, v] of others) sceneTokens.set(k, v);
+  }
+});
+
 test("0.10 L1 (R2): dropped on a token outside the group that this client sees: a swarm round it, the leader touching it first; on a hidden one: a march, never a swarm", () => {
   combatFlag = false;
   clock.step = 0;

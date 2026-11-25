@@ -68,3 +68,22 @@ def k(t):
     o = t.drag(HS, L, pt(S, "dropR1")); p = plan_ms(o)
     return t.verdict(o, [("plan reported", p is not None, "no plan time"), ("plan under 100 ms", p is not None and p < 100, f"{p} ms")], num=p, unit="ms", guards=TIMING_G)
 import numpy as np
+
+# 0.10.2, the door plug (Joe 2026-11-24 / 11-25): dropped just past a door, more of the party comes through and takes the
+# free squares just inside beside and behind the leader (never ahead of it); only those with no free square inside wait
+# outside. Room R1 is three squares tall: two squares past the door (column 57) the five free squares of columns 56-57
+# are within the plan's reach of the leader (LEAD.beside 2.5); 0.10.1 filled two or three of them.
+PLUG = (5750, 2950)
+
+@check("S07.s", S, "door plug: the leader dropped 2 squares past the open door, eight heroes: the free squares just inside beside and behind it are filled before anyone waits outside, nobody ahead of it", path="state", kind="HARD")
+def s(t):
+    o = t.drag(HS, L, PLUG); e = leader_err(o, L, PLUG)
+    sqs = [(x, y) for x in (5650, 5750) for y in (2850, 2950, 3050) if (x, y) != PLUG]
+    empty = [sq for sq in sqs if not any(d_sq(o.c1(n), sq) < 0.5 for n in HS)]
+    inside = [n for n in HS if beyond(o, n) and o.c1(n)[1] < 3100]
+    ahead = [n for n in inside if n != L and o.c1(n)[0] > o.c1(L)[0] + 40]
+    plug = ((o.last() or {}).get("plan") or {}).get("plug")
+    return t.verdict(o, [("leader within 0.5 sq of the drop", e <= 0.5, f"{e:.2f} sq off"),
+                         ("every free square inside beside and behind the leader holds a hero", not empty, f"empty {empty}; {len(inside)} of 8 inside"),
+                         ("nobody rests ahead of the leader", not ahead, f"ahead: {ahead}")],
+                     num=len(inside), unit="inside", expected=f"{len(inside)} inside, {len(HS) - len(inside)} outside; plug {plug}", guards=dict(account=False))

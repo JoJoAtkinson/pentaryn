@@ -349,7 +349,8 @@ test("L1 gate (800 seeded floors and tunnels, 2-20 members, march and swarm, Med
       const B = plan.behind;
       if (!B) { assert.equal(plan.stayed.length, members.length - 1, `seed ${seed}: no square behind, all named`); continue; }
       const followers = members.filter(m => m.id !== leader.id && !plan.members[m.id].stay).map(m => ({ id: m.id, w: m.w, h: m.h, slot: plan.members[m.id].slot }));
-      const breaches = marchBreaches({ leader, at: plan.members[leader.id].slot, behind: B, lastStep: plan.lastStep, followers, standing, step });
+      const breaches = marchBreaches({ leader, at: plan.members[leader.id].slot, behind: B, lastStep: plan.lastStep, followers, standing, step, choke: plan.choke });
+      if (plan.choke) tot.plug = (tot.plug ?? 0) + 1;
       assert.deepEqual(breaches, [], `seed ${seed}: beside or ahead of the leader`);
     } else {
       tot.swarm += 1;
