@@ -9,7 +9,7 @@ tags: [foundry, module, pentaryn-movement, movement, pathfinding]
 
 **Read this when:** a dragged token takes a strange route or will not go round a wall; several tokens dragged together overlap, jam in a door, or end up on top of each other; a moving token will not stop when clicked, or stops in the wrong place; the movement spent in a fight looks wrong after a stop; a group drag leaves someone behind; or the drag help switched itself off. **Not this file:** ghost movement and owned-on-top, the module's code, settings table and API → [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md) · how it was designed, the acceptance criteria and the live play-test list → [`../plans/pathfinding-2026-11.md`](../plans/pathfinding-2026-11.md) (§16 for 0.8, §17 for 0.9, §18 for 0.10).
 
-> **0.10.2 is built on the branch `movement-0.9` (the world runs it once deployed; 0.10.1 before). 0.10.1 was live and built on the branch `movement-0.9`** (the leader rule, march and swarm, any passage shape; Fable's reviews 2 and 3); `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until Joe has judged the hands-on ([`../plans/movement-0.10-handoff.md`](../plans/movement-0.10-handoff.md)). This page describes 0.10; where 0.9.0 differed it says so.
+> **0.10.2 is live on the world pentaryn and built on the branch `movement-0.9`** (the leader rule, march and swarm, any passage shape; Fable's reviews 2 and 3); `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until Joe has judged the hands-on ([`../plans/movement-0.10-handoff.md`](../plans/movement-0.10-handoff.md)). This page describes 0.10; where 0.9.0 differed it says so.
 
 ## The one rule
 
