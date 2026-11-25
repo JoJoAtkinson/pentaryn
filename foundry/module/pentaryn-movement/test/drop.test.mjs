@@ -3728,6 +3728,45 @@ test("0.10 R9: a group of four over the spiral C stair out of combat — the lea
   } finally { F.canvas.tokens.placeables = saved; done(); }
 });
 
+test("0.10 live round 2 (S05.j3, S05.k3): dropped with the pointer on the stair's narrowest point, core snapping the leader to a square whose centre lies in the C's hollow beyond the wall: it rests on the centre line under the pointer, alone or with its group, nobody named (live: \"No route there\")", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  const proto = Token5e.prototype;
+  const og = proto._getDragOrigin;
+  proto._getDragOrigin = function () { return center(this.document._source); };
+  try {
+    for (const n of [1, 4]) {
+      const ts = S05.tokens.filter(t => t.w === 1).slice(0, n).map((t, k) => makeToken(`jm${n}${k}000000000001`.slice(0, 16), t.x * S, t.y * S));
+      for (const t of ts) { t.visible = true; sceneTokens.set(t.document.id, t.document); }
+      F.canvas.tokens.placeables = [...ts];
+      const L = ts[0], src = { ...L.document._source };
+      // Core's snap: square (15, 38), centre (15.5, 38.5) in the hollow; the pointer at (1600, 3850), the throat (0.4 wide).
+      const ctx = contextsFor(ts, 1500 - src.x, 3800 - src.y);
+      drop.result = coreDrop(ctx);
+      const from = F.calls.length;
+      const out = L._prepareDragLeftDropUpdates({ interactionData: { contexts: ctx, destination: { x: 1600, y: 3850 } }, shiftKey: false });
+      const last = api.status().group.last;
+      const by = fileMoves(out, from);
+      const lw = by[L.document.id]?.waypoints;
+      assert.ok(lw?.length, `${n}: the leader moves (${JSON.stringify(last)})`);
+      const end = center(lw.at(-1));
+      assert.ok(Math.hypot(end.x - 1600, end.y - 3850) <= 12, `${n}: it rests under the pointer: ${JSON.stringify(end)}`);
+      assert.ok(stairLine(end).err <= 5, `${n}: on the centre line: ${stairLine(end).err}`);
+      const path = [src, ...lw];
+      for (let k = 1; k < path.length; k++) assert.equal(crossingCore(center(path[k - 1]), center(path[k])).length, 0, `${n}: never through a wall`);
+      if (n > 1) {
+        assert.equal(last.shape, "march");
+        assert.deepEqual(last.stayed, [], `${n}: nobody named`);
+        for (const t of ts) assert.ok(by[t.document.id]?.waypoints?.length, `${n}: ${t.document.id} moves`);
+      }
+      for (const t of ts) sceneTokens.delete(t.document.id);
+      tickBy(60000);
+    }
+  } finally { proto._getDragOrigin = og; F.canvas.tokens.placeables = saved; done(); }
+});
+
 /* -------------------------------------------- */
 /*  0.10 F1: Fable's design check (review-f1 B1, B2, B3)                         */
 /* -------------------------------------------- */

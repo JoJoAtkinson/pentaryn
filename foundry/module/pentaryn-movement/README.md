@@ -74,7 +74,9 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   or stopped part-way rests off the grid on the centre line, in a fight too (a fight's walk is on the grid except
   through the narrow way, its checkpoints where the centre line enters each square, charged core's measure of the way
   walked); a drop in the rock or off the line beside a narrow way rests on its nearest centre-line point (the ruler shows
-  the snapped square as not reached). A group goes leader first and files behind it. The points back along the leader's
+  the snapped square as not reached). Out of combat, a drop whose pointer lies on a way narrower than the token rests
+  under the pointer even when core snapped the token to a square whose centre lies beyond the way's wall (the C's
+  hollow beside the stair's narrowest point), alone or with its group. A group goes leader first and files behind it. The points back along the leader's
   own way where the way is narrower than the token are spots like squares: a member rests on the first one clear of
   everyone, a token apart on the centre line, when it is nearer the leader than the square behind it would be or when
   it has no square at all, so a group dropped on the narrow way, or just past its mouth, lines up on it behind the
@@ -122,7 +124,8 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   touching it first, and the rest close in round it from their own sides, ring by ring (8 squares touch a Medium, 12 a
   Large, 16 a Huge). A hidden token never makes a swarm, for the GM either: it is just a token in the way. Each member
   takes the best square it can reach and gets one route to it, round the tokens standing outside the drag and the
-  squares already given out. **The motion** (0.10 L2): the leader sets off at once and the rest one wave (150 ms,
+  squares already given out; a touching square whose taking would wall off another free touching square from the rest
+  of the floor waits (a Large one square off a wall: the squares between its corners and the wall are filled first). **The motion** (0.10 L2): the leader sets off at once and the rest one wave (150 ms,
   about a square) later as one pack; a leader that starts behind walks through its own group to the front first,
   drawn on top of it on every screen, and the pack sets off once it is a square past the frontmost member. Single file
   only where the way is narrow: through a door one at a time, in a one-wide tunnel a line, spreading out again past

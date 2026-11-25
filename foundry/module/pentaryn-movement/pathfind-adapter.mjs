@@ -28,7 +28,7 @@
  * routes this module invents.
  */
 
-import { SECRET_DOOR, avoidDist, avoidRegion, segmentIndex, segmentsCross } from "./pathfind-core.mjs";
+import { SECRET_DOOR, avoidHits, avoidRegion, segmentIndex, segmentsCross } from "./pathfind-core.mjs";
 import { narrowField, narrowMore } from "./narrow-core.mjs";
 
 /**
@@ -176,17 +176,60 @@ export function placesToAvoid(token, from, to, { preview = false } = {}) {
 }
 
 
+/** Does this visible region have a behaviour that changes movement cost or blocks it? */
+function terrainRegion(region) {
+  if (!region || region.hidden) return false;
+  const base = globalThis.foundry?.data?.regionBehaviors?.RegionBehaviorType?.prototype?._getTerrainEffects;
+  for (const behavior of region.behaviors ?? []) {
+    if (behavior.disabled) continue;
+    const fn = behavior.system?._getTerrainEffects;
+    if (typeof fn === "function" && fn !== base) return true;
+  }
+  return false;
+}
+
 /** Does any visible region on the scene have a behaviour that changes movement cost or blocks it? */
 export function sceneHasTerrain(scene) {
-  const base = globalThis.foundry?.data?.regionBehaviors?.RegionBehaviorType?.prototype?._getTerrainEffects;
+  for (const region of scene?.regions ?? []) if (terrainRegion(region)) return true;
+  return false;
+}
+
+/**
+ * The boxes (pixels, { x0, y0, x1, y1 }) of the scene's terrain regions (sceneHasTerrain's), or null when one has no
+ * box to read (then every step is measured, as before). A step whose footprints keep out of every box costs what the
+ * same step costs anywhere off terrain (0.10 live round 2: with one Difficult Terrain region anywhere on the scene,
+ * every step of every search was measured: 1,083 of a twelve-member plan's 1,493 ms on the page).
+ */
+export function terrainBoxes(scene) {
+  const out = [];
   for (const region of scene?.regions ?? []) {
-    if (region.hidden) continue;
-    for (const behavior of region.behaviors ?? []) {
-      if (behavior.disabled) continue;
-      const fn = behavior.system?._getTerrainEffects;
-      if (typeof fn === "function" && fn !== base) return true;
-    }
+    if (!terrainRegion(region)) continue;
+    let b = null;
+    try { b = region.bounds; } catch { b = null; }
+    if (![b?.x, b?.y, b?.width, b?.height].every(Number.isFinite)) return null;
+    out.push({ x0: b.x, y0: b.y, x1: b.x + b.width, y1: b.y + b.height });
   }
+  return out;
+}
+
+/**
+ * Does dnd5e leave token document `t` out of its creature difficult terrain for mover `doc`
+ * (TokenLayer5e#isOccupiedGridSpaceDifficult and #getRelevantOccupyingTokens)? Hidden, secret, moving together (the
+ * dragger's own controlled tokens), not a creature; under the 2024 rules also a token of the mover's own disposition
+ * or a Tiny one. Its squares then cost what free squares cost (0.10 live round 2: a group's own squares were measured
+ * step by step). Only what dnd5e leaves out before its hook: a token kept is measured, as before.
+ */
+function ignoredForCost(t, doc) {
+  try {
+    if (t.hidden) return true;
+    if (t.disposition === (globalThis.CONST?.TOKEN_DISPOSITIONS?.SECRET ?? -2)) return true;
+    if (t.object?.controlled === true) return true;
+    if (!t.actor?.system?.isCreature) return true;
+    if (globalThis.dnd5e?.settings?.rulesVersion === "modern") {
+      if (t.disposition === doc.disposition) return true;
+      if (globalThis.CONFIG?.DND5E?.actorSizes?.[t.actor.system.traits?.size]?.numerical === 0) return true;
+    }
+  } catch { return false; }
   return false;
 }
 
@@ -226,6 +269,9 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   // moves (its disposition, and its own squares are never in its way).
   const circles = avoid?.length ? avoid : null;
   const base = `${doc.id}|${width}x${height}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${terrain ? "t" : ""}|${blocking ? "b" : ""}|${hz.key}|${rounded ? "r" : ""}`;
+  // The wall answers and a position's squares depend only on the body (0.10 live round 2): every token of this size,
+  // action and level shares them (a group's members walk the same ways; each asked core again).
+  const geo = `${width}x${height}|${depth}|${shape ?? ""}|${action}|${level}|${elevation}|${look ? "p" : "f"}|${constrain.ignoreWalls ? "i" : ""}`;
   const sub = base + (circles ? `|a${circles.map(c => `${Math.round(c.x)},${Math.round(c.y)},${Math.round(c.r)}${c.box ? "b" : ""}`).join(";")}` : "");
 
   // The lattice: whole squares from the goal, or, for a goal off the grid (a group slot, a spot beside a stopped
@@ -306,12 +352,12 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     return true;
   };
 
-  /** Pixel-position wall test (fillets use it directly). */
-  const wallPx = (p, q) => {
+  /** Pixel-position wall test (fillets use it directly), once per move and body (memoGet "r"). */
+  const wallPx = (p, q) => memoGet("r", `${p.x},${p.y}>${q.x},${q.y}`, () => {
     const fa = footprint(p), fb = footprint(q);
     for (let k = 0; k < fa.length; k++) if (!ray(fa[k], fb[k])) return false;
     return true;
-  };
+  });
   const inside = p => {
     if (!rect) return true;
     const c = doc.getMovementOrigin({ x: p.x, y: p.y, elevation, width, height, depth, shape });
@@ -324,16 +370,17 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   const grazes = (p, q) => {
     if (!circles) return false;
     const a = centreOf(p), b = centreOf(q);
-    return circles.some(c => avoidDist(c, a, b) < c.r - 1e-6);
+    return circles.some(c => avoidHits(c, a, b));
   };
   /** A square the token may not enter whatever the avoid circles: traps, unseen ground, dnd5e's creature blocking. */
-  const shutPx = p => {
+  /** The squares the body covers at top-left p (core's answer, once per position and size). */
+  const offsetsAt = p => memoGet("g", `${p.x},${p.y}`, () => doc.getOccupiedGridSpaceOffsets({ x: p.x, y: p.y, elevation, width, height, depth, shape }));
+  const shutPx = p => memoGet("s", `${p.x},${p.y}`, () => {
     if (hz.at(p)) return true;
     if (!blocking) return false;
     const k = Math.floor((elevation / grid.distance) + 1e-8);
-    const spaces = doc.getOccupiedGridSpaceOffsets({ x: p.x, y: p.y, elevation, width, height, depth, shape });
-    return spaces.some(space => token.layer.isOccupiedGridSpaceBlocking({ ...space, k }, token, { preview: look }));
-  };
+    return offsetsAt(p).some(space => token.layer.isOccupiedGridSpaceBlocking({ ...space, k }, token, { preview: look }));
+  });
   const blockedPx = p => grazes(p, p) || shutPx(p);
 
   const measure = pts => {
@@ -352,7 +399,7 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     occupied = new Set();
     try {
       for (const t of doc.parent?.tokens ?? []) {
-        if (!t || t.id === doc.id) continue;
+        if (!t || t.id === doc.id || ignoredForCost(t, doc)) continue;
         for (const o of t.getOccupiedGridSpaceOffsets?.() ?? []) occupied.add(`${o.i},${o.j}`);
       }
     } catch { occupied = null; return null; }
@@ -362,19 +409,27 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
     const occ = othersAt();
     if (!occ) return false;
     try {
-      return doc.getOccupiedGridSpaceOffsets({ x: p.x, y: p.y, elevation, width, height, depth, shape }).every(o => !occ.has(`${o.i},${o.j}`));
+      return offsetsAt(p).every(o => !occ.has(`${o.i},${o.j}`));
     } catch { return false; }
   });
+  // A step near a terrain region is measured; one whose footprints keep a pixel clear of every region's box is not.
+  const boxes = terrain ? terrainBoxes(doc.parent) : [];
+  const nearTerrain = (p, q) => {
+    if (!terrain) return false;
+    if (!boxes) return true;
+    const x0 = Math.min(p.x, q.x) - 1, y0 = Math.min(p.y, q.y) - 1, x1 = Math.max(p.x, q.x) + width * s + 1, y1 = Math.max(p.y, q.y) + height * s + 1;
+    return boxes.some(b => x0 <= b.x1 && b.x0 <= x1 && y0 <= b.y1 && b.y0 <= y1);
+  };
   const stepCost = (p, q) => {
-    if (terrain || !freeOfOthers(p) || !freeOfOthers(q)) return measure([p, q]);
+    if (nearTerrain(p, q) || !freeOfOthers(p) || !freeOfOthers(q)) return measure([p, q]);
     return memoGet("u", `${q.x - p.x},${q.y - p.y}`, () => measure([p, q]));
   };
 
   // Walls, others' squares and step costs do not depend on the avoid circles: a group's re-plans round its
   // resting members share them with every other search (live H2-04).
-  const SHARED = new Set(["w", "o", "u"]);
+  const SHARED = new Set(["o", "u", "s"]), GEO = new Set(["w", "g", "r"]);
   const memoGet = (kind, k, fn) => {
-    const mk = `${kind}|${SHARED.has(kind) ? base : sub}|${k}`;
+    const mk = `${kind}|${GEO.has(kind) ? geo : SHARED.has(kind) ? base : sub}|${k}`;
     if (memo.has(mk)) return memo.get(mk);
     const v = fn();
     memo.set(mk, v);
@@ -420,7 +475,7 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
       const okSeg = (p, q) => {
         if (circles) {
           const a = { x: p.x * s, y: p.y * s }, b = { x: q.x * s, y: q.y * s };
-          if (circles.some(c => avoidDist(c, a, b) < c.r - 1e-6)) return false;
+          if (circles.some(c => avoidHits(c, a, b))) return false;
         }
         if (!hz.line(tl(p), tl(q))) return false;
         if (!blocking) return true;
@@ -438,7 +493,7 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
         for (let k = 0; k < c.comp.length; k++) {
           if (c.comp[k] !== n.c) continue;
           const p = { x: c.x[k] * s, y: c.y[k] * s };
-          if (!circles.some(o => avoidDist(o, p, p) < o.r - 1e-6)) return false;
+          if (!circles.some(o => avoidHits(o, p, p))) return false;
         }
         return true;
       };

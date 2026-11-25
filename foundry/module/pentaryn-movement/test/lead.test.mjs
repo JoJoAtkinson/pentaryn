@@ -141,6 +141,22 @@ test("L1 swarm: ring 1 is 12 squares round a Large and 16 round a Huge", () => {
   }
 });
 
+test("0.10 live round 2 (S02.d): fourteen swarm a Large standing one square off the arena's wall: all 12 touching squares filled (live: the two between the corners and the wall were sealed off once the corners were given out; 10 of 12)", () => {
+  const g = gridWorld(ARENA);
+  const c = { x: 11, y: 3 };
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const rnd = rng(seed);
+    const spots = [];
+    for (let i = 5; i <= 7; i++) for (let j = 2; j <= 19; j++) spots.push([j + 0.5, i + 0.5]);
+    for (let k = spots.length - 1; k > 0; k--) { const q = Math.floor(rnd() * (k + 1)); [spots[k], spots[q]] = [spots[q], spots[k]]; }
+    const members = spots.slice(0, 14).map(([x, y], k) => mem(`M${k}`, x, y));
+    const plan = planLead({ members, leaderId: "M0", target: { id: "T", ...c, w: 2, h: 2 }, standing: [{ id: "T", ...c, r: 1 }] }, oraclesOf(g));
+    const touching = Object.values(plan.members).filter(e => !e.stay && footprintCells(c, 2, 2).some(f => Math.max(Math.abs(f.j + 0.5 - e.slot.x), Math.abs(f.i + 0.5 - e.slot.y)) < 1.01));
+    assert.deepEqual(plan.stayed, [], `seed ${seed}: nobody named`);
+    assert.equal(touching.length, 12, `seed ${seed}: ring 1 full: ${touching.length} (${JSON.stringify(Object.values(plan.members).map(e => e.slot))})`);
+  }
+});
+
 test("L1 swarm through a door: they file in, then fan out round the target; nobody named", () => {
   const door = `
 ######################

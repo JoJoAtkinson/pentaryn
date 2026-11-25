@@ -569,6 +569,18 @@ export function avoidRegion(region, { isGM = false } = {}) {
  * square tokens overlap when |dx| and |dy| are both under the sum of their half sizes, which a circle's clearance lets
  * a smoothed corner do by 0.1 square). Compare it with c.r.
  */
+/**
+ * Does segment a → b come inside avoid entry c: avoidDist(c, a, b) < c.r − slack, answered without the distance when
+ * the segment's box keeps that far from c on one axis (0.10 live round 2: avoidDist over every avoid circle was 553 of
+ * a ten-member plan's 2,004 ms on the page; Euclid and Chebyshev are both at least the box's axis gap).
+ */
+export function avoidHits(c, a, b, slack = 1e-6) {
+  const lim = c.r - slack;
+  if (!(lim > 0)) return false;
+  if (c.x < Math.min(a.x, b.x) - lim || c.x > Math.max(a.x, b.x) + lim || c.y < Math.min(a.y, b.y) - lim || c.y > Math.max(a.y, b.y) + lim) return false;
+  return avoidDist(c, a, b) < lim;
+}
+
 export function avoidDist(c, a, b) {
   const dx = b.x - a.x, dy = b.y - a.y;
   if (!c.box) {
@@ -578,15 +590,13 @@ export function avoidDist(c, a, b) {
   }
   // min over t in [0,1] of max(|ax + dx t - cx|, |ay + dy t - cy|): a convex piecewise-linear function; its minimum
   // is at an end or where one term crosses zero or the two terms are equal.
-  const f = t => Math.max(Math.abs(a.x + dx * t - c.x), Math.abs(a.y + dy * t - c.y));
-  const ts = [0, 1];
-  if (dx) ts.push((c.x - a.x) / dx);
-  if (dy) ts.push((c.y - a.y) / dy);
-  for (const sx of [1, -1]) {
-    const k = dx - sx * dy;
-    if (k) ts.push((sx * (a.y - c.y) - (a.x - c.x)) / k);
-  }
-  let best = Infinity;
-  for (const t of ts) if (t >= 0 && t <= 1) best = Math.min(best, f(t));
+  const ax = a.x - c.x, ay = a.y - c.y;
+  const f = t => Math.max(Math.abs(ax + dx * t), Math.abs(ay + dy * t));
+  let best = Math.min(f(0), f(1));
+  const at = t => { if (t >= 0 && t <= 1) { const v = f(t); if (v < best) best = v; } };
+  if (dx) at(-ax / dx);
+  if (dy) at(-ay / dy);
+  if (dx - dy) at((ay - ax) / (dx - dy));
+  if (dx + dy) at((-ay - ax) / (dx + dy));
   return best;
 }

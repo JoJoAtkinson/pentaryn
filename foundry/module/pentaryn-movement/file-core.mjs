@@ -602,6 +602,23 @@ export function planLead(spec, o) {
     const avoidAll = [...standing, ...claims, ...stays];
     const cands = spotsFor(m).map(s => ({ ...s, wd: reach.get(s.k) ?? Infinity })).filter(s => Number.isFinite(s.wd))
       .sort((a, b) => a.rank - b.rank || a.wd - b.wd || (a.k < b.k ? -1 : a.k > b.k ? 1 : 0));
+    // A swarm's touching square that would wall off another free touching square from the rest of the area waits
+    // (0.10 live round 2, S02.d: a Large one square off a wall; the two squares between the corners and the wall were
+    // sealed once both corners were given out, and two members took ring 2 with ring 1 not full).
+    const seals = s => {
+      if (!target || s.rank !== 1) return false;
+      const own = new Set(footprintCells(s.centre, m.w, m.h).map(c => cellKey(c.i, c.j)));
+      const open = c => !own.has(cellKey(c.i, c.j)) && freeCell(c);
+      const ring = [], outer = [];
+      for (const [k, v] of rank) { const c = parseKey(k); if (open(c)) (v === 1 ? ring : outer).push(c); }
+      if (!ring.length || !outer.length) return false;
+      const got = walkFrom(outer, o.step, { ok: open });
+      return ring.some(c => !got.has(cellKey(c.i, c.j)));
+    };
+    if (target) {
+      const k = cands.findIndex(s => s.rank === 1 && !seals(s));
+      if (k > 0) cands.unshift(...cands.splice(k, 1));
+    }
     let picked = null, tries = 0, why = cands.length ? "noRoute" : "noSpot";
     // The leader of a swarm walks through its own group; everyone else round the slots given out and the stays.
     const avoid = m === L ? [...standing, ...stays] : avoidAll;

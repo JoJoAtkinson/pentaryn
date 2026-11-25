@@ -313,6 +313,27 @@ test("AR2-06: avoidDist is the circle's distance, or for a box the Chebyshev dis
   assert.equal(pf.avoidDist({ ...c, box: true }, { x: -3, y: -1 }, { x: 3, y: 1 }), 0);
 });
 
+test("0.10 live round 2: avoidHits answers avoidDist < r − slack (a box or a circle), without the distance far from the segment; avoidDist's box is the brute-force Chebyshev minimum (3,000 random segments)", () => {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let near = 0;
+  for (let k = 0; k < 3000; k++) {
+    const c = { x: rnd() * 10, y: rnd() * 10, r: 0.2 + rnd() * 1.5, box: rnd() < 0.5 };
+    const a = { x: rnd() * 10, y: rnd() * 10 };
+    const b = rnd() < 0.1 ? { ...a } : { x: rnd() * 10, y: rnd() * 10 };
+    const d = pf.avoidDist(c, a, b);
+    assert.equal(pf.avoidHits(c, a, b), d < c.r - 1e-6, `segment ${k}`);
+    assert.equal(pf.avoidHits(c, a, b, 0.3), d < c.r - 0.3, `segment ${k}, slack`);
+    if (d < c.r) near += 1;
+    if (c.box) {
+      let brute = Infinity;
+      for (let t = 0; t <= 1; t += 1 / 2000) brute = Math.min(brute, Math.max(Math.abs(a.x + (b.x - a.x) * t - c.x), Math.abs(a.y + (b.y - a.y) * t - c.y)));
+      assert.ok(d <= brute + 1e-9 && brute - d < 0.01, `box ${k}: ${d} vs ${brute}`);
+    }
+  }
+  assert.ok(near > 100, `the test is not vacuous: ${near}`);
+});
+
 test("segmentIndex (0.10 live round 1): near() is false only for a move that comes no closer than eps to every segment (2,000 random moves over 60 random walls)", () => {
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };

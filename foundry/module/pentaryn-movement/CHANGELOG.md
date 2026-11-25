@@ -38,6 +38,23 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### Live round 2 — the fixes (plan §18.7)
+
+- **[declared] The page's plan time** (S01.d/k, S07.k, S15.c, and the members named for the plan's budget in S06.h/i,
+  S15.a, S05.p): with one Difficult Terrain region anywhere on the scene every step of every route search was measured
+  through core (`createTerrainMovementPath` and `measureMovementPath`: 144 of S01's 245 ms cold, 890 of S15's 1,220);
+  a step whose footprints keep a pixel clear of every terrain region's box is now costed once per direction, as on a
+  scene with none. The squares of tokens dnd5e leaves out of its creature difficult terrain (the dragger's own, hidden,
+  secret, not a creature; under the 2024 rules the mover's own disposition or Tiny) cost the same (a group's own squares
+  were measured step by step). The wall answers and a position's squares are shared by every token of one size (each
+  member asked core again), and the avoid test skips a circle far from the move (`pathfind-core` `avoidHits`).
+- **[declared] A drop with the pointer on a narrow way** (S05.j3, S05.k3): core snapped the leader to a square whose
+  centre lies beyond the stair's wall, in the C's hollow, and no route reached it ("No route there"). Out of combat the
+  destination is now the pointer's own rest point on the way (`pathfind.mjs` `cursorRestPoint`), alone or in a group.
+- **[declared] A swarm round a Large off a wall** (S02.d): the two touching squares between its corners and the wall
+  were sealed off once both corners were given out (10 of 12 touching); a touching square whose taking would wall off
+  another free touching square waits.
+
 ### Live round 1 — the fixes (plan §18.6)
 
 - **[declared] A quick single drop is no longer a silent no-op** (S05.a/b/d/g/h). While core's drag search runs (and

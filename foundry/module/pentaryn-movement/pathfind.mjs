@@ -148,6 +148,34 @@ function restPointFor(token, p, options = {}) {
 }
 
 /**
+ * Where a drop rests when its pointer lies on a narrow way (0.10 live round 2, S05 dropMid: core snapped the token to a
+ * square whose centre lies beyond the way's wall, in the C's hollow, so the rest point was there and no route reached
+ * it: "No route there"): the pointer's own rest point on the way (R9 "a token dropped part-way along a narrow way rests
+ * off-grid where it is"), top-left pixels. `snapped` and `raw` are top-left positions: core's snapped destination and
+ * the pointer's (unsnapped). null when the pointer is not on a way narrower than the token, or when the snapped square's
+ * centre lies on the same part of the way (its own rest point stands: restPointFor). Reads only.
+ */
+function cursorRestPoint(token, snapped, raw, options = {}) {
+  if (![snapped?.x, snapped?.y, raw?.x, raw?.y].every(Number.isFinite)) return null;
+  const nf = narrowOf(token, raw, options);
+  if (!nf) return null;
+  const s = nf.s;
+  const src = token.document?._source ?? {};
+  const w = raw.width ?? src.width ?? 1, h = raw.height ?? src.height ?? 1;
+  const centre = p => ({ x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s });
+  const rc = centre(raw), sc = centre(snapped);
+  if (!nf.tight(Math.floor(rc.y), Math.floor(rc.x)) || !(nf.widthAt(rc.x, rc.y) < 2 * nf.pad)) return null;
+  const nr = nf.nodeAt(rc);
+  if (!nr) return null;
+  const SI = Math.floor(sc.y), SJ = Math.floor(sc.x);
+  const ns = nf.tight(SI, SJ) ? nf.nodeAt(sc) : { I: SI, J: SJ, c: 0 };
+  if (ns && ns.I === nr.I && ns.J === nr.J && ns.c === nr.c) return null;
+  const r = nf.restPoint(rc);
+  if (!r) return null;
+  return { x: Math.round(r.x * s - (w * s) / 2), y: Math.round(r.y * s - (h * s) / 2) };
+}
+
+/**
  * A drag's or a route's explicit waypoints with each one in a tight square moved to where the token may rest there
  * (restPointFor; it moves at most a few pixels where it already stands on the centre line). The same array when none
  * moves.
@@ -403,7 +431,7 @@ function crossesCircles(path, avoid, token, { w = null, h = null, s = null } = {
   return path.some((p, k) => k > 0 && avoid.some(c => {
     const a = { x: path[k - 1].x + (W * S) / 2, y: path[k - 1].y + (H * S) / 2 };
     const b = { x: p.x + (W * S) / 2, y: p.y + (H * S) / 2 };
-    return pf.avoidDist(c, a, b) < c.r;
+    return pf.avoidHits(c, a, b, 0);
   }));
 }
 
@@ -696,6 +724,7 @@ export function install(reg, ctx) {
     pathfindMemo: memoNow,
     pathfindNarrowCache: () => narrowCache,
     pathfindRestPoint: restPointFor,
+    pathfindCursorRest: cursorRestPoint,
   });
 }
 

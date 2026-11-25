@@ -1019,6 +1019,30 @@ function singleDrop(grabbed, contexts, result, info, seq, noRoute, confirmed) {
 }
 
 /** The wrap's body: core's result in, the drop's result out (null: nothing moves now). */
+/**
+ * A drop whose pointer lies on a narrow way out of combat (0.10 live round 2, S05 dropMid): core snapped the grabbed
+ * token to a square whose centre lies beyond the way's wall (the C's hollow), where no route goes ("No route there");
+ * the destination is the pointer's own rest point on the way (pathfind.mjs cursorRestPoint; R9: it rests off-grid
+ * where it is), the same shift for every member. Returns true when it moved them.
+ */
+function narrowDrop(grabbed, event, contexts) {
+  if (event?.shiftKey || inCombat(grabbed.document)) return false;
+  const p = event?.interactionData?.destination;
+  if (!Number.isFinite(p?.x) || !Number.isFinite(p?.y)) return false;
+  const c = contexts.find(x => x.token === grabbed);
+  const origin = grabbed._getDragOrigin?.();
+  if (!c?.destination || !Number.isFinite(origin?.x) || !Number.isFinite(origin?.y)) return false;
+  if (c.waypoints?.length || feature.exposed.pathfindSkip?.(grabbed)) return false;
+  try { if (grabbed._getDragConstrainOptions?.()?.ignoreWalls) return false; } catch { return false; }
+  const src = grabbed.document._source;
+  const raw = { ...c.destination, x: src.x + p.x - origin.x, y: src.y + p.y - origin.y };
+  const r = feature.exposed.pathfindCursorRest?.(grabbed, c.destination, raw, { preview: true });
+  if (!r) return false;
+  const dx = r.x - c.destination.x, dy = r.y - c.destination.y;
+  for (const x of contexts) x.destination = { ...x.destination, x: x.destination.x + dx, y: x.destination.y + dy, snapped: false };
+  return true;
+}
+
 function onDrop(grabbed, event, result) {
   if (!Array.isArray(result) || !Array.isArray(result[0]) || !result[1]?.movement) return result;
   const contexts = contextsOf(event).filter(c => c?.token?.document);
@@ -1028,6 +1052,7 @@ function onDrop(grabbed, event, result) {
   // dropped again is skipped there (runFight's latestDrop), the rest walk on.
   let caughtUp = false;
   try { caughtUp = (contexts.length < 2 || !!setting("groupDrags")) && catchUpDestination(grabbed, event, contexts); } catch (err) { log.debug?.("drop: catch up the destination", err); }
+  try { if ((contexts.length < 2 || !!setting("groupDrags")) && narrowDrop(grabbed, event, contexts)) caughtUp = true; } catch (err) { log.debug?.("drop: a pointer on a narrow way", err); }
   let noRoute = false;
   const confirmed = {};
   try { noRoute = noteNoRoute(grabbed, contexts, confirmed); } catch (err) { log.debug?.("no-route check", err); }

@@ -37,6 +37,7 @@ const sceneDoc = {
   grid: null,
   get walls() { return world.walls.map(([a, b, ...rest]) => ({ c: [a.x, a.y, b.x, b.y], door: world.walls.find(w => w[0] === a && w[1] === b)?.door ?? 0, ds: 0, rest })); },
   get regions() { return world.regions ?? []; },
+  get tokens() { return world.tokens ?? []; },
 };
 /** A region as core and the adapter read it: a rectangle, its behaviours, hidden. */
 const region = (id, rect, { type = "teleportToken", hidden = false, disabled = false } = {}) => ({ id, hidden, rect, behaviors: [{ type, disabled }] });
@@ -527,6 +528,119 @@ test("H2-04: on a scene with no terrain, a search measures each step direction o
   } finally { Token5e.prototype.measureMovementPath = orig; }
   assert.ok(steps <= 8, `two-waypoint measures: ${steps}`);
   await arcs(true);
+});
+
+test("0.10 live round 2: a Difficult Terrain region away from the way does not make a search measure every step (1,083 of a twelve-member plan's 1,493 ms on the page); a step into it still is", async () => {
+  await arcs(false);
+  world.walls = [[{ x: 650, y: 50 }, { x: 650, y: 850 }]];
+  const terrain = { disabled: false, system: { _getTerrainEffects() { return []; } } };
+  const zone = (id, x, y, w, h) => ({ id, hidden: false, rect: { x, y, w, h }, bounds: { x, y, width: w, height: h }, behaviors: [terrain] });
+  const orig = Token5e.prototype.measureMovementPath;
+  let steps = 0;
+  Token5e.prototype.measureMovementPath = function (wps, o) { if (wps.length === 2) steps += 1; return orig.call(this, wps, o); };
+  try {
+    world.regions = [zone("mud0000000000001", 0, 900, 100, 100)];
+    F.fire("updateRegion");
+    const job = drag(makeToken({ x: 400, y: 400 }), [wp(400, 400), wp(900, 400)]);
+    assert.deepEqual([job.result.at(-1).x, job.result.at(-1).y], [900, 400]);
+    assert.ok(steps <= 8, `a region far away: two-waypoint measures ${steps}`);
+    // The same region over the way: its steps are measured one by one (their cost is the region's).
+    world.regions = [zone("mud0000000000002", 600, 0, 200, 1000)];
+    F.fire("updateRegion");
+    steps = 0;
+    const over = drag(makeToken({ x: 400, y: 400 }), [wp(400, 400), wp(900, 400)]);
+    assert.deepEqual([over.result.at(-1).x, over.result.at(-1).y], [900, 400]);
+    assert.ok(steps > 8, `a region on the way: its steps measured (${steps})`);
+    // A region with no box to read: every step measured, as before.
+    world.regions = [{ ...zone("mud0000000000003", 0, 900, 100, 100), bounds: null }];
+    F.fire("updateRegion");
+    steps = 0;
+    drag(makeToken({ x: 400, y: 400 }), [wp(400, 400), wp(900, 400)]);
+    assert.ok(steps > 8, `no box: every step measured (${steps})`);
+  } finally {
+    Token5e.prototype.measureMovementPath = orig;
+    world.regions = [];
+    world.walls = [];
+    F.fire("updateRegion");
+    await arcs(true);
+  }
+});
+
+test("0.10 live round 2: the squares of tokens dnd5e leaves out of its creature difficult terrain (the dragger's own, hidden, the mover's disposition under the 2024 rules) cost by direction; a hostile's square is measured", async () => {
+  await arcs(false);
+  world.walls = [[{ x: 650, y: 50 }, { x: 650, y: 850 }]];
+  const creature = { system: { isCreature: true, traits: { size: "med" } } };
+  const at = (id, i, j, more = {}) => ({ id, disposition: 1, hidden: false, actor: creature, object: { controlled: false }, getOccupiedGridSpaceOffsets: () => [{ i, j }], ...more });
+  const orig = Token5e.prototype.measureMovementPath;
+  const had = globalThis.dnd5e;
+  let steps = 0;
+  Token5e.prototype.measureMovementPath = function (wps, o) { if (wps.length === 2) steps += 1; return orig.call(this, wps, o); };
+  const run = list => {
+    world.tokens = list;
+    F.fire("updateToken");
+    steps = 0;
+    const t = makeToken({ x: 400, y: 400 });
+    t.document.disposition = 1;
+    t.document.getOccupiedGridSpaceOffsets = w => [{ i: Math.floor(w.y / S), j: Math.floor(w.x / S) }];
+    const job = drag(t, [wp(400, 400), wp(900, 400)]);
+    assert.deepEqual([job.result.at(-1).x, job.result.at(-1).y], [900, 400]);
+    return steps;
+  };
+  try {
+    globalThis.dnd5e = { settings: { rulesVersion: "modern" } };
+    const around = [[3, 5], [4, 5], [5, 5], [3, 6], [5, 6], [4, 4]];
+    const mine = run(around.map(([i, j], k) => at(`own000000000000${k}`, i, j, { object: { controlled: true } })));
+    assert.ok(mine <= 8, `the dragger's own tokens: ${mine}`);
+    const hidden = run(around.map(([i, j], k) => at(`hid000000000000${k}`, i, j, { hidden: true, disposition: -1 })));
+    assert.ok(hidden <= 8, `hidden tokens: ${hidden}`);
+    const friends = run(around.map(([i, j], k) => at(`fri000000000000${k}`, i, j)));
+    assert.ok(friends <= 8, `friends under the 2024 rules: ${friends}`);
+    const foes = run(around.map(([i, j], k) => at(`foe000000000000${k}`, i, j, { disposition: -1 })));
+    assert.ok(foes > 8, `hostiles: their squares measured (${foes})`);
+    globalThis.dnd5e = { settings: { rulesVersion: "legacy" } };
+    const legacy = run(around.map(([i, j], k) => at(`leg000000000000${k}`, i, j)));
+    assert.ok(legacy > 8, `friends under the 2014 rules: measured (${legacy})`);
+  } finally {
+    Token5e.prototype.measureMovementPath = orig;
+    globalThis.dnd5e = had;
+    world.tokens = [];
+    world.walls = [];
+    F.fire("updateToken");
+    await arcs(true);
+  }
+});
+
+test("0.10 live round 2: the wall answers are shared by every token of one size (a group's members walk the same ways: each asked core again), and a position's squares are asked of core once", async () => {
+  await arcs(false);
+  world.walls = [[{ x: 650, y: 50 }, { x: 650, y: 850 }]];
+  F.fire("updateWall");
+  const orig = Token5e.prototype.checkCollision;
+  try {
+    const tok = (id, size = 1) => { const t = makeToken({ x: 400, y: 400, size }); t.document.id = id; return t; };
+    const first = raysOf(() => drag(tok("grp0000000000001"), [wp(400, 400), wp(900, 400)]));
+    const second = raysOf(() => drag(tok("grp0000000000002"), [wp(400, 400), wp(900, 400)]));
+    assert.ok(first > 0, `the first asks core: ${first}`);
+    assert.equal(second, 0, "a second token of the same size asks core nothing new");
+    const big = raysOf(() => drag(tok("grp0000000000003", 2), [wp(400, 400, 2), wp(900, 400, 2)]));
+    assert.ok(big > 0, `a token of another size asks core for its own: ${big}`);
+    // Its squares: once per position though both the creature test and the cost ask for them.
+    F.fire("updateWall");
+    const t = tok("grp0000000000004");
+    const asked = new Map();
+    t.document.getOccupiedGridSpaceOffsets = w => { const k = `${w.x},${w.y}`; asked.set(k, (asked.get(k) ?? 0) + 1); return [{ i: Math.floor(w.y / S), j: Math.floor(w.x / S) }]; };
+    world.tokens = [{ id: "foe0000000000001", disposition: -1, hidden: false, actor: { system: { isCreature: true } }, object: { controlled: false }, getOccupiedGridSpaceOffsets: () => [{ i: 4, j: 5 }] }];
+    const had = F.CONFIG.DND5E;
+    drag(t, [wp(400, 400), wp(900, 400)]);
+    assert.ok(asked.size > 10, `positions asked: ${asked.size}`);
+    assert.equal(Math.max(...asked.values()), 1, "each position asked once");
+    F.CONFIG.DND5E = had;
+  } finally {
+    Token5e.prototype.checkCollision = orig;
+    world.tokens = [];
+    world.walls = [];
+    F.fire("updateWall");
+    await arcs(true);
+  }
 });
 
 test("AR2-06: out of combat a route keeps its square clear of a standing token's square (a box), not only its circle: a smoothed corner passed 0.11 square into it", async () => {
