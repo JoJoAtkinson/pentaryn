@@ -34,13 +34,23 @@ def d(t):
 def e(t):
     o = t.drag(HS, L, pt(S, "dropFar")); dl = first_move_delay(o, L, REST) or {}
     m = float(np.median(list(dl.values()))) if dl else None
-    return t.verdict(o, [("pack frames seen", m is not None, "no drawn frames"), ("median pack start 100-400 ms after the leader", m is not None and 100 <= m <= 400, f"{m}")], num=m, unit="ms", guards=TIMING_G)
+    # R5: the pack goes one wave after the leader, or, when the leader starts behind, once it is that far past the
+    # frontmost member (4 s at most). In S01's layout the leader (x 2.5) starts behind Hero 3/5/7 (x 4.5-6.5) on its
+    # way east: then the bound is the leader's own walk past the frontmost member, plus one wave and slack.
+    D = np.array(pt(S, "dropFar"), dtype=float) - np.array(o.c0(L), dtype=float); D = D / (np.linalg.norm(D) or 1)
+    ahead = max([float((np.array(o.c0(n)) - np.array(o.c0(L))) @ D) / 100 for n in REST] + [0])
+    if ahead > 0.5:
+        hi = min(4000, 400 + 1000 * (ahead + 1) / 6)    # the walk runs about 6 squares a second
+        cond = ("leader starts %.1f sq behind the frontmost: pack start after the leader's, by %d ms at most" % (ahead, hi), m is not None and 100 <= m <= hi, f"{m}")
+    else:
+        cond = ("median pack start 100-400 ms after the leader", m is not None and 100 <= m <= 400, f"{m}")
+    return t.verdict(o, [("pack frames seen", m is not None, "no drawn frames"), cond], num=m, unit="ms", guards=TIMING_G)
 
 @check("S01.f", S, "march: shape reported as march with this leader and no target", path="state", kind="HARD", expect010=True, share="s01far")
 def f(t):
     o = far(t); s = shape_info(o); lid = o.docs[L]["id"]
     return t.verdict(o, [("last.shape == march", s["shape"] == "march", f"shape={s['shape']} mode={s['mode']}"), ("last.leader is the grabbed token", s["leader"] in (lid, L), f"{s['leader']}"), ("last.target is null", s["target"] in (None,), f"{s['target']}"),
-                         ("plan.total counts 8", (s["plan"] or {}).get("total") == 8, f"{s['plan']}")])
+                         ("plan.members counts 8 (plan.total is the last start, ms: README)", (s["plan"] or {}).get("members") == 8, f"{s['plan']}")])
 
 @check("S01.g", S, "march drop round the pillar: leader on the square, the pack behind its LAST step", path="state", kind="HARD", expect010=True)
 def g(t):

@@ -17,5 +17,12 @@ def b(t):
 
 @check("S09.c", S, "a member already past the leader in the dead end stays, named", path="state", kind="HARD", scenario="past", expect010=True)
 def c(t):
+    # R10 "a member already past the leader in a dead end stays, named" is the case where its only way back behind the
+    # leader runs through the leader. In this layout the leader rests in the pocket (south of the corridor) and Hero 4,
+    # at the corridor's dead end, walks back along the corridor to the square behind the leader's last step without
+    # passing it (R3): that is right too. Either it stays and is named, or it ends behind the leader (live round 1 triage).
     o = t.drag(HS, L, pt(S, "dropPocket")); h4 = "S09 Hero 4"
-    return t.verdict(o, [("Hero 4 did not move", not o.moved_doc(h4), "it moved"), ("a notice names Hero 4", o.named(h4), f"{o.notice_texts()[:3]}")], guards=dict(account=False, notices_ok=(r".",)))
+    bh, mx, md = pack(o, L, [h4]); along = (bh or {}).get(h4, {}).get("along")
+    stayed = not o.moved_doc(h4) and o.named(h4)
+    behind = o.moved_doc(h4) and along is not None and along <= -0.45
+    return t.verdict(o, [("Hero 4 stays, named, or ends behind the leader's last step", stayed or behind, f"moved={o.moved_doc(h4)} along={along} notices={o.notice_texts()[:3]}")], guards=dict(account=False, notices_ok=(r".",)))
