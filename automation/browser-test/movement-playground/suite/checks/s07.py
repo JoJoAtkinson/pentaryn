@@ -25,8 +25,10 @@ def c(t):
 
 @check("S07.d", S, "secret door: the only short way is never used; the group goes the long way round and reaches the vault", path="state", kind="HARD", expect010=True)
 def d(t):
-    o = t.drag(HS, L, pt(S, "dropVault")); e = leader_err(o, L, pt(S, "dropVault")); n = [h for h in HS if d_sq(o.c1(h), pt(S, "dropVault")) <= 2.2]
-    return t.verdict(o, [("the leader within 1.6 sq of the vault drop", e <= 1.6, f"{e:.2f} sq off; notices {o.notice_texts()[:2]}"), ("every member within 2.2 sq of it", len(n) == len(HS), f"{len(n)} of 8 near")], num=e, unit="sq")
+    # Every member near it: within 3.2 sq, as S01.c balls up eight (live round 2: 2.2 sq could not hold eight behind a
+    # leader resting at the vault's corner; the far corner of their 3 x 3 is 2.83 sq off).
+    o = t.drag(HS, L, pt(S, "dropVault")); e = leader_err(o, L, pt(S, "dropVault")); n = [h for h in HS if d_sq(o.c1(h), pt(S, "dropVault")) <= 3.2]
+    return t.verdict(o, [("the leader within 1.6 sq of the vault drop", e <= 1.6, f"{e:.2f} sq off; notices {o.notice_texts()[:2]}"), ("every member within 3.2 sq of it", len(n) == len(HS), f"{len(n)} of 8 near")], num=e, unit="sq")
 
 @check("S07.l", S, "secret door: the leader ends exactly on the vault drop square", path="state", kind="HARD", expect010=True)
 def l(t):
