@@ -163,9 +163,9 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   `status().group.told`.
 - **Up to 24 tokens** in one group drag (0.10; was 12), out of combat and in a fight; more: core's own drop out of
   combat, refused in a fight.
-- **Known limits (0.10.0; the full list in `context/foundry/movement.md`):** the door plug (a leader dropped just past a
-  one-wide door brings two or three through, the rest wait outside), eight heroes dragged back and forth over the stair
-  can leave a member named or in the far room, a fight walk on an off-grid way is charged core's measure (5 ft per square
+- **Known limits (0.10.1; the full list in `context/foundry/movement.md`):** the door plug (a leader dropped just past a
+  one-wide door brings two or three through, the rest wait outside), a member that finds no spot on a narrow way
+  behind a leader gone through it stays where it stands and is named (more than the way holds), a fight walk on an off-grid way is charged core's measure (5 ft per square
   entered), a Large leader at a narrow mouth moves nobody, any gap of 1.5 ft or more is a way.
 - **Fail-open and the circuit breaker**: an exception inside a drop sends core's own move and is logged. After 3
   errors or 6 failed plans in a session the drag help switches itself off on that screen; on the GM's screen it also

@@ -1879,3 +1879,53 @@ protects).
 **Backlog, in order:** (1) the door plug's squares beside the leader just inside; (2) S05.p, the stair's stragglers (find the
 live cause: the page's route to a line point); (3) a Large leader's pack forming behind where it stops (R10); (4) fold the
 three redundant stop rules into the settle; (5) trim the line counts toward R12's target. Joe's hands-on decides the order.
+
+### 18.10 0.10.1: the stair's stragglers (S05.q), the live cause and the fix
+
+**The trace** (GPU page, an instrumented build of `file.mjs` deployed for the trace only, then reverted: every route
+`lineBehind` asked for with its time, `reached` and `unfinished`, and every point it tried). Five legs from reset, both
+directions; the dry runs (`planGroup`) gave the drags' own slots.
+
+- *Not the budget.* planLead 180 to 750 ms, each route 60 to 150 ms, none `unfinished`; `lineBehind` had 520 to 1,300 ms
+  of LEAD.totalMs left when it gave up. No member was ever `budget`.
+- *The cause, one for both symptoms.* The first member on the line behind the leader always got its point (4.6 to 4.7
+  squares back, e.g. Hero 4 at 11.59, 32.72). The second tried the first clear point behind it (Chebyshev 1.03 off, at
+  12.62, 33.11) and then the next 0.1 square back; both lie in tight square (33, 12) and both routes failed (`reached`
+  false, no timeout), so X2's two tries were spent. Probing the same member: with only Hero 4's box to avoid, every point
+  in square (33, 12) fails (5.8 and 6.1 squares back) and the first in square (33, 13) is found (6.4); with no member
+  boxes all are found. The route reaches a point of a tight square through that square's node, and that node lies in the
+  box of the member resting ahead, though the point itself is clear of it. Node's fixture puts the node elsewhere, which
+  is why Node never reproduced it.
+- *A to B (legs 1, 3, 5):* Hero 3 (and Hero 5) had no square from planLead (`noRoute`/`noSpot`), the line failed them as
+  above, so they stayed and were named. *B to A (legs 2, 4):* planLead's flood cannot pass the slots on the one-wide
+  stair, so Heroes 4, 6 to 8 got squares in room B (rank flood reaches it), some their own start; the line failed them
+  and they kept those squares: moved a square in room B, or "in place", with no notice (the R8 miss).
+
+**The fix** (`file.mjs` `lineBehind`, +40 lines): (1) a failed route's next try is in another tight square, not 0.1
+square on in the same one (LEAD.tries unchanged, no cap raised); (2) R8: when the leader rests past the narrow way on a
+plain square, a member with no point on the line whose rest is beyond the narrow way stays where it stands and is named
+(on its own square; or where no other member's rest or way goes through it, else it keeps its square); (3) the line's
+routes keep out of members already where they rest. A leader dropped on the narrow way itself leaves the members behind
+it as before (F1 B2's 6° drop: they wait in the room they came from). No beside-the-leader squares: with (1) all eight
+line up on the stair, and the door plug's squares stay the first backlog item (F2's ruling).
+
+**Tests:** `drop.test` "0.10.1 (S05.q legs 2 and 4 …)" (every member refuses a goal in square (33, 12): 0.10.0 leaves
+Hero 6 in room B) and "0.10.1 (S05.q leg 4 …, R8)" (Heroes 6 and 7 reach no point on the stair: 0.10.0 leaves them
+unnamed); both fail on 0.10.0 and pass.
+
+**Live (GPU page, 0.10.1):** the traced five legs: nobody named, every member in the drop's room or on the stair's centre
+line, plan time (`perf.lastMs`) 569 to 891 ms (was 0.97 to 1.0 s). S05.q passed three consecutive runs (r5q1 to r5q3).
+The whole suite once (round r5, both paths, 0.10.1): no HARD check failing (113 pass, 0 fail); the misses are the known
+ones, unchanged against `standing-r4.md`: S05.i 58.5 ms (GATED, was 61), S15.b four at the door (GATED), S15.c 154 to
+157 ms (REPORTED), S11.a (REPORTED), and the software-GL page's timing (S01.d, S07.k, S15.c on the state path,
+indicative). S03, S04, S06, S07, S13, S15.a, S16 all pass. S05.p (cold A to B, then back, the heaviest leg) 957 ms.
+
+**Gates.** `make foundry-movement-check` 500 pass, 0 fail (conformance 95.9 %, C30 / C56; the R9 gate's warm route max
+under full parallel load brushed its 50 ms several times, 54 to 56 ms, a pathfinder timing it does not share with this
+change; passes alone at 43 to 50); `make test` 2,461 passed; `make foundry-module-index && make check-context` OK;
+`make foundry-movement-sim SEEDS=10000` identical to 0.10.0's (every class 0, mover overlap 25,679 episodes, named
+21,989: narrow ways are outside the simulator). Real data checked after: 29 scenes, 8 users, 333 actors, 26 journals.
+
+**Left open:** the door plug's squares beside the leader (backlog 1, unchanged). Backlog 2 (the stair's stragglers) is
+done. The pathfinder's tight-square node inside a box, though the point is clear, stays as it is: `lineBehind` steps
+round it; a single drag never has a member's box to avoid.

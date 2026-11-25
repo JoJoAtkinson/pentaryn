@@ -28,7 +28,7 @@
  * A wave skips a member no longer at its start (drop.mjs).
  */
 
-import { LEAD, STAGGER, footprintCells, heap, planLead, staggerFile } from "./file-core.mjs";
+import { LEAD, STAGGER, footprintCells, heap, planLead, routeEnters, staggerFile } from "./file-core.mjs";
 import { GROUP_MAX, radiusOf } from "./motion-core.mjs";
 import { pathLength } from "./group-core.mjs";
 import { pointsBack } from "./narrow-core.mjs";
@@ -551,9 +551,12 @@ function narrowParts(field, nf) {
  * stays, by the route's own measure (its box, less its pixel), stepping back 0.1 square at a time, and takes it with a
  * route there when planLead gave it no square (R3's fallback, also when the leader rests past the mouth) or one farther
  * from the leader. A route that fails (or ends too near another's rest) tries the next clear point back, LEAD.tries
- * routes a member at most, all inside LEAD.totalMs (0.10 sign-off X2); a member with none keeps its square, or stays,
- * named. The walk order is then front first: a
- * member resting nearer the leader goes before one behind it, whose way it would pass at rest. Changes `plan` in place.
+ * routes a member at most, all inside LEAD.totalMs (0.10 sign-off X2), the next one in another square (0.10.1: the
+ * route reaches a point of a tight square through that square's node, so a point clear of the rest ahead whose square's
+ * node is not stays unreachable for all its square); a member with none keeps its square, or stays, named, and one
+ * whose square is its own start beyond the narrow way stays, named (0.10.1, R8: it was neither sent nor named). The
+ * walk order is then front first: a member resting nearer the leader goes before one behind it, whose way it would
+ * pass at rest. Changes `plan` in place.
  */
 function lineBehind(plan, members, standing, origins, s, nf) {
   const L = members.find(m => m.id === plan.leader);
@@ -572,35 +575,74 @@ function lineBehind(plan, members, standing, origins, s, nf) {
   const total = pathLength(pts);
   // Inside the plan's own time (LEAD.totalMs, planLead's part off it).
   const until = now() + Math.max(0, LEAD.totalMs - (plan.ms ?? 0));
-  let lined = 0;
+  // How far back along the leader's way it is still a narrow way for a body of radius r (squares; 0: nowhere on it).
+  const tightTo = new Map();
+  const narrowEnd = (m) => {
+    if (!tightTo.has(m.r)) {
+      let end = 0;
+      for (let k = Math.floor(total * 10); k > 0 && !end; k--) {
+        const p = restOn(nf, pointsBack(pts, [k * 0.1])[0], m, s);
+        if (p && nf.widthAt(p.x, p.y) < 2 * m.r) end = k * 0.1;
+      }
+      tightTo.set(m.r, end);
+    }
+    return tightTo.get(m.r);
+  };
+  // The leader went through the narrow way when it rests past it, on a plain square (dropped on the way itself, the
+  // members behind it wait where they are: the room it came from is behind it).
+  const at = plan.members[L.id].slot;
+  const throughNone = !at || !!nf.tight(Math.floor(at.y), Math.floor(at.x));
+  let lined = 0, stranded = 0;
   for (const id of plan.byWalk ?? []) {
     const m = byId.get(id), e = plan.members[id];
     if (!m || m === L || m.w > 1 || m.h > 1 || !e || (e.stay && e.stay !== "noSpot" && e.stay !== "noRoute")) continue;
     const others = [...standing, ...Object.entries(plan.members).filter(([oid]) => oid !== id)
       .map(([oid, o]) => ({ ...(o.stay ? byId.get(oid).start : o.slot), r: byId.get(oid).r, id: oid }))];
-    let got = null;
+    let got = null, failedIn = null;
     for (let k = 0, tries = 0; !got && tries < LEAD.tries && k * 0.1 < Math.min(total + 1e-9, far(id)) && now() < until; k++) {
       const p = restOn(nf, pointsBack(pts, [k * 0.1])[0], m, s);
       if (!p || nf.widthAt(p.x, p.y) >= 2 * m.r || !clear(p, m.r, others, LINE_SLACK)) continue;
+      const sq = `${Math.floor(p.y)},${Math.floor(p.x)}`;
+      if (sq === failedIn) continue;
       const d = k * 0.1;
-      // Its route keeps out of the tokens standing, the members that stay and the slots of those resting nearer the
-      // leader (they walk before it).
-      const avoid = others.filter(o => !plan.members[o.id] || plan.members[o.id].stay || far(o.id) < d);
+      // Its route keeps out of the tokens standing, the members that stay, those already where they rest (0.10.1:
+      // they never walk) and the slots of those resting nearer the leader (they walk before it).
+      const avoid = others.filter(o => !plan.members[o.id] || plan.members[o.id].stay || plan.members[o.id].atStart || far(o.id) < d);
       tries += 1;
       let way = null;
       try { way = route(m, m.start, p, avoid); } catch { way = null; }
       const end = way?.at(-1);
-      // A route that failed, or ended too near another's rest: the next clear point back (0.10 sign-off X2).
+      // A route that failed, or ended too near another's rest: the next clear point back (0.10 sign-off X2), in the
+      // next square (0.10.1, live S05.q: the second on the line failed twice in the square just behind the first's).
       if (end && clear(end, m.r, others)) got = { way, end, d };
+      else failedIn = sq;
     }
-    if (!got) continue;
+    if (!got) {
+      // Its rest is beyond the narrow way, the leader gone on through it: it is not in place, nor on its way there
+      // (0.10.1, R8; live S05.q legs 2 and 4: Heroes 4, 6 and 7 kept or took squares in room B with no notice). It
+      // stays where it stands, named: on its own square (planLead gave it out as its slot), or where nobody's rest or
+      // way goes through it (else it keeps its square).
+      const end = e.stay || throughNone ? 0 : narrowEnd(m);
+      if (end > 0 && far(id) > end + 1e-9) {
+        const me = { ...m.start, r: m.r };
+        const free = e.atStart || Object.entries(plan.members).every(([oid, o]) => oid === id || o.stay || oid === L.id
+          || (Math.hypot(o.slot.x - me.x, o.slot.y - me.y) >= byId.get(oid).r + me.r - 1e-6 && !(o.points?.length >= 2 && routeEnters(o.points, byId.get(oid).r, [me]))));
+        if (free) {
+          plan.members[id] = { ...e, slot: { ...m.start }, points: [m.start], walk: undefined, stay: "noRoute", atStart: undefined };
+          stranded += 1;
+        }
+      }
+      continue;
+    }
     const { way, end, d } = got;
     plan.members[id] = { ...e, slot: end, points: way, walk: pathLength(way), stay: undefined, atStart: undefined, line: d };
     lined += 1;
   }
-  if (!lined) return;
-  const [first, ...rest] = plan.order;
-  plan.order = [first, ...rest.map((id, k) => ({ id, k, f: far(id) })).sort((a, b) => a.f - b.f || a.k - b.k).map(x => x.id)];
+  if (!lined && !stranded) return;
+  if (lined) {
+    const [first, ...rest] = plan.order;
+    plan.order = [first, ...rest.map((id, k) => ({ id, k, f: far(id) })).sort((a, b) => a.f - b.f || a.k - b.k).map(x => x.id)];
+  }
   plan.stayed = plan.order.filter(id => plan.members[id]?.stay);
 }
 

@@ -1,5 +1,21 @@
 # Changelog — pentaryn-movement
 
+## 0.10.1 — branch movement-0.9: the stair's stragglers (S05.q)
+
+- **[declared] The line behind the leader on a narrow way, the next square after a failed route** (`file.mjs`
+  `lineBehind`). Live, eight heroes over the spiral stair: the second member on the line tried the point just behind the
+  first's (1.03 square off) and the next 0.1 square back, both in the same tight square, and both routes failed (the
+  route reaches a point of a tight square through that square's node, here inside the first member's box; with no
+  member boxes the same routes were found, from the next square on too). Its two tries spent, it kept a square in the far
+  room or stayed, named. Now a failed route's next try is in another square. Not the time budget: plans took 180 to
+  750 ms, each route 60 to 150 ms and none timed out.
+- **[declared] R8: never left in the far room unnamed.** A member whose rest is beyond the narrow way after the leader
+  went through it (to a plain square past it), with no spot on the line, stays where it stands and is named; it used to
+  keep its own square silently, "in place" (S05.q legs 2 and 4: Heroes 4, 6 and 7 in room B). The line's routes also keep
+  out of members already where they rest (they never walk).
+- Tests: `drop.test` "0.10.1" (both fail on 0.10.0). Live S05.q passes; plan time for eight over the stair 0.57 to
+  0.89 s (was 0.97 to 1.0).
+
 ## 0.10.0 — branch movement-0.9 (Fable's review 3: the leader rule), for Joe's hands-on on the world
 
 The leader rule (Joe, 2026-11-24, after his hands-on of 0.9.0; Fable's review 3): the token you grab and drag leads a

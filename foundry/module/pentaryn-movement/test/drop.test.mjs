@@ -4174,3 +4174,58 @@ test("0.10 sign-off X2 (S05.p leg 2, live round 3): a member whose route to its 
     for (const j of [5, 6, 7]) assert.ok(r.ends[j].x > 1020, `hero ${j + 1} on the stair behind the leader, not left in room B: ${JSON.stringify(r.ends[j])}`);
   } finally { F.canvas.tokens.placeables = saved; done(); }
 });
+
+test("0.10.1 (S05.q legs 2 and 4, live round 5): the second member on the line behind the leader whose routes to the square just behind the first's all fail tries the next square, not the next 0.1 square of the same one (live: Heroes 6-8 left in room B)", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  try {
+    // Live leg 2's start (round 5): the leader and six in room B or its mouth, Hero 3 left in room A.
+    const leg2 = [[700, 4500], [900, 4400], [400, 3300], [900, 4500], [1010, 4397], [800, 4600], [800, 4500], [800, 4400]];
+    // On the page, the route to any point of square (33, 12) failed (Hero 4 rests on the line at 11.59, 32.72; that
+    // square's node lies inside its box): every member's token refuses a goal there.
+    let refused = 0;
+    const r = s05Drop("q1l2", leg2, [700, 3200], { before: ts => {
+      for (const t of ts.slice(1)) {
+        t.findMovementPath = function (w, o) {
+          const d = w.at(-1), cx = d.x + 50, cy = d.y + 50;
+          if (cx >= 1200 && cx < 1300 && cy >= 3300 && cy < 3400) { refused += 1; return { result: null }; }
+          return Token5e.prototype.findMovementPath.call(this, w, o);
+        };
+      }
+    } });
+    assert.ok(refused >= 1, `a route into square (33, 12) was asked for and refused (${refused})`);
+    assert.deepEqual(r.last.stayed, [], "nobody named");
+    r.ends.forEach((c, j) => assert.ok(inRoomOrLine(c, "A"), `hero ${j + 1} rests at ${JSON.stringify(c)}`));
+    for (const j of [5, 6, 7]) assert.ok(r.ends[j].x > 1020 || r.ends[j].y < 3500, `hero ${j + 1} on the stair or in room A, not left in room B: ${JSON.stringify(r.ends[j])}`);
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});
+
+test("0.10.1 (S05.q leg 4, live round 5, R8): a member whose square is its own start in the far room, with no point on the line behind the leader it can reach, stays and is named; it is never left there unnamed as if in place", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const done = onStair();
+  const saved = F.canvas.tokens.placeables;
+  try {
+    // Live leg 4's start: Heroes 3 and 5 in room A beside the drop, Heroes 6 and 7 on their squares in room B (page: their
+    // planLead squares were their own starts and the line failed them), the others in room B and the stair's mouth.
+    const leg4 = [[700, 4500], [1111, 4377], [800, 3200], [1000, 4398], [900, 3200], [900, 4400], [800, 4400], [800, 4300]];
+    // Heroes 6 and 7 reach no point on the stair (their every route onto it is refused).
+    const r = s05Drop("q1l4", leg4, [700, 3200], { before: ts => {
+      for (const t of ts.slice(5, 7)) {
+        t.findMovementPath = function (w, o) {
+          const d = w.at(-1);
+          if (d.x + 50 > 1020 || d.y + 50 < 4150) return { result: null };
+          return Token5e.prototype.findMovementPath.call(this, w, o);
+        };
+      }
+    } });
+    const ids = r.ts.map(t => t.document.id);
+    r.ends.forEach((c, j) => {
+      if (inRoomOrLine(c, "A")) return;
+      assert.ok(r.last.stayed.includes(ids[j]), `hero ${j + 1} left at ${JSON.stringify(c)} must be named: stayed ${JSON.stringify(r.last.stayed)}`);
+    });
+    for (const j of [5, 6]) assert.ok(r.last.stayed.includes(ids[j]), `hero ${j + 1} (no way onto the stair) is named`);
+  } finally { F.canvas.tokens.placeables = saved; done(); }
+});

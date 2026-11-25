@@ -9,7 +9,7 @@ tags: [foundry, module, pentaryn-movement, movement, pathfinding]
 
 **Read this when:** a dragged token takes a strange route or will not go round a wall; several tokens dragged together overlap, jam in a door, or end up on top of each other; a moving token will not stop when clicked, or stops in the wrong place; the movement spent in a fight looks wrong after a stop; a group drag leaves someone behind; or the drag help switched itself off. **Not this file:** ghost movement and owned-on-top, the module's code, settings table and API → [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md) · how it was designed, the acceptance criteria and the live play-test list → [`../plans/pathfinding-2026-11.md`](../plans/pathfinding-2026-11.md) (§16 for 0.8, §17 for 0.9, §18 for 0.10).
 
-> **0.10.0 is live on the world pentaryn and built on the branch `movement-0.9`** (the leader rule, march and swarm, any passage shape; Fable's reviews 2 and 3); `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until Joe has judged the hands-on ([`../plans/movement-0.10-handoff.md`](../plans/movement-0.10-handoff.md)). This page describes 0.10; where 0.9.0 differed it says so.
+> **0.10.1 is live on the world pentaryn and built on the branch `movement-0.9`** (the leader rule, march and swarm, any passage shape; Fable's reviews 2 and 3); `main` keeps 0.8.5 (tag `movement-0.8.5-rollback`) until Joe has judged the hands-on ([`../plans/movement-0.10-handoff.md`](../plans/movement-0.10-handoff.md)). This page describes 0.10; where 0.9.0 differed it says so.
 
 ## The one rule
 
@@ -70,11 +70,11 @@ There is nothing to learn: drag, and it works out the rest. Two world settings: 
 - **Turn things off:** GM, the drag-help button (all of it, for everyone), or the `pathfinding` / `groupDrags` settings. Each player, *Find a path when I drag* (client). `game.pentaryn.movement.stop(token)` stops one from the console.
 - **Force the fallbacks** (live checks): `CONFIG.debug["pentaryn-movement.throw"] = true` (a planner throw) or `CONFIG.debug["pentaryn-movement.throwDeliver"] = true` (a delivery throw): drag a group, core's move with one warning; delete the keys after.
 
-## Known limits (0.10.0)
+## Known limits (0.10.1)
 
 Accepted for Joe's hands-on; the backlog order is in [`../plans/pathfinding-2026-11.md`](../plans/pathfinding-2026-11.md) §18.9.
 
-- **The stair, eight dragged back and forth** (the playground's S05): a member can be named ("Stayed where they stand, with no free spot they can reach") and, going B to A, up to three can be left in room B with no notice (the one miss of "named within 4 s"). Cause unproven. Dragging again moves them.
+- **A narrow way fuller than it holds** (the playground's S05 stair): members line up behind the leader on the way's centre line, a token or a little more apart; once the leader has gone through to the room beyond, one that finds no spot on the line stays where it stands and is named ("Stayed where they stand, with no free spot they can reach"); never left in the far room unnamed (0.10.1). Eight dragged back and forth over the stair all come through (S05.q). Plan time over the stair for eight 0.6 to 0.9 s.
 - **The door plug** (accepted by Joe): a leader dropped within about three squares past a one-wide door or mouth: two or three come through and the rest line up outside though the room has space. The free squares beside the leader just inside are not used yet (first backlog item). Drag deeper into the room to bring them in.
 - **A fight walk on an off-grid way is charged core's measure**, 5 ft per square entered, not the distance walked (130 ft for 118 ft; 240 for 212 through mud; 30 for 25). Joe's call (R7 against R9); a stop part-way still rests off the grid where it is.
 - **A Large leader that does not fit the way:** nobody moves, "No route there." (the pack does not form behind where it stops). A Large follower that cannot follow stays where it stands, named. A leader whose rest square is held by a member that stays: nobody moves, the notice names that member.

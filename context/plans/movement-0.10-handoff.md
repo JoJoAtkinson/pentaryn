@@ -181,7 +181,7 @@ Automatic decisions that matter (each question, choice and reason is in the run'
 
 - The pack forming behind a Large leader where it stops (R10, shipped reduced).
 - The door plug's squares beside the leader just inside (accepted, first backlog item).
-- The stair's stragglers (S05.p, S05.q): cause unproven, Node does not reproduce it; the next step is a live trace of the page's route to a line point.
+- The stair's stragglers (S05.p, S05.q): cause unproven, Node does not reproduce it; the next step is a live trace of the page's route to a line point. **Done in 0.10.1** (plan §18.10): the route into the tight square just behind the first member on the line failed; the line now tries the next square, and a member left beyond the way is named.
 - The code-size targets (4,200 and 280 lines) and the consolidation of `stop.mjs`.
 - The warm narrow route (61 ms against the 50 ms gate).
 - `main` is not touched: 0.10.0 lives only on the branch movement-0.9 until Joe has judged it.
