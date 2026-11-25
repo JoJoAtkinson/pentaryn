@@ -643,3 +643,30 @@ test("R9 / decision 8: a Large never takes the narrow way: with no way round it 
     assert.equal(r.narrow, false);
   } finally { done(); }
 });
+
+test("0.10 live round 1: core's wall test (Token#checkCollision, most of a plan's time on the page) runs only for a step that comes near a wall; the routes are the same", async () => {
+  await arcs(false);
+  // A wall at x = 400 from the top down to y = 300, and a wall across y = 700 with a door gap at x 400-500.
+  world.walls = [[{ x: 400, y: 0 }, { x: 400, y: 300 }], [{ x: 0, y: 700 }, { x: 400, y: 700 }], [{ x: 500, y: 700 }, { x: 1000, y: 700 }]];
+  F.fire("updateWall");
+  try {
+    const tok = makeToken();
+    let job;
+    const round = raysOf(() => { job = drag(tok, [wp(0, 0), wp(800, 0)]); });
+    const p = job.result;
+    // The routes as before the broad phase (112 and 192 core rays then).
+    assert.deepEqual(p.map(w => [w.x, w.y]), [[0, 0], [300, 300], [400, 300], [800, 0]], "round the wall");
+    for (let k = 1; k < p.length; k++) assert.equal(crossing(center(p[k - 1]), center(p[k])).length, 0, "never through the wall");
+    F.fire("updateWall");
+    let thru;
+    const gap = raysOf(() => { thru = drag(tok, [wp(0, 0), wp(100, 900)]); });
+    const q = thru.result;
+    assert.deepEqual(q.map(w => [w.x, w.y]), [[0, 0], [400, 600], [400, 700], [100, 900]], "through the gap");
+    for (let k = 1; k < q.length; k++) assert.equal(crossing(center(q[k - 1]), center(q[k])).length, 0, "never through the wall");
+    assert.ok(round > 0 && gap > 0, "the rays near a wall still ask core");
+    assert.ok(round <= 30 && gap <= 50, `only the rays near a wall: ${round}, ${gap}`);
+  } finally {
+    world.walls = [];
+    F.fire("updateWall");
+  }
+});

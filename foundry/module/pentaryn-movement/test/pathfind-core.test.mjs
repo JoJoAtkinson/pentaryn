@@ -312,3 +312,27 @@ test("AR2-06: avoidDist is the circle's distance, or for a box the Chebyshev dis
   // A segment through the centre: 0.
   assert.equal(pf.avoidDist({ ...c, box: true }, { x: -3, y: -1 }, { x: 3, y: 1 }), 0);
 });
+
+test("segmentIndex (0.10 live round 1): near() is false only for a move that comes no closer than eps to every segment (2,000 random moves over 60 random walls)", () => {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const segs = Array.from({ length: 60 }, () => { const x = rnd() * 2000, y = rnd() * 2000, a = rnd() * Math.PI, L = 20 + rnd() * 400; return [x, y, x + Math.cos(a) * L, y + Math.sin(a) * L]; });
+  segs.push([500, 500, 500, 500]);                               // a degenerate one
+  const idx = pf.segmentIndex(segs, 100, 2);
+  const pd = (p, a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy; const t = L2 ? Math.min(Math.max(((p.x - a.x) * dx + (p.y - a.y) * dy) / L2, 0), 1) : 0; return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t); };
+  let free = 0;
+  for (let k = 0; k < 2000; k++) {
+    const o = { x: rnd() * 2000, y: rnd() * 2000 }, a = rnd() * 2 * Math.PI, L = rnd() * 300;
+    const d = { x: o.x + Math.cos(a) * L, y: o.y + Math.sin(a) * L };
+    if (idx.near(o, d)) continue;
+    free += 1;
+    for (const g of segs) {
+      const A = { x: g[0], y: g[1] }, B = { x: g[2], y: g[3] };
+      assert.equal(pf.segmentsCross(o, d, A, B), false, "a move it calls clear crosses a segment");
+      for (const p of [o, d]) assert.ok(pd(p, A, B) >= 2 - 1e-9);
+      for (const p of [A, B]) assert.ok(pd(p, o, d) >= 2 - 1e-9);
+    }
+  }
+  assert.ok(free > 200, `the broad phase lets moves through (${free})`);
+  assert.equal(idx.near({ x: 490, y: 500 }, { x: 510, y: 500 }), true, "through the degenerate one");
+});

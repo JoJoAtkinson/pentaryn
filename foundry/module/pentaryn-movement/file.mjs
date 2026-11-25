@@ -408,8 +408,14 @@ function stopGroupNow(doc, why, restAt) {
 /* -------------------------------------------- */
 
 const now = () => globalThis.performance?.now?.() ?? Date.now();
-/** One route search's wall-clock cap (ms): a long or impossible route rules that spot out instead of freezing the drop. */
-const ROUTE_MS = 120;
+/**
+ * One route search's wall-clock cap (ms): a long or impossible route rules that spot out instead of freezing the drop.
+ * The leader's own search has more (live round 1: on the page a route over a narrow way took 130-250 ms, so a 120 ms
+ * cap answered "No route there" for a group whose way was there; nobody moves without it). The whole plan stays inside
+ * LEAD.totalMs.
+ */
+const ROUTE_MS = 400;
+const LEADER_ROUTE_MS = 1000;
 
 /**
  * The token a group drop lands on, when it swarms (R2): the leader's drop centre inside a token outside the group
@@ -606,7 +612,7 @@ function restOn(nf, q, m, s) {
 }
 
 /** A route oracle for planLead (centres in squares; avoid circles in squares, their own radius). */
-function routeOracle(origins, s) {
+function routeOracle(origins, s, leaderId = null) {
   return (m, from, to, avoid) => {
     const origin = origins.get(m.id);
     const tl = toTopLeft(to, m.w, m.h, s);
@@ -616,7 +622,7 @@ function routeOracle(origins, s) {
     const circles = avoid.map(o => ({ x: o.x * s, y: o.y * s, r: (o.r + m.r) * s - 1, box: true }))
       .filter(c => avoidDist(c, start, start) >= c.r);
     let r = null;
-    try { r = feature.exposed.pathfindRouteTo?.(m.token, origin, dest, { preview: true, avoid: circles.length ? circles : null, maxMs: ROUTE_MS }); }
+    try { r = feature.exposed.pathfindRouteTo?.(m.token, origin, dest, { preview: true, avoid: circles.length ? circles : null, maxMs: m.id === leaderId ? LEADER_ROUTE_MS : ROUTE_MS }); }
     catch (err) { log?.debug?.("file: a route", err); r = null; }
     if (!r?.reached || !(r.path?.length >= 2)) return null;
     const pts = r.path.map(p => toSquares(p, m.w, m.h, s));
@@ -655,7 +661,7 @@ function planDrop(anchor, contexts, { constrain = {}, group = [] } = {}) {
   from(dropPoints(target, drop, L));
   const mayRest = rest ? (m, c) => (m.id === L.id && Math.hypot(c.x - rest.x, c.y - rest.y) < 1e-6) || walkable(m, c) : walkable;
   const plan = planLead({ members, leaderId: L.id, drop, target, standing },
-    { walkable: mayRest, step, route: routeOracle(origins, s), now });
+    { walkable: mayRest, step, route: routeOracle(origins, s, L.id), now });
   if (!target && !plan.none) {
     try { lineBehind(plan, members, standing, origins, s, narrow); } catch (err) { log?.debug?.("file: the line behind", err); }
   }

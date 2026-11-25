@@ -464,9 +464,12 @@ function noteNoRoute(grabbed, contexts, out = {}) {
   if (contexts.length !== 1) return false;
   const c = contexts.find(x => x.token === grabbed) ?? contexts[0];
   const doc = c?.token?.document;
-  if (!doc || inCombat(doc) || !c.destination || c.waypoints?.length) return false;
+  if (!doc || !c.destination || c.waypoints?.length) return false;
   const end = c.foundPath?.at?.(-1);
   if (!end) return false;
+  // In a fight a short path may be dnd5e's own limit; only a drag that has found nothing yet (its path the start alone:
+  // core's update goes nowhere, live round 1 S05.d/g/h) is confirmed there.
+  if (inCombat(doc) && (c.foundPath.length ?? 0) > 1) return false;
   try { if (grabbed._getDragConstrainOptions?.()?.ignoreWalls) return false; } catch (err) { log.debug?.("drag constrain options", err); }
   if (feature.exposed.pathfindSkip?.(grabbed)) return false;
   if (Math.round(end.x) === Math.round(c.destination.x) && Math.round(end.y) === Math.round(c.destination.y)) return false;
@@ -996,9 +999,11 @@ function singleDrop(grabbed, contexts, result, info, seq, noRoute, confirmed) {
   if (noRoute === "pending") return confirmLater(grabbed, contexts[0], result, seq);
   if (noRoute === "narrow") tellNarrow(grabbed);
   if (confirmed.route) {
-    // The drag's search was still running at the drop: the confirmed route, not core's short line.
-    const m = result[1].movement?.[doc.id];
-    if (m) m.waypoints = lastWp(confirmed.route.slice(1));
+    // The drag's search was still running at the drop: the confirmed route, not core's short line. Core sends no
+    // update at all while its drag has found nothing yet (live round 1 S05.a): the token's own entry, then.
+    const movement = (result[1].movement ??= {});
+    if (!movement[doc.id]) { result[0].push({ _id: doc.id }); movement[doc.id] = { waypoints: [], planned: false }; }
+    movement[doc.id].waypoints = lastWp(confirmed.route.slice(1));
   }
   let around = false;
   try { around = aroundOthers(grabbed, contexts[0], result); } catch (err) { log.debug?.("single: round the tokens that stay", err); }
@@ -1052,8 +1057,8 @@ function onDrop(grabbed, event, result) {
 
   // A single drop with no way there, or whose search still runs: core's update may go nowhere (H3-04).
   if (info.reason === "single" && (noRoute === "none" || noRoute === "pending")) return done(singleDrop(grabbed, contexts, result, info, seq, noRoute, confirmed));
-  // Dropped where it stands: nobody moves, nothing to plan.
-  if (droppedInPlace(contexts, result, caughtUp)) {
+  // Dropped where it stands: nobody moves, nothing to plan (a confirmed route is a drop whose drag had not caught up).
+  if (!confirmed.route && droppedInPlace(contexts, result, caughtUp)) {
     Object.assign(last, { mode: "core", reason: "still", result: "core" });
     return done(result);
   }

@@ -1437,6 +1437,55 @@ test("H2-12: a single drop whose drag path fell short only because its search wa
   tickBy(60000);
 });
 
+test("0.10 live R1 (S05.a): a quick single drop whose drag had found nothing yet (its path the start alone, core's update empty) goes the confirmed route, not a silent no-op", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const one = makeToken("cnfQ000000000001", 100, 200);
+  const others = keepOnly([one]);
+  try {
+    const c1 = contextsFor([one], 300, 400);            // through the door at x 400-500
+    // Core's drag context while its search runs (and for its 500 ms search animation): the start alone.
+    c1[one.document.id].foundPath = [wp(100, 200, { snapped: false, explicit: false, checkpoint: false })];
+    const from = F.calls.length;
+    const out = dropWith(one, c1);
+    assert.ok(!F.calls.slice(from).some(c => c.op === "notify"), "no warning");
+    assert.notEqual(api.status().group.last.reason, "still", JSON.stringify(api.status().group.last));
+    assert.ok(Array.isArray(out), "core's update, filled in");
+    assert.deepEqual(out[0].map(u => u._id), [one.document.id]);
+    const wps = out[1].movement[one.document.id].waypoints;
+    assert.deepEqual([wps.at(-1).x, wps.at(-1).y], [400, 600], `all the way: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+  } finally {
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
+test("0.10 live R1 (S05.d/g/h): the same quick drop in a fight goes the confirmed route, a checkpoint at every square, charged core's measure", () => {
+  combatFlag = true;
+  clock.step = 0;
+  const one = makeToken("cnfR000000000001", 100, 200);
+  noSpeed(one);
+  const others = keepOnly([one]);
+  try {
+    const c1 = contextsFor([one], 300, 400);
+    c1[one.document.id].foundPath = [wp(100, 200, { snapped: false, explicit: false, checkpoint: false })];
+    const out = dropWith(one, c1);
+    assert.notEqual(api.status().group.last.reason, "still", JSON.stringify(api.status().group.last));
+    assert.ok(Array.isArray(out), "core's update, filled in");
+    const wps = out[1].movement[one.document.id].waypoints;
+    assert.deepEqual([wps.at(-1).x, wps.at(-1).y], [400, 600], `all the way: ${JSON.stringify(wps.map(w => [w.x, w.y]))}`);
+    const path = [one.document._source, ...wps];
+    for (let k = 1; k < path.length; k++) {
+      assert.equal(path[k].checkpoint, true, "a checkpoint every square");
+      assert.equal(crossingCore(center(path[k - 1]), center(path[k])).length, 0, "never through a wall");
+    }
+  } finally {
+    combatFlag = false;
+    for (const [k, v] of others) sceneTokens.set(k, v);
+    tickBy(60000);
+  }
+});
+
 test("decision 8: a 2x2 with no way its body fits stops before the gap and the dragger is warned", () => {
   combatFlag = false;
   clock.step = 0;
@@ -3947,4 +3996,53 @@ test("0.10 F1 B2 (R7, R9) fight on Joe's S05: four dropped at 11 points along th
       } finally { restore(); tickBy(60000); }
     }
   } finally { done(); }
+});
+
+/* -------------------------------------------- */
+/*  0.10 live round 1                           */
+/* -------------------------------------------- */
+
+const S06 = JSON.parse(readFileSync(new URL("./fixtures/narrow-stations.json", import.meta.url), "utf8")).stations.find(s => s.id === "S06");
+
+test("0.10 live round 1 (S06.a/e/f, S07.d/l, S05.j3/k3): the leader's route search on a slow page is not cut at a member's cap — a march of two over S06's S-curve, hairpin and pillar field arrives, nobody named", () => {
+  combatFlag = false;
+  clock.step = 0;
+  const old = { walls: world.walls, rect: F.canvas.dimensions };
+  world.walls = S06.walls.filter(w => !w.only).map(w => [{ x: w.c[0] * S, y: w.c[1] * S }, { x: w.c[2] * S, y: w.c[3] * S }]);
+  F.canvas.dimensions = { rect: { x: 0, y: 0, width: 5000, height: 5000, contains: (x, y) => x >= 0 && y >= 0 && x <= 5000 && y <= 5000 } };
+  F.fire("updateWall");
+  const saved = F.canvas.tokens.placeables;
+  let uid = 0;
+  try {
+    for (const p of ["dropScurve", "dropHairpin", "dropField"]) {
+      const ts = S06.tokens.map(t => makeToken(`lr1a${String(uid++).padStart(5, "0")}`.padEnd(16, "0"), t.x * S, t.y * S));
+      const others = keepOnly(ts);
+      for (const t of ts) t.visible = true;
+      F.canvas.tokens.placeables = [...ts];
+      try {
+        const src = ts[0].document._source;
+        const [cx, cy] = S06.points[p].c;
+        const ctx = contextsFor(ts, cx * S - S / 2 - src.x, cy * S - S / 2 - src.y);
+        // A page four to eight times slower than Node (live round 1: a stair route 134 ms warm, 18-33 ms in Node).
+        clock.step = 6;
+        const from = F.calls.length;
+        const out = dropWith(ts[0], ctx);
+        clock.step = 0;
+        const last = api.status().group.last;
+        assert.equal(last.result, "plan", `${p}: ${JSON.stringify(last)}`);
+        assert.deepEqual(last.stayed, [], `${p}: nobody named`);
+        const by = fileMoves(out, from);
+        const end = center(by[ts[0].document.id].waypoints.at(-1));
+        assert.ok(Math.hypot(end.x / S - cx, end.y / S - cy) <= 0.6, `${p}: the leader at the drop: ${JSON.stringify(end)}`);
+      } finally {
+        clock.step = 0;
+        for (const t of ts) sceneTokens.delete(t.document.id);
+        for (const [k, v] of others) sceneTokens.set(k, v);
+        tickBy(60000);
+      }
+    }
+  } finally {
+    F.canvas.tokens.placeables = saved;
+    world.walls = old.walls; F.canvas.dimensions = old.rect; F.fire("updateWall");
+  }
 });

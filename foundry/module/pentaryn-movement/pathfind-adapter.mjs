@@ -28,7 +28,7 @@
  * routes this module invents.
  */
 
-import { SECRET_DOOR, avoidDist, avoidRegion, segmentsCross } from "./pathfind-core.mjs";
+import { SECRET_DOOR, avoidDist, avoidRegion, segmentIndex, segmentsCross } from "./pathfind-core.mjs";
 import { narrowField, narrowMore } from "./narrow-core.mjs";
 
 /**
@@ -74,6 +74,38 @@ export function narrowFor(token, { wallType = "move", look = false, ignoreWalls 
   field.s = s;
   cache?.set(key, field);
   return field;
+}
+
+/**
+ * Every edge on the token's scene that could stop a move (0.10 live round 1), as a broad phase for core's wall test:
+ * the canvas's own edges when it shows that scene, the scene's walls (doors in any state) and the scene's bounds. A
+ * superset of what core tests, so a move that comes near none of them is one core passes. One per scene in `cache`
+ * (pathfind.mjs's, dropped when a wall or door changes and on canvasReady), rebuilt when the edges differ. null when
+ * there is nothing to read.
+ */
+export function wallIndexFor(scene, s, cache = null) {
+  const key = `${scene?.id ?? "?"}|edges`;
+  const segs = [];
+  try {
+    const edges = globalThis.canvas?.scene === scene ? globalThis.canvas?.edges : null;
+    if (edges && typeof edges.values === "function") {
+      for (const e of edges.values()) if (Number.isFinite(e?.a?.x) && Number.isFinite(e?.b?.y)) segs.push([e.a.x, e.a.y, e.b.x, e.b.y]);
+    }
+    for (const w of scene?.walls ?? []) { const c = w?.c; if (Array.isArray(c) && c.length >= 4) segs.push([c[0], c[1], c[2], c[3]]); }
+    const r = globalThis.canvas?.dimensions?.sceneRect;
+    if (r && Number.isFinite(r.width)) segs.push([r.x, r.y, r.x + r.width, r.y], [r.x + r.width, r.y, r.x + r.width, r.y + r.height], [r.x + r.width, r.y + r.height, r.x, r.y + r.height], [r.x, r.y + r.height, r.x, r.y]);
+  } catch { return null; }
+  // Reading the edges is cheap; bucketing them is the cost a cache saves. Its signature catches a change no hook told
+  // the cache about.
+  let sum = 0;
+  for (const g of segs) sum = (sum * 31 + g[0] * 7 + g[1] * 11 + g[2] * 13 + g[3] * 17) % 1e15;
+  const sig = `${segs.length}:${sum}`;
+  const had = cache?.get(key);
+  if (had?.sig === sig) return had;
+  const index = segmentIndex(segs, s);
+  index.sig = sig;
+  cache?.set(key, index);
+  return index;
 }
 
 /** Is a token with these dimensions at waypoint `w` inside `region` (core's own test)? */
@@ -227,9 +259,12 @@ export function fieldFor(token, from, to, { preview = false, constrain = {}, mea
   };
 
   const seen = c => canvas.fog?.isPointExplored?.(c) || canvas.visibility?.testVisibility?.(c, { tolerance: 1 });
+  // Core's wall test only for a move that comes near an edge (0.10 live round 1: it was most of a plan's time).
+  const edges = wallType && !constrain.ignoreWalls ? wallIndexFor(doc.parent, s, narrowCache) : null;
   const ray = (o, d) => {
     if (!wallType || constrain.ignoreWalls) return true;
     if (hz.secret.length && hz.crossesSecret(o, d)) return false;
+    if (edges && !edges.near(o, d)) return true;
     if (!look) return !token.checkCollision(d, { origin: o, type: wallType, mode: "any" });
     const hits = token.checkCollision(d, { origin: o, type: wallType, mode: "all" }) ?? [];
     return !hits.some(seen);

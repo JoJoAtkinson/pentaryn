@@ -38,6 +38,26 @@ touching that token first, and the rest close in round it from their own sides, 
   the candidate lattices `hexCandidates` / `cellCandidates` (group-core). Kept for L2: the motion (`staggerFile`,
   `sequence-core`, `groupStagger` / B0).
 
+### Live round 1 — the fixes (plan §18.6)
+
+- **[declared] A quick single drop is no longer a silent no-op** (S05.a/b/d/g/h). While core's drag search runs (and
+  for its 500 ms search animation) its path is the start alone and core sends no update at all; the drop's own confirm
+  search found the way, but the drop was read as "dropped where it stands" (`last.reason` "still"). Now the confirmed
+  route is the token's update (core's entry made when it has none), out of combat and in a fight (there only when the
+  drag had found nothing yet: a short path there may be dnd5e's own limit), a checkpoint at every square in a fight.
+- **[declared] A group's leader is not refused for a slow page** (S06.a/e/f/g/h/i, S07.d/l, S05.j3/k3, S15.a, S01.f,
+  S02.i). Every route search in a group plan was cut at 120 ms; on the page a route over a narrow way took 130-250 ms
+  (18-33 ms in Node), so the leader's search ran out and the whole group got "No route there", or members were named.
+  The leader's search may now take 1,000 ms and a member's 400 ms (the whole plan stays inside 1,500 ms).
+- **[declared] Core's wall test only near a wall** (the page's plan time). `Token#checkCollision` was most of a plan's
+  time on the page (2,730 calls for eight marching across S01's open field). A broad phase over the scene's edges
+  (the canvas's edges, the scene's walls with doors in any state, the scene's bounds; bucketed per square, one per
+  scene, rebuilt when the edges differ) answers "clear" for a move that comes within 2 px of none of them; only the
+  others ask core. A superset of what core tests, so every answer is core's: the same routes, 307 core calls for the
+  same drop. `pathfind-core` `segmentIndex`, `pathfind-adapter` `wallIndexFor`.
+- **module.json**'s description now describes 0.10.0 (it still described 0.9.0's B0/B1, the stagger setting and the
+  cap of 12).
+
 ### F1 — Fable's design check (review F1: B1, B2, B3)
 
 - **[declared] A rider is in its group for the plan** (B3; R1, R2): `drop.mjs` passes every token dragged (riders

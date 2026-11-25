@@ -507,6 +507,53 @@ export function segmentsCross(p, q, a, b) {
 }
 
 /**
+ * A broad phase for a wall test (0.10 live round 1: core's Token#checkCollision was most of a group plan's time on the
+ * page). `segs`: [x1, y1, x2, y2] in pixels, every edge that could stop a move (a superset is fine), bucketed in cells
+ * of `cell` pixels. near(o, d) is false only when the move o → d comes no closer than `eps` to any of them: then core
+ * cannot find a collision on it and need not be asked. Conservative: near() may say true for a move core passes.
+ */
+export function segmentIndex(segs, cell = 100, eps = 2) {
+  const buckets = new Map();
+  const key = (i, j) => `${i},${j}`;
+  segs.forEach((g, n) => {
+    const i0 = Math.floor((Math.min(g[1], g[3]) - eps) / cell), i1 = Math.floor((Math.max(g[1], g[3]) + eps) / cell);
+    const j0 = Math.floor((Math.min(g[0], g[2]) - eps) / cell), j1 = Math.floor((Math.max(g[0], g[2]) + eps) / cell);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const k = key(i, j);
+      if (!buckets.has(k)) buckets.set(k, []);
+      buckets.get(k).push(n);
+    }
+  });
+  const pd = (px, py, ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+    const t = L2 ? Math.min(Math.max(((px - ax) * dx + (py - ay) * dy) / L2, 0), 1) : 0;
+    return Math.hypot(px - ax - dx * t, py - ay - dy * t);
+  };
+  const close = (o, d, g) => {
+    const a = { x: g[0], y: g[1] }, b = { x: g[2], y: g[3] };
+    if (segmentsCross(o, d, a, b)) return true;
+    return Math.min(pd(o.x, o.y, g[0], g[1], g[2], g[3]), pd(d.x, d.y, g[0], g[1], g[2], g[3]),
+      pd(g[0], g[1], o.x, o.y, d.x, d.y), pd(g[2], g[3], o.x, o.y, d.x, d.y)) < eps;
+  };
+  return {
+    size: segs.length,
+    near(o, d) {
+      const i0 = Math.floor((Math.min(o.y, d.y) - eps) / cell), i1 = Math.floor((Math.max(o.y, d.y) + eps) / cell);
+      const j0 = Math.floor((Math.min(o.x, d.x) - eps) / cell), j1 = Math.floor((Math.max(o.x, d.x) + eps) / cell);
+      const done = new Set();
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+        for (const n of buckets.get(key(i, j)) ?? []) {
+          if (done.has(n)) continue;
+          done.add(n);
+          if (close(o, d, segs[n])) return true;
+        }
+      }
+      return false;
+    },
+  };
+}
+
+/**
  * Is this region one an auto-route keeps out of? `region`: { hidden, behaviors: [{ type, disabled }] }.
  * A hidden region counts only for a GM (a player's route bending round an invisible trap would give it
  * away; walking into one is the same as a straight drag into it).
