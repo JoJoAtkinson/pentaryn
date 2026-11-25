@@ -29,11 +29,31 @@ def verdict(rr):
     if "void" in vs: return "void"
     return "skip"
 
+# Sign-off F2 (X4): checks relabelled after their last run, each named in the standing. "kind": the stored result is
+# counted under the registry's kind; "criteria": what the check asserts changed, so the stored result is void (shown,
+# not counted) until a round runs it again.
+RELABEL = {
+    "S05.g": ("criteria", "HARD on core's own measure of the history (R7); the distance walked reported (was: the charge = the distance walked, R9's words)"),
+    "S05.h": ("criteria", "HARD on core's own measure of the history with the mud (R7); 5 ft x (walked + inside) reported (was: that length rule)"),
+    "S05.o": ("criteria", "both walks HARD on core's own measure (R7); the distance walked reported (was: by the distance walked)"),
+    "S13.c": ("criteria", "HARD on the shipped rule: nobody moves, \"No route there.\" (was: R10's pack forms behind, not built); the pack distance reported"),
+    "S05.i": ("criteria", "judged on the GPU page (was: timed on the software-GL page at load 11-14)"),
+    "S11.a": ("kind", "REPORTED: pre-existing (0.9.0 marches straight over the mud too; R9: nothing costs more automatically)"),
+    "S15.c": ("kind", "REPORTED against 150 ms (R11's bounds scaled to twelve; was GATED at the eight-member 100 ms)"),
+}
 res = {}   # id -> {path: dict}
 for (i, p), (rnd, rr) in latest.items():
     nums = [x["number"] for x in rr if x.get("number") is not None]
     bad = next((x for x in rr if x["verdict"] == "fail"), rr[-1])
-    res.setdefault(i, {})[p] = dict(round=rnd, verdict=verdict(rr), version=rr[-1].get("version"), kind=rr[0]["kind"], number=(statistics.median(nums) if nums else None), unit=rr[0].get("unit"), note=(bad.get("note") or "")[:230], runs=len(rr), instr=any(x.get("instr_error") for x in rr), loaded=any(x.get("loaded") for x in rr))
+    kind, v, note = rr[0]["kind"], verdict(rr), (bad.get("note") or "")[:230]
+    rl = RELABEL.get(i)
+    if rl and reg.get(i) and kind != reg[i]["kind"] or (rl and rl[0] == "criteria"):
+        newer = any(x.get("kind") == reg[i]["kind"] and x.get("title") == reg[i]["title"] for x in rr) if reg.get(i) else False
+        if not newer:
+            if rl[0] == "criteria": note = f"[RELABELLED, rerun needed; stored: {v}, {kind}] " + note; v = "void"
+            else: note = f"[RELABELLED {kind} -> {reg[i]['kind']}] " + note
+            kind = reg[i]["kind"] if reg.get(i) else kind
+    res.setdefault(i, {})[p] = dict(round=rnd, verdict=v, version=rr[-1].get("version"), kind=kind, number=(statistics.median(nums) if nums else None), unit=rr[0].get("unit"), note=note[:300], runs=len(rr), instr=any(x.get("instr_error") for x in rr), loaded=any(x.get("loaded") for x in rr))
 
 def judged(i):
     c = reg.get(i); d = res[i]
@@ -76,6 +96,9 @@ head = ["# ZZ Playground suite - the standing (every check's latest result, all 
         "| station | checks | pass | HARD/GATED fail | reported not clean | void | failing ids |", "|---|---|---|---|---|---|---|"]
 for st, n, cnt, p, f, rf, v, fl in tab: head.append(f"| {st} {n[:24]} | {cnt} | {p} | {f} | {rf} | {v} | {fl[:80]} |")
 head += ["", "Failing (HARD and GATED):", ""] + [f"- {i} ({k}): {note[:160]}" for i, k, note in failing] + [""]
+head += ["Relabelled at the sign-off (F2, X4; none hidden: a changed criterion is void until rerun, a changed kind counts under it):", ""] + [f"- {i} ({how}): {why}" for i, (how, why) in RELABEL.items()] + [""]
+unrun = [c["id"] for c in CHECKS if c["id"] not in res]
+if unrun: head += [f"Registered, not yet run: {', '.join(sorted(set(unrun)))}", ""]
 (OUT / "standing.md").write_text("\n".join(head + lines) + "\n")
 (OUT / "standing.json").write_text(json.dumps(dict(totals=tot, failing=failing, table=tab, results=res), indent=1, default=str))
 print("\n".join(head))

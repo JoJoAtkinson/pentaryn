@@ -60,23 +60,29 @@ const i=cb.turns.findIndex(c=>c.token?.name===%s); if(i>=0) await cb.update({tur
     t.rig.wait_quiet(min_wait=1.0)
 import json
 
-@check("S05.g", S, "stair in a fight: the charge is the distance walked (5 ft per square, off-grid by length)", path="state", kind="HARD", expect010=True)
+@check("S05.g", S, "stair in a fight: the charge is core's own measure of the walk (R7: measureMovementPath of the history, 5 ft a square entered); the difference to the distance walked reported (Joe's question, R7 against R9)", path="state", kind="HARD", expect010=True)
 def g(t):
+    # Sign-off F2 X4: was "the charge is the distance walked" (R9's words); the build charges core's measure (R7, review
+    # F1 check 6), so the HARD check is that, and what it differs from the distance walked is reported.
     t.walk(HS, 30); fight(t, HS, L); o = t.drag([L], L, pt(S, "dropB")); c = charge_of(o, L)
     if not c or not in_b(o, L): return t.verdict(o, [("the hero crossed the stair into B", False, f"stopped at {o.c1(L)}; notices {o.notice_texts()[:2]}")], guards=dict(account=False, notices_ok=(r".",)))
-    walked = polyline_len([(e[0], e[1]) for e in o.docs[L]["hist"]]) / G * 5; ch = c["sum"]
-    return t.verdict(o, [("charged within 3 % + 1 ft of the distance walked", abs(ch - walked) <= 0.03 * walked + 1, f"charged {ch} ft, walked {walked:.1f} ft ({c})")], num=ch - walked, unit="ft")
+    walked = polyline_len([(e[0], e[1]) for e in o.docs[L]["hist"]]) / G * 5; ch = c["sum"]; cm = core_measure(t, L, origin=o.c0(L)) or {}; core = cm.get("core")
+    return t.verdict(o, [("charged exactly core's own measure of the history (0.5 ft)", isinstance(core, (int, float)) and abs(ch - core) <= 0.5, f"charged {ch} ft, core's measure {core} ft ({cm})")],
+                     num=round(ch - walked, 1), unit="ft", expected=f"charged {ch} ft = core {core} ft; walked {walked:.1f} ft; over the distance walked {ch - walked:+.1f} ft (reported)")
 
-@check("S05.h", S, "stair, mud painted over it, in a fight: the charge doubles only inside the region", path="state", kind="HARD", scenario="mud", expect010=True)
+@check("S05.h", S, "stair, mud painted over it, in a fight: the charge is core's own measure of the walk (the region costed by core); 5 ft x (walked + inside the region) reported beside it", path="state", kind="HARD", scenario="mud", expect010=True)
 def h(t):
+    # Sign-off F2 X4: was "charge = 5 ft x (walked + inside)" by length; the build charges core's measure (R7).
     t.walk(HS, 30); fight(t, HS, L); o = t.drag([L], L, pt(S, "dropB")); c = charge_of(o, L)
     if not c or not in_b(o, L): return t.verdict(o, [("the hero crossed the stair into B", False, f"stopped at {o.c1(L)}; notices {o.notice_texts()[:2]}")], guards=dict(account=False, notices_ok=(r".",)))
     pts = [(e[0] + 50, e[1] + 50) for e in o.docs[L]["hist"]]; shp = ST[S]["regions"][0]["shape"]   # history entries are top-left: the region is tested at the centres
-    inside = region_len_sq(pts, shp); total = polyline_len(pts) / G; exp = 5 * (total + inside); ch = c["sum"]
-    return t.verdict(o, [("region really crossed", inside > 1, f"{inside:.2f} sq inside"), ("charge = 5 ft x (walked + inside the region)", abs(ch - exp) <= 0.04 * exp + 1.5, f"charged {ch}, expected {exp:.1f} ({total:.1f} sq walked, {inside:.1f} inside)")], num=ch - exp, unit="ft")
+    inside = region_len_sq(pts, shp); total = polyline_len(pts) / G; exp = 5 * (total + inside); ch = c["sum"]; cm = core_measure(t, L, origin=o.c0(L)) or {}; core = cm.get("core")
+    return t.verdict(o, [("region really crossed", inside > 1, f"{inside:.2f} sq inside"), ("charged exactly core's own measure of the history (0.5 ft)", isinstance(core, (int, float)) and abs(ch - core) <= 0.5, f"charged {ch} ft, core's measure {core} ft ({cm})")],
+                     num=round(ch - exp, 1), unit="ft", expected=f"charged {ch} ft = core {core} ft; 5 ft x ({total:.1f} walked + {inside:.1f} inside) = {exp:.1f} ft; over it {ch - exp:+.1f} ft (reported)")
 
 
-@check("S05.i", S, "stair: a warm narrow route takes under 50 ms and reports narrow + minClearance >= 0.15", path="state", kind="GATED", expect010=True, timing=True)
+# Sign-off F2 X4: judged on the GPU page (it was timed on the software-GL page at load 11-14: 119 ms; Node 37.5 ms).
+@check("S05.i", S, "stair: a warm narrow route takes under 50 ms on the GPU page and reports narrow + minClearance >= 0.15", path="gpu", kind="GATED", expect010=True, timing=True)
 def i(t):
     to = (650, 4450); t.say("pathfind.route Hero 1 to the centre of the square the drop at dropB snaps to, four times (cold, warm, warm, warm)")
     r = t.rig.ev("gm", """const m=game.pentaryn.movement; const a=canvas.tokens.placeables.find(t=>t.name==='S05 Hero 1').document; const out=[]; for(let i=0;i<4;i++){const t0=performance.now(); const r=await m.pathfind.route(a,{to:{x:%d,y:%d}}); out.push({ms:performance.now()-t0, ok:r.ok, reached:r.reached, narrow:r.narrow, minClearance:r.minClearance});} return JSON.stringify(out)""" % (to[0] - 50, to[1] - 50))

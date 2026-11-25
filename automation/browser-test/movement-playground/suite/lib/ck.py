@@ -221,3 +221,14 @@ def door_frame(o, names, centre, r=60, step_ms=20):
         near = np.hypot(np.interp(ts, a[:, 0], a[:, 1]) - centre[0], np.interp(ts, a[:, 0], a[:, 2]) - centre[1]) <= r
         inside += near; passed += bool(near.any())
     return int(inside.max()), passed
+
+
+# ---- a fight's charge against core's own measure (moved here from s17_l1 for S05.g/h, sign-off X4)
+def core_measure(t, name, origin=None):
+    """what core itself measures for the token's recorded movement history (Token#measureMovementPath over the history's
+    top-left positions, as the token's own move is measured; live round 2: the centres passed as top-lefts measured a
+    path shifted half a square, 25 ft where core charges 30) beside what the history was charged. `origin` is a centre."""
+    r = t.rig.ev("gm", r"""const tk=canvas.scene.tokens.getName(%s); const h=tk.movementHistory??[]; const W=tk.width??1, H=tk.height??1; const w=h.map(e=>({x:e.x,y:e.y,elevation:e.elevation??0,width:W,height:H,action:e.action??tk.movementAction})); const og=%s; if (og && h.length && Math.hypot(og[0]-W*50-w[0].x, og[1]-H*50-w[0].y)>2) w.unshift({x:og[0]-W*50,y:og[1]-H*50,elevation:w[0].elevation,width:W,height:H,action:w[0].action});
+let core=null; try{ core=tk.object.measureMovementPath(w).cost; }catch(e){ try{ core=tk.measureMovementPath(w).cost; }catch(e2){} }
+return JSON.stringify({core, charged:h.reduce((s,e)=>s+(e.cost??0),0), n:h.length})""" % (json.dumps(name), json.dumps(list(origin) if origin else None)))
+    return r

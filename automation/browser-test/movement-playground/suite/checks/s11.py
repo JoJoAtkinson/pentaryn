@@ -4,7 +4,9 @@ from ck import *
 
 S = "S11"; HS = heroes(S); L = "S11 Hero 1"; SH = ST[S]["regions"][0]["shape"]
 
-@check("S11.a", S, "mud: the route takes the cheaper (dry) way round, the region is not crossed", path="state", kind="HARD", expect010=True)
+# Sign-off F2 X4: REPORTED: a march straight over the mud out of combat is 0.9.0's behaviour too (pre-existing; R9:
+# nothing costs more automatically, and out of combat nothing is charged). Joe's question: should it go round?
+@check("S11.a", S, "mud (reported, pre-existing): the route takes the cheaper (dry) way round, the region is not crossed", path="state", kind="REPORTED", expect010=True)
 def a(t):
     o = t.drag(HS, L, pt(S, "dropE")); e = leader_err(o, L, pt(S, "dropE")); ins = region_len_sq(route_dense(o, L), SH)
     return t.verdict(o, [("leader within 0.6 sq of the drop", e <= 0.6, f"{e:.2f} sq off"), ("route inside the mud <= 0.5 sq", ins <= 0.5, f"{ins:.2f} sq inside")], num=ins, unit="sq")

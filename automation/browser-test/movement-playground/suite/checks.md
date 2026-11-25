@@ -1,6 +1,6 @@
 # ZZ Playground suite - the checks
 
-119 checks over 16 stations (92 from the first build + 26 added in live round 1, see "Live round 1 extras" at the end). Id = station + letter. Path: `state` = WSL harness (software GL: positions at rest, notices, charges, shapes, errors), `gpu` = BOSS GPU Chrome (timing, one motion, z-order, two screens, plan time, long frames), `both` = runs on each. `runs` = 3 for timing checks (void when the host load is over 3), else 1. `010` = new in 0.10: expected to fail on 0.9.0 (`expect010`, reported as xfail).
+120 checks over 16 stations (92 from the first build + 26 added in live round 1, see "Live round 1 extras" at the end). Id = station + letter. Path: `state` = WSL harness (software GL: positions at rest, notices, charges, shapes, errors), `gpu` = BOSS GPU Chrome (timing, one motion, z-order, two screens, plan time, long frames), `both` = runs on each. `runs` = 3 for timing checks (void when the host load is over 3), else 1. `010` = new in 0.10: expected to fail on 0.9.0 (`expect010`, reported as xfail).
 
 Every check starts from the station's reset (its scenario and mode), does one thing with real mouse input where a person would, and ends with no combat. Every HARD check also runs the guards: no module error in the console, the breaker did not trip, no token through a wall or shut door (drawn path and route, one-way walls by side), no token through or onto a standing token outside the group, no two tokens overlapping at rest (circle metric), every member moving or named within 4 s of the drop, and no notice that the check does not expect.
 
@@ -67,9 +67,9 @@ Every check starts from the station's reset (its scenario and mode), does one th
 | S05.d | gpu | HARD | 1 | yes | default/paths | stair: a click on the walker mid-stair rests it off-grid ON the centre line |
 | S05.e | state | HARD | 1 |  | default/paths | stair: the Large is refused at the mouth (a notice, nobody through a wall) or takes the long way |
 | S05.f | state | HARD | 1 |  | long/paths | stair, long way open: the Large takes the 2-wide way round into room B |
-| S05.g | state | HARD | 1 | yes | default/paths | stair in a fight: the charge is the distance walked (5 ft per square, off-grid by length) |
-| S05.h | state | HARD | 1 | yes | mud/paths | stair, mud painted over it, in a fight: the charge doubles only inside the region |
-| S05.i | state | GATED | 3 | yes | default/paths | stair: a warm narrow route takes under 50 ms and reports narrow + minClearance >= 0.15 |
+| S05.g | state | HARD | 1 | yes | default/paths | stair in a fight: the charge is core's own measure of the walk (R7: measureMovementPath of the history, 5 ft a square entered); the difference to the distance walked reported (sign-off F2 X4: was "the distance walked") |
+| S05.h | state | HARD | 1 | yes | mud/paths | stair, mud painted over it, in a fight: the charge is core's own measure of the walk (the region costed by core); 5 ft x (walked + inside the region) reported beside it (sign-off F2 X4: was that length rule) |
+| S05.i | gpu | GATED | 3 | yes | default/paths | stair: a warm narrow route takes under 50 ms on the GPU page and reports narrow + minClearance >= 0.15 (sign-off F2 X4: was the software-GL page) |
 
 ## S06 Passage shapes
 
@@ -129,7 +129,7 @@ Every check starts from the station's reset (its scenario and mode), does one th
 
 | id | path | kind | runs | 010 | scenario/mode | what it checks |
 |---|---|---|---|---|---|---|
-| S11.a | state | HARD | 1 | yes | default/paths | mud: the route takes the cheaper (dry) way round, the region is not crossed |
+| S11.a | state | REPORTED | 1 | yes | default/paths | mud (reported, pre-existing: 0.9.0 crosses too): the route takes the cheaper (dry) way round, the region is not crossed |
 | S11.b | state | HARD | 1 |  | default/paths | mud, in a fight: the charge doubles only inside the region |
 
 ## S12 One-way walls
@@ -147,7 +147,7 @@ Every check starts from the station's reset (its scenario and mode), does one th
 |---|---|---|---|---|---|---|
 | S13.a | state | HARD | 1 |  | default/paths | a Large with a wide way round: takes the wide way, never the 1-wide door |
 | S13.b | state | HARD | 1 |  | noround/paths | no way round: the Large stops before the door, body clear, and the GM is whispered |
-| S13.c | state | HARD | 1 | yes | noround/paths | a Large LEADER stopped at the mouth: the pack forms behind where it stops |
+| S13.c | state | HARD | 1 | yes | noround/paths | a Large LEADER stopped at the mouth: nobody moves and "No route there." (the shipped rule; R10's pack behind it, not built, reported) |
 | S13.d | state | HARD | 1 | yes | noround/paths | a Large FOLLOWER stops where it last fits, those behind queue behind it |
 
 ## S14 Two-way lane
@@ -164,7 +164,7 @@ Every check starts from the station's reset (its scenario and mode), does one th
 |---|---|---|---|---|---|---|
 | S15.a | state | HARD | 1 | yes | default/paths | crowd: they converge on the door, none through the wall, all end beyond it near the leader |
 | S15.b | gpu | GATED | 3 | yes | default/paths | crowd: they go through the door one at a time (never two centres within 0.6 sq of the door) |
-| S15.c | both | GATED | 3 | yes | default/paths | crowd: the plan takes under 100 ms (12 members) |
+| S15.c | both | REPORTED | 3 | yes | default/paths | crowd (reported): the plan time for 12 members at a door, against 150 ms (R11's bounds scaled to twelve; was GATED at 100 ms) |
 
 ## S16 Fight yard
 
@@ -190,7 +190,7 @@ Extra tokens (ZZ Monster / ZZ Hero 5 made at the start of a check, flagged `extr
 | S05.k1-k5 | state | HARD | the same with eight heroes (Hero 5-8 added in room A) |
 | S05.m | both | HARD | two clients: Hero 1-2 (page pa) A to B and Hero 5-6 (page pb, made in room B) B to A at the same moment: each leader arrives or is named, zero rest overlap, zero wall crossing, every screen draws each token at its document |
 | S05.n | gpu | HARD | a click on a group of four mid-stair: every member rests at least 0.14 sq clear of every wall, drawn = document, nobody overlapping |
-| S05.o | state | HARD | stair in a fight: a 2-member group, speed 30 ft: the leader stops by speed mid-stair (charge 30 ft or less, off the square grid, 0.14 sq clear, the charge within 3 % + 1 ft of the distance walked as in S05.g, core's own measureMovementPath of the history reported beside it), next turn it walks on from there (3 sq further or into room B; again 30 ft or less, the charge by the distance walked, clear of the walls, no wall crossed) |
+| S05.o | state | HARD | stair in a fight: a 2-member group, speed 30 ft: the leader stops by speed mid-stair (charge 30 ft or less, off the square grid, 0.14 sq clear, charged exactly core's own measureMovementPath of the history; the distance walked reported), next turn it walks on from there (3 sq further or into room B; again 30 ft or less, charged exactly core's measure, clear of the walls, no wall crossed) (sign-off F2 X4: was "by the distance walked") |
 | S07.m-o | state | REPORTED | one-wide open door: eight heroes dropped 2, 3 and 5 squares past it: how many rest inside, queue outside, are named (gated only on nobody named, nobody in the door frame; reported kind) |
 | S07.p-r | state | HARD | the same in a fight on a diagonal approach (Hero 1-2 moved to the hall's south-west, speed 120 ft): nobody rests in the door frame unless the queue says it stopped by speed |
 | S16.g | state | HARD | the rider grabbed in a group of four: last.leader is the mount, shape march, plan.members 3 (the stack is one entry), the rider rests on its mount |
@@ -198,3 +198,4 @@ Extra tokens (ZZ Monster / ZZ Hero 5 made at the start of a check, flagged `extr
 | S01.k | gpu | GATED | R11 on the page: group.perf.lastMs (beside plan.timingMs) under 100 ms for 8 and 250 ms for 20 members on open ground, cold (right after a door toggle, which flushes the pathfinder's memo) and warm |
 | S01.l | gpu | REPORTED | the same at 4x CPU throttle (CDP Emulation.setCPUThrottlingRate on the GM page) |
 | S05.p | gpu | REPORTED | 8 heroes over the stair A to B (cold), B to A and A to B (warm): perf.lastMs reported; gated on nobody named and no route-timeout notice |
+| S05.q | gpu | HARD | eight heroes dragged A to B, B to A, A to B, B to A, A to B over the stair, each leg from where the last left them, 4.5 s after each drop for the last wave: no "No route there.", nobody named, each rests in the drop's room or on the stair (on its centre line, 0.06 sq, where narrower than a token), the guards on every leg (sign-off F2 X3; S05.p keeps the plan time, reported) |

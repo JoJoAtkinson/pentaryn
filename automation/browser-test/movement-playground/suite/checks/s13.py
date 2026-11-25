@@ -25,11 +25,14 @@ def b(t):
     chat = [n for n in o.notices() if n["type"] == "chat" or n["text"]]
     return t.verdict(o, [("the Large did not pass the door", right <= DX + 5, f"right edge at {right}"), ("the GM is told (a notice or a whisper)", bool(chat), "no notice, no whisper")], guards=dict(account=False, notices_ok=(r".",)))
 
-@check("S13.c", S, "a Large LEADER stopped at the mouth: the pack forms behind where it stops", path="state", kind="HARD", scenario="noround", expect010=True)
+# Sign-off F2 X4: R10's "the pack forms behind where it stops" was not built (F1 ruled the reduced rule): the HARD check
+# is the shipped rule, nobody moves and "No route there."; where the pack stands from the Large is reported.
+@check("S13.c", S, "a Large LEADER stopped at the mouth: nobody moves and \"No route there.\" (the shipped rule; R10's pack behind it reported)", path="state", kind="HARD", scenario="noround", expect010=True)
 def c(t):
     mem = [LARGE] + HER; o = t.drag(mem, LARGE, pt(S, "dropE")); d_ = o.docs[LARGE]; right = d_["x"] + d_["w"] * G
-    ahead = [h for h in HER if o.c1(h)[0] > right - 5]; bh, mx, md = pack(o, LARGE, HER)
-    return t.verdict(o, [("the Large did not pass the door", right <= DX + 5, f"right edge {right}"), ("no hero ahead of the Large's front edge", not ahead, f"{ahead}"), ("the pack within 4 sq of it", md is not None and md <= 4.5, f"max {md}")], guards=dict(account=False, notices_ok=(r".",)))
+    bh, mx, md = pack(o, LARGE, HER); moved = [n for n in mem if o.moved_doc(n)]; nr = [x for x in o.notice_texts() if "No route there" in x]
+    return t.verdict(o, [("nobody moved", not moved, f"moved {moved}"), ("the notice is \"No route there.\"", bool(nr), f"notices {o.notice_texts()[:3]}"), ("the Large did not pass the door", right <= DX + 5, f"right edge {right}")],
+                     num=md, unit="sq", expected=f"the pack's farthest member {md} sq from the Large (reported: R10's pack behind it is not built)", guards=dict(account=False, notices_ok=(r"No route there",)))
 
 @check("S13.d", S, "a Large FOLLOWER stops where it last fits, those behind queue behind it", path="state", kind="HARD", scenario="noround", expect010=True)
 def d(t):

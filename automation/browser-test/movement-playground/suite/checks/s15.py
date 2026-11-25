@@ -16,7 +16,9 @@ def b(t):
     mx, npass = door_frame(o, V, (6450, 8400)); need = -(-len(V) // 2)
     return t.verdict(o, [("at least half of them came through the door frame (the check is not vacuous)", npass >= need, f"{npass} of {len(V)} came near the door"), ("at most one centre within 0.6 sq of the door centre", mx <= 1, f"up to {mx} at once")], num=mx, unit="tokens", guards=TIMING_G)
 
-@check("S15.c", S, "crowd: the plan takes under 100 ms (12 members)", path="both", kind="GATED", timing=True, expect010=True)
+# Sign-off F2 X4: REPORTED: R11's gate is 8 (100 ms) and 20 (250 ms) on open ground (review F1 §5); twelve through a
+# door were held to the bound for eight. The reference is scaled to twelve (150 ms, between the two), reported.
+@check("S15.c", S, "crowd (reported): the plan time for 12 members at a door, against 150 ms (R11's bounds scaled to twelve)", path="both", kind="REPORTED", timing=True, expect010=True)
 def c(t):
     o = t.drag(V, L, pt(S, "dropBeyond"), settle=40); p = plan_ms(o)
-    return t.verdict(o, [("plan reported", p is not None, "no plan time"), ("plan under 100 ms", p is not None and p < 100, f"{p} ms")], num=p, unit="ms", guards=TIMING_G)
+    return t.verdict(o, [("plan reported", p is not None, "no plan time"), ("plan under 150 ms (scaled reference)", p is not None and p < 150, f"{p} ms")], num=p, unit="ms", guards=TIMING_G)

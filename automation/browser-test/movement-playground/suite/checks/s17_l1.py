@@ -1,6 +1,6 @@
 """Live round 1 extras (the Fable check's list): off-grid walls with ten tokens, S05 group drops, a one-wide door, riders, plan timing (R11), two clients on the stair.
 Extra tokens are made at the start of a check from ZZ actors (names "S05 Hero 5" ...), flagged as extras; the next reset deletes them as strays."""
-import json, re, math, time
+import json, re, math, time, os
 from fw import check, pt, heroes, tok_names, Skip
 from ck import *
 from an import seg_cross
@@ -53,16 +53,6 @@ def perf_of(o, page=None):
 
 
 def walls_of(st): return [w for w in ST[st]["walls"] if not w.get("only")]
-
-
-def core_measure(t, name, origin=None):
-    """what core itself measures for the token's recorded movement history (Token#measureMovementPath over the history's
-    top-left positions, as the token's own move is measured; live round 2: the centres passed as top-lefts measured a
-    path shifted half a square, 25 ft where core charges 30) beside what the history was charged. `origin` is a centre."""
-    r = t.rig.ev("gm", r"""const tk=canvas.scene.tokens.getName(%s); const h=tk.movementHistory??[]; const W=tk.width??1, H=tk.height??1; const w=h.map(e=>({x:e.x,y:e.y,elevation:e.elevation??0,width:W,height:H,action:e.action??tk.movementAction})); const og=%s; if (og && h.length && Math.hypot(og[0]-W*50-w[0].x, og[1]-H*50-w[0].y)>2) w.unshift({x:og[0]-W*50,y:og[1]-H*50,elevation:w[0].elevation,width:W,height:H,action:w[0].action});
-let core=null; try{ core=tk.object.measureMovementPath(w).cost; }catch(e){ try{ core=tk.measureMovementPath(w).cost; }catch(e2){} }
-return JSON.stringify({core, charged:h.reduce((s,e)=>s+(e.cost??0),0), n:h.length})""" % (json.dumps(name), json.dumps(list(origin) if origin else None)))
-    return r
 
 
 def blocking_pairs(o): return [((w["c"][0], w["c"][1]), (w["c"][2], w["c"][3])) for w in o.walls0 if w.get("move") and not (w.get("door") and w.get("ds") == 1)]
@@ -142,7 +132,8 @@ def n_(t):
     return t.verdict(o, c, guards=dict(account=False, notices_ok=(r".",)))
 
 
-@check("S05.o", S5, "stair in a fight: a leader stopped by speed mid-stair rests off-grid clear of the walls, and walks on next turn from there (charged by core's measure)", path="state", kind="HARD")
+# Sign-off F2 X4: both walks HARD on core's own measure of the history (R7); the distance walked is reported beside it.
+@check("S05.o", S5, "stair in a fight: a leader stopped by speed mid-stair rests off-grid clear of the walls, and walks on next turn from there (charged exactly core's measure; the distance walked reported)", path="state", kind="HARD")
 def o_(t):
     grp = H4[:2]; L = grp[0]
     t.walk(H4, 30); fight(t, grp, L)
@@ -151,19 +142,20 @@ def o_(t):
     stage = [("stopped by speed: charged 30 ft or less", bool(c1) and c1["sum"] <= 30.51, f"{c1}"), ("not yet in room B (stopped short)", o1.c1(L)[1] < 4150, f"at {o1.c1(L)}"),
              ("rests off the square grid", off, f"at {d1['x']},{d1['y']}"), ("rests at least 0.14 sq clear of the walls", clr >= 0.14, f"{clr} sq")]
     ov1 = o1.rest_overlaps(); wh1 = o1.wall_hits()
+    cm1 = core_measure(t, L, origin=o1.c0(L)) or {}         # before the next turn clears the history
     t.say("combat: next turn(s) back to Hero 1")
     r = t.rig.ev("gm", r"""const cb=game.combats.find(c=>c.scene?.id===canvas.scene.id); const hist=[]; for (let i=0;i<4;i++){ await cb.nextTurn(); if (cb.combatant?.token?.name==='S05 Hero 1') break; }
 const tok=canvas.scene.tokens.getName('S05 Hero 1'); const n0=tok.movementHistory?.length??0; if (n0) await tok.clearMovementHistory?.(); return JSON.stringify({turn:cb.combatant?.token?.name, round:cb.round, hist0:n0})""")
-    cm1 = core_measure(t, L)
     o2 = t.drag(grp, L, pt(S5, "dropB"), settle=60)
-    c2 = charge_of(o2, L); prog = d_sq(o1.c1(L), o2.c1(L)); w2 = polyline_len([(e[0], e[1]) for e in o2.docs[L]["hist"]]) / G * 5 if c2 else 0; cm2 = core_measure(t, L, origin=o2.c0(L)); clr2 = round(dist_to_walls(o2.c1(L), W5) / G, 3); wh2 = o2.wall_hits()
+    c2 = charge_of(o2, L); prog = d_sq(o1.c1(L), o2.c1(L)); w2 = polyline_len([(e[0], e[1]) for e in o2.docs[L]["hist"]]) / G * 5 if c2 else 0; cm2 = core_measure(t, L, origin=o2.c0(L)) or {}; clr2 = round(dist_to_walls(o2.c1(L), W5) / G, 3); wh2 = o2.wall_hits()
     stage += [("next turn: it is Hero 1's turn again", (r or {}).get("turn") == L, f"{r}"), ("it walks on from its off-grid rest (at least 3 sq further, or into room B)", prog >= 3 or o2.c1(L)[1] > 4150, f"moved {prog:.2f} sq on; now at {o2.c1(L)}; notices {o2.notice_texts()[:2]}"),
-              ("the second walk's charge is 30 ft or less (speed again)", bool(c2) and c2["sum"] <= 30.51, f"{c2}"), ("the second walk is charged by the distance walked (3 % + 1 ft of the history's length; core's own measure beside it)", bool(c2) and abs(c2["sum"] - w2) <= 0.03 * w2 + 1, f"charged {c2 and c2['sum']} ft, walked {w2:.1f} ft, core's measure {cm2}"),
+              ("the second walk's charge is 30 ft or less (speed again)", bool(c2) and c2["sum"] <= 30.51, f"{c2}"), ("the second walk is charged exactly core's own measure of the history (0.5 ft)", bool(c2) and isinstance(cm2.get("core"), (int, float)) and abs(c2["sum"] - cm2["core"]) <= 0.5, f"charged {c2 and c2['sum']} ft, core's measure {cm2}, walked {w2:.1f} ft"),
               ("it rests at least 0.14 sq clear of the walls again (or in room B)", clr2 >= 0.14 or o2.c1(L)[1] > 4150, f"{clr2} sq")]
     w1 = polyline_len([(e[0], e[1]) for e in o1.docs[L]["hist"]]) / G * 5 if c1 else 0
-    stage.append(("the first walk is charged by the distance walked (3 % + 1 ft; core's own measure beside it)", bool(c1) and abs(c1["sum"] - w1) <= 0.03 * w1 + 1, f"charged {c1 and c1['sum']} ft, walked {w1:.1f} ft, core's measure {cm1}"))
+    stage.append(("the first walk is charged exactly core's own measure of the history (0.5 ft)", bool(c1) and isinstance(cm1.get("core"), (int, float)) and abs(c1["sum"] - cm1["core"]) <= 0.5, f"charged {c1 and c1['sum']} ft, core's measure {cm1}, walked {w1:.1f} ft"))
     if wh2: stage.append(("no wall crossed on the second walk", False, f"{wh2[:2]}"))
-    res = t.verdict(o2, stage, num=(c1 or {}).get("sum"), unit="ft", guards=dict(account=False, notices_ok=(r".",), rest=False))
+    rep = f"walk 1: charged {c1 and c1['sum']} ft, core {cm1.get('core')}, walked {w1:.1f} ft; walk 2: charged {c2 and c2['sum']} ft, core {cm2.get('core')}, walked {w2:.1f} ft (the distance walked reported)"
+    res = t.verdict(o2, stage, num=(c1 or {}).get("sum"), unit="ft", expected=rep, guards=dict(account=False, notices_ok=(r".",), rest=False))
     bad = [("no two tokens overlapped at rest after the first stop", not ov1, f"{ov1[:2]}"), ("no wall crossed on the first walk", not wh1, f"{wh1[:2]}")]
     res["conds"] += bad
     if any(not b[1] for b in bad): res["ok"] = False; res["note"] = "; ".join(f"{b[0]}: {b[2]}" for b in bad if not b[1]) + "; " + res["note"]
@@ -284,3 +276,43 @@ def p_(t):
     nm = named_of(o1, H8) + named_of(o2, H8) + named_of(o3, H8)
     note = f"cold A->B lastMs {p1['lastMs']} / timingMs {p1['plan']}; warm B->A {p2['lastMs']} / {p2['plan']}; warm A->B {p3['lastMs']} / {p3['plan']}"
     return t.verdict(o3, [("nobody named and no route-timeout notice", not nm and not tmo, f"named {nm}; notices {tmo[:2]}")], num=max(p["lastMs"] or 0 for p in (p1, p2, p3)), unit="ms", expected=note, guards=TIMING_G)
+
+
+# ================================================================ S05.q: the five legs over the stair (sign-off F2 X3)
+WA5 = [w for w in W5 if w.get("grp") == ST[S5]["measure"]["stair"]["groups"][0]]
+WB5 = [w for w in W5 if w.get("grp") == ST[S5]["measure"]["stair"]["groups"][1]]
+
+def room_or_line(c, room):
+    """in the drop's room (A: rows 29-35, B: 42-48, columns 4-10; centres inside), or on the stair between its two curved
+    walls and, where it is narrower than a token, on its centre line (0.06 sq: the module's line points keep 0.02)"""
+    x, y = c[0] / G, c[1] / G
+    if 4 < x < 10 and ((29 < y < 35) if room == "A" else (42 < y < 48)): return True, "room"
+    a = dist_to_walls(c, WA5) / G; b = dist_to_walls(c, WB5) / G
+    if x < 10 or a >= 1 or b >= 1: return False, f"at ({x:.2f}, {y:.2f}), neither room {room} nor the stair"
+    if a + b >= 1: return True, "stair"
+    return abs(a - b) / 2 <= 0.06, f"stair, {abs(a - b) / 2:.3f} sq off its centre line at ({x:.2f}, {y:.2f})"
+
+@check("S05.q", S5, "stair, eight heroes dragged A to B, B to A, A to B, B to A, A to B (each from where the last left them, the last wave waited for): no \"No route there.\", nobody named while the stair has room, each rests in the drop's room or on the stair's centre line behind the leader, no rest overlap, no wall crossed", path="gpu", kind="HARD")
+def q_(t):
+    # Sign-off F2 X3: S05.p's five legs (the live round 3 diagnostic S05.zz) gated. S05.p keeps the plan time, reported.
+    gpu_only(t); add_tokens(t, S5, X5); toggle_door(t)
+    hold = int(os.environ.get("ZZ_HOLD", "250"))
+    conds, bad = [], 0
+    for k, room in enumerate(["B", "A", "B", "A", "B"], 1):
+        to = pt(S5, "dropB" if room == "B" else "dropA")
+        def act(to=to):
+            r = {"drag": t.rig.drag("gm", H8, L5, to, hold=hold)}
+            time.sleep(4.5)                       # every wave is sent within 4 s of the drop: wait for the last one
+            return r
+        t.say(f"leg {k}: eight heroes to room {room}")
+        o = t.act(act, key="gm", group=H8, meta={"grab": L5, "dest": to}, settle=40)
+        nm = named_of(o, H8); nr = [x for x in o.notice_texts() if "No route there" in x]
+        places = {n: room_or_line(o.c1(n), room) for n in H8}; off = {n: why for n, (ok, why) in places.items() if not ok}
+        still = tuple(n for n in H8 if not o.moved_doc(n))
+        leg = [(f"leg {k} to {room}: no \"No route there.\"", not nr, f"{nr[:1]}; last {json.dumps(o.last())[:160]}"), (f"leg {k} to {room}: nobody named", not nm, f"named {nm}; notices {o.notice_texts()[:2]}"),
+               (f"leg {k} to {room}: each in room {room} or on the stair's centre line", not off, f"{off}")]
+        leg += [(f"leg {k} to {room}: {g[0]}", g[1], g[2]) for g in t.guards(o, group=H8, still_ok=still, notices_ok=())]
+        bad += any(not c[1] for c in leg); conds += leg
+    fails = [c for c in conds if not c[1]]
+    note = "; ".join(f"{c[0]}: {c[2]}" for c in fails) if fails else "five legs clean"
+    return {"ok": not fails, "num": bad, "unit": "legs failing", "note": note[:600], "conds": conds, "expected": "five legs: no No-route, nobody named, in the room or on the line, the guards"}
