@@ -317,6 +317,46 @@ export function heap() {
 }
 
 /**
+ * One plan's memo of the step oracle (0.10.2): the same answer for the same step, asked once. Every flood of a plan
+ * (the rank, the walk to the drop, each member's reach, the door plug's seal tests) asks the same few hundred steps
+ * again and again. A step between non-neighbours, or off whole squares, is asked through.
+ */
+function stepMemo(step) {
+  if (typeof step !== "function") return step;
+  const memo = new Map();
+  return (a, b) => {
+    const di = b.i - a.i, dj = b.j - a.j;
+    if (!(Number.isInteger(a.i) && Number.isInteger(a.j) && di >= -1 && di <= 1 && dj >= -1 && dj <= 1 && Math.abs(a.i) < 4096 && Math.abs(a.j) < 4096)) return step(a, b);
+    const k = ((a.i + 4096) * 8192 + (a.j + 4096)) * 9 + (di + 1) * 3 + (dj + 1);
+    if (memo.has(k)) return memo.get(k);
+    const v = step(a, b);
+    memo.set(k, v);
+    return v;
+  };
+}
+
+/**
+ * Which of the squares `keys` a walk from `origins` reaches (8 neighbours; `step(a, b)` one step open, `ok(b)` b may
+ * be entered; origins are never tested): walkFrom's squares without their distances, so it stops as soon as every one
+ * of them is reached (0.10.2: the door plug's seal test, one walk per square it judges). A Set of the keys reached.
+ */
+function reachOf(origins, step, ok, keys) {
+  const want = new Set(keys), got = new Set(), seen = new Set(), q = [];
+  const see = (c, k) => { seen.add(k); q.push(c); if (want.has(k)) got.add(k); };
+  for (const c of origins) { const k = cellKey(c.i, c.j); if (!seen.has(k)) see(c, k); }
+  for (let h = 0; h < q.length && got.size < want.size; h++) {
+    const n = q[h];
+    for (const [di, dj] of N8) {
+      const m = { i: n.i + di, j: n.j + dj };
+      const mk = cellKey(m.i, m.j);
+      if (seen.has(mk) || !ok(m) || !step(n, m)) continue;
+      see(m, mk);
+    }
+  }
+  return got;
+}
+
+/**
  * Walking distance (8 neighbours, √2 diagonals) from `origins` (squares, distance 0) to the nearest `maxCells` squares
  * within `maxWalk`, as Map key → distance. `step(a, b)` says whether one step is open; `ok(b)` whether b may be
  * entered at all (origins are never tested). `hops`: count steps instead (rings). `until` (keys): stop as soon as
@@ -419,6 +459,7 @@ export function planLead(spec, o) { return drain(planLeadSteps(spec, o)); }
  * planLead (`drain`), the same plan for the same oracles and clock.
  */
 export function* planLeadSteps(spec, o) {
+  o = { ...o, step: stepMemo(o.step) };
   const now = o.now ?? (() => 0);
   const t0 = now();
   const members = (spec.members ?? []).map(m => ({ ...m, w: m.w ?? 1, h: m.h ?? m.w ?? 1 }));
@@ -694,23 +735,26 @@ export function* planLeadSteps(spec, o) {
     // square just inside the door) waits while one that does not is left. A swarm's "outside" is every ranked square
     // past ring 1; the door plug's, the narrow point's square(s) outside the leader's side.
     const inner = s => (target ? s.rank === 1 : s.tier < 2 && inside.size > 0);
-    const sealsWith = own => {
+    const sealsWith = (own, known = null) => {
       const open = c => !own.has(cellKey(c.i, c.j)) && freeCell(c);
       const ring = [], outer = [];
       for (const [k, v] of rank) { const c = parseKey(k); if (open(c) && (target ? v === 1 : inside.has(k))) ring.push(c); else if (target && open(c)) outer.push(c); }
       if (!target) outer.push(...wayInto.filter(c => !own.has(cellKey(c.i, c.j))));
       if (!ring.length || !outer.length) return [];
-      // The door plug's walk, as the member's own flood: never diagonally past a square taken.
-      const by = target ? o.step : (a, b) => o.step(a, b) && (a.i === b.i || a.j === b.j || (open({ i: a.i, j: b.j }) && open({ i: b.i, j: a.j })));
-      const got = walkFrom(outer, by, { ok: open });
-      return ring.filter(c => !got.has(cellKey(c.i, c.j))).map(c => cellKey(c.i, c.j));
+      // The door plug's walk, as the member's own flood: never diagonally past a square taken (the cheap corner test
+      // first). Only which ring squares it reaches counts (reachOf), never those `known` cut already: taking more
+      // squares never reopens one.
+      const by = target ? o.step : (a, b) => (a.i === b.i || a.j === b.j || (open({ i: a.i, j: b.j }) && open({ i: b.i, j: a.j }))) && o.step(a, b);
+      const keys = ring.map(c => cellKey(c.i, c.j));
+      const got = reachOf(outer, by, open, keys.filter(k => !known?.has(k)));
+      return keys.filter(k => !got.has(k));
     };
     // A swarm judges every free touching square; the door plug only those it could reach before (one it never could
     // does not hold the doorway back).
     const cutBefore = !target && inside.size ? new Set(sealsWith(new Set())) : null;
     const seals = s => {
       if (!inner(s)) return false;
-      const cut = sealsWith(new Set(footprintCells(s.centre, m.w, m.h).map(c => cellKey(c.i, c.j))));
+      const cut = sealsWith(new Set(footprintCells(s.centre, m.w, m.h).map(c => cellKey(c.i, c.j))), cutBefore);
       return cutBefore ? cut.some(k => !cutBefore.has(k)) : cut.length > 0;
     };
     if (target || inside.size) {

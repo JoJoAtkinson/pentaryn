@@ -206,3 +206,25 @@ test("0.10.2 door plug: planning stays fast (eight and twelve two squares past a
     assert.ok(times[3] < 100, `${n}: median ${times[3].toFixed(1)} ms`);
   }
 });
+
+// 0.10.2 live round r6, S07.k on the GPU page: the plan of eight through the open door went 69.5 ms (r5) to 108.1 ms.
+// The door plug's seal tests walked the whole area round the way in again for every square they judged, asking the
+// same steps (0.10.2-dev: 5827 step questions for 651 different steps, eight two past a door; 1261 without the plug).
+// Now a plan asks each step once (planLead's step memo) and a seal test stops once it reaches every square it judges.
+test("0.10.2 door plug: a plan asks each step once, and the plug asks at most 1.5 times the steps of the same plan without it (r6 S07.k)", () => {
+  for (const [name, past, n] of [["door", 2, 8], ["door", 2, 12], ["thin", 3, 12], ["mouth", 2, 12], ["door", 5, 12]]) {
+    const ask = plug => {
+      const { g, members, drop } = scenario(name, past, n);
+      let calls = 0;
+      const seen = new Set();
+      const step = (a, b) => { calls += 1; seen.add(`${a.i},${a.j},${b.i},${b.j}`); return g.stepOpen(a, b); };
+      const p = planLead({ members, leaderId: "m0", drop, standing: [] }, oraclesOf(g, { step, ...(plug === 0 ? { plug: 0 } : {}) }));
+      return { calls, distinct: seen.size, p };
+    };
+    const on = ask(), off = ask(0);
+    const label = `${name} past ${past}, ${n}`;
+    assert.equal(on.calls, on.distinct, `${label}: ${on.calls} step questions for ${on.distinct} steps`);
+    assert.equal(off.calls, off.distinct, `${label} (no plug): ${off.calls} step questions for ${off.distinct} steps`);
+    assert.ok(on.calls <= 1.5 * off.calls, `${label}: the plug asks ${on.calls} steps, ${off.calls} without it`);
+  }
+});
