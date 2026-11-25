@@ -9,6 +9,16 @@ leader's last step). Dropped on a token outside the group that you can see it is
 touching that token first, and the rest close in round it from their own sides, ring by ring. Formation offsets
 (everyone keeping its place relative to the others) are gone. Live on the world pentaryn from 0.10.0 for Joe's hands-on; main keeps 0.8.5. Plan §18.
 
+### Handoff — live round 4 (no module change after `f3ead5b0`; plan §18.9)
+
+The playground suite's last round on the world with the sign-off fixes: HARD 100 checks, 1 failing (S05.q); GATED 11, 2
+failing (S05.i 61 ms against 50, S15.b four at a door); REPORTED 9, 3 not clean (S05.p, S11.a, S15.c). No wall or
+shut-door crossing, no rest overlap, every charge core's measure, no module error. Open and shipped as known limits:
+eight heroes dragged back and forth over the stair can leave a member named or, B to A, in the far room with no notice
+(cause unproven); the door plug (the squares beside a leader dropped just past a one-wide door are not used yet); a
+fight walk on an off-grid way is charged core's measure (5 ft per square entered); a Large leader at a mouth moves
+nobody. Handoff list for Joe's play-test: `context/plans/movement-0.10-handoff.md`.
+
 ### Step L1 — the leader plan
 
 - **[declared] The tunnel bug** (Joe's hands-on): four members dragged 11 squares into a one-wide tunnel were told

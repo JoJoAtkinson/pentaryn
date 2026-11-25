@@ -1,0 +1,66 @@
+{
+ "z": {
+  "default": {
+   "overlap_instants": 56,
+   "leader_below": 56
+  },
+  "leader_sort_900": {
+   "overlap_instants": 56,
+   "leader_below": 0
+  },
+  "leader_order_default_first": [
+   [
+    1795539581114,
+    [
+     0.0,
+     2.0,
+     0.0
+    ]
+   ]
+  ],
+  "mate_order": [
+   [
+    1795539581114,
+    [
+     0.0,
+     2.0,
+     0.0
+    ]
+   ]
+  ]
+ },
+ "click": {
+  "click": {
+   "clickAt": {
+    "x": 7.22,
+    "y": 11.98
+   },
+   "clickedAt": 1795539611683
+  },
+  "rests_at_px": [
+   677,
+   1147
+  ],
+  "drawn": [
+   677,
+   1147
+  ],
+  "start": [
+   250,
+   1250
+  ]
+ },
+ "stair": {
+  "on_line": {
+   "worst_sq": 0.0,
+   "n": 1,
+   "narrowest": 0.4
+  },
+  "off_by_0.1": {
+   "worst_sq": 0.073,
+   "n": 1,
+   "narrowest": 0.401
+  },
+  "clearance_at_mid": 0.2
+ }
+}

@@ -1,5 +1,5 @@
 ---
-title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.8.3"
+title: "Drag pathfinding and group movement — pentaryn-movement 0.3.0 → 0.10.0"
 status: built
 last_modified: 2026-11-24
 tags: [foundry, plans, movement, pathfinding]
@@ -9,7 +9,7 @@ tags: [foundry, plans, movement, pathfinding]
 
 **Read this when:** you are changing how a dragged token finds its way around walls, or wondering why it was built this way. **Not this file:** using it → [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md) ("Drag pathfinding").
 
-**Status (2026-11-23):** built and live since 0.3.0 (main); 0.4 → 0.7.5 hardened through the hard-case and acceptance rounds of §15; 0.8.0 (§16) is the tiered redesign after Fable's review; 0.8.1 (§16.9) adds the simulator and its first fixes. Tier A and B are on, tier C (fight group drags) ships off until it passes its rounds. Use-doc: [`../foundry/movement.md`](../foundry/movement.md).
+**Status (2026-11-24):** 0.10.0 (§18) is built, live on the world pentaryn and handed over for Joe's play-test (§18.9, [`movement-0.10-handoff.md`](movement-0.10-handoff.md)); `main` keeps 0.8.5 until he has judged it. Earlier status (2026-11-23): built and live since 0.3.0 (main); 0.4 → 0.7.5 hardened through the hard-case and acceptance rounds of §15; 0.8.0 (§16) is the tiered redesign after Fable's review; 0.8.1 (§16.9) adds the simulator and its first fixes. Tier A and B are on, tier C (fight group drags) ships off until it passes its rounds. Use-doc: [`../foundry/movement.md`](../foundry/movement.md).
 
 ## 1. What Joe asked for
 
@@ -1796,3 +1796,86 @@ overlap 25,679 episodes (25,677), p95 2,033 ms, 6,377 square-seconds; the leader
 named 21,989 (22,055). Net lines: file-core +4 (the leader keeps its way; `blocker`), file.mjs +8 (the second point
 and the plan's time), drop.mjs +2 (the blocker named). Rerun at the next live round: S05 (S05.q new; S05.g, h, i, o
 void until then), S13.c, S11.a, S15.c.
+
+### 18.9 Handoff: live round 4, the two Fable verdicts, the rulings and what is left open
+
+**What the world runs.** pentaryn-movement 0.10.0 on the branch `movement-0.9` (last module commit `f3ead5b0`, the sign-off
+fixes X1 and X2; nothing in the module changed after it), deployed with `make foundry-movement-sync`; the page reports
+`status().version` 0.10.0 and `selftest()` passes (9 checks). `main` is 0.8.5, untouched. The playground (scene ZZ
+Playground, 16 stations, two reset macros, the journal ZZ Playground) is in the world and in the repo
+(`automation/browser-test/movement-playground/`); Joe's hands-on list is [`movement-0.10-handoff.md`](movement-0.10-handoff.md).
+
+**Live round 4 (r4, r4b; the sign-off fixes on the page; the suite's last round).** The standing over every round
+(`suite/standing-r4.md`): HARD 100 checks, 1 failing (S05.q); GATED 11, 2 failing (S05.i, S15.b); REPORTED 9, 3 not clean
+(S05.p, S11.a, S15.c). No zero-tolerance class fails: no wall or shut door crossed, no rest overlap, every charge is core's
+measure, no module error, the breaker never tripped. X1 holds (no "No route there." on any of the five stair legs). Open:
+- **S05.p / S05.q, eight heroes dragged back and forth over the stair.** Members are named ("Stayed where they stand, with no
+  free spot they can reach"): A to B leg 1 Hero 3; legs 3 and 5 Heroes 3 and 5 (they stay on their start squares in room A);
+  B to A legs 2 and 4: nobody is named but Heroes 4, 6 and 7 are left in room B with no notice (the one R8 miss: a member
+  neither sent nor named; confined to big groups on the stair). X2's change did not remove it live and Node does not
+  reproduce it, so the cause is unproven. Plan time over the stair 0.97 to 1.0 s for eight (`perf.lastMs`).
+- **S05.i (GATED), the warm narrow route 61 ms** on the GPU page against the 50 ms gate (three runs 60.7 to 62.0; Node max 37.5 ms).
+- **S15.b (GATED), twelve villagers at one door:** up to four centres within 0.6 square of the door at once (movers only).
+- **S11.a (reported):** a march crosses painted mud in a straight line (0.9.0 does the same; R9 charges nothing automatically).
+- **S15.c (reported):** twelve at a door plan in 152 to 156 ms (reference 150).
+- **Instrument fix, script only:** S05.h's oracle is the square rule (5 ft per square entered, 10 ft inside the mud); core's
+  one-shot re-measure of the finished history ignores the region (130 ft against 240 charged), now printed beside it.
+- **R11, judged on the GPU page, ordinary ground, `status().group.perf.lastMs`:** 8 cold 45 ms (gate 100), 20 cold 150 to
+  165 ms (gate 250); warm 31 and 120 ms; at 4x CPU throttle 8 cold 252 to 281 ms, 20 cold 825 to 914 ms. The cap stays 24.
+- **Gates at the end:** `make foundry-movement-check` 498 pass / 0 fail (conformance 95.9 %, exceptions C30 and C56);
+  `make test` 2,461 passed; `make foundry-module-index && make check-context` OK; the simulator, 10,000 seeds: 0 failing
+  runs, every hard class 0 (mover overlap 25,679 episodes, p95 2,033 ms, 6,377 square-seconds; the leader through its own
+  members 7,828 at rest; members named 21,989 of 62,381 dropped, 25,583 never moved).
+
+**Fable's two verdicts.**
+- *F1, the mid-build design check (§18.5): fix.* The pathfinder (no switch, any shape), the motion and the fight were
+  faithful to Joe's rules and the simulator converged (every "past a waiting mate" episode was the leader through its own
+  members). Three blockers where the group plan met the new narrow field: B1 the plan's step leaked through off-grid walls,
+  B2 the line behind on a narrow way mostly failed, B3 a rider counted as a standing token (a mount could swarm its rider).
+  Shipped reduced: a Large leader at a mouth moves nobody; cap 12 if the page gate missed (it did not).
+- *F2, the sign-off (§18.8): fix, one last round, then ship; no rollback.* No zero-tolerance rule failed live (gates
+  495/0 and 2,461 passed, simulator classes 0, R11 met) but on the stair a second group drag answered "No route there." every
+  time: a member that stays took the leader's route, and the whole group with it (X1). X2 mended the line behind, X3 and X4
+  were suite only. Ruled: the fight charge stays core's measure (Joe's call), several in a door under the 4 s rule accepted,
+  the door plug's squares beside the leader go to the backlog.
+
+**Rulings taken for Joe and automatic decisions** (the full list: scratch `b10/auto-decisions.md`, copied into the report in
+[`movement-0.10-handoff.md`](movement-0.10-handoff.md)): L3's fight and simulator gates missed twice, so retry (Joe never
+relaxes rest overlap and narrows the feature instead: refusing the one door shut that causes the breach is smaller than a
+settle off the way, and one seed in an adversarial GM sequence does not justify reverting the fight); the hard failures that
+remained live after the sign-off fixes were accepted (no wall, rest-overlap, charge or error breach and no data risk; the one
+R8 miss is confined to big groups on the stair, which 0.9.0 cannot cross at all, so reverting loses far more than it
+protects).
+
+**Known limits of 0.10.0** (also in `context/foundry/movement.md`, "Known limits"):
+- A member can be named, or left in the far room without a notice, on the stair when eight are dragged back and forth
+  (S05.p, S05.q); cause unproven.
+- Door plug (accepted by Joe): a leader dropped within about three squares past a one-wide door or mouth, two or three come
+  through and the rest wait outside though the room has space; the free squares beside the leader just inside are not
+  used yet. First backlog item. Drag deeper into the room to bring them in.
+- A fight walk on an off-grid way is charged core's measure, 5 ft per square entered, not the distance walked (130 ft for
+  118 ft; 240 for 212 through mud; 30 for 25). Joe's call, R7 against R9.
+- A Large leader that does not fit the way: nobody moves, "No route there." (R10's "the pack forms behind where it stops" is
+  not built); a Large follower that cannot follow stays where it stands, named. A leader whose rest square is held by a
+  member that stays: nobody moves, the notice names the member.
+- Door veto: a door cannot be shut on a jammed group token that has nowhere free to rest ("Door blocked: <name> is in the
+  doorway"); a player who cannot see it is told "a token".
+- Any gap of 1.5 ft or more between walls is a way for Medium and smaller tokens, with no switch: real maps may hold gaps
+  that were meant to be shut.
+- Timing: a group drop over a narrow way blocks the page longer (eight over the stair 0.7 to 1.0 s); twelve at a door 156 ms;
+  20 at 4x CPU throttle 816 ms. Search caps: leader 1,000 ms, member 400 ms, plan 1,500 ms. 3.9 % of dungeon drops have a
+  member with no clear wave under 4 s (sent at the least crowded one: twelve at one door, up to four in the frame at once, movers
+  only); 6 of 200 open-ground drops hold one member a wave or more longer. In a fight `status().group.last.plan` carries
+  members and order only.
+- A march crosses painted mud as 0.9.0 does. A square crossed by two lanes of one area (a hairpin) is one square to the
+  group plan. A swarm dropped on a narrow way keeps whole-square rings. A drop on a narrow way rests at the pointer out of
+  combat only.
+- Narrow ways (S05, S06) are outside the simulator: unit tests and the live rounds cover them. The timing gates are judged
+  on the GPU page; the software-GL page misses them under load (S05.i 119 ms, S01.d 104 ms): the host, not the module.
+- Code size: drag assist 5,736 lines against the 4,200 target, narrow ways 1,294 against 280 (accepted for the deploy);
+  `stop.mjs` (842 to 1,384) holds three stop rules the settle made redundant (`stopOrder`, `makeRoom`, the brush):
+  consolidation is backlog, after the hands-on.
+
+**Backlog, in order:** (1) the door plug's squares beside the leader just inside; (2) S05.p, the stair's stragglers (find the
+live cause: the page's route to a line point); (3) a Large leader's pack forming behind where it stops (R10); (4) fold the
+three redundant stop rules into the settle; (5) trim the line counts toward R12's target. Joe's hands-on decides the order.

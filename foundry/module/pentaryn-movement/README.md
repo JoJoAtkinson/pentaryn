@@ -52,7 +52,7 @@ were designed → `context/plans/pathfinding-2026-11.md` · its origin → `cont
   whose feat already grants it is shown pressed with the feat named, and the click changes nothing.
   Same from the console: `game.pentaryn.movement.setGhost(creature, { combat: true })`.
 
-**Drag movement (everyone; 0.3.0 pathfinding, 0.4.0 groups and click to stop, 0.9.0 the smaller design).** Nothing
+**Drag movement (everyone; 0.3.0 pathfinding, 0.4.0 groups and click to stop, 0.9.0 the smaller design, 0.10.0 the leader rule and any passage shape).** Nothing
 new to learn: you drag, it works out the rest. The table-side detail is `context/foundry/movement.md`. One rule since
 0.9.0 (Fable's review 2): **within 4 s of the drop every token is on its way, or named in a notice; nothing ever waits
 for another mover.** Walls, shut doors, tokens standing still, a mate at its spot, overlap at rest and fight charges
@@ -163,6 +163,10 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   `status().group.told`.
 - **Up to 24 tokens** in one group drag (0.10; was 12), out of combat and in a fight; more: core's own drop out of
   combat, refused in a fight.
+- **Known limits (0.10.0; the full list in `context/foundry/movement.md`):** the door plug (a leader dropped just past a
+  one-wide door brings two or three through, the rest wait outside), eight heroes dragged back and forth over the stair
+  can leave a member named or in the far room, a fight walk on an off-grid way is charged core's measure (5 ft per square
+  entered), a Large leader at a narrow mouth moves nobody, any gap of 1.5 ft or more is a way.
 - **Fail-open and the circuit breaker**: an exception inside a drop sends core's own move and is logged. After 3
   errors or 6 failed plans in a session the drag help switches itself off on that screen; on the GM's screen it also
   turns `assist` off for the table, and the GM is told either way.
