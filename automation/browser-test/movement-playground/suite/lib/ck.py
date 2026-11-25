@@ -140,6 +140,20 @@ def region_len_sq(pts_poly, shape):
     return inside / G
 
 
+def square_cost(hist, start_tl, shape):
+    """the square rule core charges with (live round 4: it matched every one of S05.h's 63 history entries): 5 ft for each grid square
+    entered (the square of the token's centre changes), doubled when the entered waypoint's centre lies inside the region.
+    hist = [[x, y, cost, ...]] top-left positions, start_tl = the top-left before the move. Returns (expected ft, entries that differ)."""
+    cell = lambda x, y: (math.floor((x + 50) / G), math.floor((y + 50) / G)); prev = cell(*start_tl); tot = 0; bad = []
+    for i, e in enumerate(hist):
+        c = cell(e[0], e[1]); exp = 0
+        if c != prev: exp = 10 if in_shape((e[0] + 50, e[1] + 50), shape) else 5
+        tot += exp
+        if abs(exp - (e[2] or 0)) > 0.01: bad.append((i, exp, e[2]))
+        prev = c
+    return tot, bad
+
+
 def in_shape(p, s):
     if s["type"] == "rectangle": return s["x"] <= p[0] <= s["x"] + s["width"] and s["y"] <= p[1] <= s["y"] + s["height"]
     if s["type"] == "polygon":

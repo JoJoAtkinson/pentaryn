@@ -77,8 +77,9 @@ def h(t):
     if not c or not in_b(o, L): return t.verdict(o, [("the hero crossed the stair into B", False, f"stopped at {o.c1(L)}; notices {o.notice_texts()[:2]}")], guards=dict(account=False, notices_ok=(r".",)))
     pts = [(e[0] + 50, e[1] + 50) for e in o.docs[L]["hist"]]; shp = ST[S]["regions"][0]["shape"]   # history entries are top-left: the region is tested at the centres
     inside = region_len_sq(pts, shp); total = polyline_len(pts) / G; exp = 5 * (total + inside); ch = c["sum"]; cm = core_measure(t, L, origin=o.c0(L)) or {}; core = cm.get("core")
-    return t.verdict(o, [("region really crossed", inside > 1, f"{inside:.2f} sq inside"), ("charged exactly core's own measure of the history (0.5 ft)", isinstance(core, (int, float)) and abs(ch - core) <= 0.5, f"charged {ch} ft, core's measure {core} ft ({cm})")],
-                     num=round(ch - exp, 1), unit="ft", expected=f"charged {ch} ft = core {core} ft; 5 ft x ({total:.1f} walked + {inside:.1f} inside) = {exp:.1f} ft; over it {ch - exp:+.1f} ft (reported)")
+    sq, bad = square_cost(o.docs[L]["hist"], (o.c0(L)[0] - 50, o.c0(L)[1] - 50), shp)
+    return t.verdict(o, [("region really crossed", inside > 1, f"{inside:.2f} sq inside"), ("charged exactly the square rule core applies (5 ft per square entered, 10 ft where the entered point is in the mud region; every history entry, live round 4: the one-shot re-measure at rest ignores the region and is no oracle here)", abs(ch - sq) <= 0.5 and not bad, f"charged {ch} ft, square rule {sq} ft, entries that differ {bad[:4]}; core's one-shot re-measure {core} ft (reported)")],
+                     num=round(ch - exp, 1), unit="ft", expected=f"charged {ch} ft = square rule {sq} ft; 5 ft x ({total:.1f} walked + {inside:.1f} inside) = {exp:.1f} ft; over it {ch - exp:+.1f} ft (reported); core's one-shot re-measure {core} ft (reported)")
 
 
 # Sign-off F2 X4: judged on the GPU page (it was timed on the software-GL page at load 11-14: 119 ms; Node 37.5 ms).
