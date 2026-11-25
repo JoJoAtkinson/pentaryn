@@ -1650,3 +1650,68 @@ fail (conformance 95.9 %, C30 / C56); `make test` 2,461 passed, 9 skipped, 4 xfa
 check-context` OK (the same 32 warnings). Net lines: drop.mjs +7, file.mjs +8 (the two caps), pathfind-core +47 and
 pathfind-adapter +37 (the broad phase). Defaults taken without a human: scratch `b10/auto-decisions.md` "Live round 1
 triage". Rerun: S01, S02, S05, S06, S07, S09, S15 (the GPU page's plan times are the R11 judgement).
+
+### 18.7 Live round 2: the triage and the fixes
+
+Live round 2 ran 0.10.0 on the world pentaryn again (rounds live2 and live2b, standing over live1 to live2b): HARD 100
+checks, 13 failing; GATED 12, 6 failing; REPORTED 7, 3 not clean. Each failure sorted as before; every module fix
+started as a failing test (`pathfind.test` and `pathfind-core.test` "0.10 live round 2", `drop.test` "S05.j3, S05.k3",
+`lead.test` "S02.d"). Probes: scratch `b10/r2x/` (page profiles over the GPU harness's `/profile`, dry runs with
+`planGroup`, read-only).
+
+**The page's plan time, found.** A CPU profile of the dry run on the GPU page put 180 of S01's 300 ms (eight, cold) and
+1,083 of S15's 1,493 ms (twelve) in the adapter's `stepCost`: core's `createTerrainMovementPath` and
+`measureMovementPath` for every step. Two causes. The playground has one Difficult Terrain region (S11's mud), and with
+any terrain region on a scene every step was measured (the per-direction memo was off for the whole scene); and the
+squares of every other token went the measured way, the group's own included, though dnd5e leaves a token moving with
+the dragger (controlled), a hidden one and, under the 2024 rules, one of the mover's disposition out of its creature
+difficult terrain. Fixed (pathfind-adapter): a step whose footprints keep a pixel clear of every terrain region's box
+(`terrainBoxes`, the regions `sceneHasTerrain` counts; a region with no box keeps every step measured) is costed once
+per direction; `ignoredForCost` mirrors dnd5e's own filter before its hook (hidden, secret, controlled, not a creature;
+modern rules: same disposition, Tiny). Also: the wall answers (`w`, and the pixel test `r` that string pulling and the
+fillets ask directly) are keyed by the body (size, shape, action, level, elevation, preview), so every member of one
+size shares them (each asked core again); a position's squares (`g`) and its creature test (`s`) once; `avoidHits`
+(pathfind-core) skips an avoid circle the move's box keeps clear of (avoidDist was 553 of S06's 2,004 ms) and the box
+distance no longer allocates. Measured on the GPU page with core's two calls answered once per direction away from
+terrain (an in-memory emulation on the ZZ GM's harness page, restored after; nothing written): S01 eight cold 66-109 ms
+(was 211), twenty cold 186-255 (609), S15 twelve 268-354 (1,171), S07's vault eight 255-349 (709), before the other
+three savings. The named members of S06.h/i, S15.a and S05.p were all the plan's budget (1,500 ms) running out on the
+page (stay `budget`, reproduced by the dry run there); the budget is unchanged.
+
+**Module defects, fixed.**
+- *A drop with the pointer on the stair's narrowest point* (S05.j3, S05.k3: "No route there" with four and eight).
+  dropMid (16, 38.5) lies on a grid line; core snaps the leader to square (15, 38) or (16, 38), whose centres lie beyond
+  the stair's walls (the C's hollow; the area outside the outer wall), so the rest point was there and no route reached
+  it (Node: the route to the snapped square's rest point is not found, the pointer's is). Out of combat a drop whose
+  pointer lies on a way narrower than the token, in another part than the snapped square's centre, now rests at the
+  pointer's own rest point (`pathfind.mjs` `cursorRestPoint`, `drop.mjs` `narrowDrop`; every member shifted alike), alone
+  or in a group. Not in a fight (R7: single drags unchanged; no failing fight check).
+- *A swarm round a Large off a wall* (S02.d, 10 of 12): a touching square whose taking would wall off another free
+  touching square from the rest of the area (a flood from the free outer ranks) waits; the first that seals nothing
+  goes first (planLead). The test: fourteen round a Large one square off ARENA's wall, six seeds, 12 touching.
+
+**Suite defects, fixed in the scripts** (scratch `b10/suite/checks`, the old ones as `*.live2`; the repo's copy follows).
+- S05.o: `core_measure` passed the history's centres to TokenDocument#measureMovementPath, which takes top-left
+  positions (a path shifted half a square: 25 ft). Core's own measure of the history is 30 ft, equal to the charge; the
+  walk crosses a square corner and enters two squares 5 px apart. Now top-left waypoints through Token#measureMovementPath.
+  What is left is the sign-off question of S05.g/h (core charges squares entered, not the distance walked).
+- S07.q (and the reported S07.m, S07.n): the door frame was a centre within 55 px of the door's line; the squares just
+  before and just past the door have centres 50 px off it (S07.q's Hero 2 rests in the room's first square). Now 45 px.
+- S07.d: every member within 2.2 sq of the vault drop; the leader rests at the vault's corner and seven fill the 3 × 3
+  behind it (the far corner 2.83 sq). Now 3.2 sq, as S01.c for eight.
+
+**Expected, left as they are.** S13.c (a Large leader at a narrow mouth moves nobody: the known limit); S05.g, S05.h
+and now S05.o (core's charge per square entered against the distance walked: a sign-off question); S11.a (a march
+straight over the mud: pre-existing, a sign-off question). S15.b (two centres within 30 px of the door at once, GATED):
+judged again on the faster plan.
+
+**R11, the page gate.** Not applied in this round either (scratch `b10/auto-decisions.md`, "Live round 2 triage"): the
+misses are mostly the defect above (59 % of S01's cold plan, 73 % of S15's), and the emulated fix already brings eight
+on open ground to 66-109 ms and twenty to 186-255 ms. Rerun S01.d/k on the GPU page: a miss there applies cap 12 for
+twenty, and planning only the leader inside the drop if eight still miss.
+
+**Gates.** `make foundry-movement-sim SEEDS=10000`: every class 0; mover overlap 25,677 episodes (25,651), p95 2,033
+ms, 6,377 square-seconds; named 22,055 (22,059). Mechanical: `make foundry-movement-check` 495 pass, 0 fail
+(conformance 95.9 %, C30 / C56). Net lines: drop.mjs +25 (narrowDrop: the pointer's rest, a drop that got no answer),
+file-core +17 (the seal check: R4's ring full only as far as it can be filled), pathfind-adapter +55, pathfind +29,
+pathfind-core +10. Rerun: S01, S02, S05, S06, S07, S15.
