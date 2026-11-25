@@ -474,7 +474,14 @@ export function* planLeadSteps(spec, o) {
   const route = o.route ?? null;
   const n = members.length;
   const flood = { maxCells: (o.cells ?? LEAD.cells) * n + (o.extra ?? LEAD.extra), maxWalk: o.maxWalk ?? LEAD.maxWalk };
-  const overStanding = c => standing.some(s => dist(cellCentre(c), s) < s.r + 0.5 - EPS);
+  // A square under a token standing outside the group (asked once per square: every flood and seal test asks it).
+  const underStanding = new Map();
+  const overStanding = c => {
+    const k = cellKey(c.i, c.j);
+    let v = underStanding.get(k);
+    if (v === undefined) { const q = cellCentre(c); v = standing.some(s => dist(q, s) < s.r + 0.5 - EPS); underStanding.set(k, v); }
+    return v;
+  };
   const claims = (spec.taken ?? []).map(t => ({ x: t.x, y: t.y, r: t.r, id: t.id ?? null })); // { x, y, r, id }: slots given out
   const stays = [];                       // { x, y, r, id }: members that stay where they stand
   const blockedBy = list => c => list.some(s => dist(cellCentre(c), s) < s.r + 0.5 - EPS);

@@ -25,9 +25,11 @@
 - **[declared] The door plug's plan time back down** (`file-core` `planLeadSteps` / `reachOf` / `stepMemo`; live round
   r6, S07.k on the GPU page: eight through the open door 69.5 ms in r5, 108.1 ms in r6). The plug's seal test walked
   the whole area round the way in again for every square it judged (5827 step questions for 651 steps, eight two past a
-  door; 1261 without the plug). A plan now asks each step once (one memo per plan) and a seal test stops as soon as it
-  reaches every square it judges (never those cut off already). Same plans, bit for bit (the simulator's 10,000 seeds
-  identical); in Node the S07 drop plans in 9.5 ms (10.0 in 0.10.1, 24.5 in 0.10.2's first build).
+  door; 1261 without the plug), and every square it entered measured itself against every token standing on the scene
+  (the playground's hundreds). A plan now asks each step once (one memo per plan), each square once whether a standing
+  token covers it, and a seal test stops as soon as it reaches every square it judges (never those cut off already).
+  Same plans, bit for bit (the simulator's 10,000 seeds identical). The S07 drop of eight, warm, on the GPU page's dry
+  run: 0.10.1 46 ms, 0.10.2's first build 61 ms, now 44 ms (Node: 10.0, 24.5, 9.5 ms).
 - Measured (GPU page, real drags, cold; nothing deployed, the page ran the branch by a module override): longest task
   from the drop to the plan's end 950 → under 50 ms for eight over the stair (S05), 162 → under 50 for the S07 vault,
   187 → under 50 for S15's twelve, 57 → under 50 / 182 → under 50 for S01's eight / twenty; the stair's plan 945 ms
