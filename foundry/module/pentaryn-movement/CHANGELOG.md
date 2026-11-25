@@ -1,6 +1,6 @@
 # Changelog — pentaryn-movement
 
-## 0.10.2-dev — branch movement-0.9: the door plug, no page freeze (not deployed)
+## 0.10.2 — branch movement-0.9: the door plug, no page freeze
 
 - **[declared] No page freeze on a big drop over a narrow way** (`drop.mjs` `groupDrop` / `planLater`, `file.mjs`
   `planDropSteps`, `file-core` `planLeadSteps`, `pathfind.mjs` `routeToSteps`, `narrow-core` `walkForSteps` /

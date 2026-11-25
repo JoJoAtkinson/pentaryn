@@ -163,9 +163,8 @@ are hard; two tokens that are both moving may brush (Joe, 2026-11-24).
   `status().group.told`.
 - **Up to 24 tokens** in one group drag (0.10; was 12), out of combat and in a fight; more: core's own drop out of
   combat, refused in a fight.
-- **Known limits (0.10.1; the full list in `context/foundry/movement.md`):** the door plug (a leader dropped just past a
-  one-wide door brings two or three through, the rest wait outside; 0.10.2-dev, on the branch: as many as fit within
-  2.5 squares of the leader, behind and beside it, never ahead), a member that finds no spot on a narrow way
+- **Known limits (0.10.2; the full list in `context/foundry/movement.md`):** the door plug (a leader dropped just past a one-wide door brings in as many as fit within
+  2.5 squares of it, behind and beside it, never ahead; one square past, nobody passes it), a member that finds no spot on a narrow way
   behind a leader gone through it stays where it stands and is named (more than the way holds), a fight walk on an off-grid way is charged core's measure (5 ft per square
   entered), a Large leader at a narrow mouth moves nobody, any gap of 1.5 ft or more is a way.
 - **Fail-open and the circuit breaker**: an exception inside a drop sends core's own move and is logged. After 3
