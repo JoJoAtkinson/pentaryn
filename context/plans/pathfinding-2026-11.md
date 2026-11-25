@@ -1715,3 +1715,84 @@ ms, 6,377 square-seconds; named 22,055 (22,059). Mechanical: `make foundry-movem
 (conformance 95.9 %, C30 / C56). Net lines: drop.mjs +25 (narrowDrop: the pointer's rest, a drop that got no answer),
 file-core +17 (the seal check: R4's ring full only as far as it can be filled), pathfind-adapter +55, pathfind +29,
 pathfind-core +10. Rerun: S01, S02, S05, S06, S07, S15.
+
+### 18.8 Sign-off F2: the fixes (X1 to X4)
+
+Live round 3 left one module defect open, S05.p (eight heroes dragged back and forth over the stair; brief F2), and a
+standing whose five HARD failures were none of them a 0.10 regression. Fable's sign-off asked for four fixes; each
+started as a failing test (`lead.test` and `drop.test` "0.10 sign-off X1", `drop.test` "0.10 sign-off X2"). Node
+reproduction: the eight heroes at live round 3's positions (scratch `b10/suite/out/live3/diag_s05p.json`), the
+playground's S05 Large standing in room A (without it Node's leg 1 plans differently from the page: with it, leg 1's
+squares match the page's exactly). Nothing was deployed or written to the world in this step.
+
+**X1, fixed: the leader through a member that stays** (S05.p legs 3 and 5, "No route there." for all eight: searches
+5, failed 1). Reproduced in Node from leg 3's positions: Heroes 2 to 5 stand in room A's east side and the stair's mouth
+on the leader's only way; one of them has no free square it can reach and stays; `stayHere` searched the leader's way
+round it (none, on the narrow way), dropped the leader and made it stay, and the line `if (out.members[L.id]?.stay)
+return everyoneStays("noRoute")` followed. Now (`file-core` `planLead`): the leader's way round a member that stays is
+still searched first; when there is none it keeps the route it has, through that member (R6, decisions.md "the group
+can never deadlock by blocking its own leader"); every other member still goes round it or stays. Unchanged: a member
+that stays on the leader's rest square (the "blocked" branch) still stops the group, and planLead now returns that
+member as `blocker`, which drop.mjs names ("No route there: <name> is in the way.", `named.noRoute`); standing
+non-members, walls and shut doors as before. The swarm leader's search avoids only the tokens standing (`stays` is
+always empty at its turn: it is first in the queue). Checked: drop.mjs sends the leader in the drop's own update
+(no `freeOfOthers` for a group's leader out of combat) with the on-top option, so nothing there treats a staying member
+as standing; the simulator classes the leader inside any member of its own drop, named ones included, as "leader"
+(`scenario.mjs` `leaderOf`: `dropOf` lists every member of the drop). The L1 gate's route rule now lets the leader
+through a member that stays only when no way round it exists (`o.route` round the stays returns null): 4 of 800 drops;
+"none" 50 → 46, named 254 → 287 (the members of those four drops that stay), searches a member 0.897, failed
+1.88 → 1.97 %. Node, S05.p's five legs chained from leg 1's start, and live leg 3's own positions: every leg plans,
+nobody named, every member in the drop's room or on the stair's centre line, no rest within 0.98 square, no wall
+crossed (before the fix: leg 3 `result none`, all eight stayed). The README had no limit line for it to remove (brief
+F2's table carried it); its group-drag paragraph now says it.
+
+**X2, fixed as asked, its live cause not proven.** Legs 1 and 2 do not reproduce in Node: at the live positions with
+the Large, Node's planLead gives exactly the page's squares in leg 1 (Hero 7 8.5/45.5 ... Hero 5's line point
+10.6/44.47) and then lines Hero 3 up behind Hero 5 (11.68, 44.25; route found); in leg 2 its squares for Heroes 6 to 8
+are the page's final positions (9.5/45.5, 8.5/44.5, 9.5/44.5) and lineBehind moves them to points 5.2 to 7.9 squares
+behind the leader. So on the page `lineBehind`'s one route a member failed (without the Large, at a test clock of 0.5 to 4 ms
+a clock read, Node still lines all, so not the 400 ms cap alone; the page's lineBehind time, 180 to 290 ms for three or four routes,
+rules out three 400 ms timeouts), or ended too near the next rest (Hero 8's first point is 1.03 squares, Chebyshev, from
+Hero 4's: 0.02 over the bound, the LINE_SLACK the page's goal move may eat). Either way the member then kept its square
+or stayed. The change (`file.mjs` `lineBehind`, local to it): a route that fails, or ends too near another's rest, goes
+on to the next clear point back along the leader's way, LEAD.tries (2) routes a member at most, all inside the plan's
+time (LEAD.totalMs less planLead's part); no cap raised. slotAtTurn's line (a fight) searches no route, so the cause is
+not shared and it is unchanged. The test: live leg 2's positions with Hero 8's own token refusing its first point's
+route (its `findMovementPath` returns no path there, as a page route that failed): it takes the next point and all
+three rest on the stair behind the leader (before: Hero 8 stayed in room B at 9.5/44.5). Whether that was the page's
+cause is for the next live round's S05.q to show; if S05.q still names a member or leaves one in the far room, the
+limit is the page's route to a line point, not lineBehind's book-keeping.
+
+**X3, done: S05.q, the five legs gated** (suite `checks/s17_l1.py`, GPU page, HARD): eight heroes A to B, B to A, A to
+B, B to A, A to B, each leg from where the last left them, 4.5 s after each drop before reading (the last wave goes
+within 4 s); per leg: no "No route there.", nobody named, each member in the drop's room or on the stair between its
+walls and, where it is narrower than a token, within 0.06 square of its centre line, and the guards (no rest overlap,
+no wall or standing token crossed, every member moving or named within 4 s, a member already in place excepted, no
+notice). S05.p keeps the plan time, REPORTED. Not yet run (no write to the world in this step).
+
+**X4, done: the standing relabelled** (suite scripts only; `tools/standing.py` names each one in a "Relabelled" list;
+a changed criterion's stored result is void until rerun, a changed kind counts under the new kind):
+- S05.g, S05.h, S05.o: HARD on the charge equalling core's own `measureMovementPath` of the token's history (R7,
+  review F1 check 6; `core_measure` moved to `lib/ck.py`); the difference to the distance walked (S05.h: 5 ft ×
+  (walked + inside the mud)) REPORTED, Joe's question. S05.o measured its first walk's core cost after the next turn had
+  cleared the history (now before it).
+- S13.c: HARD on the shipped rule, nobody moves and "No route there." (R10's "the pack forms behind where it stops" was
+  not built, F1's ruling); the pack's distance REPORTED.
+- S11.a: REPORTED (0.9.0 marches straight over the mud too; R9: nothing costs more automatically).
+- S15.c: REPORTED against 150 ms, R11's bounds (8: 100 ms, 20: 250 ms) scaled to twelve (was GATED at 100 ms; F1 §5
+  gates ordinary ground only).
+- S05.i: judged on the GPU page (was timed on the software-GL page at load 11 to 14).
+The standing over live1 to live3b with these: HARD 99, 0 failing (5 void until rerun: S05.g, h, i, o, S13.c); GATED 11,
+1 failing (S15.b, the known limit); REPORTED 9, 3 not clean (S05.p, S11.a, S15.c). Suite copy in the repo:
+`automation/browser-test/movement-playground/suite/standing-f2.md`.
+
+**Deviations from BINDING.** None in the module: R6 already said the leader passes through members of its own group;
+X1 applies it to a member that stays (Fable's ruling, scratch `b10/auto-decisions.md`, "Sign-off F2"). R3's ranks are
+untouched (the door plug's "beside the leader just inside" stays the first backlog item).
+
+**Gates.** `make foundry-movement-check` 498 pass, 0 fail (conformance 95.9 %, C30 / C56); `make test` 2,461 passed;
+`make foundry-module-index && make check-context` OK. `make foundry-movement-sim SEEDS=10000`: every class 0; mover
+overlap 25,679 episodes (25,677), p95 2,033 ms, 6,377 square-seconds; the leader through its own members at rest 7,828;
+named 21,989 (22,055). Net lines: file-core +4 (the leader keeps its way; `blocker`), file.mjs +8 (the second point
+and the plan's time), drop.mjs +2 (the blocker named). Rerun at the next live round: S05 (S05.q new; S05.g, h, i, o
+void until then), S13.c, S11.a, S15.c.
