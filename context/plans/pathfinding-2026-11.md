@@ -1579,3 +1579,74 @@ not in the group stands on it; on a narrow way `from` is the walk's last short c
 ahead of the leader (not changed: pre-existing, the simulator judges the shape against the plan's own B). The R11 page
 gate and the browser play-test (the stair, the slit, the line behind, a fight on the stair); the door plug; a Large
 leader at a narrow mouth moves nobody (R10, shipped reduced as review F1 §5 rules).
+
+### 18.6 Live round 1: the triage and the fixes
+
+Live round 1 ran 0.10.0 on the world pentaryn (ZZ playground, 119 checks: HARD 100, GATED 12, REPORTED 7; standing
+over rounds live1 to live1f): HARD 23 failing, GATED 8 failing. Each failure was sorted as a module defect, a suite or
+playground defect, or an expected result (a known limit or core's own rule); every module fix started as a failing
+test that reproduced the live record (`drop.test` "0.10 live R1", "0.10 live round 1"; `pathfind.test` and
+`pathfind-core.test` "0.10 live round 1"). Probes: scratch `b10/r1x/`.
+
+**Module defects, fixed.**
+- *A quick single drop was a silent no-op* (S05.a, S05.b, S05.d, S05.g, S05.h). Core's drag context holds the start
+  alone while its search runs (and for its 500 ms search animation), so core sends no update at all; the drop's
+  confirm search (`noteNoRoute`) found the way, but `droppedInPlace` then read the drop as "dropped where it stands"
+  (`last.reason` "still"), out of combat and, with no confirm there at all, in a fight. Now the confirmed route becomes
+  the token's update (its entry made when core has none), in a fight too when the drag had found nothing yet (a short
+  path there may be dnd5e's own limit), with a checkpoint at every square. The test reproduces live's `"still"` exactly.
+- *The leader's search was cut at a member's cap* (S06.a, S06.e, S06.f, S06.g, S06.h, S06.i, S07.d, S07.l, S05.j3,
+  S05.k3, S15.a; the named members of S01.f and S02.i). Every route search of a group plan had 120 ms; on the page a
+  route over a narrow way takes 130 to 250 ms (S05.i: 134 ms warm; Node 18 to 33 ms), so the leader's search ran out
+  and the group got "No route there" (live: `searches 1, failed 1, timingMs 132`; the test with a page six times slower
+  than Node: `searches 1, failed 1, timingMs 144`). Now the leader's search may take 1,000 ms, a member's 400 ms; the
+  whole plan stays inside `LEAD.totalMs` (1,500 ms).
+- *Core's wall test was most of a plan's time on the page* (S01.d, S01.k, S07.k, S15.c, S05.i). `Token#checkCollision`
+  runs a polygon test per ray; eight marching over S01's open field cast 2,730. A broad phase (`pathfind-core`
+  `segmentIndex`, `pathfind-adapter` `wallIndexFor`): the canvas's edges, the scene's walls (doors in any state) and
+  the scene's bounds, bucketed per square, one per scene (rebuilt when the edges differ); a move that comes within
+  2 px of none of them is clear without asking core. A superset of what core tests, so every answer is core's: the
+  pinned routes are waypoint for waypoint the same (112 and 192 core rays before, 9 and 18 now), S01's drop 307 rays.
+  A random test pins the broad phase conservative (2,000 moves over 60 walls).
+- *module.json's description* described 0.9.0 (B0/B1, groupStagger, a cap of 12); it now describes 0.10.0.
+
+**Suite defects, fixed in the scripts** (scratch `b10/suite/checks`, the old ones kept as `*.live1`).
+- S01.e expected the pack 100 to 400 ms after the leader, but in S01's layout the leader starts behind three members on
+  its way east; R5 then starts the pack once the leader is that far past the frontmost member. The bound is now that
+  walk plus 400 ms, 4 s at most (100 to 400 ms when the leader starts in front).
+- S01.f asserted `plan.total == 8`; `plan.total` is the last start in ms (README). Now `plan.members == 8`. Its other
+  failure (Hero 2 named) was the member cap above.
+- S09.c expected Hero 4 to stay, named; in S09's layout it walks back along the corridor to the square behind the
+  leader's last step without passing the leader, which R3 gives it. Now: it stays named, or it ends behind the leader.
+
+**Expected, left as they are.**
+- S13.c (a Large leader stopped at a narrow mouth, the pack not behind it): the known limit (a Large leader that does
+  not fit moves nobody, "No route there"; review F1 §5).
+- S07.q (in a fight a member resting in the door frame), with the reported S07.m and S07.n: the door plug Joe accepted
+  as an in-between state.
+- S05.g and S05.h's charge (130 ft for 118 ft walked along the curve, 240 for 212 with the mud): core charges 5 ft a
+  square entered on a square grid; R7 "exactly core's measure" and no house rule (R6). A question for the sign-off.
+- S11.a (a march straight across the mud out of combat): pre-existing (it fails on 0.9.0 too): a straight path core
+  allows is core's own and is not re-routed for cost. A question for the sign-off.
+
+**Module defects left open** (next round).
+- S02.d: a swarm round the Large target against the arena's top wall fills 10 or 11 of its 12 touching squares. The two
+  squares of the top row lie between the corner squares and the wall; once the corners are given out no flood reaches
+  them and the last members take ring 2. R4 "the next ring when a ring is full": the ring is full only as far as can be
+  reached. A fix needs a seal check in planLead's swarm (a claim that would wall off free touching squares waits).
+- S05.o: a fight walk from an off-grid rest records 30 ft in its history entries where core's measure of the same
+  history is 25 ft (25.1 ft walked): a possible extra 5 ft charged inside one square. Needs the waypoints logged.
+
+**R11, the page gate.** Not applied in this round: the misses were inflated by the two defects above (four failed
+searches at the 120 ms cap are 480 of S01's 680 ms), and a cap of 12 would neither bring eight under 100 ms nor keep
+S04's twenty in a tunnel (47 ms, passing). Rerun on the GPU page; if eight on open floor still miss 100 ms, the next
+round plans only the leader inside the drop.
+
+**Gates.** `make foundry-movement-sim SEEDS=10000` (full mix): **every class 0**, mover overlap 25,651 episodes, p95
+2,033 ms, 6,368 square-seconds, named 22,059 (identical to F1: the simulator runs planLead and staggerFile, which this
+round does not change). Node, the probes: S01's eight 12 to 15 ms (307 core rays, was 2,730), S06's two over the S-curve,
+hairpin and pillar field 85 to 110 ms with the narrow field warm. Mechanical: `make foundry-movement-check` 489 pass, 0
+fail (conformance 95.9 %, C30 / C56); `make test` 2,461 passed, 9 skipped, 4 xfailed; `make foundry-module-index && make
+check-context` OK (the same 32 warnings). Net lines: drop.mjs +7, file.mjs +8 (the two caps), pathfind-core +47 and
+pathfind-adapter +37 (the broad phase). Defaults taken without a human: scratch `b10/auto-decisions.md` "Live round 1
+triage". Rerun: S01, S02, S05, S06, S07, S09, S15 (the GPU page's plan times are the R11 judgement).
