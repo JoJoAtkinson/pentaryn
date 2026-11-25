@@ -1,0 +1,17 @@
+"""TEMPORARY diagnostic (live round 3): S05.p legs one by one, positions + telemetry after each"""
+import json
+from fw import check, pt, fmt_pos
+from ck import *
+from s17_l1 import *
+
+@check("S05.zz", S5, "diag: S05.p legs", path="gpu", kind="REPORTED")
+def zz(t):
+    add_tokens(t, S5, X5)
+    toggle_door(t)
+    out = []
+    for lab, dest in (("A->B cold", "dropB"), ("B->A", "dropA"), ("A->B", "dropB"), ("B->A again", "dropA"), ("A->B again", "dropB")):
+        o = t.drag(H8, L5, pt(S5, dest))
+        l = o.last(o.drag_page) or {}
+        out.append({"leg": lab, "pos": fmt_pos(o, H8), "named": [n for n in H8 if o.named(n)], "notices": o.notice_texts(), "res": l.get("result"), "plan": l.get("plan"), "stayed": len(l.get("stayed") or []), "ms": l.get("ms")})
+    open("/tmp/claude-1000/-home-joe-code-pentaryn/55679b9c-70a1-48f9-a7c4-b38176ae5993/scratchpad/b10/suite/out/diag_s05p.json", "w").write(json.dumps(out, indent=1))
+    return t.verdict(o, [("diag", True, "")], num=0, unit="x", expected="diag", guards=[])
