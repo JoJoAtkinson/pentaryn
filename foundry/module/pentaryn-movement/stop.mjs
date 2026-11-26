@@ -173,20 +173,48 @@ function stopSpot(token, taken = null) {
   return { drawn, p: { ...drawn, x: past.p.x, y: past.p.y }, near: { x: drawn.x, y: drawn.y }, via: past.via, way: past.way };
 }
 
-/** Token `t`'s centre when its top-left is `p` (pixels). */
-function centreOf(t, p) {
+/** Token `t`'s size: the grid's square `s` (pixels), its `w` x `h` squares (source), its radius `r` (pixels). */
+function sizeOf(t) {
   const s = gridSize(t), src = t.document._source ?? {};
-  return { x: p.x + ((src.width ?? 1) * s) / 2, y: p.y + ((src.height ?? 1) * s) / 2 };
+  const w = src.width ?? 1, h = src.height ?? 1;
+  return { s, w, h, r: radiusOf(w, h) * s };
+}
+
+/** Token `t`'s centre when its top-left is `p` (pixels); `z`: its sizeOf, when the caller has it. */
+function centreOf(t, p, z = sizeOf(t)) {
+  return { x: p.x + (z.w * z.s) / 2, y: p.y + (z.h * z.s) / 2 };
+}
+
+/** The circle (pixels) of a `w` x `h` token (squares of `s` pixels) whose top-left is (x, y). */
+const discAt = (x, y, w, h, s) => ({ x: x + (w * s) / 2, y: y + (h * s) / 2, r: radiusOf(w, h) * s });
+
+const snapPx = p => ({ x: Math.round(p.x), y: Math.round(p.y) });
+
+/** A token's route's corners (origin, passed, pending; not intermediate, finite) and `k`: where `drawn` is on it (routeAhead). */
+function routeOf(token, drawn) {
+  const m = token.document.movement;
+  const all = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])]
+    .filter(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
+  return { all, k: routeAhead(all, drawn, { near: 0.05 * gridSize(token), end: 0.5 }) };
 }
 
 /** A token's own way from `drawn` (its route's corners ahead, and back the way it came), top-left pixels. */
 function wayOf(token, drawn) {
-  const s = gridSize(token);
-  const m = token.document.movement;
-  const all = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])]
-    .filter(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
-  const k = routeAhead(all, drawn, { near: 0.05 * s, end: 0.5 });
+  const { all, k } = routeOf(token, drawn);
   return { ahead: k === null ? [] : all.slice(k), behind: (k === null ? all : all.slice(0, k)).reverse() };
+}
+
+/** Name `doc` as stopped on another token (`key`: the notice and its reason), never throwing. */
+function nameStayed(doc, key) {
+  try { feature.exposed.groupTellStayed?.([doc], key, key); } catch (err) { log?.debug?.("stop: name it", err); }
+}
+
+/** The spots along `way` a stop may rest token `t` on, from `from` (motion-core spotsAlong): clear of door lines and of `taken`. `cut(a, b)`: also a wall between those centres. */
+function spotsFor(t, from, way, taken, { enters, cut = null }) {
+  const { s } = sizeOf(t), c = p => centreOf(t, p);
+  return spotsAlong({ drawn: from, ahead: way.ahead, behind: way.behind, free: p => !doorwayAt(t, c(p)) && !taken(p), enters,
+    wallBetween: (a, b) => !wallOpen(t, c(a), c(b)) || (!!cut && cut(c(a), c(b))),
+    step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: Infinity, snap: snapPx });
 }
 
 /** How far a token across a door's line, or on one at rest, is carried along its route ahead to clear it, at most (squares). */
@@ -214,16 +242,14 @@ function pastDoor(token, drawn, taken, force = false) {
  * movement now (a door shut since, the wall that cut it).
  */
 function alongWay(token, drawn, { ahead, behind }, taken) {
-  const doc = token.document;
-  const s = gridSize(token);
-  const w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
-  const centre = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
+  const z = sizeOf(token), { s } = z;
+  const centre = p => centreOf(token, p, z);
   const onRest = p => !!taken?.resting?.(p);
   return clearAlong(drawn, ahead, behind, {
     bad: p => doorwayAt(token, centre(p)) || onRest(p), taken, wallBetween: (a, b) => !wallOpen(token, centre(a), centre(b)),
     enters: taken?.enters ?? null,
     step: s / 20, aheadMax: onRest(drawn) && taken?.lead ? Infinity : PAST_DOOR_SQUARES * s, behindMax: onRest(drawn) ? Infinity : PAST_DOOR_SQUARES * s,
-    snap: p => ({ x: Math.round(p.x), y: Math.round(p.y) }),
+    snap: snapPx,
   });
 }
 
@@ -233,6 +259,8 @@ function alongWay(token, drawn, { ahead, behind }, taken) {
  */
 const walkingOn = new Map();
 const WALK_ON_MS = 3000;
+/** A stop is carrying token `id` on to top-left `p` (`z`: its sizeOf). */
+const carryTo = (id, p, z) => walkingOn.set(id, { x: p.x, y: p.y, w: z.w, h: z.h, at: Date.now() });
 
 function displace(token, at = stopSpot(token), extra = {}) {
   const doc = token.document;
@@ -256,20 +284,19 @@ function displace(token, at = stopSpot(token), extra = {}) {
   if (at.inside) nameInside(doc, at);
   pinDrawn(token, drawn, first);
   const wp = { x: first.x, y: first.y, elevation: p.elevation, action: "displace", snapped: false, explicit: true, checkpoint: true };
-  const sz = { w: doc._source?.width ?? 1, h: doc._source?.height ?? 1 };
-  if (near) walkingOn.set(doc.id, { x: p.x, y: p.y, ...sz, at: Date.now() });
+  const z = sizeOf(token);
+  if (near) carryTo(doc.id, p, z);
   const walkOn = () => {
     // makeRoom (below) may have given it a walk on since its first write went: read `at` now.
     near = at.near ?? null; p = at.p;
     if (!near || !feature || token.destroyed) { walkingOn.delete(doc.id); return; }
-    const z = p.elevation ?? doc._source.elevation ?? 0;
+    const elevation = p.elevation ?? doc._source.elevation ?? 0;
     try {
       // A wall raised or a door shut since the spot was chosen (a click a moment after a door shut, before this client
       // knew; 0.10 L3, seed 1477): the spot again along the same way, with the walls and the tokens as they are now;
       // with none, it stays where it is drawn, named when that is on another token.
       let to = p, via = at.via ?? [];
-      const s = gridSize(token);
-      const centre = q => ({ x: q.x + (sz.w * s) / 2, y: q.y + (sz.h * s) / 2 });
+      const centre = q => centreOf(token, q, z);
       const pts = [near, ...via, p];
       if (pts.some((q, k) => k > 0 && !wallOpen(token, centre(pts[k - 1]), centre(q)))) {
         walkingOn.delete(doc.id);
@@ -278,16 +305,14 @@ function displace(token, at = stopSpot(token), extra = {}) {
         if (!again) {
           let done = false;
           try { done = settleAgain(token, at); } catch (err) { log.debug?.("stop: settle again", err); }
-          if (!done && taken.resting(near)) feature.exposed.groupTellStayed?.([doc], "stopInside", "stopInside");
+          if (!done && taken.resting(near)) nameStayed(doc, "stopInside");
           return;
         }
         to = { ...p, x: again.p.x, y: again.p.y };
         via = again.via;
       }
       // Just past the door's line along its own route (its corners passed on the way first), where it is, no snap.
-      const wps = [...via, to].map((q, k, list) => ({ x: q.x, y: q.y, elevation: z, action: doc.movementAction ?? "walk", snapped: false,
-        explicit: k === list.length - 1, checkpoint: k === list.length - 1 }));
-      Promise.resolve(doc.move(wps, { method: "api", pentarynMovementStop: true }))
+      Promise.resolve(doc.move(walkPoints(doc, [...via, to], elevation), { method: "api", pentarynMovementStop: true }))
         .catch(err => log.debug?.("stop: walk to the square", err))
         .finally(() => walkingOn.delete(doc.id));
     } catch (err) { walkingOn.delete(doc.id); log.debug?.("stop: walk to the square", err); }
@@ -445,10 +470,8 @@ function decide(token, { tool = game.activeTool, modifiers = false, armed = fals
 function takenAround(token, skip, claims, { pending = true } = {}) {
   const doc = token.document;
   const scene = doc?.parent;
-  const s = gridSize(token);
+  const z = sizeOf(token), { s, r } = z;
   const src = doc?._source ?? {};
-  const w = src.width ?? 1, h = src.height ?? 1;
-  const r = radiusOf(w, h) * s;
   // The leader of a moving group walks through its own members (0.10 R6): a stop carries it on through them.
   let lead = false, mates = null;
   try {
@@ -463,19 +486,20 @@ function takenAround(token, skip, claims, { pending = true } = {}) {
     if (!o?._source || o.id === doc.id || skip.has(o.id)) continue;
     if (o.hidden && !game.user?.isGM) continue;
     if (src.level !== undefined && o._source.level !== undefined && o._source.level !== src.level) continue;
-    const ow = o._source.width ?? 1, oh = o._source.height ?? 1, orr = radiusOf(ow, oh) * s;
+    const ow = o._source.width ?? 1, oh = o._source.height ?? 1;
     const t = o.object;
     let walking = false;
     try { walking = !!t && !t.destroyed && movementFacts(t).animating; } catch { walking = false; }
     // One of this screen's own walkers counts where it is drawn, not where it is going (0.10 L3): if its way comes
     // into where this stop rests a token, the same stop stops it too (stopAlso).
-    if (!(walking && o.movement?.user?.isSelf)) circles.push({ x: o._source.x + (ow * s) / 2, y: o._source.y + (oh * s) / 2, r: orr, id: o.id });
+    if (!(walking && o.movement?.user?.isSelf)) circles.push({ ...discAt(o._source.x, o._source.y, ow, oh, s), id: o.id });
     // One still walking: where it is drawn now counts too.
     try {
       if (walking) {
         const d = drawnPosition(t);
-        walkers.push({ x: d.x + (ow * s) / 2, y: d.y + (oh * s) / 2, r: orr });
-        if (o.movement?.user?.isSelf) own.push({ x: d.x + (ow * s) / 2, y: d.y + (oh * s) / 2, r: orr, id: o.id, own: true });
+        const disc = discAt(d.x, d.y, ow, oh, s);
+        walkers.push(disc);
+        if (o.movement?.user?.isSelf) own.push({ ...disc, id: o.id, own: true });
       }
     } catch (err) { log?.debug?.("taken: a walking token", err); }
   }
@@ -486,34 +510,34 @@ function takenAround(token, skip, claims, { pending = true } = {}) {
     if (e.id === doc?.id || skip.has(e.id)) continue;
     const m = scene?.tokens?.get?.(e.id);
     const ow = m?._source?.width ?? 1, oh = m?._source?.height ?? 1;
-    circles.push({ x: e.x + (ow * s) / 2, y: e.y + (oh * s) / 2, r: radiusOf(ow, oh) * s, id: e.id });
+    circles.push({ ...discAt(e.x, e.y, ow, oh, s), id: e.id });
   }
   // Where this client's other stops are carrying tokens on to (0.10 L3).
   const tnow = Date.now();
   for (const [id, wo] of walkingOn) {
     if (tnow - wo.at > WALK_ON_MS) { walkingOn.delete(id); continue; }
     if (id === doc?.id || skip.has(id)) continue;
-    circles.push({ x: wo.x + (wo.w * s) / 2, y: wo.y + (wo.h * s) / 2, r: radiusOf(wo.w, wo.h) * s, id });
+    circles.push({ ...discAt(wo.x, wo.y, wo.w, wo.h, s), id });
   }
   // Where this client has just sent a mate, its write not back yet (drop.mjs groupInFlight).
   let flying = [];
   try { flying = feature?.exposed?.groupInFlight?.() ?? []; } catch (err) { log?.debug?.("taken: in flight", err); }
   for (const f of flying) {
     if (f.id === doc?.id || skip.has(f.id)) continue;
-    circles.push({ x: f.x + (f.width * s) / 2, y: f.y + (f.height * s) / 2, r: radiusOf(f.width, f.height) * s });
+    circles.push(discAt(f.x, f.y, f.width, f.height, s));
   }
-  const inside = list => p => {
-    const cx = p.x + (w * s) / 2, cy = p.y + (h * s) / 2;
-    return list.some(c => Math.hypot(cx - c.x, cy - c.y) < r + c.r - 1);
-  };
-  const taken = p => inside(circles)(p) || inside(walkers)(p);
+  // How far this token's centre is from disc `c`'s when its top-left is `p`.
+  const away = (c, p) => { const q = centreOf(token, p, z); return Math.hypot(q.x - c.x, q.y - c.y); };
+  const inside = list => p => { const q = centreOf(token, p, z); return list.some(c => Math.hypot(q.x - c.x, q.y - c.y) < r + c.r - 1); };
+  const atRest = inside(circles), walking = inside(walkers);
+  const taken = p => atRest(p) || walking(p);
   // A token at rest (where the server has it) or a spot this stop already gave out: never rest inside one (0.9.0).
-  taken.resting = inside(circles);
+  taken.resting = atRest;
   // Into a token at rest it was not inside at `from`: walking on would take it through that token.
-  const within = (c, p) => Math.hypot(p.x + (w * s) / 2 - c.x, p.y + (h * s) / 2 - c.y) < r + c.r - 1;
+  const within = (c, p) => away(c, p) < r + c.r - 1;
   // (0.10 L3, simulator seed 4491: a brush at `from`, within 0.05 square, is not inside: a walk on that set off brushing
   // one went on through it.)
-  const deep = (c, p) => Math.hypot(p.x + (w * s) / 2 - c.x, p.y + (h * s) / 2 - c.y) < r + c.r - 0.05 * s;
+  const deep = (c, p) => away(c, p) < r + c.r - 0.05 * s;
   taken.enters = (from, p) => circles.some(c => !mates?.has(c.id) && within(c, p) && !deep(c, from));
   // settleTogether's: nor through one of this screen's own walkers (0.10 L3 fix round, simulator seeds 6572, 9631: the
   // same stop may stop it there, and a walk on then went through it at rest); such a walker in the way is noted (`hits`).
@@ -526,7 +550,7 @@ function takenAround(token, skip, claims, { pending = true } = {}) {
   };
   taken.lead = lead;
   taken.mates = mates;
-  taken.walking = inside(walkers);
+  taken.walking = walking;
   // The same without the waiting members' slots (stopSpot's last choice), when there were any.
   if (pend.some(e => e.id !== doc?.id && !skip.has(e.id))) taken.relax = () => takenAround(token, skip, claims, { pending: false });
   return taken;
@@ -534,8 +558,8 @@ function takenAround(token, skip, claims, { pending = true } = {}) {
 
 /** The circle (pixels) a stop at `at` claims for token `t` (with the token and its stop, for makeRoom). */
 function claimOf(t, at) {
-  const d = t.document, s = gridSize(t), w = d._source.width ?? 1, h = d._source.height ?? 1;
-  return { id: d.id, x: at.p.x + (w * s) / 2, y: at.p.y + (h * s) / 2, r: radiusOf(w, h) * s, token: t, at };
+  const { s, w, h } = sizeOf(t);
+  return { id: t.document.id, ...discAt(at.p.x, at.p.y, w, h, s), token: t, at };
 }
 
 /**
@@ -558,8 +582,7 @@ function makeRoom(token, at, taken, claims, skip) {
  */
 function roomAt(token, q, claims, skip) {
   const doc = token.document;
-  const s = gridSize(token);
-  const w = doc._source.width ?? 1, h = doc._source.height ?? 1, r = radiusOf(w, h) * s;
+  const { r } = sizeOf(token);
   const c = centreOf(token, q);
   const ys = claims.filter(k => k.id !== doc.id && Math.hypot(c.x - k.x, c.y - k.y) < r + k.r - 1);
   if (!ys.length || ys.some(y => !y.token || !y.at?.drawn)) return null;
@@ -586,19 +609,19 @@ function roomAt(token, q, claims, skip) {
  * nothing it did not set off inside, nor one of this screen's own walkers. { p, via, way } or null; the room made.
  */
 function roomAlong(token, at, claims, skip) {
-  const s = gridSize(token);
-  const c = p => centreOf(token, p);
+  const z = sizeOf(token), { s } = z;
+  const c = p => centreOf(token, p, z);
   const way = wayOf(token, at.drawn);
   const statics = takenAround(token, skip, []);
   const all = takenAround(token, skip, claims);
   const own = new Set(claims.filter(k => k.token && k.at?.drawn));
-  const onClaim = p => { const q = c(p), r = radiusOf(token.document._source.width ?? 1, token.document._source.height ?? 1) * s;
-    return claims.some(k => own.has(k) && k.id !== token.document.id && Math.hypot(q.x - k.x, q.y - k.y) < r + k.r - 1); };
+  const onClaim = p => { const q = c(p);
+    return claims.some(k => own.has(k) && k.id !== token.document.id && Math.hypot(q.x - k.x, q.y - k.y) < z.r + k.r - 1); };
   let moves = null;
   const found = clearAlong(at.drawn, way.ahead, way.behind, {
     bad: p => doorwayAt(token, c(p)) || statics.resting(p) || (onClaim(p) ? !(moves = roomAt(token, p, claims, skip)) : (moves = null, all.resting(p))),
     taken: all.walking, enters: all.entersOwn, wallBetween: (a, b) => !wallOpen(token, c(a), c(b)),
-    step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: Infinity, snap: p => ({ x: Math.round(p.x), y: Math.round(p.y) }),
+    step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: Infinity, snap: snapPx,
   });
   if (!found) return null;
   if (moves && onClaim(found.p)) commitRoom(moves);
@@ -608,14 +631,13 @@ function roomAlong(token, at, claims, skip) {
 /** roomAt's walks on, given out: each member's stop now carries it on there. */
 function commitRoom(moves) {
   for (const { y, again, way } of moves) {
-    const s = gridSize(y.token);
-    const yw = y.token.document._source.width ?? 1, yh = y.token.document._source.height ?? 1;
+    const z = sizeOf(y.token);
     y.at.p = { ...y.at.drawn, x: again.p.x, y: again.p.y };
     y.at.near = { x: y.at.drawn.x, y: y.at.drawn.y };
     y.at.via = again.via;
     y.at.way = way;
-    y.x = again.p.x + (yw * s) / 2; y.y = again.p.y + (yh * s) / 2;
-    walkingOn.set(y.id, { x: again.p.x, y: again.p.y, w: yw, h: yh, at: Date.now() });
+    Object.assign(y, centreOf(y.token, again.p, z));
+    carryTo(y.id, again.p, z);
   }
   return true;
 }
@@ -650,7 +672,7 @@ function stopOne(token, taken, claims, { wall = false, rec = null, skip = null, 
     const end = token.document._source;
     if (end && !taken.resting({ x: end.x, y: end.y })) {
       claims.push(claimOf(token, { p: { x: end.x, y: end.y } }));
-      try { feature.exposed.groupTellStayed?.([token.document], "walkedOn", "walkedOn"); } catch (err) { log?.debug?.("stop: name it", err); }
+      nameStayed(token.document, "walkedOn");
       return null;
     }
   }
@@ -680,15 +702,12 @@ function orderForStop(tokens) {
   if (tokens.length < 2) return tokens;
   try {
     const items = tokens.map(t => {
-      const doc = t.document, s = gridSize(t), w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
+      const doc = t.document, { r } = sizeOf(t);
       const drawn = drawnPosition(t);
-      const m = doc.movement;
-      const all = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])]
-        .filter(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
-      const k = routeAhead(all, drawn, { near: 0.05 * s, end: 0.5 });
+      const { all, k } = routeOf(t, drawn);
       const next = k === null ? null : all.slice(k).find(p => Math.hypot(p.x - drawn.x, p.y - drawn.y) > 1e-6);
       const L = next ? Math.hypot(next.x - drawn.x, next.y - drawn.y) : 0;
-      return { id: doc.id, at: { x: drawn.x + (w * s) / 2, y: drawn.y + (h * s) / 2 }, r: radiusOf(w, h) * s,
+      return { id: doc.id, at: centreOf(t, drawn), r,
         dir: L > 1e-9 ? { x: (next.x - drawn.x) / L, y: (next.y - drawn.y) / L } : null };
     });
     const by = new Map(tokens.map(t => [t.document.id, t]));
@@ -698,13 +717,9 @@ function orderForStop(tokens) {
 
 /** A walking token's way left (centres, pixels): where it is drawn, then its route's corners ahead. */
 function wayLeft(t) {
-  const doc = t.document, s = gridSize(t), w = doc._source?.width ?? 1, h = doc._source?.height ?? 1;
-  const c = p => ({ x: p.x + (w * s) / 2, y: p.y + (h * s) / 2 });
+  const z = sizeOf(t), c = p => centreOf(t, p, z);
   const drawn = drawnPosition(t);
-  const m = doc.movement;
-  const all = [m?.origin, ...(m?.passed?.waypoints ?? []), ...(m?.pending?.waypoints ?? [])]
-    .filter(p => p && !p.intermediate && Number.isFinite(p.x) && Number.isFinite(p.y));
-  const k = routeAhead(all, drawn, { near: 0.05 * s, end: 0.5 });
+  const { all, k } = routeOf(t, drawn);
   return [c(drawn), ...(k === null ? [] : all.slice(k).map(c))];
 }
 
@@ -726,7 +741,7 @@ function stopAlso(group) {
       try { walking = movementFacts(t).animating; } catch { walking = false; }
       if (!walking) continue;
       try {
-        const s = gridSize(t), r = radiusOf(o._source.width ?? 1, o._source.height ?? 1) * s;
+        const { s, r } = sizeOf(t);
         const cs = group.claims.filter(c => c.id !== o.id).map(c => ({ ...c, r: c.r - 0.05 * s }));
         const way = wayLeft(t);
         if (cs.some(c => Math.hypot(way[0].x - c.x, way[0].y - c.y) < r + c.r) || firstIntrusion(way, r, cs)) add.push(t);
@@ -782,7 +797,7 @@ function stopBatched(fn) {
 /** Name `doc` as stopped on another token: at the batch's end when it is still inside one, else at once. */
 function nameInside(doc, at) {
   if (batch) { batch.names.set(doc.id, { doc, at }); return; }
-  try { feature.exposed.groupTellStayed?.([doc], "stopInside", "stopInside"); } catch (err) { log?.debug?.("stop: name it", err); }
+  nameStayed(doc, "stopInside");
 }
 
 /**
@@ -792,8 +807,7 @@ function nameInside(doc, at) {
  */
 function flushBatch(b) {
   for (const { doc, at } of b.names.values()) {
-    if (!at.inside) continue;
-    try { feature.exposed.groupTellStayed?.([doc], "stopInside", "stopInside"); } catch (err) { log?.debug?.("stop: name it", err); }
+    if (at.inside) nameStayed(doc, "stopInside");
   }
   const byScene = new Map();
   for (const it of b.items) {
@@ -850,11 +864,8 @@ function settleTogether(grp, depth = 0) {
   const wrong = info.some(x => x.taken.resting(x.k.at.p) || ks.some(o => o !== x.k
     && (Math.hypot(finals.get(x.k.id).x - finals.get(o.id).x, finals.get(x.k.id).y - finals.get(o.id).y) < x.k.r + o.r - 1 || crossed(x, o))));
   if (!wrong) return;
-  const snap = p => ({ x: Math.round(p.x), y: Math.round(p.y) });
   const items = info.map(({ k, t, taken, way, c }) => {
-    const cands = spotsAlong({ drawn: k.at.drawn, ahead: way.ahead, behind: way.behind,
-      free: p => !doorwayAt(t, c(p)) && !taken(p), enters: taken.entersOwn, wallBetween: (a, b) => !wallOpen(t, c(a), c(b)),
-      step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: Infinity, snap });
+    const cands = spotsFor(t, k.at.drawn, way, taken, { enters: taken.entersOwn });
     return { id: k.id, r: k.r, drawn: c(k.at.drawn), mates: taken.mates, cands: cands.map(q => ({ p: c(q.p), via: q.via.map(c), tl: q })) };
   });
   const out = settleAlong(items, { eps: 1, leave: 0.05 * s });
@@ -870,15 +881,14 @@ function settleTogether(grp, depth = 0) {
   for (const { k, t } of info) {
     const { tl } = out.get(k.id);
     const moved = Math.hypot(tl.p.x - k.at.drawn.x, tl.p.y - k.at.drawn.y) > 0.5;
-    const src = t.document._source;
+    const z = sizeOf(t);
     k.at.p = { ...k.at.drawn, x: tl.p.x, y: tl.p.y };
     k.at.near = moved ? { x: k.at.drawn.x, y: k.at.drawn.y } : null;
     k.at.via = moved ? tl.via : [];
     k.at.way = info.find(x => x.k === k).way;
     k.at.inside = false;
-    const cc = centreOf(t, k.at.p);
-    k.x = cc.x; k.y = cc.y;
-    if (moved) walkingOn.set(k.id, { x: tl.p.x, y: tl.p.y, w: src.width ?? 1, h: src.height ?? 1, at: Date.now() });
+    Object.assign(k, centreOf(t, k.at.p, z));
+    if (moved) carryTo(k.id, tl.p, z);
     else walkingOn.delete(k.id);
   }
 }
@@ -908,17 +918,13 @@ function shutBlocked(wall) {
   }
   if (!cross.length) return null;
   const ids = new Set(cross.map(x => x.t.document.id));
-  const s = gridSize(cross[0].t);
-  const snap = p => ({ x: Math.round(p.x), y: Math.round(p.y) });
+  const { s } = sizeOf(cross[0].t);
   // A waiting member's slot is a stop's last choice (stopSpot): blocked with them, looked at again without them.
   const items = pending => cross.map(({ t, drawn, way }) => {
     const cc = p => centreOf(t, p);
     const taken = takenAround(t, ids, [], { pending });
-    const cands = spotsAlong({ drawn, ahead: way.ahead, behind: way.behind, free: p => !doorwayAt(t, cc(p)) && !taken(p),
-      enters: taken.enters, wallBetween: (a, b) => !wallOpen(t, cc(a), cc(b)) || segmentsCross(cc(a), cc(b), A, B),
-      step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: Infinity, snap });
-    const r = radiusOf(t.document._source.width ?? 1, t.document._source.height ?? 1) * s;
-    return { id: t.document.id, r, drawn: cc(drawn), mates: taken.mates, cands: cands.map(q => ({ p: cc(q.p), via: q.via.map(cc) })),
+    const cands = spotsFor(t, drawn, way, taken, { enters: taken.enters, cut: (a, b) => segmentsCross(a, b, A, B) });
+    return { id: t.document.id, r: sizeOf(t).r, drawn: cc(drawn), mates: taken.mates, cands: cands.map(q => ({ p: cc(q.p), via: q.via.map(cc) })),
       near: segDist(cc(drawn), A, B) };
   }).sort((a, b) => a.near - b.near);
   const blocked = pending => shutBlockedCore(items(pending), { eps: 1, leave: 0.05 * s });
@@ -941,19 +947,17 @@ function walkPoints(doc, list, z) {
 function settleAgain(token, at) {
   const grp = at.grp, doc = token.document;
   if (!grp || !at.way || !at.near) return false;
-  const s = gridSize(token);
-  const me = centreOf(token, at.near), r = radiusOf(doc._source.width ?? 1, doc._source.height ?? 1) * s;
+  const { s, r } = sizeOf(token);
+  const me = centreOf(token, at.near);
   const mates = grp.claims.filter(k => k.id !== doc.id && k.token && !k.token.destroyed && k.at?.drawn && !k.at.near && k.at.way
     && !movementFacts(k.token).animating && Math.hypot(k.token.document._source.x - k.at.p.x, k.token.document._source.y - k.at.p.y) < 1
     && Math.hypot(me.x - k.x, me.y - k.y) < r + k.r - 1);
   if (!mates.length) return false;
   const ids = new Set([doc.id, ...mates.map(k => k.id)]);
-  const snap = p => ({ x: Math.round(p.x), y: Math.round(p.y) });
   const item = (t, from, way) => {
     const taken = takenAround(t, ids, []), c = p => centreOf(t, p);
-    const cands = spotsAlong({ drawn: from, ahead: way.ahead, behind: way.behind, free: p => !doorwayAt(t, c(p)) && !taken(p),
-      enters: taken.enters, wallBetween: (a, b) => !wallOpen(t, c(a), c(b)), step: s / 20, aheadMax: PAST_DOOR_SQUARES * s, behindMax: Infinity, snap });
-    return { id: t.document.id, t, from, r: radiusOf(t.document._source.width ?? 1, t.document._source.height ?? 1) * s, drawn: c(from),
+    const cands = spotsFor(t, from, way, taken, { enters: taken.enters });
+    return { id: t.document.id, t, from, r: sizeOf(t).r, drawn: c(from),
       cands: cands.map(q => ({ p: c(q.p), via: q.via.map(c), tl: q })) };
   };
   const items = [item(token, at.near, at.way), ...mates.map(k => item(k.token, k.at.p, k.at.way))];
