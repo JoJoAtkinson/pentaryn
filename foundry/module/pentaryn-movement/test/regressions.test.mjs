@@ -15,7 +15,8 @@ const PENDING = new Set(["H2-01", "H4-01", "H4-03", "HX1-01", "D-9", "D-10", "FR
   "R3-3", "R4-5", "R7-2", "R7-4"]);
 
 function sources() {
-  return readdirSync(root).filter(f => f.endsWith(".mjs")).map(f => readFileSync(new URL(f, root), "utf8"));
+  const read = (dir, f) => readFileSync(new URL(`${dir}${f}`, root), "utf8");
+  return ["", "core/"].flatMap(dir => readdirSync(new URL(dir, root)).filter(f => f.endsWith(".mjs")).map(f => read(dir, f)));
 }
 function titles() {
   const dir = new URL("./", import.meta.url);

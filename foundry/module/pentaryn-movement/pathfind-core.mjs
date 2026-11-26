@@ -37,10 +37,7 @@ export const LIMITS = Object.freeze({
 const EPS = 1e-6;
 /** A node's key: a square `i,j`; a part of a tight square (narrow-core's component c ≥ 1) `i,j#c`. */
 const key = n => (n.c ? `${n.i},${n.j}#${n.c}` : `${n.i},${n.j}`);
-/**
- * A step through a narrow way (spec.more) is a hair dearer in the straightness tie-break than a plain step of the same
- * cost, so where the plain square test finds a route the search keeps it, waypoint for waypoint (R9).
- */
+/** A narrow-way step (spec.more) is a hair dearer in the tie-break than a plain step of the same cost, so plain routes stay as they were (R9). */
 const FINE_TIE = 0.01;
 export const nodeKey = key;
 
