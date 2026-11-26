@@ -7,7 +7,7 @@
  * Foundry waypoints are top-left pixels. `toSquares` / `toTopLeft` convert, given the grid size.
  */
 
-import { MOTION, radiusOf } from "./motion-core.mjs";
+import { MOTION, radiusOf, segDist } from "./motion-core.mjs";
 
 /** A token's centre in squares, for a top-left pixel position and its size in squares. */
 export const toSquares = (p, w, h, s) => ({ x: (p.x + (w * s) / 2) / s, y: (p.y + (h * s) / 2) / s });
@@ -196,7 +196,7 @@ export function fitPath(token, path) {
     const c = centreAt(x, y, w, h);
     const p = { x: c.x * s, y: c.y * s }, rr = member.r * s * WHOLE_RATIO;
     // Rays alone miss a door frame's corner poking into the circle between two of them.
-    return restWalkable(member, c, s, WHOLE_RATIO, 16) && blocking.every(([a, b]) => pointSegment(p, a, b) >= rr);
+    return restWalkable(member, c, s, WHOLE_RATIO, 16) && blocking.every(([a, b]) => segDist(p, a, b) >= rr);
   };
   /** The straight step p → g (top-lefts) with its body fitting all the way and its centre crossing no wall. */
   const stepFits = (p, g, w, h) => {
@@ -422,7 +422,7 @@ export function clearOfWalls(token, p, { taken = null, snap = false, prefer = nu
   const straddles = q => {
     if (!doors.length) return false;
     const c = { x: q.x + (w * s) / 2, y: q.y + (h * s) / 2 };
-    return doors.some(([a, b]) => pointSegment(c, a, b) < rr);
+    return doors.some(([a, b]) => segDist(c, a, b) < rr);
   };
   const fits = q => restWalkable(member, at(q), s) && !straddles(q);
   const free = q => !taken?.(q);
@@ -485,12 +485,6 @@ export function doorwayAt(token, c) {
   const s = gridSize(token);
   const src = token.document?._source ?? {};
   const rr = radiusOf(src.width ?? 1, src.height ?? 1) * s - 0.5;
-  return doorSegments(token).some(([a, b]) => pointSegment(c, a, b) < rr);
+  return doorSegments(token).some(([a, b]) => segDist(c, a, b) < rr);
 }
 
-/** Distance from point p to segment a–b (pixels). */
-function pointSegment(p, a, b) {
-  const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
-  const t = L2 ? Math.min(Math.max(((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
-  return Math.hypot(p.x - (a.x + (b.x - a.x) * t), p.y - (a.y + (b.y - a.y) * t));
-}

@@ -17,6 +17,10 @@ export const VERSION = "0.10.2";                    // === module.json version (
 export const CONTRACT = "pentaryn-movement/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_MOVEMENT";
 export const CSS = Object.freeze({ blocked: "pm-blocked", hud: "pm-ghost-combat" });
+/** The update option that names the group a move belongs to, so every client knows its members (file.mjs reads it, drop.mjs sends it). */
+export const GROUP_OPT = "pentarynMovementGroup";
+/** The update option that names the leader of a group drag (and its riders) in its move (ghost.mjs draws them on top while they walk, R6). */
+export const LEAD_OPT = "pentarynMovementLead";
 
 /*
  * Ghost during a fight (feedback nwhjz2, triage I1). The policy "exploration" switches ghost off

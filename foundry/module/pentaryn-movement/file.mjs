@@ -38,11 +38,10 @@ import { fieldFor, placesToAvoid } from "./pathfind-adapter.mjs";
 import { dnd5eMovementAutomation } from "./settings.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
 import { errorCode } from "./lib/errors.mjs";
+import { GROUP_OPT } from "./movement-core.mjs";
 
 let log = null;
 let feature = null;
-/** The update option that names the group a move belongs to, so every client knows its members (decision 3). */
-const GROUP_OPT = "pentarynMovementGroup";
 
 /**
  * Groups this client sent: id → { ids: Set, scene, at, waves: [{ at, ids, timer }], send, queue }. `waves`: the

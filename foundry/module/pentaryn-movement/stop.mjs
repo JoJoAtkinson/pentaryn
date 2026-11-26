@@ -41,7 +41,7 @@
  */
 
 import { MODULE } from "./movement-core.mjs";
-import { clearAlong, clickStop, firstLegAcross, radiusOf, routeAhead, segmentsCross, settleAlong, shutBlocked as shutBlockedCore, spotsAlong, stopOrder } from "./motion-core.mjs";
+import { clearAlong, clickStop, firstLegAcross, radiusOf, routeAhead, segDist, segmentsCross, settleAlong, shutBlocked as shutBlockedCore, spotsAlong, stopOrder } from "./motion-core.mjs";
 import { firstIntrusion } from "./group-core.mjs";
 import { continuationInFlight, doorwayAt, drawnPosition, gridSize, holdPinned, inCombat, movementFacts, open as wallOpen, pinDrawn, stopWhereDrawn, unpin } from "./group-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -971,13 +971,6 @@ function settleAgain(token, at) {
       .catch(err => log?.debug?.("stop: settle again", err));
   }
   return true;
-}
-
-/** The distance from p to the segment a-b. */
-function segDist(p, a, b) {
-  const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
-  const t = L2 ? Math.min(Math.max(((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
-  return Math.hypot(p.x - (a.x + (b.x - a.x) * t), p.y - (a.y + (b.y - a.y) * t));
 }
 
 /** Does this user own the token (a GM owns all)? */

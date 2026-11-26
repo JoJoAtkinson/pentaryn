@@ -27,8 +27,8 @@
  * Any throw is core's own drop (fail open), with one warning, and the circuit breaker counts it.
  */
 
-import { MODULE } from "./movement-core.mjs";
-import { GROUP_MAX, MOTION, cellChain, dist, doorShutting, fightWalk, firstLegAcross, groupMode, radiusOf, routeAhead, wallOpenFrom, waves as wavesOf } from "./motion-core.mjs";
+import { GROUP_OPT, LEAD_OPT, MODULE } from "./movement-core.mjs";
+import { GROUP_MAX, MOTION, cellChain, dist, doorShutting, fightWalk, firstLegAcross, groupMode, radiusOf, routeAhead, segDist, wallOpenFrom, waves as wavesOf } from "./motion-core.mjs";
 import { coalesceHistory, freePrefix, onCell, pathLength, prefixOf, stacksOf } from "./group-core.mjs";
 import { avoidDist, skipReason } from "./pathfind-core.mjs";
 import { clearOfWalls, countsForRoutes, drawnPosition, gridSize, inCombat, movementFacts, movementLeft, othersOf, restWalkable, sameLayer, speedOf, toSquares } from "./group-adapter.mjs";
@@ -40,10 +40,6 @@ let feature = null;
 let dropHandle = null;
 let dropPatched = false;
 
-/** The update option that names the group a move belongs to (file.mjs reads it on every client; the same string). */
-const GROUP_OPT = "pentarynMovementGroup";
-/** The update option that names the leader of a group drag (and its riders) in its move (ghost.mjs draws them on top while they walk, R6). */
-const LEAD_OPT = "pentarynMovementLead";
 let last = null;                           // the last drop, for status()
 let cutLast = null;                        // the last wall raised mid-walk that stopped moves this client drives
 let stepLast = null;                       // the last next square of a move this client drives that it did not send
@@ -715,13 +711,6 @@ function stepCircle(doc, p, s) {
   return { x: p.x / s + w / 2, y: p.y / s + h / 2, r: radiusOf(w, h) };
 }
 
-/** Distance from point c to segment a-b (squares). */
-function segPt(c, a, b) {
-  const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
-  const t = L2 > 1e-12 ? Math.min(Math.max(((c.x - a.x) * (b.x - a.x) + (c.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
-  return Math.hypot(c.x - (a.x + (b.x - a.x) * t), c.y - (a.y + (b.y - a.y) * t));
-}
-
 /**
  * Does the step a → b (pixels, centres) cross a wall that blocks movement now, read from the scene's documents? A
  * one-way wall met from its open side does not (0.10 L2 fix (d): it was read as a wall both ways).
@@ -768,7 +757,7 @@ function stepMeetsStanding(doc, a, b, s) {
       if (held && Math.hypot(b.x - c.x, b.y - c.y) < rr) return o.id;
       continue;
     }
-    if (segPt(c, a, b) < rr) return o.id;
+    if (segDist(c, a, b, 1e-12) < rr) return o.id;
   }
   return null;
 }
@@ -1219,6 +1208,48 @@ function nextSlice() {
  */
 const earlyLead = l => !!l?.free && !l.lead?.atStart && l.lead?.points?.length >= 2 && !l.lead.stay;
 
+/** The group these members hold (null: none), and the tag its moves carry: never with a hidden member (update options reach every client). */
+function groupTag(ids, scene) {
+  const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
+  return { gid, tag: gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null };
+}
+
+/** The ids of the riders each leader carries: id → the ids of the riders whose leader it is. */
+const ridersOfFn = riders => id => [...(riders ?? new Map())].filter(([, r]) => r.leader === id).map(([id2]) => id2);
+
+/** The update options a wave's moves carry: the drop's own, without its movement, and the group's tag. */
+function waveOpts(result, tag) {
+  const opts = {};
+  for (const [k, v] of Object.entries(result[1])) if (k !== "movement") opts[k] = v;
+  if (tag) opts[GROUP_OPT] = tag;
+  return opts;
+}
+
+/**
+ * Split a plan's members by their start delay, in members order (those in `skip` left out): every member with a way
+ * (`all`: id → { wps, delay }), the ids that go at once (delay 0) and the delays of the rest (`timed`).
+ */
+function splitPlan(members, plan, delays, skip = null) {
+  const all = new Map(), now0 = [], timed = {};
+  for (const m of members) {
+    if (skip?.has(m.id)) continue;
+    const wps = feature.exposed.groupWaypoints(m, plan.members[m.id]);
+    if (!wps.length) continue;
+    const d = delays[m.id] ?? 0;
+    all.set(m.id, { wps, delay: d });
+    if (d > 0) timed[m.id] = d;
+    else now0.push(m.id);
+  }
+  return { all, now0, timed };
+}
+
+/** The notice for a drop that sent nobody: the leader with no way (R10), or the member that stays on its rest square. */
+function tellOutcome(grabbed, plan, stayedDocs) {
+  if (plan.none && plan.blocker) tellBlockedBy(grabbed, plan.blocker);
+  else if (plan.none || !stayedDocs.length) tell("noRoute", "groupNoRoute");
+  else tellStayed(stayedDocs);
+}
+
 /**
  * The rest of a group drop's plan, in slices. Nothing of core's update goes out at the drop: the leader's own move does
  * when it may start early (`leadAt`, the drop's own update), else as soon as it may, else with the others once the
@@ -1232,19 +1263,16 @@ function planLater(grabbed, contexts, result, riders, seq, { gen, clock, leadAt,
   const at = Date.now();
   const ids = [...new Set(contexts.map(c => c.token.document.id))];
   const starts = new Map(ids.map(id => [id, { ...(scene?.tokens?.get?.(id)?._source ?? {}) }]));
-  const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
-  const tag = gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null;
+  const { gid, tag } = groupTag(ids, scene);
   if (gid) feature.exposed.groupPlanning?.(gid, true);
   // This drop's record (status().group.last): a later drop replaces `last`, never this one's fields.
   const rec = last;
   const job = { at, slices: 0, longestMs: 0, sent: null, done: false, rec };
   planLast = { at: new Date().toISOString(), members: ids.length, state: "planning", early: false, syncMs: Math.round((now() - t0) * 10) / 10, slices: 0, longestMs: 0, busyMs: null, wallMs: null };
   Object.assign(rec, { result: "planning", async: true });
-  const opts = {};
-  for (const [k, v] of Object.entries(result[1])) if (k !== "movement") opts[k] = v;
-  if (tag) opts[GROUP_OPT] = tag;
+  const opts = waveOpts(result, tag);
   const base = result[1].movement ?? {};
-  const ridersOf = id => [...(riders ?? new Map())].filter(([, r]) => r.leader === id).map(([id2]) => id2);
+  const ridersOf = ridersOfFn(riders);
   const alive = () => !!feature && (!gid || feature.exposed.groupAlive?.(gid) !== false) && ids.some(id => latestDrop.get(id) === seq);
   const leaderWps = l => feature.exposed.groupWaypoints?.(null, l.lead) ?? [];
   /** The leader's update (the drop's own, built as launch builds it), or null. */
@@ -1334,16 +1362,7 @@ function launchLater(grabbed, result, riders, seq, out, { job, gid, opts, base, 
   const { plan, members, timing } = out;
   const delays = timing?.delays ?? {};
   const elapsed = Date.now() - job.at;
-  const later = new Map(), now0 = [], timed = {};
-  for (const m of members) {
-    if (job.sent?.has(m.id)) continue;
-    const wps = feature.exposed.groupWaypoints(m, plan.members[m.id]);
-    if (!wps.length) continue;
-    const d = delays[m.id] ?? 0;
-    later.set(m.id, { wps, delay: d });
-    if (d > 0) timed[m.id] = d;
-    else now0.push(m.id);
-  }
+  const { all: later, now0, timed } = splitPlan(members, plan, delays, job.sent);
   const waveList = wavesOf(timed).map((w, k) => ({ at: Math.max(1 + k, w.at - elapsed), ids: w.ids }));
   const waves = waveList.length + (now0.length ? 1 : 0) + (job.sent ? 1 : 0);
   record(rec, plan, members, timing, waves);
@@ -1351,9 +1370,7 @@ function launchLater(grabbed, result, riders, seq, out, { job, gid, opts, base, 
   const stayedDocs = plan.stayed.map(id => members.find(m => m.id === id)?.token?.document).filter(Boolean);
   if (!later.size && !job.sent) {
     rec.result = "none";
-    if (plan.none && plan.blocker) tellBlockedBy(grabbed, plan.blocker);
-    else if (plan.none || !stayedDocs.length) tell("noRoute", "groupNoRoute");
-    else tellStayed(stayedDocs);
+    tellOutcome(grabbed, plan, stayedDocs);
     return;
   }
   if (stayedDocs.length) tellStayed(stayedDocs);
@@ -1383,22 +1400,16 @@ function launch(grabbed, result, riders, seq, out) {
   const { plan, members, timing } = out;
   const delays = timing?.delays ?? {};
   const base = result[1].movement ?? {};
-  const now0 = {}, later = new Map();
-  for (const m of members) {
-    const wps = feature.exposed.groupWaypoints(m, plan.members[m.id]);
-    if (!wps.length) continue;
-    const d = delays[m.id] ?? 0;
-    if (d > 0) later.set(m.id, { wps, delay: d });
-    else now0[m.id] = wps;
-  }
-  const waveList = wavesOf(Object.fromEntries([...later].map(([id, v]) => [id, v.delay])));
-  const waves = waveList.length + (Object.keys(now0).length ? 1 : 0);
+  const { all, now0, timed } = splitPlan(members, plan, delays);
+  const later = new Map([...all].filter(([, v]) => v.delay > 0));
+  const waveList = wavesOf(timed);
+  const waves = waveList.length + (now0.length ? 1 : 0);
   // R13: the shape, the leader, the target, who stayed, the waves; the plan's time, searches and failed searches.
   record(last, plan, members, timing, waves);
   const movement = {};
   const updates = [];
-  for (const [id, wps] of Object.entries(now0)) {
-    movement[id] = { ...(base[id] ?? { planned: false }), waypoints: wps };
+  for (const id of now0) {
+    movement[id] = { ...(base[id] ?? { planned: false }), waypoints: all.get(id).wps };
     updates.push({ _id: id });
   }
   const stayedDocs = plan.stayed.map(id => members.find(m => m.id === id)?.token?.document).filter(Boolean);
@@ -1406,31 +1417,26 @@ function launch(grabbed, result, riders, seq, out) {
     last.result = "none";
     // The leader with no way: nobody moves, "No route there" (R10); naming the member that stays on its rest square
     // when that is why (0.10 sign-off X1: through any other member of its own group it goes, R6).
-    if (plan.none && plan.blocker) tellBlockedBy(grabbed, plan.blocker);
-    else if (plan.none || !stayedDocs.length) tell("noRoute", "groupNoRoute");
-    else tellStayed(stayedDocs);
+    tellOutcome(grabbed, plan, stayedDocs);
     return null;
   }
   if (stayedDocs.length) tellStayed(stayedDocs);
   const options = { ...result[1], movement };
   // R6: the leader walks through its own members, drawn on top on every screen while it does (no document write); its
   // riders with it, so they stay above their mount.
-  if (now0[plan.leader]) options[LEAD_OPT] = [plan.leader, ...[...(riders ?? new Map())].filter(([, r]) => r.leader === plan.leader).map(([id]) => id)];
+  if (now0.includes(plan.leader)) options[LEAD_OPT] = [plan.leader, ...ridersOfFn(riders)(plan.leader)];
   const res = carryRiders(riders, [updates, options]);
   // Every client learns the group from its update option (a click on one stops them all); never with a hidden member
   // among them (update options reach every client).
   const scene = grabbed.document.parent;
   const ids = [...new Set([...res[0].map(u => u._id), ...later.keys(), ...[...(riders ?? new Map())].filter(([, r]) => later.has(r.leader)).map(([id]) => id)])];
-  const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
-  const tag = gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null;
+  const { gid, tag } = groupTag(ids, scene);
   if (tag) options[GROUP_OPT] = tag;
   if (gid && later.size) {
     const starts = new Map(ids.map(id => [id, { ...(scene?.tokens?.get?.(id)?._source ?? {}) }]));
-    const opts = {};
-    for (const [k, v] of Object.entries(result[1])) if (k !== "movement") opts[k] = v;
-    if (tag) opts[GROUP_OPT] = tag;
+    const opts = waveOpts(result, tag);
     // Where each member's plan rests it (top-left): a mate resting anywhere else is in the others' way (sendWave).
-    const ends = new Map([...Object.entries(now0).map(([id, wps]) => [id, wps.at(-1)]), ...[...later].map(([id, v]) => [id, v.wps.at(-1)])]);
+    const ends = new Map([...now0.map(id => [id, all.get(id).wps.at(-1)]), ...[...later].map(([id, v]) => [id, v.wps.at(-1)])]);
     const stayed = new Set();                  // members a wave left where they stand (named)
     const send = list => sendWave(grabbed, list, { later, base, opts, riders, seq, starts, scene, ids, ends, stayed });
     feature.exposed.groupWaves?.(gid, waveList, send, ends);
@@ -1594,8 +1600,7 @@ function fightFile(grabbed, contexts, riders, seq) {
   feature.exposed.tele?.("plan", { mode: "fightFile", shape, members: entries.length, combat: true });
   if (!entries.length) { last.result = "none"; return null; }
   const ids = entries.flatMap(e => [e.id, ...e.riders.map(r => r.id)]);
-  const gid = feature.exposed.groupHold?.(ids, scene) ?? null;
-  const tag = gid && !ids.some(id => scene?.tokens?.get?.(id)?.hidden) ? gid : null;
+  const { gid, tag } = groupTag(ids, scene);
   let wake = null;
   const q = {
     gid, done: false, why: null, current: null, shape, target: fp?.target ?? null, leaderId: anchor.document.id, leaderAt: null, ids: new Set(ids),

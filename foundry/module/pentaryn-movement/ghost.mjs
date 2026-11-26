@@ -18,7 +18,7 @@
 
 import * as core from "./movement-core.mjs";
 import {
-  ASSIST_KEYS, ASSIST_TOOL, CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
+  ASSIST_KEYS, ASSIST_TOOL, CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, LEAD_OPT, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
 import { SETTINGS, policyWrite, setting, untripAssist } from "./settings.mjs";
@@ -104,7 +104,6 @@ function ownedRankOf(token) {
  * above owned-on-top (core.LEAD_RANK) until its move ends. No document write: the mesh sort and the layer's click
  * order only. token id → { token, age (ms, counted by the polls) }.
  */
-const LEAD_OPT = "pentarynMovementLead";
 const leading = new Map();
 /** How long a lead mark is kept at least (its move's animation starts after the update), and at most (ms). */
 const LEAD_MIN_MS = 300;

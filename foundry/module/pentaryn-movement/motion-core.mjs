@@ -35,6 +35,13 @@ export const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 /** A token's circle radius in squares. */
 export const radiusOf = (width = 1, height = width) => Math.max(width, height) / 2;
 
+/** The distance from p to the segment a-b; a segment no longer than `eps` (squared length) counts as a point. */
+export function segDist(p, a, b, eps = 0) {
+  const L2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+  const t = L2 > eps ? Math.min(Math.max(((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / L2, 0), 1) : 0;
+  return Math.hypot(p.x - (a.x + (b.x - a.x) * t), p.y - (a.y + (b.y - a.y) * t));
+}
+
 /* -------------------------------------------- */
 /*  Trajectories                                */
 /* -------------------------------------------- */
