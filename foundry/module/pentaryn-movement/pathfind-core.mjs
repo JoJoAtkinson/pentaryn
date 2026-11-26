@@ -43,7 +43,6 @@ const key = n => (n.c ? `${n.i},${n.j}#${n.c}` : `${n.i},${n.j}`);
  */
 const FINE_TIE = 0.01;
 export const nodeKey = key;
-export const edgeKey = (a, b) => `${a.i},${a.j}>${b.i},${b.j}`;
 
 /** The eight neighbour steps, orthogonal first (a stable expansion order makes ties deterministic). */
 const STEPS = Object.freeze([

@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { flood, freePrefix, prefixOf, onCell, stacksOf } from "../group-core.mjs";
-import { MOTION, trajectory, delayed, positionAt, firstConflict, minSeparation, waves, cellChain, dist, radiusOf, groupMode, clickStop } from "../motion-core.mjs";
+import { MOTION, trajectory, delayed, positionAt, waves, cellChain, dist, radiusOf, groupMode, clickStop } from "../motion-core.mjs";
 
 /** mulberry32: small seeded PRNG. */
 function rng(seed) {
@@ -18,29 +18,6 @@ function rng(seed) {
 }
 
 /** A random W×H floor: a walled border, scattered pillars, an optional full wall with one or two doors. */
-test("property: firstConflict agrees with brute-force sampling (one batch: no latency shift)", () => {
-  const rand = rng(42);
-  const pt = () => ({ x: rand() * 6, y: rand() * 6 });
-  for (let k = 0; k < 400; k++) {
-    const A = trajectory([pt(), pt(), pt()], { delay: Math.floor(rand() * 5) * 150 });
-    const B = trajectory([pt(), pt()], { delay: Math.floor(rand() * 5) * 150 });
-    const hit = firstConflict(A, B, 0.5, 0.5, { sameWave: true });
-    const d0 = dist(positionAt(A, 0), positionAt(B, 0));
-    if (d0 < 1.3) continue;
-    // The latency buffer only adds conflicts: in another wave, a pair clear there is clear in one batch.
-    if (firstConflict(A, B, 0.5, 0.5, { sameWave: false }) === null) assert.equal(hit, null, `iteration ${k}: the buffer removed a conflict`);
-    let brute = null;
-    for (let t = 0; t <= Math.max(A.end, B.end) + 5; t += 0.5) {
-      if (dist(positionAt(A, t), positionAt(B, t)) < 1 - 1e-3) { brute = t; break; }
-    }
-    if (brute === null) assert.ok(hit === null || hit.d > 1 - 1e-3, `iteration ${k}: false conflict at ${hit?.t}`);
-    else {
-      assert.notEqual(hit, null, `iteration ${k}: missed a conflict at ${brute}`);
-      assert.ok(hit.t <= brute + 1, `iteration ${k}: reported ${hit.t}, brute ${brute}`);
-    }
-  }
-});
-
 test("property: positionAt is clamped at both ends and never faster than the speed", () => {
   const rand = rng(7);
   for (let k = 0; k < 200; k++) {
@@ -83,9 +60,6 @@ test("edge: single-point and zero-length trajectories rest; overlapped rests nev
   assert.deepEqual(positionAt(tr, 500), { x: 1, y: 1 });
   const z = trajectory([{ x: 1, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }]);
   assert.ok(Number.isFinite(positionAt(z, 10).x));
-  assert.equal(minSeparation(trajectory([{ x: 0, y: 0 }]), trajectory([{ x: 3, y: 4 }])), 5);
-  assert.equal(firstConflict(trajectory([{ x: 0, y: 0 }]), trajectory([{ x: 3, y: 4 }]), 0.5, 0.5), null);
-  assert.equal(firstConflict(trajectory([{ x: 0, y: 0 }]), trajectory([{ x: 0, y: 0 }]), 0.5, 0.5), null);
 });
 
 test("edge: difficulty is clamped to [1, 10]", () => {

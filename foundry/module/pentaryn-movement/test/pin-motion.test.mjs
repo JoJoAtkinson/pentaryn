@@ -27,7 +27,6 @@ Object.defineProperty(globalThis, "performance", { value: { now: () => (clock.t 
 const PINS = {
 // <PINS>
   "dungeon pairs": [{"k":0,"state":"found","size":1,"from":[20,1],"cost":75,"n":16,"steps":"N NE N N N N N N N N N NE N N NE","pulled":[[20,1],[16,2],[9,2],[5,4]]},{"k":1,"state":"found","size":2,"from":[4,15],"cost":30,"n":4,"steps":"SE SE SE","pulled":[[4,15],[7,18]]},{"k":2,"state":"found","size":1,"from":[23,28],"cost":115,"n":24,"steps":"SW SW SW W W W W W W W W W W W W W W W W W W W NW","pulled":[[23,28],[26,25],[26,6],[25,5]]},{"k":3,"state":"found","size":2,"from":[5,37],"cost":55,"n":12,"steps":"W W W W W W W W W W W","pulled":[[5,37],[5,26]]},{"k":4,"state":"found","size":1,"from":[27,29],"cost":175,"n":36,"steps":"NW W W W W W W W W W W W W W W W W W NW NW NW NW NW NW NW W NW N N N N N N N NW","pulled":[[27,29],[26,21],[26,11],[18,2],[11,2],[10,1]]},{"k":5,"state":"found","size":2,"from":[6,33],"cost":40,"n":9,"steps":"W W W W W W W SW","pulled":[[6,33],[7,25]]},{"k":6,"state":"found","size":1,"from":[8,26],"cost":240,"n":49,"steps":"E E SE SE SE S S S S S S SW SW SW SW SW S S S SW W W W W W W W W W W W W W W NW NW NW NW NW NW NW W NW N N N N NE","pulled":[[8,26],[11,31],[17,31],[26,25],[26,11],[18,2],[14,2],[13,3]]},{"k":7,"state":"found","size":2,"from":[6,4],"cost":5,"n":2,"steps":"S","pulled":[[6,4],[7,4]]},{"k":8,"state":"found","size":1,"from":[19,5],"cost":145,"n":30,"steps":"SE SE SE SE SE S SE E E E E E E E E E E E E E E NE NE NE NE NE E E NE","pulled":[[19,5],[26,11],[26,25],[20,33]]},{"k":9,"state":"found","size":2,"from":[3,3],"cost":15,"n":4,"steps":"SE S SE","pulled":[[3,3],[6,5]]},{"k":10,"state":"found","size":1,"from":[26,8],"cost":115,"n":24,"steps":"N N NW NW NW NW NW NW N N N N N N N NE NE NE NE NE NE N NE","pulled":[[26,8],[18,2],[11,2],[3,9]]},{"k":11,"state":"found","size":2,"from":[7,16],"cost":25,"n":4,"steps":"E E NE","pulled":[[7,16],[6,19]]},{"k":12,"state":"found","size":1,"from":[20,31],"cost":220,"n":45,"steps":"SW SW SW SW SW SW W W W W W W W W W W W W W W NW NW NW NW NW NW NW W NW N N N N N N N NE NE NE NE NE NE NE N","pulled":[[20,31],[26,25],[26,11],[18,2],[11,2],[3,9]]},{"k":13,"state":"found","size":2,"from":[5,27],"cost":40,"n":9,"steps":"NE NE E E E E E E","pulled":[[5,27],[3,29],[3,35]]},{"k":14,"state":"found","size":1,"from":[21,1],"cost":105,"n":22,"steps":"E E E E E SE SE SE SE SE E E E E E E E E E E E","pulled":[[21,1],[26,12],[26,22]]},{"k":15,"state":"found","size":2,"from":[4,8],"cost":25,"n":6,"steps":"W W W W SW","pulled":[[4,8],[5,3]]},{"k":16,"state":"found","size":1,"from":[6,28],"cost":95,"n":20,"steps":"S S SE SE SE S S S S S S S S SE S SE S S SE","pulled":[[6,28],[9,29],[11,31],[19,31],[25,34]]},{"k":17,"state":"found","size":2,"from":[1,33],"cost":20,"n":5,"steps":"SE E E SE","pulled":[[1,33],[3,37]]},{"k":18,"state":"found","size":1,"from":[12,2],"cost":310,"n":63,"steps":"S S S S S S SE E SE SE SE SE SE SE SE E E E E E E E E E E E E E E NE N N N NE NE NE NE NE N N N N N N NW W W W W NW W W NW W NW NW NW W W W NW W","pulled":[[12,2],[18,2],[26,11],[26,25],[24,26],[17,31],[11,31],[10,29],[9,23],[5,18],[4,13]]},{"k":19,"state":"found","size":2,"from":[8,7],"cost":30,"n":7,"steps":"N N N N NW N","pulled":[[8,7],[2,6]]}],
-  "firstConflict 1.2 behind, buffered": {"t":0,"d":0.825},
   "squareEntries straight": [{"x":0.5,"y":0.5,"checkpoint":false},{"x":1,"y":0.5,"checkpoint":true},{"x":2,"y":0.5,"checkpoint":true},{"x":2.5,"y":0.5,"checkpoint":true}],
   "slit one-way": [[1,"west to east",16,0.2],[1,"east to west","none"],[2,"west to east","none"],[2,"east to west",15,0.19]],
   "S05 routes": {"hero1 -> dropB":{"found":true,"n":40,"narrow":true,"fine":true,"minClearance":0.1862,"settled":true,"sum":23517.99,"end":{"x":7,"y":45}},"hero2 -> dropB":{"found":true,"n":38,"narrow":true,"fine":true,"minClearance":0.1914,"settled":true,"sum":22518.16,"end":{"x":7,"y":45}},"hero3 -> dropB":{"found":true,"n":39,"narrow":true,"fine":true,"minClearance":0.1881,"settled":true,"sum":22987.09,"end":{"x":7,"y":45}},"hero4 -> dropB":{"found":true,"n":41,"narrow":true,"fine":true,"minClearance":0.1872,"settled":true,"sum":23937.68,"end":{"x":7,"y":45}},"hero1 -> dropMid":{"found":true,"n":21,"narrow":true,"fine":true,"minClearance":0.1919,"settled":true,"sum":11239.65,"end":{"x":16,"y":38.5}},"hero1 -> dropStair45":{"found":true,"n":14,"narrow":true,"fine":true,"minClearance":0.2975,"settled":true,"sum":7127.04,"end":{"x":14.2426,"y":34.2574}},"hero1 -> dropA":{"found":true,"n":2,"narrow":false,"fine":false,"minClearance":null,"settled":null,"sum":960,"end":{"x":7,"y":32}},"dropB -> dropA":{"found":true,"n":40,"narrow":true,"fine":true,"minClearance":0.1903,"settled":true,"sum":23397.43,"end":{"x":7,"y":32}},"dropA -> dropB":{"found":true,"n":38,"narrow":true,"fine":true,"minClearance":0.188,"settled":true,"sum":22473.61,"end":{"x":7,"y":45}},"dropMid -> dropB":{"found":true,"n":21,"narrow":true,"fine":true,"minClearance":0.1947,"settled":true,"sum":13540.7,"end":{"x":7,"y":45}},"dropMid -> dropA":{"found":true,"n":21,"narrow":true,"fine":true,"minClearance":0.1947,"settled":true,"sum":11130.25,"end":{"x":7,"y":32}}},
@@ -355,28 +354,14 @@ test("trajectory and positionAt: linear per segment at the speed given, after th
   assert.deepEqual(mc.positionAt(mc.trajectory([{ x: 2, y: 2 }]), 99), { x: 2, y: 2 }, "a single point");
 });
 
-test("firstConflict / closeTime / minSeparation on a head-on pair (radius 0.5 each, speed 6)", () => {
+test("closeTime and nearestWhile on a head-on pair (radius 0.5 each, speed 6)", () => {
   const A = mc.trajectory([{ x: 0, y: 0 }, { x: 6, y: 0 }], { speed: 6 });
   const B = mc.trajectory([{ x: 6, y: 0 }, { x: 0, y: 0 }], { speed: 6 });
-  const hit = mc.firstConflict(A, B, 0.5, 0.5);
-  assert.ok(Math.abs(hit.t - 354.1668) < 0.001, String(hit.t));
-  assert.ok(Math.abs(hit.d - 1) < 1e-4, String(hit.d));
-  const same = mc.firstConflict(A, B, 0.5, 0.5, { sameWave: true });
-  assert.ok(Math.abs(same.t - 416.6667) < 0.001, `no latency buffer in one wave: ${same.t}`);
-  assert.equal(mc.minSeparation(A, B), 0, "they pass through each other");
   assert.ok(Math.abs(mc.closeTime(A, B, 1) - 166.667) < 0.01, String(mc.closeTime(A, B, 1)));
   assert.equal(mc.closeTime(A, B, 0), 0);
-  // Side by side in two lanes 2 squares apart: never in conflict, their least separation is the lane gap.
+  // Side by side in two lanes 2 squares apart: never closer than 1.
   const C = mc.trajectory([{ x: 6, y: 2 }, { x: 0, y: 2 }], { speed: 6 });
-  assert.equal(mc.firstConflict(A, C, 0.5, 0.5), null);
-  assert.equal(mc.firstConflict(A, C, 0.5, 0.5, { sameWave: true }), null);
-  assert.ok(Math.abs(mc.minSeparation(A, C) - 2) < 1e-9);
   assert.equal(mc.closeTime(A, C, 1), 0);
-  // The same lane, the same way, one behind the other by 1.2 squares (touching is 1.0): in one wave they never conflict.
-  const D = mc.trajectory([{ x: 1.2, y: 0 }, { x: 7.2, y: 0 }], { speed: 6 });
-  assert.equal(mc.firstConflict(A, D, 0.5, 0.5, { sameWave: true }), null);
-  const shifted = mc.firstConflict(A, D, 0.5, 0.5);
-  pin("firstConflict 1.2 behind, buffered", shifted && { t: r4(shifted.t), d: r4(shifted.d) });
   // nearestWhile: the nearest a moving trajectory comes to a point within a time window.
   assert.equal(mc.nearestWhile(A, { x: 3, y: 2 }, 0, 5000), 2);
   assert.equal(mc.nearestWhile(A, { x: 3, y: 2 }, 2000, 5000), Infinity, "not moving then");

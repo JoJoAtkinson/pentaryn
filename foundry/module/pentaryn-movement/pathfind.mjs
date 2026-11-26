@@ -745,7 +745,6 @@ export function install(reg, ctx) {
     pathfindRouteTo: routeTo,
     pathfindRouteSliced: routeToSteps,
     pathfindRouteToAsync: routeToAsync,
-    pathfindRouteSteps: routeSteps,
     pathfindOrigin: originOf,
     pathfindSkip: token => !!skipFor(token, [null, null], { constrainOptions: {} }),
     pathfindPatched: () => findPatched,

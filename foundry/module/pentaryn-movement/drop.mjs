@@ -1897,8 +1897,8 @@ export function install(reg, ctx) {
   reg.on("createWall", wall => { onWallChange(wall, null); }, { label: "createWall: stop moves across a new wall" });
   reg.on("updateWall", (wall, changes) => { onWallChange(wall, changes); }, { label: "updateWall: stop moves across a shut door" });
   reg.on("preUpdateWall", (wall, changes) => onPreWall(wall, changes), { label: "preUpdateWall: a door is not shut on a walker with nowhere to rest" });
-  ctx.expose({ groupFollower, singleAvoid, groupStatus, groupCutAcross: cutAcross, groupInFlight: restsInFlight, groupTellStayed: tellStayed,
-    groupPatched: () => dropPatched, groupCheckpoints: withCheckpoints, groupStackmates: stackmates });
+  ctx.expose({ groupFollower, singleAvoid, groupStatus, groupInFlight: restsInFlight, groupTellStayed: tellStayed,
+    groupPatched: () => dropPatched });
 }
 
 export function uninstall() {
