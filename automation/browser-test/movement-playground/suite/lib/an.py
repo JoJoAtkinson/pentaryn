@@ -22,6 +22,13 @@ def seg_cross(p0, p1, q0, q1):
     return 1e-4 < s < 1 - 1e-4 and 1e-4 < u < 1 - 1e-4
 
 
+def cross_pt(p0, p1, q0, q1):
+    """where segment p0p1 meets the line through q0q1 (callers have checked seg_cross)"""
+    d1 = (p1[0] - p0[0], p1[1] - p0[1]); d2 = (q1[0] - q0[0], q1[1] - q0[1])
+    s = ((q0[0] - p0[0]) * d2[1] - (q0[1] - p0[1]) * d2[0]) / (d1[0] * d2[1] - d1[1] * d2[0])
+    return (p0[0] + s * d1[0], p0[1] + s * d1[1])
+
+
 def side(q0, q1, p):  # sign of (q1-q0) x (p-q0): <0 is the "left" (screen) side the module's dir=1 blocks from
     return (q1[0] - q0[0]) * (p[1] - q0[1]) - (q1[1] - q0[1]) * (p[0] - q0[0])
 
@@ -140,8 +147,13 @@ class Obs:
             out.append((i, (c[0], c[1]), (c[2], c[3]), d))
         return out
 
-    def wall_hits(self, tol_end=0.0):
-        """every crossing of a blocking wall by a token's centre path: [{token, wall, t, at, src}]"""
+    def wall_hits(self, tol_end=2.0):
+        """every crossing of a blocking wall by a token's centre path: [{token, wall, t, at, src}]
+
+        A drawn segment (two frame samples) crossing within `tol_end` px of a wall's end is not counted: it is the chord
+        between two samples either side of a route corner that rounds a door jamb or a wall end (r8 S07.l, state path: a
+        route corner 0.3 px inside the door's opening, the chord across it 0.1 px past the jamb's end; the route itself
+        clear). The route polylines are judged with no such allowance."""
         ws = self.wall_state(); hits = []
         # event times matter only if a wall changed; one blocking set per distinct time bucket
         changes = [e["t"] for e in self.ev if e["k"] in ("wall", "wallc", "walld")]
@@ -168,6 +180,7 @@ class Obs:
                 blk = static if static is not None else self.walls_blocking(ws, t)
                 for wid, p, q, d in blk:
                     if seg_cross(a, b, p, q):
+                        if src == "drawn" and tol_end > 0 and min(math.dist(cross_pt(a, b, p, q), e) for e in (p, q)) <= tol_end: continue
                         if d:  # one-way: dir 1 blocks crossings starting on the "left" (side<0), dir 2 from the other
                             s0 = side(p, q, a)
                             if (d == 1 and s0 > 0) or (d == 2 and s0 < 0): continue
