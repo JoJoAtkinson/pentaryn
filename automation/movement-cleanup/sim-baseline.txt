@@ -1,0 +1,18 @@
+
+10000 seeds from 1 in 338.8 s
+0 failing runs
+  passThrough      0  e.g. 
+  wallCross        0  e.g. 
+  wrongCharge      0  e.g. 
+  unsent           0  e.g. 
+  restOverlap      0  e.g. 
+  shape            0  e.g. 
+  errors           0  e.g. 
+  mover overlap: 26773 episodes in 2416 seeds; depth p95 0.968 max 1.473 sq; duration p95 2017 max 11767 ms; 6471 square-seconds
+  past a mate waiting for its wave: 12314 (p95 0.995 sq, 1000 ms); past a mate stopped short: 2345 (p95 0.985 sq, 567 ms)
+  through a token come to rest after the walk was sent (its sender could not know): 2621 (p95 0.99 sq, 333 ms)
+  the leader through its own members at rest (R6, allowed): 7795 (p95 0.997 sq, 833 ms)
+  the leader through its own members both moving (R6, apart from mover overlap): 2080 (p95 0.951 sq, 2950 ms, 1081 square-seconds)
+  rest overlap flagged as a same-instant race (not failed): 11 seeds
+  members dropped 62381, never moved 25589, named 21983
+exit 0
